@@ -1,0 +1,25 @@
+server:
+  port: ${APP_PORT:8080}
+
+spring:
+  application:
+    name: projectflow
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/projectflow}
+    username: ${DATABASE_USERNAME:projectflow}
+    password: ${DATABASE_PASSWORD:change-me-local}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
