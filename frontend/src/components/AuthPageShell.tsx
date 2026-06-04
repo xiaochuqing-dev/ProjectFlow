@@ -13,7 +13,7 @@ export function AuthPageShell({ mode }: AuthPageShellProps) {
       />
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#03142a]/10 to-[#020817]/30" />
 
-      <section className="relative z-10 flex min-h-screen items-center justify-end px-8 py-10 lg:px-20">
+      <section className="relative z-10 flex min-h-screen items-center justify-center px-6 py-8 md:px-10 lg:justify-end lg:px-16 xl:px-24">
         <AuthPanel mode={mode} />
       </section>
     </main>

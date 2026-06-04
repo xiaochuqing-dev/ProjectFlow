@@ -40,26 +40,26 @@ export function AuthPanel({ mode }: AuthPanelProps) {
   }
 
   return (
-    <div className="w-full max-w-[430px] rounded-2xl border border-blue-300/20 bg-[#07152d]/72 p-8 shadow-[0_28px_90px_rgba(0,28,80,0.48)] backdrop-blur-xl">
-      <div className="mb-8">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-xs text-blue-100">
-          <ShieldCheck className="h-3.5 w-3.5" />
+    <div className="w-full max-w-[540px] rounded-[28px] border border-blue-200/22 bg-[#07152d]/78 p-9 shadow-[0_34px_120px_rgba(0,28,80,0.56)] backdrop-blur-2xl md:p-11 xl:mr-4">
+      <div className="mb-9">
+        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-300/22 bg-blue-400/12 px-4 py-1.5 text-sm text-blue-100">
+          <ShieldCheck className="h-4 w-4" />
           专业项目流程管理
         </div>
-        <h1 className="text-2xl font-semibold tracking-normal">
+        <h1 className="text-3xl font-semibold tracking-normal md:text-[34px]">
           {isRegister ? "创建 ProjectFlow 账号" : "登录 ProjectFlow"}
         </h1>
-        <p className="mt-3 text-sm leading-6 text-blue-100/76">
+        <p className="mt-4 max-w-[430px] text-base leading-7 text-blue-100/78">
           管理项目空间、任务推进、开发日志和 AI 复盘输出，让真实开发过程沉淀成可展示的工程资产。
         </p>
       </div>
 
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      <form className="space-y-6" onSubmit={handleSubmit}>
         {isRegister ? (
           <label className="block">
-            <span className="mb-2 block text-sm text-blue-50/86">用户名</span>
-            <span className="flex items-center gap-3 rounded-xl border border-blue-200/18 bg-white/8 px-4 py-3 text-sm text-white shadow-inner shadow-blue-950/30">
-              <UserRound className="h-4 w-4 text-cyan-200" />
+            <span className="mb-2.5 block text-sm text-blue-50/86">用户名</span>
+            <span className="flex items-center gap-3 rounded-2xl border border-blue-200/20 bg-white/9 px-4 py-4 text-base text-white shadow-inner shadow-blue-950/30">
+              <UserRound className="h-5 w-5 text-cyan-200" />
               <input
                 className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-blue-100/42"
                 onChange={(event) => setUsername(event.target.value)}
@@ -73,9 +73,9 @@ export function AuthPanel({ mode }: AuthPanelProps) {
         ) : null}
 
         <label className="block">
-          <span className="mb-2 block text-sm text-blue-50/86">邮箱</span>
-          <span className="flex items-center gap-3 rounded-xl border border-blue-200/18 bg-white/8 px-4 py-3 text-sm text-white shadow-inner shadow-blue-950/30">
-            <Mail className="h-4 w-4 text-cyan-200" />
+          <span className="mb-2.5 block text-sm text-blue-50/86">邮箱</span>
+          <span className="flex items-center gap-3 rounded-2xl border border-blue-200/20 bg-white/9 px-4 py-4 text-base text-white shadow-inner shadow-blue-950/30">
+            <Mail className="h-5 w-5 text-cyan-200" />
             <input
               className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-blue-100/42"
               onChange={(event) => setEmail(event.target.value)}
@@ -88,9 +88,9 @@ export function AuthPanel({ mode }: AuthPanelProps) {
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-sm text-blue-50/86">密码</span>
-          <span className="flex items-center gap-3 rounded-xl border border-blue-200/18 bg-white/8 px-4 py-3 text-sm text-white shadow-inner shadow-blue-950/30">
-            <LockKeyhole className="h-4 w-4 text-cyan-200" />
+          <span className="mb-2.5 block text-sm text-blue-50/86">密码</span>
+          <span className="flex items-center gap-3 rounded-2xl border border-blue-200/20 bg-white/9 px-4 py-4 text-base text-white shadow-inner shadow-blue-950/30">
+            <LockKeyhole className="h-5 w-5 text-cyan-200" />
             <input
               className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-blue-100/42"
               minLength={8}
@@ -104,22 +104,22 @@ export function AuthPanel({ mode }: AuthPanelProps) {
         </label>
 
         {error ? (
-          <p className="rounded-lg border border-rose-300/20 bg-rose-500/12 px-3 py-2 text-sm text-rose-100">
+          <p className="rounded-xl border border-rose-300/20 bg-rose-500/12 px-4 py-3 text-sm text-rose-100">
             {error}
           </p>
         ) : null}
 
         <button
-          className="group flex w-full items-center justify-center gap-2 rounded-xl bg-[#2f7cff] px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_42px_rgba(47,124,255,0.38)] transition hover:bg-[#4b8dff] disabled:cursor-not-allowed disabled:opacity-60"
+          className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-[#2f7cff] px-5 py-4 text-base font-semibold text-white shadow-[0_18px_48px_rgba(47,124,255,0.42)] transition hover:bg-[#4b8dff] disabled:cursor-not-allowed disabled:opacity-60"
           disabled={submitting}
           type="submit"
         >
           {submitting ? "处理中..." : isRegister ? "创建账号" : "进入工作台"}
-          <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+          <ArrowRight className="h-5 w-5 transition group-hover:translate-x-0.5" />
         </button>
       </form>
 
-      <div className="mt-6 flex items-center justify-between border-t border-blue-200/12 pt-6 text-sm text-blue-100/70">
+      <div className="mt-7 flex items-center justify-between border-t border-blue-200/12 pt-7 text-sm text-blue-100/70">
         <span>{isRegister ? "已有账号？" : "还没有账号？"}</span>
         <Link className="font-medium text-cyan-100 hover:text-white" href={isRegister ? "/login" : "/register"}>
           {isRegister ? "去登录" : "创建账号"}
