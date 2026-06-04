@@ -10,13 +10,20 @@ spring:
     password: ${DATABASE_PASSWORD:change-me-local}
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     open-in-view: false
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
+      repositories:
+        enabled: false
+
+projectflow:
+  jwt:
+    secret: ${JWT_SECRET:replace-with-at-least-32-random-bytes}
+    access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:60}
 
 management:
   endpoints:

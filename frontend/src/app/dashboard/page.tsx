@@ -1,9 +1,34 @@
-import { Activity, BookOpenText, CheckCircle2, LayoutDashboard, Sparkles } from "lucide-react";
-import Link from "next/link";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Activity, BookOpenText, CheckCircle2, LayoutDashboard, LogOut, Sparkles } from "lucide-react";
+import { clearSession, readSession, type AuthUser } from "@/lib/auth";
 
 const navItems = ["总览", "项目", "任务", "开发日志", "导入", "AI 复盘"];
 
-export default function Home() {
+export default function DashboardPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    const session = readSession();
+    if (!session) {
+      router.replace("/login");
+      return;
+    }
+    setUser(session.user);
+  }, [router]);
+
+  function handleLogout() {
+    clearSession();
+    router.replace("/login");
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <main className="flex min-h-screen bg-surface text-ink">
       <aside className="flex w-64 shrink-0 flex-col border-r border-line bg-white px-4 py-5">
@@ -37,12 +62,17 @@ export default function Home() {
       <section className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 items-center justify-between border-b border-line bg-white px-8">
           <div>
-            <p className="text-sm text-muted">第 1 轮健康检查</p>
-            <h1 className="text-lg font-semibold">工程骨架已就绪</h1>
+            <p className="text-sm text-muted">你好，{user.username}</p>
+            <h1 className="text-lg font-semibold">工作台总览</h1>
           </div>
-          <div className="rounded-full border border-line bg-slate-50 px-4 py-2 text-sm text-slate-600">
-            <Link href="/login">登录页预览</Link>
-          </div>
+          <button
+            className="flex items-center gap-2 rounded-full border border-line bg-slate-50 px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
+            onClick={handleLogout}
+            type="button"
+          >
+            <LogOut className="h-4 w-4" />
+            退出登录
+          </button>
         </header>
 
         <div className="grid gap-6 p-8 lg:grid-cols-[1.2fr_0.8fr]">
@@ -52,32 +82,32 @@ export default function Home() {
                 <Activity className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-xl font-semibold">系统状态</h2>
-                <p className="text-sm text-muted">前端页面用于验证 Next.js、Tailwind 与中文界面基线。</p>
+                <h2 className="text-xl font-semibold">认证状态</h2>
+                <p className="text-sm text-muted">当前页面已具备客户端会话保护和退出流程。</p>
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               {[
-                ["前端", "运行正常", CheckCircle2],
-                ["后端", "/api/health", BookOpenText],
+                ["账号", user.email, CheckCircle2],
+                ["后端", "/api/auth/me", BookOpenText],
                 ["AI", "Mock Provider", Sparkles],
               ].map(([label, value, Icon]) => (
                 <div className="rounded-lg border border-line bg-slate-50 p-4" key={label as string}>
                   <Icon className="mb-4 h-5 w-5 text-brand" />
                   <p className="text-sm text-muted">{label as string}</p>
-                  <p className="mt-1 font-semibold">{value as string}</p>
+                  <p className="mt-1 truncate font-semibold">{value as string}</p>
                 </div>
               ))}
             </div>
           </section>
 
           <section className="rounded-lg border border-line bg-white p-6 shadow-panel">
-            <h2 className="text-base font-semibold">设计约束</h2>
+            <h2 className="text-base font-semibold">第 2 轮范围</h2>
             <ul className="mt-4 space-y-3 text-sm text-slate-600">
-              <li>左侧全局导航在登录后页面常驻。</li>
-              <li>顶部导航按页面场景承载筛选、标签和主要操作。</li>
-              <li>产品界面中文为主，英文技术名词自然保留。</li>
-              <li>登录页后续使用本地背景图，并在右侧空白区放置专业卡片。</li>
+              <li>注册、登录、JWT 生成与当前用户校验。</li>
+              <li>登录页使用蓝色背景图和右侧专业卡片。</li>
+              <li>登录后页面保留左侧全局导航和顶部页面栏。</li>
+              <li>下一轮进入项目空间 CRUD。</li>
             </ul>
           </section>
         </div>
