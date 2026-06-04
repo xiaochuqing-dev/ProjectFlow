@@ -1,80 +1,9 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Activity, BookOpenText, CheckCircle2, LayoutDashboard, LogOut, Sparkles } from "lucide-react";
-import { clearSession, readSession, type AuthUser } from "@/lib/auth";
-
-const navItems = ["总览", "项目", "任务", "开发日志", "导入", "AI 复盘"];
+import { Activity, BookOpenText, CheckCircle2, Sparkles } from "lucide-react";
+import { AppShell } from "@/components/AppShell";
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<AuthUser | null>(null);
-
-  useEffect(() => {
-    const session = readSession();
-    if (!session) {
-      router.replace("/login");
-      return;
-    }
-    setUser(session.user);
-  }, [router]);
-
-  function handleLogout() {
-    clearSession();
-    router.replace("/login");
-  }
-
-  if (!user) {
-    return null;
-  }
-
   return (
-    <main className="flex min-h-screen bg-surface text-ink">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-line bg-white px-4 py-5">
-        <div className="mb-8 flex items-center gap-3 px-2">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-sm font-bold text-white">
-            PF
-          </div>
-          <div>
-            <p className="text-base font-semibold">ProjectFlow</p>
-            <p className="text-xs text-muted">项目过程资产化</p>
-          </div>
-        </div>
-        <nav className="space-y-1">
-          {navItems.map((item, index) => (
-            <a
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${
-                index === 0
-                  ? "bg-blue-50 font-medium text-brand"
-                  : "text-slate-600 hover:bg-slate-50"
-              }`}
-              href="#"
-              key={item}
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              {item}
-            </a>
-          ))}
-        </nav>
-      </aside>
-
-      <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between border-b border-line bg-white px-8">
-          <div>
-            <p className="text-sm text-muted">你好，{user.username}</p>
-            <h1 className="text-lg font-semibold">工作台总览</h1>
-          </div>
-          <button
-            className="flex items-center gap-2 rounded-full border border-line bg-slate-50 px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
-            onClick={handleLogout}
-            type="button"
-          >
-            <LogOut className="h-4 w-4" />
-            退出登录
-          </button>
-        </header>
-
+    <AppShell title="工作台总览">
         <div className="grid gap-6 p-8 lg:grid-cols-[1.2fr_0.8fr]">
           <section className="rounded-lg border border-line bg-white p-6 shadow-panel">
             <div className="mb-6 flex items-center gap-3">
@@ -88,7 +17,7 @@ export default function DashboardPage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               {[
-                ["账号", user.email, CheckCircle2],
+                ["账号", "已登录", CheckCircle2],
                 ["后端", "/api/auth/me", BookOpenText],
                 ["AI", "Mock Provider", Sparkles],
               ].map(([label, value, Icon]) => (
@@ -111,7 +40,6 @@ export default function DashboardPage() {
             </ul>
           </section>
         </div>
-      </section>
-    </main>
+    </AppShell>
   );
 }
