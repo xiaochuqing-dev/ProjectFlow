@@ -98,3 +98,59 @@ export function createProject(token: string, payload: ProjectPayload): Promise<P
     body: JSON.stringify(payload),
   });
 }
+
+export type TaskStatus = "BACKLOG" | "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE";
+
+export type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
+
+export type TaskItem = {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate: string | null;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TaskPayload = {
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate: string | null;
+  tags: string[];
+};
+
+export function listTasks(token: string, projectId: string): Promise<TaskItem[]> {
+  return requestJson<TaskItem[]>(`/projects/${projectId}/tasks`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function createTask(token: string, projectId: string, payload: TaskPayload): Promise<TaskItem> {
+  return requestJson<TaskItem>(`/projects/${projectId}/tasks`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateTaskStatus(token: string, taskId: string, status: TaskStatus): Promise<TaskItem> {
+  return requestJson<TaskItem>(`/tasks/${taskId}/status`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+}
