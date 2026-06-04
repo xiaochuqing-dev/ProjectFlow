@@ -17,7 +17,7 @@ const navItems = [
   { label: "总览", href: "/dashboard", icon: LayoutDashboard },
   { label: "项目", href: "/projects", icon: FolderKanban },
   { label: "任务", href: "/tasks", icon: SquareKanban },
-  { label: "开发日志", href: "#", icon: BookOpenText },
+  { label: "开发日志", href: "/dev-logs", icon: BookOpenText },
   { label: "导入", href: "#", icon: Import },
   { label: "AI 复盘", href: "#", icon: Sparkles },
 ];

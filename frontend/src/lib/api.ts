@@ -154,3 +154,50 @@ export function updateTaskStatus(token: string, taskId: string, status: TaskStat
     body: JSON.stringify({ status }),
   });
 }
+
+export type DevLogCategory = "FEATURE" | "BUGFIX" | "REFACTOR" | "RESEARCH" | "REVIEW" | "DEPLOYMENT";
+
+export type DevLog = {
+  id: string;
+  projectId: string;
+  taskId: string | null;
+  title: string;
+  content: string;
+  category: DevLogCategory;
+  logDate: string;
+  minutesSpent: number;
+  blocked: boolean;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DevLogPayload = {
+  taskId: string | null;
+  title: string;
+  content: string;
+  category: DevLogCategory;
+  logDate: string;
+  minutesSpent: number;
+  blocked: boolean;
+  tags: string[];
+};
+
+export function listDevLogs(token: string, projectId: string): Promise<DevLog[]> {
+  return requestJson<DevLog[]>(`/projects/${projectId}/dev-logs`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function createDevLog(token: string, projectId: string, payload: DevLogPayload): Promise<DevLog> {
+  return requestJson<DevLog>(`/projects/${projectId}/dev-logs`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+}
