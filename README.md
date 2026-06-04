@@ -74,19 +74,11 @@ projectflow/
 `-- README.md
 ```
 
-## Local Development Plan
+## Local Development
 
-The runnable stack will be added in Round 1:
+For Windows local startup, double-click `start-projectflow.bat` from the repository root. It starts PostgreSQL and Redis with Docker Compose, opens a backend Spring Boot terminal, opens a frontend Next.js terminal, and then opens the browser at `http://localhost:3000/login`.
 
-- `frontend/`: Next.js + TypeScript + Tailwind.
-- `backend/`: Spring Boot 3 + Java 17 + Maven.
-- `docker-compose.yml`: PostgreSQL + Redis.
-- Backend health check: `GET /api/health`.
-- Frontend health page.
-
-## Round 1 Health Checks
-
-After Round 1, the expected local development checks are:
+Manual verification commands:
 
 ```powershell
 cd frontend
@@ -98,7 +90,7 @@ C:\Users\Administrator\Desktop\apache-maven-3.9.9\bin\mvn.cmd -q test
 Current Windows environment notes:
 
 - Maven is available through `C:\Users\Administrator\Desktop\apache-maven-3.9.9\bin\mvn.cmd`.
-- Docker is not currently available through PATH, so Docker Compose validation requires Docker Desktop or Docker CLI setup first.
+- Docker Desktop is required for PostgreSQL and Redis.
 - If npm installation hangs, clear or replace the local frontend dependency cache before rerunning `npm.cmd install`.
 
 ## Roadmap
