@@ -76,7 +76,7 @@ projectflow/
 
 ## Local Development
 
-For Windows local startup, double-click `start-projectflow.bat` from the repository root. It starts PostgreSQL and Redis with Docker Compose, opens a backend Spring Boot terminal, opens a frontend Next.js terminal, and then opens the browser at `http://localhost:3000/login`.
+For Windows local startup, double-click `start-projectflow.bat` from the repository root. It runs in one console window, starts PostgreSQL and Redis with Docker Compose, builds the frontend, starts the backend and frontend, then opens the browser at `http://localhost:3000/login`. Press Enter in that console window to stop ProjectFlow.
 
 Manual verification commands:
 
@@ -91,6 +91,7 @@ Current Windows environment notes:
 
 - Maven is available through `C:\Users\Administrator\Desktop\apache-maven-3.9.9\bin\mvn.cmd`.
 - Docker Desktop is required for PostgreSQL and Redis.
+- If Docker Desktop is not running, the startup script tries to start it and waits before opening the browser.
 - If npm installation hangs, clear or replace the local frontend dependency cache before rerunning `npm.cmd install`.
 
 ## Roadmap
