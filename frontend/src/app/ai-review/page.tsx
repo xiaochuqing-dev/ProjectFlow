@@ -31,6 +31,50 @@ const outputDescriptions: Record<AiOutputType, string> = {
   README_SECTION: "适合直接整理到仓库文档中。",
 };
 
+const outputTemplates: Record<AiOutputType, string> = {
+  WEEKLY_REPORT: `# 本周项目周报
+
+## 本周完成
+- 
+
+## 遇到的问题
+- 
+
+## 技术决策
+- 
+
+## 下周计划
+- `,
+  PROJECT_SUMMARY: `# 项目总结
+
+## 项目背景
+
+## 核心功能
+- 
+
+## 技术实现
+- 
+
+## 工程亮点
+- `,
+  RESUME_BULLET: `# 简历项目要点
+
+- 独立负责/参与实现 ...
+- 使用 ... 技术完成 ...
+- 通过 ... 解决 ...
+- 项目沉淀了 ...`,
+  README_SECTION: `## Project Overview
+
+### Features
+- 
+
+### Tech Stack
+- 
+
+### Engineering Highlights
+- `,
+};
+
 export default function AiReviewPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -45,6 +89,7 @@ export default function AiReviewPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [copyState, setCopyState] = useState("");
+  const [templateCopyState, setTemplateCopyState] = useState("");
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId),
@@ -136,6 +181,16 @@ export default function AiReviewPage() {
     }
   }
 
+  async function handleCopyTemplate(type: AiOutputType) {
+    try {
+      await navigator.clipboard.writeText(outputTemplates[type]);
+      setTemplateCopyState(`${outputLabels[type]}模板已复制`);
+      window.setTimeout(() => setTemplateCopyState(""), 1600);
+    } catch {
+      setTemplateCopyState("模板复制失败");
+    }
+  }
+
   function handleDownload() {
     if (!selectedOutput) {
       return;
@@ -199,40 +254,61 @@ export default function AiReviewPage() {
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-semibold">生成复盘</h2>
-                <p className="text-sm text-muted">当前使用 Mock Provider，不产生外部 AI 请求。</p>
+                <h2 className="font-semibold">选择导出模板</h2>
+                <p className="text-sm text-muted">先选用途，再生成或复制模板。</p>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <select
-                className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
-                onChange={(event) => setSelectedType(event.target.value as AiOutputType)}
-                value={selectedType}
-              >
-                {Object.entries(outputLabels).map(([type, label]) => (
-                  <option key={type} value={type}>
-                    {label}
-                  </option>
+            <div className="space-y-4">
+              <div className="grid gap-3">
+                {(Object.keys(outputLabels) as AiOutputType[]).map((type) => (
+                  <div
+                    className={`rounded-lg border p-3 transition ${
+                      selectedType === type ? "border-blue-200 bg-blue-50/60" : "border-line bg-white"
+                    }`}
+                    key={type}
+                  >
+                    <button
+                      className="w-full text-left"
+                      onClick={() => setSelectedType(type)}
+                      type="button"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="font-semibold text-slate-950">{outputLabels[type]}</p>
+                        <span className="rounded-full bg-white px-2 py-1 text-xs text-muted">模板</span>
+                      </div>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">{outputDescriptions[type]}</p>
+                    </button>
+                    <button
+                      className="mt-3 text-sm font-semibold text-brand hover:text-blue-700"
+                      onClick={() => handleCopyTemplate(type)}
+                      type="button"
+                    >
+                      复制空白模板
+                    </button>
+                  </div>
                 ))}
-              </select>
-              <p className="rounded-lg bg-slate-50 p-3 text-sm leading-6 text-slate-600">
-                {outputDescriptions[selectedType]}
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  className="rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand"
-                  onChange={(event) => setFromDate(event.target.value)}
-                  type="date"
-                  value={fromDate}
-                />
-                <input
-                  className="rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand"
-                  onChange={(event) => setToDate(event.target.value)}
-                  type="date"
-                  value={toDate}
-                />
               </div>
+              {templateCopyState ? (
+                <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{templateCopyState}</p>
+              ) : null}
+              <details className="rounded-lg border border-line bg-slate-50 p-3">
+                <summary className="cursor-pointer text-sm font-medium text-slate-700">可选：限制复盘日期范围</summary>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <input
+                    className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+                    onChange={(event) => setFromDate(event.target.value)}
+                    type="date"
+                    value={fromDate}
+                  />
+                  <input
+                    className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+                    onChange={(event) => setToDate(event.target.value)}
+                    type="date"
+                    value={toDate}
+                  />
+                </div>
+              </details>
               {error ? <p className="text-sm text-rose-600">{error}</p> : null}
               <button
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-60"
@@ -240,7 +316,7 @@ export default function AiReviewPage() {
                 type="submit"
               >
                 {generating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {generating ? "生成中..." : "生成 Markdown"}
+                {generating ? "生成中..." : `生成${outputLabels[selectedType]}`}
               </button>
             </div>
           </form>

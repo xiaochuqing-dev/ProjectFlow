@@ -207,8 +207,8 @@ export default function TasksPage() {
                 <Plus className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-semibold">新增任务</h2>
-                <p className="text-sm text-muted">默认进入待执行列。</p>
+                <h2 className="font-semibold">快速加任务</h2>
+                <p className="text-sm text-muted">只写标题即可，其他信息可以后补。</p>
               </div>
             </div>
 
@@ -217,29 +217,34 @@ export default function TasksPage() {
                 className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand"
                 disabled={!selectedProjectId}
                 name="title"
-                placeholder="任务标题"
+                placeholder="任务标题，例如：完成登录页布局"
                 required
               />
               <textarea
-                className="min-h-24 w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand"
+                className="min-h-20 w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand"
                 disabled={!selectedProjectId}
                 name="description"
-                placeholder="执行说明"
+                placeholder="可选：补充执行说明"
               />
-              <div className="grid grid-cols-2 gap-3">
-                <select className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" defaultValue="MEDIUM" disabled={!selectedProjectId} name="priority">
-                  <option value="LOW">低优先级</option>
-                  <option value="MEDIUM">中优先级</option>
-                  <option value="HIGH">高优先级</option>
-                </select>
-                <input className="rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand" disabled={!selectedProjectId} name="dueDate" type="date" />
-              </div>
-              <input
-                className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand"
-                disabled={!selectedProjectId}
-                name="tags"
-                placeholder="标签，用英文逗号分隔"
-              />
+              <details className="rounded-lg border border-line bg-slate-50 p-3">
+                <summary className="cursor-pointer text-sm font-medium text-slate-700">优先级、日期、标签</summary>
+                <div className="mt-3 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <select className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" defaultValue="MEDIUM" disabled={!selectedProjectId} name="priority">
+                      <option value="LOW">低优先级</option>
+                      <option value="MEDIUM">中优先级</option>
+                      <option value="HIGH">高优先级</option>
+                    </select>
+                    <input className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" disabled={!selectedProjectId} name="dueDate" type="date" />
+                  </div>
+                  <input
+                    className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+                    disabled={!selectedProjectId}
+                    name="tags"
+                    placeholder="标签，可选，用英文逗号分隔"
+                  />
+                </div>
+              </details>
               {error ? <p className="text-sm text-rose-600">{error}</p> : null}
               <button
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-60"
@@ -247,7 +252,7 @@ export default function TasksPage() {
                 type="submit"
               >
                 {creating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                {creating ? "创建中..." : "创建任务"}
+                {creating ? "创建中..." : "添加到待执行"}
               </button>
             </form>
           </div>

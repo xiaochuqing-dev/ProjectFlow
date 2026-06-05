@@ -181,8 +181,8 @@ export default function DevLogsPage() {
                 <FilePenLine className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-semibold">新增日志</h2>
-                <p className="text-sm text-muted">记录取舍、推进和阻塞。</p>
+                <h2 className="font-semibold">快速写日志</h2>
+                <p className="text-sm text-muted">标题和正文足够开始，分类信息可选。</p>
               </div>
             </div>
 
@@ -191,47 +191,52 @@ export default function DevLogsPage() {
                 className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand"
                 disabled={!selectedProjectId}
                 name="title"
-                placeholder="日志标题"
+                placeholder="日志标题，例如：完成任务看板第一版"
                 required
               />
               <textarea
                 className="min-h-28 w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand"
                 disabled={!selectedProjectId}
                 name="content"
-                placeholder="记录今天完成了什么、为什么这样做、还有哪些风险"
+                placeholder="写今天完成了什么、遇到什么问题、下一步准备做什么"
                 required
               />
-              <div className="grid grid-cols-2 gap-3">
-                <select className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" defaultValue="FEATURE" disabled={!selectedProjectId} name="category">
-                  {categories.map((category) => (
-                    <option key={category} value={category}>
-                      {categoryLabels[category]}
-                    </option>
-                  ))}
-                </select>
-                <select className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" disabled={!selectedProjectId} name="taskId">
-                  <option value="">项目级日志</option>
-                  {tasks.map((task) => (
-                    <option key={task.id} value={task.id}>
-                      {task.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <input className="rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand" defaultValue={today} disabled={!selectedProjectId} name="logDate" type="date" />
-                <input className="rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand" defaultValue="60" disabled={!selectedProjectId} min="0" name="minutesSpent" type="number" />
-              </div>
-              <input
-                className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand"
-                disabled={!selectedProjectId}
-                name="tags"
-                placeholder="标签，用英文逗号分隔"
-              />
-              <label className="flex items-center gap-2 rounded-lg border border-line bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                <input className="h-4 w-4 accent-blue-600" disabled={!selectedProjectId} name="blocked" type="checkbox" />
-                存在阻塞或风险
-              </label>
+              <details className="rounded-lg border border-line bg-slate-50 p-3">
+                <summary className="cursor-pointer text-sm font-medium text-slate-700">分类、关联任务、日期和标签</summary>
+                <div className="mt-3 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <select className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" defaultValue="FEATURE" disabled={!selectedProjectId} name="category">
+                      {categories.map((category) => (
+                        <option key={category} value={category}>
+                          {categoryLabels[category]}
+                        </option>
+                      ))}
+                    </select>
+                    <select className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" disabled={!selectedProjectId} name="taskId">
+                      <option value="">项目级日志</option>
+                      {tasks.map((task) => (
+                        <option key={task.id} value={task.id}>
+                          {task.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" defaultValue={today} disabled={!selectedProjectId} name="logDate" type="date" />
+                    <input className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" defaultValue="60" disabled={!selectedProjectId} min="0" name="minutesSpent" type="number" />
+                  </div>
+                  <input
+                    className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+                    disabled={!selectedProjectId}
+                    name="tags"
+                    placeholder="标签，可选，用英文逗号分隔"
+                  />
+                  <label className="flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-sm text-slate-600">
+                    <input className="h-4 w-4 accent-blue-600" disabled={!selectedProjectId} name="blocked" type="checkbox" />
+                    存在阻塞或风险
+                  </label>
+                </div>
+              </details>
               {error ? <p className="text-sm text-rose-600">{error}</p> : null}
               <button
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-60"
@@ -239,7 +244,7 @@ export default function DevLogsPage() {
                 type="submit"
               >
                 {creating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                {creating ? "记录中..." : "写入日志"}
+                {creating ? "记录中..." : "保存这条日志"}
               </button>
             </form>
           </div>
