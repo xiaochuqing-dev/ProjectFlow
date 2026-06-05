@@ -40,7 +40,7 @@ export function AuthPanel({ mode }: AuthPanelProps) {
   }
 
   return (
-    <div className="w-full max-w-[540px] rounded-[28px] border border-blue-200/22 bg-[#07152d]/78 p-9 shadow-[0_34px_120px_rgba(0,28,80,0.56)] backdrop-blur-2xl md:p-11 xl:mr-4">
+    <div className="w-full max-w-[540px] rounded-[28px] border border-blue-200/22 bg-[#07152d]/78 p-9 shadow-[0_34px_120px_rgba(0,28,80,0.56)] backdrop-blur-2xl md:p-11 lg:w-[clamp(540px,38vw,860px)] lg:max-w-none xl:mr-4">
       <div className="mb-9">
         <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-300/22 bg-blue-400/12 px-4 py-1.5 text-sm text-blue-100">
           <ShieldCheck className="h-4 w-4" />
