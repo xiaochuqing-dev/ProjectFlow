@@ -14,8 +14,34 @@ type ApiErrorResponse = {
   };
 };
 
-async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+const NETWORK_ERROR_MESSAGE = "暂时连接不到本地服务。请确认启动脚本窗口还在运行，或等待几秒后再试。";
+const RESPONSE_ERROR_MESSAGE = "服务返回内容暂时无法识别，请刷新页面后重试。";
+
+function isNetworkError(error: unknown) {
+  return error instanceof TypeError && error.message.toLowerCase().includes("fetch");
+}
+
+async function readApiPayload<T>(response: Response): Promise<ApiResponse<T> & ApiErrorResponse> {
+  try {
+    return (await response.json()) as ApiResponse<T> & ApiErrorResponse;
+  } catch {
+    throw new Error(RESPONSE_ERROR_MESSAGE);
+  }
+}
+
+async function fetchWithFriendlyError(url: string, options: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, options);
+  } catch (error) {
+    if (isNetworkError(error)) {
+      throw new Error(NETWORK_ERROR_MESSAGE);
+    }
+    throw error instanceof Error ? error : new Error("请求失败，请稍后重试");
+  }
+}
+
+async function postJson<T>(path: string, body: unknown, retryNetwork = false): Promise<T> {
+  const request = () => fetchWithFriendlyError(`${API_BASE_URL}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -23,7 +49,18 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
 
-  const payload = (await response.json()) as ApiResponse<T> & ApiErrorResponse;
+  let response: Response;
+  try {
+    response = await request();
+  } catch (error) {
+    if (!retryNetwork || !(error instanceof Error) || error.message !== NETWORK_ERROR_MESSAGE) {
+      throw error;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 350));
+    response = await request();
+  }
+
+  const payload = await readApiPayload<T>(response);
   if (!response.ok) {
     throw new Error(payload.error?.message ?? "请求失败，请稍后重试");
   }
@@ -31,8 +68,8 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 }
 
 async function requestJson<T>(path: string, options: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, options);
-  const payload = (await response.json()) as ApiResponse<T> & ApiErrorResponse;
+  const response = await fetchWithFriendlyError(`${API_BASE_URL}${path}`, options);
+  const payload = await readApiPayload<T>(response);
   if (!response.ok) {
     throw new Error(payload.error?.message ?? "请求失败，请稍后重试");
   }
@@ -40,7 +77,7 @@ async function requestJson<T>(path: string, options: RequestInit): Promise<T> {
 }
 
 export function login(email: string, password: string): Promise<AuthResult> {
-  return postJson<AuthResult>("/auth/login", { email, password });
+  return postJson<AuthResult>("/auth/login", { email, password }, true);
 }
 
 export function register(username: string, email: string, password: string): Promise<AuthResult> {

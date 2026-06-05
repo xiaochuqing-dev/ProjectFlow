@@ -29,7 +29,8 @@ export default function ProjectsPage() {
       return;
     }
 
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     setCreating(true);
     setError("");
     try {
@@ -46,7 +47,7 @@ export default function ProjectsPage() {
         endDate: null,
       });
       setProjects((current) => [project, ...current]);
-      event.currentTarget.reset();
+      form.reset();
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "项目创建失败");
     } finally {
