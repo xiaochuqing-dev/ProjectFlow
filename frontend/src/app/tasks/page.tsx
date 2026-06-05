@@ -167,8 +167,8 @@ export default function TasksPage() {
 
   return (
     <AppShell eyebrow="任务工作台" title="任务看板">
-      <div className="grid min-h-[calc(100vh-4rem)] gap-6 p-8 xl:grid-cols-[360px_1fr]">
-        <section className="space-y-4">
+      <div className="grid min-h-[calc(100vh-4rem)] gap-6 p-6 lg:p-8 2xl:grid-cols-[360px_minmax(0,1fr)]">
+        <section className="space-y-4 2xl:sticky 2xl:top-24 2xl:self-start">
           <div className="rounded-lg border border-line bg-white p-5 shadow-panel">
             <div className="mb-4 flex items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-white">
@@ -258,7 +258,7 @@ export default function TasksPage() {
           </div>
         </section>
 
-        <section className="min-w-0 rounded-lg border border-line bg-white p-5 shadow-panel">
+        <section className="min-w-0 overflow-hidden rounded-lg border border-line bg-white p-5 shadow-panel">
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
               <h2 className="font-semibold">执行流转</h2>
@@ -276,9 +276,9 @@ export default function TasksPage() {
               暂无项目。请先进入项目管理创建项目。
             </div>
           ) : (
-            <div className="grid gap-4 overflow-x-auto pb-2 xl:grid-cols-5">
+            <div className="grid grid-flow-col auto-cols-[minmax(220px,260px)] gap-4 overflow-x-auto pb-4 pr-2 [scrollbar-gutter:stable] 2xl:auto-cols-[minmax(230px,1fr)]">
               {columns.map((status) => (
-                <div className="min-w-64 rounded-lg border border-line bg-slate-50/70 p-3" key={status}>
+                <div className="min-h-[230px] rounded-lg border border-line bg-slate-50/70 p-3" key={status}>
                   <div className="mb-3 flex items-center justify-between">
                     <h3 className="text-sm font-semibold">{statusLabels[status]}</h3>
                     <span className="rounded-full bg-white px-2 py-1 text-xs text-muted">{groupedTasks[status].length}</span>
@@ -290,9 +290,9 @@ export default function TasksPage() {
                       const forwardStatus = nextStatus[task.status];
 
                       return (
-                        <article className="rounded-lg border border-line bg-white p-4 shadow-sm" key={task.id}>
+                        <article className="overflow-hidden rounded-lg border border-line bg-white p-4 shadow-sm" key={task.id}>
                           <div className="mb-3 flex items-start justify-between gap-3">
-                            <h4 className="text-sm font-semibold leading-5">{task.title}</h4>
+                            <h4 className="min-w-0 break-words text-sm font-semibold leading-5">{task.title}</h4>
                             <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${priorityStyles[task.priority]}`}>
                               {priorityLabels[task.priority]}
                             </span>
