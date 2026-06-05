@@ -27,16 +27,17 @@ ProjectFlow is not a public SaaS product in V1. It is designed as a multi-user s
 | Local Runtime | Docker Compose |
 | Documentation | README, architecture notes, API design, data model, roadmap |
 
-## V1 Features
+## Current V1 Features
 
 - JWT authentication with user-level data isolation.
 - Project spaces with status, tech stack tags, repository links, and project metadata.
 - Kanban tasks with Backlog, Todo, In Progress, Review, and Done states.
-- Structured dev logs with completed work, bugs fixed, decisions, problems, next steps, and reflection.
-- Markdown paste import with front matter parsing and preview before saving.
-- AI reflection outputs for weekly reports, project summaries, resume bullets, and README sections.
+- Structured dev logs with category, date, time spent, risk flag, tags, and task association.
+- Markdown paste import with front matter parsing, section recognition, preview before saving, and import records.
+- Mock AI reflection outputs for weekly reports, project summaries, resume bullets, and README sections.
 - Markdown copy and `.md` download export.
-- Demo data based on InsightWrite 2.0.
+
+The V1 flow is intentionally local-first: users create real project records, move tasks through the board, write or import logs, then generate portfolio-ready Markdown from those records.
 
 ## Deferred Features
 
@@ -106,8 +107,10 @@ Current Windows environment notes:
 | 5 | Dev logs | Structured log editor, timeline, detail view |
 | 6 | Markdown import | Parser, preview, import records |
 | 7 | AI reflection and export | Weekly report, summary, resume bullets, Markdown export |
-| 8 | Redis and async workflow | AI task states, project stats cache, rate limits |
-| 9 | Portfolio packaging | Screenshots, demo data, final README, architecture diagram |
+| 8 | Engineering hardening | Startup script, health checks, stable navigation, clear empty states |
+| 9 | Portfolio packaging | README, acceptance checklist, architecture notes |
+
+See [docs/v1-acceptance-checklist.md](docs/v1-acceptance-checklist.md) for the current completion checklist.
 
 ## Suggested GitHub Topics
 

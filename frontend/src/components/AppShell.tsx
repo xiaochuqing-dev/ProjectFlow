@@ -18,8 +18,8 @@ const navItems = [
   { label: "项目", href: "/projects", icon: FolderKanban },
   { label: "任务", href: "/tasks", icon: SquareKanban },
   { label: "开发日志", href: "/dev-logs", icon: BookOpenText },
-  { label: "导入", href: "#", icon: Import },
-  { label: "AI 复盘", href: "#", icon: Sparkles },
+  { label: "导入", href: "/imports", icon: Import },
+  { label: "AI 复盘", href: "/ai-review", icon: Sparkles },
 ];
 
 export function AppShell({ title, eyebrow, actions, children }: AppShellProps) {

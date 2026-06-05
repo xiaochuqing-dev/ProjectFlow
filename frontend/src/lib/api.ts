@@ -201,3 +201,95 @@ export function createDevLog(token: string, projectId: string, payload: DevLogPa
     body: JSON.stringify(payload),
   });
 }
+
+export type MarkdownPreview = {
+  frontMatter: Record<string, string>;
+  title: string;
+  content: string;
+  category: DevLogCategory;
+  logDate: string;
+  minutesSpent: number;
+  blocked: boolean;
+  tags: string[];
+  warnings: string[];
+};
+
+export type ImportRecord = {
+  id: string;
+  projectId: string;
+  devLogId: string;
+  title: string;
+  source: string;
+  warnings: string[];
+  createdAt: string;
+};
+
+export function previewMarkdownImport(token: string, projectId: string, markdown: string): Promise<MarkdownPreview> {
+  return requestJson<MarkdownPreview>("/imports/preview", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ projectId, markdown }),
+  });
+}
+
+export function confirmMarkdownImport(token: string, projectId: string, taskId: string | null, markdown: string): Promise<DevLog> {
+  return requestJson<DevLog>("/imports/confirm", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ projectId, taskId, markdown }),
+  });
+}
+
+export function listImportRecords(token: string, projectId: string): Promise<ImportRecord[]> {
+  return requestJson<ImportRecord[]>(`/projects/${projectId}/imports`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export type AiOutputType = "WEEKLY_REPORT" | "PROJECT_SUMMARY" | "RESUME_BULLET" | "README_SECTION";
+
+export type AiOutput = {
+  id: string;
+  projectId: string;
+  type: AiOutputType;
+  title: string;
+  content: string;
+  fromDate: string | null;
+  toDate: string | null;
+  provider: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export function listAiOutputs(token: string, projectId: string): Promise<AiOutput[]> {
+  return requestJson<AiOutput[]>(`/projects/${projectId}/ai-outputs`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function generateAiOutput(
+  token: string,
+  projectId: string,
+  type: AiOutputType,
+  fromDate: string | null,
+  toDate: string | null,
+): Promise<AiOutput> {
+  return requestJson<AiOutput>(`/projects/${projectId}/ai-outputs`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ type, fromDate, toDate }),
+  });
+}

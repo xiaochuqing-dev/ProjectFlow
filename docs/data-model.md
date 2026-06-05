@@ -62,16 +62,14 @@ erDiagram
 | --- | --- | --- |
 | id | UUID | Primary key |
 | project_id | UUID | FK to projects |
+| task_id | UUID | Optional FK to tasks |
+| title | varchar(180) | Required |
+| content | text | Required Markdown-compatible log body |
+| category | varchar(40) | FEATURE, BUGFIX, REFACTOR, RESEARCH, REVIEW, DEPLOYMENT |
 | log_date | date | Required |
-| title | varchar(200) | Required |
-| completed | jsonb | Array of strings |
-| bugs_fixed | jsonb | Array of strings |
-| decisions | jsonb | Array of strings |
-| problems | jsonb | Array of strings |
-| next_steps | jsonb | Array of strings |
-| reflection | text | Optional |
-| raw_markdown | text | Optional |
-| source | varchar(80) | manual, codex, claude, gpt, imported |
+| minutes_spent | integer | Required |
+| blocked | boolean | Required risk/blocked marker |
+| tags | jsonb | Array of strings |
 | created_at | timestamptz | Required |
 | updated_at | timestamptz | Required |
 
@@ -81,12 +79,11 @@ erDiagram
 | --- | --- | --- |
 | id | UUID | Primary key |
 | project_id | UUID | FK to projects |
-| dev_log_id | UUID | FK to dev_logs, nullable until confirm |
-| source_type | varchar(40) | PASTE, FILE |
-| filename | varchar(255) | Optional |
-| status | varchar(40) | PREVIEWED, IMPORTED, FAILED |
-| error_message | text | Safe parse error |
-| raw_markdown_hash | varchar(128) | Used for duplicate detection |
+| dev_log_id | UUID | FK to created dev log |
+| title | varchar(180) | Parsed title |
+| source | varchar(80) | codex, claude, gpt, markdown, imported |
+| raw_markdown | text | Original pasted Markdown |
+| warnings | jsonb | Parser warnings |
 | created_at | timestamptz | Required |
 
 ## ai_outputs
@@ -95,13 +92,10 @@ erDiagram
 | --- | --- | --- |
 | id | UUID | Primary key |
 | project_id | UUID | FK to projects |
-| dev_log_id | UUID | Optional FK to dev_logs |
 | type | varchar(40) | WEEKLY_REPORT, PROJECT_SUMMARY, RESUME_BULLET, README_SECTION |
-| status | varchar(40) | PENDING, RUNNING, SUCCEEDED, FAILED |
+| title | varchar(180) | Generated output title |
 | content | text | Generated Markdown |
-| model | varchar(120) | AI model or mock model name |
-| prompt_version | varchar(40) | Internal prompt version |
-| error_message | text | Safe error, no secrets |
+| provider | varchar(60) | mock-provider first, real provider later |
 | from_date | date | Optional source range |
 | to_date | date | Optional source range |
 | created_at | timestamptz | Required |
@@ -121,4 +115,3 @@ erDiagram
 ## Ownership Rule
 
 All resource access is scoped through `projects.user_id`. A user can access a task, dev log, import record, or AI output only if the parent project belongs to that user.
-

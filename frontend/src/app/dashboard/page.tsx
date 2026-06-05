@@ -64,7 +64,7 @@ const actionCards = [
   {
     title: "整理 AI 复盘",
     description: "汇总项目、任务和日志内容，后续生成阶段总结与展示材料。",
-    href: "#ai-review",
+    href: "/ai-review",
     cta: "查看准备项",
     icon: Sparkles,
     tone: "bg-slate-900 text-white",
