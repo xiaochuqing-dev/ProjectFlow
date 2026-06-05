@@ -232,8 +232,11 @@ try {
     $frontendLog = Join-Path $logDir "frontend.log"
     Remove-Item -Force -ErrorAction SilentlyContinue $backendLog, $frontendLog
 
-    $backendCommand = "`$env:SPRING_PROFILES_ACTIVE='local'; & " + (Quote-ForPowerShell $mavenPath) + " spring-boot:run"
-    $frontendCommand = "`$env:NEXT_PUBLIC_API_BASE_URL='http://localhost:8080/api'; & " + (Quote-ForPowerShell $npmPath) + " run start -- --hostname 127.0.0.1 --port 3000"
+    $frontendUrl = "http://127.0.0.1:3000/login"
+    $backendHealthUrl = "http://127.0.0.1:8080/api/health"
+
+    $backendCommand = "`$env:SPRING_PROFILES_ACTIVE='local'; `$env:FRONTEND_ORIGIN='http://127.0.0.1:3000'; & " + (Quote-ForPowerShell $mavenPath) + " spring-boot:run"
+    $frontendCommand = "`$env:NEXT_PUBLIC_API_BASE_URL='http://127.0.0.1:8080/api'; & " + (Quote-ForPowerShell $npmPath) + " run start -- --hostname 127.0.0.1 --port 3000"
 
     Write-Host "Starting backend in this console..."
     $backendJob = Start-ProjectJob -Name "backend" -WorkingDirectory $backendDir -Command $backendCommand -LogPath $backendLog
@@ -244,8 +247,8 @@ try {
     $jobs += $frontendJob
 
     Write-Host "Waiting for backend and frontend..."
-    $backendReady = Wait-ForHttp -Url "http://localhost:8080/api/health" -TimeoutSeconds 90
-    $frontendReady = Wait-ForHttp -Url "http://localhost:3000/login" -TimeoutSeconds 60
+    $backendReady = Wait-ForHttp -Url $backendHealthUrl -TimeoutSeconds 90
+    $frontendReady = Wait-ForHttp -Url $frontendUrl -TimeoutSeconds 60
     Show-JobOutput -Jobs $jobs
 
     if (-not $backendReady) {
@@ -256,13 +259,13 @@ try {
     }
 
     if (-not $NoBrowser) {
-        Start-Process "http://localhost:3000/login"
+        Start-Process $frontendUrl
     }
 
     Write-Host ""
     Write-Host "ProjectFlow is running."
-    Write-Host "Frontend: http://localhost:3000/login"
-    Write-Host "Backend:  http://localhost:8080/api/health"
+    Write-Host "Frontend: $frontendUrl"
+    Write-Host "Backend:  $backendHealthUrl"
     Write-Host "Logs:     $logDir"
     Write-Host ""
     Write-Host "Press Enter in this window to stop ProjectFlow."

@@ -77,7 +77,7 @@ projectflow/
 
 ## Local Development
 
-For Windows local startup, double-click `start-projectflow.bat` from the repository root. It runs in one console window, starts PostgreSQL and Redis with Docker Compose, builds the frontend, starts the backend and frontend, then opens the browser at `http://localhost:3000/login`. Press Enter in that console window to stop ProjectFlow.
+For Windows local startup, double-click `start-projectflow.bat` from the repository root. It runs in one console window, starts PostgreSQL and Redis with Docker Compose, builds the frontend, starts the backend and frontend, then opens the browser at `http://127.0.0.1:3000/login`. Press Enter in that console window to stop ProjectFlow.
 
 Manual verification commands:
 
