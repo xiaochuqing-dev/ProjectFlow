@@ -40,8 +40,8 @@ export function AuthPanel({ mode }: AuthPanelProps) {
   }
 
   return (
-    <div className="w-full max-w-[540px] rounded-[28px] border border-blue-200/22 bg-[#07152d]/78 p-9 shadow-[0_34px_120px_rgba(0,28,80,0.56)] backdrop-blur-2xl md:p-11 lg:w-[clamp(540px,38vw,860px)] lg:max-w-none xl:mr-4">
-      <div className="mb-9">
+    <div className="flex w-full max-w-[540px] flex-col rounded-[28px] border border-blue-200/22 bg-[#07152d]/78 p-9 shadow-[0_34px_120px_rgba(0,28,80,0.56)] backdrop-blur-2xl md:p-11 xl:mr-4 2xl:min-h-[680px] 2xl:w-[clamp(500px,32vw,680px)] 2xl:max-w-none">
+      <div className="mb-10">
         <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-300/22 bg-blue-400/12 px-4 py-1.5 text-sm text-blue-100">
           <ShieldCheck className="h-4 w-4" />
           专业项目流程管理
@@ -54,7 +54,7 @@ export function AuthPanel({ mode }: AuthPanelProps) {
         </p>
       </div>
 
-      <form className="space-y-6" onSubmit={handleSubmit}>
+      <form className="space-y-7" onSubmit={handleSubmit}>
         {isRegister ? (
           <label className="block">
             <span className="mb-2.5 block text-sm text-blue-50/86">用户名</span>
@@ -119,7 +119,7 @@ export function AuthPanel({ mode }: AuthPanelProps) {
         </button>
       </form>
 
-      <div className="mt-7 flex items-center justify-between border-t border-blue-200/12 pt-7 text-sm text-blue-100/70">
+      <div className="mt-8 flex items-center justify-between border-t border-blue-200/12 pt-7 text-sm text-blue-100/70 2xl:mt-auto">
         <span>{isRegister ? "已有账号？" : "还没有账号？"}</span>
         <Link className="font-medium text-cyan-100 hover:text-white" href={isRegister ? "/login" : "/register"}>
           {isRegister ? "去登录" : "创建账号"}
