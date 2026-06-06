@@ -1,0 +1,12 @@
+package com.projectflow.entity;
+
+public enum AiSuggestionType {
+    UPDATE_PROJECT_MEMORY,
+    CREATE_TASK,
+    CREATE_DEV_LOG,
+    RECORD_TECHNICAL_DECISION,
+    RECORD_RISK,
+    RECORD_DEVELOPER_LEARNING,
+    UPDATE_CURRENT_STAGE,
+    GENERATE_ASSET_SUMMARY
+}

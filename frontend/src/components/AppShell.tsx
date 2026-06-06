@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BookOpenText, FolderKanban, Import, LayoutDashboard, LogOut, Sparkles, SquareKanban } from "lucide-react";
+import { BookOpenText, LayoutDashboard, LogOut, Settings, Sparkles, SquareKanban } from "lucide-react";
 import { clearSession, readSession, type AuthUser } from "@/lib/auth";
 
 type AppShellProps = {
@@ -14,12 +14,11 @@ type AppShellProps = {
 };
 
 const navItems = [
-  { label: "总览", href: "/dashboard", icon: LayoutDashboard },
-  { label: "项目", href: "/projects", icon: FolderKanban },
+  { label: "项目管理", href: "/dashboard", icon: LayoutDashboard },
   { label: "任务", href: "/tasks", icon: SquareKanban },
   { label: "开发日志", href: "/dev-logs", icon: BookOpenText },
-  { label: "导入", href: "/imports", icon: Import },
-  { label: "AI 复盘", href: "/ai-review", icon: Sparkles },
+  { label: "成果输出", href: "/ai-review", icon: Sparkles },
+  { label: "个人设置", href: "/settings", icon: Settings },
 ];
 
 export function AppShell({ title, eyebrow, actions, children }: AppShellProps) {

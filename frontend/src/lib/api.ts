@@ -330,3 +330,395 @@ export function generateAiOutput(
     body: JSON.stringify({ type, fromDate, toDate }),
   });
 }
+
+export type AiProviderType = "MOCK" | "DEEPSEEK" | "OPENAI_COMPATIBLE" | "CUSTOM";
+
+export type AiProvider = {
+  id: string | null;
+  name: string;
+  baseUrl: string;
+  modelName: string;
+  type: AiProviderType;
+  temperature: number;
+  maxTokens: number;
+  defaultEnabled: boolean;
+  purposeTags: string[];
+  apiKeyConfigured: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AiProviderPayload = {
+  name: string;
+  baseUrl: string;
+  apiKey: string;
+  modelName: string;
+  type: AiProviderType;
+  temperature: number;
+  maxTokens: number;
+  defaultEnabled: boolean;
+  purposeTags: string[];
+};
+
+export type ProviderTestResult = {
+  ok: boolean;
+  provider: string;
+  message: string;
+};
+
+export function listAiProviders(token: string): Promise<AiProvider[]> {
+  return requestJson<AiProvider[]>("/ai-providers", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function createAiProvider(token: string, payload: AiProviderPayload): Promise<AiProvider> {
+  return requestJson<AiProvider>("/ai-providers", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function testAiProvider(token: string, providerId: string): Promise<ProviderTestResult> {
+  return requestJson<ProviderTestResult>(`/ai-providers/${providerId}/test`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export type MaterialSourceType =
+  | "NATURAL_NOTE"
+  | "AGENT_SUMMARY"
+  | "AGENT_CONVERSATION"
+  | "CODEX_OUTPUT"
+  | "CLAUDE_CODE_OUTPUT"
+  | "CURSOR_OUTPUT"
+  | "COMMIT_LOG"
+  | "README_MARKDOWN"
+  | "TEXT_FILE"
+  | "DOCX_FILE"
+  | "JSON_LOG"
+  | "PROJECT_ZIP"
+  | "OTHER";
+
+export type AiSuggestionType =
+  | "UPDATE_PROJECT_MEMORY"
+  | "CREATE_TASK"
+  | "CREATE_DEV_LOG"
+  | "RECORD_TECHNICAL_DECISION"
+  | "RECORD_RISK"
+  | "RECORD_DEVELOPER_LEARNING"
+  | "UPDATE_CURRENT_STAGE"
+  | "GENERATE_ASSET_SUMMARY";
+
+export type AiSuggestionStatus = "PENDING" | "APPLIED" | "IGNORED";
+
+export type ProjectMaterial = {
+  id: string;
+  projectId: string;
+  sourceType: MaterialSourceType;
+  fileName: string | null;
+  content: string;
+  normalizedSummary: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProjectProfile = {
+  inferredProjectName: string;
+  summary: string;
+  techStack: string[];
+  moduleStructure: string[];
+  currentStage: string;
+  hasReadme: boolean;
+  hasTests: boolean;
+  hasStartScript: boolean;
+  hasDeployConfig: boolean;
+  looksEmptyShell: boolean;
+  mostImportantGap: string;
+};
+
+export type AiSuggestion = {
+  id: string;
+  projectId: string;
+  materialId: string | null;
+  type: AiSuggestionType;
+  status: AiSuggestionStatus;
+  title: string;
+  reason: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+};
+
+export type AnalyzeMaterialResult = {
+  materialId: string;
+  summary: string;
+  suggestions: AiSuggestion[];
+};
+
+export type ProjectImportAnalyzeResult = {
+  project: Project;
+  material: ProjectMaterial;
+  projectProfile: ProjectProfile;
+  suggestions: AiSuggestion[];
+  modelEnhancementAvailable: boolean;
+  providerConfigured: boolean;
+};
+
+export type ProjectMemory = {
+  id: string;
+  projectId: string;
+  positioning: string;
+  currentStage: string;
+  completedCapabilities: string;
+  inProgressCapabilities: string;
+  currentRisks: string;
+  technicalDecisions: string;
+  developerLearnings: string;
+  showcaseAssets: string;
+  nextStepSuggestions: string;
+  localProjectPath: string | null;
+  version: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type ProjectSnapshot = {
+  id: string;
+  projectId: string;
+  currentStage: string;
+  taskStatusSummary: string;
+  techStackSummary: string;
+  moduleCompletion: string;
+  riskSummary: string;
+  recentAchievements: string;
+  nextStepSuggestions: string;
+  memoryVersion: number;
+  createdAt: string;
+};
+
+export type ProjectEvolutionRecord = {
+  id: string;
+  projectId: string;
+  materialId: string | null;
+  summary: string;
+  detectedChanges: string;
+  keyAchievements: string;
+  keyIssues: string;
+  technicalDecisions: string;
+  developerLearnings: string;
+  nextSteps: string;
+  createdAt: string;
+};
+
+export type ApplySuggestionsResult = {
+  appliedCount: number;
+  memory: ProjectMemory;
+  snapshot: ProjectSnapshot;
+  evolutionRecord: ProjectEvolutionRecord;
+};
+
+export type AgentBridgeWriteResult = {
+  projectFlowDir: string;
+  writtenFiles: string[];
+  globalRule: string;
+  alreadyLinked: boolean;
+};
+
+export type AgentResultScanResult = {
+  importedResults: number;
+  materials: ProjectMaterial[];
+  suggestions: AiSuggestion[];
+  warnings: string[];
+};
+
+export type AgentTaskBriefResult = {
+  taskId: string;
+  taskDir: string;
+  briefPath: string;
+  resultPath: string;
+  statusPath: string;
+  writtenFiles: string[];
+};
+
+export function listProjectMaterials(token: string, projectId: string): Promise<ProjectMaterial[]> {
+  return requestJson<ProjectMaterial[]>(`/projects/${projectId}/materials`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function createTextMaterial(
+  token: string,
+  projectId: string,
+  sourceType: MaterialSourceType,
+  content: string,
+): Promise<ProjectMaterial> {
+  return requestJson<ProjectMaterial>(`/projects/${projectId}/materials/text`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ sourceType, content }),
+  });
+}
+
+async function postFormData<T>(token: string, path: string, formData: FormData): Promise<T> {
+  const response = await fetchWithFriendlyError(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+  const payload = await readApiPayload<T>(response);
+  if (!response.ok) {
+    throw new Error(payload.error?.message ?? "请求失败，请稍后重试");
+  }
+  return payload.data;
+}
+
+export function uploadProjectMaterialFile(
+  token: string,
+  projectId: string,
+  file: File,
+  sourceType: MaterialSourceType,
+): Promise<ProjectMaterial> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return postFormData<ProjectMaterial>(token, `/projects/${projectId}/materials/file?sourceType=${sourceType}`, formData);
+}
+
+export function uploadProjectZip(token: string, projectId: string, file: File): Promise<ProjectMaterial> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return postFormData<ProjectMaterial>(token, `/projects/${projectId}/materials/zip`, formData);
+}
+
+export function importProjectZip(token: string, file: File, projectId?: string): Promise<ProjectImportAnalyzeResult> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const query = projectId ? `?projectId=${projectId}` : "";
+  return postFormData<ProjectImportAnalyzeResult>(token, `/project-imports/zip${query}`, formData);
+}
+
+export function analyzeProjectMaterial(token: string, materialId: string): Promise<AnalyzeMaterialResult> {
+  return requestJson<AnalyzeMaterialResult>(`/project-materials/${materialId}/analyze`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function listAiSuggestions(token: string, projectId: string): Promise<AiSuggestion[]> {
+  return requestJson<AiSuggestion[]>(`/projects/${projectId}/suggestions`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function applyAiSuggestions(token: string, projectId: string, suggestionIds: string[]): Promise<ApplySuggestionsResult> {
+  return requestJson<ApplySuggestionsResult>(`/projects/${projectId}/suggestions/apply`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ suggestionIds }),
+  });
+}
+
+export function ignoreAiSuggestion(token: string, suggestionId: string): Promise<AiSuggestion> {
+  return requestJson<AiSuggestion>(`/ai-suggestions/${suggestionId}/ignore`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function getProjectMemory(token: string, projectId: string): Promise<ProjectMemory> {
+  return requestJson<ProjectMemory>(`/projects/${projectId}/memory`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function listProjectSnapshots(token: string, projectId: string): Promise<ProjectSnapshot[]> {
+  return requestJson<ProjectSnapshot[]>(`/projects/${projectId}/snapshots`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function listProjectEvolutionRecords(token: string, projectId: string): Promise<ProjectEvolutionRecord[]> {
+  return requestJson<ProjectEvolutionRecord[]>(`/projects/${projectId}/evolution-records`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function writeProjectFlowProtocol(
+  token: string,
+  projectId: string,
+  projectPath: string,
+  requirements: string,
+): Promise<AgentBridgeWriteResult> {
+  return requestJson<AgentBridgeWriteResult>(`/projects/${projectId}/agent-bridge/protocol`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ projectPath, requirements }),
+  });
+}
+
+export function scanProjectFlowAgentResults(
+  token: string,
+  projectId: string,
+  projectPath: string,
+): Promise<AgentResultScanResult> {
+  return requestJson<AgentResultScanResult>(`/projects/${projectId}/agent-bridge/scan`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ projectPath, requirements: "" }),
+  });
+}
+
+export function writeAgentTaskBrief(
+  token: string,
+  projectId: string,
+  taskId: string,
+  projectPath: string,
+  requirements: string,
+): Promise<AgentTaskBriefResult> {
+  return requestJson<AgentTaskBriefResult>(`/projects/${projectId}/agent-bridge/tasks/${taskId}/brief`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ projectPath, requirements }),
+  });
+}
