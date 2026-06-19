@@ -306,6 +306,24 @@ export type AiOutput = {
   updatedAt: string;
 };
 
+export type ModelUsageRecord = {
+  id: string;
+  projectId: string;
+  operation: string;
+  providerName: string;
+  modelName: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  usageEstimated: boolean;
+  latencyMs: number;
+  status: string;
+  errorType: string | null;
+  errorMessage: string | null;
+  qualityWarnings: string | null;
+  createdAt: string;
+};
+
 export function listAiOutputs(token: string, projectId: string): Promise<AiOutput[]> {
   return requestJson<AiOutput[]>(`/projects/${projectId}/ai-outputs`, {
     headers: {
@@ -328,6 +346,14 @@ export function generateAiOutput(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ type, fromDate, toDate }),
+  });
+}
+
+export function listProjectModelUsageRecords(token: string, projectId: string): Promise<ModelUsageRecord[]> {
+  return requestJson<ModelUsageRecord[]>(`/projects/${projectId}/model-usage-records`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });
 }
 
@@ -550,6 +576,7 @@ export type ProjectChangeImpactLevel = "MAJOR" | "MINOR" | "MAINTENANCE" | "UNCE
 
 export type ProjectChangeSourceType =
   | "AGENT_RESULT"
+  | "EVIDENCE_BUNDLE"
   | "PROJECT_ZIP"
   | "MATERIAL_UPDATE"
   | "USER_MANUAL"
@@ -712,6 +739,91 @@ export type AgentTaskBriefResult = {
   resultPath: string;
   statusPath: string;
   writtenFiles: string[];
+};
+
+export type WorkSessionCandidate = {
+  sessionId: string;
+  projectId: string;
+  agentType: string;
+  agentName: string;
+  taskIntent: string;
+  branchName: string;
+  baseCommit: string;
+  startTime: string;
+  endTime: string;
+  attributionConfidence: string;
+  detectionMethod: string;
+  changedFiles: number;
+  addedLines: number;
+  deletedLines: number;
+  affectedModules: string[];
+  evidence: string[];
+  files: string[];
+};
+
+export type WorkSessionScanResult = {
+  projectId: string;
+  projectPath: string;
+  branchName: string;
+  scannedAt: string;
+  sessions: WorkSessionCandidate[];
+  warnings: string[];
+};
+
+export type EvidenceSource = {
+  sourceType: string;
+  sourceRef: string;
+  summary: string;
+};
+
+export type EvidenceBundle = {
+  id: string;
+  projectId: string;
+  workSessionId: string;
+  agentType: string;
+  taskIntent: string;
+  branchName: string;
+  attributionConfidence: string;
+  changedFiles: number;
+  addedLines: number;
+  deletedLines: number;
+  files: string[];
+  objectiveEvidence: string[];
+  agentClaims: string[];
+  sources: EvidenceSource[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AgentSignatureFeedback = {
+  id: string;
+  projectId: string;
+  agentName: string;
+  originalAgentType: string;
+  correctedAgentType: string;
+  correctedTaskIntent: string;
+  scope: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ChangeConflict = {
+  id: string;
+  projectId: string;
+  conflictType: string;
+  filePath: string;
+  moduleName: string;
+  severity: string;
+  status: string;
+  summary: string;
+  evidenceBundleIds: string[];
+};
+
+export type ContextSyncResult = {
+  projectId: string;
+  contextPath: string;
+  writtenFiles: string[];
+  syncedAt: string;
 };
 
 export function listProjectMaterials(token: string, projectId: string): Promise<ProjectMaterial[]> {
@@ -1000,6 +1112,90 @@ export function scanProjectFlowAgentResults(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ projectPath, requirements: "" }),
+  });
+}
+
+export function scanProjectWorkSessions(token: string, projectId: string): Promise<WorkSessionScanResult> {
+  return requestJson<WorkSessionScanResult>(`/projects/${projectId}/scan`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function listProjectWorkSessions(token: string, projectId: string): Promise<WorkSessionCandidate[]> {
+  return requestJson<WorkSessionCandidate[]>(`/projects/${projectId}/work-sessions`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function updateWorkSession(
+  token: string,
+  sessionId: string,
+  agentType: string,
+  taskIntent: string,
+): Promise<WorkSessionCandidate> {
+  return requestJson<WorkSessionCandidate>(`/work-sessions/${sessionId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ agentType, taskIntent }),
+  });
+}
+
+export function createEvidenceBundle(token: string, sessionId: string): Promise<EvidenceBundle> {
+  return requestJson<EvidenceBundle>(`/work-sessions/${sessionId}/evidence-bundles`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function listProjectEvidenceBundles(token: string, projectId: string): Promise<EvidenceBundle[]> {
+  return requestJson<EvidenceBundle[]>(`/projects/${projectId}/evidence-bundles`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function listProjectAgentSignatureFeedback(token: string, projectId: string): Promise<AgentSignatureFeedback[]> {
+  return requestJson<AgentSignatureFeedback[]>(`/projects/${projectId}/agent-signature-feedback`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function listProjectChangeConflicts(token: string, projectId: string): Promise<ChangeConflict[]> {
+  return requestJson<ChangeConflict[]>(`/projects/${projectId}/change-conflicts`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function draftProjectChangeFromEvidenceBundle(token: string, bundleId: string): Promise<ProjectChange> {
+  return requestJson<ProjectChange>(`/evidence-bundles/${bundleId}/draft-changes`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function syncProjectContext(token: string, projectId: string): Promise<ContextSyncResult> {
+  return requestJson<ContextSyncResult>(`/projects/${projectId}/context/sync`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });
 }
 

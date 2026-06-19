@@ -1,0 +1,25 @@
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  datasource:
+    url: jdbc:h2:file:${PROJECTFLOW_DATA_DIR:./.projectflow/local-data}/projectflow;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  cache:
+    type: simple
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+projectflow:
+  storage:
+    mode: embedded
+    data-dir: ${PROJECTFLOW_DATA_DIR:./.projectflow/local-data}

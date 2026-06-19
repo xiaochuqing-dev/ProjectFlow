@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.projectflow.dto.AiOutputDtos.AiOutputRequest;
 import com.projectflow.dto.AiOutputDtos.AiOutputResponse;
+import com.projectflow.dto.AiOutputDtos.ModelUsageRecordResponse;
 import com.projectflow.dto.ApiResponse;
 import com.projectflow.dto.AuthDtos.AuthUser;
 import com.projectflow.service.AiOutputService;
@@ -48,6 +49,15 @@ public class AiOutputController {
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
         return ApiResponse.ok(aiOutputService.list(user.id(), projectId));
+    }
+
+    @GetMapping("/projects/{projectId}/model-usage-records")
+    ApiResponse<List<ModelUsageRecordResponse>> listModelUsageRecords(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(aiOutputService.listModelUsageRecords(user.id(), projectId));
     }
 
     @GetMapping("/ai-outputs/{outputId}")

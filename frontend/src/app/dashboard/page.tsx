@@ -19,24 +19,38 @@ import {
 import { AppShell } from "@/components/AppShell";
 import {
   applyAiSuggestions,
+  createEvidenceBundle,
+  draftProjectChangeFromEvidenceBundle,
   getProjectMemory,
   ignoreAiSuggestion,
   importProjectZip,
   listAiProviders,
   listAiSuggestions,
+  listProjectAgentSignatureFeedback,
+  listProjectChangeConflicts,
+  listProjectEvidenceBundles,
   listProjectEvolutionRecords,
   listProjectMaterials,
+  listProjectWorkSessions,
   listProjects,
   listTasks,
+  scanProjectWorkSessions,
   scanProjectFlowAgentResults,
+  syncProjectContext,
+  updateWorkSession,
   writeProjectFlowProtocol,
+  type AgentSignatureFeedback,
   type AiProvider,
   type AiSuggestion,
+  type ChangeConflict,
+  type EvidenceBundle,
   type Project,
   type ProjectEvolutionRecord,
   type ProjectMaterial,
   type ProjectMemory,
   type TaskItem,
+  type WorkSessionCandidate,
+  type WorkSessionScanResult,
 } from "@/lib/api";
 import { buildModuleGroups, projectZipPaths } from "@/lib/project-insights";
 import { readSession } from "@/lib/auth";
@@ -48,6 +62,9 @@ export default function DashboardPage() {
   const [materials, setMaterials] = useState<ProjectMaterial[]>([]);
   const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);
   const [evolutionRecords, setEvolutionRecords] = useState<ProjectEvolutionRecord[]>([]);
+  const [evidenceBundles, setEvidenceBundles] = useState<EvidenceBundle[]>([]);
+  const [agentFeedback, setAgentFeedback] = useState<AgentSignatureFeedback[]>([]);
+  const [changeConflicts, setChangeConflicts] = useState<ChangeConflict[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [memory, setMemory] = useState<ProjectMemory | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -55,11 +72,18 @@ export default function DashboardPage() {
   const [file, setFile] = useState<File | null>(null);
   const [projectPath, setProjectPath] = useState("");
   const [globalRule, setGlobalRule] = useState("");
+  const [workSessionScan, setWorkSessionScan] = useState<WorkSessionScanResult | null>(null);
+  const [workSessionDrafts, setWorkSessionDrafts] = useState<Record<string, { agentType: string; taskIntent: string }>>({});
   const [scanWarnings, setScanWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [applying, setApplying] = useState(false);
   const [writingProtocol, setWritingProtocol] = useState(false);
+  const [scanningWorkSessions, setScanningWorkSessions] = useState(false);
+  const [savingWorkSessionId, setSavingWorkSessionId] = useState("");
+  const [creatingBundleSessionId, setCreatingBundleSessionId] = useState("");
+  const [draftingChangeBundleId, setDraftingChangeBundleId] = useState("");
+  const [syncingContext, setSyncingContext] = useState(false);
   const [scanningAgentResults, setScanningAgentResults] = useState(false);
   const [ignoringSuggestions, setIgnoringSuggestions] = useState(false);
   const [error, setError] = useState("");
@@ -121,27 +145,41 @@ export default function DashboardPage() {
       setMaterials([]);
       setSuggestions([]);
       setEvolutionRecords([]);
+      setEvidenceBundles([]);
+      setAgentFeedback([]);
+      setChangeConflicts([]);
       setTasks([]);
       setMemory(null);
       setProjectPath("");
+      setWorkSessionScan(null);
+      setWorkSessionDrafts({});
       setSelectedSuggestionIds([]);
       return;
     }
 
     try {
-      const [materialItems, suggestionItems, evolutionItems, taskItems, memoryRecord] = await Promise.all([
+      const [materialItems, suggestionItems, evolutionItems, taskItems, memoryRecord, workSessions, bundles, feedbackItems, conflicts] = await Promise.all([
         listProjectMaterials(session.accessToken, projectId),
         listAiSuggestions(session.accessToken, projectId),
         listProjectEvolutionRecords(session.accessToken, projectId),
         listTasks(session.accessToken, projectId),
         getProjectMemory(session.accessToken, projectId),
+        listProjectWorkSessions(session.accessToken, projectId),
+        listProjectEvidenceBundles(session.accessToken, projectId),
+        listProjectAgentSignatureFeedback(session.accessToken, projectId),
+        listProjectChangeConflicts(session.accessToken, projectId),
       ]);
       setMaterials(materialItems);
       setSuggestions(suggestionItems);
       setEvolutionRecords(evolutionItems);
+      setEvidenceBundles(bundles);
+      setAgentFeedback(feedbackItems);
+      setChangeConflicts(conflicts);
       setTasks(taskItems);
       setMemory(memoryRecord);
       setProjectPath(memoryRecord.localProjectPath ?? "");
+      setWorkSessionScan(workSessions.length ? workSessionListResult(projectId, memoryRecord.localProjectPath ?? "", workSessions) : null);
+      setWorkSessionDrafts(workSessionDraftMap(workSessions));
       setSelectedSuggestionIds(suggestionItems.filter((item) => item.status === "PENDING").map((item) => item.id));
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "项目上下文加载失败");
@@ -276,6 +314,121 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleScanWorkSessions() {
+    const session = readSession();
+    if (!session || !selectedProjectId) {
+      return;
+    }
+
+    setScanningWorkSessions(true);
+    setError("");
+    setNotice("");
+    setScanWarnings([]);
+    try {
+      const result = await scanProjectWorkSessions(session.accessToken, selectedProjectId);
+      setWorkSessionScan(result);
+      setWorkSessionDrafts(workSessionDraftMap(result.sessions));
+      setScanWarnings(result.warnings);
+      setNotice(result.sessions.length ? `已生成 ${result.sessions.length} 个今日变化候选。` : "今天暂未发现可归因的 Git 变化。");
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "今日变化扫描失败");
+    } finally {
+      setScanningWorkSessions(false);
+    }
+  }
+
+  async function handleUpdateWorkSession(sessionId: string) {
+    const session = readSession();
+    const draft = workSessionDrafts[sessionId];
+    if (!session || !draft) {
+      return;
+    }
+
+    setSavingWorkSessionId(sessionId);
+    setError("");
+    setNotice("");
+    try {
+      const updated = await updateWorkSession(session.accessToken, sessionId, draft.agentType, draft.taskIntent);
+      setWorkSessionScan((current) => current ? {
+        ...current,
+        sessions: current.sessions.map((item) => item.sessionId === updated.sessionId ? updated : item),
+      } : current);
+      setWorkSessionDrafts((current) => ({
+        ...current,
+        [updated.sessionId]: { agentType: updated.agentType, taskIntent: updated.taskIntent },
+      }));
+      if (selectedProjectId) {
+        setAgentFeedback(await listProjectAgentSignatureFeedback(session.accessToken, selectedProjectId));
+      }
+      setNotice("已保存 Work Session 归因校正。");
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Work Session 校正失败");
+    } finally {
+      setSavingWorkSessionId("");
+    }
+  }
+
+  async function handleCreateEvidenceBundle(sessionId: string) {
+    const session = readSession();
+    if (!session) {
+      return;
+    }
+
+    setCreatingBundleSessionId(sessionId);
+    setError("");
+    setNotice("");
+    try {
+      const bundle = await createEvidenceBundle(session.accessToken, sessionId);
+      setEvidenceBundles((current) => [bundle, ...current.filter((item) => item.id !== bundle.id)]);
+      if (selectedProjectId) {
+        setChangeConflicts(await listProjectChangeConflicts(session.accessToken, selectedProjectId));
+      }
+      setNotice("已生成 Evidence Bundle，可用于后续候选变更审查。");
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Evidence Bundle 生成失败");
+    } finally {
+      setCreatingBundleSessionId("");
+    }
+  }
+
+  async function handleDraftChange(bundleId: string) {
+    const session = readSession();
+    if (!session) {
+      return;
+    }
+
+    setDraftingChangeBundleId(bundleId);
+    setError("");
+    setNotice("");
+    try {
+      await draftProjectChangeFromEvidenceBundle(session.accessToken, bundleId);
+      setNotice("已从 Evidence Bundle 生成候选变更，请到变更审查中确认。");
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "候选变更生成失败");
+    } finally {
+      setDraftingChangeBundleId("");
+    }
+  }
+
+  async function handleSyncContext() {
+    const session = readSession();
+    if (!session || !selectedProjectId) {
+      return;
+    }
+
+    setSyncingContext(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await syncProjectContext(session.accessToken, selectedProjectId);
+      setNotice(`已同步确认上下文：${result.writtenFiles.join(", ")}`);
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "确认上下文同步失败");
+    } finally {
+      setSyncingContext(false);
+    }
+  }
+
   async function handleCopyGlobalRule() {
     const rule = globalRule || "If the current project root contains `.projectflow/agent-protocol.md`, read it before work. After finishing development work, write a ProjectFlow Agent Result to `.projectflow/inbox/` or the task result file. Do not directly modify ProjectFlow task state.";
     try {
@@ -364,7 +517,7 @@ export default function DashboardPage() {
                   placeholder="真实项目文件夹路径"
                   value={projectPath}
                 />
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <div className="mt-3 grid gap-2 sm:grid-cols-4">
                   <button
                     className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-line bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
                     disabled={!selectedProjectId || !projectPath.trim() || writingProtocol}
@@ -382,6 +535,15 @@ export default function DashboardPage() {
                   >
                     {scanningAgentResults ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />}
                     扫描
+                  </button>
+                  <button
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-line bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                    disabled={!selectedProjectId || !projectPath.trim() || syncingContext}
+                    onClick={handleSyncContext}
+                    type="button"
+                  >
+                    {syncingContext ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FolderTree className="h-4 w-4" />}
+                    同步上下文
                   </button>
                   <button
                     className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-100 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-200"
@@ -418,9 +580,171 @@ export default function DashboardPage() {
                 ))}
               </section>
             ) : null}
+
+            {agentFeedback.length ? (
+              <section className="rounded-md border border-line bg-white p-5 shadow-panel">
+                <p className="text-sm font-semibold text-slate-950">归因校正规则</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  当前项目已保存 {agentFeedback.length} 条校正反馈，后续扫描同一 Agent 痕迹时会优先复用。
+                </p>
+                <div className="mt-3 space-y-2">
+                  {agentFeedback.slice(0, 3).map((feedback) => (
+                    <div className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600" key={feedback.id}>
+                      {feedback.agentName}: {feedback.originalAgentType} {"->"} {feedback.correctedAgentType}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {changeConflicts.length ? (
+              <section className="rounded-md border border-amber-200 bg-amber-50 p-5 shadow-panel">
+                <p className="text-sm font-semibold text-amber-950">冲突待审查</p>
+                <p className="mt-2 text-sm leading-6 text-amber-900">
+                  检测到 {changeConflicts.length} 个文件级证据重叠，需要确认是连续修改还是冲突。
+                </p>
+                <div className="mt-3 space-y-2">
+                  {changeConflicts.slice(0, 3).map((conflict) => (
+                    <div className="rounded-md bg-white/70 px-3 py-2 text-xs text-amber-950" key={conflict.id}>
+                      {conflict.filePath} · {conflict.severity}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </aside>
 
           <div className="space-y-5">
+            <section className="rounded-md border border-line bg-white shadow-panel">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
+                <div>
+                  <p className="text-sm text-muted">今日变化概览</p>
+                  <h2 className="text-lg font-semibold text-slate-950">自动归因候选</h2>
+                </div>
+                <button
+                  className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                  disabled={!selectedProjectId || !hasProjectPath || scanningWorkSessions}
+                  onClick={handleScanWorkSessions}
+                  type="button"
+                >
+                  {scanningWorkSessions ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />}
+                  刷新变化
+                </button>
+              </div>
+              {workSessionScan?.sessions.length ? (
+                <div className="divide-y divide-line">
+                  {workSessionScan.sessions.map((session) => (
+                    <article className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_220px]" key={session.sessionId}>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <StatusChip label={session.agentType === "UNKNOWN" ? "unknown" : session.agentType} tone="amber" />
+                          <StatusChip label={confidenceLabel(session.attributionConfidence)} tone={session.attributionConfidence === "HIGH" ? "green" : "slate"} />
+                          <StatusChip label={session.detectionMethod === "USER_CORRECTED" ? "人工校正" : "Git evidence"} tone={session.detectionMethod === "USER_CORRECTED" ? "green" : "slate"} />
+                          <span className="text-xs text-muted">{formatSessionRange(session.startTime, session.endTime)}</span>
+                        </div>
+                        <p className="mt-3 text-sm font-semibold text-slate-950">{session.taskIntent}</p>
+                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">
+                          {session.evidence[0] ?? "仅从 Git evidence 生成候选，尚未接入授权 Agent 日志。"}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {session.affectedModules.slice(0, 5).map((module) => (
+                            <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600" key={module}>{module}</span>
+                          ))}
+                        </div>
+                        <div className="mt-4 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-[150px_minmax(0,1fr)_auto]">
+                          <select
+                            className="rounded-md border border-line bg-white px-3 py-2 text-sm text-slate-800"
+                            onChange={(event) => setWorkSessionDrafts((current) => ({
+                              ...current,
+                              [session.sessionId]: {
+                                agentType: event.target.value,
+                                taskIntent: current[session.sessionId]?.taskIntent ?? session.taskIntent,
+                              },
+                            }))}
+                            value={workSessionDrafts[session.sessionId]?.agentType ?? session.agentType}
+                          >
+                            {agentTypeOptions.map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                          <input
+                            className="rounded-md border border-line bg-white px-3 py-2 text-sm text-slate-800"
+                            onChange={(event) => setWorkSessionDrafts((current) => ({
+                              ...current,
+                              [session.sessionId]: {
+                                agentType: current[session.sessionId]?.agentType ?? session.agentType,
+                                taskIntent: event.target.value,
+                              },
+                            }))}
+                            placeholder="补充这轮工作的真实任务意图"
+                            value={workSessionDrafts[session.sessionId]?.taskIntent ?? session.taskIntent}
+                          />
+                          <button
+                            className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                            disabled={savingWorkSessionId === session.sessionId}
+                            onClick={() => handleUpdateWorkSession(session.sessionId)}
+                            type="button"
+                          >
+                            {savingWorkSessionId === session.sessionId ? "保存中" : "保存校正"}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-center lg:grid-cols-1 lg:text-left">
+                        <MiniFact label="文件" value={`${session.changedFiles}`} />
+                        <MiniFact label="新增" value={`+${session.addedLines}`} />
+                        <MiniFact label="删除" value={`-${session.deletedLines}`} />
+                        <button
+                          className="col-span-3 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 lg:col-span-1"
+                          disabled={creatingBundleSessionId === session.sessionId}
+                          onClick={() => handleCreateEvidenceBundle(session.sessionId)}
+                          type="button"
+                        >
+                          {creatingBundleSessionId === session.sessionId
+                            ? "生成中"
+                            : evidenceBundles.some((bundle) => bundle.workSessionId === session.sessionId)
+                              ? "更新证据包"
+                              : "生成证据包"}
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-5 text-sm leading-6 text-muted">
+                  {hasProjectPath
+                    ? "点击“刷新变化”后，ProjectFlow 会读取已绑定项目的今日 Git evidence，生成可审查的 Work Session 候选。"
+                    : "先在上方绑定真实项目路径，ProjectFlow 才能读取 Git evidence。不会扫描用户主目录或全局 Agent 日志。"}
+                </div>
+              )}
+              {evidenceBundles.length ? (
+                <div className="border-t border-line bg-slate-50 px-5 py-4">
+                  <p className="text-sm font-semibold text-slate-900">已生成 Evidence Bundle：{evidenceBundles.length}</p>
+                  <div className="mt-3 grid gap-2 md:grid-cols-2">
+                    {evidenceBundles.slice(0, 4).map((bundle) => (
+                      <div className="rounded-md border border-slate-200 bg-white p-3 text-sm" key={bundle.id}>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <StatusChip label={bundle.agentType === "UNKNOWN" ? "unknown" : bundle.agentType} tone="slate" />
+                          <span className="text-xs text-muted">{bundle.sources[0]?.sourceType ?? "UNKNOWN_SOURCE"}</span>
+                        </div>
+                        <p className="mt-2 font-semibold text-slate-900">{bundle.taskIntent || "未补充任务意图"}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {bundle.changedFiles} 文件，+{bundle.addedLines}/-{bundle.deletedLines}，Agent Claim {bundle.agentClaims.length} 条
+                        </p>
+                        <button
+                          className="mt-3 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                          disabled={draftingChangeBundleId === bundle.id}
+                          onClick={() => handleDraftChange(bundle.id)}
+                          type="button"
+                        >
+                          {draftingChangeBundleId === bundle.id ? "生成中" : "生成候选变更"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
             <section className="rounded-md border border-line bg-white shadow-panel">
               <div className="flex items-center justify-between border-b border-line px-5 py-4">
                 <div>
@@ -612,6 +936,50 @@ function EmptyProjectState({ hasProject }: { hasProject: boolean }) {
       </div>
     </div>
   );
+}
+
+function confidenceLabel(value: string) {
+  if (value === "HIGH") return "置信度 high";
+  if (value === "MEDIUM") return "置信度 medium";
+  if (value === "LOW") return "置信度 low";
+  return "置信度 unknown";
+}
+
+function formatSessionRange(startTime: string, endTime: string) {
+  const formatter = new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `${formatter.format(new Date(startTime))} - ${formatter.format(new Date(endTime))}`;
+}
+
+const agentTypeOptions = [
+  { value: "UNKNOWN", label: "未知" },
+  { value: "CODEX", label: "Codex" },
+  { value: "CLAUDE_CODE", label: "Claude Code" },
+  { value: "CURSOR", label: "Cursor" },
+  { value: "DEEPSEEK", label: "DeepSeek" },
+  { value: "OTHER", label: "其他" },
+];
+
+function workSessionDraftMap(sessions: WorkSessionCandidate[]) {
+  return Object.fromEntries(
+    sessions.map((session) => [session.sessionId, {
+      agentType: session.agentType,
+      taskIntent: session.taskIntent,
+    }]),
+  );
+}
+
+function workSessionListResult(projectId: string, projectPath: string, sessions: WorkSessionCandidate[]): WorkSessionScanResult {
+  return {
+    projectId,
+    projectPath,
+    branchName: sessions[0]?.branchName ?? "",
+    scannedAt: new Date().toISOString(),
+    sessions,
+    warnings: [],
+  };
 }
 
 function primaryActionTitle(hasProject: boolean, hasMaterials: boolean, hasProjectPath: boolean, pendingCount: number) {

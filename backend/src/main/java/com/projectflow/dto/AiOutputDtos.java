@@ -32,4 +32,23 @@ public final class AiOutputDtos {
         Instant updatedAt
     ) {
     }
+
+    public record ModelUsageRecordResponse(
+        UUID id,
+        UUID projectId,
+        String operation,
+        String providerName,
+        String modelName,
+        int promptTokens,
+        int completionTokens,
+        int totalTokens,
+        boolean usageEstimated,
+        long latencyMs,
+        String status,
+        String errorType,
+        String errorMessage,
+        String qualityWarnings,
+        Instant createdAt
+    ) {
+    }
 }

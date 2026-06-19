@@ -11,10 +11,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+
+import java.util.UUID;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -23,12 +26,16 @@ class AiOutputControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private ApplicationContext applicationContext;
+
     @Test
     void generatesAndListsAiOutputsForOwnedProject() throws Exception {
         String token = register("ai-owner", "ai-owner@example.com");
         String projectId = createProject(token, "AI Reflection Project");
         createTask(token, projectId, "Build AI output API");
         createDevLog(token, projectId, "完成 AI Mock 输出");
+        createAcceptedChange(projectId, "Evidence Bundle 确认：今日变化概览");
 
         MvcResult result = mockMvc.perform(post("/api/projects/" + projectId + "/ai-outputs")
                 .header("Authorization", "Bearer " + token)
@@ -44,6 +51,8 @@ class AiOutputControllerTest {
             .andExpect(jsonPath("$.data.type").value("WEEKLY_REPORT"))
             .andExpect(jsonPath("$.data.provider").value("mock-provider"))
             .andExpect(jsonPath("$.data.content").value(containsString("完成 AI Mock 输出")))
+            .andExpect(jsonPath("$.data.content").value(containsString("已确认变更")))
+            .andExpect(jsonPath("$.data.content").value(containsString("Evidence Bundle 确认：今日变化概览")))
             .andReturn();
 
         String outputId = result.getResponse().getContentAsString().split("\"id\":\"")[1].split("\"")[0];
@@ -57,6 +66,13 @@ class AiOutputControllerTest {
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.title").value("AI Reflection Project 周报"));
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/model-usage-records")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].operation").value("AI_OUTPUT_WEEKLY_REPORT"))
+            .andExpect(jsonPath("$.data[0].status").value("SUCCEEDED"))
+            .andExpect(jsonPath("$.data[0].usageEstimated").value(true));
     }
 
     @Test
@@ -157,5 +173,56 @@ class AiOutputControllerTest {
                     }
                     """.formatted(title)))
             .andExpect(status().isOk());
+    }
+
+    private void createAcceptedChange(String projectId, String title) throws Exception {
+        Class<?> sourceTypeClass = Class.forName("com.projectflow.entity.ProjectChangeSourceType");
+        Class<?> kindClass = Class.forName("com.projectflow.entity.ProjectChangeKind");
+        Class<?> impactLevelClass = Class.forName("com.projectflow.entity.ProjectChangeImpactLevel");
+        Class<?> changeClass = Class.forName("com.projectflow.entity.ProjectChange");
+        Object change = changeClass
+            .getConstructor(UUID.class, UUID.class)
+            .newInstance(UUID.fromString(projectId), null);
+        changeClass.getMethod(
+            "update",
+            sourceTypeClass,
+            String.class,
+            UUID.class,
+            kindClass,
+            impactLevelClass,
+            String.class,
+            String.class,
+            String.class,
+            String.class,
+            String.class,
+            String.class,
+            String.class,
+            String.class,
+            String.class,
+            String.class,
+            String.class
+        ).invoke(
+            change,
+            Enum.valueOf(sourceTypeClass.asSubclass(Enum.class), "USER_MANUAL"),
+            "test",
+            null,
+            Enum.valueOf(kindClass.asSubclass(Enum.class), "CAPABILITY"),
+            Enum.valueOf(impactLevelClass.asSubclass(Enum.class), "MINOR"),
+            title,
+            "用户已确认的证据账本变更。",
+            "基于 Evidence Bundle 的确认事实。",
+            "- src/app/page.tsx",
+            "",
+            "测试通过",
+            "构建通过",
+            "",
+            "",
+            "",
+            ""
+        );
+        changeClass.getMethod("markAccepted").invoke(change);
+        applicationContext.getBean("projectChangeRepository").getClass()
+            .getMethod("save", Object.class)
+            .invoke(applicationContext.getBean("projectChangeRepository"), change);
     }
 }

@@ -278,6 +278,104 @@ public final class V2ProjectDtos {
     ) {
     }
 
+    public record WorkSessionScanResponse(
+        UUID projectId,
+        String projectPath,
+        String branchName,
+        Instant scannedAt,
+        List<WorkSessionCandidateResponse> sessions,
+        List<String> warnings
+    ) {
+    }
+
+    public record WorkSessionCandidateResponse(
+        String sessionId,
+        UUID projectId,
+        String agentType,
+        String agentName,
+        String taskIntent,
+        String branchName,
+        String baseCommit,
+        Instant startTime,
+        Instant endTime,
+        String attributionConfidence,
+        String detectionMethod,
+        int changedFiles,
+        int addedLines,
+        int deletedLines,
+        List<String> affectedModules,
+        List<String> evidence,
+        List<String> files
+    ) {
+    }
+
+    public record WorkSessionPatchRequest(
+        @Size(max = 40) String agentType,
+        @Size(max = 1000) String taskIntent
+    ) {
+    }
+
+    public record EvidenceBundleResponse(
+        UUID id,
+        UUID projectId,
+        UUID workSessionId,
+        String agentType,
+        String taskIntent,
+        String branchName,
+        String attributionConfidence,
+        int changedFiles,
+        int addedLines,
+        int deletedLines,
+        List<String> files,
+        List<String> objectiveEvidence,
+        List<String> agentClaims,
+        List<EvidenceSourceResponse> sources,
+        Instant createdAt,
+        Instant updatedAt
+    ) {
+    }
+
+    public record EvidenceSourceResponse(
+        String sourceType,
+        String sourceRef,
+        String summary
+    ) {
+    }
+
+    public record AgentSignatureFeedbackResponse(
+        UUID id,
+        UUID projectId,
+        String agentName,
+        String originalAgentType,
+        String correctedAgentType,
+        String correctedTaskIntent,
+        String scope,
+        Instant createdAt,
+        Instant updatedAt
+    ) {
+    }
+
+    public record ChangeConflictResponse(
+        String id,
+        UUID projectId,
+        String conflictType,
+        String filePath,
+        String moduleName,
+        String severity,
+        String status,
+        String summary,
+        List<UUID> evidenceBundleIds
+    ) {
+    }
+
+    public record ContextSyncResponse(
+        UUID projectId,
+        String contextPath,
+        List<String> writtenFiles,
+        Instant syncedAt
+    ) {
+    }
+
     public record ProjectChangeResponse(
         UUID id,
         UUID projectId,

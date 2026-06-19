@@ -21,10 +21,10 @@ ProjectFlow is not a public SaaS product in V1. It is designed as a multi-user s
 | --- | --- |
 | Frontend | Next.js, TypeScript, Tailwind CSS |
 | Backend | Spring Boot 3, Java 17, Maven |
-| Database | PostgreSQL |
-| Cache / Task State | Redis |
+| Database | H2 embedded mode for personal use, PostgreSQL for Docker/team mode |
+| Cache / Task State | Spring in-memory cache for embedded mode, Redis for Docker/team mode |
 | AI Provider | Mock provider first, DeepSeek or OpenAI-compatible API later |
-| Local Runtime | Docker Compose |
+| Local Runtime | Embedded Windows launcher for personal use, Docker Compose for team mode |
 | Documentation | README, architecture notes, API design, data model, roadmap |
 
 ## Current V1 Features
@@ -77,7 +77,21 @@ projectflow/
 
 ## Local Development
 
-For Windows local startup, double-click `start-projectflow.bat` from the repository root. It runs in one console window, starts PostgreSQL and Redis with Docker Compose, builds the frontend, starts the backend and frontend, then opens the browser at `http://127.0.0.1:3000/login`. Press Enter in that console window to stop ProjectFlow.
+For Windows personal startup, double-click `start-projectflow.bat` from the repository root. It runs embedded mode in one console window, builds the frontend, starts the H2-backed backend and production frontend, then opens the browser at `http://127.0.0.1:3000/login`. Press Enter in that console window to stop ProjectFlow.
+
+Embedded mode stores local data under `.projectflow/local-data/`. To export a copy for migration or backup:
+
+```powershell
+.\export-embedded-data.ps1
+```
+
+The Docker-based PostgreSQL + Redis startup path is still available:
+
+```powershell
+.\start-projectflow.ps1
+```
+
+or double-click `start-projectflow-docker.bat`.
 
 Manual verification commands:
 
@@ -91,8 +105,8 @@ C:\Users\Administrator\Desktop\apache-maven-3.9.9\bin\mvn.cmd -q test
 Current Windows environment notes:
 
 - Maven is available through `C:\Users\Administrator\Desktop\apache-maven-3.9.9\bin\mvn.cmd`.
-- Docker Desktop is required for PostgreSQL and Redis.
-- If Docker Desktop is not running, the startup script tries to start it and waits before opening the browser.
+- Docker Desktop is required only for the Docker/team mode.
+- If Docker Desktop is not running, the Docker startup script tries to start it and waits before opening the browser.
 - If npm installation hangs, clear or replace the local frontend dependency cache before rerunning `npm.cmd install`.
 
 ## Roadmap
