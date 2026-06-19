@@ -5,21 +5,27 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.ByteArrayOutputStream;
+import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import com.sun.net.httpserver.HttpServer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -109,13 +115,13 @@ class V2CoreControllerTest {
                       "modelName": "deepseek-v4-pro",
                       "type": "DEEPSEEK",
                       "temperature": 0.3,
-                      "maxTokens": 1000000,
+                      "maxTokens": 100000000,
                       "defaultEnabled": true,
                       "purposeTags": ["项目分析"]
                     }
                     """))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.maxTokens").value(1000000));
+            .andExpect(jsonPath("$.data.maxTokens").value(100000000));
     }
 
     @Test
@@ -205,6 +211,291 @@ class V2CoreControllerTest {
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    void runsProjectAnalysisWithLocalFallbackWhenProviderIsNotConfigured() throws Exception {
+        String token = register("analysis-owner", "analysis-owner@example.com");
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "ProjectFlow.zip",
+            "application/zip",
+            projectZip()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/project-imports/zip")
+                .file(file)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andReturn();
+        String projectId = objectMapper.readTree(result.getResponse().getContentAsString()).get("data").get("project").get("id").asText();
+
+        JsonNode completed = runProjectAnalysisAndAwait(token, projectId);
+        org.assertj.core.api.Assertions.assertThat(completed.at("/projectResult/providerConfigured").asBoolean()).isFalse();
+        org.assertj.core.api.Assertions.assertThat(completed.at("/projectResult/modelUsed").asBoolean()).isFalse();
+        org.assertj.core.api.Assertions.assertThat(completed.at("/projectResult/analysisSource").asText()).isEqualTo("LOCAL_RULE");
+        org.assertj.core.api.Assertions.assertThat(completed.at("/projectResult/summary").asText()).contains("ProjectFlow");
+        org.assertj.core.api.Assertions.assertThat(completed.at("/projectResult/modules").size()).isGreaterThanOrEqualTo(3);
+        org.assertj.core.api.Assertions.assertThat(completed.at("/projectResult/risks/0").asText()).contains("模型");
+    }
+
+    @Test
+    void persistsAsyncProjectAnalysisJobAndRestoresChineseEvidence() throws Exception {
+        String token = register("async-analysis-owner", "async-analysis-owner@example.com");
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "ProjectFlow.zip",
+            "application/zip",
+            projectZip()
+        );
+
+        MvcResult importResult = mockMvc.perform(multipart("/api/project-imports/zip")
+                .file(file)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andReturn();
+        String projectId = objectMapper.readTree(importResult.getResponse().getContentAsString()).get("data").get("project").get("id").asText();
+
+        MvcResult startResult = mockMvc.perform(post("/api/projects/" + projectId + "/analysis/run")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").isNotEmpty())
+            .andExpect(jsonPath("$.data.projectId").value(projectId))
+            .andExpect(jsonPath("$.data.jobType").value("PROJECT"))
+            .andReturn();
+        String jobId = objectMapper.readTree(startResult.getResponse().getContentAsString()).get("data").get("id").asText();
+
+        JsonNode completed = awaitAnalysisJob(token, jobId);
+        org.assertj.core.api.Assertions.assertThat(completed.get("status").asText()).isEqualTo("SUCCEEDED");
+        org.assertj.core.api.Assertions.assertThat(completed.at("/projectResult/summary").asText()).contains("已导入");
+        org.assertj.core.api.Assertions.assertThat(completed.at("/projectResult/evidence").isArray()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(completed.at("/projectResult/evidence").size()).isGreaterThan(0);
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/analysis-jobs")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].id").value(jobId))
+            .andExpect(jsonPath("$.data[0].status").value("SUCCEEDED"));
+    }
+
+    @Test
+    void indexesSourceSnippetsAndSkipsGeneratedLogs() throws Exception {
+        String token = register("zip-evidence-owner", "zip-evidence-owner@example.com");
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "ProjectFlow.zip",
+            "application/zip",
+            projectZip()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/project-imports/zip")
+                .file(file)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        JsonNode material = objectMapper.readTree(result.getResponse().getContentAsString()).at("/data/material");
+        org.assertj.core.api.Assertions.assertThat(material.get("content").asText())
+            .contains("## File snippets")
+            .contains("src/app/page.tsx")
+            .contains("export default function Page()")
+            .doesNotContain(".next-dev.err.log");
+    }
+
+    @Test
+    void retriesTransientModelFailureForFileAnalysis() throws Exception {
+        AtomicInteger requests = new AtomicInteger();
+        AtomicReference<String> lastRequestBody = new AtomicReference<>("");
+        HttpServer modelServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        modelServer.createContext("/v1/chat/completions", exchange -> {
+            int attempt = requests.incrementAndGet();
+            lastRequestBody.set(new String(exchange.getRequestBody().readAllBytes()));
+            byte[] body;
+            if (attempt == 1) {
+                exchange.sendResponseHeaders(503, -1);
+                exchange.close();
+                return;
+            }
+            body = """
+                {"choices":[{"message":{"content":"{\\"path\\":\\"src/app/page.tsx\\",\\"fileType\\":\\"source\\",\\"role\\":\\"页面入口\\",\\"summary\\":\\"该文件声明 Page 组件并作为页面入口。\\",\\"importance\\":\\"critical\\",\\"riskLevel\\":\\"none\\",\\"riskNotes\\":\\"未发现明确风险证据。\\",\\"evidence\\":[\\"Page：默认导出页面组件\\"],\\"relatedFiles\\":[],\\"limitations\\":\\"仅分析已索引片段。\\",\\"confidence\\":\\"high\\"}"}}]}
+                """.getBytes();
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        modelServer.start();
+
+        try {
+            String token = register("model-retry-owner", "model-retry-owner@example.com");
+            mockMvc.perform(post("/api/ai-providers")
+                    .header("Authorization", "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "name": "Retry test provider",
+                          "baseUrl": "http://127.0.0.1:%d/v1",
+                          "apiKey": "test-key",
+                          "modelName": "test-model",
+                          "type": "OPENAI_COMPATIBLE",
+                          "temperature": 0.1,
+                          "maxTokens": 200000,
+                          "defaultEnabled": true,
+                          "purposeTags": ["项目分析"]
+                        }
+                        """.formatted(modelServer.getAddress().getPort())))
+                .andExpect(status().isOk());
+
+            MockMultipartFile file = new MockMultipartFile("file", "ProjectFlow.zip", "application/zip", projectZip());
+            MvcResult importResult = mockMvc.perform(multipart("/api/project-imports/zip")
+                    .file(file)
+                    .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn();
+            String projectId = objectMapper.readTree(importResult.getResponse().getContentAsString()).at("/data/project/id").asText();
+
+            MvcResult startResult = mockMvc.perform(post("/api/projects/" + projectId + "/files/analyze")
+                    .header("Authorization", "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"path\":\"src/app/page.tsx\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+            String jobId = objectMapper.readTree(startResult.getResponse().getContentAsString()).at("/data/id").asText();
+            JsonNode completed = awaitAnalysisJob(token, jobId);
+
+            org.assertj.core.api.Assertions.assertThat(completed.at("/fileResult/modelUsed").asBoolean()).isTrue();
+            org.assertj.core.api.Assertions.assertThat(completed.at("/fileResult/summary").asText()).contains("Page");
+            org.assertj.core.api.Assertions.assertThat(requests.get()).isEqualTo(2);
+            org.assertj.core.api.Assertions.assertThat(lastRequestBody.get()).contains("\"max_tokens\":100000");
+        } finally {
+            modelServer.stop(0);
+        }
+    }
+
+    @Test
+    void storesAndDeletesProjectAnalysisRecords() throws Exception {
+        String token = register("analysis-record-owner", "analysis-record-owner@example.com");
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "ProjectFlow.zip",
+            "application/zip",
+            projectZip()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/project-imports/zip")
+                .file(file)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andReturn();
+        String projectId = objectMapper.readTree(result.getResponse().getContentAsString()).get("data").get("project").get("id").asText();
+
+        runProjectAnalysisAndAwait(token, projectId);
+
+        MvcResult recordsResult = mockMvc.perform(get("/api/projects/" + projectId + "/analysis-records")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data", hasSize(1)))
+            .andExpect(jsonPath("$.data[0].recordType").value("PROJECT"))
+            .andReturn();
+        String recordId = objectMapper.readTree(recordsResult.getResponse().getContentAsString()).get("data").get(0).get("id").asText();
+
+        mockMvc.perform(delete("/api/project-analysis-records/" + recordId)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/analysis-records")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    void rejectsAnalysisRecordDeleteForNonOwner() throws Exception {
+        String ownerToken = register("analysis-delete-owner", "analysis-delete-owner@example.com");
+        String otherToken = register("analysis-delete-other", "analysis-delete-other@example.com");
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "ProjectFlow.zip",
+            "application/zip",
+            projectZip()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/project-imports/zip")
+                .file(file)
+                .header("Authorization", "Bearer " + ownerToken))
+            .andExpect(status().isOk())
+            .andReturn();
+        String projectId = objectMapper.readTree(result.getResponse().getContentAsString()).get("data").get("project").get("id").asText();
+
+        runProjectAnalysisAndAwait(ownerToken, projectId);
+
+        MvcResult recordsResult = mockMvc.perform(get("/api/projects/" + projectId + "/analysis-records")
+                .header("Authorization", "Bearer " + ownerToken))
+            .andExpect(status().isOk())
+            .andReturn();
+        String recordId = objectMapper.readTree(recordsResult.getResponse().getContentAsString()).get("data").get(0).get("id").asText();
+
+        mockMvc.perform(delete("/api/project-analysis-records/" + recordId)
+                .header("Authorization", "Bearer " + otherToken))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error.code").value("PROJECT_NOT_FOUND"));
+    }
+
+    @Test
+    void getsProjectAnalysisRecordDetailForOwnerAndRejectsNonOwner() throws Exception {
+        String ownerToken = register("analysis-detail-owner", "analysis-detail-owner@example.com");
+        String otherToken = register("analysis-detail-other", "analysis-detail-other@example.com");
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "ProjectFlow.zip",
+            "application/zip",
+            projectZip()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/project-imports/zip")
+                .file(file)
+                .header("Authorization", "Bearer " + ownerToken))
+            .andExpect(status().isOk())
+            .andReturn();
+        String projectId = objectMapper.readTree(result.getResponse().getContentAsString()).get("data").get("project").get("id").asText();
+
+        runProjectAnalysisAndAwait(ownerToken, projectId);
+
+        MvcResult recordsResult = mockMvc.perform(get("/api/projects/" + projectId + "/analysis-records")
+                .header("Authorization", "Bearer " + ownerToken))
+            .andExpect(status().isOk())
+            .andReturn();
+        String recordId = objectMapper.readTree(recordsResult.getResponse().getContentAsString()).get("data").get(0).get("id").asText();
+
+        mockMvc.perform(get("/api/project-analysis-records/" + recordId)
+                .header("Authorization", "Bearer " + ownerToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(recordId))
+            .andExpect(jsonPath("$.data.recordType").value("PROJECT"))
+            .andExpect(jsonPath("$.data.details").value(containsString("架构判断")));
+
+        mockMvc.perform(get("/api/project-analysis-records/" + recordId)
+                .header("Authorization", "Bearer " + otherToken))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error.code").value("PROJECT_NOT_FOUND"));
+    }
+
+    @Test
+    void rejectsFileAnalysisForNonOwner() throws Exception {
+        String ownerToken = register("file-analysis-owner", "file-analysis-owner@example.com");
+        String otherToken = register("file-analysis-other", "file-analysis-other@example.com");
+        String projectId = createProject(ownerToken, "Private File Analysis");
+
+        mockMvc.perform(post("/api/projects/" + projectId + "/files/analyze")
+                .header("Authorization", "Bearer " + otherToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "path": "backend/src/main/java/com/projectflow/config/WebConfig.java"
+                    }
+                    """))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error.code").value("PROJECT_NOT_FOUND"));
     }
 
     @Test
@@ -330,6 +621,61 @@ class V2CoreControllerTest {
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    void scansAgentResultIntoStructuredProjectChanges() throws Exception {
+        String token = register("change-scan-owner", "change-scan-owner@example.com");
+        String projectId = createProject(token, "Structured Change Project");
+        Path projectPath = createTestProjectDir("structured-change-project");
+        Path inbox = Files.createDirectories(projectPath.resolve(".projectflow/inbox"));
+        Files.writeString(inbox.resolve("20260607-0900-agent-result.md"), """
+            # ProjectFlow Agent Result
+
+            ProjectId: structured-change-project
+            TaskId: PF-201
+            Status: ready_for_review
+
+            ## Summary
+            Agent implemented the V3 change review data model and wired source-aware project facts.
+
+            ## Changed Files
+            - backend/src/main/java/com/projectflow/entity/ProjectChange.java
+            - backend/src/main/java/com/projectflow/entity/ProjectFactSource.java
+
+            ## Task Updates
+            - PF-201: ready_for_review
+
+            ## Decisions
+            - Keep AiSuggestion compatibility while ProjectChange becomes the review source.
+
+            ## Risks
+            - Need to avoid AI overwriting user-confirmed project facts.
+
+            ## Dev Log
+            Implemented structured change review foundations.
+            """);
+
+        mockMvc.perform(post("/api/projects/" + projectId + "/agent-bridge/scan")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "projectPath": "%s"
+                    }
+                    """.formatted(jsonEscapedPath(projectPath))))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/changes")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data", hasSize(greaterThanOrEqualTo(1))))
+            .andExpect(jsonPath("$.data[0].sourceType").value("AGENT_RESULT"))
+            .andExpect(jsonPath("$.data[0].changeKind").value("CAPABILITY"))
+            .andExpect(jsonPath("$.data[0].impactLevel").value("MAJOR"))
+            .andExpect(jsonPath("$.data[0].status").value("PENDING"))
+            .andExpect(jsonPath("$.data[0].affectedFiles").value(containsString("ProjectChange.java")))
+            .andExpect(jsonPath("$.data[0].riskNotes").value(containsString("AI overwriting user-confirmed")));
     }
 
     @Test
@@ -460,6 +806,71 @@ class V2CoreControllerTest {
             .contains("\"waiting_for_agent\"");
     }
 
+    @Test
+    void updatesProjectMemoryForOwnedProject() throws Exception {
+        String token = register("memory-editor", "memory-editor@example.com");
+        String projectId = createProject(token, "Editable Memory Project");
+
+        mockMvc.perform(patch("/api/projects/" + projectId + "/memory")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "positioning": "Developer cockpit for agent-driven project work.",
+                      "currentStage": "V3_WORKSTATION",
+                      "completedCapabilities": "Navigation, workstation, confirmed facts.",
+                      "inProgressCapabilities": "Change review and daily review.",
+                      "currentRisks": "Local file access still depends on browser limitations.",
+                      "technicalDecisions": "Keep ProjectFlow as recorder; agents change the real project.",
+                      "developerLearnings": "Confirmed assets must outrank raw AI guesses.",
+                      "showcaseAssets": "Weekly report, README draft, resume bullets.",
+                      "nextStepSuggestions": "Implement a lightweight Tauri helper."
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.positioning").value("Developer cockpit for agent-driven project work."))
+            .andExpect(jsonPath("$.data.currentStage").value("V3_WORKSTATION"))
+            .andExpect(jsonPath("$.data.version").value(greaterThanOrEqualTo(2)));
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/memory")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.technicalDecisions").value("Keep ProjectFlow as recorder; agents change the real project."));
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/fact-sources")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data", hasSize(greaterThanOrEqualTo(9))))
+            .andExpect(jsonPath("$.data[0].sourceType").value("USER_MANUAL"))
+            .andExpect(jsonPath("$.data[0].confirmedByUser").value(true));
+    }
+
+    @Test
+    void rejectsProjectMemoryUpdateForNonOwner() throws Exception {
+        String ownerToken = register("memory-private-owner", "memory-private-owner@example.com");
+        String otherToken = register("memory-private-other", "memory-private-other@example.com");
+        String projectId = createProject(ownerToken, "Private Memory Project");
+
+        mockMvc.perform(patch("/api/projects/" + projectId + "/memory")
+                .header("Authorization", "Bearer " + otherToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "positioning": "Should not be saved.",
+                      "currentStage": "BLOCKED",
+                      "completedCapabilities": "",
+                      "inProgressCapabilities": "",
+                      "currentRisks": "",
+                      "technicalDecisions": "",
+                      "developerLearnings": "",
+                      "showcaseAssets": "",
+                      "nextStepSuggestions": ""
+                    }
+                    """))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error.code").value("PROJECT_NOT_FOUND"));
+    }
+
     private String register(String username, String email) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -544,9 +955,39 @@ class V2CoreControllerTest {
             addZipEntry(zip, "projectflow-v2/start-projectflow.ps1", "npm.cmd run dev");
             addZipEntry(zip, "projectflow-v2/src/app/page.tsx", "export default function Page() { return null; }");
             addZipEntry(zip, "projectflow-v2/backend/src/test/java/AppTest.java", "class AppTest {}");
+            addZipEntry(zip, "projectflow-v2/frontend/.next-dev.err.log", "generated development error output");
             addZipEntry(zip, "projectflow-v2/.env", "DATABASE_PASSWORD=secret");
         }
         return outputStream.toByteArray();
+    }
+
+    private JsonNode awaitAnalysisJob(String token, String jobId) throws Exception {
+        JsonNode job = null;
+        for (int attempt = 0; attempt < 40; attempt++) {
+            MvcResult result = mockMvc.perform(get("/api/analysis-jobs/" + jobId)
+                    .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn();
+            job = objectMapper.readTree(result.getResponse().getContentAsString()).get("data");
+            String status = job.get("status").asText();
+            if (status.equals("SUCCEEDED") || status.equals("FAILED")) {
+                return job;
+            }
+            Thread.sleep(50);
+        }
+        throw new AssertionError("Analysis job did not finish: " + jobId);
+    }
+
+    private JsonNode runProjectAnalysisAndAwait(String token, String projectId) throws Exception {
+        MvcResult startResult = mockMvc.perform(post("/api/projects/" + projectId + "/analysis/run")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").isNotEmpty())
+            .andReturn();
+        String jobId = objectMapper.readTree(startResult.getResponse().getContentAsString()).at("/data/id").asText();
+        JsonNode completed = awaitAnalysisJob(token, jobId);
+        org.assertj.core.api.Assertions.assertThat(completed.get("status").asText()).isEqualTo("SUCCEEDED");
+        return completed;
     }
 
     private void addZipEntry(ZipOutputStream zip, String name, String content) throws Exception {

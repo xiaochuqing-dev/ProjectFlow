@@ -1,78 +1,39 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Clipboard, Download, FileText, Layers3, RefreshCw, Sparkles } from "lucide-react";
+import type { ReactNode } from "react";
+import { Clipboard, Download, FileText, History, Layers3, RefreshCw, Save, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
   generateAiOutput,
+  getProjectMemory,
   listAiOutputs,
   listDevLogs,
+  listProjectEvolutionRecords,
   listProjects,
   listTasks,
   type AiOutput,
   type AiOutputType,
   type DevLog,
   type Project,
+  type ProjectEvolutionRecord,
+  type ProjectMemory,
   type TaskItem,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
 
 const outputLabels: Record<AiOutputType, string> = {
   WEEKLY_REPORT: "周报",
-  PROJECT_SUMMARY: "项目总结",
-  RESUME_BULLET: "简历要点",
-  README_SECTION: "README 段落",
+  PROJECT_SUMMARY: "项目复盘",
+  RESUME_BULLET: "简历描述",
+  README_SECTION: "README 草稿",
 };
 
 const outputDescriptions: Record<AiOutputType, string> = {
-  WEEKLY_REPORT: "适合阶段复盘、周记和项目推进汇报。",
-  PROJECT_SUMMARY: "适合作品集、GitHub README 和项目介绍。",
-  RESUME_BULLET: "适合压缩成简历项目经历和面试讲述素材。",
-  README_SECTION: "适合直接整理到仓库文档中。",
-};
-
-const outputTemplates: Record<AiOutputType, string> = {
-  WEEKLY_REPORT: `# 本周项目周报
-
-## 本周完成
-- 
-
-## 遇到的问题
-- 
-
-## 技术决策
-- 
-
-## 下周计划
-- `,
-  PROJECT_SUMMARY: `# 项目总结
-
-## 项目背景
-
-## 核心功能
-- 
-
-## 技术实现
-- 
-
-## 工程亮点
-- `,
-  RESUME_BULLET: `# 简历项目要点
-
-- 独立负责/参与实现 ...
-- 使用 ... 技术完成 ...
-- 通过 ... 解决 ...
-- 项目沉淀了 ...`,
-  README_SECTION: `## Project Overview
-
-### Features
-- 
-
-### Tech Stack
-- 
-
-### Engineering Highlights
-- `,
+  WEEKLY_REPORT: "基于已确认档案、每日回顾和任务证据，整理阶段汇报。",
+  PROJECT_SUMMARY: "面向作品集、项目复盘和对外介绍，突出定位、能力和工程决策。",
+  RESUME_BULLET: "压缩为简历可用项目经历，强调动作、技术和结果。",
+  README_SECTION: "生成可继续编辑的 README 段落，保留来源线索。",
 };
 
 export default function AiReviewPage() {
@@ -80,26 +41,29 @@ export default function AiReviewPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [logs, setLogs] = useState<DevLog[]>([]);
   const [outputs, setOutputs] = useState<AiOutput[]>([]);
+  const [evolutionRecords, setEvolutionRecords] = useState<ProjectEvolutionRecord[]>([]);
+  const [memory, setMemory] = useState<ProjectMemory | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedType, setSelectedType] = useState<AiOutputType>("WEEKLY_REPORT");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [selectedOutputId, setSelectedOutputId] = useState("");
+  const [editableContent, setEditableContent] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [copyState, setCopyState] = useState("");
-  const [templateCopyState, setTemplateCopyState] = useState("");
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId),
     [projects, selectedProjectId],
   );
-
   const selectedOutput = useMemo(
     () => outputs.find((output) => output.id === selectedOutputId) ?? outputs[0],
     [outputs, selectedOutputId],
   );
+  const doneTasks = tasks.filter((task) => task.status === "DONE");
+  const reviewLogs = logs.filter((log) => log.category === "REVIEW");
 
   useEffect(() => {
     const session = readSession();
@@ -111,35 +75,67 @@ export default function AiReviewPage() {
     listProjects(session.accessToken)
       .then((items) => {
         setProjects(items);
-        setSelectedProjectId((current) => current || items[0]?.id || "");
+        setSelectedProjectId(items[0]?.id ?? "");
       })
       .catch((exception) => setError(exception instanceof Error ? exception.message : "项目加载失败"))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
+    refreshProjectContext(selectedProjectId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    setEditableContent(selectedOutput?.content ?? buildFallbackDraft(selectedType, selectedProject, memory, reviewLogs, doneTasks, evolutionRecords));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOutputId, outputs, selectedType, selectedProjectId, memory, logs, tasks, evolutionRecords]);
+
+  useEffect(() => {
+    if (!notice && !error) {
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      setNotice("");
+      setError("");
+    }, 4200);
+    return () => window.clearTimeout(timeout);
+  }, [error, notice]);
+
+  async function refreshProjectContext(projectId: string) {
     const session = readSession();
-    if (!session || !selectedProjectId) {
+    if (!session || !projectId) {
       setTasks([]);
       setLogs([]);
       setOutputs([]);
+      setEvolutionRecords([]);
+      setMemory(null);
+      setSelectedOutputId("");
       return;
     }
 
-    setSelectedOutputId("");
-    Promise.all([
-      listTasks(session.accessToken, selectedProjectId),
-      listDevLogs(session.accessToken, selectedProjectId),
-      listAiOutputs(session.accessToken, selectedProjectId),
-    ])
-      .then(([taskItems, logItems, outputItems]) => {
-        setTasks(taskItems);
-        setLogs(logItems);
-        setOutputs(outputItems);
-        setSelectedOutputId(outputItems[0]?.id ?? "");
-      })
-      .catch((exception) => setError(exception instanceof Error ? exception.message : "复盘上下文加载失败"));
-  }, [selectedProjectId]);
+    setLoading(true);
+    setError("");
+    try {
+      const [taskItems, logItems, outputItems, evolutionItems, memoryRecord] = await Promise.all([
+        listTasks(session.accessToken, projectId),
+        listDevLogs(session.accessToken, projectId),
+        listAiOutputs(session.accessToken, projectId),
+        listProjectEvolutionRecords(session.accessToken, projectId),
+        getProjectMemory(session.accessToken, projectId),
+      ]);
+      setTasks(taskItems);
+      setLogs(logItems);
+      setOutputs(outputItems);
+      setEvolutionRecords(evolutionItems);
+      setMemory(memoryRecord);
+      setSelectedOutputId(outputItems[0]?.id ?? "");
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "成果输出上下文加载失败");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleGenerate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -150,252 +146,273 @@ export default function AiReviewPage() {
 
     setGenerating(true);
     setError("");
+    setNotice("");
     try {
-      const output = await generateAiOutput(
-        session.accessToken,
-        selectedProjectId,
-        selectedType,
-        fromDate || null,
-        toDate || null,
-      );
+      const output = await generateAiOutput(session.accessToken, selectedProjectId, selectedType, fromDate || null, toDate || null);
       const refreshed = await listAiOutputs(session.accessToken, selectedProjectId);
       setOutputs(refreshed);
       setSelectedOutputId(output.id);
+      setEditableContent(output.content);
+      setNotice(`${outputLabels[selectedType]}已生成，可继续编辑后复制或下载。`);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "AI 复盘生成失败");
+      setError(exception instanceof Error ? exception.message : "成果生成失败");
     } finally {
       setGenerating(false);
     }
   }
 
   async function handleCopy() {
-    if (!selectedOutput) {
-      return;
-    }
     try {
-      await navigator.clipboard.writeText(selectedOutput.content);
-      setCopyState("已复制");
-      window.setTimeout(() => setCopyState(""), 1600);
+      await navigator.clipboard.writeText(editableContent);
+      setNotice("已复制当前编辑内容。");
     } catch {
-      setCopyState("复制失败");
-    }
-  }
-
-  async function handleCopyTemplate(type: AiOutputType) {
-    try {
-      await navigator.clipboard.writeText(outputTemplates[type]);
-      setTemplateCopyState(`${outputLabels[type]}模板已复制`);
-      window.setTimeout(() => setTemplateCopyState(""), 1600);
-    } catch {
-      setTemplateCopyState("模板复制失败");
+      setError("复制失败，浏览器未授权剪贴板。");
     }
   }
 
   function handleDownload() {
-    if (!selectedOutput) {
-      return;
-    }
-    const blob = new Blob([selectedOutput.content], { type: "text/markdown;charset=utf-8" });
+    const title = selectedOutput?.title || `${selectedProject?.name ?? "projectflow"}-${outputLabels[selectedType]}`;
+    const blob = new Blob([editableContent], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `${selectedOutput.title}.md`;
+    anchor.download = `${title}.md`;
     anchor.click();
     URL.revokeObjectURL(url);
   }
 
   return (
-    <AppShell eyebrow="AI 复盘" title="复盘输出">
-      <div className="grid min-h-[calc(100vh-4rem)] gap-6 p-8 xl:grid-cols-[400px_1fr]">
-        <section className="space-y-4">
-          <div className="rounded-lg border border-line bg-white p-5 shadow-panel">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-white">
-                <Layers3 className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="font-semibold">复盘来源</h2>
-                <p className="text-sm text-muted">从项目、任务和日志生成 Markdown。</p>
-              </div>
+    <AppShell eyebrow="确认资产到可展示内容" title="成果输出">
+      <div className="min-h-[calc(100vh-4rem)] bg-surface p-8">
+        <section className="mb-6 rounded-md border border-line bg-white p-4 shadow-panel">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <select
+                className="h-10 min-w-72 rounded-md border border-line bg-white px-3 text-sm outline-none focus:border-slate-950"
+                disabled={projects.length === 0}
+                onChange={(event) => setSelectedProjectId(event.target.value)}
+                value={selectedProjectId}
+              >
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+              <SourcePill label="项目档案" value={memory ? 1 : 0} />
+              <SourcePill label="每日回顾" value={reviewLogs.length} />
+              <SourcePill label="任务证据" value={tasks.length} />
+              <SourcePill label="演进记录" value={evolutionRecords.length} />
             </div>
-
-            <select
-              className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
-              disabled={projects.length === 0}
-              onChange={(event) => setSelectedProjectId(event.target.value)}
-              value={selectedProjectId}
-            >
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-
-            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-lg font-semibold">{tasks.length}</p>
-                <p className="text-xs text-muted">任务</p>
-              </div>
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-lg font-semibold">{logs.length}</p>
-                <p className="text-xs text-muted">日志</p>
-              </div>
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-lg font-semibold">{outputs.length}</p>
-                <p className="text-xs text-muted">输出</p>
-              </div>
+            <div className="flex items-center gap-2 text-sm text-muted">
+              <FileText className="h-4 w-4" />
+              已生成 {outputs.length} 份
             </div>
           </div>
+        </section>
 
-          <form className="rounded-lg border border-line bg-white p-5 shadow-panel" onSubmit={handleGenerate}>
-            <div className="mb-4 flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-brand">
-                <Sparkles className="h-5 w-5" />
+        <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)_360px]">
+          <section className="space-y-5">
+            <form className="rounded-md border border-line bg-white p-5 shadow-panel" onSubmit={handleGenerate}>
+              <div className="mb-4 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-slate-700" />
+                <h2 className="font-semibold">生成素材</h2>
               </div>
-              <div>
-                <h2 className="font-semibold">选择导出模板</h2>
-                <p className="text-sm text-muted">先选用途，再生成或复制模板。</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid gap-3">
+              <div className="space-y-3">
                 {(Object.keys(outputLabels) as AiOutputType[]).map((type) => (
-                  <div
-                    className={`rounded-lg border p-3 transition ${
-                      selectedType === type ? "border-blue-200 bg-blue-50/60" : "border-line bg-white"
+                  <button
+                    className={`w-full rounded-md border p-3 text-left transition ${
+                      selectedType === type ? "border-slate-950 bg-slate-950 text-white" : "border-line bg-white hover:bg-slate-50"
                     }`}
                     key={type}
+                    onClick={() => setSelectedType(type)}
+                    type="button"
                   >
-                    <button
-                      className="w-full text-left"
-                      onClick={() => setSelectedType(type)}
-                      type="button"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="font-semibold text-slate-950">{outputLabels[type]}</p>
-                        <span className="rounded-full bg-white px-2 py-1 text-xs text-muted">模板</span>
-                      </div>
-                      <p className="mt-1 text-sm leading-6 text-slate-600">{outputDescriptions[type]}</p>
-                    </button>
-                    <button
-                      className="mt-3 text-sm font-semibold text-brand hover:text-blue-700"
-                      onClick={() => handleCopyTemplate(type)}
-                      type="button"
-                    >
-                      复制空白模板
-                    </button>
-                  </div>
+                    <p className="font-semibold">{outputLabels[type]}</p>
+                    <p className={`mt-1 text-sm leading-5 ${selectedType === type ? "text-slate-200" : "text-slate-600"}`}>{outputDescriptions[type]}</p>
+                  </button>
                 ))}
               </div>
-              {templateCopyState ? (
-                <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{templateCopyState}</p>
-              ) : null}
-              <details className="rounded-lg border border-line bg-slate-50 p-3">
-                <summary className="cursor-pointer text-sm font-medium text-slate-700">可选：限制复盘日期范围</summary>
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <input
-                    className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
-                    onChange={(event) => setFromDate(event.target.value)}
-                    type="date"
-                    value={fromDate}
-                  />
-                  <input
-                    className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
-                    onChange={(event) => setToDate(event.target.value)}
-                    type="date"
-                    value={toDate}
-                  />
-                </div>
-              </details>
-              {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <input
+                  className="rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-slate-950"
+                  onChange={(event) => setFromDate(event.target.value)}
+                  type="date"
+                  value={fromDate}
+                />
+                <input
+                  className="rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-slate-950"
+                  onChange={(event) => setToDate(event.target.value)}
+                  type="date"
+                  value={toDate}
+                />
+              </div>
               <button
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-60"
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-60"
                 disabled={generating || !selectedProjectId}
                 type="submit"
               >
                 {generating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                 {generating ? "生成中..." : `生成${outputLabels[selectedType]}`}
               </button>
-            </div>
-          </form>
+            </form>
 
-          <div className="rounded-lg border border-line bg-white p-5 shadow-panel">
-            <h2 className="font-semibold">历史输出</h2>
-            <div className="mt-4 space-y-3">
-              {outputs.map((output) => (
-                <button
-                  className={`w-full rounded-lg border p-3 text-left transition ${
-                    selectedOutput?.id === output.id ? "border-blue-200 bg-blue-50/50" : "border-line hover:bg-slate-50"
-                  }`}
-                  key={output.id}
-                  onClick={() => setSelectedOutputId(output.id)}
-                  type="button"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="font-medium">{output.title}</p>
-                    <span className="rounded-full bg-white px-2 py-1 text-xs text-muted">{outputLabels[output.type]}</span>
-                  </div>
-                  <p className="mt-2 text-xs text-muted">{new Date(output.createdAt).toLocaleString()}</p>
-                </button>
-              ))}
-              {!loading && outputs.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-line p-5 text-center text-sm text-muted">
-                  暂无复盘输出。
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </section>
+            <section className="rounded-md border border-line bg-white shadow-panel">
+              <div className="flex items-center gap-2 border-b border-line px-5 py-4">
+                <History className="h-4 w-4 text-slate-700" />
+                <h2 className="font-semibold">历史输出</h2>
+              </div>
+              <div className="divide-y divide-line">
+                {outputs.map((output) => (
+                  <button
+                    className={`w-full p-4 text-left text-sm transition ${selectedOutput?.id === output.id ? "bg-blue-50" : "hover:bg-slate-50"}`}
+                    key={output.id}
+                    onClick={() => setSelectedOutputId(output.id)}
+                    type="button"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium text-slate-950">{output.title}</p>
+                      <span className="rounded-md bg-white px-2 py-1 text-xs text-muted">{outputLabels[output.type]}</span>
+                    </div>
+                    <p className="mt-2 text-xs text-muted">{new Date(output.createdAt).toLocaleString()}</p>
+                  </button>
+                ))}
+                {!loading && outputs.length === 0 ? <p className="p-5 text-sm text-muted">暂无历史输出。</p> : null}
+              </div>
+            </section>
+          </section>
 
-        <section className="rounded-lg border border-line bg-white p-5 shadow-panel">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <div>
-              <h2 className="font-semibold">{selectedOutput?.title ?? "输出预览"}</h2>
-              <p className="text-sm text-muted">
-                {selectedProject?.name ?? "选择项目"} 的复盘 Markdown，可复制或下载。
-              </p>
-            </div>
-            <FileText className="h-5 w-5 text-brand" />
-          </div>
-
-          {selectedOutput ? (
-            <>
-              <div className="mb-4 flex flex-wrap gap-3">
-                <button
-                  className="flex items-center gap-2 rounded-lg border border-line bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                  onClick={handleCopy}
-                  type="button"
-                >
+          <section className="rounded-md border border-line bg-white shadow-panel">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
+              <div className="flex items-center gap-2">
+                <Save className="h-4 w-4 text-slate-700" />
+                <h2 className="font-semibold">可编辑正文</h2>
+              </div>
+              <div className="flex gap-2">
+                <button className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" onClick={handleCopy} type="button">
                   <Clipboard className="h-4 w-4" />
-                  {copyState || "复制 Markdown"}
+                  复制
                 </button>
-                <button
-                  className="flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                  onClick={handleDownload}
-                  type="button"
-                >
+                <button className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800" onClick={handleDownload} type="button">
                   <Download className="h-4 w-4" />
                   下载 .md
                 </button>
               </div>
-              <pre className="min-h-[680px] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-950 p-5 text-sm leading-7 text-slate-100">
-                {selectedOutput.content}
-              </pre>
-            </>
-          ) : (
-            <div className="grid min-h-[680px] place-items-center rounded-lg border border-dashed border-line p-8 text-center">
-              <div>
-                <p className="font-semibold text-slate-950">还没有可用输出</p>
-                <p className="mt-2 text-sm leading-6 text-muted">
-                  先选择项目并生成一种复盘材料。输出会保存，避免重复生成。
-                </p>
-              </div>
             </div>
-          )}
-        </section>
+            <textarea
+              className="min-h-[760px] w-full resize-none border-0 bg-slate-50 p-5 font-mono text-sm leading-7 outline-none"
+              onChange={(event) => setEditableContent(event.target.value)}
+              value={editableContent}
+            />
+          </section>
+
+          <aside className="space-y-5">
+            <SourceBlock
+              icon={<Layers3 className="h-4 w-4 text-slate-700" />}
+              title="项目档案来源"
+              text={[
+                memory?.positioning,
+                memory?.completedCapabilities,
+                memory?.technicalDecisions,
+                memory?.showcaseAssets,
+              ].filter(Boolean).join("\n\n") || "暂无已确认项目档案。"}
+            />
+            <SourceBlock
+              icon={<FileText className="h-4 w-4 text-slate-700" />}
+              title="每日回顾来源"
+              text={reviewLogs.slice(0, 3).map((log) => `${log.logDate} ${log.title}\n${log.content}`).join("\n\n") || "暂无每日回顾。"}
+            />
+            <SourceBlock
+              icon={<History className="h-4 w-4 text-slate-700" />}
+              title="演进记录来源"
+              text={evolutionRecords.slice(0, 4).map((record) => `${record.summary}\n${record.detectedChanges}`).join("\n\n") || "暂无演进记录。"}
+            />
+          </aside>
+        </div>
+
+        {error ? <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-panel">{error}</div> : null}
+        {notice ? <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-panel">{notice}</div> : null}
+        {loading ? <div className="fixed inset-x-0 bottom-0 h-1 bg-slate-950" /> : null}
       </div>
     </AppShell>
   );
+}
+
+function SourcePill({ label, value }: { label: string; value: number }) {
+  return <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs text-slate-600">{label} {value}</span>;
+}
+
+function SourceBlock({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
+  return (
+    <section className="rounded-md border border-line bg-white shadow-panel">
+      <div className="flex items-center gap-2 border-b border-line px-5 py-4">
+        {icon}
+        <h2 className="font-semibold">{title}</h2>
+      </div>
+      <p className="whitespace-pre-line p-5 text-sm leading-6 text-slate-600">{text}</p>
+    </section>
+  );
+}
+
+function buildFallbackDraft(
+  type: AiOutputType,
+  project: Project | undefined,
+  memory: ProjectMemory | null,
+  reviewLogs: DevLog[],
+  doneTasks: TaskItem[],
+  evolutionRecords: ProjectEvolutionRecord[],
+) {
+  const projectName = project?.name ?? "项目";
+  const sourceLines = [
+    memory?.positioning,
+    memory?.completedCapabilities,
+    memory?.technicalDecisions,
+    ...reviewLogs.slice(0, 3).map((log) => log.content),
+    ...evolutionRecords.slice(0, 3).map((record) => record.summary),
+  ].filter(Boolean);
+  const sources = sourceLines.length ? sourceLines.map((item) => `- ${String(item).replace(/\n/g, "\n  ")}`).join("\n") : "- 暂无已确认来源。";
+
+  if (type === "RESUME_BULLET") {
+    return `# ${projectName} 简历描述
+
+- 基于 ${projectName} 的已确认项目档案，沉淀开发过程、技术决策和成果素材。
+- 推进 ${doneTasks.length} 个已完成任务，形成可复用的项目证据。
+- 来源：
+${sources}`;
+  }
+
+  if (type === "README_SECTION") {
+    return `## ${projectName}
+
+### Project Overview
+${memory?.positioning || "暂无项目定位。"}
+
+### Confirmed Capabilities
+${memory?.completedCapabilities || "暂无已确认能力。"}
+
+### Engineering Notes
+${memory?.technicalDecisions || "暂无技术决策。"}
+
+### Sources
+${sources}`;
+  }
+
+  return `# ${projectName} ${outputLabels[type]}
+
+## 项目档案
+${memory?.positioning || "暂无项目定位。"}
+
+## 已确认能力
+${memory?.completedCapabilities || "暂无已确认能力。"}
+
+## 每日回顾摘要
+${reviewLogs.slice(0, 5).map((log) => `- ${log.logDate} ${log.title}`).join("\n") || "- 暂无每日回顾。"}
+
+## 技术决策与风险
+${memory?.technicalDecisions || "暂无技术决策。"}
+
+${memory?.currentRisks || "暂无已确认风险。"}
+
+## 来源
+${sources}`;
 }

@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BookOpenText, LayoutDashboard, LogOut, Settings, Sparkles, SquareKanban } from "lucide-react";
+import { BookOpenText, ClipboardCheck, DatabaseZap, LayoutDashboard, LogOut, Settings, Sparkles } from "lucide-react";
 import { clearSession, readSession, type AuthUser } from "@/lib/auth";
 
 type AppShellProps = {
@@ -14,11 +14,12 @@ type AppShellProps = {
 };
 
 const navItems = [
-  { label: "项目管理", href: "/dashboard", icon: LayoutDashboard },
-  { label: "任务", href: "/tasks", icon: SquareKanban },
-  { label: "开发日志", href: "/dev-logs", icon: BookOpenText },
+  { label: "工作台", href: "/dashboard", icon: LayoutDashboard },
+  { label: "变更审查", href: "/tasks", icon: ClipboardCheck },
+  { label: "项目画像", href: "/project-intelligence", icon: DatabaseZap },
+  { label: "每日回顾", href: "/dev-logs", icon: BookOpenText },
   { label: "成果输出", href: "/ai-review", icon: Sparkles },
-  { label: "个人设置", href: "/settings", icon: Settings },
+  { label: "设置", href: "/settings", icon: Settings },
 ];
 
 export function AppShell({ title, eyebrow, actions, children }: AppShellProps) {
@@ -48,23 +49,23 @@ export function AppShell({ title, eyebrow, actions, children }: AppShellProps) {
     <main className="flex min-h-screen bg-surface text-ink">
       <aside className="flex w-64 shrink-0 flex-col border-r border-line bg-white px-4 py-5">
         <div className="mb-8 flex items-center gap-3 px-2">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-sm font-bold text-white">
+          <div className="grid h-10 w-10 place-items-center rounded-md bg-slate-950 text-sm font-bold text-white">
             PF
           </div>
           <div>
             <p className="text-base font-semibold">ProjectFlow</p>
-            <p className="text-xs text-muted">项目过程资产化</p>
+            <p className="text-xs text-muted">开发过程资产化</p>
           </div>
         </div>
         <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href;
+            const active = pathname === item.href || (item.href === "/project-intelligence" && pathname.includes("/files"));
             return (
               <Link
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${
+                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm ${
                   active
-                    ? "bg-blue-50 font-medium text-brand"
+                    ? "bg-slate-950 font-medium text-white"
                     : "text-slate-600 hover:bg-slate-50"
                 }`}
                 href={item.href}
@@ -81,7 +82,7 @@ export function AppShell({ title, eyebrow, actions, children }: AppShellProps) {
       <section className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 items-center justify-between border-b border-line bg-white px-8">
           <div>
-            <p className="text-sm text-muted">{eyebrow ?? `你好，${user.username}`}</p>
+            <p className="text-sm text-muted">{eyebrow ?? `${user.username} 的工作区`}</p>
             <h1 className="text-lg font-semibold">{title}</h1>
           </div>
           <div className="flex items-center gap-3">

@@ -3,6 +3,7 @@ package com.projectflow.controller;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,14 +24,22 @@ import com.projectflow.dto.V2ProjectDtos.AnalyzeMaterialResponse;
 import com.projectflow.dto.V2ProjectDtos.ApplySuggestionsRequest;
 import com.projectflow.dto.V2ProjectDtos.ApplySuggestionsResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectEvolutionRecordResponse;
+import com.projectflow.dto.V2ProjectDtos.ProjectChangePatchRequest;
+import com.projectflow.dto.V2ProjectDtos.ProjectChangeResponse;
+import com.projectflow.dto.V2ProjectDtos.ProjectFactSourceResponse;
+import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisRecordResponse;
+import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisJobResponse;
+import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectImportAnalyzeResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectMaterialResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectMaterialTextRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectMemoryResponse;
+import com.projectflow.dto.V2ProjectDtos.ProjectMemoryUpdateRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectSnapshotResponse;
 import com.projectflow.entity.MaterialSourceType;
 import com.projectflow.service.AuthService;
 import com.projectflow.service.ProjectIntelligenceService;
+import com.projectflow.service.ProjectAnalysisJobService;
 
 import jakarta.validation.Valid;
 
@@ -38,10 +47,16 @@ import jakarta.validation.Valid;
 @RequestMapping("/api")
 public class ProjectIntelligenceController {
     private final ProjectIntelligenceService projectIntelligenceService;
+    private final ProjectAnalysisJobService projectAnalysisJobService;
     private final AuthService authService;
 
-    public ProjectIntelligenceController(ProjectIntelligenceService projectIntelligenceService, AuthService authService) {
+    public ProjectIntelligenceController(
+        ProjectIntelligenceService projectIntelligenceService,
+        ProjectAnalysisJobService projectAnalysisJobService,
+        AuthService authService
+    ) {
         this.projectIntelligenceService = projectIntelligenceService;
+        this.projectAnalysisJobService = projectAnalysisJobService;
         this.authService = authService;
     }
 
@@ -62,6 +77,71 @@ public class ProjectIntelligenceController {
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
         return ApiResponse.ok(projectIntelligenceService.listMaterials(user.id(), projectId));
+    }
+
+    @PostMapping("/projects/{projectId}/analysis/run")
+    ApiResponse<ProjectAnalysisJobResponse> runProjectAnalysis(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectAnalysisJobService.startProjectAnalysis(user.id(), projectId));
+    }
+
+    @PostMapping("/projects/{projectId}/files/analyze")
+    ApiResponse<ProjectAnalysisJobResponse> analyzeProjectFile(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId,
+        @Valid @RequestBody ProjectFileAnalysisRequest request
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectAnalysisJobService.startFileAnalysis(user.id(), projectId, request.path()));
+    }
+
+    @GetMapping("/analysis-jobs/{jobId}")
+    ApiResponse<ProjectAnalysisJobResponse> analysisJob(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID jobId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectAnalysisJobService.getJob(user.id(), jobId));
+    }
+
+    @GetMapping("/projects/{projectId}/analysis-jobs")
+    ApiResponse<List<ProjectAnalysisJobResponse>> listAnalysisJobs(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectAnalysisJobService.listProjectJobs(user.id(), projectId));
+    }
+
+    @GetMapping("/projects/{projectId}/analysis-records")
+    ApiResponse<List<ProjectAnalysisRecordResponse>> listAnalysisRecords(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectIntelligenceService.listAnalysisRecords(user.id(), projectId));
+    }
+
+    @GetMapping("/project-analysis-records/{recordId}")
+    ApiResponse<ProjectAnalysisRecordResponse> analysisRecordDetail(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID recordId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectIntelligenceService.analysisRecordDetail(user.id(), recordId));
+    }
+
+    @DeleteMapping("/project-analysis-records/{recordId}")
+    ApiResponse<Void> deleteAnalysisRecord(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID recordId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        projectIntelligenceService.deleteAnalysisRecord(user.id(), recordId);
+        return ApiResponse.ok(null);
     }
 
     @PostMapping("/projects/{projectId}/materials/text")
@@ -158,6 +238,62 @@ public class ProjectIntelligenceController {
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
         return ApiResponse.ok(projectIntelligenceService.getMemory(user.id(), projectId));
+    }
+
+    @GetMapping("/projects/{projectId}/changes")
+    ApiResponse<List<ProjectChangeResponse>> listChanges(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectIntelligenceService.listChanges(user.id(), projectId));
+    }
+
+    @PatchMapping("/project-changes/{changeId}")
+    ApiResponse<ProjectChangeResponse> updateChange(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID changeId,
+        @Valid @RequestBody ProjectChangePatchRequest request
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectIntelligenceService.updateChange(user.id(), changeId, request));
+    }
+
+    @PostMapping("/project-changes/{changeId}/accept")
+    ApiResponse<ProjectChangeResponse> acceptChange(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID changeId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectIntelligenceService.acceptChange(user.id(), changeId));
+    }
+
+    @PostMapping("/project-changes/{changeId}/ignore")
+    ApiResponse<ProjectChangeResponse> ignoreChange(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID changeId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectIntelligenceService.ignoreChange(user.id(), changeId));
+    }
+
+    @GetMapping("/projects/{projectId}/fact-sources")
+    ApiResponse<List<ProjectFactSourceResponse>> listFactSources(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectIntelligenceService.listFactSources(user.id(), projectId));
+    }
+
+    @PatchMapping("/projects/{projectId}/memory")
+    ApiResponse<ProjectMemoryResponse> updateMemory(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId,
+        @Valid @RequestBody ProjectMemoryUpdateRequest request
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectIntelligenceService.updateMemory(user.id(), projectId, request));
     }
 
     @GetMapping("/projects/{projectId}/snapshots")

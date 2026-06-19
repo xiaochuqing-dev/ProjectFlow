@@ -1,61 +1,50 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { BookOpenText, CalendarDays, Clock3, FilePenLine, Layers3, Link2, Plus, RefreshCw, ShieldAlert } from "lucide-react";
+import type { ReactNode } from "react";
+import { BookOpenText, CalendarDays, CheckCircle2, Clock3, FilePenLine, History, RefreshCw, Save, ShieldAlert } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
   createDevLog,
+  getProjectMemory,
   listDevLogs,
+  listProjectEvolutionRecords,
   listProjects,
   listTasks,
   type DevLog,
-  type DevLogCategory,
   type Project,
+  type ProjectEvolutionRecord,
+  type ProjectMemory,
   type TaskItem,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
-
-const categories: DevLogCategory[] = ["FEATURE", "BUGFIX", "REFACTOR", "RESEARCH", "REVIEW", "DEPLOYMENT"];
-
-const categoryLabels: Record<DevLogCategory, string> = {
-  FEATURE: "功能开发",
-  BUGFIX: "缺陷修复",
-  REFACTOR: "结构调整",
-  RESEARCH: "技术调研",
-  REVIEW: "评审验收",
-  DEPLOYMENT: "部署发布",
-};
-
-const categoryStyles: Record<DevLogCategory, string> = {
-  FEATURE: "bg-blue-50 text-blue-700",
-  BUGFIX: "bg-rose-50 text-rose-700",
-  REFACTOR: "bg-violet-50 text-violet-700",
-  RESEARCH: "bg-cyan-50 text-cyan-700",
-  REVIEW: "bg-amber-50 text-amber-700",
-  DEPLOYMENT: "bg-emerald-50 text-emerald-700",
-};
 
 export default function DevLogsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [logs, setLogs] = useState<DevLog[]>([]);
+  const [evolutionRecords, setEvolutionRecords] = useState<ProjectEvolutionRecord[]>([]);
+  const [memory, setMemory] = useState<ProjectMemory | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [reviewDate, setReviewDate] = useState(new Date().toISOString().slice(0, 10));
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftContent, setDraftContent] = useState("");
+  const [minutesSpent, setMinutesSpent] = useState(30);
+  const [blocked, setBlocked] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId),
     [projects, selectedProjectId],
   );
-
-  const taskNames = useMemo(() => {
-    return tasks.reduce<Record<string, string>>((names, task) => ({ ...names, [task.id]: task.title }), {});
-  }, [tasks]);
-
-  const totalMinutes = useMemo(() => logs.reduce((total, log) => total + log.minutesSpent, 0), [logs]);
-  const blockedCount = useMemo(() => logs.filter((log) => log.blocked).length, [logs]);
-  const today = new Date().toISOString().slice(0, 10);
+  const dayLogs = logs.filter((log) => log.logDate === reviewDate);
+  const dayEvolution = evolutionRecords.filter((record) => record.createdAt.slice(0, 10) === reviewDate);
+  const activeTasks = tasks.filter((task) => task.status !== "DONE");
+  const completedTasks = tasks.filter((task) => task.status === "DONE");
+  const totalMinutes = logs.reduce((total, log) => total + log.minutesSpent, 0);
 
   useEffect(() => {
     const session = readSession();
@@ -67,261 +56,304 @@ export default function DevLogsPage() {
     listProjects(session.accessToken)
       .then((items) => {
         setProjects(items);
-        setSelectedProjectId((current) => current || items[0]?.id || "");
+        setSelectedProjectId(items[0]?.id ?? "");
       })
       .catch((exception) => setError(exception instanceof Error ? exception.message : "项目加载失败"))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    if (!selectedProjectId) {
-      setLogs([]);
-      setTasks([]);
+    refreshProjectContext(selectedProjectId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    const title = `${reviewDate} 每日回顾`;
+    setDraftTitle(title);
+    setDraftContent(buildDailyDraft(selectedProject, memory, dayLogs, dayEvolution, activeTasks, completedTasks));
+    setBlocked(dayLogs.some((log) => log.blocked) || Boolean(memory?.currentRisks && !memory.currentRisks.includes("暂无")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewDate, selectedProjectId, logs, evolutionRecords, tasks, memory]);
+
+  useEffect(() => {
+    if (!notice && !error) {
       return;
     }
+    const timeout = window.setTimeout(() => {
+      setNotice("");
+      setError("");
+    }, 4200);
+    return () => window.clearTimeout(timeout);
+  }, [error, notice]);
 
+  async function refreshProjectContext(projectId: string) {
     const session = readSession();
-    if (!session) {
+    if (!session || !projectId) {
+      setTasks([]);
+      setLogs([]);
+      setEvolutionRecords([]);
+      setMemory(null);
       return;
     }
 
     setLoading(true);
     setError("");
-    Promise.all([
-      listDevLogs(session.accessToken, selectedProjectId),
-      listTasks(session.accessToken, selectedProjectId),
-    ])
-      .then(([devLogs, projectTasks]) => {
-        setLogs(devLogs);
-        setTasks(projectTasks);
-      })
-      .catch((exception) => setError(exception instanceof Error ? exception.message : "开发日志加载失败"))
-      .finally(() => setLoading(false));
-  }, [selectedProjectId]);
+    try {
+      const [devLogs, projectTasks, evolutionItems, memoryRecord] = await Promise.all([
+        listDevLogs(session.accessToken, projectId),
+        listTasks(session.accessToken, projectId),
+        listProjectEvolutionRecords(session.accessToken, projectId),
+        getProjectMemory(session.accessToken, projectId),
+      ]);
+      setLogs(devLogs);
+      setTasks(projectTasks);
+      setEvolutionRecords(evolutionItems);
+      setMemory(memoryRecord);
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "每日回顾数据加载失败");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  async function handleCreate(event: FormEvent<HTMLFormElement>) {
+  async function handleSaveReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const session = readSession();
     if (!session || !selectedProjectId) {
       return;
     }
 
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    setCreating(true);
+    setSaving(true);
     setError("");
+    setNotice("");
     try {
       const log = await createDevLog(session.accessToken, selectedProjectId, {
-        taskId: String(formData.get("taskId")) || null,
-        title: String(formData.get("title")),
-        content: String(formData.get("content")),
-        category: String(formData.get("category")) as DevLogCategory,
-        logDate: String(formData.get("logDate")) || today,
-        minutesSpent: Number(formData.get("minutesSpent") || 0),
-        blocked: formData.get("blocked") === "on",
-        tags: String(formData.get("tags"))
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
+        taskId: null,
+        title: draftTitle,
+        content: draftContent,
+        category: "REVIEW",
+        logDate: reviewDate,
+        minutesSpent,
+        blocked,
+        tags: ["daily-review", "confirmed-assets"],
       });
       setLogs((current) => [log, ...current]);
-      form.reset();
+      setNotice("每日回顾已保存，可用于成果输出。");
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "开发日志创建失败");
+      setError(exception instanceof Error ? exception.message : "每日回顾保存失败");
     } finally {
-      setCreating(false);
+      setSaving(false);
     }
   }
 
   return (
-    <AppShell eyebrow="过程沉淀" title="开发日志">
-      <div className="grid min-h-[calc(100vh-4rem)] gap-6 p-8 xl:grid-cols-[380px_1fr]">
-        <section className="space-y-4">
-          <div className="rounded-lg border border-line bg-white p-5 shadow-panel">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-white">
-                <Layers3 className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="font-semibold">记录范围</h2>
-                <p className="text-sm text-muted">按项目沉淀开发过程。</p>
-              </div>
+    <AppShell eyebrow="按日期沉淀真实开发过程" title="每日回顾">
+      <div className="min-h-[calc(100vh-4rem)] bg-surface p-8">
+        <section className="mb-6 rounded-md border border-line bg-white p-4 shadow-panel">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <select
+                className="h-10 min-w-72 rounded-md border border-line bg-white px-3 text-sm outline-none focus:border-slate-950"
+                disabled={projects.length === 0}
+                onChange={(event) => setSelectedProjectId(event.target.value)}
+                value={selectedProjectId}
+              >
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                className="h-10 rounded-md border border-line bg-white px-3 text-sm outline-none focus:border-slate-950"
+                onChange={(event) => setReviewDate(event.target.value)}
+                type="date"
+                value={reviewDate}
+              />
             </div>
-            <select
-              className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
-              disabled={projects.length === 0}
-              onChange={(event) => setSelectedProjectId(event.target.value)}
-              value={selectedProjectId}
-            >
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-lg font-semibold">{logs.length}</p>
-                <p className="text-xs text-muted">日志</p>
-              </div>
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-lg font-semibold">{Math.round(totalMinutes / 60 * 10) / 10}</p>
-                <p className="text-xs text-muted">小时</p>
-              </div>
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-lg font-semibold">{blockedCount}</p>
-                <p className="text-xs text-muted">阻塞</p>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <StatusPill label="当日日志" value={dayLogs.length} />
+              <StatusPill label="当日演进" value={dayEvolution.length} />
+              <StatusPill label="累计小时" value={Math.round((totalMinutes / 60) * 10) / 10} />
             </div>
           </div>
+        </section>
 
-          <div className="rounded-lg border border-line bg-white p-5 shadow-panel">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-brand">
-                <FilePenLine className="h-5 w-5" />
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+          <form className="rounded-md border border-line bg-white shadow-panel" onSubmit={handleSaveReview}>
+            <div className="flex items-center justify-between border-b border-line px-5 py-4">
+              <div className="flex items-center gap-2">
+                <FilePenLine className="h-4 w-4 text-slate-700" />
+                <h2 className="font-semibold">可编辑回顾草稿</h2>
               </div>
-              <div>
-                <h2 className="font-semibold">快速写日志</h2>
-                <p className="text-sm text-muted">标题和正文足够开始，分类信息可选。</p>
-              </div>
-            </div>
-
-            <form className="space-y-3" onSubmit={handleCreate}>
-              <input
-                className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand"
-                disabled={!selectedProjectId}
-                name="title"
-                placeholder="日志标题，例如：完成任务看板第一版"
-                required
-              />
-              <textarea
-                className="min-h-28 w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand"
-                disabled={!selectedProjectId}
-                name="content"
-                placeholder="写今天完成了什么、遇到什么问题、下一步准备做什么"
-                required
-              />
-              <details className="rounded-lg border border-line bg-slate-50 p-3">
-                <summary className="cursor-pointer text-sm font-medium text-slate-700">分类、关联任务、日期和标签</summary>
-                <div className="mt-3 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <select className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" defaultValue="FEATURE" disabled={!selectedProjectId} name="category">
-                      {categories.map((category) => (
-                        <option key={category} value={category}>
-                          {categoryLabels[category]}
-                        </option>
-                      ))}
-                    </select>
-                    <select className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" disabled={!selectedProjectId} name="taskId">
-                      <option value="">项目级日志</option>
-                      {tasks.map((task) => (
-                        <option key={task.id} value={task.id}>
-                          {task.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" defaultValue={today} disabled={!selectedProjectId} name="logDate" type="date" />
-                    <input className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" defaultValue="60" disabled={!selectedProjectId} min="0" name="minutesSpent" type="number" />
-                  </div>
-                  <input
-                    className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
-                    disabled={!selectedProjectId}
-                    name="tags"
-                    placeholder="标签，可选，用英文逗号分隔"
-                  />
-                  <label className="flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-sm text-slate-600">
-                    <input className="h-4 w-4 accent-blue-600" disabled={!selectedProjectId} name="blocked" type="checkbox" />
-                    存在阻塞或风险
-                  </label>
-                </div>
-              </details>
-              {error ? <p className="text-sm text-rose-600">{error}</p> : null}
               <button
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-60"
-                disabled={creating || !selectedProjectId}
+                className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                disabled={saving || !selectedProjectId}
                 type="submit"
               >
-                {creating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                {creating ? "记录中..." : "保存这条日志"}
+                {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                保存为当天记录
               </button>
-            </form>
-          </div>
-        </section>
+            </div>
+            <div className="space-y-4 p-5">
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-700">标题</span>
+                <input
+                  className="w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-slate-950"
+                  onChange={(event) => setDraftTitle(event.target.value)}
+                  value={draftTitle}
+                />
+              </label>
+              <textarea
+                className="min-h-[620px] w-full rounded-md border border-line bg-slate-50 px-4 py-3 text-sm leading-7 outline-none focus:border-slate-950"
+                onChange={(event) => setDraftContent(event.target.value)}
+                value={draftContent}
+              />
+              <div className="grid gap-3 md:grid-cols-[180px_1fr]">
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-slate-700">整理耗时（分钟）</span>
+                  <input
+                    className="w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-slate-950"
+                    min="0"
+                    onChange={(event) => setMinutesSpent(Number(event.target.value))}
+                    type="number"
+                    value={minutesSpent}
+                  />
+                </label>
+                <label className="flex items-end gap-2 rounded-md border border-line bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  <input checked={blocked} className="h-4 w-4 accent-slate-950" onChange={(event) => setBlocked(event.target.checked)} type="checkbox" />
+                  今日存在风险或阻塞
+                </label>
+              </div>
+            </div>
+          </form>
 
-        <section className="min-w-0 rounded-lg border border-line bg-white p-5 shadow-panel">
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <h2 className="font-semibold">过程时间线</h2>
-              <p className="text-sm text-muted">
-                {selectedProject?.name ?? "暂无项目"} 的开发过程、任务关联和阶段性证据。
-              </p>
-            </div>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600">{logs.length} 条记录</span>
-          </div>
-
-          {loading ? (
-            <div className="grid min-h-96 place-items-center rounded-lg border border-dashed border-line text-sm text-muted">
-              加载日志中...
-            </div>
-          ) : projects.length === 0 ? (
-            <div className="grid min-h-96 place-items-center rounded-lg border border-dashed border-line text-sm text-muted">
-              暂无项目。请先进入项目管理创建项目。
-            </div>
-          ) : logs.length === 0 ? (
-            <div className="grid min-h-96 place-items-center rounded-lg border border-dashed border-line text-sm text-muted">
-              暂无开发日志。可以先记录今天完成的第一项工程推进。
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {logs.map((log) => (
-                <article className="rounded-lg border border-line p-5 transition hover:border-blue-200 hover:bg-blue-50/30" key={log.id}>
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${categoryStyles[log.category]}`}>
-                          {categoryLabels[log.category]}
-                        </span>
-                        {log.blocked ? (
-                          <span className="flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700">
-                            <ShieldAlert className="h-3.5 w-3.5" />
-                            有阻塞
-                          </span>
-                        ) : null}
-                      </div>
-                      <h3 className="text-base font-semibold">{log.title}</h3>
-                      <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600">{log.content}</p>
-                    </div>
-                    <div className="grid min-w-32 gap-2 text-sm text-muted">
-                      <span className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4" />
+          <aside className="space-y-5">
+            <SourcePanel
+              icon={<History className="h-4 w-4 text-slate-700" />}
+              title="大变化"
+              empty="暂无当日演进记录。"
+              items={dayEvolution.map((record) => record.detectedChanges || record.summary)}
+            />
+            <SourcePanel
+              icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+              title="任务证据"
+              empty="暂无任务证据。"
+              items={[
+                ...completedTasks.slice(0, 4).map((task) => `已完成：${task.title}`),
+                ...activeTasks.slice(0, 4).map((task) => `进行中：${task.title}`),
+              ]}
+            />
+            <SourcePanel
+              icon={<ShieldAlert className="h-4 w-4 text-amber-700" />}
+              title="风险与决策"
+              empty="暂无已确认风险或决策。"
+              items={[memory?.currentRisks, memory?.technicalDecisions].filter(Boolean) as string[]}
+            />
+            <section className="rounded-md border border-line bg-white shadow-panel">
+              <div className="flex items-center gap-2 border-b border-line px-5 py-4">
+                <BookOpenText className="h-4 w-4 text-slate-700" />
+                <h2 className="font-semibold">已保存回顾</h2>
+              </div>
+              <div className="divide-y divide-line">
+                {logs.slice(0, 6).map((log) => (
+                  <article className="p-4 text-sm" key={log.id}>
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <p className="font-medium text-slate-950">{log.title}</p>
+                      <span className="flex items-center gap-1 text-xs text-muted">
+                        <CalendarDays className="h-3.5 w-3.5" />
                         {log.logDate}
                       </span>
-                      <span className="flex items-center gap-2">
-                        <Clock3 className="h-4 w-4" />
-                        {log.minutesSpent} 分钟
-                      </span>
                     </div>
-                  </div>
+                    <p className="line-clamp-3 whitespace-pre-line leading-5 text-slate-600">{log.content}</p>
+                    <p className="mt-2 flex items-center gap-1 text-xs text-muted">
+                      <Clock3 className="h-3.5 w-3.5" />
+                      {log.minutesSpent} 分钟
+                    </p>
+                  </article>
+                ))}
+                {logs.length === 0 ? <p className="p-5 text-sm text-muted">暂无已保存回顾。</p> : null}
+              </div>
+            </section>
+          </aside>
+        </div>
 
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
-                    <span className="flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
-                      <Link2 className="h-3.5 w-3.5" />
-                      {log.taskId ? taskNames[log.taskId] ?? "已关联任务" : "项目级日志"}
-                    </span>
-                    {log.tags.map((tag) => (
-                      <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600" key={tag}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+        {error ? <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-panel">{error}</div> : null}
+        {notice ? <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-panel">{notice}</div> : null}
+        {loading ? <div className="fixed inset-x-0 bottom-0 h-1 bg-slate-950" /> : null}
       </div>
     </AppShell>
   );
+}
+
+function SourcePanel({ icon, title, items, empty }: { icon: ReactNode; title: string; items: string[]; empty: string }) {
+  return (
+    <section className="rounded-md border border-line bg-white shadow-panel">
+      <div className="flex items-center gap-2 border-b border-line px-5 py-4">
+        {icon}
+        <h2 className="font-semibold">{title}</h2>
+      </div>
+      <div className="space-y-3 p-5 text-sm leading-6 text-slate-600">
+        {items.length ? items.slice(0, 6).map((item, index) => <p className="whitespace-pre-line" key={`${title}-${index}`}>{item}</p>) : <p className="text-muted">{empty}</p>}
+      </div>
+    </section>
+  );
+}
+
+function StatusPill({ label, value }: { label: string; value: string | number }) {
+  return <span className="rounded-md bg-slate-100 px-2.5 py-1 text-slate-600">{label} {value}</span>;
+}
+
+function buildDailyDraft(
+  project: Project | undefined,
+  memory: ProjectMemory | null,
+  logs: DevLog[],
+  evolutionRecords: ProjectEvolutionRecord[],
+  activeTasks: TaskItem[],
+  completedTasks: TaskItem[],
+) {
+  const bigChanges = evolutionRecords.map((record) => record.detectedChanges || record.summary).filter(Boolean);
+  const logSummaries = logs.map((log) => `${log.title}\n${log.content}`).filter(Boolean);
+  return `# ${project?.name ?? "项目"} 每日回顾
+
+## 今天做了什么
+${listOrFallback([...bigChanges, ...logSummaries], "暂无自动识别记录。")}
+
+## 大变化
+${listOrFallback(bigChanges, "暂无大变化。")}
+
+## 小变化
+${listOrFallback(activeTasks.slice(0, 6).map((task) => `${task.title}：${task.description || task.status}`), "暂无小变化。")}
+
+## 经验沉淀
+${memory?.developerLearnings || "暂无已确认经验。"}
+
+## 风险与决策
+风险：
+${memory?.currentRisks || "暂无已确认风险。"}
+
+决策：
+${memory?.technicalDecisions || "暂无技术决策。"}
+
+## 项目档案更新
+已完成能力：
+${memory?.completedCapabilities || "暂无已确认能力。"}
+
+进行中能力：
+${memory?.inProgressCapabilities || "暂无进行中能力。"}
+
+## 明天继续
+${listOrFallback([
+    memory?.nextStepSuggestions || "",
+    ...activeTasks.slice(0, 5).map((task) => task.title),
+    ...(completedTasks.length ? [`复核 ${completedTasks.length} 个已完成任务是否可沉淀为成果素材。`] : []),
+  ].filter(Boolean), "暂无下一步建议。")}`;
+}
+
+function listOrFallback(items: string[], fallback: string) {
+  const cleanItems = items.map((item) => item.trim()).filter(Boolean);
+  if (cleanItems.length === 0) {
+    return `- ${fallback}`;
+  }
+  return cleanItems.map((item) => `- ${item.replace(/\n/g, "\n  ")}`).join("\n");
 }

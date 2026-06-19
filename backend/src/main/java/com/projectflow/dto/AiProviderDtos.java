@@ -23,7 +23,7 @@ public final class AiProviderDtos {
         @NotBlank @Size(max = 160) String modelName,
         @NotNull AiProviderType type,
         @NotNull @Min(0) @Max(2) Double temperature,
-        @NotNull @Min(1) @Max(5000000) Integer maxTokens,
+        @NotNull @Min(1) @Max(1000000000) Integer maxTokens,
         boolean defaultEnabled,
         List<@Size(max = 60) String> purposeTags
     ) {

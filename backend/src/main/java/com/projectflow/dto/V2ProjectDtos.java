@@ -8,6 +8,14 @@ import java.util.UUID;
 import com.projectflow.entity.AiSuggestionStatus;
 import com.projectflow.entity.AiSuggestionType;
 import com.projectflow.entity.MaterialSourceType;
+import com.projectflow.entity.ProjectChangeImpactLevel;
+import com.projectflow.entity.ProjectChangeKind;
+import com.projectflow.entity.ProjectChangeSourceType;
+import com.projectflow.entity.ProjectChangeStatus;
+import com.projectflow.entity.ProjectFactSourceType;
+import com.projectflow.entity.ProjectAnalysisRecordType;
+import com.projectflow.entity.ProjectAnalysisJobStatus;
+import com.projectflow.entity.ProjectAnalysisJobType;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -67,6 +75,80 @@ public final class V2ProjectDtos {
     ) {
     }
 
+    public record ProjectAnalysisResponse(
+        String summary,
+        String architecture,
+        List<String> modules,
+        List<String> risks,
+        List<String> importantFiles,
+        List<String> evidence,
+        List<String> limitations,
+        boolean providerConfigured,
+        boolean modelUsed,
+        String providerName,
+        String analysisSource,
+        String confidence,
+        String message
+    ) {
+    }
+
+    public record ProjectFileAnalysisRequest(
+        @NotBlank @Size(max = 1000) String path
+    ) {
+    }
+
+    public record ProjectFileAnalysisResponse(
+        String path,
+        String fileType,
+        String role,
+        String summary,
+        String importance,
+        String riskLevel,
+        String riskNotes,
+        List<String> evidence,
+        List<String> relatedFiles,
+        String limitations,
+        boolean providerConfigured,
+        boolean modelUsed,
+        String providerName,
+        String analysisSource,
+        String confidence,
+        String message
+    ) {
+    }
+
+    public record ProjectAnalysisJobResponse(
+        UUID id,
+        UUID projectId,
+        ProjectAnalysisJobType jobType,
+        String filePath,
+        ProjectAnalysisJobStatus status,
+        ProjectAnalysisResponse projectResult,
+        ProjectFileAnalysisResponse fileResult,
+        String errorMessage,
+        UUID recordId,
+        Instant createdAt,
+        Instant updatedAt,
+        Instant startedAt,
+        Instant completedAt
+    ) {
+    }
+
+    public record ProjectAnalysisRecordResponse(
+        UUID id,
+        UUID projectId,
+        ProjectAnalysisRecordType recordType,
+        String filePath,
+        String summary,
+        String details,
+        String analysisSource,
+        boolean modelUsed,
+        String providerName,
+        String confidence,
+        Instant createdAt
+    ) {
+    }
+
     public record AiSuggestionResponse(
         UUID id,
         UUID projectId,
@@ -118,6 +200,19 @@ public final class V2ProjectDtos {
         Integer version,
         Instant createdAt,
         Instant updatedAt
+    ) {
+    }
+
+    public record ProjectMemoryUpdateRequest(
+        @NotNull @Size(max = 10000) String positioning,
+        @NotNull @Size(max = 5000) String currentStage,
+        @NotNull @Size(max = 20000) String completedCapabilities,
+        @NotNull @Size(max = 20000) String inProgressCapabilities,
+        @NotNull @Size(max = 20000) String currentRisks,
+        @NotNull @Size(max = 20000) String technicalDecisions,
+        @NotNull @Size(max = 20000) String developerLearnings,
+        @NotNull @Size(max = 20000) String showcaseAssets,
+        @NotNull @Size(max = 20000) String nextStepSuggestions
     ) {
     }
 
@@ -180,6 +275,64 @@ public final class V2ProjectDtos {
         String resultPath,
         String statusPath,
         List<String> writtenFiles
+    ) {
+    }
+
+    public record ProjectChangeResponse(
+        UUID id,
+        UUID projectId,
+        UUID materialId,
+        UUID linkedSuggestionId,
+        ProjectChangeSourceType sourceType,
+        String sourceRef,
+        ProjectChangeKind changeKind,
+        ProjectChangeImpactLevel impactLevel,
+        ProjectChangeStatus status,
+        String title,
+        String summary,
+        String details,
+        String affectedFiles,
+        String relatedTasks,
+        String testEvidence,
+        String buildEvidence,
+        String riskNotes,
+        String decisionNotes,
+        String learningNotes,
+        String assetCandidates,
+        Instant createdAt,
+        Instant updatedAt,
+        Instant reviewedAt
+    ) {
+    }
+
+    public record ProjectChangePatchRequest(
+        @NotNull ProjectChangeKind changeKind,
+        @NotNull ProjectChangeImpactLevel impactLevel,
+        @NotBlank @Size(max = 180) String title,
+        @NotBlank @Size(max = 10000) String summary,
+        @NotNull @Size(max = 20000) String details,
+        @NotNull @Size(max = 20000) String affectedFiles,
+        @NotNull @Size(max = 20000) String relatedTasks,
+        @NotNull @Size(max = 20000) String testEvidence,
+        @NotNull @Size(max = 20000) String buildEvidence,
+        @NotNull @Size(max = 20000) String riskNotes,
+        @NotNull @Size(max = 20000) String decisionNotes,
+        @NotNull @Size(max = 20000) String learningNotes,
+        @NotNull @Size(max = 20000) String assetCandidates
+    ) {
+    }
+
+    public record ProjectFactSourceResponse(
+        UUID id,
+        UUID projectId,
+        String fieldKey,
+        String value,
+        ProjectFactSourceType sourceType,
+        UUID sourceId,
+        String confidence,
+        boolean confirmedByUser,
+        Instant createdAt,
+        Instant updatedAt
     ) {
     }
 }

@@ -145,11 +145,11 @@ export default function SettingsPage() {
               </label>
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-slate-700">Max Tokens</span>
-                <input className="w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-brand" defaultValue="8192" max="5000000" min="1" name="maxTokens" type="number" />
+                <input className="w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-brand" defaultValue="100000" max="1000000000" min="1" name="maxTokens" type="number" />
               </label>
             </div>
             <p className="text-xs leading-5 text-muted">
-              DeepSeek 填 Base URL，不要填完整 `/chat/completions`；如果误填，后端会自动修正。Max Tokens 上限为 5000000，实际可用长度仍由模型服务决定。
+              DeepSeek 填 Base URL，不要填完整 `/chat/completions`；如果误填，后端会自动修正。Max Tokens 可配置到 1000000000，实际可用长度仍由模型服务决定。
             </p>
             <button className="flex w-full items-center justify-center gap-2 rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-60" disabled={saving} type="submit">
               {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Settings2 className="h-4 w-4" />}

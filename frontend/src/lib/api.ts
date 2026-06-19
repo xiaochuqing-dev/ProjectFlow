@@ -493,6 +493,18 @@ export type ProjectMemory = {
   updatedAt: string | null;
 };
 
+export type ProjectMemoryPayload = {
+  positioning: string;
+  currentStage: string;
+  completedCapabilities: string;
+  inProgressCapabilities: string;
+  currentRisks: string;
+  technicalDecisions: string;
+  developerLearnings: string;
+  showcaseAssets: string;
+  nextStepSuggestions: string;
+};
+
 export type ProjectSnapshot = {
   id: string;
   projectId: string;
@@ -518,6 +530,157 @@ export type ProjectEvolutionRecord = {
   technicalDecisions: string;
   developerLearnings: string;
   nextSteps: string;
+  createdAt: string;
+};
+
+export type ProjectChangeKind =
+  | "CAPABILITY"
+  | "BUGFIX"
+  | "REFACTOR"
+  | "CONFIG"
+  | "DOCS"
+  | "TEST"
+  | "RISK"
+  | "DECISION"
+  | "LEARNING"
+  | "ASSET"
+  | "UNKNOWN";
+
+export type ProjectChangeImpactLevel = "MAJOR" | "MINOR" | "MAINTENANCE" | "UNCERTAIN";
+
+export type ProjectChangeSourceType =
+  | "AGENT_RESULT"
+  | "PROJECT_ZIP"
+  | "MATERIAL_UPDATE"
+  | "USER_MANUAL"
+  | "MODEL_SUMMARY";
+
+export type ProjectChangeStatus = "PENDING" | "EDITED" | "ACCEPTED" | "IGNORED" | "MERGED";
+
+export type ProjectChange = {
+  id: string;
+  projectId: string;
+  materialId: string | null;
+  linkedSuggestionId: string | null;
+  sourceType: ProjectChangeSourceType;
+  sourceRef: string;
+  changeKind: ProjectChangeKind;
+  impactLevel: ProjectChangeImpactLevel;
+  status: ProjectChangeStatus;
+  title: string;
+  summary: string;
+  details: string;
+  affectedFiles: string;
+  relatedTasks: string;
+  testEvidence: string;
+  buildEvidence: string;
+  riskNotes: string;
+  decisionNotes: string;
+  learningNotes: string;
+  assetCandidates: string;
+  createdAt: string;
+  updatedAt: string;
+  reviewedAt: string | null;
+};
+
+export type ProjectChangePayload = {
+  changeKind: ProjectChangeKind;
+  impactLevel: ProjectChangeImpactLevel;
+  title: string;
+  summary: string;
+  details: string;
+  affectedFiles: string;
+  relatedTasks: string;
+  testEvidence: string;
+  buildEvidence: string;
+  riskNotes: string;
+  decisionNotes: string;
+  learningNotes: string;
+  assetCandidates: string;
+};
+
+export type ProjectFactSourceType = "USER_MANUAL" | "ACCEPTED_CHANGE" | "AGENT_RESULT" | "ZIP_ANALYSIS" | "MODEL_SUMMARY";
+
+export type ProjectFactSource = {
+  id: string;
+  projectId: string;
+  fieldKey: keyof ProjectMemoryPayload | string;
+  value: string;
+  sourceType: ProjectFactSourceType;
+  sourceId: string | null;
+  confidence: string;
+  confirmedByUser: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProjectAnalysis = {
+  summary: string;
+  architecture: string;
+  modules: string[];
+  risks: string[];
+  importantFiles: string[];
+  evidence: string[];
+  limitations: string[];
+  providerConfigured: boolean;
+  modelUsed: boolean;
+  providerName: string | null;
+  analysisSource: "LOCAL_RULE" | "MODEL_ANALYSIS" | string;
+  confidence: string;
+  message: string;
+};
+
+export type ProjectFileAnalysis = {
+  path: string;
+  fileType: string;
+  role: string;
+  summary: string;
+  importance: string;
+  riskLevel: string;
+  riskNotes: string;
+  evidence: string[];
+  relatedFiles: string[];
+  limitations: string;
+  providerConfigured: boolean;
+  modelUsed: boolean;
+  providerName: string | null;
+  analysisSource: "LOCAL_RULE" | "MODEL_ANALYSIS" | string;
+  confidence: string;
+  message: string;
+};
+
+export type ProjectAnalysisJobStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED";
+export type ProjectAnalysisJobType = "PROJECT" | "FILE";
+
+export type ProjectAnalysisJob = {
+  id: string;
+  projectId: string;
+  jobType: ProjectAnalysisJobType;
+  filePath: string | null;
+  status: ProjectAnalysisJobStatus;
+  projectResult: ProjectAnalysis | null;
+  fileResult: ProjectFileAnalysis | null;
+  errorMessage: string | null;
+  recordId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+};
+
+export type ProjectAnalysisRecordType = "PROJECT" | "FILE";
+
+export type ProjectAnalysisRecord = {
+  id: string;
+  projectId: string;
+  recordType: ProjectAnalysisRecordType;
+  filePath: string | null;
+  summary: string;
+  details: string;
+  analysisSource: "LOCAL_RULE" | "MODEL_ANALYSIS" | string;
+  modelUsed: boolean;
+  providerName: string | null;
+  confidence: string;
   createdAt: string;
 };
 
@@ -631,6 +794,23 @@ export function listAiSuggestions(token: string, projectId: string): Promise<AiS
   });
 }
 
+export function updateAiSuggestion(
+  token: string,
+  suggestionId: string,
+  title: string,
+  reason: string,
+  payload: Record<string, unknown>,
+): Promise<AiSuggestion> {
+  return requestJson<AiSuggestion>(`/ai-suggestions/${suggestionId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ title, reason, payload }),
+  });
+}
+
 export function applyAiSuggestions(token: string, projectId: string, suggestionIds: string[]): Promise<ApplySuggestionsResult> {
   return requestJson<ApplySuggestionsResult>(`/projects/${projectId}/suggestions/apply`, {
     method: "POST",
@@ -651,8 +831,125 @@ export function ignoreAiSuggestion(token: string, suggestionId: string): Promise
   });
 }
 
+export function listProjectChanges(token: string, projectId: string): Promise<ProjectChange[]> {
+  return requestJson<ProjectChange[]>(`/projects/${projectId}/changes`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function updateProjectChange(token: string, changeId: string, payload: ProjectChangePayload): Promise<ProjectChange> {
+  return requestJson<ProjectChange>(`/project-changes/${changeId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function acceptProjectChange(token: string, changeId: string): Promise<ProjectChange> {
+  return requestJson<ProjectChange>(`/project-changes/${changeId}/accept`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function ignoreProjectChange(token: string, changeId: string): Promise<ProjectChange> {
+  return requestJson<ProjectChange>(`/project-changes/${changeId}/ignore`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function runProjectAnalysis(token: string, projectId: string): Promise<ProjectAnalysisJob> {
+  return requestJson<ProjectAnalysisJob>(`/projects/${projectId}/analysis/run`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function analyzeProjectFile(token: string, projectId: string, path: string): Promise<ProjectAnalysisJob> {
+  return requestJson<ProjectAnalysisJob>(`/projects/${projectId}/files/analyze`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ path }),
+  });
+}
+
+export function getProjectAnalysisJob(token: string, jobId: string): Promise<ProjectAnalysisJob> {
+  return requestJson<ProjectAnalysisJob>(`/analysis-jobs/${jobId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function listProjectAnalysisJobs(token: string, projectId: string): Promise<ProjectAnalysisJob[]> {
+  return requestJson<ProjectAnalysisJob[]>(`/projects/${projectId}/analysis-jobs`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function listProjectAnalysisRecords(token: string, projectId: string): Promise<ProjectAnalysisRecord[]> {
+  return requestJson<ProjectAnalysisRecord[]>(`/projects/${projectId}/analysis-records`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function getProjectAnalysisRecord(token: string, recordId: string): Promise<ProjectAnalysisRecord> {
+  return requestJson<ProjectAnalysisRecord>(`/project-analysis-records/${recordId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function deleteProjectAnalysisRecord(token: string, recordId: string): Promise<void> {
+  return requestJson<void>(`/project-analysis-records/${recordId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 export function getProjectMemory(token: string, projectId: string): Promise<ProjectMemory> {
   return requestJson<ProjectMemory>(`/projects/${projectId}/memory`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function updateProjectMemory(token: string, projectId: string, payload: ProjectMemoryPayload): Promise<ProjectMemory> {
+  return requestJson<ProjectMemory>(`/projects/${projectId}/memory`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listProjectFactSources(token: string, projectId: string): Promise<ProjectFactSource[]> {
+  return requestJson<ProjectFactSource[]>(`/projects/${projectId}/fact-sources`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

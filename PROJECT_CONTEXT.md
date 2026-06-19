@@ -1,0 +1,277 @@
+# ProjectFlow Project Context
+
+Last updated: 2026-06-08
+
+Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
+
+## Product Position
+
+ProjectFlow is a local-first developer workbench that turns real project activity into durable engineering assets.
+
+Current direction:
+
+- Agent tools such as Codex modify real projects.
+- ProjectFlow records, reviews, and confirms what changed.
+- Confirmed changes become project profile data, daily reviews, task evidence, technical decisions, risks, and output material.
+- AI/model calls are candidate generators only; user confirmation is required before treating output as official project facts.
+
+Do not treat ProjectFlow as a generic Kanban app, SaaS admin panel, hotel/library system, or marketing site. The product should feel like a serious developer tool focused on project understanding.
+
+## Current Stage
+
+The project has moved beyond the V1/V2 planning baseline. Current V3.1 focus:
+
+- Workbench first screen should emphasize project profile, architecture/file understanding, model analysis status, risks, and pending changes.
+- Left-side first-screen actions should prioritize raw project connection: import zip, bind real project path, write `.projectflow` protocol, scan agent result.
+- "Project facts" UI language should become "项目画像" / "项目档案".
+- Model API value should move upstream into project analysis, module/file explanation, risk identification, agent result parsing, and profile update suggestions.
+- Model-not-configured and model-failed states must keep local-rule fallback usable.
+
+Recent implementation report says these are already present:
+
+- `POST /api/projects/{projectId}/analysis/run`
+- `POST /api/projects/{projectId}/files/analyze`
+- Project analysis and file analysis can use model when configured, otherwise local rules.
+- Sensitive file paths are not sent to the model.
+- Analysis records exist and can be listed, opened, and deleted.
+
+Known remaining boundary:
+
+- Analysis records exist, but deeper persistent `ProjectAnalysisRun` / `ProjectFileInsight` style history is still a likely next step.
+- Real DeepSeek key/network validation may not have been done locally.
+- File analysis is based on imported zip summaries and key content, not full source indexing.
+
+## Tech Stack
+
+- Frontend: Next.js App Router, TypeScript, React, Tailwind CSS, lucide-react.
+- Backend: Spring Boot 3.5.x, Java 17, Maven, Spring Web, Validation, Actuator, JPA, Redis, Spring Security Crypto, JJWT.
+- Database/cache: PostgreSQL and Redis via Docker Compose.
+- Runtime: Windows/PowerShell local workflow, Docker Desktop required for PostgreSQL and Redis.
+
+Important commands:
+
+```powershell
+cd frontend
+npm.cmd run build
+
+cd ..\backend
+C:\Users\Administrator\Desktop\apache-maven-3.9.9\bin\mvn.cmd -q test
+```
+
+Startup:
+
+```powershell
+.\start-projectflow.ps1
+```
+
+or double-click `start-projectflow.bat`.
+
+## Repository Map
+
+```text
+backend/                  Spring Boot API
+frontend/                 Next.js app
+docs/                     product, architecture, data model, stage plans, reports
+.projectflow/             agent bridge protocol/context/results for this project
+docker-compose.yml        PostgreSQL and Redis
+.env.example              repo-safe environment template
+start-projectflow.ps1     Windows startup orchestration
+start-projectflow.bat     simple Windows launcher
+```
+
+Key docs to read selectively:
+
+- `README.md`: product scope, tech stack, local startup.
+- `docs/architecture.md`: frontend/backend layering and core flows.
+- `docs/data-model.md`: base V1 data model and ownership rule.
+- `docs/api-design.md`: V1 API shape and endpoint baseline.
+- `docs/v2-core-plan.md`: Project Material, Project Memory, Snapshot/Diff, AI suggestion confirmation model.
+- `docs/v3-product-direction-plan.md`: V3 developer workbench direction and agent/ProjectFlow split.
+- `docs/v3.1-product-improvement-plan.md`: current product target for project profile, file understanding, states, and model role.
+- `docs/v3.1-second-round-implementation-report.md`: latest implementation and verification summary.
+
+When reading Chinese docs in PowerShell, use `Get-Content -Encoding UTF8`; default output may display mojibake.
+
+## Backend Shape
+
+Package root: `backend/src/main/java/com/projectflow`.
+
+Layering:
+
+- `controller`: HTTP endpoints and auth extraction.
+- `service`: business rules, ownership checks, parsing, model calls, bridge writes.
+- `entity`: JPA entities and enums.
+- `repository`: JPA repositories.
+- `dto`: request/response records.
+- `security`: JWT service.
+- `support`: shared app errors and converters.
+
+Core services:
+
+- `AuthService`: register/login/me, BCrypt password handling, JWT issue.
+- `ProjectService`: project CRUD and ownership.
+- `TaskService`: project-scoped tasks and status transitions.
+- `DevLogService`: project-scoped development logs.
+- `MarkdownImportService`: Markdown preview/confirm/import records.
+- `AiProviderService`: user model provider config and test.
+- `AiOutputService`: weekly report, project summary, resume bullets, README section outputs.
+- `ProjectIntelligenceService`: materials, zip import, project analysis, file analysis, suggestions, memory, snapshots, evolution records, project changes, fact sources, analysis records.
+- `ProjectAgentBridgeService`: writes `.projectflow` protocol/context/task briefs, scans agent result files, creates materials/suggestions/changes.
+
+Important backend constraints:
+
+- All project-owned resources must be scoped through project ownership.
+- Real secrets belong in environment variables or user provider config, not committed files.
+- Model output is candidate data; do not silently overwrite confirmed user/project memory content.
+- Zip import skips `.git`, dependency/build output, logs, `.env`, binary/media/archive files.
+- File model analysis must skip sensitive paths.
+- Local-rule fallback should keep pages useful when model API is missing or fails.
+
+## Frontend Shape
+
+Frontend root: `frontend/src`.
+
+Important files:
+
+- `frontend/src/lib/api.ts`: typed API client and response/error handling.
+- `frontend/src/lib/auth.ts`: local session handling.
+- `frontend/src/lib/project-insights.ts`: frontend project insight helpers.
+- `frontend/src/components/AppShell.tsx`: authenticated layout and main navigation.
+- `frontend/src/components/AuthPageShell.tsx`, `AuthPanel.tsx`: auth screens.
+- `frontend/src/app/globals.css`: global styling.
+
+Current main nav in `AppShell.tsx`:
+
+- `工作台` -> `/dashboard`
+- `变更审查` -> `/tasks`
+- `项目画像` -> `/project-intelligence`
+- `每日回顾` -> `/dev-logs`
+- `成果输出` -> `/ai-review`
+- `设置` -> `/settings`
+
+Important routes:
+
+- `/login`, `/register`
+- `/dashboard`
+- `/projects`, `/projects/[projectId]`, `/projects/[projectId]/files`
+- `/tasks`
+- `/dev-logs`
+- `/imports`
+- `/project-intelligence`
+- `/project-analysis-records/[recordId]`
+- `/ai-review`
+- `/settings`
+
+Frontend design direction:
+
+- Chinese-first product UI; GitHub/docs can stay English-first.
+- Use restrained developer-dashboard visuals, clear density, and useful status indicators.
+- Avoid repeated navigation cards on the workbench.
+- Empty states must explain what is missing, why it matters, and the next action.
+- Do not show fake project profile, fake architecture, or fake model output when prerequisites are missing.
+
+## API Surface
+
+Base path is `/api`. Protected requests use `Authorization: Bearer <token>`.
+
+Core endpoint groups:
+
+- Auth: `/auth/register`, `/auth/login`, `/auth/me`
+- Projects: `/projects`
+- Tasks: `/projects/{projectId}/tasks`, `/tasks/{taskId}`, `/tasks/{taskId}/status`
+- Dev logs: `/projects/{projectId}/dev-logs`, `/dev-logs/{logId}`
+- Markdown imports: `/imports/preview`, `/imports/confirm`, `/projects/{projectId}/imports`
+- AI providers: `/ai-providers`, `/ai-providers/{providerId}/test`
+- AI outputs: `/projects/{projectId}/ai-outputs`, `/ai-outputs/{outputId}`
+- Project materials: `/projects/{projectId}/materials`, `/projects/{projectId}/materials/text`, `/projects/{projectId}/materials/file`, `/projects/{projectId}/materials/zip`, `/project-imports/zip`
+- Project analysis: `/projects/{projectId}/analysis/run`, `/projects/{projectId}/files/analyze`, `/projects/{projectId}/analysis-records`, `/project-analysis-records/{recordId}`
+- Suggestions/changes: `/projects/{projectId}/suggestions`, `/ai-suggestions/{suggestionId}`, `/projects/{projectId}/changes`, `/project-changes/{changeId}`
+- Memory/history: `/projects/{projectId}/memory`, `/projects/{projectId}/fact-sources`, `/projects/{projectId}/snapshots`, `/projects/{projectId}/evolution-records`
+- Agent bridge: `/projects/{projectId}/agent-bridge/protocol`, `/projects/{projectId}/agent-bridge/scan`, `/projects/{projectId}/agent-bridge/tasks/{taskId}/brief`
+
+Response shape:
+
+```json
+{ "data": {}, "message": "OK" }
+```
+
+Error shape:
+
+```json
+{ "error": { "code": "CODE", "message": "Message", "details": [] } }
+```
+
+## Data Concepts
+
+Base V1:
+
+- `User`
+- `ProjectSpace`
+- `TaskItem`
+- `DevLog`
+- `ImportRecord`
+- `AiOutput`
+
+V2/V3 project intelligence:
+
+- `AiProvider`
+- `ProjectMaterial`
+- `AiSuggestion`
+- `ProjectMemory`
+- `ProjectSnapshot`
+- `ProjectEvolutionRecord`
+- `ProjectChange`
+- `ProjectFactSource`
+- `ProjectAnalysisRecord`
+
+Ownership rule:
+
+- A user can access task/log/material/suggestion/change/memory/output data only through a project owned by that user.
+
+## Agent Bridge
+
+ProjectFlow can write `.projectflow` files into a real project path:
+
+```text
+.projectflow/
+  agent-protocol.md
+  context/
+    project-profile.md
+    requirements.md
+    confirmed-decisions.md
+    known-risks.md
+    update-history.md
+  inbox/
+  tasks/<task-id>/
+    brief.md
+    result.md
+    status.json
+```
+
+Agent result requirements:
+
+- Result starts with `# ProjectFlow Agent Result`.
+- It should include `Summary`, `Changed Files`, `Task Updates`, `Decisions`, `Risks`, and `Dev Log`.
+- Agent must not directly mark ProjectFlow task state as complete.
+- ProjectFlow scans results, imports them as material, creates suggestions, and creates `ProjectChange` records for review.
+
+## Implementation Habits
+
+- Keep changes narrow and aligned with the current V3.1 direction.
+- Prefer existing services, DTO records, repository patterns, and API client types.
+- If adding backend behavior, add focused tests in `backend/src/test/java/com/projectflow`.
+- If touching frontend routes or API types, verify `npm.cmd run build`.
+- If touching backend service/controller/entity behavior, verify targeted tests or full `mvn.cmd -q test`.
+- Do not commit local secrets or real `.env`.
+- For current docs or API/library behavior, use Context7 first.
+
+## Token-Saving Rule
+
+For large tasks, first read this file, then read only:
+
+1. The latest relevant stage report in `docs/`.
+2. The target frontend route/component or backend controller/service.
+3. The matching API client types in `frontend/src/lib/api.ts` when frontend/backend contract is involved.
+4. The focused tests for the touched backend service or controller.
+
+Avoid rereading all docs and all source files unless the task is cross-cutting or this file is out of date.

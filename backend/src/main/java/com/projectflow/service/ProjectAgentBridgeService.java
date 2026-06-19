@@ -30,11 +30,16 @@ import com.projectflow.entity.AiSuggestion;
 import com.projectflow.entity.AiSuggestionStatus;
 import com.projectflow.entity.AiSuggestionType;
 import com.projectflow.entity.MaterialSourceType;
+import com.projectflow.entity.ProjectChange;
+import com.projectflow.entity.ProjectChangeImpactLevel;
+import com.projectflow.entity.ProjectChangeKind;
+import com.projectflow.entity.ProjectChangeSourceType;
 import com.projectflow.entity.ProjectMaterial;
 import com.projectflow.entity.ProjectMemory;
 import com.projectflow.entity.ProjectSpace;
 import com.projectflow.entity.TaskItem;
 import com.projectflow.repository.AiSuggestionRepository;
+import com.projectflow.repository.ProjectChangeRepository;
 import com.projectflow.repository.ProjectMaterialRepository;
 import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
@@ -50,6 +55,7 @@ public class ProjectAgentBridgeService {
     private final ProjectMemoryRepository memoryRepository;
     private final ProjectMaterialRepository materialRepository;
     private final AiSuggestionRepository suggestionRepository;
+    private final ProjectChangeRepository changeRepository;
     private final TaskRepository taskRepository;
     private final ObjectMapper objectMapper;
 
@@ -58,6 +64,7 @@ public class ProjectAgentBridgeService {
         ProjectMemoryRepository memoryRepository,
         ProjectMaterialRepository materialRepository,
         AiSuggestionRepository suggestionRepository,
+        ProjectChangeRepository changeRepository,
         TaskRepository taskRepository,
         ObjectMapper objectMapper
     ) {
@@ -65,6 +72,7 @@ public class ProjectAgentBridgeService {
         this.memoryRepository = memoryRepository;
         this.materialRepository = materialRepository;
         this.suggestionRepository = suggestionRepository;
+        this.changeRepository = changeRepository;
         this.taskRepository = taskRepository;
         this.objectMapper = objectMapper;
     }
@@ -161,6 +169,7 @@ public class ProjectAgentBridgeService {
             ProjectMaterial material = saveMaterial(project.getId(), projectRoot.relativize(resultFile).toString().replace("\\", "/"), content);
             AgentResult agentResult = parseAgentResult(content);
             List<AiSuggestion> createdSuggestions = generateSuggestions(project, material, agentResult);
+            saveProjectChange(project, material, agentResult, createdSuggestions);
             materials.add(toMaterialResponse(material));
             suggestions.addAll(createdSuggestions.stream().map(this::toSuggestionResponse).toList());
             markProcessed(resultFile);
@@ -278,6 +287,84 @@ public class ProjectAgentBridgeService {
         }
 
         return suggestions;
+    }
+
+    private ProjectChange saveProjectChange(
+        ProjectSpace project,
+        ProjectMaterial material,
+        AgentResult result,
+        List<AiSuggestion> suggestions
+    ) {
+        String summary = defaultText(result.section("Summary"), "Agent returned a ProjectFlow result.");
+        String changedFiles = defaultText(result.section("Changed Files"), "- Not reported");
+        String taskUpdates = result.section("Task Updates");
+        String decisions = result.section("Decisions");
+        String risks = result.section("Risks");
+        String devLog = result.section("Dev Log");
+        UUID linkedSuggestionId = suggestions.stream()
+            .filter(suggestion -> suggestion.getType() == AiSuggestionType.UPDATE_PROJECT_MEMORY)
+            .findFirst()
+            .or(() -> suggestions.stream().findFirst())
+            .map(AiSuggestion::getId)
+            .orElse(null);
+
+        ProjectChange change = new ProjectChange(project.getId(), material.getId());
+        change.update(
+            ProjectChangeSourceType.AGENT_RESULT,
+            material.getFileName(),
+            linkedSuggestionId,
+            inferChangeKind(summary, changedFiles, decisions, risks),
+            inferImpactLevel(changedFiles, decisions, risks),
+            truncate("Agent result: " + firstLine(summary), 180),
+            summary,
+            defaultText(devLog, summary),
+            changedFiles,
+            defaultText(taskUpdates, result.taskId()),
+            "Not reported",
+            "Not reported",
+            risks,
+            decisions,
+            "",
+            ""
+        );
+        return changeRepository.save(change);
+    }
+
+    private ProjectChangeKind inferChangeKind(String summary, String changedFiles, String decisions, String risks) {
+        String text = (summary + "\n" + changedFiles + "\n" + decisions + "\n" + risks).toLowerCase();
+        if (text.contains("implemented") || text.contains("completed") || text.contains("added") || text.contains("完成") || text.contains("实现")) {
+            return ProjectChangeKind.CAPABILITY;
+        }
+        if (text.contains("risk") || text.contains("风险")) {
+            return ProjectChangeKind.RISK;
+        }
+        if (text.contains("decision") || text.contains("决策")) {
+            return ProjectChangeKind.DECISION;
+        }
+        if (text.contains("test") || text.contains("测试")) {
+            return ProjectChangeKind.TEST;
+        }
+        if (text.contains("readme") || text.contains("docs/") || text.contains("文档")) {
+            return ProjectChangeKind.DOCS;
+        }
+        if (text.contains("config") || text.contains(".env") || text.contains("配置")) {
+            return ProjectChangeKind.CONFIG;
+        }
+        return ProjectChangeKind.CAPABILITY;
+    }
+
+    private ProjectChangeImpactLevel inferImpactLevel(String changedFiles, String decisions, String risks) {
+        if (!decisions.isBlank() || !risks.isBlank()) {
+            return ProjectChangeImpactLevel.MAJOR;
+        }
+        long changedFileCount = changedFiles.lines().filter(line -> line.trim().startsWith("- ")).count();
+        if (changedFileCount >= 2) {
+            return ProjectChangeImpactLevel.MAJOR;
+        }
+        if (changedFileCount == 1) {
+            return ProjectChangeImpactLevel.MINOR;
+        }
+        return ProjectChangeImpactLevel.UNCERTAIN;
     }
 
     private AgentResult parseAgentResult(String content) {
