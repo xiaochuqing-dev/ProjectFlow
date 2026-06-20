@@ -800,6 +800,9 @@ export type EvidenceBundle = {
   objectiveEvidence: string[];
   agentClaims: string[];
   sources: EvidenceSource[];
+  status: "READY_FOR_CHANGE" | "CHANGE_DRAFTED" | "CHANGE_ACCEPTED" | "ARCHIVED" | string;
+  nextAction: "GENERATE_CHANGE" | "REVIEW_CHANGE" | "VIEW_MEMORY" | "NO_ACTION" | string;
+  changeId: string | null;
   createdAt: string;
   updatedAt: string;
 };

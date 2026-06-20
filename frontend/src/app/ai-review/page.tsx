@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import { Clipboard, Download, FileText, History, Layers3, RefreshCw, Save, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { compactProjectPath } from "@/lib/project-insights";
@@ -47,6 +46,7 @@ export default function AiReviewPage() {
   const [memory, setMemory] = useState<ProjectMemory | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedType, setSelectedType] = useState<AiOutputType>("WEEKLY_REPORT");
+  const [activeSourcePanel, setActiveSourcePanel] = useState<"memory" | "reviews" | "tasks" | "growth">("memory");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [selectedOutputId, setSelectedOutputId] = useState("");
@@ -66,6 +66,7 @@ export default function AiReviewPage() {
   );
   const doneTasks = tasks.filter((task) => task.status === "DONE");
   const reviewLogs = logs.filter((log) => log.category === "REVIEW");
+  const sourcePanel = buildSourcePanel(activeSourcePanel, memory, reviewLogs, tasks, evolutionRecords);
 
   useEffect(() => {
     const session = readSession();
@@ -204,10 +205,10 @@ export default function AiReviewPage() {
                   </option>
                 ))}
               </select>
-              <SourcePill label="项目档案" value={memory ? 1 : 0} />
-              <SourcePill label="每日回顾" value={reviewLogs.length} />
-              <SourcePill label="任务证据" value={tasks.length} />
-              <SourcePill label="演进记录" value={evolutionRecords.length} />
+              <SourceQuickFilter active={activeSourcePanel === "memory"} label="项目档案" value={memory ? 1 : 0} onClick={() => setActiveSourcePanel("memory")} />
+              <SourceQuickFilter active={activeSourcePanel === "reviews"} label="每日回顾" value={reviewLogs.length} onClick={() => setActiveSourcePanel("reviews")} />
+              <SourceQuickFilter active={activeSourcePanel === "tasks"} label="任务证据" value={tasks.length} onClick={() => setActiveSourcePanel("tasks")} />
+              <SourceQuickFilter active={activeSourcePanel === "growth"} label="成长记录" value={evolutionRecords.length} onClick={() => setActiveSourcePanel("growth")} />
             </div>
             <div className="flex items-center gap-2 text-sm text-muted">
               <FileText className="h-4 w-4" />
@@ -218,6 +219,22 @@ export default function AiReviewPage() {
 
         <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)_360px]">
           <section className="space-y-5">
+            <section className="rounded-md border border-line bg-white p-5 shadow-panel">
+              <div className="mb-3 flex items-center gap-2">
+                <Layers3 className="h-4 w-4 text-slate-700" />
+                <h2 className="font-semibold">生成依据</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <OutputSourceMetric label="项目档案" ready={Boolean(memory)} value={memory ? "已连接" : "缺失"} />
+                <OutputSourceMetric label="成长记录" ready={evolutionRecords.length > 0} value={`${evolutionRecords.length} 条`} />
+                <OutputSourceMetric label="每日回顾" ready={reviewLogs.length > 0} value={`${reviewLogs.length} 条`} />
+                <OutputSourceMetric label="任务证据" ready={tasks.length > 0} value={`${tasks.length} 条`} />
+              </div>
+              <p className="mt-3 text-xs leading-5 text-muted">
+                输出优先使用已确认档案和成长记录；缺少来源时仍可生成草稿，但需要人工补充。
+              </p>
+            </section>
+
             <form className="rounded-md border border-line bg-white p-5 shadow-panel" onSubmit={handleGenerate}>
               <div className="mb-4 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-slate-700" />
@@ -312,21 +329,7 @@ export default function AiReviewPage() {
           </section>
 
           <aside className="space-y-5">
-            <SourceBlock
-              icon={<Layers3 className="h-4 w-4 text-slate-700" />}
-              title="项目档案来源"
-              items={projectMemorySourceItems(memory)}
-            />
-            <SourceBlock
-              icon={<FileText className="h-4 w-4 text-slate-700" />}
-              title="每日回顾来源"
-              text={reviewLogs.slice(0, 3).map((log) => `${log.logDate} ${log.title}\n${log.content}`).join("\n\n") || "暂无每日回顾。"}
-            />
-            <SourceBlock
-              icon={<History className="h-4 w-4 text-slate-700" />}
-              title="演进记录来源"
-              text={evolutionRecords.slice(0, 4).map((record) => `${record.summary}\n${record.detectedChanges}`).join("\n\n") || "暂无演进记录。"}
-            />
+            <SourceCardList empty={sourcePanel.empty} items={sourcePanel.items} title={sourcePanel.title} />
           </aside>
         </div>
 
@@ -338,42 +341,112 @@ export default function AiReviewPage() {
   );
 }
 
-function SourcePill({ label, value }: { label: string; value: number }) {
-  return <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs text-slate-600">{label} {value}</span>;
+type SourceCardItem = {
+  title: string;
+  body: string;
+  meta?: string;
+};
+
+function SourceQuickFilter({ active, label, onClick, value }: { active: boolean; label: string; onClick: () => void; value: number }) {
+  return (
+    <button
+      className={`rounded-md px-3 py-1.5 text-xs font-semibold transition hover:-translate-y-0.5 hover:shadow-sm ${
+        active ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-600 hover:bg-white"
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      {label} {value}
+    </button>
+  );
 }
 
-function SourceBlock({ icon, items, text, title }: { icon: ReactNode; items?: string[]; text?: string; title: string }) {
-  const lines = items ?? (text ? [text] : []);
+function OutputSourceMetric({ label, ready, value }: { label: string; ready: boolean; value: string }) {
+  return (
+    <div className={`rounded-md border px-3 py-2 ${ready ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-line bg-slate-50 text-slate-500"}`}>
+      <p className="text-xs">{label}</p>
+      <p className="mt-1 font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function SourceCardList({ empty, items, title }: { empty: string; items: SourceCardItem[]; title: string }) {
   return (
     <section className="rounded-md border border-line bg-white shadow-panel">
       <div className="flex items-center gap-2 border-b border-line px-5 py-4">
-        {icon}
+        <Layers3 className="h-4 w-4 text-slate-700" />
         <h2 className="font-semibold">{title}</h2>
       </div>
-      <div className="max-h-80 space-y-2 overflow-auto p-5 text-sm leading-6 text-slate-600">
-        {lines.length ? lines.map((item) => (
-          <p className="break-words" key={item}>{item}</p>
-        )) : <p>暂无已确认来源。</p>}
+      <div className="max-h-80 space-y-3 overflow-auto p-5">
+        {items.length ? items.map((item) => (
+          <article className="rounded-md border border-line bg-slate-50 px-3 py-2 text-sm" key={`${item.title}-${item.body}`}>
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <p className="font-semibold text-slate-950">{item.title}</p>
+              {item.meta ? <span className="shrink-0 rounded-md bg-white px-2 py-1 text-xs text-muted">{item.meta}</span> : null}
+            </div>
+            <p className="line-clamp-3 leading-5 text-slate-600">{compactSourceText(item.body)}</p>
+          </article>
+        )) : <p className="text-sm text-muted">{empty}</p>}
       </div>
     </section>
   );
 }
 
-function projectMemorySourceItems(memory: ProjectMemory | null) {
-  if (!memory) {
-    return [];
+function buildSourcePanel(
+  active: "memory" | "reviews" | "tasks" | "growth",
+  memory: ProjectMemory | null,
+  reviewLogs: DevLog[],
+  tasks: TaskItem[],
+  evolutionRecords: ProjectEvolutionRecord[],
+) {
+  if (active === "reviews") {
+    return {
+      title: "每日回顾来源",
+      empty: "无每日回顾。",
+      items: reviewLogs.slice(0, 5).map((log) => ({
+        title: log.title,
+        body: firstUsefulLine(log.content) || "无内容",
+        meta: log.logDate,
+      })),
+    };
   }
-  return [
-    sourceItem("定位", memory.positioning),
-    sourceItem("能力", memory.completedCapabilities),
-    sourceItem("决策", memory.technicalDecisions),
-    sourceItem("成果", memory.showcaseAssets),
-  ].filter(Boolean) as string[];
+  if (active === "tasks") {
+    return {
+      title: "任务证据来源",
+      empty: "无任务证据。",
+      items: tasks.slice(0, 6).map((task) => ({
+        title: task.title,
+        body: task.description || task.status,
+        meta: task.status,
+      })),
+    };
+  }
+  if (active === "growth") {
+    return {
+      title: "成长记录来源",
+      empty: "无成长记录。",
+      items: evolutionRecords.slice(0, 5).map((record) => ({
+        title: record.summary,
+        body: firstUsefulLine(record.detectedChanges) || "已记录项目变化。",
+        meta: new Date(record.createdAt).toLocaleDateString(),
+      })),
+    };
+  }
+  return {
+    title: "项目档案来源",
+    empty: "无已确认项目档案。",
+    items: memory ? [
+      sourceCardItem("定位", memory.positioning),
+      sourceCardItem("能力", memory.completedCapabilities),
+      sourceCardItem("决策", memory.technicalDecisions),
+      sourceCardItem("成果", memory.showcaseAssets),
+    ].filter((item): item is SourceCardItem => Boolean(item)) : [],
+  };
 }
 
-function sourceItem(label: string, value: string | undefined) {
+function sourceCardItem(label: string, value: string | undefined): SourceCardItem | null {
   const line = firstUsefulLine(value);
-  return line ? `${label}：${compactSourceText(line)}` : "";
+  return line ? { title: label, body: line, meta: "已确认" } : null;
 }
 
 function firstUsefulLine(value: string | undefined) {

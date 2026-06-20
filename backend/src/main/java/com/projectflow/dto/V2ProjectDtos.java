@@ -335,6 +335,9 @@ public final class V2ProjectDtos {
         List<String> objectiveEvidence,
         List<String> agentClaims,
         List<EvidenceSourceResponse> sources,
+        String status,
+        String nextAction,
+        UUID changeId,
         Instant createdAt,
         Instant updatedAt
     ) {

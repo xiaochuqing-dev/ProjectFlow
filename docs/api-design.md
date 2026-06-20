@@ -216,10 +216,71 @@ Initial V1 allowed transitions:
 }
 ```
 
+## V3.2 Project Intelligence Flow
+
+These endpoints support the current evidence-to-growth loop.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/project-imports/zip` | Import a complete project zip and create or update the base project profile |
+| PATCH | `/projects/{projectId}/memory/local-path` | Save the real local project folder path |
+| POST | `/projects/{projectId}/agent-bridge/protocol` | Write or refresh `.projectflow` protocol files |
+| POST | `/projects/{projectId}/agent-bridge/scan` | Scan `.projectflow/inbox` agent results into reviewable changes |
+| POST | `/projects/{projectId}/scan` | Scan bound local Git evidence into work sessions |
+| GET | `/projects/{projectId}/work-sessions` | List detected work sessions |
+| POST | `/work-sessions/{sessionId}/evidence-bundles` | Create or update the evidence bundle for a work session |
+| GET | `/projects/{projectId}/evidence-bundles` | List evidence bundles with lifecycle state |
+| POST | `/evidence-bundles/{bundleId}/draft-changes` | Generate or update a structured project change from evidence |
+| GET | `/projects/{projectId}/changes` | List structured project changes |
+| PATCH | `/project-changes/{changeId}` | Edit a structured project change before acceptance |
+| POST | `/project-changes/{changeId}/accept` | Accept a change into project memory and fact sources |
+| POST | `/project-changes/{changeId}/ignore` | Remove a change from the review queue without deleting source evidence |
+| GET | `/projects/{projectId}/fact-sources` | List field-level project memory sources |
+| GET | `/projects/{projectId}/evolution-records` | List project growth records |
+| POST | `/projects/{projectId}/context/sync` | Sync confirmed project context back to `.projectflow/context` |
+
+### Evidence Bundle Response
+
+```json
+{
+  "id": "uuid",
+  "projectId": "uuid",
+  "workSessionId": "uuid",
+  "agentType": "CODEX",
+  "taskIntent": "Improve project profile flow",
+  "branchName": "main",
+  "attributionConfidence": "medium",
+  "changedFiles": 3,
+  "addedLines": 120,
+  "deletedLines": 12,
+  "files": ["frontend/src/app/dashboard/page.tsx"],
+  "objectiveEvidence": ["Git commit or worktree evidence"],
+  "agentClaims": [],
+  "sources": [],
+  "status": "READY_FOR_CHANGE",
+  "nextAction": "GENERATE_CHANGE",
+  "changeId": null,
+  "createdAt": "2026-06-21T00:00:00",
+  "updatedAt": "2026-06-21T00:00:00"
+}
+```
+
+Lifecycle values:
+
+- `READY_FOR_CHANGE`: evidence exists and can generate a structured change.
+- `CHANGE_DRAFTED`: a candidate change exists and should be reviewed.
+- `CHANGE_ACCEPTED`: the related change has been accepted into project memory.
+- `ARCHIVED`: the related change was ignored or no longer needs action.
+
+`nextAction` is the UI routing hint: `GENERATE_CHANGE`, `REVIEW_CHANGE`, `VIEW_MEMORY`, or `NO_ACTION`.
+
+### Structured Change Acceptance
+
+Accepting a Project Change writes confirmed facts to `ProjectMemory`, records field-level `ProjectFactSource`, and makes the accepted content available to daily review, output generation, and context sync. Unaccepted evidence and candidate changes must not be treated as official project facts.
+
 ## Health
 
 | Method | Path | Purpose |
 | --- | --- | --- |
 | GET | `/health` | Lightweight API health check |
 | GET | `/actuator/health` | Spring Boot actuator health |
-

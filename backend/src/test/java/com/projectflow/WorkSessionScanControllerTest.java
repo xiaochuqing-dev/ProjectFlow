@@ -91,6 +91,8 @@ class WorkSessionScanControllerTest {
             .andExpect(jsonPath("$.data.sources[0].sourceType").value("GIT_EVIDENCE"))
             .andExpect(jsonPath("$.data.objectiveEvidence[0]").value(containsString("本轮 Git 变化")))
             .andExpect(jsonPath("$.data.agentClaims.length()").value(0))
+            .andExpect(jsonPath("$.data.status").value("READY_FOR_CHANGE"))
+            .andExpect(jsonPath("$.data.nextAction").value("GENERATE_CHANGE"))
             .andReturn();
 
         String bundleId = objectMapper.readTree(bundleResult.getResponse().getContentAsString())
@@ -101,7 +103,8 @@ class WorkSessionScanControllerTest {
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data[0].id").value(bundleId))
-            .andExpect(jsonPath("$.data[0].workSessionId").value(sessionId));
+            .andExpect(jsonPath("$.data[0].workSessionId").value(sessionId))
+            .andExpect(jsonPath("$.data[0].status").value("READY_FOR_CHANGE"));
 
         MvcResult draftChangeResult = mockMvc.perform(post("/api/evidence-bundles/" + bundleId + "/draft-changes")
                 .header("Authorization", "Bearer " + token))
@@ -115,6 +118,14 @@ class WorkSessionScanControllerTest {
         String changeId = objectMapper.readTree(draftChangeResult.getResponse().getContentAsString())
             .at("/data/id")
             .asText();
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/evidence-bundles")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].id").value(bundleId))
+            .andExpect(jsonPath("$.data[0].status").value("CHANGE_DRAFTED"))
+            .andExpect(jsonPath("$.data[0].nextAction").value("REVIEW_CHANGE"))
+            .andExpect(jsonPath("$.data[0].changeId").value(changeId));
 
         mockMvc.perform(get("/api/projects/" + projectId + "/changes")
                 .header("Authorization", "Bearer " + token))

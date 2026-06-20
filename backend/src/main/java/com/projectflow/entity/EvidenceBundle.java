@@ -108,6 +108,10 @@ public class EvidenceBundle {
     }
 
     public EvidenceBundleResponse toResponse() {
+        return toResponse("READY_FOR_CHANGE", "GENERATE_CHANGE", null);
+    }
+
+    public EvidenceBundleResponse toResponse(String status, String nextAction, UUID changeId) {
         return new EvidenceBundleResponse(
             id,
             projectId,
@@ -123,6 +127,9 @@ public class EvidenceBundle {
             splitLines(objectiveEvidence),
             splitLines(agentClaims),
             sourceResponses(),
+            status,
+            nextAction,
+            changeId,
             createdAt,
             updatedAt
         );

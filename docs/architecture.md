@@ -2,7 +2,7 @@
 
 ## System Overview
 
-ProjectFlow uses a separated frontend and backend architecture:
+ProjectFlow uses a separated frontend and backend architecture. The current V3.2 product spine is a developer workbench that turns real project activity into confirmed project assets.
 
 ```mermaid
 flowchart LR
@@ -12,15 +12,17 @@ flowchart LR
     Backend --> Redis[(Redis)]
     Backend --> AI[AI Provider]
     Frontend --> Export[Markdown Copy or Download]
+    Backend --> Git[Local Git Evidence]
+    Backend --> PF[.projectflow Context]
 ```
 
 ## Components
 
 | Component | Responsibility |
 | --- | --- |
-| Next.js frontend | App shell, routing, forms, Kanban UI, Markdown import UI, AI output display |
-| Spring Boot backend | Auth, ownership checks, business rules, parsing, AI orchestration, persistence |
-| PostgreSQL | Source of truth for users, projects, tasks, logs, imports, AI outputs |
+| Next.js frontend | App shell, dashboard flow state, project profile, change review, daily review, output display |
+| Spring Boot backend | Auth, ownership checks, import analysis, work-session scanning, evidence lifecycle, AI orchestration, persistence |
+| PostgreSQL | Source of truth for users, projects, tasks, logs, materials, changes, memory, evidence bundles, AI outputs |
 | Redis | AI task state, project statistics cache, rate limits, future import locks |
 | AI provider | Mock provider first; later DeepSeek or OpenAI-compatible provider |
 
@@ -85,6 +87,32 @@ backend/src/main/java/com/projectflow/
 | Support | Shared error responses, parser utilities, AI provider contracts |
 
 ## Key Flows
+
+### V3.2 Evidence To Growth Flow
+
+```mermaid
+flowchart LR
+    Import[Add project zip] --> Profile[Project profile]
+    Profile --> Path[Bind local path]
+    Path --> Scan[Refresh Git changes]
+    Scan --> Session[Work Session]
+    Session --> Bundle[Evidence Bundle]
+    Bundle --> Change[Project Change]
+    Change --> Review[User review]
+    Review --> Memory[Project Memory]
+    Memory --> Timeline[Growth Timeline]
+    Timeline --> Outputs[Daily review / README / report]
+    Memory --> Context[Sync confirmed context]
+```
+
+Rules:
+
+- Zip import creates the initial profile and file structure; it is not the daily change tracker.
+- Local project path is required before Git evidence, agent result scanning, and context sync.
+- Evidence Bundle is objective evidence, not a confirmed project fact.
+- Project Change is the editable review object.
+- Only accepted changes and user-confirmed memory become output sources and synced context.
+- The dashboard must expose the next action without requiring documentation.
 
 ### Authentication
 

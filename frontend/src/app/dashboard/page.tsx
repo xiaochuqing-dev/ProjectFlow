@@ -14,6 +14,7 @@ import {
   Settings,
   ShieldAlert,
   Upload,
+  X,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -24,16 +25,20 @@ import {
   PageContainer,
   ProjectContextBar,
   SectionHeader,
-  Stat,
   Toast,
 } from "@/components/ui";
 import {
   deleteProject,
+  createEvidenceBundle,
+  draftProjectChangeFromEvidenceBundle,
   getProjectMemory,
   importProjectZip,
+  listAiOutputs,
   listAiProviders,
   listAiSuggestions,
   listProjectChangeConflicts,
+  listProjectChanges,
+  listProjectEvidenceBundles,
   listProjectEvolutionRecords,
   listProjectMaterials,
   listProjectWorkSessions,
@@ -45,10 +50,13 @@ import {
   syncProjectContext,
   writeProjectFlowProtocol,
   type AiProvider,
+  type AiOutput,
   type AiSuggestion,
   type ChangeConflict,
+  type EvidenceBundle,
   type Project,
   type ProjectAnalysis,
+  type ProjectChange,
   type ProjectEvolutionRecord,
   type ProjectMaterial,
   type ProjectMemory,
@@ -57,6 +65,7 @@ import {
   type WorkSessionScanResult,
 } from "@/lib/api";
 import { buildProjectArchitecture, compactProjectPath, projectZipPaths } from "@/lib/project-insights";
+import { projectFlowSteps, resolveProjectFlowState } from "@/lib/project-flow-state";
 import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 import { readSession } from "@/lib/auth";
 import { useProjectAnalysisJobs } from "@/lib/use-project-analysis-jobs";
@@ -74,11 +83,17 @@ export default function DashboardPage() {
   const [materials, setMaterials] = useState<ProjectMaterial[]>([]);
   const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);
   const [evolutionRecords, setEvolutionRecords] = useState<ProjectEvolutionRecord[]>([]);
+  const [evidenceBundles, setEvidenceBundles] = useState<EvidenceBundle[]>([]);
   const [changeConflicts, setChangeConflicts] = useState<ChangeConflict[]>([]);
+  const [changes, setChanges] = useState<ProjectChange[]>([]);
+  const [outputs, setOutputs] = useState<AiOutput[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [memory, setMemory] = useState<ProjectMemory | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [showZipImport, setShowZipImport] = useState(false);
+  const [showFlowGuide, setShowFlowGuide] = useState(false);
+  const [statsFocus, setStatsFocus] = useState<"materials" | "changes" | "sessions" | "tasks" | "">("");
   const [projectPath, setProjectPath] = useState("");
   const [globalRule, setGlobalRule] = useState("");
   const [workSessionScan, setWorkSessionScan] = useState<WorkSessionScanResult | null>(null);
@@ -91,6 +106,8 @@ export default function DashboardPage() {
   const [scanningWorkSessions, setScanningWorkSessions] = useState(false);
   const [syncingContext, setSyncingContext] = useState(false);
   const [scanningAgentResults, setScanningAgentResults] = useState(false);
+  const [creatingEvidenceFor, setCreatingEvidenceFor] = useState("");
+  const [draftingChangeFor, setDraftingChangeFor] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -105,6 +122,8 @@ export default function DashboardPage() {
   const analysisRejectedByNoise = rawAnalysis ? projectAnalysisContainsNoise(rawAnalysis) : false;
   const analysis = analysisRejectedByNoise ? null : rawAnalysis;
   const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === "PENDING");
+  const pendingChanges = changes.filter((change) => change.status === "PENDING" || change.status === "EDITED");
+  const pendingReviewCount = pendingSuggestions.length + pendingChanges.length;
   const configuredProvider = providers.find((provider) => provider.id && provider.apiKeyConfigured);
   const paths = useMemo(() => projectZipPaths(materials), [materials]);
   const architecture = useMemo(() => buildProjectArchitecture(paths), [paths]);
@@ -119,15 +138,25 @@ export default function DashboardPage() {
       ? latestProjectJob.errorMessage
       : "";
   const todaySessions = workSessionScan?.sessions ?? [];
+  const projectFlowState = resolveProjectFlowState({
+    project: selectedProject,
+    materials,
+    memory,
+    workSessions: todaySessions,
+    evidenceBundles,
+    pendingChanges,
+    outputs,
+  });
 
   // 当前下一步 —— 把原来的平铺改成单一焦点
   const currentStep: Step = useMemo(() => {
     if (!selectedProject) return { kind: "no_project" };
     if (!hasMaterials) return { kind: "no_material" };
     if (!hasProjectPath) return { kind: "no_path" };
-    if (pendingSuggestions.length > 0) return { kind: "has_pending", count: pendingSuggestions.length };
+    if (pendingReviewCount > 0) return { kind: "has_pending", count: pendingReviewCount };
     return { kind: "scan_updates" };
-  }, [selectedProject, hasMaterials, hasProjectPath, pendingSuggestions.length]);
+  }, [selectedProject, hasMaterials, hasProjectPath, pendingReviewCount]);
+  const shouldShowZipImport = currentStep.kind === "no_project" || showZipImport;
 
   useEffect(() => {
     if (!notice && !error) {
@@ -168,7 +197,10 @@ export default function DashboardPage() {
       setMaterials([]);
       setSuggestions([]);
       setEvolutionRecords([]);
+      setEvidenceBundles([]);
       setChangeConflicts([]);
+      setChanges([]);
+      setOutputs([]);
       setTasks([]);
       setMemory(null);
       setProjectPath("");
@@ -177,19 +209,25 @@ export default function DashboardPage() {
     }
 
     try {
-      const [materialItems, suggestionItems, evolutionItems, taskItems, memoryRecord, workSessions, conflicts] = await Promise.all([
+      const [materialItems, suggestionItems, evolutionItems, taskItems, memoryRecord, workSessions, bundles, conflicts, changeItems, outputItems] = await Promise.all([
         listProjectMaterials(session.accessToken, projectId),
         listAiSuggestions(session.accessToken, projectId),
         listProjectEvolutionRecords(session.accessToken, projectId),
         listTasks(session.accessToken, projectId),
         getProjectMemory(session.accessToken, projectId),
         listProjectWorkSessions(session.accessToken, projectId),
+        listProjectEvidenceBundles(session.accessToken, projectId),
         listProjectChangeConflicts(session.accessToken, projectId),
+        listProjectChanges(session.accessToken, projectId),
+        listAiOutputs(session.accessToken, projectId),
       ]);
       setMaterials(materialItems);
       setSuggestions(suggestionItems);
       setEvolutionRecords(evolutionItems);
+      setEvidenceBundles(bundles);
       setChangeConflicts(conflicts);
+      setChanges(changeItems);
+      setOutputs(outputItems);
       setTasks(taskItems);
       setMemory(memoryRecord);
       setProjectPath(memoryRecord.localProjectPath ?? "");
@@ -210,7 +248,7 @@ export default function DashboardPage() {
     setError("");
     setNotice("");
     try {
-      const result = await importProjectZip(session.accessToken, file, selectedProjectId || undefined);
+      const result = await importProjectZip(session.accessToken, file);
       setProjects((current) => {
         const exists = current.some((project) => project.id === result.project.id);
         return exists ? current.map((project) => (project.id === result.project.id ? result.project : project)) : [result.project, ...current];
@@ -219,6 +257,7 @@ export default function DashboardPage() {
       setSelectedProjectId(result.project.id);
       setNotice("项目 zip 已导入，已生成基础画像和结构理解。");
       setFile(null);
+      setShowZipImport(false);
       await refreshProjectContext(result.project.id);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "项目 zip 导入失败");
@@ -364,6 +403,46 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleCreateEvidenceBundle(sessionId: string) {
+    const session = readSession();
+    if (!session || !selectedProjectId) {
+      return;
+    }
+
+    setCreatingEvidenceFor(sessionId);
+    setError("");
+    setNotice("");
+    try {
+      const bundle = await createEvidenceBundle(session.accessToken, sessionId);
+      setNotice(`证据包已生成：${bundle.changedFiles} 个文件，下一步生成候选变更。`);
+      await refreshProjectContext(selectedProjectId);
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "证据包生成失败");
+    } finally {
+      setCreatingEvidenceFor("");
+    }
+  }
+
+  async function handleDraftChangeFromEvidence(bundleId: string) {
+    const session = readSession();
+    if (!session || !selectedProjectId) {
+      return;
+    }
+
+    setDraftingChangeFor(bundleId);
+    setError("");
+    setNotice("");
+    try {
+      await draftProjectChangeFromEvidenceBundle(session.accessToken, bundleId);
+      setNotice("已从证据包生成候选变更。下一步进入变更审查，采纳后会写入项目档案和事实来源。");
+      await refreshProjectContext(selectedProjectId);
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "候选变更生成失败");
+    } finally {
+      setDraftingChangeFor("");
+    }
+  }
+
   async function handleSyncContext() {
     const session = readSession();
     if (!session || !selectedProjectId) {
@@ -414,12 +493,29 @@ export default function DashboardPage() {
           placeholder={projects.length === 0 ? "暂无项目，导入 zip 即可创建" : "选择项目"}
           leadingExtras={
             <>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowZipImport((current) => !current)}
+                title="导入完整项目 zip，创建一个新的 ProjectFlow 项目。"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                添加项目
+              </Button>
               {selectedProject ? <Badge label={selectedProject.status} /> : null}
               <Badge
                 label={configuredProvider ? `模型：${configuredProvider.name}` : "未配置模型"}
                 tone={configuredProvider ? "success" : "warning"}
                 dot
               />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFlowGuide(true)}
+                title="查看从导入项目到生成输出的完整独立上手流程。"
+              >
+                打开上手流程
+              </Button>
               <button
                 className="inline-flex items-center gap-1 text-xs font-medium text-danger-fg transition-colors hover:text-danger-fg/80 disabled:opacity-50"
                 disabled={!selectedProjectId || deletingProject}
@@ -435,25 +531,73 @@ export default function DashboardPage() {
 
         {/* 关键指标行 */}
         <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat label="项目材料" value={materials.length} hint={hasUsableProjectZip ? `${paths.length} 个文件信号` : "暂无源码结构"} />
-          <Stat label="待确认变更" value={pendingSuggestions.length} tone={pendingSuggestions.length ? "warning" : "slate"} hint="去变更审查" />
-          <Stat label="今日候选" value={todaySessions.length} tone={todaySessions.length ? "brand" : "slate"} hint="Work Session" />
-          <Stat label="进行中任务" value={activeTasks.length} hint={memory?.currentStage || selectedProject?.status || "—"} />
+          <InteractiveStat
+            active={statsFocus === "materials"}
+            hint={hasUsableProjectZip ? `${paths.length} 个文件信号` : "暂无源码结构"}
+            label="项目材料"
+            onClick={() => setStatsFocus(statsFocus === "materials" ? "" : "materials")}
+            value={materials.length}
+          />
+          <InteractiveStat
+            active={statsFocus === "changes"}
+            hint="去变更审查"
+            label="待确认变更"
+            onClick={() => setStatsFocus(statsFocus === "changes" ? "" : "changes")}
+            tone={pendingReviewCount ? "warning" : "slate"}
+            value={pendingReviewCount}
+          />
+          <InteractiveStat
+            active={statsFocus === "sessions"}
+            hint="Work Session"
+            label="今日候选"
+            onClick={() => setStatsFocus(statsFocus === "sessions" ? "" : "sessions")}
+            tone={todaySessions.length ? "brand" : "slate"}
+            value={todaySessions.length}
+          />
+          <InteractiveStat
+            active={statsFocus === "tasks"}
+            hint={memory?.currentStage || selectedProject?.status || "—"}
+            label="进行中任务"
+            onClick={() => setStatsFocus(statsFocus === "tasks" ? "" : "tasks")}
+            value={activeTasks.length}
+          />
         </section>
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        {statsFocus ? (
+          <StatsFocusPanel
+            activeTasks={activeTasks}
+            architecture={architecture}
+            changes={pendingChanges}
+            focus={statsFocus}
+            paths={paths}
+            suggestions={pendingSuggestions}
+            workSessions={todaySessions}
+          />
+        ) : null}
+
+        <FlowGuideDialog onClose={() => setShowFlowGuide(false)} open={showFlowGuide} state={projectFlowState} />
+
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px]">
           {/* 主列 */}
           <div className="space-y-5">
-            {/* 项目接入卡：zip 导入常驻 + 本地接入并列 */}
+            {shouldShowZipImport ? (
+              <ZipImportPanel
+                file={file}
+                setFile={setFile}
+                importing={importing}
+                onImportZip={handleImportZip}
+                canClose={currentStep.kind !== "no_project"}
+                onClose={() => {
+                  setShowZipImport(false);
+                  setFile(null);
+                }}
+              />
+            ) : null}
+
+            {/* 项目接入卡：只处理已选项目的本地路径、协议、扫描和同步 */}
             <ProjectAccessCard
               step={currentStep}
               hasSelectedProject={Boolean(selectedProjectId)}
-              hasUsableProjectZip={hasUsableProjectZip}
-              hasProjectZipMaterial={hasProjectZipMaterial}
-              file={file}
-              setFile={setFile}
-              importing={importing}
-              onImportZip={handleImportZip}
               projectPath={projectPath}
               setProjectPath={setProjectPath}
               savingProjectPath={savingProjectPath}
@@ -465,6 +609,19 @@ export default function DashboardPage() {
               syncingContext={syncingContext}
               onSyncContext={handleSyncContext}
               onCopyGlobalRule={handleCopyGlobalRule}
+            />
+
+            <EvidenceFlowPanel
+              bundles={evidenceBundles}
+              creatingEvidenceFor={creatingEvidenceFor}
+              draftingChangeFor={draftingChangeFor}
+              hasProjectPath={hasProjectPath}
+              onCreateEvidenceBundle={handleCreateEvidenceBundle}
+              onDraftChange={handleDraftChangeFromEvidence}
+              onScanWorkSessions={handleScanWorkSessions}
+              scanningWorkSessions={scanningWorkSessions}
+              selectedProjectId={selectedProjectId}
+              workSessions={todaySessions}
             />
 
             {/* 项目画像速览（极简，不再重复完整画像） */}
@@ -549,32 +706,12 @@ export default function DashboardPage() {
               )}
             </Card>
 
-            {/* 架构入口（极简，只留入口链接与形态摘要，详情去文件页） */}
-            {hasUsableProjectZip ? (
-              <Card shadow="card">
-                <SectionHeader
-                  eyebrow="架构与文件理解"
-                  title={architecture.summary || "项目结构"}
-                  icon={<FolderTree className="h-4 w-4" />}
-                  actions={
-                    <Link href={`/projects/${selectedProjectId}/files`}>
-                      <Button variant="secondary" size="sm">
-                        完整结构 <ArrowRight className="h-3.5 w-3.5" />
-                      </Button>
-                    </Link>
-                  }
-                />
-                <div className="grid gap-3 p-5 sm:grid-cols-3">
-                  <MiniFact label="入口" value={architecture.entrypoints[0]?.path ? compactProjectPath(architecture.entrypoints[0].path) : "未识别"} />
-                  <MiniFact label="核心模块" value={architecture.coreModules[0]?.path ? compactProjectPath(architecture.coreModules[0].path) : "待确认"} />
-                  <MiniFact label="文件信号" value={`${paths.length} 个`} />
-                </div>
-              </Card>
-            ) : null}
           </div>
 
           {/* 侧列 */}
           <aside className="space-y-5">
+            <ArchitectureQuickEntry architecture={architecture} hasUsableProjectZip={hasUsableProjectZip} paths={paths} selectedProjectId={selectedProjectId} />
+
             {/* 最近活动流：把分散的变化/建议/候选压缩成只读摘要流 */}
             <Card shadow="card">
               <SectionHeader
@@ -642,18 +779,312 @@ export default function DashboardPage() {
 }
 
 /* ------------------------------------------------------------------ */
-/* 项目接入卡：zip 导入常驻 + 本地接入并列                              */
+/* 入口与解释层                                                        */
+/* ------------------------------------------------------------------ */
+
+function InteractiveStat({
+  active,
+  hint,
+  label,
+  onClick,
+  tone = "slate",
+  value,
+}: {
+  active: boolean;
+  hint?: string;
+  label: string;
+  onClick: () => void;
+  tone?: "slate" | "brand" | "warning";
+  value: number;
+}) {
+  const toneClass = {
+    slate: "hover:border-lineStrong hover:bg-surfaceAlt",
+    brand: "hover:border-brand/40 hover:bg-brand-soft",
+    warning: "hover:border-warning/40 hover:bg-warning-soft",
+  }[tone];
+  return (
+    <button
+      className={`group min-w-0 rounded-card border bg-elevated p-4 text-left transition duration-150 hover:-translate-y-0.5 hover:shadow-card ${
+        active ? "border-brand bg-brand-soft shadow-card" : `border-line ${toneClass}`
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted">{label}</p>
+        <ArrowRight className={`h-3.5 w-3.5 transition ${active ? "text-brand" : "text-muted group-hover:text-brand"}`} />
+      </div>
+      <p className="mt-1.5 text-xl font-semibold leading-7 text-ink">{value}</p>
+      {hint ? <p className="mt-0.5 text-xs text-muted">{hint}</p> : null}
+    </button>
+  );
+}
+
+function StatsFocusPanel({
+  activeTasks,
+  architecture,
+  changes,
+  focus,
+  paths,
+  suggestions,
+  workSessions,
+}: {
+  activeTasks: TaskItem[];
+  architecture: ReturnType<typeof buildProjectArchitecture>;
+  changes: ProjectChange[];
+  focus: "materials" | "changes" | "sessions" | "tasks";
+  paths: string[];
+  suggestions: AiSuggestion[];
+  workSessions: WorkSessionCandidate[];
+}) {
+  const content = {
+    materials: {
+      title: "项目材料",
+      body: paths.length ? `${architecture.shapeLabel}，识别 ${paths.length} 个文件信号。` : "暂无可用项目文件信号。",
+      action: "查看架构入口",
+      href: "",
+      items: [architecture.entrypoints[0]?.path, architecture.coreModules[0]?.path, architecture.dependencySignals[0]?.path].filter(Boolean) as string[],
+    },
+    changes: {
+      title: "待确认变更",
+      body: suggestions.length || changes.length ? "这些候选需要审查后才会进入项目档案。" : "暂无待确认变更。",
+      action: "去变更审查",
+      href: "/tasks",
+      items: [...suggestions.map((item) => item.title), ...changes.map((item) => item.title)].slice(0, 3),
+    },
+    sessions: {
+      title: "今日候选",
+      body: workSessions.length ? "这些 Git 变化可继续生成证据包。" : "暂无今日 Git 变化候选。",
+      action: "刷新变化",
+      href: "",
+      items: workSessions.slice(0, 3).map((item) => item.taskIntent || `${item.changedFiles} 个文件变化`),
+    },
+    tasks: {
+      title: "进行中任务",
+      body: activeTasks.length ? "这些任务会参与每日回顾和成果输出。" : "暂无进行中任务。",
+      action: "查看任务",
+      href: "/tasks",
+      items: activeTasks.slice(0, 3).map((item) => item.title),
+    },
+  }[focus];
+
+  return (
+    <Card shadow="card" padding="md" className="mb-6 border-brand/20 bg-brand-soft/40">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-brand">已选入口</p>
+          <h3 className="mt-1 text-lg font-semibold text-ink">{content.title}</h3>
+          <p className="mt-1 text-sm leading-6 text-body">{content.body}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {content.items.length ? content.items.map((item) => (
+              <span className="max-w-full break-all rounded-field bg-elevated px-3 py-1.5 font-mono text-xs text-muted" key={item}>
+                {item.includes("/") ? compactProjectPath(item) : item}
+              </span>
+            )) : <span className="rounded-field bg-elevated px-3 py-1.5 text-xs text-muted">无</span>}
+          </div>
+        </div>
+        {content.href ? (
+          <Link href={content.href}>
+            <Button variant="primary" size="sm">
+              {content.action} <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
+function FlowGuideDialog({
+  onClose,
+  open,
+  state,
+}: {
+  onClose: () => void;
+  open: boolean;
+  state: ReturnType<typeof resolveProjectFlowState>;
+}) {
+  if (!open) {
+    return null;
+  }
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/35 p-4" role="dialog" aria-modal="true" aria-label="独立上手流程">
+      <div className="max-h-[86vh] w-full max-w-5xl overflow-auto rounded-card border border-line bg-elevated shadow-cardLg">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line p-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">独立上手流程</p>
+            <h2 className="mt-2 text-2xl font-semibold text-ink">{state.title}</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-body">{state.description}</p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onClose} aria-label="关闭上手流程">
+            <X className="h-4 w-4" />
+            关闭
+          </Button>
+        </div>
+        <div className="space-y-5 p-5">
+          <p className="rounded-field bg-surfaceAlt px-4 py-3 text-sm leading-6 text-muted">{state.helper}</p>
+          <FlowStepStrip state={state} />
+          {state.primaryHref ? (
+            <Link className="inline-flex" href={state.primaryHref} onClick={onClose}>
+              <Button variant="primary" size="md">
+                下一步：{state.primaryAction} <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          ) : (
+            <div className="inline-flex rounded-field bg-brand-soft px-4 py-2 text-sm font-semibold text-brand">
+              下一步：{state.primaryAction}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FlowStepStrip({ state }: { state: ReturnType<typeof resolveProjectFlowState> }) {
+  const colors = [
+    "bg-emerald-50 border-emerald-100 text-emerald-900",
+    "bg-cyan-50 border-cyan-100 text-cyan-900",
+    "bg-blue-50 border-blue-100 text-blue-900",
+    "bg-amber-50 border-amber-100 text-amber-900",
+    "bg-indigo-50 border-indigo-100 text-indigo-900",
+    "bg-slate-100 border-slate-200 text-slate-800",
+  ];
+  return (
+    <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+      {projectFlowSteps.map((step, index) => {
+        const done = state.completedSteps.includes(step.key);
+        const active = state.nextStep === step.key && !done;
+        return (
+          <div className={`rounded-card border p-4 ${colors[index % colors.length]} ${active ? "ring-2 ring-brand/40" : ""}`} key={step.key}>
+            <div className="flex items-center gap-2">
+              <span className={`grid h-7 w-7 place-items-center rounded-full text-xs font-semibold ${done ? "bg-success text-white" : active ? "bg-brand text-white" : "bg-white/80 text-ink"}`}>
+                {index + 1}
+              </span>
+              <p className="text-sm font-semibold">{step.label}</p>
+            </div>
+            <p className="mt-3 text-xs leading-5 opacity-80">{step.description}</p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ArchitectureQuickEntry({
+  architecture,
+  hasUsableProjectZip,
+  paths,
+  selectedProjectId,
+}: {
+  architecture: ReturnType<typeof buildProjectArchitecture>;
+  hasUsableProjectZip: boolean;
+  paths: string[];
+  selectedProjectId: string;
+}) {
+  if (!hasUsableProjectZip) {
+    return (
+      <Card shadow="card" padding="md">
+        <p className="text-xs font-semibold text-muted">架构入口</p>
+        <p className="mt-2 text-sm leading-6 text-muted">导入完整项目 zip 后，这里会显示项目形态、入口、核心和依赖数量。</p>
+      </Card>
+    );
+  }
+  const facts = [
+    ["形态", architecture.shapeLabel],
+    ["入口", `${architecture.entrypoints.length} 个`],
+    ["核心", `${architecture.coreModules.length} 个`],
+    ["依赖", `${architecture.dependencySignals.length} 个`],
+  ];
+  return (
+    <Card shadow="card" padding="none" className="overflow-hidden border-brand/20">
+      <SectionHeader
+        eyebrow="架构入口"
+        title={architecture.summary || architecture.shapeLabel}
+        icon={<FolderTree className="h-4 w-4" />}
+        actions={
+          <Link href={`/projects/${selectedProjectId}/files`}>
+            <Button variant="primary" size="sm">
+              完整结构 <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+        }
+      />
+      <div className="grid grid-cols-2 gap-2 p-4">
+        {facts.map(([label, value]) => (
+          <div className="rounded-field border border-line bg-surfaceAlt px-3 py-2" key={label}>
+            <p className="text-xs text-muted">{label}</p>
+            <p className="mt-1 truncate text-sm font-semibold text-ink">{value}</p>
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-line px-4 py-3 text-xs text-muted">
+        {paths.length} 个文件信号 · {architecture.shapeTags.join(" / ")}
+      </div>
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 独立 zip 导入入口                                                    */
+/* ------------------------------------------------------------------ */
+
+type ZipImportPanelProps = {
+  file: File | null;
+  setFile: (file: File | null) => void;
+  importing: boolean;
+  onImportZip: (event: FormEvent<HTMLFormElement>) => void;
+  canClose: boolean;
+  onClose: () => void;
+};
+
+function ZipImportPanel(props: ZipImportPanelProps) {
+  return (
+    <Card shadow="card" padding="none" className="overflow-hidden border-brand/20">
+      <form className="p-5" onSubmit={props.onImportZip}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Upload className="h-4 w-4 text-brand" />
+              <h3 className="text-sm font-semibold text-ink">添加项目</h3>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-muted">
+              选择完整项目 zip，创建新的项目画像和文件结构理解。
+            </p>
+          </div>
+          {props.canClose ? (
+            <Button variant="ghost" size="sm" onClick={props.onClose} type="button">
+              收起
+            </Button>
+          ) : null}
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+          <label className="block rounded-field border border-dashed border-lineStrong bg-surfaceAlt p-4 transition hover:border-brand">
+            <span className="mb-2 block text-sm font-medium text-body">选择项目 zip</span>
+            <input
+              accept=".zip,application/zip"
+              className="w-full text-sm text-muted"
+              onChange={(event) => props.setFile(event.target.files?.[0] ?? null)}
+              type="file"
+            />
+          </label>
+          <Button variant="primary" type="submit" fullWidth disabled={!props.file || props.importing}>
+            {props.importing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {props.importing ? "导入中..." : "导入并建档"}
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 项目接入卡：本地项目接入                                             */
 /* ------------------------------------------------------------------ */
 
 type ProjectAccessCardProps = {
   step: Step;
   hasSelectedProject: boolean;
-  hasUsableProjectZip: boolean;
-  hasProjectZipMaterial: boolean;
-  file: File | null;
-  setFile: (file: File | null) => void;
-  importing: boolean;
-  onImportZip: (event: FormEvent<HTMLFormElement>) => void;
   projectPath: string;
   setProjectPath: (value: string) => void;
   savingProjectPath: boolean;
@@ -686,35 +1117,7 @@ function ProjectAccessCard(props: ProjectAccessCardProps) {
         ) : null}
       </div>
 
-      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        {/* 左栏：zip 导入 —— 始终显示，无论是否已选项目都能导入/替换 */}
-        <form className="space-y-3 border-b border-line p-5 lg:border-b-0 lg:border-r" onSubmit={props.onImportZip}>
-          <div className="flex items-center gap-2">
-            <Upload className="h-4 w-4 text-brand" />
-            <h3 className="text-sm font-semibold text-ink">导入 / 替换项目 zip</h3>
-          </div>
-          <p className="text-xs leading-5 text-muted">
-            {hasSelectedProject
-              ? "重新导入会覆盖当前项目的材料与结构理解。未选项目时导入会创建新项目。"
-              : "导入完整项目 zip，自动创建项目并生成基础画像与结构理解。"}
-          </p>
-          <label className="block rounded-field border border-dashed border-lineStrong bg-surfaceAlt p-4 transition hover:border-brand">
-            <span className="mb-2 block text-sm font-medium text-body">选择项目 zip</span>
-            <input
-              accept=".zip,application/zip"
-              className="w-full text-sm text-muted"
-              onChange={(event) => props.setFile(event.target.files?.[0] ?? null)}
-              type="file"
-            />
-          </label>
-          <Button variant="primary" type="submit" fullWidth disabled={!props.file || props.importing}>
-            {props.importing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {props.importing ? "导入中..." : "导入并生成基础画像"}
-          </Button>
-        </form>
-
-        {/* 右栏：本地项目接入 */}
-        <div className="p-5">
+      <div className="p-5">
           <div className="flex items-center gap-2">
             <FolderTree className="h-4 w-4 text-brand" />
             <h3 className="text-sm font-semibold text-ink">本地项目接入</h3>
@@ -781,7 +1184,6 @@ function ProjectAccessCard(props: ProjectAccessCardProps) {
               复制规则
             </Button>
           </div>
-        </div>
       </div>
     </Card>
   );
@@ -802,6 +1204,218 @@ function accessHint(step: Step, hasSelectedProject: boolean): { title: string; c
     default:
       return { title: hasSelectedProject ? "项目接入就绪。" : "导入项目 zip 开始。" };
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* 今日变化闭环                                                        */
+/* ------------------------------------------------------------------ */
+
+type EvidenceFlowPanelProps = {
+  workSessions: WorkSessionCandidate[];
+  bundles: EvidenceBundle[];
+  hasProjectPath: boolean;
+  selectedProjectId: string;
+  scanningWorkSessions: boolean;
+  creatingEvidenceFor: string;
+  draftingChangeFor: string;
+  onScanWorkSessions: () => void;
+  onCreateEvidenceBundle: (sessionId: string) => void;
+  onDraftChange: (bundleId: string) => void;
+};
+
+function EvidenceFlowPanel(props: EvidenceFlowPanelProps) {
+  const bundleBySession = new Map(props.bundles.map((bundle) => [bundle.workSessionId, bundle]));
+  const visibleSessions = props.workSessions.slice(0, 3);
+  const orphanBundles = props.bundles
+    .filter((bundle) => !bundleBySession.has(bundle.workSessionId) || !props.workSessions.some((session) => session.sessionId === bundle.workSessionId))
+    .slice(0, Math.max(0, 3 - visibleSessions.length));
+
+  return (
+    <Card shadow="card" padding="none" className="overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <History className="h-4 w-4 text-brand" />
+            <h3 className="text-sm font-semibold text-ink">今日变化闭环</h3>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-muted">开发后回来刷新变化，把 Git evidence 变成可审查事实，采纳后进入项目档案和输出来源。</p>
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={!props.hasProjectPath || props.scanningWorkSessions}
+          onClick={props.onScanWorkSessions}
+          title={props.hasProjectPath ? "读取已绑定项目的 Git 变化，生成今日工作候选。" : "先保存真实项目文件夹路径。"}
+        >
+          {props.scanningWorkSessions ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
+          刷新变化
+        </Button>
+      </div>
+
+      {visibleSessions.length || orphanBundles.length ? (
+        <div className="divide-y divide-line">
+          {visibleSessions.map((session) => (
+            <EvidenceFlowRow
+              bundle={bundleBySession.get(session.sessionId)}
+              creatingEvidenceFor={props.creatingEvidenceFor}
+              draftingChangeFor={props.draftingChangeFor}
+              key={session.sessionId}
+              onCreateEvidenceBundle={props.onCreateEvidenceBundle}
+              onDraftChange={props.onDraftChange}
+              selectedProjectId={props.selectedProjectId}
+              session={session}
+            />
+          ))}
+          {orphanBundles.map((bundle) => (
+            <EvidenceFlowRow
+              bundle={bundle}
+              creatingEvidenceFor={props.creatingEvidenceFor}
+              draftingChangeFor={props.draftingChangeFor}
+              key={bundle.id}
+              onCreateEvidenceBundle={props.onCreateEvidenceBundle}
+              onDraftChange={props.onDraftChange}
+              selectedProjectId={props.selectedProjectId}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="p-5 text-sm leading-6 text-muted">
+          {props.hasProjectPath
+            ? "还没有今日变化。点击刷新后，如果当前项目有 Git 改动或提交，这里会出现候选工作会话。"
+            : "先保存本地项目路径，ProjectFlow 才能从这个项目读取 Git evidence。"}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function EvidenceFlowRow({
+  bundle,
+  creatingEvidenceFor,
+  draftingChangeFor,
+  onCreateEvidenceBundle,
+  onDraftChange,
+  selectedProjectId,
+  session,
+}: {
+  bundle?: EvidenceBundle;
+  creatingEvidenceFor: string;
+  draftingChangeFor: string;
+  onCreateEvidenceBundle: (sessionId: string) => void;
+  onDraftChange: (bundleId: string) => void;
+  selectedProjectId: string;
+  session?: WorkSessionCandidate;
+}) {
+  const sessionId = session?.sessionId ?? bundle?.workSessionId ?? "";
+  const status = evidenceStatus(bundle);
+  const files = (bundle?.files.length ? bundle.files : session?.files ?? []).slice(0, 2);
+  const title = bundle?.taskIntent || session?.taskIntent || "今日工作候选";
+  const metrics = bundle
+    ? `${bundle.changedFiles} 文件 · +${bundle.addedLines}/-${bundle.deletedLines}`
+    : session
+      ? `${session.changedFiles} 文件 · +${session.addedLines}/-${session.deletedLines}`
+      : "等待证据";
+
+  return (
+    <article className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="min-w-0">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <Badge label={status.label} tone={status.tone} />
+          <span className="text-xs text-muted">{metrics}</span>
+        </div>
+        <p className="line-clamp-2 text-sm font-semibold leading-6 text-ink">{title}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {files.length ? files.map((file) => (
+            <span className="max-w-full break-all rounded-field bg-surfaceAlt px-2 py-1 font-mono text-xs text-muted" key={file}>
+              {compactProjectPath(file)}
+            </span>
+          )) : <span className="text-xs text-muted">暂无文件证据</span>}
+        </div>
+      </div>
+      <EvidenceFlowAction
+        bundle={bundle}
+        creating={creatingEvidenceFor === sessionId}
+        drafting={Boolean(bundle && draftingChangeFor === bundle.id)}
+        onCreateEvidenceBundle={() => sessionId && onCreateEvidenceBundle(sessionId)}
+        onDraftChange={() => bundle && onDraftChange(bundle.id)}
+        selectedProjectId={selectedProjectId}
+      />
+    </article>
+  );
+}
+
+function EvidenceFlowAction({
+  bundle,
+  creating,
+  drafting,
+  onCreateEvidenceBundle,
+  onDraftChange,
+  selectedProjectId,
+}: {
+  bundle?: EvidenceBundle;
+  creating: boolean;
+  drafting: boolean;
+  onCreateEvidenceBundle: () => void;
+  onDraftChange: () => void;
+  selectedProjectId: string;
+}) {
+  if (!bundle) {
+    return (
+      <Button variant="secondary" size="sm" disabled={creating} onClick={onCreateEvidenceBundle}>
+        {creating ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileCode2 className="h-3.5 w-3.5" />}
+        生成证据包
+      </Button>
+    );
+  }
+  if (bundle.nextAction === "GENERATE_CHANGE") {
+    return (
+      <Button variant="primary" size="sm" disabled={drafting} onClick={onDraftChange}>
+        {drafting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+        生成候选变更
+      </Button>
+    );
+  }
+  if (bundle.nextAction === "REVIEW_CHANGE") {
+    return (
+      <Link href="/tasks">
+        <Button variant="primary" size="sm">
+          去变更审查 <ArrowRight className="h-3.5 w-3.5" />
+        </Button>
+      </Link>
+    );
+  }
+  if (bundle.nextAction === "VIEW_MEMORY") {
+    return (
+      <Link href="/project-intelligence">
+        <Button variant="secondary" size="sm">
+          看项目档案 <ArrowRight className="h-3.5 w-3.5" />
+        </Button>
+      </Link>
+    );
+  }
+  return selectedProjectId ? (
+    <Link href="/ai-review">
+      <Button variant="secondary" size="sm">
+        生成输出 <ArrowRight className="h-3.5 w-3.5" />
+      </Button>
+    </Link>
+  ) : null;
+}
+
+function evidenceStatus(bundle?: EvidenceBundle): { label: string; tone: "brand" | "warning" | "success" | "slate" } {
+  if (!bundle) {
+    return { label: "待生成证据", tone: "slate" };
+  }
+  if (bundle.status === "READY_FOR_CHANGE") {
+    return { label: "证据包就绪", tone: "brand" };
+  }
+  if (bundle.status === "CHANGE_DRAFTED") {
+    return { label: "待审查", tone: "warning" };
+  }
+  if (bundle.status === "CHANGE_ACCEPTED") {
+    return { label: "已入档案", tone: "success" };
+  }
+  return { label: "已归档", tone: "slate" };
 }
 
 /* ------------------------------------------------------------------ */

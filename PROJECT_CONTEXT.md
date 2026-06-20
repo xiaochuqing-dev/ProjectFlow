@@ -1,6 +1,6 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-06-08
+Last updated: 2026-06-21
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
@@ -19,10 +19,16 @@ Do not treat ProjectFlow as a generic Kanban app, SaaS admin panel, hotel/librar
 
 ## Current Stage
 
-The project has moved beyond the V1/V2 planning baseline. Current V3.1 focus:
+The project has moved beyond the V1/V2 planning baseline. Current V3.2 focus:
 
-- Workbench first screen should emphasize project profile, architecture/file understanding, model analysis status, risks, and pending changes.
-- Left-side first-screen actions should prioritize raw project connection: import zip, bind real project path, write `.projectflow` protocol, scan agent result.
+- Workbench first screen should expose the independent user loop: import project -> see profile -> bind local path -> develop -> refresh changes -> review -> generate output.
+- ProjectFlow must be usable without reading docs or requiring an agent to explain the workflow.
+- Workbench actions should prioritize the next concrete step, not a flat set of unrelated buttons.
+- Evidence Bundle lifecycle is now product-visible through `status`, `nextAction`, and `changeId`.
+- Change review is the project asset intake desk: accepted changes write to Project Memory and Fact Sources.
+- Project profile should show both current fields and project growth history.
+- Daily review and outputs should explain which confirmed sources they use.
+- Left-side first-screen actions still include raw project connection: import zip, bind real project path, write `.projectflow` protocol, scan agent result.
 - "Project facts" UI language should become "项目画像" / "项目档案".
 - Model API value should move upstream into project analysis, module/file explanation, risk identification, agent result parsing, and profile update suggestions.
 - Model-not-configured and model-failed states must keep local-rule fallback usable.
@@ -117,6 +123,9 @@ Core services:
 - `AiOutputService`: weekly report, project summary, resume bullets, README section outputs.
 - `ProjectIntelligenceService`: materials, zip import, project analysis, file analysis, suggestions, memory, snapshots, evolution records, project changes, fact sources, analysis records.
 - `ProjectAgentBridgeService`: writes `.projectflow` protocol/context/task briefs, scans agent result files, creates materials/suggestions/changes.
+- `WorkSessionScanService`: reads the bound local project path and Git evidence to create work sessions.
+- `EvidenceBundleService`: creates or updates one evidence bundle per work session and exposes lifecycle state.
+- `EvidenceDraftChangeService`: turns an evidence bundle into an editable structured project change.
 
 Important backend constraints:
 
@@ -124,6 +133,7 @@ Important backend constraints:
 - Real secrets belong in environment variables or user provider config, not committed files.
 - Model output is candidate data; do not silently overwrite confirmed user/project memory content.
 - Zip import skips `.git`, dependency/build output, logs, `.env`, binary/media/archive files.
+- Evidence bundles are not confirmed project facts; accepted project changes are.
 - File model analysis must skip sensitive paths.
 - Local-rule fallback should keep pages useful when model API is missing or fails.
 

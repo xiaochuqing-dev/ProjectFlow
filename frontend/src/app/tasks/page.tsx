@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Check,
   ClipboardCheck,
@@ -483,6 +484,37 @@ export default function TasksPage() {
 
           <aside className="space-y-5">
             <section className="rounded-md border border-line bg-white shadow-panel">
+              <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <Layers3 className="h-4 w-4 text-slate-700" />
+                  <h2 className="font-semibold">采纳后写入</h2>
+                </div>
+                <Link className="text-xs font-semibold text-slate-700 hover:text-slate-950" href="/project-intelligence">
+                  看项目档案
+                </Link>
+              </div>
+              <div className="space-y-3 p-5 text-sm leading-6 text-slate-600">
+                {selectedChange ? (
+                  <>
+                    <p className="font-medium text-slate-950">{selectedChange.title}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {changeMemoryTargets(selectedChange).map((target) => (
+                        <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs text-slate-700" key={target}>
+                          {target}
+                        </span>
+                      ))}
+                    </div>
+                    <p>
+                      采纳后会写入上方字段的事实来源，并被每日回顾、README 草稿、周报和后续同步上下文复用。
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-muted">选择一条待确认变更后，这里会显示它最终进入项目档案的字段。</p>
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-md border border-line bg-white shadow-panel">
               <div className="flex items-center gap-2 border-b border-line px-5 py-4">
                 <FileDiff className="h-4 w-4 text-slate-700" />
                 <h2 className="font-semibold">编辑结构化变更</h2>
@@ -684,6 +716,32 @@ function changePreview(change: ProjectChange) {
   return [change.sourceRef, change.affectedFiles.split("\n")[0], change.riskNotes ? "含风险备注" : ""]
     .filter(Boolean)
     .join(" · ") || "结构化变更可审查";
+}
+
+function changeMemoryTargets(change: ProjectChange) {
+  const targets = new Set<string>();
+  switch (change.changeKind) {
+    case "RISK":
+      targets.add("当前风险");
+      break;
+    case "DECISION":
+      targets.add("技术决策");
+      break;
+    case "LEARNING":
+      targets.add("经验沉淀");
+      break;
+    case "ASSET":
+      targets.add("可展示成果");
+      break;
+    default:
+      targets.add("已完成能力");
+      break;
+  }
+  if (change.riskNotes) targets.add("当前风险");
+  if (change.decisionNotes) targets.add("技术决策");
+  if (change.learningNotes) targets.add("经验沉淀");
+  if (change.assetCandidates) targets.add("可展示成果");
+  return Array.from(targets);
 }
 
 function toChangePayload(change: ProjectChange): ChangeEditState {

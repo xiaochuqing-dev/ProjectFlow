@@ -233,6 +233,12 @@ export default function DevLogsPage() {
           </form>
 
           <aside className="space-y-5">
+            <DailySourceGrid
+              completedCount={completedTasks.length}
+              evolutionCount={dayEvolution.length}
+              logCount={dayLogs.length}
+              riskReady={Boolean(memory?.currentRisks && !memory.currentRisks.includes("暂无"))}
+            />
             <SourcePanel
               icon={<History className="h-4 w-4 text-slate-700" />}
               title="大变化"
@@ -291,14 +297,67 @@ export default function DevLogsPage() {
 }
 
 function SourcePanel({ icon, title, items, empty }: { icon: ReactNode; title: string; items: string[]; empty: string }) {
+  const cards = items.slice(0, 6).map((item, index) => ({
+    title: `${title} ${index + 1}`,
+    body: firstUsefulLine(item) || item,
+  }));
+  return <SourceCardList empty={empty} icon={icon} items={cards} title={title} />;
+}
+
+type SourceCardItem = {
+  title: string;
+  body: string;
+};
+
+function DailySourceGrid({
+  completedCount,
+  evolutionCount,
+  logCount,
+  riskReady,
+}: {
+  completedCount: number;
+  evolutionCount: number;
+  logCount: number;
+  riskReady: boolean;
+}) {
+  const items = [
+    ["当日日志", `${logCount} 条`, logCount > 0],
+    ["项目演进", `${evolutionCount} 条`, evolutionCount > 0],
+    ["完成任务", `${completedCount} 个`, completedCount > 0],
+    ["风险决策", riskReady ? "有" : "无", riskReady],
+  ] as const;
+  return (
+    <section className="rounded-md border border-line bg-white p-5 shadow-panel">
+      <div className="mb-3 flex items-center gap-2">
+        <BookOpenText className="h-4 w-4 text-slate-700" />
+        <h2 className="font-semibold">每日回顾来源</h2>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {items.map(([label, value, ready]) => (
+          <div className={`rounded-md border px-3 py-2 ${ready ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-line bg-slate-50 text-slate-500"}`} key={label}>
+            <p className="text-xs">{label}</p>
+            <p className="mt-1 font-semibold">{value}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SourceCardList({ empty, icon, items, title }: { empty: string; icon: ReactNode; items: SourceCardItem[]; title: string }) {
   return (
     <section className="rounded-md border border-line bg-white shadow-panel">
       <div className="flex items-center gap-2 border-b border-line px-5 py-4">
         {icon}
         <h2 className="font-semibold">{title}</h2>
       </div>
-      <div className="space-y-3 p-5 text-sm leading-6 text-slate-600">
-        {items.length ? items.slice(0, 6).map((item, index) => <p className="whitespace-pre-line" key={`${title}-${index}`}>{item}</p>) : <p className="text-muted">{empty}</p>}
+      <div className="space-y-3 p-5">
+        {items.length ? items.map((item) => (
+          <article className="rounded-md border border-line bg-slate-50 px-3 py-2 text-sm" key={`${title}-${item.title}-${item.body}`}>
+            <p className="font-semibold text-slate-950">{item.title}</p>
+            <p className="mt-1 line-clamp-3 leading-5 text-slate-600">{item.body}</p>
+          </article>
+        )) : <p className="text-sm text-muted">{empty}</p>}
       </div>
     </section>
   );
@@ -371,4 +430,10 @@ function listOrFallback(items: string[], fallback: string) {
     return `- ${fallback}`;
   }
   return cleanItems.map((item) => `- ${item.replace(/\n/g, "\n  ")}`).join("\n");
+}
+
+function firstUsefulLine(value: string) {
+  return value.split(/\r?\n/)
+    .map((line) => line.replace(/^[-*#>\s]+/, "").trim())
+    .find((line) => line && !line.startsWith("暂无")) ?? "";
 }
