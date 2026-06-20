@@ -1010,13 +1010,23 @@ class V2CoreControllerTest {
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.status").value("ACCEPTED"));
+        mockMvc.perform(post("/api/project-changes/" + changeId + "/accept")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("ACCEPTED"));
 
-        mockMvc.perform(get("/api/projects/" + projectId + "/memory")
+        MvcResult memoryResult = mockMvc.perform(get("/api/projects/" + projectId + "/memory")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.completedCapabilities").value(containsString("durable evidence review workflow")))
             .andExpect(jsonPath("$.data.currentRisks").value(containsString("silently overwrite manual profile edits")))
-            .andExpect(jsonPath("$.data.technicalDecisions").value(containsString("reusable project memory")));
+            .andExpect(jsonPath("$.data.technicalDecisions").value(containsString("reusable project memory")))
+            .andReturn();
+        String completedCapabilities = objectMapper.readTree(memoryResult.getResponse().getContentAsString())
+            .at("/data/completedCapabilities")
+            .asText();
+        org.assertj.core.api.Assertions.assertThat(completedCapabilities.split("durable evidence review workflow", -1).length - 1)
+            .isEqualTo(1);
 
         mockMvc.perform(get("/api/projects/" + projectId + "/fact-sources")
                 .header("Authorization", "Bearer " + token))

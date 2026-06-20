@@ -1403,7 +1403,7 @@ public class ProjectIntelligenceService {
         List<String> decisions = new ArrayList<>();
         List<String> learnings = new ArrayList<>();
         List<String> assets = new ArrayList<>();
-        String summaryLine = change.getTitle() + "：" + defaultText(change.getSummary(), change.getDetails());
+        String summaryLine = defaultText(change.getSummary(), change.getDetails());
 
         switch (change.getChangeKind()) {
             case RISK -> risks.add(defaultText(change.getRiskNotes(), summaryLine));
@@ -2374,11 +2374,34 @@ public class ProjectIntelligenceService {
         if (additions.isEmpty()) {
             return existing;
         }
-        String joined = String.join("\n", additions.stream().map(item -> "- " + item).toList());
+        LinkedHashMap<String, String> lines = new LinkedHashMap<>();
+        if (existing != null && !existing.isBlank() && !existing.startsWith("暂无")) {
+            existing.lines()
+                .map(this::cleanMemoryLine)
+                .filter(line -> !line.isBlank())
+                .forEach(line -> lines.putIfAbsent(normalizeMemoryLine(line), line));
+        }
+        additions.stream()
+            .flatMap(item -> item == null ? java.util.stream.Stream.<String>empty() : item.lines())
+            .map(this::cleanMemoryLine)
+            .filter(line -> !line.isBlank())
+            .forEach(line -> lines.putIfAbsent(normalizeMemoryLine(line), line));
+        String joined = String.join("\n", lines.values().stream().map(item -> "- " + item).toList());
         if (existing == null || existing.isBlank() || existing.startsWith("暂无")) {
             return joined;
         }
-        return existing + "\n" + joined;
+        return joined;
+    }
+
+    private String cleanMemoryLine(String value) {
+        return value == null ? "" : value.trim().replaceFirst("^(?:[-*]\\s*)+", "").trim();
+    }
+
+    private String normalizeMemoryLine(String value) {
+        return cleanMemoryLine(value)
+            .replaceAll("\\s+", " ")
+            .replace("：", ":")
+            .toLowerCase();
     }
 
     private String joinOrFallback(List<String> values, String fallback) {

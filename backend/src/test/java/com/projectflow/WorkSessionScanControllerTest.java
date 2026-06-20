@@ -51,7 +51,9 @@ class WorkSessionScanControllerTest {
             .andExpect(jsonPath("$.data.sessions[0].changedFiles").value(greaterThanOrEqualTo(1)))
             .andExpect(jsonPath("$.data.sessions[0].addedLines").value(greaterThanOrEqualTo(1)))
             .andExpect(jsonPath("$.data.sessions[0].affectedModules[0]").value("src"))
-            .andExpect(jsonPath("$.data.sessions[0].evidence[0]").value(containsString("Git commit")))
+            .andExpect(jsonPath("$.data.sessions[0].taskIntent").value(containsString("更新")))
+            .andExpect(jsonPath("$.data.sessions[0].evidence[0]").value(containsString("本轮 Git 变化")))
+            .andExpect(jsonPath("$.data.sessions[0].evidence[1]").value(containsString("主要涉及")))
             .andExpect(jsonPath("$.data.warnings.length()").value(0))
             .andReturn();
 
@@ -87,7 +89,7 @@ class WorkSessionScanControllerTest {
             .andExpect(jsonPath("$.data.changedFiles").value(greaterThanOrEqualTo(1)))
             .andExpect(jsonPath("$.data.addedLines").value(greaterThanOrEqualTo(1)))
             .andExpect(jsonPath("$.data.sources[0].sourceType").value("GIT_EVIDENCE"))
-            .andExpect(jsonPath("$.data.objectiveEvidence[0]").value(containsString("Git commit")))
+            .andExpect(jsonPath("$.data.objectiveEvidence[0]").value(containsString("本轮 Git 变化")))
             .andExpect(jsonPath("$.data.agentClaims.length()").value(0))
             .andReturn();
 

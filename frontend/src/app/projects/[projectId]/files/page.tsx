@@ -13,7 +13,7 @@ import {
   type Project,
   type ProjectMaterial,
 } from "@/lib/api";
-import { buildFileInsights, buildModuleGroups, projectZipPaths, type FileInsight } from "@/lib/project-insights";
+import { buildFileInsights, buildModuleGroups, buildProjectArchitecture, compactProjectPath, projectZipPaths, type FileInsight } from "@/lib/project-insights";
 import { readSession } from "@/lib/auth";
 import { useProjectAnalysisJobs } from "@/lib/use-project-analysis-jobs";
 import { updateProjectFileViewSearch, type ProjectFileViewStatePatch } from "@/lib/project-file-view-state";
@@ -37,6 +37,7 @@ export default function ProjectFilesPage() {
   const paths = useMemo(() => projectZipPaths(materials), [materials]);
   const files = useMemo(() => buildFileInsights(paths), [paths]);
   const modules = useMemo(() => buildModuleGroups(paths), [paths]);
+  const architecture = useMemo(() => buildProjectArchitecture(paths), [paths]);
   const filteredFiles = files.filter((file) => {
     const moduleMatches = !selectedModule || file.moduleName === selectedModule;
     const queryMatches = !query.trim() || file.path.toLowerCase().includes(query.trim().toLowerCase());
@@ -119,6 +120,28 @@ export default function ProjectFilesPage() {
 
         {error ? <div className="mb-5 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div> : null}
         {jobError ? <div className="mb-5 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{jobError}</div> : null}
+        {paths.length > 0 ? (
+          <section className="mb-5 rounded-md border border-line bg-white shadow-panel">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">项目架构</p>
+                <h2 className="mt-1 text-lg font-semibold text-slate-950">{architecture.summary}</h2>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {architecture.shapeTags.slice(0, 3).map((tag) => (
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700" key={tag}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-px bg-line md:grid-cols-3">
+              <ArchitectureSignal title="入口" items={architecture.entrypoints} empty="未识别" />
+              <ArchitectureSignal title="核心" items={architecture.coreModules} empty="待确认" />
+              <ArchitectureSignal title="运行/依赖" items={[...architecture.dependencySignals, ...architecture.runtimeArtifacts].slice(0, 4)} empty="暂无" />
+            </div>
+          </section>
+        ) : null}
 
         {paths.length === 0 && !loading ? (
           <section className="grid min-h-96 place-items-center rounded-md border border-line bg-white p-8 text-center shadow-panel">
@@ -191,7 +214,7 @@ export default function ProjectFilesPage() {
                         {signalLabel(file.fileType)}
                       </span>
                     </div>
-                    <p className={`mt-1 truncate font-mono text-xs ${selectedFile?.path === file.path ? "text-white/70" : "text-muted"}`}>{file.path}</p>
+                    <p className={`mt-1 break-all font-mono text-xs leading-5 ${selectedFile?.path === file.path ? "text-white/70" : "text-muted"}`}>{compactProjectPath(file.path)}</p>
                   </button>
                 ))}
                 {!loading && filteredFiles.length === 0 ? <p className="p-5 text-sm text-muted">没有匹配文件。</p> : null}
@@ -215,6 +238,37 @@ export default function ProjectFilesPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+function ArchitectureSignal({
+  empty = "暂无",
+  items,
+  title,
+}: {
+  empty?: string;
+  items: { path: string; label: string; reason: string }[];
+  title: string;
+}) {
+  const visible = items.slice(0, 1);
+  return (
+    <div className="bg-white p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-slate-950">{title}</p>
+        {items.length > visible.length ? <span className="text-xs text-muted">+{items.length - visible.length}</span> : null}
+      </div>
+      {visible.length ? (
+        <div className="mt-3 space-y-2">
+          {visible.map((item) => (
+            <p className="break-all font-mono text-xs leading-5 text-slate-600" key={`${title}-${item.path}`} title={item.path}>
+              {compactProjectPath(item.path)}
+            </p>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 text-sm text-muted">{empty}</p>
+      )}
+    </div>
   );
 }
 
@@ -253,16 +307,18 @@ function FileDetail({
           <FileCode2 className="h-5 w-5 text-slate-700" />
           <h2 className="min-w-0 truncate text-lg font-semibold text-slate-950">{file.name}</h2>
         </div>
-        <p className="break-all font-mono text-xs text-muted">{file.path}</p>
+        <p className="break-all font-mono text-xs text-muted">{compactProjectPath(file.path)}</p>
       </div>
       <div className="space-y-5 p-5">
         <div>
           <p className="text-sm font-semibold text-slate-950">基础解释</p>
           <p className="mt-2 text-sm leading-6 text-slate-600">{active?.summary ?? file.summary}</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Signal label="职责" value={active?.role ?? file.role} />
+        <div className="grid gap-3 sm:grid-cols-5">
+          <Signal label="文件角色" value={active?.role ?? file.role} />
           <Signal label="重要性" value={active?.importance ?? file.importance} />
+          <Signal label="阅读优先级" value={file.readPriority} />
+          <Signal label="操作建议" value={file.actionHint} />
           <Signal label="风险" value={active?.riskLevel ?? file.riskLevel} />
         </div>
         <div className={`rounded-md border p-4 text-sm leading-6 ${(active?.riskLevel ?? file.riskLevel) === "high" || (active?.riskLevel ?? file.riskLevel) === "medium" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-line bg-slate-50 text-slate-600"}`}>
@@ -283,7 +339,7 @@ function FileDetail({
         {active?.relatedFiles.length ? (
           <div className="rounded-md border border-line bg-white p-4">
             <p className="text-sm font-semibold text-slate-950">关联文件</p>
-            <p className="mt-2 break-all font-mono text-xs leading-5 text-slate-600">{active.relatedFiles.join(" · ")}</p>
+            <p className="mt-2 break-all font-mono text-xs leading-5 text-slate-600">{active.relatedFiles.map(compactProjectPath).join(" · ")}</p>
           </div>
         ) : null}
         <div className="rounded-md border border-line bg-white p-4">
@@ -353,12 +409,20 @@ function signalLabel(value: string) {
     source: "源码",
     test: "测试",
     config: "配置",
+    dependency: "依赖",
     docs: "文档",
     script: "脚本",
     asset: "资源",
     build: "构建产物",
+    runtime: "运行产物",
     env: "环境配置",
     unknown: "未知",
+    first_read: "先读",
+    key: "关键",
+    modify: "可修改",
+    read_only: "只读参考",
+    exclude: "应排除",
+    verify: "需确认",
   };
   return labels[value.toLowerCase()] ?? value;
 }
@@ -381,10 +445,12 @@ function typeTone(type: FileInsight["fileType"]) {
     source: "bg-blue-50 text-blue-800",
     test: "bg-emerald-50 text-emerald-700",
     config: "bg-amber-50 text-amber-800",
+    dependency: "bg-orange-50 text-orange-800",
     docs: "bg-slate-100 text-slate-600",
     script: "bg-cyan-50 text-cyan-800",
     asset: "bg-slate-100 text-slate-600",
     build: "bg-slate-100 text-slate-500",
+    runtime: "bg-zinc-100 text-zinc-600",
     env: "bg-rose-50 text-rose-700",
     unknown: "bg-slate-100 text-slate-600",
   };

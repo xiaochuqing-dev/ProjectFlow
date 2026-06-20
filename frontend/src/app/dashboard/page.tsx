@@ -57,7 +57,7 @@ import {
   type WorkSessionCandidate,
   type WorkSessionScanResult,
 } from "@/lib/api";
-import { buildModuleGroups, projectZipPaths } from "@/lib/project-insights";
+import { buildModuleGroups, buildProjectArchitecture, compactProjectPath, projectZipPaths } from "@/lib/project-insights";
 import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 import { readSession } from "@/lib/auth";
 import { useProjectAnalysisJobs } from "@/lib/use-project-analysis-jobs";
@@ -111,6 +111,7 @@ export default function DashboardPage() {
   const configuredProvider = providers.find((provider) => provider.id && provider.apiKeyConfigured);
   const paths = useMemo(() => projectZipPaths(materials), [materials]);
   const moduleGroups = useMemo(() => buildModuleGroups(paths), [paths]);
+  const architecture = useMemo(() => buildProjectArchitecture(paths), [paths]);
   const hasMaterials = materials.length > 0;
   const hasProjectZipMaterial = materials.some((material) => material.sourceType === "PROJECT_ZIP");
   const hasUsableProjectZip = paths.length > 0;
@@ -741,8 +742,8 @@ export default function DashboardPage() {
                           <span className="text-xs text-muted">{formatSessionRange(session.startTime, session.endTime)}</span>
                         </div>
                         <p className="mt-3 text-sm font-semibold text-slate-950">{session.taskIntent}</p>
-                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">
-                          {session.evidence[0] ?? "仅从 Git evidence 生成候选，尚未接入授权 Agent 日志。"}
+                        <p className="mt-2 line-clamp-4 text-sm leading-6 text-slate-600">
+                          {sessionChangeSummary(session)}
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           {session.affectedModules.slice(0, 5).map((module) => (
@@ -791,6 +792,12 @@ export default function DashboardPage() {
                         <MiniFact label="文件" value={`${session.changedFiles}`} />
                         <MiniFact label="新增" value={`+${session.addedLines}`} />
                         <MiniFact label="删除" value={`-${session.deletedLines}`} />
+                        <Link
+                          className="col-span-3 rounded-md border border-slate-300 px-3 py-2 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50 lg:col-span-1"
+                          href={`/work-sessions/${session.sessionId}?projectId=${selectedProjectId}`}
+                        >
+                          查看细节
+                        </Link>
                         <button
                           className="col-span-3 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 lg:col-span-1"
                           disabled={creatingBundleSessionId === session.sessionId}
@@ -940,21 +947,38 @@ export default function DashboardPage() {
                 </div>
                 <span className="text-sm text-muted">{paths.length ? `${paths.length} 个文件信号` : "等待导入"}</span>
               </div>
+              {paths.length ? (
+                <div className="border-b border-line p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">项目形态</p>
+                      <h3 className="mt-1 text-lg font-semibold text-slate-950">{architecture.summary}</h3>
+                    </div>
+                    <Link className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white" href={`/projects/${selectedProjectId}/files`}>
+                      完整结构 <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <MiniFact label="入口" value={architecture.entrypoints[0] ? compactProjectPath(architecture.entrypoints[0].path) : "未识别"} />
+                    <MiniFact label="核心" value={architecture.coreModules[0] ? compactProjectPath(architecture.coreModules[0].path) : "待确认"} />
+                    <MiniFact label="运行/依赖" value={architecture.dependencySignals[0] ? compactProjectPath(architecture.dependencySignals[0].path) : architecture.runtimeArtifacts[0] ? compactProjectPath(architecture.runtimeArtifacts[0].path) : "暂无"} />
+                  </div>
+                </div>
+              ) : null}
               <div className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-3">
                 {moduleGroups.map((group) => (
                   <Link
-                    className="rounded-md border border-line bg-slate-50 p-4 transition hover:-translate-y-0.5 hover:border-slate-400 hover:bg-white hover:shadow-panel"
+                    className="min-w-0 rounded-md border border-line bg-slate-50 p-4 transition hover:-translate-y-0.5 hover:border-slate-400 hover:bg-white hover:shadow-panel"
                     href={`/projects/${selectedProjectId}/files?module=${encodeURIComponent(group.name)}`}
                     key={group.name}
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-lg font-semibold">{group.name}</h3>
+                      <h3 className="min-w-0 truncate text-lg font-semibold" title={group.name}>{group.name}</h3>
                       <span className="rounded-full bg-white px-2 py-1 text-xs text-muted">{group.count}</span>
                     </div>
-                    <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">{group.summary}</p>
-                    <div className="mt-4 flex items-center justify-between text-xs text-muted">
-                      <span>{group.important[0] ?? "暂无关键文件"}</span>
-                      <ArrowRight className="h-4 w-4" />
+                    <div className="mt-4 flex items-center justify-between gap-3 text-xs text-muted">
+                      <span className="min-w-0 break-all font-mono leading-5">{group.important[0] ?? "暂无关键文件"}</span>
+                      <ArrowRight className="h-4 w-4 shrink-0" />
                     </div>
                   </Link>
                 ))}
@@ -1019,11 +1043,18 @@ function StatusChip({ label, tone = "slate" }: { label: string; tone?: "slate" |
   return <span className={`rounded-md px-2.5 py-1 text-xs ${styles[tone]}`}>{label}</span>;
 }
 
+function sessionChangeSummary(session: WorkSessionCandidate) {
+  const modules = session.affectedModules.length ? session.affectedModules.slice(0, 4).join("、") : "未明确模块";
+  const files = session.files.slice(0, 4).map(compactProjectPath).join("、") || "暂无文件明细";
+  const evidence = session.evidence.slice(0, 2).join(" ");
+  return `本轮变化涉及 ${modules}，共 ${session.changedFiles} 个文件，新增 ${session.addedLines} 行、删除 ${session.deletedLines} 行。代表文件：${files}。${evidence}`;
+}
+
 function MiniFact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-line bg-slate-50 p-3">
+    <div className="min-w-0 rounded-md border border-line bg-slate-50 p-3">
       <p className="text-xs text-muted">{label}</p>
-      <p className="mt-1 line-clamp-2 text-sm font-semibold text-slate-900">{value}</p>
+      <p className="mt-1 break-all text-sm font-semibold leading-5 text-slate-900">{value}</p>
     </div>
   );
 }

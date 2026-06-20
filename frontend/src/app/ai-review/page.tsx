@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Clipboard, Download, FileText, History, Layers3, RefreshCw, Save, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { compactProjectPath } from "@/lib/project-insights";
 import {
   generateAiOutput,
   getProjectMemory,
@@ -314,12 +315,7 @@ export default function AiReviewPage() {
             <SourceBlock
               icon={<Layers3 className="h-4 w-4 text-slate-700" />}
               title="项目档案来源"
-              text={[
-                memory?.positioning,
-                memory?.completedCapabilities,
-                memory?.technicalDecisions,
-                memory?.showcaseAssets,
-              ].filter(Boolean).join("\n\n") || "暂无已确认项目档案。"}
+              items={projectMemorySourceItems(memory)}
             />
             <SourceBlock
               icon={<FileText className="h-4 w-4 text-slate-700" />}
@@ -346,16 +342,54 @@ function SourcePill({ label, value }: { label: string; value: number }) {
   return <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs text-slate-600">{label} {value}</span>;
 }
 
-function SourceBlock({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
+function SourceBlock({ icon, items, text, title }: { icon: ReactNode; items?: string[]; text?: string; title: string }) {
+  const lines = items ?? (text ? [text] : []);
   return (
     <section className="rounded-md border border-line bg-white shadow-panel">
       <div className="flex items-center gap-2 border-b border-line px-5 py-4">
         {icon}
         <h2 className="font-semibold">{title}</h2>
       </div>
-      <p className="whitespace-pre-line p-5 text-sm leading-6 text-slate-600">{text}</p>
+      <div className="max-h-80 space-y-2 overflow-auto p-5 text-sm leading-6 text-slate-600">
+        {lines.length ? lines.map((item) => (
+          <p className="break-words" key={item}>{item}</p>
+        )) : <p>暂无已确认来源。</p>}
+      </div>
     </section>
   );
+}
+
+function projectMemorySourceItems(memory: ProjectMemory | null) {
+  if (!memory) {
+    return [];
+  }
+  return [
+    sourceItem("定位", memory.positioning),
+    sourceItem("能力", memory.completedCapabilities),
+    sourceItem("决策", memory.technicalDecisions),
+    sourceItem("成果", memory.showcaseAssets),
+  ].filter(Boolean) as string[];
+}
+
+function sourceItem(label: string, value: string | undefined) {
+  const line = firstUsefulLine(value);
+  return line ? `${label}：${compactSourceText(line)}` : "";
+}
+
+function firstUsefulLine(value: string | undefined) {
+  if (!value) {
+    return "";
+  }
+  return value.split(/\r?\n/)
+    .map((line) => line.replace(/^[-*]\s*/, "").trim())
+    .find((line) => line && !line.startsWith("暂无")) ?? "";
+}
+
+function compactSourceText(value: string) {
+  return value
+    .split(/\s+/)
+    .map((part) => part.includes("/") ? compactProjectPath(part) : part)
+    .join(" ");
 }
 
 function buildFallbackDraft(

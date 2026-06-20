@@ -281,7 +281,7 @@ public class WorkSessionScanService {
         private final String branchName;
         private final LinkedHashMap<String, FileStat> files = new LinkedHashMap<>();
         private final LinkedHashSet<String> modules = new LinkedHashSet<>();
-        private final List<String> evidence = new ArrayList<>();
+        private final List<String> commitSummaries = new ArrayList<>();
         private Instant startTime;
         private Instant endTime;
         private String baseCommit = "";
@@ -303,7 +303,7 @@ public class WorkSessionScanService {
             if (endTime == null || commit.time().isAfter(endTime)) {
                 endTime = commit.time();
             }
-            evidence.add("Git commit " + shortHash(commit.hash()) + ": " + commit.subject());
+            commitSummaries.add(commitSummary(commit));
         }
 
         private void addNumstat(CommitCursor commit, String line) {
@@ -332,12 +332,13 @@ public class WorkSessionScanService {
             int addedLines = files.values().stream().mapToInt(FileStat::added).sum();
             int deletedLines = files.values().stream().mapToInt(FileStat::deleted).sum();
             String seed = projectId + ":" + branchName + ":" + baseCommit + ":" + files.keySet();
+            List<String> evidence = evidenceLines(addedLines, deletedLines);
             return new WorkSessionCandidateResponse(
                 UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8)).toString(),
                 projectId,
                 "UNKNOWN",
                 agentName,
-                "根据今日 Git 证据生成的候选工作会话",
+                taskIntent(),
                 branchName,
                 baseCommit,
                 startTime == null ? Instant.now() : startTime,
@@ -348,9 +349,37 @@ public class WorkSessionScanService {
                 addedLines,
                 deletedLines,
                 List.copyOf(modules),
-                evidence.stream().limit(8).toList(),
+                evidence,
                 List.copyOf(files.keySet())
             );
+        }
+
+        private String taskIntent() {
+            String module = modules.stream().findFirst().orElse("项目");
+            String subject = commitSummaries.stream()
+                .findFirst()
+                .map(summary -> summary.replaceFirst("^提交 [^：]+：", ""))
+                .orElse("未提交工作区变更");
+            return "更新 " + module + " 相关内容：" + subject;
+        }
+
+        private List<String> evidenceLines(int addedLines, int deletedLines) {
+            List<String> lines = new ArrayList<>();
+            lines.add("本轮 Git 变化：修改 " + files.size() + " 个文件，新增 " + addedLines + " 行，删除 " + deletedLines + " 行。");
+            if (!modules.isEmpty()) {
+                lines.add("主要涉及：" + String.join("、", modules.stream().limit(5).toList()) + "。");
+            }
+            if (!files.isEmpty()) {
+                lines.add("代表文件：" + files.entrySet().stream()
+                    .limit(5)
+                    .map(entry -> compactPath(entry.getKey()) + "（+" + entry.getValue().added() + "/-" + entry.getValue().deleted() + "）")
+                    .reduce((first, second) -> first + "；" + second)
+                    .orElse("暂无文件明细。"));
+            }
+            if (!commitSummaries.isEmpty()) {
+                lines.add("提交线索：" + String.join("；", commitSummaries.stream().limit(4).toList()));
+            }
+            return lines;
         }
 
         private static int parseCount(String value) {
@@ -363,6 +392,25 @@ public class WorkSessionScanService {
 
         private static String shortHash(String hash) {
             return hash.length() > 12 ? hash.substring(0, 12) : hash;
+        }
+
+        private static String commitSummary(CommitCursor commit) {
+            if ("WORKTREE".equals(commit.hash())) {
+                return "未提交工作区变更";
+            }
+            return "提交 " + shortHash(commit.hash()) + "：" + commit.subject();
+        }
+
+        private static String compactPath(String path) {
+            String normalized = path.replace("\\", "/");
+            String[] markers = {"/controller/", "/service/", "/repository/", "/entity/", "/dto/", "/app/"};
+            for (String marker : markers) {
+                int index = normalized.indexOf(marker);
+                if (index >= 0) {
+                    return normalized.substring(index + 1);
+                }
+            }
+            return normalized.length() <= 80 ? normalized : "..." + normalized.substring(normalized.length() - 77);
         }
     }
 
