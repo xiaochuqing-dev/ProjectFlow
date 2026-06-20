@@ -14,8 +14,8 @@ html,
 body {
   min-height: 100%;
   margin: 0;
-  background: #f6f8fb;
-  color: #101828;
+  background: #f8fafc;
+  color: #0f172a;
 }
 
 body {
@@ -24,6 +24,11 @@ body {
     "PingFang SC",
     "Segoe UI",
     sans-serif;
+  /* 微妙的页面底纹理，消除大面积纯白的扁平感 */
+  background-image:
+    radial-gradient(rgba(79, 70, 229, 0.04) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-position: -1px -1px;
 }
 
 a {
