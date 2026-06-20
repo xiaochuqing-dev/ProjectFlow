@@ -9,4 +9,6 @@ import com.projectflow.entity.WorkSession;
 
 public interface WorkSessionRepository extends JpaRepository<WorkSession, UUID> {
     List<WorkSession> findByProjectIdOrderByEndTimeDesc(UUID projectId);
+
+    void deleteByProjectId(UUID projectId);
 }

@@ -11,5 +11,7 @@ import com.projectflow.entity.AgentSignatureFeedback;
 public interface AgentSignatureFeedbackRepository extends JpaRepository<AgentSignatureFeedback, UUID> {
     List<AgentSignatureFeedback> findByProjectIdOrderByUpdatedAtDesc(UUID projectId);
 
+    void deleteByProjectId(UUID projectId);
+
     Optional<AgentSignatureFeedback> findFirstByProjectIdAndAgentNameOrderByUpdatedAtDesc(UUID projectId, String agentName);
 }

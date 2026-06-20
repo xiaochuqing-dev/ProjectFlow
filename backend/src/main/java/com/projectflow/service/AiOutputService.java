@@ -128,25 +128,42 @@ public class AiOutputService {
             .toList();
         long doneTasks = tasks.stream().filter(task -> task.getStatus().name().equals("DONE")).count();
         long blockedLogs = scopedLogs.stream().filter(DevLog::isBlocked).count();
+        List<TaskItem> activeTasks = tasks.stream().filter(task -> !task.getStatus().name().equals("DONE")).limit(8).toList();
+        String period = periodLabel(fromDate, toDate);
+        String sources = sourceSummary(scopedLogs, acceptedChanges, tasks);
 
         return switch (type) {
             case WEEKLY_REPORT -> """
                 # %s 周报
 
-                ## 本周进展
-                - 推进任务 %d 个，完成任务 %d 个。
-                - 新增开发日志 %d 条，其中阻塞记录 %d 条。
+                ## 范围
+                - 时间：%s
+                - 来源：%s
 
-                ## 关键记录
+                ## 已确认进展
                 %s
 
-                ## 已确认变更
+                ## 关键日志证据
+                %s
+
+                ## 风险与阻塞
+                %s
+
+                ## 可复用成果素材
                 %s
 
                 ## 下周重点
-                - 优先处理仍在进行中或待验收的任务。
-                - 将关键日志和已确认变更整理为项目复盘材料。
-                """.formatted(project.getName(), tasks.size(), doneTasks, scopedLogs.size(), blockedLogs, logBullets(scopedLogs), changeBullets(acceptedChanges));
+                %s
+                """.formatted(
+                    project.getName(),
+                    period,
+                    sources,
+                    changeBullets(acceptedChanges),
+                    logBullets(scopedLogs),
+                    riskBullets(scopedLogs, acceptedChanges, blockedLogs),
+                    assetBullets(acceptedChanges),
+                    taskBullets(activeTasks, "暂无待推进任务。")
+                );
             case PROJECT_SUMMARY -> """
                 # %s 项目总结
 
@@ -155,25 +172,39 @@ public class AiOutputService {
                 ## 技术栈
                 %s
 
-                ## 工程过程
+                ## 工程证据
                 - 项目累计任务：%d
                 - 项目累计日志：%d
                 - 已完成任务：%d
+                - 已确认变更：%d
 
                 ## 已确认变更
                 %s
 
-                ## 可展示亮点
+                ## 最近日志
                 %s
-                """.formatted(project.getName(), safeText(project.getDescription()), String.join(", ", project.getTechStack()), tasks.size(), logs.size(), doneTasks, changeBullets(acceptedChanges), logBullets(logs));
+
+                ## 当前风险
+                %s
+                """.formatted(
+                    project.getName(),
+                    safeText(project.getDescription()),
+                    project.getTechStack().isEmpty() ? "暂无技术栈标签。" : String.join(", ", project.getTechStack()),
+                    tasks.size(),
+                    logs.size(),
+                    doneTasks,
+                    acceptedChanges.size(),
+                    changeBullets(acceptedChanges),
+                    logBullets(logs),
+                    riskBullets(logs, acceptedChanges, logs.stream().filter(DevLog::isBlocked).count())
+                );
             case RESUME_BULLET -> """
                 # %s 简历要点
 
-                - 独立设计并推进 %s，覆盖项目空间、任务流转、开发日志与复盘输出。
-                - 基于 %d 条任务和 %d 条开发记录沉淀工程过程，支持将真实开发活动转化为作品集素材。
-                - 基于 %d 条已确认变更输出项目成果，避免把未确认候选写成作品事实。
+                %s
+                - 基于 %d 条任务、%d 条开发记录和 %d 条已确认变更沉淀项目证据，输出时区分候选与已确认事实。
                 - 通过结构化日志记录技术取舍、阻塞和验证结果，提升项目复盘与面试讲述的可信度。
-                """.formatted(project.getName(), project.getName(), tasks.size(), logs.size(), acceptedChanges.size());
+                """.formatted(project.getName(), resumeChangeBullets(acceptedChanges, project.getName()), tasks.size(), logs.size(), acceptedChanges.size());
             case README_SECTION -> """
                 ## %s
 
@@ -182,12 +213,18 @@ public class AiOutputService {
                 ### Confirmed changes
                 %s
 
+                ### Evidence
+                %s
+
                 ### What it demonstrates
-                - Project workflow modeling
-                - Task state tracking
-                - Structured development logging
-                - AI-ready reflection outputs
-                """.formatted(project.getName(), safeText(project.getDescription()), changeBullets(acceptedChanges));
+                %s
+                """.formatted(
+                    project.getName(),
+                    safeText(project.getDescription()),
+                    changeBullets(acceptedChanges),
+                    sources,
+                    assetBullets(acceptedChanges)
+                );
         };
     }
 
@@ -197,7 +234,7 @@ public class AiOutputService {
         }
         return logs.stream()
             .limit(5)
-            .map(log -> "- " + log.getLogDate() + "：" + log.getTitle())
+            .map(log -> "- " + log.getLogDate() + "：" + log.getTitle() + logDetail(log))
             .reduce((first, second) -> first + "\n" + second)
             .orElse("- 暂无日志记录。");
     }
@@ -208,9 +245,103 @@ public class AiOutputService {
         }
         return changes.stream()
             .limit(8)
-            .map(change -> "- " + change.getTitle() + "（来源：" + change.getSourceType() + "）")
+            .map(change -> "- " + change.getTitle() + "（" + change.getChangeKind() + "/" + change.getImpactLevel() + "，来源：" + change.getSourceType() + "）" + changeSummary(change))
             .reduce((first, second) -> first + "\n" + second)
             .orElse("- 暂无已确认变更。");
+    }
+
+    private String taskBullets(List<TaskItem> tasks, String fallback) {
+        if (tasks.isEmpty()) {
+            return "- " + fallback;
+        }
+        return tasks.stream()
+            .map(task -> "- " + task.getTitle() + "（" + task.getStatus() + "/" + task.getPriority() + "）")
+            .reduce((first, second) -> first + "\n" + second)
+            .orElse("- " + fallback);
+    }
+
+    private String riskBullets(List<DevLog> logs, List<ProjectChange> changes, long blockedLogs) {
+        List<String> risks = new java.util.ArrayList<>();
+        logs.stream()
+            .filter(DevLog::isBlocked)
+            .limit(4)
+            .forEach(log -> risks.add(log.getLogDate() + " 阻塞：" + log.getTitle()));
+        changes.stream()
+            .map(ProjectChange::getRiskNotes)
+            .filter(value -> value != null && !value.isBlank())
+            .limit(4)
+            .forEach(risks::add);
+        if (risks.isEmpty()) {
+            return blockedLogs > 0 ? "- 存在阻塞记录，但缺少具体风险说明。" : "- 暂无已确认风险或阻塞。";
+        }
+        return risks.stream()
+            .map(value -> "- " + compact(value))
+            .reduce((first, second) -> first + "\n" + second)
+            .orElse("- 暂无已确认风险或阻塞。");
+    }
+
+    private String assetBullets(List<ProjectChange> changes) {
+        List<String> assets = changes.stream()
+            .map(ProjectChange::getAssetCandidates)
+            .filter(value -> value != null && !value.isBlank())
+            .limit(6)
+            .toList();
+        if (assets.isEmpty()) {
+            return "- 暂无已确认成果素材；先在变更审查中确认可展示内容。";
+        }
+        return assets.stream()
+            .map(value -> "- " + compact(value))
+            .reduce((first, second) -> first + "\n" + second)
+            .orElse("- 暂无已确认成果素材。");
+    }
+
+    private String resumeChangeBullets(List<ProjectChange> changes, String projectName) {
+        if (changes.isEmpty()) {
+            return "- 独立设计并推进 " + projectName + "，覆盖项目空间、任务流转、开发日志与复盘输出。";
+        }
+        return changes.stream()
+            .limit(3)
+            .map(change -> "- " + compact(change.getSummary()) + "（证据：" + change.getTitle() + "）")
+            .reduce((first, second) -> first + "\n" + second)
+            .orElse("- 独立设计并推进 " + projectName + "。");
+    }
+
+    private String sourceSummary(List<DevLog> logs, List<ProjectChange> changes, List<TaskItem> tasks) {
+        return "每日回顾 " + logs.size() + " 条，已确认变更 " + changes.size() + " 条，任务 " + tasks.size() + " 条。";
+    }
+
+    private String periodLabel(LocalDate fromDate, LocalDate toDate) {
+        if (fromDate == null && toDate == null) {
+            return "全部已记录周期";
+        }
+        return (fromDate == null ? "开始" : fromDate.toString()) + " 至 " + (toDate == null ? "当前" : toDate.toString());
+    }
+
+    private String logDetail(DevLog log) {
+        List<String> parts = new java.util.ArrayList<>();
+        if (log.getMinutesSpent() != null && log.getMinutesSpent() > 0) {
+            parts.add(log.getMinutesSpent() + " 分钟");
+        }
+        if (log.isBlocked()) {
+            parts.add("阻塞");
+        }
+        if (!log.getTags().isEmpty()) {
+            parts.add("标签：" + String.join(", ", log.getTags()));
+        }
+        return parts.isEmpty() ? "" : "（" + String.join("，", parts) + "）";
+    }
+
+    private String changeSummary(ProjectChange change) {
+        String summary = compact(change.getSummary());
+        return summary.isBlank() ? "" : "：" + summary;
+    }
+
+    private String compact(String value) {
+        if (value == null) {
+            return "";
+        }
+        String compacted = value.replace("\r", "").replace("\n", " ").trim();
+        return compacted.length() > 180 ? compacted.substring(0, 180) + "..." : compacted;
     }
 
     private String safeText(String value) {

@@ -18,6 +18,7 @@ import {
   type TaskItem,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
+import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 
 export default function DevLogsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -56,7 +57,7 @@ export default function DevLogsPage() {
     listProjects(session.accessToken)
       .then((items) => {
         setProjects(items);
-        setSelectedProjectId(items[0]?.id ?? "");
+        setSelectedProjectId(resolveSelectedProjectId(items));
       })
       .catch((exception) => setError(exception instanceof Error ? exception.message : "项目加载失败"))
       .finally(() => setLoading(false));
@@ -155,7 +156,10 @@ export default function DevLogsPage() {
               <select
                 className="h-10 min-w-72 rounded-md border border-line bg-white px-3 text-sm outline-none focus:border-slate-950"
                 disabled={projects.length === 0}
-                onChange={(event) => setSelectedProjectId(event.target.value)}
+                onChange={(event) => {
+                  rememberSelectedProjectId(event.target.value);
+                  setSelectedProjectId(event.target.value);
+                }}
                 value={selectedProjectId}
               >
                 {projects.map((project) => (
@@ -313,26 +317,37 @@ function buildDailyDraft(
   completedTasks: TaskItem[],
 ) {
   const bigChanges = evolutionRecords.map((record) => record.detectedChanges || record.summary).filter(Boolean);
-  const logSummaries = logs.map((log) => `${log.title}\n${log.content}`).filter(Boolean);
+  const logSummaries = logs.map((log) => `${log.logDate} ${log.title}${log.blocked ? "（阻塞）" : ""}\n${log.content}`).filter(Boolean);
+  const blockedLogs = logs.filter((log) => log.blocked);
+  const sourceLine = `来源：当天日志 ${logs.length} 条，项目演进记录 ${evolutionRecords.length} 条，进行中任务 ${activeTasks.length} 个，已完成任务 ${completedTasks.length} 个。`;
   return `# ${project?.name ?? "项目"} 每日回顾
 
-## 今天做了什么
+> ${sourceLine}
+
+## 今天确认的变化
 ${listOrFallback([...bigChanges, ...logSummaries], "暂无自动识别记录。")}
 
-## 大变化
+## 证据来源
 ${listOrFallback(bigChanges, "暂无大变化。")}
 
-## 小变化
-${listOrFallback(activeTasks.slice(0, 6).map((task) => `${task.title}：${task.description || task.status}`), "暂无小变化。")}
+## 任务状态
+进行中：
+${listOrFallback(activeTasks.slice(0, 6).map((task) => `${task.title}：${task.description || task.status}`), "暂无进行中任务。")}
+
+已完成：
+${listOrFallback(completedTasks.slice(0, 6).map((task) => task.title), "暂无当天可复核的完成任务。")}
 
 ## 经验沉淀
 ${memory?.developerLearnings || "暂无已确认经验。"}
 
-## 风险与决策
-风险：
+## 风险、阻塞与决策
+阻塞：
+${listOrFallback(blockedLogs.map((log) => `${log.title}：${log.content}`), "暂无当天阻塞。")}
+
+已确认风险：
 ${memory?.currentRisks || "暂无已确认风险。"}
 
-决策：
+技术决策：
 ${memory?.technicalDecisions || "暂无技术决策。"}
 
 ## 项目档案更新

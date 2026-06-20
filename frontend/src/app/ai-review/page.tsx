@@ -21,6 +21,7 @@ import {
   type TaskItem,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
+import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 
 const outputLabels: Record<AiOutputType, string> = {
   WEEKLY_REPORT: "周报",
@@ -75,7 +76,7 @@ export default function AiReviewPage() {
     listProjects(session.accessToken)
       .then((items) => {
         setProjects(items);
-        setSelectedProjectId(items[0]?.id ?? "");
+        setSelectedProjectId(resolveSelectedProjectId(items));
       })
       .catch((exception) => setError(exception instanceof Error ? exception.message : "项目加载失败"))
       .finally(() => setLoading(false));
@@ -190,7 +191,10 @@ export default function AiReviewPage() {
               <select
                 className="h-10 min-w-72 rounded-md border border-line bg-white px-3 text-sm outline-none focus:border-slate-950"
                 disabled={projects.length === 0}
-                onChange={(event) => setSelectedProjectId(event.target.value)}
+                onChange={(event) => {
+                  rememberSelectedProjectId(event.target.value);
+                  setSelectedProjectId(event.target.value);
+                }}
                 value={selectedProjectId}
               >
                 {projects.map((project) => (

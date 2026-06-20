@@ -3,6 +3,7 @@ package com.projectflow.controller;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -64,5 +65,15 @@ public class ProjectController {
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
         return ApiResponse.ok(projectService.update(user.id(), projectId, request));
+    }
+
+    @DeleteMapping("/{projectId}")
+    ApiResponse<Void> delete(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        projectService.delete(user.id(), projectId);
+        return ApiResponse.ok(null);
     }
 }

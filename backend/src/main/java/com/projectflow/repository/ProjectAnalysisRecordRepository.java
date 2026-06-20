@@ -9,4 +9,6 @@ import com.projectflow.entity.ProjectAnalysisRecord;
 
 public interface ProjectAnalysisRecordRepository extends JpaRepository<ProjectAnalysisRecord, UUID> {
     List<ProjectAnalysisRecord> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
+
+    void deleteByProjectId(UUID projectId);
 }

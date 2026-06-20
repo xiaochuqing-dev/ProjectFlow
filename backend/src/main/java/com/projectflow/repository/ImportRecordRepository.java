@@ -9,4 +9,6 @@ import com.projectflow.entity.ImportRecord;
 
 public interface ImportRecordRepository extends JpaRepository<ImportRecord, UUID> {
     List<ImportRecord> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
+
+    void deleteByProjectId(UUID projectId);
 }

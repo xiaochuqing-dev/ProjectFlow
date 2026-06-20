@@ -9,4 +9,6 @@ import com.projectflow.entity.TaskItem;
 
 public interface TaskRepository extends JpaRepository<TaskItem, UUID> {
     List<TaskItem> findByProjectIdOrderByUpdatedAtDesc(UUID projectId);
+
+    void deleteByProjectId(UUID projectId);
 }

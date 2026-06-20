@@ -11,5 +11,7 @@ import com.projectflow.entity.ProjectFactSource;
 public interface ProjectFactSourceRepository extends JpaRepository<ProjectFactSource, UUID> {
     List<ProjectFactSource> findByProjectIdOrderByUpdatedAtDesc(UUID projectId);
 
+    void deleteByProjectId(UUID projectId);
+
     Optional<ProjectFactSource> findByProjectIdAndFieldKey(UUID projectId, String fieldKey);
 }

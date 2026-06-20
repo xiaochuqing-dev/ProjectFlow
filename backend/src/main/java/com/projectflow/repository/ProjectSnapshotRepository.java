@@ -11,5 +11,7 @@ import com.projectflow.entity.ProjectSnapshot;
 public interface ProjectSnapshotRepository extends JpaRepository<ProjectSnapshot, UUID> {
     List<ProjectSnapshot> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
 
+    void deleteByProjectId(UUID projectId);
+
     Optional<ProjectSnapshot> findFirstByProjectIdOrderByCreatedAtDesc(UUID projectId);
 }

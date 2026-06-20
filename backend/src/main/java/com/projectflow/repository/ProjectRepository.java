@@ -12,4 +12,6 @@ public interface ProjectRepository extends JpaRepository<ProjectSpace, UUID> {
     List<ProjectSpace> findByUserIdOrderByUpdatedAtDesc(UUID userId);
 
     Optional<ProjectSpace> findByIdAndUserId(UUID id, UUID userId);
+
+    Optional<ProjectSpace> findFirstByUserIdAndNameIgnoreCaseOrderByUpdatedAtDesc(UUID userId, String name);
 }

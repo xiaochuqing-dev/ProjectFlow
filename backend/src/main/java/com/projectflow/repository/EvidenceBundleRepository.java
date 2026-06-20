@@ -11,5 +11,7 @@ import com.projectflow.entity.EvidenceBundle;
 public interface EvidenceBundleRepository extends JpaRepository<EvidenceBundle, UUID> {
     List<EvidenceBundle> findByProjectIdOrderByUpdatedAtDesc(UUID projectId);
 
+    void deleteByProjectId(UUID projectId);
+
     Optional<EvidenceBundle> findByWorkSessionId(UUID workSessionId);
 }

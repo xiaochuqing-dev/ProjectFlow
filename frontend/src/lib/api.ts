@@ -136,6 +136,15 @@ export function createProject(token: string, payload: ProjectPayload): Promise<P
   });
 }
 
+export function deleteProject(token: string, projectId: string): Promise<void> {
+  return requestJson<void>(`/projects/${projectId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 export type TaskStatus = "BACKLOG" | "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE";
 
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
@@ -1057,6 +1066,17 @@ export function updateProjectMemory(token: string, projectId: string, payload: P
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
+  });
+}
+
+export function saveProjectLocalPath(token: string, projectId: string, localProjectPath: string): Promise<ProjectMemory> {
+  return requestJson<ProjectMemory>(`/projects/${projectId}/memory/local-path`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ localProjectPath }),
   });
 }
 

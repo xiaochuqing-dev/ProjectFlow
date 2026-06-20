@@ -2,6 +2,7 @@ package com.projectflow;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -87,6 +88,31 @@ class ProjectControllerTest {
             .andExpect(jsonPath("$.data.name").value("Updated Project"))
             .andExpect(jsonPath("$.data.status").value("PAUSED"))
             .andExpect(jsonPath("$.data.techStack[1]").value("PostgreSQL"));
+    }
+
+    @Test
+    void deletesOwnedProjectOnlyFromProjectFlowData() throws Exception {
+        String token = register("delete-owner", "delete-owner@example.com");
+        String otherToken = register("delete-other", "delete-other@example.com");
+        String projectId = createProject(token, "Duplicate Import");
+
+        mockMvc.perform(delete("/api/projects/" + projectId)
+                .header("Authorization", "Bearer " + otherToken))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error.code").value("PROJECT_NOT_FOUND"));
+
+        mockMvc.perform(delete("/api/projects/" + projectId)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/projects")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data", hasSize(0)));
+
+        mockMvc.perform(get("/api/projects/" + projectId)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isNotFound());
     }
 
     private String register(String username, String email) throws Exception {

@@ -15,6 +15,7 @@ import {
   type Project,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
+import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 
 export default function SettingsPage() {
   const [providers, setProviders] = useState<AiProvider[]>([]);
@@ -74,7 +75,7 @@ export default function SettingsPage() {
     try {
       const projectItems = await listProjects(session.accessToken);
       setProjects(projectItems);
-      setSelectedProjectId((current) => current || projectItems[0]?.id || "");
+      setSelectedProjectId((current) => resolveSelectedProjectId(projectItems, current));
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "项目列表加载失败");
     }
@@ -280,7 +281,10 @@ export default function SettingsPage() {
                 <select
                   className="min-w-52 rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
                   disabled={projects.length === 0}
-                  onChange={(event) => setSelectedProjectId(event.target.value)}
+                  onChange={(event) => {
+                    rememberSelectedProjectId(event.target.value);
+                    setSelectedProjectId(event.target.value);
+                  }}
                   value={selectedProjectId}
                 >
                   {projects.map((project) => (

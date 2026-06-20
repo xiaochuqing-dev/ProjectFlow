@@ -9,4 +9,6 @@ import com.projectflow.entity.DevLog;
 
 public interface DevLogRepository extends JpaRepository<DevLog, UUID> {
     List<DevLog> findByProjectIdOrderByLogDateDescUpdatedAtDesc(UUID projectId);
+
+    void deleteByProjectId(UUID projectId);
 }

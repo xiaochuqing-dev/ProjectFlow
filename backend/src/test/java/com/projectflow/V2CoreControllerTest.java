@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -200,10 +201,12 @@ class V2CoreControllerTest {
             .andExpect(jsonPath("$.data.projectProfile.hasStartScript").value(true))
             .andExpect(jsonPath("$.data.projectProfile.hasDeployConfig").value(true))
             .andExpect(jsonPath("$.data.projectProfile.looksEmptyShell").value(false))
-            .andExpect(jsonPath("$.data.projectProfile.techStack[0]").value("Next.js"))
             .andExpect(jsonPath("$.data.suggestions.length()", greaterThanOrEqualTo(3)))
             .andExpect(content().string(not(containsString("DATABASE_PASSWORD=secret"))))
             .andReturn();
+
+        org.assertj.core.api.Assertions.assertThat(stringArray(objectMapper.readTree(result.getResponse().getContentAsString()).at("/data/projectProfile/techStack")))
+            .contains("Next.js", "React", "Java");
 
         String projectId = objectMapper.readTree(result.getResponse().getContentAsString()).get("data").get("project").get("id").asText();
 
@@ -211,6 +214,255 @@ class V2CoreControllerTest {
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    void importingSameProjectZipWithoutManualProjectReusesExistingProject() throws Exception {
+        String token = register("zip-dedupe-owner", "zip-dedupe-owner@example.com");
+
+        MvcResult first = mockMvc.perform(multipart("/api/project-imports/zip")
+                .file(new MockMultipartFile("file", "ProjectFlow.zip", "application/zip", projectZip()))
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andReturn();
+        String firstProjectId = objectMapper.readTree(first.getResponse().getContentAsString()).at("/data/project/id").asText();
+
+        MvcResult second = mockMvc.perform(multipart("/api/project-imports/zip")
+                .file(new MockMultipartFile("file", "ProjectFlow.zip", "application/zip", projectZip()))
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andReturn();
+        String secondProjectId = objectMapper.readTree(second.getResponse().getContentAsString()).at("/data/project/id").asText();
+
+        org.assertj.core.api.Assertions.assertThat(secondProjectId).isEqualTo(firstProjectId);
+        mockMvc.perform(get("/api/projects")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data", hasSize(1)))
+            .andExpect(jsonPath("$.data[0].id").value(firstProjectId));
+    }
+
+    @Test
+    void importsProjectZipIgnoringCodexRunGitBackupsBeforeEntryLimit() throws Exception {
+        String token = register("zip-codex-run-owner", "zip-codex-run@example.com");
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "insightwrite-2.0.zip",
+            "application/zip",
+            zipWithCodexRunBackupFirst()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/project-imports/zip")
+                .file(file)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.projectProfile.inferredProjectName").value("insightwrite-2.0"))
+            .andExpect(jsonPath("$.data.projectProfile.hasReadme").value(true))
+            .andExpect(jsonPath("$.data.projectProfile.hasTests").value(true))
+            .andExpect(jsonPath("$.data.projectProfile.hasStartScript").value(true))
+            .andExpect(jsonPath("$.data.projectProfile.hasDeployConfig").value(true))
+            .andReturn();
+
+        JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
+        org.assertj.core.api.Assertions.assertThat(stringArray(response.at("/data/projectProfile/techStack"))).contains("Vue", "Vite", "Java");
+        String materialContent = response.at("/data/material/content").asText();
+        org.assertj.core.api.Assertions.assertThat(materialContent)
+            .contains("README.md")
+            .contains("frontend/package.json")
+            .contains("backend/pom.xml")
+            .doesNotContain(".codex-run");
+    }
+
+    @Test
+    void importsPolyglotFullStackProjectWithoutAssumingFixedFrontendBackendFolders() throws Exception {
+        String token = register("polyglot-zip-owner", "polyglot-zip@example.com");
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "polyglot-workspace.zip",
+            "application/zip",
+            polyglotFullStackZip()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/project-imports/zip")
+                .file(file)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.projectProfile.inferredProjectName").value("polyglot-workspace"))
+            .andExpect(jsonPath("$.data.projectProfile.hasReadme").value(true))
+            .andExpect(jsonPath("$.data.projectProfile.hasTests").value(true))
+            .andExpect(jsonPath("$.data.projectProfile.hasStartScript").value(true))
+            .andExpect(jsonPath("$.data.projectProfile.hasDeployConfig").value(true))
+            .andExpect(jsonPath("$.data.projectProfile.looksEmptyShell").value(false))
+            .andReturn();
+
+        JsonNode profile = objectMapper.readTree(result.getResponse().getContentAsString()).at("/data/projectProfile");
+        org.assertj.core.api.Assertions.assertThat(stringArray(profile.get("techStack")))
+            .contains("React", "Vite", "Python", "FastAPI", "Java", "Gradle", "Docker Compose");
+        org.assertj.core.api.Assertions.assertThat(stringArray(profile.get("moduleStructure")))
+            .contains("apps/web/package.json", "services/api/pyproject.toml", "services/api/app/main.py", "services/worker/build.gradle");
+    }
+
+    @Test
+    void importsGbkEncodedChineseProjectZip() throws Exception {
+        String token = register("gbk-zip-owner", "gbk-zip@example.com");
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "综测系统.zip",
+            "application/zip",
+            gbkChineseProjectZip()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/project-imports/zip")
+                .file(file)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.projectProfile.inferredProjectName").value("综测系统"))
+            .andExpect(jsonPath("$.data.projectProfile.hasReadme").value(true))
+            .andExpect(jsonPath("$.data.projectProfile.hasTests").value(true))
+            .andExpect(jsonPath("$.data.projectProfile.looksEmptyShell").value(false))
+            .andReturn();
+
+        JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
+        org.assertj.core.api.Assertions.assertThat(response.at("/data/material/content").asText())
+            .contains("README.md")
+            .contains("scorecard_batch/ocr.py");
+        org.assertj.core.api.Assertions.assertThat(stringArray(response.at("/data/projectProfile/techStack"))).contains("Python");
+    }
+
+    @Test
+    void analysisIgnoresCodexRunNoiseAlreadyStoredInOlderZipMaterial() throws Exception {
+        String token = register("legacy-noise-owner", "legacy-noise@example.com");
+        String projectId = createProject(token, "Legacy Noise Project");
+        String content = """
+            # Project zip summary
+
+            ## Directory tree
+            - .codex-run/old-git-20260602132318/objects/aa/object-1
+            - .codex-run/old-git-20260602132318/config
+            - apps/web/package.json
+            - apps/web/src/App.tsx
+            - services/api/pyproject.toml
+            - services/api/app/main.py
+            - services/api/tests/test_main.py
+            - README.md
+
+            ## Key files
+
+            ### apps/web/package.json
+            {"dependencies":{"react":"19.0.0","vite":"6.0.0"}}
+
+            ### services/api/pyproject.toml
+            [project]
+            dependencies = ["fastapi"]
+
+            ### README.md
+            # Legacy Noise Project
+            """;
+
+        mockMvc.perform(post("/api/projects/" + projectId + "/materials/text")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "sourceType": "PROJECT_ZIP",
+                      "content": %s
+                    }
+                    """.formatted(objectMapper.writeValueAsString(content))))
+            .andExpect(status().isOk());
+
+        JsonNode completed = runProjectAnalysisAndAwait(token, projectId);
+        org.assertj.core.api.Assertions.assertThat(stringArray(completed.at("/projectResult/modules")))
+            .doesNotContain(".codex-run")
+            .contains("frontend", "backend");
+        org.assertj.core.api.Assertions.assertThat(completed.at("/projectResult/summary").asText()).doesNotContain(".codex-run");
+        org.assertj.core.api.Assertions.assertThat(stringArray(completed.at("/projectResult/evidence")))
+            .noneMatch(item -> item.contains(".codex-run"));
+    }
+
+    @Test
+    void modelProjectAnalysisDoesNotReceiveCodexRunNoiseFromLegacyMaterial() throws Exception {
+        AtomicReference<String> lastRequestBody = new AtomicReference<>("");
+        HttpServer modelServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        modelServer.createContext("/v1/chat/completions", exchange -> {
+            lastRequestBody.set(new String(exchange.getRequestBody().readAllBytes()));
+            byte[] body = """
+                {"choices":[{"message":{"content":"{\\"summary\\":\\"Legacy Noise Project 是一个前后端项目。\\",\\"architecture\\":\\"apps/web 提供前端入口，services/api 提供后端接口。\\",\\"modules\\":[\\"frontend\\",\\"backend\\"],\\"risks\\":[\\"未发现明确风险证据。\\"],\\"importantFiles\\":[\\"apps/web/package.json\\",\\"services/api/pyproject.toml\\"],\\"evidence\\":[\\"apps/web/package.json：声明 React 依赖\\",\\"services/api/pyproject.toml：声明 FastAPI 依赖\\",\\"README.md：说明项目名称\\"],\\"limitations\\":[\\"仅依据已导入材料分析。\\"],\\"confidence\\":\\"high\\"}"}}]}
+                """.getBytes();
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        modelServer.start();
+
+        try {
+            String token = register("legacy-model-noise-owner", "legacy-model-noise@example.com");
+            mockMvc.perform(post("/api/ai-providers")
+                    .header("Authorization", "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "name": "Noise sanitizer provider",
+                          "baseUrl": "http://127.0.0.1:%d/v1",
+                          "apiKey": "test-key",
+                          "modelName": "test-model",
+                          "type": "OPENAI_COMPATIBLE",
+                          "temperature": 0.1,
+                          "maxTokens": 200000,
+                          "defaultEnabled": true,
+                          "purposeTags": ["项目分析"]
+                        }
+                        """.formatted(modelServer.getAddress().getPort())))
+                .andExpect(status().isOk());
+            String projectId = createProject(token, "Legacy Noise Project");
+            String content = """
+                # Project zip summary
+
+                ## Directory tree
+                - .codex-run/old-git-20260602132318/objects/aa/object-1
+                - .git/objects/aa/object-2
+                - apps/web/package.json
+                - services/api/pyproject.toml
+                - README.md
+
+                ## Key files
+
+                ### .codex-run/old-git-20260602132318/config
+                [core]
+                  repositoryformatversion = 0
+
+                ### apps/web/package.json
+                {"dependencies":{"react":"19.0.0","vite":"6.0.0"}}
+
+                ### services/api/pyproject.toml
+                [project]
+                dependencies = ["fastapi"]
+
+                ### README.md
+                # Legacy Noise Project
+                """;
+
+            mockMvc.perform(post("/api/projects/" + projectId + "/materials/text")
+                    .header("Authorization", "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "sourceType": "PROJECT_ZIP",
+                          "content": %s
+                        }
+                        """.formatted(objectMapper.writeValueAsString(content))))
+                .andExpect(status().isOk());
+
+            JsonNode completed = runProjectAnalysisAndAwait(token, projectId);
+            org.assertj.core.api.Assertions.assertThat(completed.at("/projectResult/modelUsed").asBoolean()).isTrue();
+            org.assertj.core.api.Assertions.assertThat(lastRequestBody.get())
+                .contains("apps/web/package.json")
+                .doesNotContain(".codex-run")
+                .doesNotContain("old-git-")
+                .doesNotContain(".git/objects");
+        } finally {
+            modelServer.stop(0);
+        }
     }
 
     @Test
@@ -237,6 +489,13 @@ class V2CoreControllerTest {
         org.assertj.core.api.Assertions.assertThat(completed.at("/projectResult/summary").asText()).contains("ProjectFlow");
         org.assertj.core.api.Assertions.assertThat(completed.at("/projectResult/modules").size()).isGreaterThanOrEqualTo(3);
         org.assertj.core.api.Assertions.assertThat(completed.at("/projectResult/risks/0").asText()).contains("模型");
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/model-usage-records")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].operation").value("PROJECT_ANALYSIS"))
+            .andExpect(jsonPath("$.data[0].usageEstimated").value(true))
+            .andExpect(jsonPath("$.data[0].totalTokens", greaterThanOrEqualTo(1)));
     }
 
     @Test
@@ -537,6 +796,26 @@ class V2CoreControllerTest {
     }
 
     @Test
+    void savesLocalProjectPathWithoutWritingBridgeProtocol() throws Exception {
+        String token = register("local-path-owner", "local-path-owner@example.com");
+        String projectId = createProject(token, "Path Only Project");
+        Path projectPath = createTestProjectDir("path-only-project");
+
+        mockMvc.perform(patch("/api/projects/" + projectId + "/memory/local-path")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "localProjectPath": "%s"
+                    }
+                    """.formatted(jsonEscapedPath(projectPath))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.localProjectPath").value(projectPath.toAbsolutePath().normalize().toString()));
+
+        org.assertj.core.api.Assertions.assertThat(Files.exists(projectPath.resolve(".projectflow/agent-protocol.md"))).isFalse();
+    }
+
+    @Test
     void writingProjectFlowProtocolAgainReportsExistingLink() throws Exception {
         String token = register("bridge-repeat-owner", "bridge-repeat-owner@example.com");
         String projectId = createProject(token, "Repeated Bridge Project");
@@ -676,6 +955,73 @@ class V2CoreControllerTest {
             .andExpect(jsonPath("$.data[0].status").value("PENDING"))
             .andExpect(jsonPath("$.data[0].affectedFiles").value(containsString("ProjectChange.java")))
             .andExpect(jsonPath("$.data[0].riskNotes").value(containsString("AI overwriting user-confirmed")));
+    }
+
+    @Test
+    void acceptingStructuredProjectChangeWritesMemoryAndFactSource() throws Exception {
+        String token = register("change-accept-owner", "change-accept-owner@example.com");
+        String projectId = createProject(token, "Accepted Change Project");
+        Path projectPath = createTestProjectDir("accepted-change-project");
+        Path inbox = Files.createDirectories(projectPath.resolve(".projectflow/inbox"));
+        Files.writeString(inbox.resolve("20260607-1000-agent-result.md"), """
+            # ProjectFlow Agent Result
+
+            ProjectId: accepted-change-project
+            Status: ready_for_review
+
+            ## Summary
+            Agent added a durable evidence review workflow for accepted project changes.
+
+            ## Changed Files
+            - frontend/src/app/tasks/page.tsx
+            - backend/src/main/java/com/projectflow/service/ProjectIntelligenceService.java
+
+            ## Task Updates
+            - PF-301: ready_for_review
+
+            ## Decisions
+            - Accepted structured changes must become reusable project memory.
+
+            ## Risks
+            - Accepted changes should not silently overwrite manual profile edits.
+
+            ## Dev Log
+            Verified accepted change propagation into memory and sources.
+            """);
+
+        mockMvc.perform(post("/api/projects/" + projectId + "/agent-bridge/scan")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "projectPath": "%s"
+                    }
+                    """.formatted(jsonEscapedPath(projectPath))))
+            .andExpect(status().isOk());
+
+        MvcResult changesResult = mockMvc.perform(get("/api/projects/" + projectId + "/changes")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].status").value("PENDING"))
+            .andReturn();
+        String changeId = objectMapper.readTree(changesResult.getResponse().getContentAsString()).at("/data/0/id").asText();
+
+        mockMvc.perform(post("/api/project-changes/" + changeId + "/accept")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("ACCEPTED"));
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/memory")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.completedCapabilities").value(containsString("durable evidence review workflow")))
+            .andExpect(jsonPath("$.data.currentRisks").value(containsString("silently overwrite manual profile edits")))
+            .andExpect(jsonPath("$.data.technicalDecisions").value(containsString("reusable project memory")));
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/fact-sources")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].sourceType").value("ACCEPTED_CHANGE"));
     }
 
     @Test
@@ -961,6 +1307,88 @@ class V2CoreControllerTest {
         return outputStream.toByteArray();
     }
 
+    private byte[] zipWithCodexRunBackupFirst() throws Exception {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(outputStream)) {
+            for (int index = 0; index < 260; index++) {
+                addZipEntry(zip, "insightwrite-2.0/.codex-run/old-git-20260602132318/objects/aa/file-" + index, "git object " + index);
+            }
+            addZipEntry(zip, "insightwrite-2.0/README.md", "# insightwrite-2.0\n\n英语写作分析平台。");
+            addZipEntry(zip, "insightwrite-2.0/frontend/package.json", """
+                {
+                  "name": "insightwrite-frontend",
+                  "dependencies": {
+                    "vue": "3.5.0",
+                    "vite": "6.0.0"
+                  }
+                }
+                """);
+            addZipEntry(zip, "insightwrite-2.0/backend/pom.xml", """
+                <project>
+                  <artifactId>insightwrite-backend</artifactId>
+                  <dependencies>
+                    <dependency>
+                      <artifactId>spring-boot-starter-web</artifactId>
+                    </dependency>
+                  </dependencies>
+                </project>
+                """);
+            addZipEntry(zip, "insightwrite-2.0/docker/docker-compose.yml", "services:\n  mysql:\n    image: mysql:8\n");
+            addZipEntry(zip, "insightwrite-2.0/start.bat", "cd backend && mvn spring-boot:run");
+            addZipEntry(zip, "insightwrite-2.0/frontend/src/views/AnalyzeResult.vue", "<template><main>Analyze</main></template>");
+            addZipEntry(zip, "insightwrite-2.0/backend/src/test/java/com/insightwrite/service/AnalyzeServiceLimitsTest.java", "class AnalyzeServiceLimitsTest {}");
+        }
+        return outputStream.toByteArray();
+    }
+
+    private byte[] polyglotFullStackZip() throws Exception {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(outputStream)) {
+            addZipEntry(zip, "polyglot-workspace/README.md", "# Polyglot Workspace\n\nReact, FastAPI and Java worker workspace.");
+            addZipEntry(zip, "polyglot-workspace/apps/web/package.json", """
+                {
+                  "name": "web-client",
+                  "scripts": {
+                    "dev": "vite --host 0.0.0.0"
+                  },
+                  "dependencies": {
+                    "@vitejs/plugin-react": "latest",
+                    "react": "19.0.0",
+                    "vite": "6.0.0"
+                  }
+                }
+                """);
+            addZipEntry(zip, "polyglot-workspace/apps/web/src/App.tsx", "export function App() { return <main>Web</main>; }");
+            addZipEntry(zip, "polyglot-workspace/services/api/pyproject.toml", """
+                [project]
+                name = "api"
+                dependencies = ["fastapi", "uvicorn"]
+                """);
+            addZipEntry(zip, "polyglot-workspace/services/api/app/main.py", "from fastapi import FastAPI\napp = FastAPI()\n");
+            addZipEntry(zip, "polyglot-workspace/services/api/tests/test_main.py", "def test_api():\n    assert True\n");
+            addZipEntry(zip, "polyglot-workspace/services/worker/build.gradle", """
+                plugins {
+                    id 'java'
+                    id 'org.springframework.boot' version '3.5.0'
+                }
+                """);
+            addZipEntry(zip, "polyglot-workspace/services/worker/src/main/java/com/example/Worker.java", "class Worker {}\n");
+            addZipEntry(zip, "polyglot-workspace/docker-compose.yml", "services:\n  api:\n    build: ./services/api\n");
+        }
+        return outputStream.toByteArray();
+    }
+
+    private byte[] gbkChineseProjectZip() throws Exception {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(outputStream, Charset.forName("GBK"))) {
+            addZipEntry(zip, "综测系统/README.md", "# 综测系统\n\n成绩卡上传和 OCR 处理工具。");
+            addZipEntry(zip, "综测系统/requirements.txt", "fastapi\npytest\n");
+            addZipEntry(zip, "综测系统/scorecard_batch/ocr.py", "def parse_scorecard():\n    return True\n");
+            addZipEntry(zip, "综测系统/tests/test_ocr.py", "def test_ocr():\n    assert True\n");
+        }
+        return outputStream.toByteArray();
+    }
+
     private JsonNode awaitAnalysisJob(String token, String jobId) throws Exception {
         JsonNode job = null;
         for (int attempt = 0; attempt < 40; attempt++) {
@@ -976,6 +1404,14 @@ class V2CoreControllerTest {
             Thread.sleep(50);
         }
         throw new AssertionError("Analysis job did not finish: " + jobId);
+    }
+
+    private List<String> stringArray(JsonNode node) {
+        List<String> values = new ArrayList<>();
+        if (node != null && node.isArray()) {
+            node.forEach(item -> values.add(item.asText()));
+        }
+        return values;
     }
 
     private JsonNode runProjectAnalysisAndAwait(String token, String projectId) throws Exception {

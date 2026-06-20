@@ -31,6 +31,7 @@ import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisRecordResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisJobResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectImportAnalyzeResponse;
+import com.projectflow.dto.V2ProjectDtos.ProjectLocalPathRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectMaterialResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectMaterialTextRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectMemoryResponse;
@@ -294,6 +295,16 @@ public class ProjectIntelligenceController {
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
         return ApiResponse.ok(projectIntelligenceService.updateMemory(user.id(), projectId, request));
+    }
+
+    @PatchMapping("/projects/{projectId}/memory/local-path")
+    ApiResponse<ProjectMemoryResponse> updateLocalProjectPath(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId,
+        @Valid @RequestBody ProjectLocalPathRequest request
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectIntelligenceService.updateLocalProjectPath(user.id(), projectId, request));
     }
 
     @GetMapping("/projects/{projectId}/snapshots")

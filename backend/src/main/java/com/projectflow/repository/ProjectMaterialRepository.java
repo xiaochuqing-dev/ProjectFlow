@@ -9,4 +9,6 @@ import com.projectflow.entity.ProjectMaterial;
 
 public interface ProjectMaterialRepository extends JpaRepository<ProjectMaterial, UUID> {
     List<ProjectMaterial> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
+
+    void deleteByProjectId(UUID projectId);
 }

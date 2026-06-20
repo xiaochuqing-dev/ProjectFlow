@@ -12,6 +12,8 @@ import com.projectflow.entity.ProjectChangeSourceType;
 public interface ProjectChangeRepository extends JpaRepository<ProjectChange, UUID> {
     List<ProjectChange> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
 
+    void deleteByProjectId(UUID projectId);
+
     Optional<ProjectChange> findByLinkedSuggestionId(UUID linkedSuggestionId);
 
     Optional<ProjectChange> findBySourceTypeAndSourceRef(ProjectChangeSourceType sourceType, String sourceRef);

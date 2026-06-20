@@ -11,15 +11,18 @@ import {
   FolderTree,
   GitPullRequestArrow,
   RefreshCw,
+  Save,
   ScanLine,
   Settings,
   ShieldAlert,
+  Trash2,
   Upload,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
   applyAiSuggestions,
   createEvidenceBundle,
+  deleteProject,
   draftProjectChangeFromEvidenceBundle,
   getProjectMemory,
   ignoreAiSuggestion,
@@ -34,6 +37,7 @@ import {
   listProjectWorkSessions,
   listProjects,
   listTasks,
+  saveProjectLocalPath,
   scanProjectWorkSessions,
   scanProjectFlowAgentResults,
   syncProjectContext,
@@ -45,6 +49,7 @@ import {
   type ChangeConflict,
   type EvidenceBundle,
   type Project,
+  type ProjectAnalysis,
   type ProjectEvolutionRecord,
   type ProjectMaterial,
   type ProjectMemory,
@@ -53,6 +58,7 @@ import {
   type WorkSessionScanResult,
 } from "@/lib/api";
 import { buildModuleGroups, projectZipPaths } from "@/lib/project-insights";
+import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 import { readSession } from "@/lib/auth";
 import { useProjectAnalysisJobs } from "@/lib/use-project-analysis-jobs";
 
@@ -78,6 +84,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
+  const [savingProjectPath, setSavingProjectPath] = useState(false);
   const [writingProtocol, setWritingProtocol] = useState(false);
   const [scanningWorkSessions, setScanningWorkSessions] = useState(false);
   const [savingWorkSessionId, setSavingWorkSessionId] = useState("");
@@ -95,16 +103,25 @@ export default function DashboardPage() {
   );
   const { jobs, jobError, enqueueProjectAnalysis } = useProjectAnalysisJobs(selectedProjectId);
   const latestProjectJob = jobs.find((job) => job.jobType === "PROJECT") ?? null;
-  const analysis = latestProjectJob?.status === "SUCCEEDED" ? latestProjectJob.projectResult : null;
+  const rawAnalysis = latestProjectJob?.status === "SUCCEEDED" ? latestProjectJob.projectResult : null;
+  const analysisRejectedByNoise = rawAnalysis ? projectAnalysisContainsNoise(rawAnalysis) : false;
+  const analysis = analysisRejectedByNoise ? null : rawAnalysis;
   const analyzing = latestProjectJob?.status === "QUEUED" || latestProjectJob?.status === "RUNNING";
   const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === "PENDING");
   const configuredProvider = providers.find((provider) => provider.id && provider.apiKeyConfigured);
   const paths = useMemo(() => projectZipPaths(materials), [materials]);
   const moduleGroups = useMemo(() => buildModuleGroups(paths), [paths]);
   const hasMaterials = materials.length > 0;
+  const hasProjectZipMaterial = materials.some((material) => material.sourceType === "PROJECT_ZIP");
+  const hasUsableProjectZip = paths.length > 0;
   const hasProjectPath = Boolean(projectPath.trim());
   const latestChange = evolutionRecords[0];
   const activeTasks = tasks.filter((task) => task.status !== "DONE");
+  const analysisWarning = analysisRejectedByNoise
+    ? "旧分析结果包含 .codex-run、old-git 或 Git 内部对象，已停止展示。请重新导入有效项目 zip，或点击重新分析生成干净画像。"
+    : latestProjectJob?.status === "SUCCEEDED" && !rawAnalysis && latestProjectJob.errorMessage
+      ? latestProjectJob.errorMessage
+      : "";
 
   useEffect(() => {
     if (!notice && !error) {
@@ -128,7 +145,7 @@ export default function DashboardPage() {
       .then(([projectItems, providerItems]) => {
         setProjects(projectItems);
         setProviders(providerItems);
-        setSelectedProjectId(projectItems[0]?.id ?? "");
+        setSelectedProjectId(resolveSelectedProjectId(projectItems));
       })
       .catch((exception) => setError(exception instanceof Error ? exception.message : "工作台数据加载失败"))
       .finally(() => setLoading(false));
@@ -202,6 +219,7 @@ export default function DashboardPage() {
         const exists = current.some((project) => project.id === result.project.id);
         return exists ? current.map((project) => (project.id === result.project.id ? result.project : project)) : [result.project, ...current];
       });
+      rememberSelectedProjectId(result.project.id);
       setSelectedProjectId(result.project.id);
       setNotice("项目 zip 已导入，已生成基础画像和结构理解。");
       setFile(null);
@@ -210,6 +228,37 @@ export default function DashboardPage() {
       setError(exception instanceof Error ? exception.message : "项目 zip 导入失败");
     } finally {
       setImporting(false);
+    }
+  }
+
+  async function handleDeleteSelectedProject() {
+    const session = readSession();
+    if (!session || !selectedProjectId || !selectedProject) {
+      return;
+    }
+    const confirmed = window.confirm(`删除 ProjectFlow 中的项目“${selectedProject.name}”？这只会删除 ProjectFlow 保存的数据，不会删除你磁盘上的真实源码文件夹。`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingProject(true);
+    setError("");
+    setNotice("");
+    try {
+      await deleteProject(session.accessToken, selectedProjectId);
+      const updatedProjects = await listProjects(session.accessToken);
+      const nextProjectId = resolveSelectedProjectId(updatedProjects, "");
+      setProjects(updatedProjects);
+      rememberSelectedProjectId(nextProjectId);
+      setSelectedProjectId(nextProjectId);
+      setNotice("已删除 ProjectFlow 项目记录；本地源码文件未被删除。");
+      if (!nextProjectId) {
+        await refreshProjectContext("");
+      }
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "项目删除失败");
+    } finally {
+      setDeletingProject(false);
     }
   }
 
@@ -252,6 +301,28 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleSaveProjectPath() {
+    const session = readSession();
+    if (!session || !selectedProjectId || !projectPath.trim()) {
+      setError("先选择项目，并填写真实项目文件夹路径。");
+      return;
+    }
+
+    setSavingProjectPath(true);
+    setError("");
+    setNotice("");
+    try {
+      const memoryRecord = await saveProjectLocalPath(session.accessToken, selectedProjectId, projectPath.trim());
+      setMemory(memoryRecord);
+      setProjectPath(memoryRecord.localProjectPath ?? projectPath.trim());
+      setNotice("已保存本地项目路径；扫描和同步会复用这个路径。");
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "本地项目路径保存失败");
+    } finally {
+      setSavingProjectPath(false);
+    }
+  }
+
   async function handleWriteProtocol() {
     const session = readSession();
     if (!session || !selectedProjectId || !projectPath.trim()) {
@@ -276,8 +347,8 @@ export default function DashboardPage() {
 
   async function handleRunAnalysis() {
     const session = readSession();
-    if (!session || !selectedProjectId || !hasMaterials) {
-      setError("先导入完整项目 zip，再运行项目画像分析。");
+    if (!session || !selectedProjectId || !hasUsableProjectZip) {
+      setError("先导入包含源码、配置或文档的完整项目 zip，再运行项目画像分析。");
       return;
     }
 
@@ -462,7 +533,10 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center gap-3">
               <select
                 className="h-10 min-w-72 rounded-md border border-line bg-white px-3 text-sm outline-none focus:border-slate-950"
-                onChange={(event) => setSelectedProjectId(event.target.value)}
+                onChange={(event) => {
+                  rememberSelectedProjectId(event.target.value);
+                  setSelectedProjectId(event.target.value);
+                }}
                 value={selectedProjectId}
               >
                 <option value="">选择项目，或导入 zip 创建</option>
@@ -474,6 +548,16 @@ export default function DashboardPage() {
               </select>
               <StatusChip label={selectedProject?.status ?? "NEW"} />
               <StatusChip label={configuredProvider ? `模型：${configuredProvider.name}` : "未配置模型"} tone={configuredProvider ? "green" : "amber"} />
+              <button
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-rose-200 bg-white px-3 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                disabled={!selectedProjectId || deletingProject}
+                onClick={handleDeleteSelectedProject}
+                title="删除当前 ProjectFlow 项目记录，不删除本地真实源码文件夹。用于清理误导入或重复项目。"
+                type="button"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deletingProject ? "删除中" : "删除项目"}
+              </button>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted">
               <Database className="h-4 w-4" />
@@ -486,7 +570,7 @@ export default function DashboardPage() {
           <div className="rounded-md border border-line bg-white shadow-panel">
             <div className="border-b border-line px-5 py-4">
               <p className="text-sm text-muted">当前第一步</p>
-              <h2 className="mt-1 text-lg font-semibold text-slate-950">{primaryActionTitle(Boolean(selectedProject), hasMaterials, hasProjectPath, pendingSuggestions.length)}</h2>
+              <h2 className="mt-1 text-lg font-semibold text-slate-950">{primaryActionTitle(Boolean(selectedProject), hasUsableProjectZip, hasProjectPath, pendingSuggestions.length)}</h2>
             </div>
             <div className="grid gap-0 lg:grid-cols-[360px_minmax(0,1fr)]">
               <form className="space-y-4 border-b border-line p-5 lg:border-b-0 lg:border-r" onSubmit={handleImportZip}>
@@ -517,37 +601,51 @@ export default function DashboardPage() {
                   placeholder="真实项目文件夹路径"
                   value={projectPath}
                 />
-                <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                  <button
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                    disabled={!selectedProjectId || !projectPath.trim() || savingProjectPath}
+                    onClick={handleSaveProjectPath}
+                    title="只记录本地项目根目录，切换项目和刷新页面后继续复用，不写入目标项目文件。"
+                    type="button"
+                  >
+                    {savingProjectPath ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    保存路径
+                  </button>
                   <button
                     className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-line bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
                     disabled={!selectedProjectId || !projectPath.trim() || writingProtocol}
                     onClick={handleWriteProtocol}
+                    title="在目标项目生成 ProjectFlow 协议、上下文目录和结果收件箱，供 Agent 按规则写回结果。"
                     type="button"
                   >
                     {writingProtocol ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileCode2 className="h-4 w-4" />}
-                    写入协议
+                    写入/刷新协议
                   </button>
                   <button
                     className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-line bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
                     disabled={!selectedProjectId || !projectPath.trim() || scanningAgentResults}
                     onClick={handleScanAgentResults}
+                    title="读取目标项目的 ProjectFlow 结果收件箱，把 Agent 写回内容转成待审查变更。"
                     type="button"
                   >
                     {scanningAgentResults ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />}
-                    扫描
+                    扫描 Agent Result
                   </button>
                   <button
                     className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-line bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
                     disabled={!selectedProjectId || !projectPath.trim() || syncingContext}
                     onClick={handleSyncContext}
+                    title="把已经采纳和确认的项目档案写回目标项目上下文目录，供后续 Agent 读取。"
                     type="button"
                   >
                     {syncingContext ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FolderTree className="h-4 w-4" />}
-                    同步上下文
+                    同步确认上下文
                   </button>
                   <button
                     className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-100 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-200"
                     onClick={handleCopyGlobalRule}
+                    title="复制给其他 Agent 使用的通用规则，让它们按 ProjectFlow 协议输出结果。"
                     type="button"
                   >
                     <Clipboard className="h-4 w-4" />
@@ -755,8 +853,9 @@ export default function DashboardPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                      disabled={analyzing || !hasMaterials}
+                      disabled={analyzing || !hasUsableProjectZip}
                       onClick={handleRunAnalysis}
+                      title={hasUsableProjectZip ? "基于当前有效项目 zip 重新生成项目画像。" : "当前项目还没有可分析的源码、配置或文档目录结构。"}
                       type="button"
                     >
                       {analyzing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileCode2 className="h-4 w-4" />}
@@ -780,7 +879,9 @@ export default function DashboardPage() {
                 <div className="grid gap-0 md:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.8fr)]">
                   <div className="border-b border-line p-5 md:border-b-0 md:border-r">
                     <p className="max-w-4xl text-base leading-7 text-slate-800">
-                      {analysis?.summary || memory?.positioning || selectedProject.description || "已导入项目材料，正在使用本地规则生成基础项目画像。配置模型后可生成更完整的架构、风险和文件解释。"}
+                      {analysis?.summary || (!hasUsableProjectZip && hasProjectZipMaterial
+                        ? "当前项目材料没有识别到有效源码、配置或文档结构；如果这是旧导入，建议重新导入完整项目 zip，或删除这个错误项目记录。"
+                        : memory?.positioning || selectedProject.description || "已导入项目材料，正在使用本地规则生成基础项目画像。配置模型后可生成更完整的架构、风险和文件解释。")}
                     </p>
                     {analysis ? (
                       <div className="mt-4 rounded-md border border-line bg-slate-50 p-4">
@@ -800,6 +901,11 @@ export default function DashboardPage() {
                     {latestProjectJob?.status === "FAILED" ? (
                       <p className="mt-3 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
                         分析任务失败：{latestProjectJob.errorMessage ?? "未知错误"}
+                      </p>
+                    ) : null}
+                    {analysisWarning ? (
+                      <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800">
+                        {analysisWarning}
                       </p>
                     ) : null}
                     {jobError ? <p className="mt-3 text-sm text-amber-700">{jobError}</p> : null}
@@ -980,6 +1086,26 @@ function workSessionListResult(projectId: string, projectPath: string, sessions:
     sessions,
     warnings: [],
   };
+}
+
+function projectAnalysisContainsNoise(analysis: ProjectAnalysis) {
+  return [
+    analysis.summary,
+    analysis.architecture,
+    analysis.message,
+    ...analysis.modules,
+    ...analysis.risks,
+    ...analysis.importantFiles,
+    ...analysis.evidence,
+    ...analysis.limitations,
+  ].some((value) => {
+    const lower = value.toLowerCase().replaceAll("\\", "/");
+    return lower.includes(".codex-run/")
+      || lower.includes("old-git-")
+      || lower.includes(".git/objects/")
+      || lower.includes(".git/config")
+      || lower.includes(".git/head");
+  });
 }
 
 function primaryActionTitle(hasProject: boolean, hasMaterials: boolean, hasProjectPath: boolean, pendingCount: number) {

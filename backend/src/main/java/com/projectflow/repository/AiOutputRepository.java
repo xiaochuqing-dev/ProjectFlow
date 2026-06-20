@@ -9,4 +9,6 @@ import com.projectflow.entity.AiOutput;
 
 public interface AiOutputRepository extends JpaRepository<AiOutput, UUID> {
     List<AiOutput> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
+
+    void deleteByProjectId(UUID projectId);
 }

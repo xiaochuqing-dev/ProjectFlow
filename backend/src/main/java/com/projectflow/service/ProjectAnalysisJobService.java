@@ -116,12 +116,21 @@ public class ProjectAnalysisJobService {
     private ProjectAnalysisJobResponse toResponse(ProjectAnalysisJob job) {
         ProjectAnalysisResponse projectResult = null;
         ProjectFileAnalysisResponse fileResult = null;
+        String errorMessage = job.getErrorMessage();
         if (job.getResultJson() != null && !job.getResultJson().isBlank()) {
             try {
                 if (job.getJobType() == ProjectAnalysisJobType.PROJECT) {
                     projectResult = objectMapper.readValue(job.getResultJson(), ProjectAnalysisResponse.class);
+                    if (containsProjectNoise(projectResult)) {
+                        projectResult = null;
+                        errorMessage = "旧分析结果包含 .codex-run、old-git 或 Git 内部对象，已失效；请重新分析。";
+                    }
                 } else {
                     fileResult = objectMapper.readValue(job.getResultJson(), ProjectFileAnalysisResponse.class);
+                    if (containsProjectNoise(fileResult)) {
+                        fileResult = null;
+                        errorMessage = "旧文件分析结果包含工具目录噪声，已失效；请重新分析。";
+                    }
                 }
             } catch (JsonProcessingException exception) {
                 throw new AppException("PROJECT_ANALYSIS_RESULT_INVALID", "分析结果无法读取，请重新运行", HttpStatus.INTERNAL_SERVER_ERROR);
@@ -135,12 +144,44 @@ public class ProjectAnalysisJobService {
             job.getStatus(),
             projectResult,
             fileResult,
-            job.getErrorMessage(),
+            errorMessage,
             job.getRecordId(),
             job.getCreatedAt(),
             job.getUpdatedAt(),
             job.getStartedAt(),
             job.getCompletedAt()
         );
+    }
+
+    private boolean containsProjectNoise(ProjectAnalysisResponse response) {
+        return containsProjectNoise(response.summary())
+            || containsProjectNoise(response.architecture())
+            || response.modules().stream().anyMatch(this::containsProjectNoise)
+            || response.risks().stream().anyMatch(this::containsProjectNoise)
+            || response.importantFiles().stream().anyMatch(this::containsProjectNoise)
+            || response.evidence().stream().anyMatch(this::containsProjectNoise)
+            || response.limitations().stream().anyMatch(this::containsProjectNoise);
+    }
+
+    private boolean containsProjectNoise(ProjectFileAnalysisResponse response) {
+        return containsProjectNoise(response.path())
+            || containsProjectNoise(response.role())
+            || containsProjectNoise(response.summary())
+            || containsProjectNoise(response.riskNotes())
+            || response.evidence().stream().anyMatch(this::containsProjectNoise)
+            || response.relatedFiles().stream().anyMatch(this::containsProjectNoise)
+            || containsProjectNoise(response.limitations());
+    }
+
+    private boolean containsProjectNoise(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        String lower = value.toLowerCase().replace("\\", "/");
+        return lower.contains(".codex-run/")
+            || lower.contains("old-git-")
+            || lower.contains(".git/objects/")
+            || lower.contains(".git/config")
+            || lower.contains(".git/head");
     }
 }

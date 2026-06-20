@@ -34,6 +34,7 @@ import {
   type TaskItem,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
+import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 
 const suggestionLabels = {
   UPDATE_PROJECT_MEMORY: "项目档案",
@@ -119,7 +120,7 @@ export default function TasksPage() {
     listProjects(session.accessToken)
       .then((items) => {
         setProjects(items);
-        setSelectedProjectId(items[0]?.id ?? "");
+        setSelectedProjectId(resolveSelectedProjectId(items));
       })
       .catch((exception) => setError(exception instanceof Error ? exception.message : "项目加载失败"))
       .finally(() => setLoading(false));
@@ -258,7 +259,7 @@ export default function TasksPage() {
     setNotice("");
     try {
       await Promise.all(ids.map((id) => acceptProjectChange(session.accessToken, id)));
-      setNotice(`已采纳 ${ids.length} 条结构化变更，并沉淀到项目档案来源。`);
+      setNotice(`已采纳 ${ids.length} 条结构化变更，已写入项目档案和事实来源。`);
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "采纳结构化变更失败");
@@ -348,7 +349,10 @@ export default function TasksPage() {
               <select
                 className="h-10 min-w-72 rounded-md border border-line bg-white px-3 text-sm outline-none focus:border-slate-950"
                 disabled={projects.length === 0}
-                onChange={(event) => setSelectedProjectId(event.target.value)}
+                onChange={(event) => {
+                  rememberSelectedProjectId(event.target.value);
+                  setSelectedProjectId(event.target.value);
+                }}
                 value={selectedProjectId}
               >
                 {projects.map((project) => (
@@ -371,6 +375,13 @@ export default function TasksPage() {
               采纳选中 {selectedChangeIds.length}
             </button>
           </div>
+        </section>
+
+        <section className="mb-6 grid gap-3 rounded-md border border-line bg-white p-4 text-sm shadow-panel lg:grid-cols-4">
+          <FlowStep title="1. 采纳" text="结构化变更会进入已采纳列表，并按类型写入项目档案字段和事实来源。" />
+          <FlowStep title="2. 项目档案" text="能力、风险、技术决策、经验和成果素材会在项目画像页继续编辑和确认。" />
+          <FlowStep title="3. 上下文同步" text="点击工作台的同步确认上下文后，已采纳信息会写回本地项目上下文。" />
+          <FlowStep title="4. 输出复用" text="成果输出、每日回顾、README 草稿和 Agent 后续任务会优先使用这些已确认信息。" />
         </section>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
@@ -652,6 +663,15 @@ function StatusPill({ label, value, tone }: { label: string; value: number; tone
     slate: "bg-slate-100 text-slate-600",
   };
   return <span className={`rounded-md px-2.5 py-1 text-xs ${styles[tone]}`}>{label} {value}</span>;
+}
+
+function FlowStep({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-md bg-slate-50 p-3">
+      <p className="font-semibold text-slate-950">{title}</p>
+      <p className="mt-1 leading-5 text-slate-600">{text}</p>
+    </div>
+  );
 }
 
 function sourcePreview(suggestion: AiSuggestion) {

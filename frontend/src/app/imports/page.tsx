@@ -15,6 +15,7 @@ import {
   type TaskItem,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
+import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 
 const sampleMarkdown = `---
 title: ProjectFlow 导入页开发
@@ -67,7 +68,7 @@ export default function ImportsPage() {
     listProjects(session.accessToken)
       .then((items) => {
         setProjects(items);
-        setSelectedProjectId((current) => current || items[0]?.id || "");
+        setSelectedProjectId((current) => resolveSelectedProjectId(items, current));
       })
       .catch((exception) => setError(exception instanceof Error ? exception.message : "项目加载失败"))
       .finally(() => setLoading(false));
@@ -154,7 +155,10 @@ export default function ImportsPage() {
               <select
                 className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
                 disabled={projects.length === 0}
-                onChange={(event) => setSelectedProjectId(event.target.value)}
+                onChange={(event) => {
+                  rememberSelectedProjectId(event.target.value);
+                  setSelectedProjectId(event.target.value);
+                }}
                 value={selectedProjectId}
               >
                 {projects.map((project) => (

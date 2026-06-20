@@ -38,7 +38,10 @@ export function parseZipDirectoryTree(content: string) {
     }
     const trimmed = line.trim();
     if (trimmed.startsWith("- ")) {
-      result.push(trimmed.slice(2));
+      const path = trimmed.slice(2);
+      if (!isProjectNoisePath(path)) {
+        result.push(path);
+      }
     }
   }
   return result;
@@ -88,10 +91,10 @@ export function buildModuleGroups(paths: string[]): ModuleGroup[] {
 
 function inferModuleName(path: string) {
   const lower = path.toLowerCase();
-  if (lower.startsWith("frontend/") || lower.includes("/src/app/") || lower.includes("/src/components/")) {
+  if (looksLikeFrontendPath(lower)) {
     return "frontend";
   }
-  if (lower.startsWith("backend/") || lower.includes("/src/main/") || lower.endsWith("pom.xml")) {
+  if (looksLikeBackendPath(lower)) {
     return "backend";
   }
   if (lower.startsWith("docs/") || lower.endsWith("readme.md") || lower.endsWith("agents.md")) {
@@ -112,8 +115,8 @@ function inferFileType(path: string): FileInsight["fileType"] {
   if (lower.endsWith(".md") || lower.endsWith(".mdx")) return "docs";
   if (lower.endsWith(".json") || lower.endsWith(".yml") || lower.endsWith(".yaml") || lower.endsWith(".toml") || lower.endsWith(".xml")) return "config";
   if (lower.endsWith(".bat") || lower.endsWith(".ps1") || lower.endsWith(".sh")) return "script";
-  if (lower.includes("test") || lower.includes("spec")) return "test";
-  if (lower.endsWith(".ts") || lower.endsWith(".tsx") || lower.endsWith(".js") || lower.endsWith(".jsx") || lower.endsWith(".java") || lower.endsWith(".css")) return "source";
+  if (isTestPath(lower)) return "test";
+  if (isSourceCodePath(lower)) return "source";
   if (lower.includes("dist/") || lower.includes("build/") || lower.includes(".next/")) return "build";
   if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".svg")) return "asset";
   return "unknown";
@@ -121,7 +124,7 @@ function inferFileType(path: string): FileInsight["fileType"] {
 
 function inferImportance(path: string, fileType: FileInsight["fileType"]): FileInsight["importance"] {
   const lower = path.toLowerCase();
-  if (lower.endsWith("package.json") || lower.endsWith("pom.xml") || lower.endsWith("docker-compose.yml") || lower.endsWith("layout.tsx") || lower.endsWith("page.tsx")) {
+  if (lower.endsWith("package.json") || lower.endsWith("pom.xml") || lower.endsWith("build.gradle") || lower.endsWith("pyproject.toml") || lower.endsWith("go.mod") || lower.endsWith("cargo.toml") || lower.endsWith("docker-compose.yml") || lower.endsWith("layout.tsx") || lower.endsWith("page.tsx")) {
     return "critical";
   }
   if (fileType === "config" || fileType === "script" || lower.includes("/controller/") || lower.includes("/service/")) {
@@ -196,4 +199,100 @@ function inferModuleSummary(name: string, items: FileInsight[]) {
 
 function scoreModule(name: string) {
   return { frontend: 5, backend: 5, docs: 4, config: 3, scripts: 2 }[name as keyof Record<string, number>] ?? 1;
+}
+
+function isProjectNoisePath(path: string) {
+  const lower = path.toLowerCase();
+  return lower.startsWith(".codex-run/")
+    || lower.includes("/.codex-run/")
+    || lower.includes("/old-git-")
+    || lower.startsWith(".git/")
+    || lower.includes("/.git/")
+    || lower.startsWith("node_modules/")
+    || lower.includes("/node_modules/")
+    || lower.startsWith(".venv/")
+    || lower.includes("/.venv/")
+    || lower.startsWith("venv/")
+    || lower.includes("/venv/")
+    || lower.includes("/__pycache__/")
+    || lower.includes("/.pytest_cache/")
+    || lower.includes("/.mypy_cache/")
+    || lower.includes("/.ruff_cache/")
+    || lower.includes("/coverage/")
+    || lower.includes("/dist/")
+    || lower.includes("/build/")
+    || lower.includes("/target/")
+    || lower.includes("/.next/")
+    || lower.includes("/.turbo/");
+}
+
+function looksLikeFrontendPath(lower: string) {
+  return lower.startsWith("frontend/")
+    || lower.startsWith("web/")
+    || lower.startsWith("client/")
+    || lower.startsWith("ui/")
+    || lower.startsWith("apps/web/")
+    || lower.startsWith("apps/frontend/")
+    || lower.startsWith("packages/web/")
+    || lower.startsWith("packages/ui/")
+    || lower.includes("/src/app/")
+    || lower.includes("/src/components/")
+    || lower.endsWith("page.tsx")
+    || lower.endsWith("app.tsx")
+    || lower.endsWith("vite.config.ts")
+    || lower.endsWith("vite.config.js")
+    || lower.endsWith("next.config.ts")
+    || lower.endsWith("next.config.js");
+}
+
+function looksLikeBackendPath(lower: string) {
+  return lower.startsWith("backend/")
+    || lower.startsWith("server/")
+    || lower.startsWith("api/")
+    || lower.startsWith("services/api/")
+    || lower.startsWith("services/server/")
+    || lower.startsWith("services/worker/")
+    || lower.includes("/src/main/")
+    || lower.includes("/controller/")
+    || lower.includes("/service/")
+    || lower.endsWith("pom.xml")
+    || lower.endsWith("build.gradle")
+    || lower.endsWith("build.gradle.kts")
+    || lower.endsWith("pyproject.toml")
+    || lower.endsWith("requirements.txt")
+    || lower.endsWith("go.mod")
+    || lower.endsWith("main.py");
+}
+
+function isTestPath(lower: string) {
+  return lower.startsWith("test/")
+    || lower.startsWith("tests/")
+    || lower.startsWith("spec/")
+    || lower.includes("/test/")
+    || lower.includes("/tests/")
+    || lower.includes("/spec/")
+    || lower.includes("/__tests__/")
+    || lower.includes(".test.")
+    || lower.includes(".spec.")
+    || lower.endsWith("_test.py")
+    || lower.endsWith("test_main.py");
+}
+
+function isSourceCodePath(lower: string) {
+  return lower.includes("/src/")
+    || lower.startsWith("src/")
+    || lower.includes("/app/")
+    || lower.endsWith(".java")
+    || lower.endsWith(".kt")
+    || lower.endsWith(".ts")
+    || lower.endsWith(".tsx")
+    || lower.endsWith(".js")
+    || lower.endsWith(".jsx")
+    || lower.endsWith(".vue")
+    || lower.endsWith(".py")
+    || lower.endsWith(".go")
+    || lower.endsWith(".rs")
+    || lower.endsWith(".php")
+    || lower.endsWith(".cs")
+    || lower.endsWith(".rb");
 }

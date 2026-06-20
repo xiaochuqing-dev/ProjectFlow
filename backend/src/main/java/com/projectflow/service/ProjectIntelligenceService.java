@@ -7,7 +7,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -44,6 +47,7 @@ import com.projectflow.dto.V2ProjectDtos.ProjectChangeResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFactSourceResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisResponse;
+import com.projectflow.dto.V2ProjectDtos.ProjectLocalPathRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectMaterialResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectMemoryResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectMemoryUpdateRequest;
@@ -159,7 +163,8 @@ public class ProjectIntelligenceService {
     public ProjectAnalysisResponse runProjectAnalysis(UUID userId, UUID projectId) {
         ProjectSpace project = findOwnedProject(userId, projectId);
         ProjectMaterial zipMaterial = latestZipMaterial(project.getId());
-        ProjectAnalysisResponse fallback = localProjectAnalysis(project, zipMaterial);
+        String analysisMaterial = sanitizeProjectMaterialForAnalysis(zipMaterial.getContent());
+        ProjectAnalysisResponse fallback = localProjectAnalysis(project, analysisMaterial);
         AiProvider provider = configuredProvider(userId);
         if (provider == null) {
             return fallback;
@@ -183,7 +188,7 @@ public class ProjectIntelligenceService {
                 已有描述：%s
                 项目材料：
                 %s
-                """.formatted(project.getName(), project.getDescription(), truncate(zipMaterial.getContent(), 20_000));
+                """.formatted(project.getName(), project.getDescription(), truncate(analysisMaterial, 20_000));
             JsonNode json = callModelJson(provider, prompt, MODEL_ANALYSIS_MAX_TOKENS);
             return new ProjectAnalysisResponse(
                 chineseTextOr(json, "summary", fallback.summary()),
@@ -229,13 +234,14 @@ public class ProjectIntelligenceService {
     public ProjectFileAnalysisResponse analyzeProjectFile(UUID userId, UUID projectId, ProjectFileAnalysisRequest request) {
         ProjectSpace project = findOwnedProject(userId, projectId);
         ProjectMaterial zipMaterial = latestZipMaterial(project.getId());
-        List<String> paths = parseDirectoryTree(zipMaterial.getContent());
+        String analysisMaterial = sanitizeProjectMaterialForAnalysis(zipMaterial.getContent());
+        List<String> paths = parseDirectoryTree(analysisMaterial);
         String requestedPath = request.path().trim();
         if (paths.stream().noneMatch(path -> path.equals(requestedPath))) {
             throw new AppException("PROJECT_FILE_NOT_FOUND", "Project file was not found in imported zip material", HttpStatus.NOT_FOUND);
         }
 
-        String fileContent = extractIndexedFileContent(zipMaterial.getContent(), requestedPath);
+        String fileContent = extractIndexedFileContent(analysisMaterial, requestedPath);
         AiProvider provider = configuredProvider(userId);
         ProjectFileAnalysisResponse fallback = localFileAnalysis(
             requestedPath,
@@ -278,7 +284,7 @@ public class ProjectIntelligenceService {
                     project.getName(),
                     requestedPath,
                     fileContent.isBlank() ? "[未索引到文件内容，只能依据路径分析]" : truncate(fileContent, MAX_FILE_SNIPPET_CHARS),
-                    fileStructureContext(zipMaterial.getContent(), requestedPath)
+                    fileStructureContext(analysisMaterial, requestedPath)
                 );
             JsonNode json = callModelJson(provider, prompt, MODEL_ANALYSIS_MAX_TOKENS);
             return new ProjectFileAnalysisResponse(
@@ -397,7 +403,7 @@ public class ProjectIntelligenceService {
     public ProjectImportAnalyzeResponse importProjectZip(UUID userId, UUID projectId, MultipartFile file) {
         ZipProjectScan scan = scanZip(file);
         ProjectSpace project = projectId == null
-            ? createImportedProject(userId, scan.profile())
+            ? findReusableImportedProject(userId, scan.profile()).orElseGet(() -> createImportedProject(userId, scan.profile()))
             : findOwnedProject(userId, projectId);
         ProjectMaterial material = saveMaterial(project.getId(), MaterialSourceType.PROJECT_ZIP, cleanFileName(file.getOriginalFilename()), scan.content());
         List<AiSuggestion> suggestions = generateProjectProfileSuggestions(project, material, scan.profile());
@@ -518,6 +524,7 @@ public class ProjectIntelligenceService {
                 case UPDATE_PROJECT_MEMORY -> {
                     positioning = text(payload, "positioning", suggestion.getTitle());
                     stage = text(payload, "currentStage", stage);
+                    addIfPresent(newLogs, payload, "completedCapabilities");
                     addIfPresent(nextSteps, payload, "nextStepSuggestions");
                     recordFactSources(project.getId(), ProjectFactSourceType.ACCEPTED_CHANGE, suggestion.getId(), true, Map.of(
                         "positioning", positioning,
@@ -606,9 +613,11 @@ public class ProjectIntelligenceService {
     @Transactional
     public ProjectChangeResponse acceptChange(UUID userId, UUID changeId) {
         ProjectChange change = findOwnedChange(userId, changeId);
+        ProjectSpace project = findOwnedProject(userId, change.getProjectId());
         if (change.getLinkedSuggestionId() != null && change.getStatus() == ProjectChangeStatus.PENDING) {
             applySuggestions(userId, change.getProjectId(), List.of(change.getLinkedSuggestionId()));
         }
+        applyAcceptedChangeToMemory(project, change);
         change.markAccepted();
         return toChangeResponse(change);
     }
@@ -659,6 +668,15 @@ public class ProjectIntelligenceService {
         return toMemoryResponse(saved);
     }
 
+    @Transactional
+    public ProjectMemoryResponse updateLocalProjectPath(UUID userId, UUID projectId, ProjectLocalPathRequest request) {
+        ProjectSpace project = findOwnedProject(userId, projectId);
+        Path projectRoot = resolveLocalProjectRoot(request.localProjectPath());
+        ProjectMemory memory = memoryRepository.findByProjectId(project.getId()).orElseGet(() -> initialMemory(project));
+        memory.rememberLocalProjectPath(projectRoot.toString());
+        return toMemoryResponse(memoryRepository.save(memory));
+    }
+
     @Transactional(readOnly = true)
     public List<ProjectSnapshotResponse> listSnapshots(UUID userId, UUID projectId) {
         ProjectSpace project = findOwnedProject(userId, projectId);
@@ -684,8 +702,8 @@ public class ProjectIntelligenceService {
         return materialRepository.save(material);
     }
 
-    private ProjectAnalysisResponse localProjectAnalysis(ProjectSpace project, ProjectMaterial zipMaterial) {
-        List<String> paths = parseDirectoryTree(zipMaterial.getContent());
+    private ProjectAnalysisResponse localProjectAnalysis(ProjectSpace project, String materialContent) {
+        List<String> paths = parseDirectoryTree(materialContent);
         List<String> modules = paths.stream()
             .map(this::moduleName)
             .distinct()
@@ -695,7 +713,7 @@ public class ProjectIntelligenceService {
             .filter(this::isImportantProjectFile)
             .limit(12)
             .toList();
-        String readmeTitle = extractReadmeTitle(zipMaterial.getContent());
+        String readmeTitle = extractReadmeTitle(materialContent);
         String summary = !readmeTitle.isBlank()
             ? readmeTitle + "：已导入 " + paths.size() + " 个文件信号，当前使用本地规则生成基础项目画像。"
             : project.getName() + "：已导入 " + paths.size() + " 个文件信号，当前使用本地规则生成基础项目画像。";
@@ -963,10 +981,41 @@ public class ProjectIntelligenceService {
                 break;
             }
             if (inTree && trimmed.startsWith("- ")) {
-                result.add(trimmed.substring(2));
+                String path = trimmed.substring(2);
+                if (!isProjectNoisePath(path)) {
+                    result.add(path);
+                }
             }
         }
         return result;
+    }
+
+    private String sanitizeProjectMaterialForAnalysis(String content) {
+        StringBuilder sanitized = new StringBuilder();
+        boolean skippingNoiseBlock = false;
+        for (String line : content.split("\\R")) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("### ")) {
+                String path = trimmed.substring(4).trim();
+                skippingNoiseBlock = isProjectNoisePath(path) || lineContainsProjectNoise(path);
+            } else if (trimmed.startsWith("## ")) {
+                skippingNoiseBlock = false;
+            }
+            if (skippingNoiseBlock || lineContainsProjectNoise(line)) {
+                continue;
+            }
+            sanitized.append(line).append('\n');
+        }
+        return sanitized.toString().trim();
+    }
+
+    private boolean lineContainsProjectNoise(String value) {
+        String lower = value.toLowerCase().replace("\\", "/");
+        return lower.contains(".codex-run/")
+            || lower.contains("old-git-")
+            || lower.contains(".git/objects/")
+            || lower.contains(".git/config")
+            || lower.contains(".git/head");
     }
 
     private String extractReadmeTitle(String content) {
@@ -981,10 +1030,10 @@ public class ProjectIntelligenceService {
 
     private String moduleName(String path) {
         String lower = path.toLowerCase();
-        if (lower.startsWith("frontend/") || lower.contains("/src/app/") || lower.contains("/src/components/")) {
+        if (looksLikeFrontendPath(lower)) {
             return "frontend";
         }
-        if (lower.startsWith("backend/") || lower.contains("/src/main/") || lower.endsWith("pom.xml")) {
+        if (looksLikeBackendPath(lower)) {
             return "backend";
         }
         if (lower.startsWith("docs/") || lower.endsWith("readme.md") || lower.endsWith("agents.md")) {
@@ -1003,9 +1052,20 @@ public class ProjectIntelligenceService {
         String lower = path.toLowerCase();
         return lower.endsWith("package.json")
             || lower.endsWith("pom.xml")
+            || lower.endsWith("build.gradle")
+            || lower.endsWith("build.gradle.kts")
+            || lower.endsWith("settings.gradle")
+            || lower.endsWith("pyproject.toml")
+            || lower.endsWith("requirements.txt")
+            || lower.endsWith("go.mod")
+            || lower.endsWith("cargo.toml")
+            || lower.endsWith("composer.json")
+            || lower.endsWith(".csproj")
             || lower.endsWith("docker-compose.yml")
             || lower.endsWith("readme.md")
             || lower.endsWith("page.tsx")
+            || lower.endsWith("app.tsx")
+            || lower.endsWith("main.py")
             || lower.contains("/controller/")
             || lower.contains("/service/");
     }
@@ -1016,8 +1076,8 @@ public class ProjectIntelligenceService {
         if (lower.endsWith(".md") || lower.endsWith(".mdx")) return "docs";
         if (lower.endsWith(".json") || lower.endsWith(".yml") || lower.endsWith(".yaml") || lower.endsWith(".toml") || lower.endsWith(".xml")) return "config";
         if (lower.endsWith(".bat") || lower.endsWith(".ps1") || lower.endsWith(".sh")) return "script";
-        if (lower.contains("test") || lower.contains("spec")) return "test";
-        if (lower.endsWith(".ts") || lower.endsWith(".tsx") || lower.endsWith(".js") || lower.endsWith(".jsx") || lower.endsWith(".java") || lower.endsWith(".css")) return "source";
+        if (isTestPath(lower)) return "test";
+        if (isSourceCodePath(lower)) return "source";
         if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".svg")) return "asset";
         return "unknown";
     }
@@ -1074,6 +1134,102 @@ public class ProjectIntelligenceService {
             return "部署配置会影响本地和生产运行方式，建议确认端口、凭据和服务依赖。";
         }
         return "需要模型或用户进一步确认风险。";
+    }
+
+    private boolean isProjectNoisePath(String path) {
+        String lower = path.toLowerCase();
+        return lower.startsWith(".codex-run/")
+            || lower.contains("/.codex-run/")
+            || lower.contains("/old-git-")
+            || lower.startsWith(".git/")
+            || lower.contains("/.git/")
+            || lower.startsWith("node_modules/")
+            || lower.contains("/node_modules/")
+            || lower.startsWith(".venv/")
+            || lower.contains("/.venv/")
+            || lower.startsWith("venv/")
+            || lower.contains("/venv/")
+            || lower.contains("/__pycache__/")
+            || lower.contains("/.pytest_cache/")
+            || lower.contains("/.mypy_cache/")
+            || lower.contains("/.ruff_cache/")
+            || lower.contains("/coverage/")
+            || lower.contains("/dist/")
+            || lower.contains("/build/")
+            || lower.contains("/target/")
+            || lower.contains("/.next/")
+            || lower.contains("/.turbo/");
+    }
+
+    private boolean looksLikeFrontendPath(String lowerPath) {
+        return lowerPath.startsWith("frontend/")
+            || lowerPath.startsWith("web/")
+            || lowerPath.startsWith("client/")
+            || lowerPath.startsWith("ui/")
+            || lowerPath.startsWith("apps/web/")
+            || lowerPath.startsWith("apps/frontend/")
+            || lowerPath.startsWith("packages/web/")
+            || lowerPath.startsWith("packages/ui/")
+            || lowerPath.contains("/src/app/")
+            || lowerPath.contains("/src/components/")
+            || lowerPath.endsWith("page.tsx")
+            || lowerPath.endsWith("app.tsx")
+            || lowerPath.endsWith("vite.config.ts")
+            || lowerPath.endsWith("vite.config.js")
+            || lowerPath.endsWith("next.config.ts")
+            || lowerPath.endsWith("next.config.js");
+    }
+
+    private boolean looksLikeBackendPath(String lowerPath) {
+        return lowerPath.startsWith("backend/")
+            || lowerPath.startsWith("server/")
+            || lowerPath.startsWith("api/")
+            || lowerPath.startsWith("services/api/")
+            || lowerPath.startsWith("services/server/")
+            || lowerPath.startsWith("services/worker/")
+            || lowerPath.contains("/src/main/")
+            || lowerPath.contains("/controller/")
+            || lowerPath.contains("/service/")
+            || lowerPath.endsWith("pom.xml")
+            || lowerPath.endsWith("build.gradle")
+            || lowerPath.endsWith("build.gradle.kts")
+            || lowerPath.endsWith("pyproject.toml")
+            || lowerPath.endsWith("requirements.txt")
+            || lowerPath.endsWith("go.mod")
+            || lowerPath.endsWith("main.py");
+    }
+
+    private boolean isTestPath(String lowerPath) {
+        return lowerPath.startsWith("test/")
+            || lowerPath.startsWith("tests/")
+            || lowerPath.startsWith("spec/")
+            || lowerPath.contains("/test/")
+            || lowerPath.contains("/tests/")
+            || lowerPath.contains("/spec/")
+            || lowerPath.contains("/__tests__/")
+            || lowerPath.contains(".test.")
+            || lowerPath.contains(".spec.")
+            || lowerPath.endsWith("_test.py")
+            || lowerPath.endsWith("test_main.py");
+    }
+
+    private boolean isSourceCodePath(String lowerPath) {
+        return lowerPath.contains("/src/")
+            || lowerPath.startsWith("src/")
+            || lowerPath.contains("/app/")
+            || lowerPath.endsWith(".java")
+            || lowerPath.endsWith(".kt")
+            || lowerPath.endsWith(".ts")
+            || lowerPath.endsWith(".tsx")
+            || lowerPath.endsWith(".js")
+            || lowerPath.endsWith(".jsx")
+            || lowerPath.endsWith(".vue")
+            || lowerPath.endsWith(".py")
+            || lowerPath.endsWith(".go")
+            || lowerPath.endsWith(".rs")
+            || lowerPath.endsWith(".php")
+            || lowerPath.endsWith(".cs")
+            || lowerPath.endsWith(".rb");
     }
 
     private boolean isSensitivePath(String path) {
@@ -1241,6 +1397,54 @@ public class ProjectIntelligenceService {
         return memoryRepository.save(memory);
     }
 
+    private ProjectMemory applyAcceptedChangeToMemory(ProjectSpace project, ProjectChange change) {
+        List<String> completed = new ArrayList<>();
+        List<String> risks = new ArrayList<>();
+        List<String> decisions = new ArrayList<>();
+        List<String> learnings = new ArrayList<>();
+        List<String> assets = new ArrayList<>();
+        String summaryLine = change.getTitle() + "：" + defaultText(change.getSummary(), change.getDetails());
+
+        switch (change.getChangeKind()) {
+            case RISK -> risks.add(defaultText(change.getRiskNotes(), summaryLine));
+            case DECISION -> decisions.add(defaultText(change.getDecisionNotes(), summaryLine));
+            case LEARNING -> learnings.add(defaultText(change.getLearningNotes(), summaryLine));
+            case ASSET -> assets.add(defaultText(change.getAssetCandidates(), summaryLine));
+            default -> completed.add(summaryLine);
+        }
+        if (change.getRiskNotes() != null && !change.getRiskNotes().isBlank()) {
+            risks.add(change.getRiskNotes());
+        }
+        if (change.getDecisionNotes() != null && !change.getDecisionNotes().isBlank()) {
+            decisions.add(change.getDecisionNotes());
+        }
+        if (change.getLearningNotes() != null && !change.getLearningNotes().isBlank()) {
+            learnings.add(change.getLearningNotes());
+        }
+        if (change.getAssetCandidates() != null && !change.getAssetCandidates().isBlank()) {
+            assets.add(change.getAssetCandidates());
+        }
+
+        ProjectMemory memory = updateMemory(project, null, null, List.of(), completed, risks, decisions, learnings, assets, List.of());
+        UUID sourceId = change.getId();
+        if (!completed.isEmpty()) {
+            recordFactSource(project.getId(), "completedCapabilities", summaryLine, ProjectFactSourceType.ACCEPTED_CHANGE, sourceId, true);
+        }
+        if (!risks.isEmpty()) {
+            recordFactSource(project.getId(), "currentRisks", String.join("\n", risks), ProjectFactSourceType.ACCEPTED_CHANGE, sourceId, true);
+        }
+        if (!decisions.isEmpty()) {
+            recordFactSource(project.getId(), "technicalDecisions", String.join("\n", decisions), ProjectFactSourceType.ACCEPTED_CHANGE, sourceId, true);
+        }
+        if (!learnings.isEmpty()) {
+            recordFactSource(project.getId(), "developerLearnings", String.join("\n", learnings), ProjectFactSourceType.ACCEPTED_CHANGE, sourceId, true);
+        }
+        if (!assets.isEmpty()) {
+            recordFactSource(project.getId(), "showcaseAssets", String.join("\n", assets), ProjectFactSourceType.ACCEPTED_CHANGE, sourceId, true);
+        }
+        return memory;
+    }
+
     private String cleanMemoryText(String value, String fallback) {
         if (value == null || value.trim().isBlank()) {
             return fallback;
@@ -1345,6 +1549,14 @@ public class ProjectIntelligenceService {
         return projectRepository.save(project);
     }
 
+    private java.util.Optional<ProjectSpace> findReusableImportedProject(UUID userId, ProjectProfileResponse profile) {
+        String inferredName = profile.inferredProjectName();
+        if (inferredName == null || inferredName.isBlank()) {
+            return java.util.Optional.empty();
+        }
+        return projectRepository.findFirstByUserIdAndNameIgnoreCaseOrderByUpdatedAtDesc(userId, inferredName.trim());
+    }
+
     private ProjectSpace findOwnedProject(UUID userId, UUID projectId) {
         return projectRepository.findByIdAndUserId(projectId, userId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
@@ -1367,6 +1579,20 @@ public class ProjectIntelligenceService {
     private ProjectSpace findOwnedProjectById(UUID projectId) {
         return projectRepository.findById(projectId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
+    }
+
+    private Path resolveLocalProjectRoot(String projectPath) {
+        if (projectPath == null || projectPath.isBlank()) {
+            throw new AppException("PROJECT_PATH_REQUIRED", "Project folder path is required", HttpStatus.BAD_REQUEST);
+        }
+        Path path = Path.of(projectPath).toAbsolutePath().normalize();
+        if (path.getParent() == null || path.equals(path.getRoot())) {
+            throw new AppException("PROJECT_PATH_TOO_BROAD", "Project folder path is too broad", HttpStatus.BAD_REQUEST);
+        }
+        if (!Files.isDirectory(path)) {
+            throw new AppException("PROJECT_PATH_NOT_FOUND", "Project folder path was not found", HttpStatus.BAD_REQUEST);
+        }
+        return path;
     }
 
     private ProjectMaterial findOwnedMaterial(UUID userId, UUID materialId) {
@@ -1400,7 +1626,18 @@ public class ProjectIntelligenceService {
     }
 
     private ZipProjectScan scanZip(MultipartFile file) {
-        try (ZipInputStream zipInputStream = new ZipInputStream(file.getInputStream())) {
+        try {
+            return scanZip(file, StandardCharsets.UTF_8);
+        } catch (AppException utf8Exception) {
+            if (!"ZIP_READ_FAILED".equals(utf8Exception.getCode())) {
+                throw utf8Exception;
+            }
+            return scanZip(file, Charset.forName("GBK"));
+        }
+    }
+
+    private ZipProjectScan scanZip(MultipartFile file, Charset charset) {
+        try (ZipInputStream zipInputStream = new ZipInputStream(file.getInputStream(), charset)) {
             StringBuilder tree = new StringBuilder("# Project zip summary\n\n## Directory tree\n");
             StringBuilder keyFiles = new StringBuilder("\n## Key files\n");
             StringBuilder fileSnippets = new StringBuilder("\n## File snippets\n");
@@ -1432,10 +1669,10 @@ public class ProjectIntelligenceService {
 
                 String lowerRelativeName = relativeName.toLowerCase();
                 hasReadme = hasReadme || lowerRelativeName.endsWith("readme.md");
-                hasTests = hasTests || lowerRelativeName.contains("/test/") || lowerRelativeName.startsWith("test/");
+                hasTests = hasTests || isTestPath(lowerRelativeName);
                 hasStartScript = hasStartScript || lowerRelativeName.startsWith("start-") || lowerRelativeName.endsWith(".bat") || lowerRelativeName.contains("package.json");
                 hasDeployConfig = hasDeployConfig || lowerRelativeName.endsWith("docker-compose.yml") || lowerRelativeName.contains("docker/");
-                hasSource = hasSource || lowerRelativeName.contains("/src/") || lowerRelativeName.startsWith("src/");
+                hasSource = hasSource || isSourceCodePath(lowerRelativeName);
 
                 if (!isSensitivePath(relativeName) && (isKeyZipFile(relativeName) || isIndexableTextFile(relativeName))) {
                     String content = readSafeZipText(zipInputStream);
@@ -1464,7 +1701,7 @@ public class ProjectIntelligenceService {
             );
             return new ZipProjectScan(tree.append(keyFiles).append(fileSnippets).toString(), profile);
         } catch (IOException exception) {
-            throw new AppException("ZIP_READ_FAILED", "Project zip could not be read", HttpStatus.BAD_REQUEST);
+            throw new AppException("ZIP_READ_FAILED", "项目 zip 无法读取；如果是中文路径或旧压缩工具生成的 zip，ProjectFlow 会自动尝试 GBK 编码。若仍失败，请重新压缩为标准 zip。", HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -1557,6 +1794,7 @@ public class ProjectIntelligenceService {
         String lowerName = relativeName.toLowerCase();
         String lowerContent = content.toLowerCase();
         if (lowerName.endsWith("package.json")) {
+            techStack.add("Node.js");
             if (lowerContent.contains("\"next\"")) {
                 techStack.add("Next.js");
             }
@@ -1569,12 +1807,55 @@ public class ProjectIntelligenceService {
             if (lowerContent.contains("\"vite\"")) {
                 techStack.add("Vite");
             }
+            if (lowerContent.contains("\"express\"")) {
+                techStack.add("Express");
+            }
+            if (lowerContent.contains("\"nestjs\"") || lowerContent.contains("@nestjs/")) {
+                techStack.add("NestJS");
+            }
         }
         if (lowerName.endsWith("pom.xml")) {
             if (lowerContent.contains("spring-boot")) {
                 techStack.add("Spring Boot");
             }
             techStack.add("Java");
+        }
+        if (lowerName.endsWith("build.gradle") || lowerName.endsWith("build.gradle.kts")) {
+            if (lowerContent.contains("springframework.boot") || lowerContent.contains("spring-boot")) {
+                techStack.add("Spring Boot");
+            }
+            techStack.add("Java");
+            techStack.add("Gradle");
+        }
+        if (lowerName.endsWith("pyproject.toml") || lowerName.endsWith("requirements.txt")) {
+            techStack.add("Python");
+            if (lowerContent.contains("fastapi")) {
+                techStack.add("FastAPI");
+            }
+            if (lowerContent.contains("django")) {
+                techStack.add("Django");
+            }
+            if (lowerContent.contains("flask")) {
+                techStack.add("Flask");
+            }
+        }
+        if (lowerName.endsWith("go.mod")) {
+            techStack.add("Go");
+            if (lowerContent.contains("gin-gonic") || lowerContent.contains("gin ")) {
+                techStack.add("Gin");
+            }
+        }
+        if (lowerName.endsWith("cargo.toml")) {
+            techStack.add("Rust");
+        }
+        if (lowerName.endsWith("composer.json")) {
+            techStack.add("PHP");
+            if (lowerContent.contains("laravel")) {
+                techStack.add("Laravel");
+            }
+        }
+        if (lowerName.endsWith(".csproj")) {
+            techStack.add(".NET");
         }
         if (lowerName.endsWith("docker-compose.yml")) {
             techStack.add("Docker Compose");
@@ -1634,7 +1915,8 @@ public class ProjectIntelligenceService {
 
     private boolean shouldSkipZipEntry(String name) {
         String lower = name.toLowerCase();
-        return lower.contains("/.git/")
+        return isProjectNoisePath(lower)
+            || lower.contains("/.git/")
             || lower.contains("/node_modules/")
             || lower.contains("/target/")
             || lower.contains("/dist/")
@@ -1643,6 +1925,13 @@ public class ProjectIntelligenceService {
             || lower.contains("/logs/")
             || lower.contains("/coverage/")
             || lower.contains("/.turbo/")
+            || lower.contains("/.venv/")
+            || lower.contains("/venv/")
+            || lower.contains("/__pycache__/")
+            || lower.contains("/.pytest_cache/")
+            || lower.contains("/.mypy_cache/")
+            || lower.contains("/.ruff_cache/")
+            || lower.contains("/vendor/")
             || lower.endsWith(".log")
             || lower.contains(".next-dev.")
             || lower.endsWith(".env")
@@ -1667,6 +1956,9 @@ public class ProjectIntelligenceService {
             || lower.endsWith(".py")
             || lower.endsWith(".go")
             || lower.endsWith(".rs")
+            || lower.endsWith(".php")
+            || lower.endsWith(".cs")
+            || lower.endsWith(".rb")
             || lower.endsWith(".sql")
             || lower.endsWith(".graphql")
             || lower.endsWith(".properties")
@@ -1699,10 +1991,24 @@ public class ProjectIntelligenceService {
         return lower.endsWith("readme.md")
             || lower.endsWith("package.json")
             || lower.endsWith("pom.xml")
+            || lower.endsWith("build.gradle")
+            || lower.endsWith("build.gradle.kts")
+            || lower.endsWith("settings.gradle")
+            || lower.endsWith("gradle.properties")
+            || lower.endsWith("pyproject.toml")
+            || lower.endsWith("requirements.txt")
+            || lower.endsWith("poetry.lock")
+            || lower.endsWith("go.mod")
+            || lower.endsWith("cargo.toml")
+            || lower.endsWith("composer.json")
+            || lower.endsWith(".csproj")
             || lower.endsWith("docker-compose.yml")
             || lower.endsWith("tsconfig.json")
+            || lower.endsWith("jsconfig.json")
             || lower.endsWith("next.config.ts")
+            || lower.endsWith("next.config.js")
             || lower.endsWith("vite.config.ts")
+            || lower.endsWith("vite.config.js")
             || lower.endsWith(".env.example")
             || lower.startsWith("docs/");
     }

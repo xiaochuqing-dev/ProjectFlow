@@ -12,4 +12,6 @@ public interface AiSuggestionRepository extends JpaRepository<AiSuggestion, UUID
     List<AiSuggestion> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
 
     List<AiSuggestion> findByProjectIdAndStatusOrderByCreatedAtDesc(UUID projectId, AiSuggestionStatus status);
+
+    void deleteByProjectId(UUID projectId);
 }

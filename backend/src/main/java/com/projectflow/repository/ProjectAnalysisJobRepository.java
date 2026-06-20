@@ -13,6 +13,8 @@ import com.projectflow.entity.ProjectAnalysisJobType;
 public interface ProjectAnalysisJobRepository extends JpaRepository<ProjectAnalysisJob, UUID> {
     List<ProjectAnalysisJob> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
 
+    void deleteByProjectId(UUID projectId);
+
     Optional<ProjectAnalysisJob> findFirstByProjectIdAndJobTypeAndFilePathAndStatusInOrderByCreatedAtDesc(
         UUID projectId,
         ProjectAnalysisJobType jobType,

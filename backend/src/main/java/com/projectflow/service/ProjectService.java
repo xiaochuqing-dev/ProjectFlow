@@ -10,15 +10,85 @@ import org.springframework.transaction.annotation.Transactional;
 import com.projectflow.dto.ProjectDtos.ProjectRequest;
 import com.projectflow.dto.ProjectDtos.ProjectResponse;
 import com.projectflow.entity.ProjectSpace;
+import com.projectflow.repository.AgentSignatureFeedbackRepository;
+import com.projectflow.repository.AiOutputRepository;
+import com.projectflow.repository.AiSuggestionRepository;
+import com.projectflow.repository.DevLogRepository;
+import com.projectflow.repository.EvidenceBundleRepository;
+import com.projectflow.repository.ImportRecordRepository;
+import com.projectflow.repository.ModelUsageRecordRepository;
+import com.projectflow.repository.ProjectAnalysisJobRepository;
+import com.projectflow.repository.ProjectAnalysisRecordRepository;
+import com.projectflow.repository.ProjectChangeRepository;
+import com.projectflow.repository.ProjectEvolutionRecordRepository;
+import com.projectflow.repository.ProjectFactSourceRepository;
+import com.projectflow.repository.ProjectMaterialRepository;
+import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
+import com.projectflow.repository.ProjectSnapshotRepository;
+import com.projectflow.repository.TaskRepository;
+import com.projectflow.repository.WorkSessionRepository;
 import com.projectflow.support.AppException;
 
 @Service
 public class ProjectService {
     private final ProjectRepository projectRepository;
+    private final ProjectMaterialRepository materialRepository;
+    private final AiSuggestionRepository suggestionRepository;
+    private final ProjectMemoryRepository memoryRepository;
+    private final ProjectSnapshotRepository snapshotRepository;
+    private final ProjectEvolutionRecordRepository evolutionRepository;
+    private final ProjectAnalysisRecordRepository analysisRecordRepository;
+    private final ProjectAnalysisJobRepository analysisJobRepository;
+    private final ProjectChangeRepository changeRepository;
+    private final ProjectFactSourceRepository factSourceRepository;
+    private final TaskRepository taskRepository;
+    private final DevLogRepository devLogRepository;
+    private final AiOutputRepository aiOutputRepository;
+    private final ImportRecordRepository importRecordRepository;
+    private final WorkSessionRepository workSessionRepository;
+    private final EvidenceBundleRepository evidenceBundleRepository;
+    private final AgentSignatureFeedbackRepository agentSignatureFeedbackRepository;
+    private final ModelUsageRecordRepository modelUsageRecordRepository;
 
-    public ProjectService(ProjectRepository projectRepository) {
+    public ProjectService(
+        ProjectRepository projectRepository,
+        ProjectMaterialRepository materialRepository,
+        AiSuggestionRepository suggestionRepository,
+        ProjectMemoryRepository memoryRepository,
+        ProjectSnapshotRepository snapshotRepository,
+        ProjectEvolutionRecordRepository evolutionRepository,
+        ProjectAnalysisRecordRepository analysisRecordRepository,
+        ProjectAnalysisJobRepository analysisJobRepository,
+        ProjectChangeRepository changeRepository,
+        ProjectFactSourceRepository factSourceRepository,
+        TaskRepository taskRepository,
+        DevLogRepository devLogRepository,
+        AiOutputRepository aiOutputRepository,
+        ImportRecordRepository importRecordRepository,
+        WorkSessionRepository workSessionRepository,
+        EvidenceBundleRepository evidenceBundleRepository,
+        AgentSignatureFeedbackRepository agentSignatureFeedbackRepository,
+        ModelUsageRecordRepository modelUsageRecordRepository
+    ) {
         this.projectRepository = projectRepository;
+        this.materialRepository = materialRepository;
+        this.suggestionRepository = suggestionRepository;
+        this.memoryRepository = memoryRepository;
+        this.snapshotRepository = snapshotRepository;
+        this.evolutionRepository = evolutionRepository;
+        this.analysisRecordRepository = analysisRecordRepository;
+        this.analysisJobRepository = analysisJobRepository;
+        this.changeRepository = changeRepository;
+        this.factSourceRepository = factSourceRepository;
+        this.taskRepository = taskRepository;
+        this.devLogRepository = devLogRepository;
+        this.aiOutputRepository = aiOutputRepository;
+        this.importRecordRepository = importRecordRepository;
+        this.workSessionRepository = workSessionRepository;
+        this.evidenceBundleRepository = evidenceBundleRepository;
+        this.agentSignatureFeedbackRepository = agentSignatureFeedbackRepository;
+        this.modelUsageRecordRepository = modelUsageRecordRepository;
     }
 
     @Transactional
@@ -46,6 +116,30 @@ public class ProjectService {
         ProjectSpace project = findOwned(userId, projectId);
         apply(project, request);
         return toResponse(project);
+    }
+
+    @Transactional
+    public void delete(UUID userId, UUID projectId) {
+        ProjectSpace project = findOwned(userId, projectId);
+        UUID id = project.getId();
+        evidenceBundleRepository.deleteByProjectId(id);
+        workSessionRepository.deleteByProjectId(id);
+        agentSignatureFeedbackRepository.deleteByProjectId(id);
+        analysisJobRepository.deleteByProjectId(id);
+        analysisRecordRepository.deleteByProjectId(id);
+        modelUsageRecordRepository.deleteByProjectId(id);
+        changeRepository.deleteByProjectId(id);
+        suggestionRepository.deleteByProjectId(id);
+        factSourceRepository.deleteByProjectId(id);
+        snapshotRepository.deleteByProjectId(id);
+        evolutionRepository.deleteByProjectId(id);
+        memoryRepository.deleteByProjectId(id);
+        materialRepository.deleteByProjectId(id);
+        aiOutputRepository.deleteByProjectId(id);
+        importRecordRepository.deleteByProjectId(id);
+        taskRepository.deleteByProjectId(id);
+        devLogRepository.deleteByProjectId(id);
+        projectRepository.delete(project);
     }
 
     private ProjectSpace findOwned(UUID userId, UUID projectId) {

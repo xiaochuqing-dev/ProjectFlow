@@ -9,4 +9,6 @@ import com.projectflow.entity.ModelUsageRecord;
 
 public interface ModelUsageRecordRepository extends JpaRepository<ModelUsageRecord, UUID> {
     List<ModelUsageRecord> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
+
+    void deleteByProjectId(UUID projectId);
 }

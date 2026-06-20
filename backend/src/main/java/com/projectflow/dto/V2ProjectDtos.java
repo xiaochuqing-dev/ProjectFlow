@@ -216,6 +216,11 @@ public final class V2ProjectDtos {
     ) {
     }
 
+    public record ProjectLocalPathRequest(
+        @NotBlank @Size(max = 1000) String localProjectPath
+    ) {
+    }
+
     public record ProjectSnapshotResponse(
         UUID id,
         UUID projectId,

@@ -2,15 +2,16 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { createProject, listProjects, type Project } from "@/lib/api";
+import { createProject, deleteProject, listProjects, type Project } from "@/lib/api";
 import { readSession } from "@/lib/auth";
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [deletingProjectId, setDeletingProjectId] = useState("");
 
   useEffect(() => {
     const session = readSession();
@@ -52,6 +53,28 @@ export default function ProjectsPage() {
       setError(exception instanceof Error ? exception.message : "项目创建失败");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleDeleteProject(project: Project) {
+    const session = readSession();
+    if (!session) {
+      return;
+    }
+    const confirmed = window.confirm(`删除 ProjectFlow 中的项目“${project.name}”？这只会删除 ProjectFlow 保存的数据，不会删除你磁盘上的真实源码文件夹。`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingProjectId(project.id);
+    setError("");
+    try {
+      await deleteProject(session.accessToken, project.id);
+      setProjects((current) => current.filter((item) => item.id !== project.id));
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "项目删除失败");
+    } finally {
+      setDeletingProjectId("");
     }
   }
 
@@ -115,13 +138,25 @@ export default function ProjectsPage() {
 
           <div className="space-y-3">
             {projects.map((project) => (
-              <Link className="block rounded-lg border border-line p-4 transition hover:border-blue-200 hover:bg-blue-50/40" href={`/projects/${project.id}`} key={project.id}>
+              <article className="rounded-lg border border-line p-4 transition hover:border-blue-200 hover:bg-blue-50/40" key={project.id}>
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h3 className="font-semibold">{project.name}</h3>
+                    <Link className="font-semibold hover:text-brand" href={`/projects/${project.id}`}>{project.name}</Link>
                     <p className="mt-1 line-clamp-2 text-sm text-muted">{project.description || "暂未填写项目简介"}</p>
                   </div>
-                  <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-brand">{project.status}</span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-brand">{project.status}</span>
+                    <button
+                      className="inline-flex items-center gap-1 rounded-md border border-rose-200 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                      disabled={deletingProjectId === project.id}
+                      onClick={() => handleDeleteProject(project)}
+                      title="删除当前 ProjectFlow 项目记录，不删除本地真实源码文件夹。"
+                      type="button"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      {deletingProjectId === project.id ? "删除中" : "删除"}
+                    </button>
+                  </div>
                 </div>
                 {project.techStack.length > 0 ? (
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -130,7 +165,7 @@ export default function ProjectsPage() {
                     ))}
                   </div>
                 ) : null}
-              </Link>
+              </article>
             ))}
             {projects.length === 0 ? (
               <div className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-muted">
