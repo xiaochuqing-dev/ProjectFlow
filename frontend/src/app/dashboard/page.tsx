@@ -100,6 +100,7 @@ export default function DashboardPage() {
   );
   const { jobs, jobError, enqueueProjectAnalysis } = useProjectAnalysisJobs(selectedProjectId);
   const latestProjectJob = jobs.find((job) => job.jobType === "PROJECT") ?? null;
+  const analyzing = latestProjectJob?.status === "QUEUED" || latestProjectJob?.status === "RUNNING";
   const rawAnalysis = latestProjectJob?.status === "SUCCEEDED" ? latestProjectJob.projectResult : null;
   const analysisRejectedByNoise = rawAnalysis ? projectAnalysisContainsNoise(rawAnalysis) : false;
   const analysis = analysisRejectedByNoise ? null : rawAnalysis;
@@ -324,6 +325,23 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleRunAnalysis() {
+    const session = readSession();
+    if (!session || !selectedProjectId || !hasUsableProjectZip) {
+      setError("先导入包含源码、配置或文档的完整项目 zip，再运行项目画像分析。");
+      return;
+    }
+
+    setError("");
+    setNotice("");
+    try {
+      await enqueueProjectAnalysis();
+      setNotice("分析任务已提交。可离开或刷新页面，任务会继续运行。");
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "项目画像分析失败");
+    }
+  }
+
   async function handleScanWorkSessions() {
     const session = readSession();
     if (!session || !selectedProjectId) {
@@ -393,6 +411,7 @@ export default function DashboardPage() {
           projects={projects}
           selectedProjectId={selectedProjectId}
           onSelect={setSelectedProjectId}
+          placeholder={projects.length === 0 ? "暂无项目，导入 zip 即可创建" : "选择项目"}
           leadingExtras={
             <>
               {selectedProject ? <Badge label={selectedProject.status} /> : null}
@@ -425,9 +444,10 @@ export default function DashboardPage() {
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
           {/* 主列 */}
           <div className="space-y-5">
-            {/* 当前下一步引导卡：单一焦点 */}
-            <NextStepCard
+            {/* 项目接入卡：zip 导入常驻 + 本地接入并列 */}
+            <ProjectAccessCard
               step={currentStep}
+              hasSelectedProject={Boolean(selectedProjectId)}
               hasUsableProjectZip={hasUsableProjectZip}
               hasProjectZipMaterial={hasProjectZipMaterial}
               file={file}
@@ -454,9 +474,29 @@ export default function DashboardPage() {
                 title={selectedProject?.name ?? "先导入项目"}
                 actions={
                   selectedProjectId ? (
-                    <Link className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-hover" href="/project-intelligence">
-                      查看完整画像 <ArrowRight className="h-4 w-4" />
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        disabled={analyzing || !hasUsableProjectZip}
+                        onClick={handleRunAnalysis}
+                        title={hasUsableProjectZip ? "基于当前有效项目 zip 重新生成项目画像。" : "当前项目还没有可分析的源码、配置或文档目录结构。"}
+                      >
+                        {analyzing ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileCode2 className="h-3.5 w-3.5" />}
+                        {latestProjectJob?.status === "QUEUED"
+                          ? "等待分析"
+                          : analyzing
+                            ? "模型分析中"
+                            : analysis
+                              ? "重新分析"
+                              : configuredProvider
+                                ? "运行模型分析"
+                                : "本地规则分析"}
+                      </Button>
+                      <Link className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-hover" href="/project-intelligence">
+                        完整画像 <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </div>
                   ) : null
                 }
               />
@@ -602,11 +642,12 @@ export default function DashboardPage() {
 }
 
 /* ------------------------------------------------------------------ */
-/* 当前下一步引导卡                                                    */
+/* 项目接入卡：zip 导入常驻 + 本地接入并列                              */
 /* ------------------------------------------------------------------ */
 
-type NextStepCardProps = {
+type ProjectAccessCardProps = {
   step: Step;
+  hasSelectedProject: boolean;
   hasUsableProjectZip: boolean;
   hasProjectZipMaterial: boolean;
   file: File | null;
@@ -626,119 +667,141 @@ type NextStepCardProps = {
   onCopyGlobalRule: () => void;
 };
 
-function NextStepCard(props: NextStepCardProps) {
-  const { step } = props;
-  const stepMeta: Record<Step["kind"], { title: string; subtitle: string }> = {
-    no_project: { title: "导入项目", subtitle: "导入完整项目 zip，开始建立项目画像与结构理解。" },
-    no_material: { title: "导入完整 zip", subtitle: "当前项目还没有可分析的材料。导入完整项目 zip 后才能生成画像。" },
-    no_path: { title: "绑定真实路径", subtitle: "绑定本地项目文件夹后，才能扫描 Agent 结果和今日变化。" },
-    has_pending: { title: "确认变化", subtitle: `当前有 ${step.kind === "has_pending" ? step.count : 0} 条待确认变更，去变更审查集中处理。` },
-    scan_updates: { title: "扫描更新", subtitle: "项目已就绪。扫描 Agent 结果或今日变化，获取新的候选证据。" },
-  };
-  const meta = stepMeta[step.kind];
+function ProjectAccessCard(props: ProjectAccessCardProps) {
+  const { step, hasSelectedProject } = props;
+  const hint = accessHint(step, hasSelectedProject);
 
   return (
-    <Card shadow="cardLg" className="overflow-hidden border-brand/20">
-      {/* 顶部靛蓝强调条 */}
-      <div className="h-1 bg-brand" />
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">当前下一步</p>
-            <h2 className="mt-1 text-lg font-semibold text-ink">{meta.title}</h2>
-            <p className="mt-1 text-sm leading-6 text-muted">{meta.subtitle}</p>
-          </div>
-          <Badge label="Step" tone="brand" dot />
+    <Card shadow="card" padding="none" className="overflow-hidden">
+      {/* 顶部状态条：轻量提示当前阶段，但不门控导入入口 */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-brand-soft px-5 py-3">
+        <div className="flex items-center gap-2">
+          <Badge label="项目接入" tone="brand" dot />
+          <p className="text-sm text-body">{hint.title}</p>
         </div>
+        {hint.cta && hint.ctaHref ? (
+          <Link className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-hover" href={hint.ctaHref}>
+            {hint.cta} <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        ) : null}
+      </div>
 
-        <div className="mt-4">
-          {/* 不论处于哪一步，zip 导入始终可达（最常见的真实入口） */}
-          {(step.kind === "no_project" || step.kind === "no_material") ? (
-            <form onSubmit={props.onImportZip}>
-              <label className="block rounded-card border border-dashed border-lineStrong bg-surfaceAlt p-4 transition hover:border-brand">
-                <span className="mb-2 block text-sm font-medium text-body">导入完整项目 zip</span>
-                <input
-                  accept=".zip,application/zip"
-                  className="w-full text-sm text-muted"
-                  onChange={(event) => props.setFile(event.target.files?.[0] ?? null)}
-                  type="file"
-                />
-              </label>
-              <Button variant="primary" type="submit" className="mt-3 w-full" disabled={!props.file || props.importing}>
-                {props.importing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                {props.importing ? "导入中..." : "导入并生成基础画像"}
-              </Button>
-            </form>
-          ) : null}
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+        {/* 左栏：zip 导入 —— 始终显示，无论是否已选项目都能导入/替换 */}
+        <form className="space-y-3 border-b border-line p-5 lg:border-b-0 lg:border-r" onSubmit={props.onImportZip}>
+          <div className="flex items-center gap-2">
+            <Upload className="h-4 w-4 text-brand" />
+            <h3 className="text-sm font-semibold text-ink">导入 / 替换项目 zip</h3>
+          </div>
+          <p className="text-xs leading-5 text-muted">
+            {hasSelectedProject
+              ? "重新导入会覆盖当前项目的材料与结构理解。未选项目时导入会创建新项目。"
+              : "导入完整项目 zip，自动创建项目并生成基础画像与结构理解。"}
+          </p>
+          <label className="block rounded-field border border-dashed border-lineStrong bg-surfaceAlt p-4 transition hover:border-brand">
+            <span className="mb-2 block text-sm font-medium text-body">选择项目 zip</span>
+            <input
+              accept=".zip,application/zip"
+              className="w-full text-sm text-muted"
+              onChange={(event) => props.setFile(event.target.files?.[0] ?? null)}
+              type="file"
+            />
+          </label>
+          <Button variant="primary" type="submit" fullWidth disabled={!props.file || props.importing}>
+            {props.importing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {props.importing ? "导入中..." : "导入并生成基础画像"}
+          </Button>
+        </form>
 
-          {/* 绑定路径阶段：主操作聚焦保存路径，其余接入动作降为次级 */}
-          {step.kind === "no_path" ? (
-            <div>
-              <input
-                className="h-10 w-full rounded-field border border-line bg-elevated px-3 text-sm outline-none transition focus:border-brand focus-visible:shadow-focus"
-                onChange={(event) => props.setProjectPath(event.target.value)}
-                placeholder="真实项目文件夹路径"
-                value={props.projectPath}
-              />
-              <Button variant="primary" className="mt-3 w-full" disabled={props.savingProjectPath} onClick={props.onSavePath}>
-                {props.savingProjectPath ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                保存路径
-              </Button>
-            </div>
-          ) : null}
-
-          {/* 已绑定路径后：接入动作横向排列 */}
-          {step.kind !== "no_project" && step.kind !== "no_material" ? (
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={!props.projectPath.trim() || props.writingProtocol}
-                onClick={props.onWriteProtocol}
-                title="在目标项目生成 ProjectFlow 协议、上下文目录和结果收件箱。"
-              >
-                {props.writingProtocol ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileCode2 className="h-3.5 w-3.5" />}
-                写入/刷新协议
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={!props.projectPath.trim() || props.scanningAgentResults}
-                onClick={props.onScanAgentResults}
-                title="读取目标项目的 ProjectFlow 结果收件箱。"
-              >
-                {props.scanningAgentResults ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
-                扫描 Agent Result
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={props.syncingContext}
-                onClick={props.onSyncContext}
-                title="把已确认档案写回目标项目上下文目录。"
-              >
-                {props.syncingContext ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FolderTree className="h-3.5 w-3.5" />}
-                同步确认上下文
-              </Button>
-              <Button variant="secondary" size="sm" onClick={props.onCopyGlobalRule} title="复制给其他 Agent 使用的通用规则。">
-                <Clipboard className="h-3.5 w-3.5" />
-                复制规则
-              </Button>
-            </div>
-          ) : null}
-
-          {/* 有待确认变化：直接引导去变更审查 */}
-          {step.kind === "has_pending" ? (
-            <Link href="/tasks" className="mt-1 inline-flex w-full">
-              <Button variant="primary" className="w-full">
-                去变更审查处理 {step.count} 条 <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-          ) : null}
+        {/* 右栏：本地项目接入 */}
+        <div className="p-5">
+          <div className="flex items-center gap-2">
+            <FolderTree className="h-4 w-4 text-brand" />
+            <h3 className="text-sm font-semibold text-ink">本地项目接入</h3>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-muted">
+            绑定真实项目文件夹后，才能扫描 Agent 结果、读取 Git evidence、同步上下文。不会扫描用户主目录。
+          </p>
+          <input
+            className="mt-3 h-10 w-full rounded-field border border-line bg-elevated px-3 text-sm outline-none transition focus:border-brand focus-visible:shadow-focus disabled:cursor-not-allowed disabled:bg-surfaceAlt disabled:text-muted"
+            onChange={(event) => props.setProjectPath(event.target.value)}
+            placeholder={hasSelectedProject ? "真实项目文件夹路径" : "先在项目下拉选择一个项目"}
+            value={props.projectPath}
+            disabled={!hasSelectedProject}
+          />
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={!hasSelectedProject || !props.projectPath.trim() || props.savingProjectPath}
+              onClick={props.onSavePath}
+              title="只记录本地项目根目录，切换项目和刷新页面后继续复用，不写入目标项目文件。"
+            >
+              {props.savingProjectPath ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              保存路径
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!hasSelectedProject || !props.projectPath.trim() || props.writingProtocol}
+              onClick={props.onWriteProtocol}
+              title="在目标项目生成 ProjectFlow 协议、上下文目录和结果收件箱，供 Agent 按规则写回结果。"
+            >
+              {props.writingProtocol ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileCode2 className="h-3.5 w-3.5" />}
+              写入/刷新协议
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!hasSelectedProject || !props.projectPath.trim() || props.scanningAgentResults}
+              onClick={props.onScanAgentResults}
+              title="读取目标项目的 ProjectFlow 结果收件箱，把 Agent 写回内容转成待审查变更。"
+            >
+              {props.scanningAgentResults ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
+              扫描 Agent Result
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!hasSelectedProject || !props.projectPath.trim() || props.syncingContext}
+              onClick={props.onSyncContext}
+              title="把已经采纳和确认的项目档案写回目标项目上下文目录，供后续 Agent 读取。"
+            >
+              {props.syncingContext ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FolderTree className="h-3.5 w-3.5" />}
+              同步确认上下文
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!hasSelectedProject}
+              onClick={props.onCopyGlobalRule}
+              title="复制给其他 Agent 使用的通用规则，让它们按 ProjectFlow 协议输出结果。"
+            >
+              <Clipboard className="h-3.5 w-3.5" />
+              复制规则
+            </Button>
+          </div>
         </div>
       </div>
     </Card>
   );
+}
+
+function accessHint(step: Step, hasSelectedProject: boolean): { title: string; cta?: string; ctaHref?: string } {
+  switch (step.kind) {
+    case "no_project":
+      return { title: "还没有项目 —— 导入项目 zip 即可创建第一个项目。", cta: undefined };
+    case "no_material":
+      return { title: "当前项目还没有可分析的材料，导入完整 zip 后生成画像。", cta: undefined };
+    case "no_path":
+      return { title: "绑定本地项目文件夹路径后，才能扫描 Agent 结果与今日变化。", cta: undefined };
+    case "has_pending":
+      return { title: `当前有 ${step.count} 条待确认变更。`, cta: "去变更审查", ctaHref: "/tasks" };
+    case "scan_updates":
+      return { title: "项目已就绪，扫描 Agent Result 或刷新今日变化获取新候选。", cta: undefined };
+    default:
+      return { title: hasSelectedProject ? "项目接入就绪。" : "导入项目 zip 开始。" };
+  }
 }
 
 /* ------------------------------------------------------------------ */
