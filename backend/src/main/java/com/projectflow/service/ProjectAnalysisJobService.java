@@ -7,7 +7,9 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,40 +35,49 @@ public class ProjectAnalysisJobService {
     private final ProjectRepository projectRepository;
     private final ProjectAnalysisJobRunner jobRunner;
     private final ObjectMapper objectMapper;
+    private final TransactionTemplate transactionTemplate;
 
     public ProjectAnalysisJobService(
         ProjectAnalysisJobRepository jobRepository,
         ProjectRepository projectRepository,
         ProjectAnalysisJobRunner jobRunner,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        PlatformTransactionManager transactionManager
     ) {
         this.jobRepository = jobRepository;
         this.projectRepository = projectRepository;
         this.jobRunner = jobRunner;
         this.objectMapper = objectMapper;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     public ProjectAnalysisJobResponse startProjectAnalysis(UUID userId, UUID projectId) {
-        findOwnedProject(userId, projectId);
-        java.util.Optional<ProjectAnalysisJob> active = activeJob(projectId, ProjectAnalysisJobType.PROJECT, null);
-        if (active.isPresent()) {
-            return toResponse(active.get());
+        StartJobResult result = transactionTemplate.execute(status -> {
+            findOwnedProject(userId, projectId);
+            java.util.Optional<ProjectAnalysisJob> active = activeJob(projectId, ProjectAnalysisJobType.PROJECT, null);
+            return active
+                .map(job -> new StartJobResult(job, false))
+                .orElseGet(() -> new StartJobResult(jobRepository.save(new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.PROJECT, null)), true));
+        });
+        if (result.created()) {
+            jobRunner.execute(result.job().getId());
         }
-        ProjectAnalysisJob job = jobRepository.save(new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.PROJECT, null));
-        jobRunner.execute(job.getId());
-        return toResponse(job);
+        return toResponse(result.job());
     }
 
     public ProjectAnalysisJobResponse startFileAnalysis(UUID userId, UUID projectId, String path) {
-        findOwnedProject(userId, projectId);
         String normalizedPath = path.trim();
-        java.util.Optional<ProjectAnalysisJob> active = activeJob(projectId, ProjectAnalysisJobType.FILE, normalizedPath);
-        if (active.isPresent()) {
-            return toResponse(active.get());
+        StartJobResult result = transactionTemplate.execute(status -> {
+            findOwnedProject(userId, projectId);
+            java.util.Optional<ProjectAnalysisJob> active = activeJob(projectId, ProjectAnalysisJobType.FILE, normalizedPath);
+            return active
+                .map(job -> new StartJobResult(job, false))
+                .orElseGet(() -> new StartJobResult(jobRepository.save(new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.FILE, normalizedPath)), true));
+        });
+        if (result.created()) {
+            jobRunner.execute(result.job().getId());
         }
-        ProjectAnalysisJob job = jobRepository.save(new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.FILE, normalizedPath));
-        jobRunner.execute(job.getId());
-        return toResponse(job);
+        return toResponse(result.job());
     }
 
     @Transactional(readOnly = true)
@@ -183,5 +194,8 @@ public class ProjectAnalysisJobService {
             || lower.contains(".git/objects/")
             || lower.contains(".git/config")
             || lower.contains(".git/head");
+    }
+
+    private record StartJobResult(ProjectAnalysisJob job, boolean created) {
     }
 }
