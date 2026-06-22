@@ -25,20 +25,20 @@ public class ProjectAnalysisJobRunner {
 
     private final ProjectAnalysisJobRepository jobRepository;
     private final ModelUsageRecordRepository modelUsageRecordRepository;
-    private final ProjectIntelligenceService projectIntelligenceService;
+    private final ProjectAnalysisService projectAnalysisService;
     private final ProjectAnalysisRecordService projectAnalysisRecordService;
     private final ObjectMapper objectMapper;
 
     public ProjectAnalysisJobRunner(
         ProjectAnalysisJobRepository jobRepository,
         ModelUsageRecordRepository modelUsageRecordRepository,
-        ProjectIntelligenceService projectIntelligenceService,
+        ProjectAnalysisService projectAnalysisService,
         ProjectAnalysisRecordService projectAnalysisRecordService,
         ObjectMapper objectMapper
     ) {
         this.jobRepository = jobRepository;
         this.modelUsageRecordRepository = modelUsageRecordRepository;
-        this.projectIntelligenceService = projectIntelligenceService;
+        this.projectAnalysisService = projectAnalysisService;
         this.projectAnalysisRecordService = projectAnalysisRecordService;
         this.objectMapper = objectMapper;
     }
@@ -56,13 +56,13 @@ public class ProjectAnalysisJobRunner {
             jobRepository.save(job);
 
             if (job.getJobType() == ProjectAnalysisJobType.PROJECT) {
-                ProjectAnalysisResponse result = projectIntelligenceService.runProjectAnalysis(job.getUserId(), job.getProjectId());
+                ProjectAnalysisResponse result = projectAnalysisService.runProjectAnalysis(job.getUserId(), job.getProjectId());
                 UUID recordId = projectAnalysisRecordService.createProjectAnalysisRecord(job.getUserId(), job.getProjectId(), result);
                 String resultJson = objectMapper.writeValueAsString(result);
                 markSucceeded(jobId, resultJson, recordId);
                 recordUsage(job, "PROJECT_ANALYSIS", result.providerName(), result.modelUsed(), resultJson, startedAt);
             } else {
-                ProjectFileAnalysisResponse result = projectIntelligenceService.analyzeProjectFile(
+                ProjectFileAnalysisResponse result = projectAnalysisService.analyzeProjectFile(
                     job.getUserId(),
                     job.getProjectId(),
                     new ProjectFileAnalysisRequest(job.getFilePath())
