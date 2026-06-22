@@ -24,10 +24,12 @@ import com.projectflow.support.AppException;
 @Service
 public class AiProviderService {
     private final AiProviderRepository aiProviderRepository;
+    private final AiProviderUrlGuard aiProviderUrlGuard;
     private final HttpClient httpClient;
 
-    public AiProviderService(AiProviderRepository aiProviderRepository) {
+    public AiProviderService(AiProviderRepository aiProviderRepository, AiProviderUrlGuard aiProviderUrlGuard) {
         this.aiProviderRepository = aiProviderRepository;
+        this.aiProviderUrlGuard = aiProviderUrlGuard;
         this.httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .build();
@@ -50,7 +52,7 @@ public class AiProviderService {
         AiProvider provider = new AiProvider(userId);
         provider.update(
             request.name().trim(),
-            normalizeBaseUrl(request.baseUrl()),
+            aiProviderUrlGuard.validateBaseUrl(normalizeBaseUrl(request.baseUrl())),
             blankToNull(request.apiKey()),
             request.modelName().trim(),
             request.type(),
@@ -67,7 +69,7 @@ public class AiProviderService {
         AiProvider provider = findOwned(userId, providerId);
         provider.update(
             request.name().trim(),
-            normalizeBaseUrl(request.baseUrl()),
+            aiProviderUrlGuard.validateBaseUrl(normalizeBaseUrl(request.baseUrl())),
             blankToNull(request.apiKey()),
             request.modelName().trim(),
             request.type(),
@@ -95,7 +97,7 @@ public class AiProviderService {
 
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(provider.getBaseUrl() + "/chat/completions"))
+                .uri(aiProviderUrlGuard.chatCompletionsUri(provider.getBaseUrl()))
                 .timeout(Duration.ofSeconds(12))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + provider.getApiKey())

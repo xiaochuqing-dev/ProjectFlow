@@ -126,6 +126,30 @@ class V2CoreControllerTest {
     }
 
     @Test
+    void rejectsProviderUrlThatTargetsCloudMetadataEndpoint() throws Exception {
+        String token = register("metadata-provider-owner", "metadata-provider-owner@example.com");
+
+        mockMvc.perform(post("/api/ai-providers")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "name": "Metadata Endpoint",
+                      "baseUrl": "http://169.254.169.254/latest/meta-data",
+                      "apiKey": "sk-test-secret-value",
+                      "modelName": "metadata",
+                      "type": "OPENAI_COMPATIBLE",
+                      "temperature": 0.3,
+                      "maxTokens": 8192,
+                      "defaultEnabled": true,
+                      "purposeTags": ["项目分析"]
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("AI_PROVIDER_URL_BLOCKED"));
+    }
+
+    @Test
     void analyzesMaterialAndAppliesSuggestionsAfterConfirmation() throws Exception {
         String token = register("v2-owner", "v2-owner@example.com");
         String projectId = createProject(token, "V2 Project");
@@ -559,6 +583,19 @@ class V2CoreControllerTest {
             .contains("src/app/page.tsx")
             .contains("export default function Page()")
             .doesNotContain(".next-dev.err.log");
+    }
+
+    @Test
+    void rejectsProjectZipWhenUploadExceedsConfiguredBudget() throws Exception {
+        String token = register("zip-budget-owner", "zip-budget-owner@example.com");
+        byte[] oversizedZip = new byte[65 * 1024 * 1024];
+        MockMultipartFile file = new MockMultipartFile("file", "too-large.zip", "application/zip", oversizedZip);
+
+        mockMvc.perform(multipart("/api/project-imports/zip")
+                .file(file)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isPayloadTooLarge())
+            .andExpect(jsonPath("$.error.code").value("ZIP_TOO_LARGE"));
     }
 
     @Test

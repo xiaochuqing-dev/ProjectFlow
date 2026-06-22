@@ -1,12 +1,15 @@
 package com.projectflow.security;
 
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +18,10 @@ import io.jsonwebtoken.security.Keys;
 
 @Service
 public class JwtService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(JwtService.class);
+    private static final String DEFAULT_PLACEHOLDER_SECRET = "replace-with-at-least-32-random-bytes";
+    private static final int MIN_SECRET_BYTES = 32;
+
     private final SecretKey key;
     private final long accessTokenMinutes;
 
@@ -22,7 +29,7 @@ public class JwtService {
         @Value("${projectflow.jwt.secret:${JWT_SECRET:replace-with-at-least-32-random-bytes}}") String secret,
         @Value("${projectflow.jwt.access-token-minutes:${JWT_ACCESS_TOKEN_MINUTES:60}}") long accessTokenMinutes
     ) {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.key = Keys.hmacShaKeyFor(resolveSecretBytes(secret));
         this.accessTokenMinutes = accessTokenMinutes;
     }
 
@@ -45,5 +52,20 @@ public class JwtService {
             .getPayload()
             .getSubject();
         return UUID.fromString(subject);
+    }
+
+    private byte[] resolveSecretBytes(String secret) {
+        String trimmed = secret == null ? "" : secret.trim();
+        if (DEFAULT_PLACEHOLDER_SECRET.equals(trimmed)) {
+            LOGGER.warn("JWT_SECRET is using the default placeholder. ProjectFlow generated an in-memory development key; all sessions expire after restart and this is not safe for production.");
+            byte[] generated = new byte[64];
+            new SecureRandom().nextBytes(generated);
+            return generated;
+        }
+        byte[] bytes = trimmed.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException("JWT_SECRET must be at least 32 bytes long.");
+        }
+        return bytes;
     }
 }

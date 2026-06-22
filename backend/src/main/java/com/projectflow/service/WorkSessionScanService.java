@@ -38,17 +38,20 @@ public class WorkSessionScanService {
     private final ProjectMemoryRepository memoryRepository;
     private final WorkSessionRepository workSessionRepository;
     private final AgentSignatureFeedbackRepository feedbackRepository;
+    private final LocalProjectPathGuard localProjectPathGuard;
 
     public WorkSessionScanService(
         ProjectRepository projectRepository,
         ProjectMemoryRepository memoryRepository,
         WorkSessionRepository workSessionRepository,
-        AgentSignatureFeedbackRepository feedbackRepository
+        AgentSignatureFeedbackRepository feedbackRepository,
+        LocalProjectPathGuard localProjectPathGuard
     ) {
         this.projectRepository = projectRepository;
         this.memoryRepository = memoryRepository;
         this.workSessionRepository = workSessionRepository;
         this.feedbackRepository = feedbackRepository;
+        this.localProjectPathGuard = localProjectPathGuard;
     }
 
     @Transactional
@@ -57,10 +60,7 @@ public class WorkSessionScanService {
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
         ProjectMemory memory = memoryRepository.findByProjectId(project.getId())
             .orElseThrow(() -> new AppException("PROJECT_PATH_REQUIRED", "Bind a local project path before scanning", HttpStatus.BAD_REQUEST));
-        Path projectRoot = resolveProjectRoot(memory.getLocalProjectPath());
-        if (!Files.isDirectory(projectRoot.resolve(".git"))) {
-            throw new AppException("PROJECT_GIT_REQUIRED", "Bound project path is not a Git repository", HttpStatus.BAD_REQUEST);
-        }
+        Path projectRoot = localProjectPathGuard.requireGitProjectDirectory(memory.getLocalProjectPath()).path();
 
         List<String> warnings = new ArrayList<>();
         String branchName = runGit(projectRoot, warnings, "branch", "--show-current").trim();
@@ -206,20 +206,6 @@ public class WorkSessionScanService {
             }
         }
         return evidence.hasChanges() ? evidence.toResponse() : null;
-    }
-
-    private Path resolveProjectRoot(String projectPath) {
-        if (projectPath == null || projectPath.isBlank()) {
-            throw new AppException("PROJECT_PATH_REQUIRED", "Bind a local project path before scanning", HttpStatus.BAD_REQUEST);
-        }
-        Path path = Path.of(projectPath).toAbsolutePath().normalize();
-        if (path.getParent() == null || path.equals(path.getRoot())) {
-            throw new AppException("PROJECT_PATH_TOO_BROAD", "Project folder path is too broad", HttpStatus.BAD_REQUEST);
-        }
-        if (!Files.isDirectory(path)) {
-            throw new AppException("PROJECT_PATH_NOT_FOUND", "Project folder path was not found", HttpStatus.BAD_REQUEST);
-        }
-        return path;
     }
 
     private String runGit(Path projectRoot, List<String> warnings, String... args) {

@@ -2,7 +2,6 @@ package com.projectflow.service;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -115,6 +114,9 @@ public class ProjectIntelligenceService {
     private final TaskRepository taskRepository;
     private final DevLogRepository devLogRepository;
     private final ObjectMapper objectMapper;
+    private final AiProviderUrlGuard aiProviderUrlGuard;
+    private final LocalProjectPathGuard localProjectPathGuard;
+    private final ProjectZipUploadGuard projectZipUploadGuard;
     private final HttpClient httpClient;
 
     public ProjectIntelligenceService(
@@ -130,7 +132,10 @@ public class ProjectIntelligenceService {
         ProjectFactSourceRepository factSourceRepository,
         TaskRepository taskRepository,
         DevLogRepository devLogRepository,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        AiProviderUrlGuard aiProviderUrlGuard,
+        LocalProjectPathGuard localProjectPathGuard,
+        ProjectZipUploadGuard projectZipUploadGuard
     ) {
         this.projectRepository = projectRepository;
         this.aiProviderRepository = aiProviderRepository;
@@ -145,6 +150,9 @@ public class ProjectIntelligenceService {
         this.taskRepository = taskRepository;
         this.devLogRepository = devLogRepository;
         this.objectMapper = objectMapper;
+        this.aiProviderUrlGuard = aiProviderUrlGuard;
+        this.localProjectPathGuard = localProjectPathGuard;
+        this.projectZipUploadGuard = projectZipUploadGuard;
         this.httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(8))
             .build();
@@ -840,7 +848,7 @@ public class ProjectIntelligenceService {
             "max_tokens", Math.min(provider.getMaxTokens(), outputTokenLimit)
         );
         HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(provider.getBaseUrl() + "/chat/completions"))
+            .uri(aiProviderUrlGuard.chatCompletionsUri(provider.getBaseUrl()))
             .timeout(MODEL_REQUEST_TIMEOUT)
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer " + provider.getApiKey())
@@ -1587,17 +1595,7 @@ public class ProjectIntelligenceService {
     }
 
     private Path resolveLocalProjectRoot(String projectPath) {
-        if (projectPath == null || projectPath.isBlank()) {
-            throw new AppException("PROJECT_PATH_REQUIRED", "Project folder path is required", HttpStatus.BAD_REQUEST);
-        }
-        Path path = Path.of(projectPath).toAbsolutePath().normalize();
-        if (path.getParent() == null || path.equals(path.getRoot())) {
-            throw new AppException("PROJECT_PATH_TOO_BROAD", "Project folder path is too broad", HttpStatus.BAD_REQUEST);
-        }
-        if (!Files.isDirectory(path)) {
-            throw new AppException("PROJECT_PATH_NOT_FOUND", "Project folder path was not found", HttpStatus.BAD_REQUEST);
-        }
-        return path;
+        return localProjectPathGuard.requireProjectDirectory(projectPath).path();
     }
 
     private ProjectMaterial findOwnedMaterial(UUID userId, UUID materialId) {
@@ -1631,6 +1629,7 @@ public class ProjectIntelligenceService {
     }
 
     private ZipProjectScan scanZip(MultipartFile file) {
+        projectZipUploadGuard.assertUploadBudget(file.getSize());
         try {
             return scanZip(file, StandardCharsets.UTF_8);
         } catch (AppException utf8Exception) {
@@ -1656,6 +1655,7 @@ public class ProjectIntelligenceService {
             boolean hasDeployConfig = false;
             boolean hasSource = false;
             int count = 0;
+            long indexedBytes = 0;
             ZipEntry entry;
 
             while ((entry = zipInputStream.getNextEntry()) != null && count < MAX_ZIP_ENTRIES) {
@@ -1681,6 +1681,7 @@ public class ProjectIntelligenceService {
 
                 if (!isSensitivePath(relativeName) && (isKeyZipFile(relativeName) || isIndexableTextFile(relativeName))) {
                     String content = readSafeZipText(zipInputStream);
+                    indexedBytes = projectZipUploadGuard.assertReadBudget(indexedBytes, content.getBytes(StandardCharsets.UTF_8).length);
                     if (isKeyZipFile(relativeName)) {
                         keyFileContent.put(relativeName, content);
                         keyFiles.append("\n### ").append(relativeName).append("\n");
