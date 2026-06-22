@@ -49,7 +49,7 @@ class AiOutputControllerTest {
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.type").value("WEEKLY_REPORT"))
-            .andExpect(jsonPath("$.data.provider").value("mock-provider"))
+            .andExpect(jsonPath("$.data.provider").value("local-template"))
             .andExpect(jsonPath("$.data.content").value(containsString("完成 AI Mock 输出")))
             .andExpect(jsonPath("$.data.content").value(containsString("已确认变更")))
             .andExpect(jsonPath("$.data.content").value(containsString("Evidence Bundle 确认：今日变化概览")))
