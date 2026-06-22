@@ -39,6 +39,7 @@ import com.projectflow.dto.V2ProjectDtos.ProjectMemoryUpdateRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectSnapshotResponse;
 import com.projectflow.entity.MaterialSourceType;
 import com.projectflow.service.AuthService;
+import com.projectflow.service.ProjectChangeReviewService;
 import com.projectflow.service.ProjectIntelligenceService;
 import com.projectflow.service.ProjectAnalysisJobService;
 import com.projectflow.service.ProjectAnalysisRecordService;
@@ -53,6 +54,7 @@ public class ProjectIntelligenceController {
     private final ProjectAnalysisJobService projectAnalysisJobService;
     private final ProjectAnalysisRecordService projectAnalysisRecordService;
     private final ProjectMemoryService projectMemoryService;
+    private final ProjectChangeReviewService projectChangeReviewService;
     private final AuthService authService;
 
     public ProjectIntelligenceController(
@@ -60,12 +62,14 @@ public class ProjectIntelligenceController {
         ProjectAnalysisJobService projectAnalysisJobService,
         ProjectAnalysisRecordService projectAnalysisRecordService,
         ProjectMemoryService projectMemoryService,
+        ProjectChangeReviewService projectChangeReviewService,
         AuthService authService
     ) {
         this.projectIntelligenceService = projectIntelligenceService;
         this.projectAnalysisJobService = projectAnalysisJobService;
         this.projectAnalysisRecordService = projectAnalysisRecordService;
         this.projectMemoryService = projectMemoryService;
+        this.projectChangeReviewService = projectChangeReviewService;
         this.authService = authService;
     }
 
@@ -265,7 +269,7 @@ public class ProjectIntelligenceController {
         @PathVariable UUID projectId
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.listChanges(user.id(), projectId));
+        return ApiResponse.ok(projectChangeReviewService.listChanges(user.id(), projectId));
     }
 
     @GetMapping("/project-changes/{changeId}")
@@ -274,7 +278,7 @@ public class ProjectIntelligenceController {
         @PathVariable UUID changeId
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.getChange(user.id(), changeId));
+        return ApiResponse.ok(projectChangeReviewService.getChange(user.id(), changeId));
     }
 
     @PatchMapping("/project-changes/{changeId}")
@@ -284,7 +288,7 @@ public class ProjectIntelligenceController {
         @Valid @RequestBody ProjectChangePatchRequest request
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.updateChange(user.id(), changeId, request));
+        return ApiResponse.ok(projectChangeReviewService.updateChange(user.id(), changeId, request));
     }
 
     @PostMapping("/project-changes/{changeId}/accept")
@@ -293,7 +297,7 @@ public class ProjectIntelligenceController {
         @PathVariable UUID changeId
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.acceptChange(user.id(), changeId));
+        return ApiResponse.ok(projectChangeReviewService.acceptChange(user.id(), changeId));
     }
 
     @PostMapping("/project-changes/{changeId}/ignore")
@@ -302,7 +306,7 @@ public class ProjectIntelligenceController {
         @PathVariable UUID changeId
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.ignoreChange(user.id(), changeId));
+        return ApiResponse.ok(projectChangeReviewService.ignoreChange(user.id(), changeId));
     }
 
     @GetMapping("/projects/{projectId}/fact-sources")
