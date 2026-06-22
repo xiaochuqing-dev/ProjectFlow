@@ -916,6 +916,7 @@ export function analyzeProjectMaterial(token: string, materialId: string): Promi
   });
 }
 
+/** @deprecated Legacy V2 suggestion API. Primary review flow should use ProjectChange APIs. */
 export function listAiSuggestions(token: string, projectId: string): Promise<AiSuggestion[]> {
   return requestJson<AiSuggestion[]>(`/projects/${projectId}/suggestions`, {
     headers: {
@@ -924,6 +925,7 @@ export function listAiSuggestions(token: string, projectId: string): Promise<AiS
   });
 }
 
+/** @deprecated Legacy V2 suggestion API. Primary review flow should use ProjectChange APIs. */
 export function updateAiSuggestion(
   token: string,
   suggestionId: string,
@@ -941,6 +943,7 @@ export function updateAiSuggestion(
   });
 }
 
+/** @deprecated Legacy V2 suggestion API. Primary review flow should use ProjectChange APIs. */
 export function applyAiSuggestions(token: string, projectId: string, suggestionIds: string[]): Promise<ApplySuggestionsResult> {
   return requestJson<ApplySuggestionsResult>(`/projects/${projectId}/suggestions/apply`, {
     method: "POST",
@@ -952,6 +955,7 @@ export function applyAiSuggestions(token: string, projectId: string, suggestionI
   });
 }
 
+/** @deprecated Legacy V2 suggestion API. Primary review flow should use ProjectChange APIs. */
 export function ignoreAiSuggestion(token: string, suggestionId: string): Promise<AiSuggestion> {
   return requestJson<AiSuggestion>(`/ai-suggestions/${suggestionId}/ignore`, {
     method: "POST",

@@ -65,7 +65,7 @@ public class AiOutputService {
         String content = renderMarkdown(project, tasks, logs, acceptedChanges, request.type(), request.fromDate(), request.toDate());
 
         AiOutput output = new AiOutput(project.getId());
-        output.update(request.type(), title, content, request.fromDate(), request.toDate(), "mock-provider");
+        output.update(request.type(), title, content, request.fromDate(), request.toDate(), "local-template");
         AiOutput savedOutput = aiOutputRepository.save(output);
         modelUsageRecordRepository.save(successUsageRecord(project.getId(), request.type(), content, acceptedChanges, startedAt));
         return toResponse(savedOutput);
@@ -359,7 +359,7 @@ public class AiOutputService {
         return new ModelUsageRecord(
             projectId,
             "AI_OUTPUT_" + type.name(),
-            "mock-provider",
+            "local-template",
             "local-template",
             0,
             completionTokens,

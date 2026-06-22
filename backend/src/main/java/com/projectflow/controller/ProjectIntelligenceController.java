@@ -145,7 +145,10 @@ public class ProjectIntelligenceController {
         return ApiResponse.ok(null);
     }
 
+    // Legacy V2 material/suggestion endpoints remain for historical data compatibility.
+    // The primary V3.2 intake flow is project zip import -> Evidence/ProjectChange review.
     @PostMapping("/projects/{projectId}/materials/text")
+    @Deprecated(since = "3.2", forRemoval = false)
     ApiResponse<ProjectMaterialResponse> createTextMaterial(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
         @PathVariable UUID projectId,
@@ -156,6 +159,7 @@ public class ProjectIntelligenceController {
     }
 
     @PostMapping("/projects/{projectId}/materials/file")
+    @Deprecated(since = "3.2", forRemoval = false)
     ApiResponse<ProjectMaterialResponse> createFileMaterial(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
         @PathVariable UUID projectId,
@@ -167,6 +171,7 @@ public class ProjectIntelligenceController {
     }
 
     @PostMapping("/projects/{projectId}/materials/zip")
+    @Deprecated(since = "3.2", forRemoval = false)
     ApiResponse<ProjectMaterialResponse> createZipMaterial(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
         @PathVariable UUID projectId,
@@ -186,6 +191,7 @@ public class ProjectIntelligenceController {
     }
 
     @PostMapping("/project-materials/{materialId}/analyze")
+    @Deprecated(since = "3.2", forRemoval = false)
     ApiResponse<AnalyzeMaterialResponse> analyzeMaterial(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
         @PathVariable UUID materialId
@@ -195,6 +201,7 @@ public class ProjectIntelligenceController {
     }
 
     @GetMapping("/projects/{projectId}/suggestions")
+    @Deprecated(since = "3.2", forRemoval = false)
     ApiResponse<List<AiSuggestionResponse>> listSuggestions(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
         @PathVariable UUID projectId
@@ -204,6 +211,7 @@ public class ProjectIntelligenceController {
     }
 
     @PatchMapping("/ai-suggestions/{suggestionId}")
+    @Deprecated(since = "3.2", forRemoval = false)
     ApiResponse<AiSuggestionResponse> updateSuggestion(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
         @PathVariable UUID suggestionId,
@@ -214,6 +222,7 @@ public class ProjectIntelligenceController {
     }
 
     @PostMapping("/ai-suggestions/{suggestionId}/ignore")
+    @Deprecated(since = "3.2", forRemoval = false)
     ApiResponse<AiSuggestionResponse> ignoreSuggestion(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
         @PathVariable UUID suggestionId
@@ -223,6 +232,7 @@ public class ProjectIntelligenceController {
     }
 
     @PostMapping("/projects/{projectId}/suggestions/apply")
+    @Deprecated(since = "3.2", forRemoval = false)
     ApiResponse<ApplySuggestionsResponse> applySuggestions(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
         @PathVariable UUID projectId,

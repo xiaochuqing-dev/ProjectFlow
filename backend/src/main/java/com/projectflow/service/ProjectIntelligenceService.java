@@ -381,12 +381,14 @@ public class ProjectIntelligenceService {
     }
 
     @Transactional
+    @Deprecated(since = "3.2", forRemoval = false)
     public ProjectMaterialResponse createTextMaterial(UUID userId, UUID projectId, MaterialSourceType sourceType, String content) {
         ProjectSpace project = findOwnedProject(userId, projectId);
         return toMaterialResponse(saveMaterial(project.getId(), sourceType, null, content));
     }
 
     @Transactional
+    @Deprecated(since = "3.2", forRemoval = false)
     public ProjectMaterialResponse createFileMaterial(UUID userId, UUID projectId, MaterialSourceType sourceType, MultipartFile file) {
         ProjectSpace project = findOwnedProject(userId, projectId);
         String fileName = cleanFileName(file.getOriginalFilename());
@@ -398,6 +400,7 @@ public class ProjectIntelligenceService {
     }
 
     @Transactional
+    @Deprecated(since = "3.2", forRemoval = false)
     public ProjectMaterialResponse createZipMaterial(UUID userId, UUID projectId, MultipartFile file) {
         ProjectSpace project = findOwnedProject(userId, projectId);
         String content = projectZipScanService.scan(file).content();
@@ -429,6 +432,7 @@ public class ProjectIntelligenceService {
     }
 
     @Transactional
+    @Deprecated(since = "3.2", forRemoval = false)
     public AnalyzeMaterialResponse analyzeMaterial(UUID userId, UUID materialId) {
         ProjectMaterial material = findOwnedMaterial(userId, materialId);
         ProjectSpace project = findOwnedProjectById(material.getProjectId());
@@ -443,6 +447,7 @@ public class ProjectIntelligenceService {
     }
 
     @Transactional(readOnly = true)
+    @Deprecated(since = "3.2", forRemoval = false)
     public List<AiSuggestionResponse> listSuggestions(UUID userId, UUID projectId) {
         ProjectSpace project = findOwnedProject(userId, projectId);
         return suggestionRepository.findByProjectIdOrderByCreatedAtDesc(project.getId())
@@ -452,6 +457,7 @@ public class ProjectIntelligenceService {
     }
 
     @Transactional
+    @Deprecated(since = "3.2", forRemoval = false)
     public AiSuggestionResponse updateSuggestion(UUID userId, UUID suggestionId, AiSuggestionPatchRequest request) {
         AiSuggestion suggestion = findOwnedSuggestion(userId, suggestionId);
         suggestion.update(suggestion.getType(), request.title().trim(), request.reason().trim(), writePayload(request.payload()));
@@ -459,6 +465,7 @@ public class ProjectIntelligenceService {
     }
 
     @Transactional
+    @Deprecated(since = "3.2", forRemoval = false)
     public AiSuggestionResponse ignoreSuggestion(UUID userId, UUID suggestionId) {
         AiSuggestion suggestion = findOwnedSuggestion(userId, suggestionId);
         suggestion.markIgnored();
@@ -466,6 +473,7 @@ public class ProjectIntelligenceService {
     }
 
     @Transactional
+    @Deprecated(since = "3.2", forRemoval = false)
     public ApplySuggestionsResponse applySuggestions(UUID userId, UUID projectId, List<UUID> suggestionIds) {
         if (suggestionIds.isEmpty()) {
             throw new AppException("NO_SUGGESTIONS_SELECTED", "Select at least one suggestion to apply", HttpStatus.BAD_REQUEST);
