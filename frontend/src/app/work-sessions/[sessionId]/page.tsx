@@ -58,13 +58,8 @@ export default function WorkSessionDetailPage() {
         {session ? (
           <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-5">
-              <Card title="变化概览">
-                <p className="text-sm leading-7 text-slate-700">
-                  本轮变化覆盖 {session.changedFiles} 个文件，新增 {session.addedLines} 行、删除 {session.deletedLines} 行。
-                  主要模块：{session.affectedModules.length ? session.affectedModules.join("、") : "未明确"}。
-                  这份详情用于判断本轮工作是否应该生成证据包、是否需要进入变更审查，以及后续是否可沉淀到项目档案。
-                </p>
-              </Card>
+              <ChangeIntentCard session={session} />
+              <FileChangeSummary session={session} />
 
               <Card title="变更文件">
                 <div className="grid gap-2 md:grid-cols-2">
@@ -80,16 +75,7 @@ export default function WorkSessionDetailPage() {
                 </div>
               </Card>
 
-              <Card title="Git 证据">
-                <div className="space-y-3">
-                  {session.evidence.map((item) => (
-                    <div className="flex gap-2 rounded-md bg-slate-50 p-3 text-sm leading-6 text-slate-700" key={item}>
-                      <GitCommitHorizontal className="mt-1 h-4 w-4 shrink-0 text-slate-500" />
-                      <span>{item}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
+              <EvidenceTimeline evidence={session.evidence} />
             </div>
 
             <aside className="space-y-3">
@@ -106,6 +92,70 @@ export default function WorkSessionDetailPage() {
         ) : null}
       </div>
     </AppShell>
+  );
+}
+
+function ChangeIntentCard({ session }: { session: WorkSessionCandidate }) {
+  return (
+    <Card title="具体改了什么">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+        <div>
+          <p className="text-base font-semibold leading-7 text-slate-950">{readableSessionTitle(session)}</p>
+          <p className="mt-2 text-sm leading-7 text-slate-700">
+            本轮变化覆盖 {session.changedFiles} 个文件，新增 {session.addedLines} 行，删除 {session.deletedLines} 行。
+            主要影响 {session.affectedModules.length ? session.affectedModules.join("、") : "未识别模块"}。
+          </p>
+          <p className="mt-2 text-sm leading-7 text-slate-600">
+            {primaryEvidenceSentence(session)}
+          </p>
+        </div>
+        <div className="rounded-md border border-line bg-slate-50 p-3 text-sm">
+          <p className="text-xs text-muted">判断用途</p>
+          <p className="mt-1 leading-6 text-slate-700">确认是否生成证据包，并决定是否进入变更审查。</p>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function FileChangeSummary({ session }: { session: WorkSessionCandidate }) {
+  const groups = summarizeFiles(session.files);
+  return (
+    <Card title="影响范围">
+      <div className="grid gap-3 md:grid-cols-3">
+        {groups.map((group) => (
+          <div className="rounded-md border border-line bg-slate-50 p-3" key={group.label}>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-slate-950">{group.label}</p>
+              <span className="rounded-full bg-white px-2 py-0.5 text-xs text-slate-600">{group.count}</span>
+            </div>
+            <p className="line-clamp-2 text-xs leading-5 text-slate-600">{group.hint}</p>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function EvidenceTimeline({ evidence }: { evidence: string[] }) {
+  return (
+    <Card title="Git 证据">
+      <div className="space-y-3">
+        {evidence.length ? evidence.map((item, index) => (
+          <div className="grid gap-3 rounded-md border border-line bg-slate-50 p-3 text-sm md:grid-cols-[32px_minmax(0,1fr)]" key={`${item}-${index}`}>
+            <div className="grid h-8 w-8 place-items-center rounded-full bg-white text-slate-600">
+              <GitCommitHorizontal className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-slate-500">证据 {index + 1}</p>
+              <p className="mt-1 break-words leading-6 text-slate-700">{item}</p>
+            </div>
+          </div>
+        )) : (
+          <p className="rounded-md bg-slate-50 p-3 text-sm text-muted">暂无 Git 证据。</p>
+        )}
+      </div>
+    </Card>
   );
 }
 
@@ -127,4 +177,32 @@ function Metric({ label, value }: { label: string; value: string }) {
       <p className="mt-2 break-all text-xl font-semibold text-slate-950">{value}</p>
     </div>
   );
+}
+
+function readableSessionTitle(session: WorkSessionCandidate) {
+  if (session.taskIntent && !session.taskIntent.startsWith("Git commit") && !session.taskIntent.includes("WORKTREE")) {
+    return session.taskIntent;
+  }
+  return `更新 ${session.affectedModules[0] ?? "项目"} 相关内容`;
+}
+
+function primaryEvidenceSentence(session: WorkSessionCandidate) {
+  const firstEvidence = session.evidence.find((item) => item && !item.startsWith("提交线索"));
+  if (firstEvidence) {
+    return firstEvidence;
+  }
+  return `改动集中在 ${session.files.slice(0, 3).map(compactProjectPath).join("、") || "未识别文件"}。`;
+}
+
+function summarizeFiles(files: string[]) {
+  const groups = [
+    { label: "界面与交互", count: files.filter((file) => /frontend|app|components|\.tsx$|\.jsx$|\.css$/.test(file)).length, hint: "可能影响页面显示、按钮行为或用户流程。" },
+    { label: "后端与数据", count: files.filter((file) => /backend|controller|service|repository|entity|\.java$|\.py$/.test(file)).length, hint: "可能影响接口、业务规则或数据写入。" },
+    { label: "文档与配置", count: files.filter((file) => /docs|README|\.md$|package\.json|pom\.xml|\.yml$|\.json$/.test(file)).length, hint: "可能影响说明、依赖、启动或构建。" },
+  ];
+  const known = groups.reduce((total, group) => total + group.count, 0);
+  if (files.length > known) {
+    groups.push({ label: "其他文件", count: files.length - known, hint: "需要结合文件路径判断具体影响。" });
+  }
+  return groups.filter((group) => group.count > 0);
 }

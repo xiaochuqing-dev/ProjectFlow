@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { BookOpenText, CalendarDays, CheckCircle2, Clock3, FilePenLine, History, RefreshCw, Save, ShieldAlert } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -237,6 +238,8 @@ export default function DevLogsPage() {
               completedCount={completedTasks.length}
               evolutionCount={dayEvolution.length}
               logCount={dayLogs.length}
+              projectId={selectedProjectId}
+              reviewDate={reviewDate}
               riskReady={Boolean(memory?.currentRisks && !memory.currentRisks.includes("暂无"))}
             />
             <SourcePanel
@@ -313,19 +316,24 @@ function DailySourceGrid({
   completedCount,
   evolutionCount,
   logCount,
+  projectId,
+  reviewDate,
   riskReady,
 }: {
   completedCount: number;
   evolutionCount: number;
   logCount: number;
+  projectId: string;
+  reviewDate: string;
   riskReady: boolean;
 }) {
   const items = [
     ["当日日志", `${logCount} 条`, logCount > 0],
     ["项目演进", `${evolutionCount} 条`, evolutionCount > 0],
     ["完成任务", `${completedCount} 个`, completedCount > 0],
-    ["风险决策", riskReady ? "有" : "无", riskReady],
+    ["风险决策", riskReady ? "1 组" : "0 组", riskReady],
   ] as const;
+  const href = `/dev-logs/sources?projectId=${projectId}&date=${reviewDate}`;
   return (
     <section className="rounded-md border border-line bg-white p-5 shadow-panel">
       <div className="mb-3 flex items-center gap-2">
@@ -334,13 +342,22 @@ function DailySourceGrid({
       </div>
       <div className="grid grid-cols-2 gap-2">
         {items.map(([label, value, ready]) => (
-          <div className={`rounded-md border px-3 py-2 ${ready ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-line bg-slate-50 text-slate-500"}`} key={label}>
-            <p className="text-xs">{label}</p>
-            <p className="mt-1 font-semibold">{value}</p>
-          </div>
+          <SourceStateCard href={href} key={label} label={label} ready={ready} value={value} />
         ))}
       </div>
     </section>
+  );
+}
+
+function SourceStateCard({ href, label, ready, value }: { href: string; label: string; ready: boolean; value: string }) {
+  return (
+    <Link className={`rounded-md border px-3 py-2 transition hover:-translate-y-0.5 hover:shadow-sm ${ready ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-line bg-slate-50 text-slate-500"}`} href={href}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs">{label}</p>
+        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-slate-500">查看</span>
+      </div>
+      <p className="mt-1 font-semibold">{value}</p>
+    </Link>
   );
 }
 

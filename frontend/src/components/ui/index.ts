@@ -3,6 +3,7 @@ export {
   SectionHeader,
   Button,
   Badge,
+  InfoBubble,
   Stat,
   Field,
   EmptyState,

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Clipboard, Download, FileText, History, Layers3, RefreshCw, Save, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { compactProjectPath } from "@/lib/project-insights";
@@ -225,10 +226,10 @@ export default function AiReviewPage() {
                 <h2 className="font-semibold">生成依据</h2>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <OutputSourceMetric label="项目档案" ready={Boolean(memory)} value={memory ? "已连接" : "缺失"} />
-                <OutputSourceMetric label="成长记录" ready={evolutionRecords.length > 0} value={`${evolutionRecords.length} 条`} />
-                <OutputSourceMetric label="每日回顾" ready={reviewLogs.length > 0} value={`${reviewLogs.length} 条`} />
-                <OutputSourceMetric label="任务证据" ready={tasks.length > 0} value={`${tasks.length} 条`} />
+                <OutputSourceMetric href={`/project-intelligence/fact-sources?projectId=${selectedProjectId}`} label="项目档案" ready={Boolean(memory)} value={memory ? "已连接" : "缺失"} />
+                <OutputSourceMetric href={`/project-intelligence/timeline?projectId=${selectedProjectId}`} label="成长记录" ready={evolutionRecords.length > 0} value={`${evolutionRecords.length} 条`} />
+                <OutputSourceMetric href={`/dev-logs/sources?projectId=${selectedProjectId}&date=${new Date().toISOString().slice(0, 10)}`} label="每日回顾" ready={reviewLogs.length > 0} value={`${reviewLogs.length} 条`} />
+                <OutputSourceMetric href={`/tasks?projectId=${selectedProjectId}`} label="任务证据" ready={tasks.length > 0} value={`${tasks.length} 条`} />
               </div>
               <p className="mt-3 text-xs leading-5 text-muted">
                 输出优先使用已确认档案和成长记录；缺少来源时仍可生成草稿，但需要人工补充。
@@ -361,12 +362,12 @@ function SourceQuickFilter({ active, label, onClick, value }: { active: boolean;
   );
 }
 
-function OutputSourceMetric({ label, ready, value }: { label: string; ready: boolean; value: string }) {
+function OutputSourceMetric({ href, label, ready, value }: { href: string; label: string; ready: boolean; value: string }) {
   return (
-    <div className={`rounded-md border px-3 py-2 ${ready ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-line bg-slate-50 text-slate-500"}`}>
+    <Link className={`rounded-md border px-3 py-2 transition hover:-translate-y-0.5 hover:shadow-sm ${ready ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-line bg-slate-50 text-slate-500"}`} href={href}>
       <p className="text-xs">{label}</p>
       <p className="mt-1 font-semibold">{value}</p>
-    </div>
+    </Link>
   );
 }
 

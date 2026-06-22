@@ -250,6 +250,15 @@ public class ProjectIntelligenceController {
         return ApiResponse.ok(projectIntelligenceService.listChanges(user.id(), projectId));
     }
 
+    @GetMapping("/project-changes/{changeId}")
+    ApiResponse<ProjectChangeResponse> getChange(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID changeId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectIntelligenceService.getChange(user.id(), changeId));
+    }
+
     @PatchMapping("/project-changes/{changeId}")
     ApiResponse<ProjectChangeResponse> updateChange(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,

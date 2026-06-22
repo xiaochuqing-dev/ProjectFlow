@@ -1,12 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, DatabaseZap, History, RefreshCw, Save, ShieldCheck, Trash2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { DatabaseZap, RefreshCw, Save, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
   getProjectMemory,
-  deleteProjectAnalysisRecord,
   listAiSuggestions,
   listProjectAnalysisRecords,
   listProjectEvolutionRecords,
@@ -43,6 +43,16 @@ const fieldConfig: Array<{
 ];
 
 export default function ProjectIntelligencePage() {
+  return (
+    <Suspense fallback={<AppShell eyebrow="长期档案" title="项目画像"><div className="min-h-[calc(100vh-4rem)] bg-surface p-8"><div className="h-1 bg-slate-950" /></div></AppShell>}>
+      <ProjectIntelligencePageContent />
+    </Suspense>
+  );
+}
+
+function ProjectIntelligencePageContent() {
+  const searchParams = useSearchParams();
+  const queryProjectId = searchParams.get("projectId") ?? "";
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [memory, setMemory] = useState<ProjectMemory | null>(null);
@@ -53,7 +63,6 @@ export default function ProjectIntelligencePage() {
   const [analysisRecords, setAnalysisRecords] = useState<ProjectAnalysisRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [deletingRecordId, setDeletingRecordId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -69,12 +78,22 @@ export default function ProjectIntelligencePage() {
   const latestSourceByField = useMemo(() => {
     const entries = new Map<string, ProjectFactSource>();
     for (const source of factSources) {
-      if (!entries.has(source.fieldKey)) {
+      const existing = entries.get(source.fieldKey);
+      if (!existing || new Date(source.updatedAt).getTime() > new Date(existing.updatedAt).getTime()) {
         entries.set(source.fieldKey, source);
       }
     }
     return entries;
   }, [factSources]);
+  const pendingFactsByField = useMemo(() => {
+    const entries = new Map<string, AiSuggestion[]>();
+    for (const suggestion of pendingFacts) {
+      const fieldKey = suggestionFieldKey(suggestion);
+      if (!fieldKey) continue;
+      entries.set(fieldKey, [...(entries.get(fieldKey) ?? []), suggestion]);
+    }
+    return entries;
+  }, [pendingFacts]);
 
   useEffect(() => {
     const session = readSession();
@@ -86,11 +105,11 @@ export default function ProjectIntelligencePage() {
     listProjects(session.accessToken)
       .then((items) => {
         setProjects(items);
-        setSelectedProjectId(resolveSelectedProjectId(items));
+        setSelectedProjectId(queryProjectId || resolveSelectedProjectId(items));
       })
       .catch((exception) => setError(exception instanceof Error ? exception.message : "项目列表加载失败"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [queryProjectId]);
 
   useEffect(() => {
     refreshProjectContext(selectedProjectId);
@@ -196,26 +215,6 @@ export default function ProjectIntelligencePage() {
     }
   }
 
-  async function handleDeleteAnalysisRecord(recordId: string) {
-    const session = readSession();
-    if (!session) {
-      return;
-    }
-
-    setDeletingRecordId(recordId);
-    setError("");
-    setNotice("");
-    try {
-      await deleteProjectAnalysisRecord(session.accessToken, recordId);
-      setAnalysisRecords((current) => current.filter((record) => record.id !== recordId));
-      setNotice("分析记录已删除。");
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "分析记录删除失败");
-    } finally {
-      setDeletingRecordId("");
-    }
-  }
-
   return (
     <AppShell eyebrow="长期档案" title="项目画像">
       <div className="min-h-[calc(100vh-4rem)] bg-surface p-8">
@@ -291,7 +290,10 @@ export default function ProjectIntelligencePage() {
             <div className="flex items-center justify-between border-b border-line px-5 py-4">
               <div className="flex items-center gap-2">
                 <DatabaseZap className="h-4 w-4 text-slate-700" />
-                <h2 className="font-semibold">可编辑项目档案</h2>
+                <div>
+                  <h2 className="font-semibold">项目档案审查工作台</h2>
+                  <p className="mt-1 text-xs text-muted">默认展示已确认内容和来源。只有需要修正时才展开编辑框。</p>
+                </div>
               </div>
               <button
                 className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
@@ -299,27 +301,21 @@ export default function ProjectIntelligencePage() {
                 type="submit"
               >
                 {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {saving ? "保存中..." : "保存档案"}
+                {saving ? "保存中..." : "保存手动修正"}
               </button>
             </div>
             <div className="grid gap-0 md:grid-cols-2">
               {fieldConfig.map((field) => {
                 const latestSource = latestSourceByField.get(field.key);
                 return (
-                <label className="border-b border-line p-5 odd:md:border-r" key={field.key}>
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="font-semibold text-slate-950">{field.label}</span>
-                    <span className={`rounded-md px-2 py-1 text-xs ${latestSource?.confirmedByUser ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-muted"}`}>
-                      {latestSource ? sourceLabel(latestSource) : field.source}
-                    </span>
-                  </div>
-                  <textarea
-                    className="w-full resize-y rounded-md border border-line bg-slate-50 px-3 py-2 text-sm leading-6 outline-none focus:border-slate-950"
-                    onChange={(event) => updateField(field.key, event.target.value)}
-                    rows={field.rows}
+                  <ArchiveFieldReview
+                    candidateCount={pendingFactsByField.get(field.key)?.length ?? 0}
+                    field={field}
+                    key={field.key}
+                    latestSource={latestSource}
+                    onChange={(value) => updateField(field.key, value)}
                     value={formValue[field.key]}
                   />
-                </label>
                 );
               })}
             </div>
@@ -327,142 +323,50 @@ export default function ProjectIntelligencePage() {
           </form>
 
           <aside className="space-y-5">
-            <div className="rounded-md border border-line bg-white shadow-panel">
-              <div className="flex items-center justify-between border-b border-line px-5 py-4">
-                <h2 className="font-semibold">分析记录</h2>
-                <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-muted">{analysisRecords.length} 条</span>
+            <section className="rounded-md border border-line bg-white shadow-panel">
+              <div className="border-b border-line px-5 py-4">
+                <h2 className="font-semibold">项目档案入口</h2>
               </div>
-              <div className="divide-y divide-line">
-                {analysisRecords.slice(0, 8).map((record) => (
-                  <article className="p-4 text-sm" key={record.id}>
-                    <div className="mb-2 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                      <div className="min-w-0">
-                        <p
-                          className="truncate font-medium text-slate-950"
-                          title={record.recordType === "FILE" ? record.filePath ?? "文件分析" : "项目分析"}
-                        >
-                          {record.recordType === "FILE" ? record.filePath ?? "文件分析" : "项目分析"}
-                        </p>
-                        <p className="mt-1 line-clamp-2 leading-5 text-slate-600">{record.summary}</p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <Link
-                          className="rounded-md border border-line px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                          href={`/project-analysis-records/${record.id}`}
-                        >
-                          查看
-                        </Link>
-                        <button
-                          aria-label="删除分析记录"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-muted hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50"
-                          disabled={deletingRecordId === record.id}
-                          onClick={() => handleDeleteAnalysisRecord(record.id)}
-                          type="button"
-                        >
-                          {deletingRecordId === record.id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                      <span>{record.modelUsed ? "模型" : "本地规则"}</span>
-                      <span>{record.providerName ?? "无 API"}</span>
-                      <span>{new Date(record.createdAt).toLocaleString()}</span>
-                    </div>
-                  </article>
-                ))}
-                {analysisRecords.length === 0 ? <p className="p-5 text-sm text-muted">暂无分析记录。运行项目分析或文件分析后会在这里出现，可随时删除。</p> : null}
+              <div className="space-y-3 p-5">
+                <ArchiveEntryCard
+                  count={evolutionRecords.length}
+                  href={`/project-intelligence/timeline?projectId=${selectedProjectId}`}
+                  label="成长时间线"
+                  text="按时间查看项目如何演进。"
+                />
+                <ArchiveEntryCard
+                  count={factSources.length}
+                  href={`/project-intelligence/fact-sources?projectId=${selectedProjectId}`}
+                  label="字段来源链"
+                  text="解释每个档案字段的来源。"
+                />
+                <ArchiveEntryCard
+                  count={pendingFacts.length}
+                  href={`/tasks?projectId=${selectedProjectId}&type=project-memory`}
+                  label="待确认档案"
+                  text="审查还没进入正式档案的候选。"
+                />
+                <ArchiveEntryCard
+                  count={evolutionRecords.length}
+                  href={`/project-intelligence/changes?projectId=${selectedProjectId}`}
+                  label="档案变化"
+                  text="查看每次档案更新改了什么。"
+                />
+                <ArchiveEntryCard
+                  count={analysisRecords.length}
+                  href={`/project-intelligence/analysis-records?projectId=${selectedProjectId}`}
+                  label="分析记录"
+                  text={analysisRecords[0] ? `最近：${analysisRecords[0].summary}` : "暂无分析记录。"}
+                />
               </div>
-            </div>
+            </section>
 
-            <div className="rounded-md border border-line bg-white p-5 shadow-panel">
-              <div className="mb-3 flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                <h2 className="font-semibold">确认原则</h2>
-              </div>
-              <p className="text-sm leading-6 text-slate-600">
-                AI、zip 分析和 agent result 都只能生成候选档案。用户在这里确认后，才进入正式项目档案，并作为成果输出、每日回顾和 agent 上下文的优先来源。
+            <section className="rounded-md border border-line bg-white p-5 shadow-panel">
+              <p className="font-semibold text-slate-950">确认原则</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                AI、zip 分析和 agent result 都只是候选。用户确认后，才进入正式项目档案和输出来源。
               </p>
-            </div>
-
-            <div className="rounded-md border border-line bg-white shadow-panel">
-              <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
-                <div className="flex items-center gap-2">
-                  <History className="h-4 w-4 text-slate-700" />
-                  <h2 className="font-semibold">成长时间线</h2>
-                </div>
-                <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-muted">{evolutionRecords.length} 条</span>
-              </div>
-              <div className="divide-y divide-line">
-                {evolutionRecords.slice(0, 5).map((record) => (
-                  <article className="p-4 text-sm" key={record.id}>
-                    <div className="mb-1 flex items-center justify-between gap-3">
-                      <p className="font-medium text-slate-950">{record.summary}</p>
-                      <span className="shrink-0 text-xs text-muted">{new Date(record.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    <p className="line-clamp-3 whitespace-pre-line leading-5 text-slate-600">{record.detectedChanges || "已采纳项目变化。"}</p>
-                  </article>
-                ))}
-                {evolutionRecords.length === 0 ? (
-                  <div className="p-5 text-sm leading-6 text-muted">
-                    采纳变更后，这里会按时间记录项目如何成长，并成为每日回顾、周报、README 草稿的输出来源。
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="rounded-md border border-line bg-white shadow-panel">
-              <div className="border-b border-line px-5 py-4">
-                <h2 className="font-semibold">字段来源链</h2>
-              </div>
-              <div className="divide-y divide-line">
-                {factSources.slice(0, 8).map((source) => (
-                  <article className="p-4 text-sm" key={source.id}>
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <p className="font-medium text-slate-950">{fieldLabel(source.fieldKey)}</p>
-                      <span className={`rounded-md px-2 py-1 text-xs ${source.confirmedByUser ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-muted"}`}>
-                        {source.sourceType}
-                      </span>
-                    </div>
-                    <p className="line-clamp-2 leading-5 text-slate-600">{source.value}</p>
-                    <p className="mt-2 text-xs text-muted">
-                      {source.confidence} · {source.confirmedByUser ? "用户确认" : "待确认"} · {new Date(source.updatedAt).toLocaleString()}
-                    </p>
-                  </article>
-                ))}
-                {factSources.length === 0 ? <p className="p-5 text-sm text-muted">保存项目档案或采纳变更后，会生成字段级来源记录。</p> : null}
-              </div>
-            </div>
-
-            <div className="rounded-md border border-line bg-white shadow-panel">
-              <div className="border-b border-line px-5 py-4">
-                <h2 className="font-semibold">待确认档案</h2>
-              </div>
-              <div className="divide-y divide-line">
-                {pendingFacts.slice(0, 6).map((suggestion) => (
-                  <article className="p-4 text-sm" key={suggestion.id}>
-                    <p className="font-medium text-slate-950">{suggestion.title}</p>
-                    <p className="mt-1 line-clamp-3 leading-5 text-slate-600">{suggestion.reason}</p>
-                  </article>
-                ))}
-                {pendingFacts.length === 0 ? <p className="p-5 text-sm text-muted">暂无项目档案类候选变更。</p> : null}
-              </div>
-            </div>
-
-            <div className="rounded-md border border-line bg-white shadow-panel">
-              <div className="flex items-center gap-2 border-b border-line px-5 py-4">
-                <History className="h-4 w-4 text-slate-700" />
-                <h2 className="font-semibold">最近档案变化</h2>
-              </div>
-              <div className="divide-y divide-line">
-                {evolutionRecords.slice(0, 4).map((record) => (
-                  <article className="p-4 text-sm" key={record.id}>
-                    <p className="font-medium text-slate-950">{record.summary}</p>
-                    <p className="mt-1 line-clamp-3 whitespace-pre-line leading-5 text-slate-600">{record.detectedChanges}</p>
-                  </article>
-                ))}
-                {evolutionRecords.length === 0 ? <p className="p-5 text-sm text-muted">采纳变更后会产生演进记录。</p> : null}
-              </div>
-            </div>
+            </section>
           </aside>
         </div>
 
@@ -505,6 +409,74 @@ function sourceLabel(source: ProjectFactSource) {
   return `${source.sourceType} · ${source.confirmedByUser ? "已确认" : source.confidence}`;
 }
 
-function fieldLabel(fieldKey: string) {
-  return fieldConfig.find((field) => field.key === fieldKey)?.label ?? fieldKey;
+function ArchiveFieldReview({
+  candidateCount,
+  field,
+  latestSource,
+  onChange,
+  value,
+}: {
+  candidateCount: number;
+  field: { key: keyof ProjectMemoryPayload; label: string; source: string; rows: number };
+  latestSource?: ProjectFactSource;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  return (
+    <section className="border-b border-line p-5 odd:md:border-r">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold text-slate-950">{field.label}</h3>
+          <p className="mt-1 text-xs text-muted">
+            {latestSource ? `更新于 ${new Date(latestSource.updatedAt).toLocaleString()}` : field.source}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <span className={`rounded-md px-2 py-1 text-xs ${latestSource?.confirmedByUser ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-muted"}`}>
+            {latestSource ? sourceLabel(latestSource) : "暂无来源"}
+          </span>
+          {candidateCount ? <span className="rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-800">候选 {candidateCount}</span> : null}
+        </div>
+      </div>
+      <p className="min-h-20 whitespace-pre-line rounded-md border border-line bg-slate-50 p-3 text-sm leading-6 text-slate-700">
+        {value || "暂无已确认内容。采纳结构化变更或运行项目分析后，会形成可审查候选。"}
+      </p>
+      {latestSource?.sourceId ? <p className="mt-2 break-all font-mono text-xs text-muted">sourceId: {latestSource.sourceId}</p> : null}
+      <details className="mt-3 rounded-md border border-line bg-white">
+        <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          手动修正字段
+        </summary>
+        <div className="border-t border-line p-3">
+          <textarea
+            className="w-full resize-y rounded-md border border-line bg-white px-3 py-2 text-sm leading-6 outline-none focus:border-slate-950"
+            onChange={(event) => onChange(event.target.value)}
+            rows={field.rows}
+            value={value}
+          />
+        </div>
+      </details>
+    </section>
+  );
+}
+
+function suggestionFieldKey(suggestion: AiSuggestion) {
+  const payloadField = suggestion.payload.fieldKey;
+  if (typeof payloadField === "string") {
+    return payloadField;
+  }
+  const title = suggestion.title.toLowerCase();
+  const match = fieldConfig.find((field) => title.includes(field.label.toLowerCase()) || title.includes(String(field.key).toLowerCase()));
+  return match?.key ?? "";
+}
+
+function ArchiveEntryCard({ count, href, label, text }: { count: number; href: string; label: string; text: string }) {
+  return (
+    <Link className="block rounded-md border border-line bg-slate-50 p-4 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm" href={href}>
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-semibold text-slate-950">{label}</p>
+        <span className="rounded-full bg-white px-2.5 py-1 text-xs text-slate-600">{count}</span>
+      </div>
+      <p className="mt-2 text-sm leading-5 text-slate-600">{text}</p>
+    </Link>
+  );
 }

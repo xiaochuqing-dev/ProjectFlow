@@ -586,6 +586,11 @@ public class ProjectIntelligenceService {
             .toList();
     }
 
+    @Transactional(readOnly = true)
+    public ProjectChangeResponse getChange(UUID userId, UUID changeId) {
+        return toChangeResponse(findOwnedChange(userId, changeId));
+    }
+
     @Transactional
     public ProjectChangeResponse updateChange(UUID userId, UUID changeId, ProjectChangePatchRequest request) {
         ProjectChange change = findOwnedChange(userId, changeId);

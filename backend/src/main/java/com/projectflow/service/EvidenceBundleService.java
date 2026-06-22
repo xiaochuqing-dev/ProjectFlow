@@ -26,17 +26,20 @@ public class EvidenceBundleService {
     private final WorkSessionRepository workSessionRepository;
     private final EvidenceBundleRepository evidenceBundleRepository;
     private final ProjectChangeRepository projectChangeRepository;
+    private final ProjectChangeSchemaRepairService projectChangeSchemaRepairService;
 
     public EvidenceBundleService(
         ProjectRepository projectRepository,
         WorkSessionRepository workSessionRepository,
         EvidenceBundleRepository evidenceBundleRepository,
-        ProjectChangeRepository projectChangeRepository
+        ProjectChangeRepository projectChangeRepository,
+        ProjectChangeSchemaRepairService projectChangeSchemaRepairService
     ) {
         this.projectRepository = projectRepository;
         this.workSessionRepository = workSessionRepository;
         this.evidenceBundleRepository = evidenceBundleRepository;
         this.projectChangeRepository = projectChangeRepository;
+        this.projectChangeSchemaRepairService = projectChangeSchemaRepairService;
     }
 
     @Transactional
@@ -61,6 +64,7 @@ public class EvidenceBundleService {
     }
 
     private EvidenceBundleResponse toResponse(EvidenceBundle bundle) {
+        projectChangeSchemaRepairService.ensureEvidenceBundleSourceTypeAllowed();
         return projectChangeRepository.findBySourceTypeAndSourceRef(ProjectChangeSourceType.EVIDENCE_BUNDLE, bundle.getId().toString())
             .map(change -> bundle.toResponse(status(change), nextAction(change), change.getId()))
             .orElseGet(() -> bundle.toResponse("READY_FOR_CHANGE", "GENERATE_CHANGE", null));

@@ -18,6 +18,12 @@ assert.match(dashboard, /今日变化闭环/, "dashboard should name the post-de
 assert.match(dashboard, /生成证据包/, "dashboard should let users create evidence packages from work sessions");
 assert.match(dashboard, /生成候选变更/, "dashboard should let users turn evidence into reviewable changes");
 assert.match(dashboard, /采纳后会写入项目档案和事实来源/, "dashboard should explain what happens after review");
+assert.doesNotMatch(
+  dashboard,
+  /!bundleBySession\.has\(bundle\.workSessionId\)/,
+  "orphan evidence bundles should be compared against visible work sessions, not against their own bundle map",
+);
+assert.match(dashboard, /workSessionIds/, "dashboard should keep evidence bundles visible when the matching work session is no longer in the current slice");
 
 assert.match(tasks, /采纳后写入/, "change review should preview where accepted facts go");
 assert.match(tasks, /changeMemoryTargets/, "change review should derive project-memory target fields");

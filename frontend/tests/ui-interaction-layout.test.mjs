@@ -6,6 +6,9 @@ const root = process.cwd();
 const dashboard = readFileSync(join(root, "src/app/dashboard/page.tsx"), "utf8");
 const devLogs = readFileSync(join(root, "src/app/dev-logs/page.tsx"), "utf8");
 const outputs = readFileSync(join(root, "src/app/ai-review/page.tsx"), "utf8");
+const primitives = readFileSync(join(root, "src/components/ui/primitives.tsx"), "utf8");
+const workSessionDetail = readFileSync(join(root, "src/app/work-sessions/[sessionId]/page.tsx"), "utf8");
+const changeDetail = readFileSync(join(root, "src/app/project-changes/[changeId]/page.tsx"), "utf8");
 
 assert.match(dashboard, /showFlowGuide/, "dashboard should open the onboarding flow from a button instead of always showing the full guide");
 assert.match(dashboard, /FlowGuideDialog/, "dashboard should render the flow guide in a standalone dialog");
@@ -17,13 +20,31 @@ assert.match(dashboard, /InteractiveStat/, "dashboard metrics should be clickabl
 assert.match(dashboard, /statsFocus/, "dashboard should use metric clicks to focus related content");
 assert.match(dashboard, /ArchitectureQuickEntry/, "dashboard should put a compact architecture entry in the right rail");
 assert.match(dashboard, /架构入口/, "right rail should expose the architecture summary entry");
+assert.match(dashboard, /ActivityGroup/, "recent activity should be grouped by review state instead of one flat mixed feed");
+assert.match(dashboard, /activityImpactSummary/, "recent activity should describe what changed, not only that something changed");
+assert.match(dashboard, /今日变化在左侧闭环处理/, "recent activity should not duplicate the main daily change loop");
+assert.match(dashboard, /InfoBubble/, "non-clickable project status and model state should render as information bubbles, not button-like controls");
 
 assert.match(outputs, /SourceQuickFilter/, "output source pills should be clickable source filters");
 assert.match(outputs, /activeSourcePanel/, "output page should switch visible source detail from top pills");
 assert.match(outputs, /SourceCardList/, "output source details should use compact source cards");
 
 assert.match(devLogs, /DailySourceGrid/, "daily review sources should use a compact source grid");
+assert.match(devLogs, /SourceStateCard/, "daily review source state should be rendered as compact status cards");
 assert.match(devLogs, /SourceCardList/, "daily review source panels should render cards instead of long raw paragraphs");
 assert.doesNotMatch(devLogs, /<p className="whitespace-pre-line"/, "daily review source items should not render long template paragraphs");
+
+assert.match(primitives, /hover:-translate-y-0\.5/, "clickable buttons should provide clear hover movement");
+assert.match(primitives, /active:translate-y-0/, "clickable buttons should provide active press feedback");
+
+assert.match(workSessionDetail, /具体改了什么/, "git evidence detail page should explicitly explain what changed");
+assert.match(workSessionDetail, /ChangeIntentCard/, "git evidence detail page should summarize change intent");
+assert.match(workSessionDetail, /FileChangeSummary/, "git evidence detail page should classify changed files");
+assert.match(workSessionDetail, /EvidenceTimeline/, "git evidence detail page should show evidence as structured timeline items");
+
+assert.match(changeDetail, /自动化审查/, "structured change detail should be positioned as automated review");
+assert.match(changeDetail, /证据卡片/, "structured change detail should show evidence cards before manual correction");
+assert.match(changeDetail, /建议沉淀到项目档案/, "structured change detail should show archive candidates before manual correction");
+assert.match(changeDetail, /修正 AI 总结/, "manual change editing should be a secondary correction action");
 
 console.log("ui interaction layout checks passed");

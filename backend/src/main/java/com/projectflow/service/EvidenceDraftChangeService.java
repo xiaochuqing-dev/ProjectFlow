@@ -14,6 +14,7 @@ import com.projectflow.entity.ProjectChange;
 import com.projectflow.entity.ProjectChangeImpactLevel;
 import com.projectflow.entity.ProjectChangeKind;
 import com.projectflow.entity.ProjectChangeSourceType;
+import com.projectflow.entity.ProjectChangeStatus;
 import com.projectflow.repository.EvidenceBundleRepository;
 import com.projectflow.repository.ProjectChangeRepository;
 import com.projectflow.repository.ProjectRepository;
@@ -21,18 +22,23 @@ import com.projectflow.support.AppException;
 
 @Service
 public class EvidenceDraftChangeService {
+    private static final int PROJECT_CHANGE_TITLE_MAX_LENGTH = 180;
+
     private final ProjectRepository projectRepository;
     private final EvidenceBundleRepository evidenceBundleRepository;
     private final ProjectChangeRepository projectChangeRepository;
+    private final ProjectChangeSchemaRepairService projectChangeSchemaRepairService;
 
     public EvidenceDraftChangeService(
         ProjectRepository projectRepository,
         EvidenceBundleRepository evidenceBundleRepository,
-        ProjectChangeRepository projectChangeRepository
+        ProjectChangeRepository projectChangeRepository,
+        ProjectChangeSchemaRepairService projectChangeSchemaRepairService
     ) {
         this.projectRepository = projectRepository;
         this.evidenceBundleRepository = evidenceBundleRepository;
         this.projectChangeRepository = projectChangeRepository;
+        this.projectChangeSchemaRepairService = projectChangeSchemaRepairService;
     }
 
     @Transactional
@@ -42,8 +48,14 @@ public class EvidenceDraftChangeService {
         projectRepository.findByIdAndUserId(bundle.getProjectId(), userId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
         EvidenceBundleResponse evidence = bundle.toResponse();
+        projectChangeSchemaRepairService.ensureEvidenceBundleSourceTypeAllowed();
         ProjectChange change = projectChangeRepository.findBySourceTypeAndSourceRef(ProjectChangeSourceType.EVIDENCE_BUNDLE, evidenceBundleId.toString())
             .orElseGet(() -> new ProjectChange(bundle.getProjectId(), null));
+        if (change.getStatus() == ProjectChangeStatus.ACCEPTED
+            || change.getStatus() == ProjectChangeStatus.IGNORED
+            || change.getStatus() == ProjectChangeStatus.MERGED) {
+            return toResponse(change);
+        }
         change.update(
             ProjectChangeSourceType.EVIDENCE_BUNDLE,
             evidenceBundleId.toString(),
@@ -78,7 +90,8 @@ public class EvidenceDraftChangeService {
     }
 
     private String title(EvidenceBundleResponse evidence) {
-        return "Evidence Bundle 候选变更：" + (evidence.taskIntent().isBlank() ? evidence.branchName() : evidence.taskIntent());
+        String base = evidence.taskIntent().isBlank() ? evidence.branchName() : evidence.taskIntent();
+        return trimToMax("Evidence Bundle 候选变更：" + base, PROJECT_CHANGE_TITLE_MAX_LENGTH);
     }
 
     private String summary(EvidenceBundleResponse evidence) {
@@ -100,6 +113,13 @@ public class EvidenceDraftChangeService {
             return "- 未记录";
         }
         return String.join("\n", values.stream().map(value -> "- " + value).toList());
+    }
+
+    private String trimToMax(String value, int maxLength) {
+        if (value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength - 3).trim() + "...";
     }
 
     private ProjectChangeResponse toResponse(ProjectChange change) {

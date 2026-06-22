@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -22,6 +22,7 @@ import {
   Button,
   Card,
   EmptyState,
+  InfoBubble,
   PageContainer,
   ProjectContextBar,
   SectionHeader,
@@ -110,6 +111,7 @@ export default function DashboardPage() {
   const [draftingChangeFor, setDraftingChangeFor] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const projectContextRequestRef = useRef(0);
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId),
@@ -193,21 +195,15 @@ export default function DashboardPage() {
 
   async function refreshProjectContext(projectId: string) {
     const session = readSession();
+    const requestId = projectContextRequestRef.current + 1;
+    projectContextRequestRef.current = requestId;
+    clearProjectContextViewState();
+
     if (!session || !projectId) {
-      setMaterials([]);
-      setSuggestions([]);
-      setEvolutionRecords([]);
-      setEvidenceBundles([]);
-      setChangeConflicts([]);
-      setChanges([]);
-      setOutputs([]);
-      setTasks([]);
-      setMemory(null);
-      setProjectPath("");
-      setWorkSessionScan(null);
       return;
     }
 
+    setLoading(true);
     try {
       const [materialItems, suggestionItems, evolutionItems, taskItems, memoryRecord, workSessions, bundles, conflicts, changeItems, outputItems] = await Promise.all([
         listProjectMaterials(session.accessToken, projectId),
@@ -221,6 +217,9 @@ export default function DashboardPage() {
         listProjectChanges(session.accessToken, projectId),
         listAiOutputs(session.accessToken, projectId),
       ]);
+      if (requestId !== projectContextRequestRef.current) {
+        return;
+      }
       setMaterials(materialItems);
       setSuggestions(suggestionItems);
       setEvolutionRecords(evolutionItems);
@@ -233,8 +232,32 @@ export default function DashboardPage() {
       setProjectPath(memoryRecord.localProjectPath ?? "");
       setWorkSessionScan(workSessions.length ? workSessionListResult(projectId, memoryRecord.localProjectPath ?? "", workSessions) : null);
     } catch (exception) {
+      if (requestId !== projectContextRequestRef.current) {
+        return;
+      }
+      clearProjectContextViewState();
       setError(exception instanceof Error ? exception.message : "项目上下文加载失败");
+    } finally {
+      if (requestId === projectContextRequestRef.current) {
+        setLoading(false);
+      }
     }
+  }
+
+  function clearProjectContextViewState() {
+    setMaterials([]);
+    setSuggestions([]);
+    setEvolutionRecords([]);
+    setEvidenceBundles([]);
+    setChangeConflicts([]);
+    setChanges([]);
+    setOutputs([]);
+    setTasks([]);
+    setMemory(null);
+    setProjectPath("");
+    setWorkSessionScan(null);
+    setScanWarnings([]);
+    setStatsFocus("");
   }
 
   async function handleImportZip(event: FormEvent<HTMLFormElement>) {
@@ -502,11 +525,12 @@ export default function DashboardPage() {
                 <Upload className="h-3.5 w-3.5" />
                 添加项目
               </Button>
-              {selectedProject ? <Badge label={selectedProject.status} /> : null}
-              <Badge
+              {selectedProject ? <InfoBubble label={selectedProject.status} title="当前项目阶段，仅展示状态，不是操作按钮。" /> : null}
+              <InfoBubble
                 label={configuredProvider ? `模型：${configuredProvider.name}` : "未配置模型"}
                 tone={configuredProvider ? "success" : "warning"}
                 dot
+                title={configuredProvider ? "当前可用于项目画像分析的模型配置。" : "未配置模型时仍可使用本地规则分析。"}
               />
               <Button
                 variant="ghost"
@@ -1226,8 +1250,9 @@ type EvidenceFlowPanelProps = {
 function EvidenceFlowPanel(props: EvidenceFlowPanelProps) {
   const bundleBySession = new Map(props.bundles.map((bundle) => [bundle.workSessionId, bundle]));
   const visibleSessions = props.workSessions.slice(0, 3);
+  const workSessionIds = new Set(visibleSessions.map((session) => session.sessionId));
   const orphanBundles = props.bundles
-    .filter((bundle) => !bundleBySession.has(bundle.workSessionId) || !props.workSessions.some((session) => session.sessionId === bundle.workSessionId))
+    .filter((bundle) => !workSessionIds.has(bundle.workSessionId))
     .slice(0, Math.max(0, 3 - visibleSessions.length));
 
   return (
@@ -1438,36 +1463,33 @@ function ActivityFeed(props: ActivityFeedProps) {
     badge: React.ReactNode;
     badgeTone: "brand" | "warning" | "success" | "slate";
     title: string;
+    impact: string;
     href?: string;
     hrefLabel?: string;
   };
 
-  const items: FeedItem[] = [
-    ...props.pendingSuggestions.slice(0, 3).map<FeedItem>((suggestion) => ({
+  const pendingItems = props.pendingSuggestions.slice(0, 3).map<FeedItem>((suggestion) => ({
       id: `sug-${suggestion.id}`,
       badge: "待确认",
       badgeTone: "warning",
       title: suggestion.title,
+      impact: "候选信息尚未进入项目档案，审查后才会影响后续输出。",
       href: "/tasks",
       hrefLabel: "审查",
-    })),
-    ...props.evolutionRecords.slice(0, 3).map<FeedItem>((record) => ({
+    }));
+  const acceptedItems = props.evolutionRecords.slice(0, 3).map<FeedItem>((record) => ({
       id: `evo-${record.id}`,
       badge: "已采纳",
       badgeTone: "success",
       title: record.summary,
-    })),
-    ...props.workSessions.slice(0, 3).map<FeedItem>((session) => ({
-      id: `ws-${session.sessionId}`,
-      badge: session.agentType === "UNKNOWN" ? "今日候选" : session.agentType,
-      badgeTone: "brand",
-      title: session.taskIntent || "未补充任务意图",
-      href: `/work-sessions/${session.sessionId}?projectId=${props.selectedProjectId}`,
-      hrefLabel: "查看",
-    })),
+      impact: activityImpactSummary(record.detectedChanges || record.summary, "已沉淀到项目成长记录，可用于每日回顾和成果输出。"),
+    }));
+  const groups = [
+    { key: "pending", title: "待审查", items: pendingItems, empty: "暂无待审查候选。" },
+    { key: "accepted", title: "已入档", items: acceptedItems, empty: "暂无已采纳变化。" },
   ];
 
-  if (items.length === 0) {
+  if (groups.every((group) => group.items.length === 0)) {
     return (
       <div className="p-5">
         <p className="text-sm leading-6 text-muted">
@@ -1492,38 +1514,80 @@ function ActivityFeed(props: ActivityFeedProps) {
   return (
     <div>
       <div className="border-b border-line px-5 py-3">
-        <Button
-          variant="secondary"
-          size="sm"
-          fullWidth
-          disabled={!props.hasProjectPath || props.scanningWorkSessions}
-          onClick={props.onScanWorkSessions}
-        >
-          {props.scanningWorkSessions ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
-          刷新今日变化
-        </Button>
+        <div className="flex items-center justify-between gap-3 rounded-field bg-surfaceAlt px-3 py-2 text-xs text-muted">
+          <span>今日变化在左侧闭环处理，这里只留档案审计摘要。</span>
+          <InfoBubble label={`${props.workSessions.length} 个今日候选`} />
+        </div>
       </div>
-      <div className="divide-y divide-line">
-        {items.map((item) => (
-          <article className="flex items-start gap-3 p-4" key={item.id}>
-            <div className="min-w-0 flex-1">
-              <div className="mb-1.5 flex items-center gap-2">
-                <Badge label={item.badge} tone={item.badgeTone} />
-              </div>
-              <p className="line-clamp-2 text-sm leading-6 text-body">{item.title}</p>
-            </div>
-            {item.href ? (
-              <Link className="shrink-0" href={item.href}>
-                <Button variant="ghost" size="sm">
-                  {item.hrefLabel} <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
-            ) : null}
-          </article>
+      <div className="space-y-3 p-4">
+        {groups.map((group) => (
+          <ActivityGroup group={group} key={group.key} />
         ))}
       </div>
     </div>
   );
+}
+
+function ActivityGroup({
+  group,
+}: {
+  group: {
+    key: string;
+    title: string;
+    empty: string;
+    items: Array<{
+      id: string;
+      badge: React.ReactNode;
+      badgeTone: "brand" | "warning" | "success" | "slate";
+      title: string;
+      impact: string;
+      href?: string;
+      hrefLabel?: string;
+    }>;
+  };
+}) {
+  return (
+    <section className="rounded-field border border-line bg-surfaceAlt/70 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold text-ink">{group.title}</p>
+        <InfoBubble label={`${group.items.length} 条`} />
+      </div>
+      {group.items.length ? (
+        <div className="space-y-2">
+          {group.items.map((item) => (
+            <article className="rounded-field border border-line bg-elevated p-3" key={item.id}>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <Badge label={item.badge} tone={item.badgeTone} />
+                {item.href ? (
+                  <Link className="shrink-0" href={item.href}>
+                    <Button variant="ghost" size="sm">
+                      {item.hrefLabel} <ArrowRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </Link>
+                ) : null}
+              </div>
+              <p className="line-clamp-2 text-sm font-semibold leading-6 text-ink">{item.title}</p>
+              <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted">{item.impact}</p>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-field bg-elevated px-3 py-2 text-xs text-muted">{group.empty}</p>
+      )}
+    </section>
+  );
+}
+
+function activityImpactSummary(value: string | undefined, fallback: string) {
+  const clean = firstMeaningfulText(value);
+  return clean || fallback;
+}
+
+function firstMeaningfulText(value: string | undefined) {
+  return (value ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^[-*#>\s]+/, "").trim())
+    .find(Boolean) ?? "";
 }
 
 /* ------------------------------------------------------------------ */

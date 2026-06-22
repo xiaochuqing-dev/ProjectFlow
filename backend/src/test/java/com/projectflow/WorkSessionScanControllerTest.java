@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -32,6 +33,9 @@ class WorkSessionScanControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void scansBoundGitProjectIntoTodayWorkSessionCandidate() throws Exception {
@@ -119,6 +123,12 @@ class WorkSessionScanControllerTest {
             .at("/data/id")
             .asText();
 
+        mockMvc.perform(get("/api/project-changes/" + changeId)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(changeId))
+            .andExpect(jsonPath("$.data.details").value(containsString("本轮 Git 变化")));
+
         mockMvc.perform(get("/api/projects/" + projectId + "/evidence-bundles")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
@@ -202,6 +212,86 @@ class WorkSessionScanControllerTest {
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isBadRequest())
             .andExpect(content().string(containsString("Bind a local project path before scanning")));
+    }
+
+    @Test
+    void draftsEvidenceBundleWithLongTaskIntent() throws Exception {
+        String token = register("scan-long-intent-owner", "scan-long-intent-owner@example.com");
+        String projectId = createProject(token, "Long Intent Scan Project");
+        Path projectPath = createGitProject("scan-long-intent-project");
+
+        writeProtocol(token, projectId, projectPath);
+
+        MvcResult scanResult = mockMvc.perform(post("/api/projects/" + projectId + "/scan")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        String sessionId = objectMapper.readTree(scanResult.getResponse().getContentAsString())
+            .at("/data/sessions/0/sessionId")
+            .asText();
+        String longIntent = "确认项目画像并规划下一轮开发，补充证据包到候选变更的完整链路，确保开发者从首页下一步按钮进入审查时不会因为过长标题或描述导致请求失败，同时保留足够清晰的上下文说明和后续处理方向。".repeat(4);
+
+        mockMvc.perform(patch("/api/work-sessions/" + sessionId)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "agentType": "CODEX",
+                      "taskIntent": "%s"
+                    }
+                    """.formatted(longIntent)))
+            .andExpect(status().isOk());
+
+        MvcResult bundleResult = mockMvc.perform(post("/api/work-sessions/" + sessionId + "/evidence-bundles")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        String bundleId = objectMapper.readTree(bundleResult.getResponse().getContentAsString())
+            .at("/data/id")
+            .asText();
+
+        mockMvc.perform(post("/api/evidence-bundles/" + bundleId + "/draft-changes")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.sourceType").value("EVIDENCE_BUNDLE"))
+            .andExpect(jsonPath("$.data.status").value("PENDING"))
+            .andExpect(jsonPath("$.data.title").value(containsString("Evidence Bundle")));
+    }
+
+    @Test
+    void draftsEvidenceBundleAfterEmbeddedEnumSchemaUpgrade() throws Exception {
+        String token = register("scan-old-enum-owner", "scan-old-enum-owner@example.com");
+        String projectId = createProject(token, "Old Enum Scan Project");
+        Path projectPath = createGitProject("scan-old-enum-project");
+
+        writeProtocol(token, projectId, projectPath);
+
+        MvcResult scanResult = mockMvc.perform(post("/api/projects/" + projectId + "/scan")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        String sessionId = objectMapper.readTree(scanResult.getResponse().getContentAsString())
+            .at("/data/sessions/0/sessionId")
+            .asText();
+
+        MvcResult bundleResult = mockMvc.perform(post("/api/work-sessions/" + sessionId + "/evidence-bundles")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        String bundleId = objectMapper.readTree(bundleResult.getResponse().getContentAsString())
+            .at("/data/id")
+            .asText();
+
+        jdbcTemplate.execute("ALTER TABLE project_changes ALTER COLUMN source_type ENUM('AGENT_RESULT','MATERIAL_UPDATE','MODEL_SUMMARY','PROJECT_ZIP','USER_MANUAL')");
+
+        mockMvc.perform(post("/api/evidence-bundles/" + bundleId + "/draft-changes")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.sourceType").value("EVIDENCE_BUNDLE"));
     }
 
     private String register(String username, String email) throws Exception {

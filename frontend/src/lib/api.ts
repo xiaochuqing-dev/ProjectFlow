@@ -963,6 +963,14 @@ export function listProjectChanges(token: string, projectId: string): Promise<Pr
   });
 }
 
+export function getProjectChange(token: string, changeId: string): Promise<ProjectChange> {
+  return requestJson<ProjectChange>(`/project-changes/${changeId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 export function updateProjectChange(token: string, changeId: string, payload: ProjectChangePayload): Promise<ProjectChange> {
   return requestJson<ProjectChange>(`/project-changes/${changeId}`, {
     method: "PATCH",

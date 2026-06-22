@@ -95,13 +95,13 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const buttonBase =
-  "inline-flex items-center justify-center gap-2 rounded-field font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:shadow-focus";
+  "inline-flex items-center justify-center gap-2 rounded-field font-semibold transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:translate-y-0 disabled:scale-100 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:shadow-focus";
 
 const buttonVariant: Record<ButtonVariant, string> = {
-  primary: "bg-brand text-white hover:bg-brand-hover",
-  secondary: "border border-line bg-elevated text-body hover:bg-surfaceAlt hover:border-lineStrong",
+  primary: "bg-brand text-white shadow-sm hover:bg-brand-hover hover:shadow-card",
+  secondary: "border border-line bg-elevated text-body hover:border-lineStrong hover:bg-surfaceAlt hover:shadow-sm",
   ghost: "text-muted hover:bg-surfaceAlt hover:text-ink",
-  danger: "border border-danger/30 bg-danger/soft text-danger-fg hover:bg-danger-soft",
+  danger: "border border-danger/30 bg-danger-soft text-danger-fg hover:border-danger/40 hover:bg-danger-soft/80",
 };
 
 const buttonSize: Record<ButtonSize, string> = {
@@ -164,6 +164,30 @@ export function Badge({ label, tone = "slate", dot = false, className = "" }: Ba
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-field px-2.5 py-1 text-xs font-medium ${badgeTone[tone]} ${className}`.trim().replace(/\s+/g, " ")}
+    >
+      {dot ? <span className={`h-1.5 w-1.5 rounded-full ${badgeDot[tone]}`} /> : null}
+      {label}
+    </span>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* InfoBubble                                                          */
+/* ------------------------------------------------------------------ */
+
+type InfoBubbleProps = {
+  label: ReactNode;
+  tone?: BadgeTone;
+  dot?: boolean;
+  title?: string;
+  className?: string;
+};
+
+export function InfoBubble({ label, tone = "slate", dot = false, title, className = "" }: InfoBubbleProps) {
+  return (
+    <span
+      className={`inline-flex select-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${badgeTone[tone]} ${className}`.trim().replace(/\s+/g, " ")}
+      title={title}
     >
       {dot ? <span className={`h-1.5 w-1.5 rounded-full ${badgeDot[tone]}`} /> : null}
       {label}
