@@ -41,6 +41,7 @@ import com.projectflow.entity.MaterialSourceType;
 import com.projectflow.service.AuthService;
 import com.projectflow.service.ProjectIntelligenceService;
 import com.projectflow.service.ProjectAnalysisJobService;
+import com.projectflow.service.ProjectAnalysisRecordService;
 
 import jakarta.validation.Valid;
 
@@ -49,15 +50,18 @@ import jakarta.validation.Valid;
 public class ProjectIntelligenceController {
     private final ProjectIntelligenceService projectIntelligenceService;
     private final ProjectAnalysisJobService projectAnalysisJobService;
+    private final ProjectAnalysisRecordService projectAnalysisRecordService;
     private final AuthService authService;
 
     public ProjectIntelligenceController(
         ProjectIntelligenceService projectIntelligenceService,
         ProjectAnalysisJobService projectAnalysisJobService,
+        ProjectAnalysisRecordService projectAnalysisRecordService,
         AuthService authService
     ) {
         this.projectIntelligenceService = projectIntelligenceService;
         this.projectAnalysisJobService = projectAnalysisJobService;
+        this.projectAnalysisRecordService = projectAnalysisRecordService;
         this.authService = authService;
     }
 
@@ -123,7 +127,7 @@ public class ProjectIntelligenceController {
         @PathVariable UUID projectId
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.listAnalysisRecords(user.id(), projectId));
+        return ApiResponse.ok(projectAnalysisRecordService.listAnalysisRecords(user.id(), projectId));
     }
 
     @GetMapping("/project-analysis-records/{recordId}")
@@ -132,7 +136,7 @@ public class ProjectIntelligenceController {
         @PathVariable UUID recordId
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.analysisRecordDetail(user.id(), recordId));
+        return ApiResponse.ok(projectAnalysisRecordService.detail(user.id(), recordId));
     }
 
     @DeleteMapping("/project-analysis-records/{recordId}")
@@ -141,7 +145,7 @@ public class ProjectIntelligenceController {
         @PathVariable UUID recordId
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        projectIntelligenceService.deleteAnalysisRecord(user.id(), recordId);
+        projectAnalysisRecordService.delete(user.id(), recordId);
         return ApiResponse.ok(null);
     }
 

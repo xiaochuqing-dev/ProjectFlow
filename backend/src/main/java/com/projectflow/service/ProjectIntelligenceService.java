@@ -38,7 +38,6 @@ import com.projectflow.dto.V2ProjectDtos.ApplySuggestionsResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectImportAnalyzeResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectEvolutionRecordResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisResponse;
-import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisRecordResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectChangePatchRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectChangeResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFactSourceResponse;
@@ -61,8 +60,6 @@ import com.projectflow.entity.DevLog;
 import com.projectflow.entity.DevLogCategory;
 import com.projectflow.entity.MaterialSourceType;
 import com.projectflow.entity.ProjectEvolutionRecord;
-import com.projectflow.entity.ProjectAnalysisRecord;
-import com.projectflow.entity.ProjectAnalysisRecordType;
 import com.projectflow.entity.ProjectChange;
 import com.projectflow.entity.ProjectChangeStatus;
 import com.projectflow.entity.ProjectFactSource;
@@ -79,7 +76,6 @@ import com.projectflow.repository.AiProviderRepository;
 import com.projectflow.repository.AiSuggestionRepository;
 import com.projectflow.repository.DevLogRepository;
 import com.projectflow.repository.ProjectEvolutionRecordRepository;
-import com.projectflow.repository.ProjectAnalysisRecordRepository;
 import com.projectflow.repository.ProjectChangeRepository;
 import com.projectflow.repository.ProjectFactSourceRepository;
 import com.projectflow.repository.ProjectMaterialRepository;
@@ -105,7 +101,6 @@ public class ProjectIntelligenceService {
     private final ProjectMemoryRepository memoryRepository;
     private final ProjectSnapshotRepository snapshotRepository;
     private final ProjectEvolutionRecordRepository evolutionRepository;
-    private final ProjectAnalysisRecordRepository analysisRecordRepository;
     private final ProjectChangeRepository changeRepository;
     private final ProjectFactSourceRepository factSourceRepository;
     private final TaskRepository taskRepository;
@@ -124,7 +119,6 @@ public class ProjectIntelligenceService {
         ProjectMemoryRepository memoryRepository,
         ProjectSnapshotRepository snapshotRepository,
         ProjectEvolutionRecordRepository evolutionRepository,
-        ProjectAnalysisRecordRepository analysisRecordRepository,
         ProjectChangeRepository changeRepository,
         ProjectFactSourceRepository factSourceRepository,
         TaskRepository taskRepository,
@@ -141,7 +135,6 @@ public class ProjectIntelligenceService {
         this.memoryRepository = memoryRepository;
         this.snapshotRepository = snapshotRepository;
         this.evolutionRepository = evolutionRepository;
-        this.analysisRecordRepository = analysisRecordRepository;
         this.changeRepository = changeRepository;
         this.factSourceRepository = factSourceRepository;
         this.taskRepository = taskRepository;
@@ -327,57 +320,6 @@ public class ProjectIntelligenceService {
                 "模型分析失败，已使用本地规则解释。" + modelFailureMessage(exception)
             );
         }
-    }
-
-    @Transactional
-    public UUID createProjectAnalysisRecord(UUID userId, UUID projectId, ProjectAnalysisResponse response) {
-        ProjectSpace project = findOwnedProject(userId, projectId);
-        ProjectAnalysisRecord record = new ProjectAnalysisRecord(project.getId(), ProjectAnalysisRecordType.PROJECT);
-        record.update(
-            null,
-            response.summary(),
-            projectAnalysisDetails(response),
-            response.analysisSource(),
-            response.modelUsed(),
-            response.providerName(),
-            response.confidence()
-        );
-        return analysisRecordRepository.save(record).getId();
-    }
-
-    @Transactional
-    public UUID createFileAnalysisRecord(UUID userId, UUID projectId, ProjectFileAnalysisResponse response) {
-        ProjectSpace project = findOwnedProject(userId, projectId);
-        ProjectAnalysisRecord record = new ProjectAnalysisRecord(project.getId(), ProjectAnalysisRecordType.FILE);
-        record.update(
-            response.path(),
-            response.summary(),
-            fileAnalysisDetails(response),
-            response.analysisSource(),
-            response.modelUsed(),
-            response.providerName(),
-            response.confidence()
-        );
-        return analysisRecordRepository.save(record).getId();
-    }
-
-    @Transactional(readOnly = true)
-    public List<ProjectAnalysisRecordResponse> listAnalysisRecords(UUID userId, UUID projectId) {
-        ProjectSpace project = findOwnedProject(userId, projectId);
-        return analysisRecordRepository.findByProjectIdOrderByCreatedAtDesc(project.getId())
-            .stream()
-            .map(this::toAnalysisRecordResponse)
-            .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public ProjectAnalysisRecordResponse analysisRecordDetail(UUID userId, UUID recordId) {
-        return toAnalysisRecordResponse(findOwnedAnalysisRecord(userId, recordId));
-    }
-
-    @Transactional
-    public void deleteAnalysisRecord(UUID userId, UUID recordId) {
-        analysisRecordRepository.delete(findOwnedAnalysisRecord(userId, recordId));
     }
 
     @Transactional
@@ -1587,13 +1529,6 @@ public class ProjectIntelligenceService {
         return change;
     }
 
-    private ProjectAnalysisRecord findOwnedAnalysisRecord(UUID userId, UUID recordId) {
-        ProjectAnalysisRecord record = analysisRecordRepository.findById(recordId)
-            .orElseThrow(() -> new AppException("PROJECT_ANALYSIS_RECORD_NOT_FOUND", "Project analysis record was not found", HttpStatus.NOT_FOUND));
-        findOwnedProject(userId, record.getProjectId());
-        return record;
-    }
-
     private ProjectSpace findOwnedProjectById(UUID projectId) {
         return projectRepository.findById(projectId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
@@ -1673,74 +1608,6 @@ public class ProjectIntelligenceService {
             return MaterialSourceType.JSON_LOG;
         }
         return MaterialSourceType.TEXT_FILE;
-    }
-
-    private String projectAnalysisDetails(ProjectAnalysisResponse response) {
-        return String.join("\n\n",
-            "架构判断：\n" + response.architecture(),
-            "模块：\n" + joinOrNone(response.modules()),
-            "风险：\n" + joinOrNone(response.risks()),
-            "重要文件：\n" + joinOrNone(response.importantFiles()),
-            "分析证据：\n" + joinOrNone(response.evidence()),
-            "分析局限：\n" + joinOrNone(response.limitations()),
-            "说明：\n" + response.message()
-        );
-    }
-
-    private String fileAnalysisDetails(ProjectFileAnalysisResponse response) {
-        return String.join("\n\n",
-            "路径：\n" + response.path(),
-            "文件类型：\n" + localizedAnalysisCode(response.fileType()),
-            "职责：\n" + response.role(),
-            "重要性：\n" + localizedAnalysisCode(response.importance()),
-            "风险等级：\n" + localizedAnalysisCode(response.riskLevel()),
-            "风险说明：\n" + response.riskNotes(),
-            "分析证据：\n" + joinOrNone(response.evidence()),
-            "关联文件：\n" + joinOrNone(response.relatedFiles()),
-            "分析局限：\n" + response.limitations(),
-            "说明：\n" + response.message()
-        );
-    }
-
-    private String joinOrNone(List<String> values) {
-        return values.isEmpty() ? "暂无" : String.join("\n", values.stream().map(value -> "- " + value).toList());
-    }
-
-    private String localizedAnalysisCode(String value) {
-        return switch (value.toLowerCase()) {
-            case "source" -> "源码";
-            case "test" -> "测试";
-            case "config" -> "配置";
-            case "docs" -> "文档";
-            case "script" -> "脚本";
-            case "asset" -> "资源";
-            case "build" -> "构建产物";
-            case "env" -> "环境配置";
-            case "critical" -> "核心";
-            case "important" -> "重要";
-            case "normal" -> "一般";
-            case "high" -> "高";
-            case "medium" -> "中";
-            case "low" -> "低";
-            case "none" -> "未发现";
-            default -> value;
-        };
-    }
-
-    private ProjectAnalysisRecordResponse toAnalysisRecordResponse(ProjectAnalysisRecord record) {
-        return new ProjectAnalysisRecordResponse(
-            record.getId(),
-            record.getProjectId(),
-            record.getRecordType(),
-            record.getFilePath(),
-            record.getSummary(),
-            record.getDetails(),
-            record.getAnalysisSource(),
-            record.isModelUsed(),
-            record.getProviderName(),
-            record.getConfidence(),
-            record.getCreatedAt()
-        );
     }
 
     private ProjectMaterialResponse toMaterialResponse(ProjectMaterial material) {

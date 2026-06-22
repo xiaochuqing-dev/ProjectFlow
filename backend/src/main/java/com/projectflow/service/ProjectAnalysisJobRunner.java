@@ -26,17 +26,20 @@ public class ProjectAnalysisJobRunner {
     private final ProjectAnalysisJobRepository jobRepository;
     private final ModelUsageRecordRepository modelUsageRecordRepository;
     private final ProjectIntelligenceService projectIntelligenceService;
+    private final ProjectAnalysisRecordService projectAnalysisRecordService;
     private final ObjectMapper objectMapper;
 
     public ProjectAnalysisJobRunner(
         ProjectAnalysisJobRepository jobRepository,
         ModelUsageRecordRepository modelUsageRecordRepository,
         ProjectIntelligenceService projectIntelligenceService,
+        ProjectAnalysisRecordService projectAnalysisRecordService,
         ObjectMapper objectMapper
     ) {
         this.jobRepository = jobRepository;
         this.modelUsageRecordRepository = modelUsageRecordRepository;
         this.projectIntelligenceService = projectIntelligenceService;
+        this.projectAnalysisRecordService = projectAnalysisRecordService;
         this.objectMapper = objectMapper;
     }
 
@@ -54,7 +57,7 @@ public class ProjectAnalysisJobRunner {
 
             if (job.getJobType() == ProjectAnalysisJobType.PROJECT) {
                 ProjectAnalysisResponse result = projectIntelligenceService.runProjectAnalysis(job.getUserId(), job.getProjectId());
-                UUID recordId = projectIntelligenceService.createProjectAnalysisRecord(job.getUserId(), job.getProjectId(), result);
+                UUID recordId = projectAnalysisRecordService.createProjectAnalysisRecord(job.getUserId(), job.getProjectId(), result);
                 String resultJson = objectMapper.writeValueAsString(result);
                 markSucceeded(jobId, resultJson, recordId);
                 recordUsage(job, "PROJECT_ANALYSIS", result.providerName(), result.modelUsed(), resultJson, startedAt);
@@ -64,7 +67,7 @@ public class ProjectAnalysisJobRunner {
                     job.getProjectId(),
                     new ProjectFileAnalysisRequest(job.getFilePath())
                 );
-                UUID recordId = projectIntelligenceService.createFileAnalysisRecord(job.getUserId(), job.getProjectId(), result);
+                UUID recordId = projectAnalysisRecordService.createFileAnalysisRecord(job.getUserId(), job.getProjectId(), result);
                 String resultJson = objectMapper.writeValueAsString(result);
                 markSucceeded(jobId, resultJson, recordId);
                 recordUsage(job, "FILE_ANALYSIS", result.providerName(), result.modelUsed(), resultJson, startedAt);
