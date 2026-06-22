@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 /**
  * 统一的底部 Toast。
  *
@@ -25,13 +23,3 @@ export function Toast({ error, notice }: { error?: string; notice?: string }) {
     </>
   );
 }
-
-/** 页面底部加载条，替代各页重复的 `fixed inset-x-0 bottom-0 h-1 bg-slate-950` */
-export function LoadingBar({ loading }: { loading?: boolean }) {
-  if (!loading) {
-    return null;
-  }
-  return <div className="fixed inset-x-0 bottom-0 h-1 bg-brand" />;
-}
-
-export type { ReactNode };

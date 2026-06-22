@@ -57,7 +57,7 @@ export function projectZipPaths(materials: ProjectMaterial[]) {
   return zipMaterial ? parseZipDirectoryTree(zipMaterial.content) : [];
 }
 
-export function parseZipDirectoryTree(content: string) {
+function parseZipDirectoryTree(content: string) {
   const lines = content.split(/\r?\n/);
   const treeStart = lines.findIndex((line) => line.trim() === "## Directory tree");
   if (treeStart < 0) {

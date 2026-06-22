@@ -1,6 +1,7 @@
 package com.projectflow.service;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -204,7 +205,7 @@ public class MarkdownImportService {
         }
         try {
             return LocalDate.parse(value.trim());
-        } catch (RuntimeException exception) {
+        } catch (DateTimeParseException exception) {
             warnings.add("日期格式无法识别，已使用今天。");
             return LocalDate.now();
         }

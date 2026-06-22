@@ -84,7 +84,6 @@ public class AiProviderService {
         aiProviderRepository.delete(findOwned(userId, providerId));
     }
 
-    @Transactional(readOnly = true)
     public ProviderTestResponse test(UUID userId, UUID providerId) {
         AiProvider provider = findOwned(userId, providerId);
         if (provider.getType() == AiProviderType.MOCK) {

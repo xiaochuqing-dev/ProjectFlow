@@ -19,19 +19,16 @@ import { AppShell } from "@/components/AppShell";
 import {
   acceptProjectChange,
   applyAiSuggestions,
-  ignoreAiSuggestion,
   ignoreProjectChange,
   listAiSuggestions,
   listProjectChanges,
   listProjectMaterials,
   listProjects,
   listTasks,
-  updateProjectChange,
   updateAiSuggestion,
   type AiSuggestion,
   type Project,
   type ProjectChange,
-  type ProjectChangePayload,
   type ProjectMaterial,
   type TaskItem,
 } from "@/lib/api";
@@ -77,10 +74,6 @@ type EditState = {
   payloadText: string;
 };
 
-type ChangeEditState = ProjectChangePayload & {
-  id: string;
-};
-
 export default function TasksPage() {
   return (
     <Suspense fallback={<AppShell eyebrow="从 agent result 到确认资产" title="变更审查"><div className="min-h-[calc(100vh-4rem)] bg-surface p-8"><div className="h-1 bg-slate-950" /></div></AppShell>}>
@@ -101,12 +94,10 @@ function TasksPageContent() {
   const [selectedChangeIds, setSelectedChangeIds] = useState<string[]>([]);
   const [selectedSuggestionIds, setSelectedSuggestionIds] = useState<string[]>([]);
   const [editing, setEditing] = useState<EditState | null>(null);
-  const [editingChange, setEditingChange] = useState<ChangeEditState | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [savingSuggestion, setSavingSuggestion] = useState(false);
-  const [savingChange, setSavingChange] = useState(false);
   const [applying, setApplying] = useState(false);
   const [ignoringId, setIgnoringId] = useState("");
 
@@ -119,7 +110,7 @@ function TasksPageContent() {
   const ignoredChanges = changes.filter((change) => change.status === "IGNORED");
   const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === "PENDING");
   const selectedSuggestion = editing ? suggestions.find((suggestion) => suggestion.id === editing.id) : pendingSuggestions[0];
-  const selectedChange = editingChange ? changes.find((change) => change.id === editingChange.id) : pendingChanges[0];
+  const selectedChange = pendingChanges[0];
   const latestMaterial = materials[0];
 
   useEffect(() => {
@@ -164,7 +155,6 @@ function TasksPageContent() {
       setSelectedChangeIds([]);
       setSelectedSuggestionIds([]);
       setEditing(null);
-      setEditingChange(null);
       return;
     }
 
@@ -184,7 +174,6 @@ function TasksPageContent() {
       setSelectedChangeIds(changeItems.filter((change) => change.status === "PENDING" || change.status === "EDITED").map((change) => change.id));
       setSelectedSuggestionIds(suggestionItems.filter((suggestion) => suggestion.status === "PENDING").map((suggestion) => suggestion.id));
       setEditing(null);
-      setEditingChange(null);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "变更审查数据加载失败");
     } finally {
@@ -193,41 +182,12 @@ function TasksPageContent() {
   }
 
   function startEditing(suggestion: AiSuggestion) {
-    setEditingChange(null);
     setEditing({
       id: suggestion.id,
       title: suggestion.title,
       reason: suggestion.reason,
       payloadText: JSON.stringify(suggestion.payload, null, 2),
     });
-  }
-
-  function startEditingChange(change: ProjectChange) {
-    setEditing(null);
-    setEditingChange(toChangePayload(change));
-  }
-
-  async function handleSaveChange(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const session = readSession();
-    if (!session || !editingChange) {
-      return;
-    }
-
-    const { id, ...payload } = editingChange;
-    setSavingChange(true);
-    setError("");
-    setNotice("");
-    try {
-      const updated = await updateProjectChange(session.accessToken, id, payload);
-      setChanges((current) => current.map((change) => (change.id === updated.id ? updated : change)));
-      setEditingChange(null);
-      setNotice("结构化变更已保存。");
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "结构化变更保存失败");
-    } finally {
-      setSavingChange(false);
-    }
   }
 
   async function handleSaveSuggestion(event: FormEvent<HTMLFormElement>) {
@@ -320,26 +280,6 @@ function TasksPageContent() {
     }
   }
 
-  async function handleIgnore(id: string) {
-    const session = readSession();
-    if (!session || !selectedProjectId) {
-      return;
-    }
-
-    setIgnoringId(id);
-    setError("");
-    setNotice("");
-    try {
-      await ignoreAiSuggestion(session.accessToken, id);
-      setNotice("变更已忽略。");
-      await refreshProjectContext(selectedProjectId);
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "忽略变更失败");
-    } finally {
-      setIgnoringId("");
-    }
-  }
-
   function toggleChange(id: string) {
     setSelectedChangeIds((current) =>
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
@@ -421,11 +361,11 @@ function TasksPageContent() {
                     <p className="mt-2 text-xs text-muted">{change.sourceType}</p>
                     <p className="mt-1 text-xs text-muted">{new Date(change.createdAt).toLocaleString()}</p>
                   </div>
-                  <button className="min-w-0 text-left" onClick={() => startEditingChange(change)} type="button">
+                  <Link className="min-w-0 text-left" href={`/project-changes/${change.id}`}>
                     <h3 className="font-semibold text-slate-950">{change.title}</h3>
                     <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{change.summary}</p>
                     <p className="mt-2 line-clamp-1 font-mono text-xs text-muted">{changePreview(change)}</p>
-                  </button>
+                  </Link>
                   <div className="flex flex-wrap items-start gap-2">
                     <Link
                       className="inline-flex h-9 items-center rounded-md border border-line bg-white px-3 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
@@ -675,12 +615,6 @@ function FlowStep({ title, text }: { title: string; text: string }) {
   );
 }
 
-function sourcePreview(suggestion: AiSuggestion) {
-  const sourceFile = typeof suggestion.payload.sourceFile === "string" ? suggestion.payload.sourceFile : "";
-  const taskRef = typeof suggestion.payload.taskRef === "string" ? suggestion.payload.taskRef : "";
-  return [sourceFile, taskRef].filter(Boolean).join(" · ") || "payload 可审查";
-}
-
 function changePreview(change: ProjectChange) {
   return [change.sourceRef, change.affectedFiles.split("\n")[0], change.riskNotes ? "含风险备注" : ""]
     .filter(Boolean)
@@ -711,23 +645,4 @@ function changeMemoryTargets(change: ProjectChange) {
   if (change.learningNotes) targets.add("经验沉淀");
   if (change.assetCandidates) targets.add("可展示成果");
   return Array.from(targets);
-}
-
-function toChangePayload(change: ProjectChange): ChangeEditState {
-  return {
-    id: change.id,
-    changeKind: change.changeKind,
-    impactLevel: change.impactLevel,
-    title: change.title,
-    summary: change.summary,
-    details: change.details,
-    affectedFiles: change.affectedFiles,
-    relatedTasks: change.relatedTasks,
-    testEvidence: change.testEvidence,
-    buildEvidence: change.buildEvidence,
-    riskNotes: change.riskNotes,
-    decisionNotes: change.decisionNotes,
-    learningNotes: change.learningNotes,
-    assetCandidates: change.assetCandidates,
-  };
 }

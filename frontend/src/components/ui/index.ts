@@ -8,5 +8,5 @@ export {
   Field,
   EmptyState,
 } from "./primitives";
-export { Toast, LoadingBar } from "./toast";
+export { Toast } from "./toast";
 export { PageContainer, ProjectContextBar } from "./layout";

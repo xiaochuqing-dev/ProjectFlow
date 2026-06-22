@@ -2,6 +2,8 @@ package com.projectflow.service;
 
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +21,8 @@ import com.projectflow.repository.ProjectAnalysisJobRepository;
 
 @Service
 public class ProjectAnalysisJobRunner {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProjectAnalysisJobRunner.class);
+
     private final ProjectAnalysisJobRepository jobRepository;
     private final ModelUsageRecordRepository modelUsageRecordRepository;
     private final ProjectIntelligenceService projectIntelligenceService;
@@ -66,6 +70,7 @@ public class ProjectAnalysisJobRunner {
                 recordUsage(job, "FILE_ANALYSIS", result.providerName(), result.modelUsed(), resultJson, startedAt);
             }
         } catch (Exception exception) {
+            LOGGER.warn("Project analysis job failed: jobId={}", jobId, exception);
             markFailed(jobId, safeErrorMessage(exception));
             recordFailedUsage(job, exception, startedAt);
         }

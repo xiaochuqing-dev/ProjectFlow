@@ -51,6 +51,7 @@ public class EvidenceBundleService {
         EvidenceBundle bundle = evidenceBundleRepository.findByWorkSessionId(workSessionId)
             .orElseGet(() -> new EvidenceBundle(session.getProjectId(), workSessionId));
         bundle.updateFromWorkSession(session.toResponse());
+        projectChangeSchemaRepairService.ensureEvidenceBundleSourceTypeAllowed();
         return toResponse(evidenceBundleRepository.save(bundle));
     }
 
@@ -64,7 +65,6 @@ public class EvidenceBundleService {
     }
 
     private EvidenceBundleResponse toResponse(EvidenceBundle bundle) {
-        projectChangeSchemaRepairService.ensureEvidenceBundleSourceTypeAllowed();
         return projectChangeRepository.findBySourceTypeAndSourceRef(ProjectChangeSourceType.EVIDENCE_BUNDLE, bundle.getId().toString())
             .map(change -> bundle.toResponse(status(change), nextAction(change), change.getId()))
             .orElseGet(() -> bundle.toResponse("READY_FOR_CHANGE", "GENERATE_CHANGE", null));

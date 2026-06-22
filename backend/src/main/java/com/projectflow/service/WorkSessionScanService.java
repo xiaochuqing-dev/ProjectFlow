@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -250,7 +251,7 @@ public class WorkSessionScanService {
     private Instant parseInstant(String value) {
         try {
             return Instant.parse(value);
-        } catch (RuntimeException exception) {
+        } catch (DateTimeParseException exception) {
             return Instant.now();
         }
     }

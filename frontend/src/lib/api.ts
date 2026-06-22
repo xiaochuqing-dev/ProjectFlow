@@ -179,6 +179,7 @@ export function listTasks(token: string, projectId: string): Promise<TaskItem[]>
   });
 }
 
+/** @deprecated Legacy task write API. Current review flow writes project changes first. */
 export function createTask(token: string, projectId: string, payload: TaskPayload): Promise<TaskItem> {
   return requestJson<TaskItem>(`/projects/${projectId}/tasks`, {
     method: "POST",
@@ -190,6 +191,7 @@ export function createTask(token: string, projectId: string, payload: TaskPayloa
   });
 }
 
+/** @deprecated Legacy task status API. Prefer change review and confirmed project archive flow. */
 export function updateTaskStatus(token: string, taskId: string, status: TaskStatus): Promise<TaskItem> {
   return requestJson<TaskItem>(`/tasks/${taskId}/status`, {
     method: "PATCH",
@@ -846,6 +848,7 @@ export function listProjectMaterials(token: string, projectId: string): Promise<
   });
 }
 
+/** @deprecated Legacy material API. Current project onboarding should use importProjectZip. */
 export function createTextMaterial(
   token: string,
   projectId: string,
@@ -877,6 +880,7 @@ async function postFormData<T>(token: string, path: string, formData: FormData):
   return payload.data;
 }
 
+/** @deprecated Legacy material API. Current project onboarding should use importProjectZip. */
 export function uploadProjectMaterialFile(
   token: string,
   projectId: string,
@@ -888,6 +892,7 @@ export function uploadProjectMaterialFile(
   return postFormData<ProjectMaterial>(token, `/projects/${projectId}/materials/file?sourceType=${sourceType}`, formData);
 }
 
+/** @deprecated Legacy material API. Current project onboarding should use importProjectZip. */
 export function uploadProjectZip(token: string, projectId: string, file: File): Promise<ProjectMaterial> {
   const formData = new FormData();
   formData.append("file", file);
@@ -901,6 +906,7 @@ export function importProjectZip(token: string, file: File, projectId?: string):
   return postFormData<ProjectImportAnalyzeResult>(token, `/project-imports/zip${query}`, formData);
 }
 
+/** @deprecated Legacy material analysis API. Prefer project/file analysis records. */
 export function analyzeProjectMaterial(token: string, materialId: string): Promise<AnalyzeMaterialResult> {
   return requestJson<AnalyzeMaterialResult>(`/project-materials/${materialId}/analyze`, {
     method: "POST",
@@ -1099,6 +1105,7 @@ export function listProjectFactSources(token: string, projectId: string): Promis
   });
 }
 
+/** @deprecated Snapshot UI is not part of the current primary workflow. */
 export function listProjectSnapshots(token: string, projectId: string): Promise<ProjectSnapshot[]> {
   return requestJson<ProjectSnapshot[]>(`/projects/${projectId}/snapshots`, {
     headers: {
@@ -1163,6 +1170,7 @@ export function listProjectWorkSessions(token: string, projectId: string): Promi
   });
 }
 
+/** @deprecated Agent attribution correction is not exposed in the current primary workflow. */
 export function updateWorkSession(
   token: string,
   sessionId: string,
@@ -1196,6 +1204,7 @@ export function listProjectEvidenceBundles(token: string, projectId: string): Pr
   });
 }
 
+/** @deprecated Agent signature feedback is not exposed in the current primary workflow. */
 export function listProjectAgentSignatureFeedback(token: string, projectId: string): Promise<AgentSignatureFeedback[]> {
   return requestJson<AgentSignatureFeedback[]>(`/projects/${projectId}/agent-signature-feedback`, {
     headers: {
@@ -1230,6 +1239,7 @@ export function syncProjectContext(token: string, projectId: string): Promise<Co
   });
 }
 
+/** @deprecated Task brief writing belongs to the legacy agent bridge task flow. */
 export function writeAgentTaskBrief(
   token: string,
   projectId: string,

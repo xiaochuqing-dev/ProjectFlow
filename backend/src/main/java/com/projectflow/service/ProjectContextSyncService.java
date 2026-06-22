@@ -38,7 +38,7 @@ public class ProjectContextSyncService {
         this.changeRepository = changeRepository;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public ContextSyncResponse sync(UUID userId, UUID projectId) {
         ProjectSpace project = projectRepository.findByIdAndUserId(projectId, userId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
