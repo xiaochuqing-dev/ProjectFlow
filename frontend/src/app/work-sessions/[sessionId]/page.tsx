@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, FileCode2, GitCommitHorizontal } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { Card, SectionHeader, Stat } from "@/components/ui";
 import { listProjectWorkSessions, type WorkSessionCandidate } from "@/lib/api";
 import { readSession } from "@/lib/auth";
 import { compactProjectPath } from "@/lib/project-insights";
@@ -61,7 +62,7 @@ export default function WorkSessionDetailPage() {
               <ChangeIntentCard session={session} />
               <FileChangeSummary session={session} />
 
-              <Card title="变更文件">
+              <DetailCard title="变更文件">
                 <div className="grid gap-2 md:grid-cols-2">
                   {session.files.map((file) => (
                     <div className="rounded-md border border-line bg-slate-50 p-3" key={file}>
@@ -73,16 +74,16 @@ export default function WorkSessionDetailPage() {
                     </div>
                   ))}
                 </div>
-              </Card>
+              </DetailCard>
 
               <EvidenceTimeline evidence={session.evidence} />
             </div>
 
             <aside className="space-y-3">
-              <Metric label="文件" value={`${session.changedFiles}`} />
-              <Metric label="新增" value={`+${session.addedLines}`} />
-              <Metric label="删除" value={`-${session.deletedLines}`} />
-              <Metric label="来源" value={session.detectionMethod === "USER_CORRECTED" ? "人工校正" : "Git 证据"} />
+              <Stat label="文件" value={session.changedFiles} />
+              <Stat label="新增" value={`+${session.addedLines}`} />
+              <Stat label="删除" value={`-${session.deletedLines}`} />
+              <Stat label="来源" value={session.detectionMethod === "USER_CORRECTED" ? "人工校正" : "Git 证据"} />
             </aside>
           </section>
         ) : !loading ? (
@@ -97,7 +98,7 @@ export default function WorkSessionDetailPage() {
 
 function ChangeIntentCard({ session }: { session: WorkSessionCandidate }) {
   return (
-    <Card title="具体改了什么">
+    <DetailCard title="具体改了什么">
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
         <div>
           <p className="text-base font-semibold leading-7 text-slate-950">{readableSessionTitle(session)}</p>
@@ -114,14 +115,14 @@ function ChangeIntentCard({ session }: { session: WorkSessionCandidate }) {
           <p className="mt-1 leading-6 text-slate-700">确认是否生成证据包，并决定是否进入变更审查。</p>
         </div>
       </div>
-    </Card>
+    </DetailCard>
   );
 }
 
 function FileChangeSummary({ session }: { session: WorkSessionCandidate }) {
   const groups = summarizeFiles(session.files);
   return (
-    <Card title="影响范围">
+    <DetailCard title="影响范围">
       <div className="grid gap-3 md:grid-cols-3">
         {groups.map((group) => (
           <div className="rounded-md border border-line bg-slate-50 p-3" key={group.label}>
@@ -133,13 +134,13 @@ function FileChangeSummary({ session }: { session: WorkSessionCandidate }) {
           </div>
         ))}
       </div>
-    </Card>
+    </DetailCard>
   );
 }
 
 function EvidenceTimeline({ evidence }: { evidence: string[] }) {
   return (
-    <Card title="Git 证据">
+    <DetailCard title="Git 证据">
       <div className="space-y-3">
         {evidence.length ? evidence.map((item, index) => (
           <div className="grid gap-3 rounded-md border border-line bg-slate-50 p-3 text-sm md:grid-cols-[32px_minmax(0,1fr)]" key={`${item}-${index}`}>
@@ -155,27 +156,16 @@ function EvidenceTimeline({ evidence }: { evidence: string[] }) {
           <p className="rounded-md bg-slate-50 p-3 text-sm text-muted">暂无 Git 证据。</p>
         )}
       </div>
-    </Card>
+    </DetailCard>
   );
 }
 
-function Card({ children, title }: { children: React.ReactNode; title: string }) {
+function DetailCard({ children, title }: { children: React.ReactNode; title: string }) {
   return (
-    <section className="rounded-md border border-line bg-white shadow-panel">
-      <div className="border-b border-line px-5 py-4">
-        <h3 className="font-semibold text-slate-950">{title}</h3>
-      </div>
+    <Card>
+      <SectionHeader title={title} />
       <div className="p-5">{children}</div>
-    </section>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-line bg-white p-4 shadow-panel">
-      <p className="text-sm text-muted">{label}</p>
-      <p className="mt-2 break-all text-xl font-semibold text-slate-950">{value}</p>
-    </div>
+    </Card>
   );
 }
 

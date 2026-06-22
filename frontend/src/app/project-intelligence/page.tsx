@@ -5,16 +5,17 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { DatabaseZap, RefreshCw, Save, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { Badge, ProjectContextBar, Toast } from "@/components/ui";
+import { useAutoDismissNotice } from "@/hooks/useAutoDismissNotice";
+import { useProjectSelection } from "@/hooks/useProjectSelection";
 import {
   getProjectMemory,
   listAiSuggestions,
   listProjectAnalysisRecords,
   listProjectEvolutionRecords,
   listProjectFactSources,
-  listProjects,
   updateProjectMemory,
   type AiSuggestion,
-  type Project,
   type ProjectAnalysisRecord,
   type ProjectEvolutionRecord,
   type ProjectFactSource,
@@ -22,7 +23,6 @@ import {
   type ProjectMemoryPayload,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
-import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 import { useProjectAnalysisJobs } from "@/lib/use-project-analysis-jobs";
 
 const fieldConfig: Array<{
@@ -53,8 +53,7 @@ export default function ProjectIntelligencePage() {
 function ProjectIntelligencePageContent() {
   const searchParams = useSearchParams();
   const queryProjectId = searchParams.get("projectId") ?? "";
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const { projects, selectedProject, selectedProjectId, selectProject, loadingProjects, projectError } = useProjectSelection({ queryProjectId });
   const [memory, setMemory] = useState<ProjectMemory | null>(null);
   const [formValue, setFormValue] = useState<ProjectMemoryPayload>(emptyPayload());
   const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);
@@ -66,10 +65,6 @@ function ProjectIntelligencePageContent() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  const selectedProject = useMemo(
-    () => projects.find((project) => project.id === selectedProjectId),
-    [projects, selectedProjectId],
-  );
   const { jobs, jobError, enqueueProjectAnalysis } = useProjectAnalysisJobs(selectedProjectId);
   const latestProjectJob = jobs.find((job) => job.jobType === "PROJECT") ?? null;
   const analysis = latestProjectJob?.status === "SUCCEEDED" ? latestProjectJob.projectResult : null;
@@ -96,22 +91,6 @@ function ProjectIntelligencePageContent() {
   }, [pendingFacts]);
 
   useEffect(() => {
-    const session = readSession();
-    if (!session) {
-      return;
-    }
-
-    setLoading(true);
-    listProjects(session.accessToken)
-      .then((items) => {
-        setProjects(items);
-        setSelectedProjectId(queryProjectId || resolveSelectedProjectId(items));
-      })
-      .catch((exception) => setError(exception instanceof Error ? exception.message : "项目列表加载失败"))
-      .finally(() => setLoading(false));
-  }, [queryProjectId]);
-
-  useEffect(() => {
     refreshProjectContext(selectedProjectId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProjectId]);
@@ -126,16 +105,10 @@ function ProjectIntelligencePageContent() {
       .catch(() => undefined);
   }, [latestProjectJob?.id, latestProjectJob?.status, selectedProjectId]);
 
-  useEffect(() => {
-    if (!notice && !error) {
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      setNotice("");
-      setError("");
-    }, 4200);
-    return () => window.clearTimeout(timeout);
-  }, [error, notice]);
+  useAutoDismissNotice(error, notice, () => {
+    setNotice("");
+    setError("");
+  });
 
   async function refreshProjectContext(projectId: string) {
     const session = readSession();
@@ -218,44 +191,32 @@ function ProjectIntelligencePageContent() {
   return (
     <AppShell eyebrow="长期档案" title="项目画像">
       <div className="min-h-[calc(100vh-4rem)] bg-surface p-8">
-        <section className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-md border border-line bg-white p-4 shadow-panel">
-          <div className="flex flex-wrap items-center gap-3">
-            <select
-              className="h-10 min-w-72 rounded-md border border-line bg-white px-3 text-sm outline-none focus:border-slate-950"
-              disabled={projects.length === 0}
-              onChange={(event) => {
-                rememberSelectedProjectId(event.target.value);
-                setSelectedProjectId(event.target.value);
-              }}
-              value={selectedProjectId}
-            >
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-            <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs text-slate-600">
-              版本 {memory?.version ?? "-"}
-            </span>
-            <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-xs text-emerald-700">
-              用户确认内容优先
-            </span>
-            <button
-              className="inline-flex h-9 items-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white disabled:opacity-60"
-              disabled={analyzing || !selectedProjectId}
-              onClick={handleRunAnalysis}
-              type="button"
-            >
-              {analyzing ? <RefreshCw className="h-4 w-4 animate-spin" /> : null}
-              {latestProjectJob?.status === "QUEUED" ? "等待分析" : analyzing ? "模型分析中" : analysis ? "重新分析" : "运行项目分析"}
-            </button>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted">
-            <ShieldCheck className="h-4 w-4" />
-            {selectedProject?.name ?? "暂无项目"}
-          </div>
-        </section>
+        <ProjectContextBar
+          actions={(
+            <div className="flex items-center gap-2 text-sm text-muted">
+              <ShieldCheck className="h-4 w-4" />
+              {selectedProject?.name ?? "暂无项目"}
+            </div>
+          )}
+          leadingExtras={(
+            <>
+              <Badge label={`版本 ${memory?.version ?? "-"}`} />
+              <Badge label="用户确认内容优先" tone="success" />
+              <button
+                className="inline-flex h-9 items-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white disabled:opacity-60"
+                disabled={analyzing || !selectedProjectId}
+                onClick={handleRunAnalysis}
+                type="button"
+              >
+                {analyzing ? <RefreshCw className="h-4 w-4 animate-spin" /> : null}
+                {latestProjectJob?.status === "QUEUED" ? "等待分析" : analyzing ? "模型分析中" : analysis ? "重新分析" : "运行项目分析"}
+              </button>
+            </>
+          )}
+          onSelect={selectProject}
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+        />
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <form className="rounded-md border border-line bg-white shadow-panel" onSubmit={handleSave}>
@@ -319,7 +280,7 @@ function ProjectIntelligencePageContent() {
                 );
               })}
             </div>
-            {loading ? <div className="h-1 bg-slate-950" /> : null}
+            {loading || loadingProjects ? <div className="h-1 bg-slate-950" /> : null}
           </form>
 
           <aside className="space-y-5">
@@ -370,8 +331,7 @@ function ProjectIntelligencePageContent() {
           </aside>
         </div>
 
-        {error ? <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-panel">{error}</div> : null}
-        {notice ? <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-panel">{notice}</div> : null}
+        <Toast error={error || projectError} notice={notice} />
       </div>
     </AppShell>
   );

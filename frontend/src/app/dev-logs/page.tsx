@@ -1,16 +1,19 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { BookOpenText, CalendarDays, CheckCircle2, Clock3, FilePenLine, History, RefreshCw, Save, ShieldAlert } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { Badge, ProjectContextBar, Toast } from "@/components/ui";
+import { SourceCardList, type SourceCardItem } from "@/components/sources/SourceCardList";
+import { useAutoDismissNotice } from "@/hooks/useAutoDismissNotice";
+import { useProjectSelection } from "@/hooks/useProjectSelection";
 import {
   createDevLog,
   getProjectMemory,
   listDevLogs,
   listProjectEvolutionRecords,
-  listProjects,
   listTasks,
   type DevLog,
   type Project,
@@ -19,15 +22,14 @@ import {
   type TaskItem,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
-import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
+import { firstUsefulLine } from "@/lib/text-summary";
 
 export default function DevLogsPage() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const { projects, selectedProject, selectedProjectId, selectProject, loadingProjects, projectError } = useProjectSelection();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [logs, setLogs] = useState<DevLog[]>([]);
   const [evolutionRecords, setEvolutionRecords] = useState<ProjectEvolutionRecord[]>([]);
   const [memory, setMemory] = useState<ProjectMemory | null>(null);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
   const [reviewDate, setReviewDate] = useState(new Date().toISOString().slice(0, 10));
   const [draftTitle, setDraftTitle] = useState("");
   const [draftContent, setDraftContent] = useState("");
@@ -38,31 +40,11 @@ export default function DevLogsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const selectedProject = useMemo(
-    () => projects.find((project) => project.id === selectedProjectId),
-    [projects, selectedProjectId],
-  );
   const dayLogs = logs.filter((log) => log.logDate === reviewDate);
   const dayEvolution = evolutionRecords.filter((record) => record.createdAt.slice(0, 10) === reviewDate);
   const activeTasks = tasks.filter((task) => task.status !== "DONE");
   const completedTasks = tasks.filter((task) => task.status === "DONE");
   const totalMinutes = logs.reduce((total, log) => total + log.minutesSpent, 0);
-
-  useEffect(() => {
-    const session = readSession();
-    if (!session) {
-      return;
-    }
-
-    setLoading(true);
-    listProjects(session.accessToken)
-      .then((items) => {
-        setProjects(items);
-        setSelectedProjectId(resolveSelectedProjectId(items));
-      })
-      .catch((exception) => setError(exception instanceof Error ? exception.message : "项目加载失败"))
-      .finally(() => setLoading(false));
-  }, []);
 
   useEffect(() => {
     refreshProjectContext(selectedProjectId);
@@ -77,16 +59,10 @@ export default function DevLogsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reviewDate, selectedProjectId, logs, evolutionRecords, tasks, memory]);
 
-  useEffect(() => {
-    if (!notice && !error) {
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      setNotice("");
-      setError("");
-    }, 4200);
-    return () => window.clearTimeout(timeout);
-  }, [error, notice]);
+  useAutoDismissNotice(error, notice, () => {
+    setNotice("");
+    setError("");
+  });
 
   async function refreshProjectContext(projectId: string) {
     const session = readSession();
@@ -151,38 +127,26 @@ export default function DevLogsPage() {
   return (
     <AppShell eyebrow="按日期沉淀真实开发过程" title="每日回顾">
       <div className="min-h-[calc(100vh-4rem)] bg-surface p-8">
-        <section className="mb-6 rounded-md border border-line bg-white p-4 shadow-panel">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <select
-                className="h-10 min-w-72 rounded-md border border-line bg-white px-3 text-sm outline-none focus:border-slate-950"
-                disabled={projects.length === 0}
-                onChange={(event) => {
-                  rememberSelectedProjectId(event.target.value);
-                  setSelectedProjectId(event.target.value);
-                }}
-                value={selectedProjectId}
-              >
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                className="h-10 rounded-md border border-line bg-white px-3 text-sm outline-none focus:border-slate-950"
-                onChange={(event) => setReviewDate(event.target.value)}
-                type="date"
-                value={reviewDate}
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <StatusPill label="当日日志" value={dayLogs.length} />
-              <StatusPill label="当日演进" value={dayEvolution.length} />
-              <StatusPill label="累计小时" value={Math.round((totalMinutes / 60) * 10) / 10} />
-            </div>
-          </div>
-        </section>
+        <ProjectContextBar
+          actions={(
+            <input
+              className="h-10 rounded-md border border-line bg-white px-3 text-sm outline-none focus:border-slate-950"
+              onChange={(event) => setReviewDate(event.target.value)}
+              type="date"
+              value={reviewDate}
+            />
+          )}
+          leadingExtras={(
+            <>
+              <Badge label={`当日日志 ${dayLogs.length}`} />
+              <Badge label={`当日演进 ${dayEvolution.length}`} />
+              <Badge label={`累计小时 ${Math.round((totalMinutes / 60) * 10) / 10}`} />
+            </>
+          )}
+          onSelect={selectProject}
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+        />
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
           <form className="rounded-md border border-line bg-white shadow-panel" onSubmit={handleSaveReview}>
@@ -291,9 +255,8 @@ export default function DevLogsPage() {
           </aside>
         </div>
 
-        {error ? <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-panel">{error}</div> : null}
-        {notice ? <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-panel">{notice}</div> : null}
-        {loading ? <div className="fixed inset-x-0 bottom-0 h-1 bg-slate-950" /> : null}
+        <Toast error={error || projectError} notice={notice} />
+        {loading || loadingProjects ? <div className="fixed inset-x-0 bottom-0 h-1 bg-slate-950" /> : null}
       </div>
     </AppShell>
   );
@@ -306,11 +269,6 @@ function SourcePanel({ icon, title, items, empty }: { icon: ReactNode; title: st
   }));
   return <SourceCardList empty={empty} icon={icon} items={cards} title={title} />;
 }
-
-type SourceCardItem = {
-  title: string;
-  body: string;
-};
 
 function DailySourceGrid({
   completedCount,
@@ -359,29 +317,6 @@ function SourceStateCard({ href, label, ready, value }: { href: string; label: s
       <p className="mt-1 font-semibold">{value}</p>
     </Link>
   );
-}
-
-function SourceCardList({ empty, icon, items, title }: { empty: string; icon: ReactNode; items: SourceCardItem[]; title: string }) {
-  return (
-    <section className="rounded-md border border-line bg-white shadow-panel">
-      <div className="flex items-center gap-2 border-b border-line px-5 py-4">
-        {icon}
-        <h2 className="font-semibold">{title}</h2>
-      </div>
-      <div className="space-y-3 p-5">
-        {items.length ? items.map((item) => (
-          <article className="rounded-md border border-line bg-slate-50 px-3 py-2 text-sm" key={`${title}-${item.title}-${item.body}`}>
-            <p className="font-semibold text-slate-950">{item.title}</p>
-            <p className="mt-1 line-clamp-3 leading-5 text-slate-600">{item.body}</p>
-          </article>
-        )) : <p className="text-sm text-muted">{empty}</p>}
-      </div>
-    </section>
-  );
-}
-
-function StatusPill({ label, value }: { label: string; value: string | number }) {
-  return <span className="rounded-md bg-slate-100 px-2.5 py-1 text-slate-600">{label} {value}</span>;
 }
 
 function buildDailyDraft(
@@ -447,10 +382,4 @@ function listOrFallback(items: string[], fallback: string) {
     return `- ${fallback}`;
   }
   return cleanItems.map((item) => `- ${item.replace(/\n/g, "\n  ")}`).join("\n");
-}
-
-function firstUsefulLine(value: string) {
-  return value.split(/\r?\n/)
-    .map((line) => line.replace(/^[-*#>\s]+/, "").trim())
-    .find((line) => line && !line.startsWith("暂无")) ?? "";
 }

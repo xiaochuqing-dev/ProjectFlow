@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -16,6 +16,9 @@ import {
   Trash2,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { Badge, ProjectContextBar, Toast } from "@/components/ui";
+import { useAutoDismissNotice } from "@/hooks/useAutoDismissNotice";
+import { useProjectSelection } from "@/hooks/useProjectSelection";
 import {
   acceptProjectChange,
   applyAiSuggestions,
@@ -23,17 +26,14 @@ import {
   listAiSuggestions,
   listProjectChanges,
   listProjectMaterials,
-  listProjects,
   listTasks,
   updateAiSuggestion,
   type AiSuggestion,
-  type Project,
   type ProjectChange,
   type ProjectMaterial,
   type TaskItem,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
-import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 
 const suggestionLabels = {
   UPDATE_PROJECT_MEMORY: "项目档案",
@@ -85,8 +85,7 @@ export default function TasksPage() {
 function TasksPageContent() {
   const searchParams = useSearchParams();
   const queryProjectId = searchParams.get("projectId") ?? "";
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const { projects, selectedProject, selectedProjectId, selectProject, loadingProjects, projectError } = useProjectSelection({ queryProjectId });
   const [changes, setChanges] = useState<ProjectChange[]>([]);
   const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);
   const [materials, setMaterials] = useState<ProjectMaterial[]>([]);
@@ -101,10 +100,6 @@ function TasksPageContent() {
   const [applying, setApplying] = useState(false);
   const [ignoringId, setIgnoringId] = useState("");
 
-  const selectedProject = useMemo(
-    () => projects.find((project) => project.id === selectedProjectId),
-    [projects, selectedProjectId],
-  );
   const pendingChanges = changes.filter((change) => change.status === "PENDING" || change.status === "EDITED");
   const acceptedChanges = changes.filter((change) => change.status === "ACCEPTED" || change.status === "MERGED");
   const ignoredChanges = changes.filter((change) => change.status === "IGNORED");
@@ -114,36 +109,14 @@ function TasksPageContent() {
   const latestMaterial = materials[0];
 
   useEffect(() => {
-    const session = readSession();
-    if (!session) {
-      return;
-    }
-
-    setLoading(true);
-    listProjects(session.accessToken)
-      .then((items) => {
-        setProjects(items);
-        setSelectedProjectId(queryProjectId || resolveSelectedProjectId(items));
-      })
-      .catch((exception) => setError(exception instanceof Error ? exception.message : "项目加载失败"))
-      .finally(() => setLoading(false));
-  }, [queryProjectId]);
-
-  useEffect(() => {
     refreshProjectContext(selectedProjectId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProjectId]);
 
-  useEffect(() => {
-    if (!notice && !error) {
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      setNotice("");
-      setError("");
-    }, 4200);
-    return () => window.clearTimeout(timeout);
-  }, [error, notice]);
+  useAutoDismissNotice(error, notice, () => {
+    setNotice("");
+    setError("");
+  });
 
   async function refreshProjectContext(projectId: string) {
     const session = readSession();
@@ -295,28 +268,8 @@ function TasksPageContent() {
   return (
     <AppShell eyebrow="从 agent result 到确认资产" title="变更审查">
       <div className="min-h-[calc(100vh-4rem)] bg-surface p-8">
-        <section className="mb-6 rounded-md border border-line bg-white p-4 shadow-panel">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <select
-                className="h-10 min-w-72 rounded-md border border-line bg-white px-3 text-sm outline-none focus:border-slate-950"
-                disabled={projects.length === 0}
-                onChange={(event) => {
-                  rememberSelectedProjectId(event.target.value);
-                  setSelectedProjectId(event.target.value);
-                }}
-                value={selectedProjectId}
-              >
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-              <StatusPill label="待确认" value={pendingChanges.length} tone="amber" />
-              <StatusPill label="已采纳" value={acceptedChanges.length} tone="emerald" />
-              <StatusPill label="已忽略" value={ignoredChanges.length} tone="slate" />
-            </div>
+        <ProjectContextBar
+          actions={(
             <button
               className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
               disabled={applying || selectedChangeIds.length === 0}
@@ -326,8 +279,18 @@ function TasksPageContent() {
               {applying ? <RefreshCw className="h-4 w-4 animate-spin" /> : <GitPullRequestArrow className="h-4 w-4" />}
               采纳选中 {selectedChangeIds.length}
             </button>
-          </div>
-        </section>
+          )}
+          leadingExtras={(
+            <>
+              <Badge label={`待确认 ${pendingChanges.length}`} tone="warning" />
+              <Badge label={`已采纳 ${acceptedChanges.length}`} tone="success" />
+              <Badge label={`已忽略 ${ignoredChanges.length}`} tone="slate" />
+            </>
+          )}
+          onSelect={selectProject}
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+        />
 
         <section className="mb-6 grid gap-3 rounded-md border border-line bg-white p-4 text-sm shadow-panel lg:grid-cols-4">
           <FlowStep title="1. 采纳" text="结构化变更会进入已采纳列表，并按类型写入项目档案字段和事实来源。" />
@@ -435,7 +398,7 @@ function TasksPageContent() {
                   暂无待确认变更。回到工作台扫描 agent result 或导入项目 zip 后，这里会集中处理候选事实、风险、决策和成果素材。
                 </div>
               ) : null}
-              {loading ? <div className="h-1 bg-slate-950" /> : null}
+            {loading || loadingProjects ? <div className="h-1 bg-slate-950" /> : null}
             </div>
           </section>
 
@@ -590,20 +553,10 @@ function TasksPageContent() {
           </aside>
         </div>
 
-        {error ? <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-panel">{error}</div> : null}
-        {notice ? <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-panel">{notice}</div> : null}
+        <Toast error={error || projectError} notice={notice} />
       </div>
     </AppShell>
   );
-}
-
-function StatusPill({ label, value, tone }: { label: string; value: number; tone: "amber" | "emerald" | "slate" }) {
-  const styles = {
-    amber: "bg-amber-50 text-amber-800",
-    emerald: "bg-emerald-50 text-emerald-700",
-    slate: "bg-slate-100 text-slate-600",
-  };
-  return <span className={`rounded-md px-2.5 py-1 text-xs ${styles[tone]}`}>{label} {value}</span>;
 }
 
 function FlowStep({ title, text }: { title: string; text: string }) {

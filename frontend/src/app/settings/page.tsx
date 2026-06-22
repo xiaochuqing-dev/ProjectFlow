@@ -3,24 +3,23 @@
 import { FormEvent, useEffect, useState } from "react";
 import { CheckCircle2, KeyRound, RefreshCw, Settings2, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { ProjectContextBar, Toast } from "@/components/ui";
+import { useAutoDismissNotice } from "@/hooks/useAutoDismissNotice";
+import { useProjectSelection } from "@/hooks/useProjectSelection";
 import {
   createAiProvider,
   listAiProviders,
-  listProjects,
   listProjectModelUsageRecords,
   testAiProvider,
   type AiProvider,
   type AiProviderType,
   type ModelUsageRecord,
-  type Project,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
-import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 
 export default function SettingsPage() {
   const [providers, setProviders] = useState<AiProvider[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const { projects, selectedProjectId, selectProject, projectError } = useProjectSelection();
   const [usageRecords, setUsageRecords] = useState<ModelUsageRecord[]>([]);
   const [saving, setSaving] = useState(false);
   const [loadingUsage, setLoadingUsage] = useState(false);
@@ -30,7 +29,6 @@ export default function SettingsPage() {
 
   useEffect(() => {
     refreshProviders();
-    refreshProjects();
   }, []);
 
   useEffect(() => {
@@ -41,16 +39,10 @@ export default function SettingsPage() {
     refreshUsageRecords(selectedProjectId);
   }, [selectedProjectId]);
 
-  useEffect(() => {
-    if (!notice && !error) {
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      setNotice("");
-      setError("");
-    }, 4200);
-    return () => window.clearTimeout(timeout);
-  }, [error, notice]);
+  useAutoDismissNotice(error, notice, () => {
+    setNotice("");
+    setError("");
+  });
 
   async function refreshProviders() {
     const session = readSession();
@@ -63,21 +55,6 @@ export default function SettingsPage() {
       setProviders(providerItems.filter((provider) => provider.id !== null));
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "模型配置加载失败");
-    }
-  }
-
-  async function refreshProjects() {
-    const session = readSession();
-    if (!session) {
-      return;
-    }
-    setError("");
-    try {
-      const projectItems = await listProjects(session.accessToken);
-      setProjects(projectItems);
-      setSelectedProjectId((current) => resolveSelectedProjectId(projectItems, current));
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "项目列表加载失败");
     }
   }
 
@@ -224,8 +201,7 @@ export default function SettingsPage() {
         </section>
 
         <section className="space-y-6">
-          {error ? <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
-          {notice ? <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div> : null}
+          <Toast error={error || projectError} notice={notice} />
 
           <div className="rounded-md border border-line bg-white shadow-panel">
             <div className="border-b border-line px-5 py-3">
@@ -278,19 +254,6 @@ export default function SettingsPage() {
                 <p className="mt-1 text-sm text-muted">按项目查看成果生成等模型/模板调用的 token 估算和状态。</p>
               </div>
               <div className="flex gap-2">
-                <select
-                  className="min-w-52 rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
-                  disabled={projects.length === 0}
-                  onChange={(event) => {
-                    rememberSelectedProjectId(event.target.value);
-                    setSelectedProjectId(event.target.value);
-                  }}
-                  value={selectedProjectId}
-                >
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>{project.name}</option>
-                  ))}
-                </select>
                 <button
                   className="rounded-md border border-line bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                   disabled={!selectedProjectId || loadingUsage}
@@ -301,6 +264,11 @@ export default function SettingsPage() {
                 </button>
               </div>
             </div>
+            <ProjectContextBar
+              onSelect={selectProject}
+              projects={projects}
+              selectedProjectId={selectedProjectId}
+            />
             <div className="divide-y divide-line">
               {usageRecords.length > 0 ? (
                 <div className="grid gap-3 px-5 py-4 text-sm md:grid-cols-3">

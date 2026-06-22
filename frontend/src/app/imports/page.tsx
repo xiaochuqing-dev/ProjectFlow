@@ -1,21 +1,19 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, ClipboardPaste, FileDown, Layers3, RefreshCw } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { useProjectSelection } from "@/hooks/useProjectSelection";
 import {
   confirmMarkdownImport,
   listImportRecords,
-  listProjects,
   listTasks,
   previewMarkdownImport,
   type ImportRecord,
   type MarkdownPreview,
-  type Project,
   type TaskItem,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
-import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 
 const sampleMarkdown = `---
 title: ProjectFlow 导入页开发
@@ -41,10 +39,9 @@ minutes: 90
 - 用导入记录支撑 AI 复盘材料。`;
 
 export default function ImportsPage() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const { projects, selectedProject, selectedProjectId, selectProject, loadingProjects, projectError } = useProjectSelection();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [records, setRecords] = useState<ImportRecord[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedTaskId, setSelectedTaskId] = useState("");
   const [markdown, setMarkdown] = useState(sampleMarkdown);
   const [preview, setPreview] = useState<MarkdownPreview | null>(null);
@@ -53,37 +50,18 @@ export default function ImportsPage() {
   const [previewing, setPreviewing] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
-  const selectedProject = useMemo(
-    () => projects.find((project) => project.id === selectedProjectId),
-    [projects, selectedProjectId],
-  );
-
-  useEffect(() => {
-    const session = readSession();
-    if (!session) {
-      return;
-    }
-
-    setLoading(true);
-    listProjects(session.accessToken)
-      .then((items) => {
-        setProjects(items);
-        setSelectedProjectId((current) => resolveSelectedProjectId(items, current));
-      })
-      .catch((exception) => setError(exception instanceof Error ? exception.message : "项目加载失败"))
-      .finally(() => setLoading(false));
-  }, []);
-
   useEffect(() => {
     const session = readSession();
     if (!session || !selectedProjectId) {
       setTasks([]);
       setRecords([]);
+      setLoading(false);
       return;
     }
 
     setPreview(null);
     setSelectedTaskId("");
+    setLoading(true);
     Promise.all([
       listTasks(session.accessToken, selectedProjectId),
       listImportRecords(session.accessToken, selectedProjectId),
@@ -92,7 +70,8 @@ export default function ImportsPage() {
         setTasks(taskItems);
         setRecords(importItems);
       })
-      .catch((exception) => setError(exception instanceof Error ? exception.message : "导入上下文加载失败"));
+      .catch((exception) => setError(exception instanceof Error ? exception.message : "导入上下文加载失败"))
+      .finally(() => setLoading(false));
   }, [selectedProjectId]);
 
   async function handlePreview(event?: FormEvent<HTMLFormElement>) {
@@ -155,10 +134,7 @@ export default function ImportsPage() {
               <select
                 className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
                 disabled={projects.length === 0}
-                onChange={(event) => {
-                  rememberSelectedProjectId(event.target.value);
-                  setSelectedProjectId(event.target.value);
-                }}
+                onChange={(event) => selectProject(event.target.value)}
                 value={selectedProjectId}
               >
                 {projects.map((project) => (
@@ -203,7 +179,7 @@ export default function ImportsPage() {
                   <p className="mt-2 text-xs text-muted">{new Date(record.createdAt).toLocaleString()}</p>
                 </article>
               ))}
-              {!loading && records.length === 0 ? (
+              {!loading && !loadingProjects && records.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-line p-5 text-center text-sm text-muted">
                   暂无导入记录。
                 </div>
@@ -226,7 +202,7 @@ export default function ImportsPage() {
               onChange={(event) => setMarkdown(event.target.value)}
               value={markdown}
             />
-            {error ? <p className="mt-3 text-sm text-rose-600">{error}</p> : null}
+            {error || projectError ? <p className="mt-3 text-sm text-rose-600">{error || projectError}</p> : null}
             <button
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-60"
               disabled={previewing || !selectedProjectId}

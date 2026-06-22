@@ -4,6 +4,10 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Clipboard, Download, FileText, History, Layers3, RefreshCw, Save, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { ProjectContextBar, Toast } from "@/components/ui";
+import { SourceCardList, type SourceCardItem } from "@/components/sources/SourceCardList";
+import { useAutoDismissNotice } from "@/hooks/useAutoDismissNotice";
+import { useProjectSelection } from "@/hooks/useProjectSelection";
 import { compactProjectPath } from "@/lib/project-insights";
 import {
   generateAiOutput,
@@ -11,7 +15,6 @@ import {
   listAiOutputs,
   listDevLogs,
   listProjectEvolutionRecords,
-  listProjects,
   listTasks,
   type AiOutput,
   type AiOutputType,
@@ -22,7 +25,7 @@ import {
   type TaskItem,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
-import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
+import { firstUsefulLine } from "@/lib/text-summary";
 
 const outputLabels: Record<AiOutputType, string> = {
   WEEKLY_REPORT: "周报",
@@ -39,13 +42,12 @@ const outputDescriptions: Record<AiOutputType, string> = {
 };
 
 export default function AiReviewPage() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const { projects, selectedProject, selectedProjectId, selectProject, loadingProjects, projectError } = useProjectSelection();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [logs, setLogs] = useState<DevLog[]>([]);
   const [outputs, setOutputs] = useState<AiOutput[]>([]);
   const [evolutionRecords, setEvolutionRecords] = useState<ProjectEvolutionRecord[]>([]);
   const [memory, setMemory] = useState<ProjectMemory | null>(null);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedType, setSelectedType] = useState<AiOutputType>("WEEKLY_REPORT");
   const [activeSourcePanel, setActiveSourcePanel] = useState<"memory" | "reviews" | "tasks" | "growth">("memory");
   const [fromDate, setFromDate] = useState("");
@@ -57,10 +59,6 @@ export default function AiReviewPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
 
-  const selectedProject = useMemo(
-    () => projects.find((project) => project.id === selectedProjectId),
-    [projects, selectedProjectId],
-  );
   const selectedOutput = useMemo(
     () => outputs.find((output) => output.id === selectedOutputId) ?? outputs[0],
     [outputs, selectedOutputId],
@@ -68,22 +66,6 @@ export default function AiReviewPage() {
   const doneTasks = tasks.filter((task) => task.status === "DONE");
   const reviewLogs = logs.filter((log) => log.category === "REVIEW");
   const sourcePanel = buildSourcePanel(activeSourcePanel, memory, reviewLogs, tasks, evolutionRecords);
-
-  useEffect(() => {
-    const session = readSession();
-    if (!session) {
-      return;
-    }
-
-    setLoading(true);
-    listProjects(session.accessToken)
-      .then((items) => {
-        setProjects(items);
-        setSelectedProjectId(resolveSelectedProjectId(items));
-      })
-      .catch((exception) => setError(exception instanceof Error ? exception.message : "项目加载失败"))
-      .finally(() => setLoading(false));
-  }, []);
 
   useEffect(() => {
     refreshProjectContext(selectedProjectId);
@@ -95,16 +77,10 @@ export default function AiReviewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOutputId, outputs, selectedType, selectedProjectId, memory, logs, tasks, evolutionRecords]);
 
-  useEffect(() => {
-    if (!notice && !error) {
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      setNotice("");
-      setError("");
-    }, 4200);
-    return () => window.clearTimeout(timeout);
-  }, [error, notice]);
+  useAutoDismissNotice(error, notice, () => {
+    setNotice("");
+    setError("");
+  });
 
   async function refreshProjectContext(projectId: string) {
     const session = readSession();
@@ -188,35 +164,25 @@ export default function AiReviewPage() {
   return (
     <AppShell eyebrow="确认资产到可展示内容" title="成果输出">
       <div className="min-h-[calc(100vh-4rem)] bg-surface p-8">
-        <section className="mb-6 rounded-md border border-line bg-white p-4 shadow-panel">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <select
-                className="h-10 min-w-72 rounded-md border border-line bg-white px-3 text-sm outline-none focus:border-slate-950"
-                disabled={projects.length === 0}
-                onChange={(event) => {
-                  rememberSelectedProjectId(event.target.value);
-                  setSelectedProjectId(event.target.value);
-                }}
-                value={selectedProjectId}
-              >
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-              <SourceQuickFilter active={activeSourcePanel === "memory"} label="项目档案" value={memory ? 1 : 0} onClick={() => setActiveSourcePanel("memory")} />
-              <SourceQuickFilter active={activeSourcePanel === "reviews"} label="每日回顾" value={reviewLogs.length} onClick={() => setActiveSourcePanel("reviews")} />
-              <SourceQuickFilter active={activeSourcePanel === "tasks"} label="任务证据" value={tasks.length} onClick={() => setActiveSourcePanel("tasks")} />
-              <SourceQuickFilter active={activeSourcePanel === "growth"} label="成长记录" value={evolutionRecords.length} onClick={() => setActiveSourcePanel("growth")} />
-            </div>
+        <ProjectContextBar
+          actions={(
             <div className="flex items-center gap-2 text-sm text-muted">
               <FileText className="h-4 w-4" />
               已生成 {outputs.length} 份
             </div>
-          </div>
-        </section>
+          )}
+          leadingExtras={(
+            <>
+              <SourceQuickFilter active={activeSourcePanel === "memory"} label="项目档案" value={memory ? 1 : 0} onClick={() => setActiveSourcePanel("memory")} />
+              <SourceQuickFilter active={activeSourcePanel === "reviews"} label="每日回顾" value={reviewLogs.length} onClick={() => setActiveSourcePanel("reviews")} />
+              <SourceQuickFilter active={activeSourcePanel === "tasks"} label="任务证据" value={tasks.length} onClick={() => setActiveSourcePanel("tasks")} />
+              <SourceQuickFilter active={activeSourcePanel === "growth"} label="成长记录" value={evolutionRecords.length} onClick={() => setActiveSourcePanel("growth")} />
+            </>
+          )}
+          onSelect={selectProject}
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+        />
 
         <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)_360px]">
           <section className="space-y-5">
@@ -330,23 +296,16 @@ export default function AiReviewPage() {
           </section>
 
           <aside className="space-y-5">
-            <SourceCardList empty={sourcePanel.empty} items={sourcePanel.items} title={sourcePanel.title} />
+            <SourceCardList compactBody={compactSourceText} empty={sourcePanel.empty} items={sourcePanel.items} title={sourcePanel.title} />
           </aside>
         </div>
 
-        {error ? <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-panel">{error}</div> : null}
-        {notice ? <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-panel">{notice}</div> : null}
-        {loading ? <div className="fixed inset-x-0 bottom-0 h-1 bg-slate-950" /> : null}
+        <Toast error={error || projectError} notice={notice} />
+        {loading || loadingProjects ? <div className="fixed inset-x-0 bottom-0 h-1 bg-slate-950" /> : null}
       </div>
     </AppShell>
   );
 }
-
-type SourceCardItem = {
-  title: string;
-  body: string;
-  meta?: string;
-};
 
 function SourceQuickFilter({ active, label, onClick, value }: { active: boolean; label: string; onClick: () => void; value: number }) {
   return (
@@ -368,28 +327,6 @@ function OutputSourceMetric({ href, label, ready, value }: { href: string; label
       <p className="text-xs">{label}</p>
       <p className="mt-1 font-semibold">{value}</p>
     </Link>
-  );
-}
-
-function SourceCardList({ empty, items, title }: { empty: string; items: SourceCardItem[]; title: string }) {
-  return (
-    <section className="rounded-md border border-line bg-white shadow-panel">
-      <div className="flex items-center gap-2 border-b border-line px-5 py-4">
-        <Layers3 className="h-4 w-4 text-slate-700" />
-        <h2 className="font-semibold">{title}</h2>
-      </div>
-      <div className="max-h-80 space-y-3 overflow-auto p-5">
-        {items.length ? items.map((item) => (
-          <article className="rounded-md border border-line bg-slate-50 px-3 py-2 text-sm" key={`${item.title}-${item.body}`}>
-            <div className="mb-1 flex items-center justify-between gap-3">
-              <p className="font-semibold text-slate-950">{item.title}</p>
-              {item.meta ? <span className="shrink-0 rounded-md bg-white px-2 py-1 text-xs text-muted">{item.meta}</span> : null}
-            </div>
-            <p className="line-clamp-3 leading-5 text-slate-600">{compactSourceText(item.body)}</p>
-          </article>
-        )) : <p className="text-sm text-muted">{empty}</p>}
-      </div>
-    </section>
   );
 }
 
@@ -448,15 +385,6 @@ function buildSourcePanel(
 function sourceCardItem(label: string, value: string | undefined): SourceCardItem | null {
   const line = firstUsefulLine(value);
   return line ? { title: label, body: line, meta: "已确认" } : null;
-}
-
-function firstUsefulLine(value: string | undefined) {
-  if (!value) {
-    return "";
-  }
-  return value.split(/\r?\n/)
-    .map((line) => line.replace(/^[-*]\s*/, "").trim())
-    .find((line) => line && !line.startsWith("暂无")) ?? "";
 }
 
 function compactSourceText(value: string) {
