@@ -7,22 +7,25 @@ const dashboard = readFileSync(join(root, "src/app/dashboard/page.tsx"), "utf8")
 const devLogs = readFileSync(join(root, "src/app/dev-logs/page.tsx"), "utf8");
 const outputs = readFileSync(join(root, "src/app/ai-review/page.tsx"), "utf8");
 const primitives = readFileSync(join(root, "src/components/ui/primitives.tsx"), "utf8");
+const activityFeed = readFileSync(join(root, "src/components/dashboard/ActivityFeed.tsx"), "utf8");
+const architectureQuickEntry = readFileSync(join(root, "src/components/dashboard/ArchitectureQuickEntry.tsx"), "utf8");
+const flowGuideDialog = readFileSync(join(root, "src/components/dashboard/FlowGuideDialog.tsx"), "utf8");
 const workSessionDetail = readFileSync(join(root, "src/app/work-sessions/[sessionId]/page.tsx"), "utf8");
 const changeDetail = readFileSync(join(root, "src/app/project-changes/[changeId]/page.tsx"), "utf8");
 
 assert.match(dashboard, /showFlowGuide/, "dashboard should open the onboarding flow from a button instead of always showing the full guide");
 assert.match(dashboard, /FlowGuideDialog/, "dashboard should render the flow guide in a standalone dialog");
 assert.match(dashboard, /打开上手流程/, "dashboard should expose a compact top-bar guide button");
-assert.match(dashboard, /FlowStepStrip/, "flow steps should be displayed as colored rounded strip cards inside the dialog");
+assert.match(flowGuideDialog, /FlowStepStrip/, "flow steps should be displayed as colored rounded strip cards inside the dialog");
 assert.doesNotMatch(dashboard, /<ProjectFlowGuide state=\{projectFlowState\} \/>/, "dashboard should not permanently render the large guide block");
 
 assert.match(dashboard, /InteractiveStat/, "dashboard metrics should be clickable interaction entries, not dead number cards");
 assert.match(dashboard, /statsFocus/, "dashboard should use metric clicks to focus related content");
 assert.match(dashboard, /ArchitectureQuickEntry/, "dashboard should put a compact architecture entry in the right rail");
-assert.match(dashboard, /架构入口/, "right rail should expose the architecture summary entry");
-assert.match(dashboard, /ActivityGroup/, "recent activity should be grouped by review state instead of one flat mixed feed");
-assert.match(dashboard, /activityImpactSummary/, "recent activity should describe what changed, not only that something changed");
-assert.match(dashboard, /今日变化在左侧闭环处理/, "recent activity should not duplicate the main daily change loop");
+assert.match(architectureQuickEntry, /架构入口/, "right rail should expose the architecture summary entry");
+assert.match(activityFeed, /ActivityGroup/, "recent activity should be grouped by review state instead of one flat mixed feed");
+assert.match(activityFeed, /activityImpactSummary/, "recent activity should describe what changed, not only that something changed");
+assert.match(activityFeed, /今日变化在左侧闭环处理/, "recent activity should not duplicate the main daily change loop");
 assert.match(dashboard, /InfoBubble/, "non-clickable project status and model state should render as information bubbles, not button-like controls");
 
 assert.match(outputs, /SourceQuickFilter/, "output source pills should be clickable source filters");

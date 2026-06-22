@@ -1,22 +1,25 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
-  Clipboard,
   FileCode2,
-  FolderTree,
   History,
   RefreshCw,
-  Save,
   ScanLine,
   Settings,
   ShieldAlert,
   Upload,
-  X,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import { ArchitectureQuickEntry } from "@/components/dashboard/ArchitectureQuickEntry";
+import { EvidenceFlowPanel } from "@/components/dashboard/EvidenceFlowPanel";
+import { FlowGuideDialog } from "@/components/dashboard/FlowGuideDialog";
+import { InteractiveStat, MiniFact, StatsFocusPanel } from "@/components/dashboard/DashboardStats";
+import { ProjectAccessCard, ZipImportPanel } from "@/components/dashboard/ProjectAccessCard";
+import type { DashboardStep } from "@/components/dashboard/types";
 import {
   Badge,
   Button,
@@ -56,7 +59,6 @@ import {
   type ChangeConflict,
   type EvidenceBundle,
   type Project,
-  type ProjectAnalysis,
   type ProjectChange,
   type ProjectEvolutionRecord,
   type ProjectMaterial,
@@ -66,17 +68,11 @@ import {
   type WorkSessionScanResult,
 } from "@/lib/api";
 import { buildProjectArchitecture, compactProjectPath, projectZipPaths } from "@/lib/project-insights";
-import { projectFlowSteps, resolveProjectFlowState } from "@/lib/project-flow-state";
+import { resolveProjectFlowState } from "@/lib/project-flow-state";
 import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 import { readSession } from "@/lib/auth";
+import { projectAnalysisContainsNoise, useDashboardWorkspace, workSessionListResult } from "@/hooks/useDashboardWorkspace";
 import { useProjectAnalysisJobs } from "@/lib/use-project-analysis-jobs";
-
-type Step =
-  | { kind: "no_project" }
-  | { kind: "no_material" }
-  | { kind: "no_path" }
-  | { kind: "has_pending"; count: number }
-  | { kind: "scan_updates" };
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -111,7 +107,7 @@ export default function DashboardPage() {
   const [draftingChangeFor, setDraftingChangeFor] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const projectContextRequestRef = useRef(0);
+  const { beginContextRequest, isLatestContextRequest } = useDashboardWorkspace();
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId),
@@ -151,7 +147,7 @@ export default function DashboardPage() {
   });
 
   // 当前下一步 —— 把原来的平铺改成单一焦点
-  const currentStep: Step = useMemo(() => {
+  const currentStep: DashboardStep = useMemo(() => {
     if (!selectedProject) return { kind: "no_project" };
     if (!hasMaterials) return { kind: "no_material" };
     if (!hasProjectPath) return { kind: "no_path" };
@@ -195,8 +191,7 @@ export default function DashboardPage() {
 
   async function refreshProjectContext(projectId: string) {
     const session = readSession();
-    const requestId = projectContextRequestRef.current + 1;
-    projectContextRequestRef.current = requestId;
+    const requestId = beginContextRequest();
     clearProjectContextViewState();
 
     if (!session || !projectId) {
@@ -217,7 +212,7 @@ export default function DashboardPage() {
         listProjectChanges(session.accessToken, projectId),
         listAiOutputs(session.accessToken, projectId),
       ]);
-      if (requestId !== projectContextRequestRef.current) {
+      if (!isLatestContextRequest(requestId)) {
         return;
       }
       setMaterials(materialItems);
@@ -232,13 +227,13 @@ export default function DashboardPage() {
       setProjectPath(memoryRecord.localProjectPath ?? "");
       setWorkSessionScan(workSessions.length ? workSessionListResult(projectId, memoryRecord.localProjectPath ?? "", workSessions) : null);
     } catch (exception) {
-      if (requestId !== projectContextRequestRef.current) {
+      if (!isLatestContextRequest(requestId)) {
         return;
       }
       clearProjectContextViewState();
       setError(exception instanceof Error ? exception.message : "项目上下文加载失败");
     } finally {
-      if (requestId === projectContextRequestRef.current) {
+      if (isLatestContextRequest(requestId)) {
         setLoading(false);
       }
     }
@@ -800,836 +795,4 @@ export default function DashboardPage() {
       {loading ? <div className="fixed inset-x-0 bottom-0 h-1 bg-brand" /> : null}
     </AppShell>
   );
-}
-
-/* ------------------------------------------------------------------ */
-/* 入口与解释层                                                        */
-/* ------------------------------------------------------------------ */
-
-function InteractiveStat({
-  active,
-  hint,
-  label,
-  onClick,
-  tone = "slate",
-  value,
-}: {
-  active: boolean;
-  hint?: string;
-  label: string;
-  onClick: () => void;
-  tone?: "slate" | "brand" | "warning";
-  value: number;
-}) {
-  const toneClass = {
-    slate: "hover:border-lineStrong hover:bg-surfaceAlt",
-    brand: "hover:border-brand/40 hover:bg-brand-soft",
-    warning: "hover:border-warning/40 hover:bg-warning-soft",
-  }[tone];
-  return (
-    <button
-      className={`group min-w-0 rounded-card border bg-elevated p-4 text-left transition duration-150 hover:-translate-y-0.5 hover:shadow-card ${
-        active ? "border-brand bg-brand-soft shadow-card" : `border-line ${toneClass}`
-      }`}
-      onClick={onClick}
-      type="button"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-muted">{label}</p>
-        <ArrowRight className={`h-3.5 w-3.5 transition ${active ? "text-brand" : "text-muted group-hover:text-brand"}`} />
-      </div>
-      <p className="mt-1.5 text-xl font-semibold leading-7 text-ink">{value}</p>
-      {hint ? <p className="mt-0.5 text-xs text-muted">{hint}</p> : null}
-    </button>
-  );
-}
-
-function StatsFocusPanel({
-  activeTasks,
-  architecture,
-  changes,
-  focus,
-  paths,
-  suggestions,
-  workSessions,
-}: {
-  activeTasks: TaskItem[];
-  architecture: ReturnType<typeof buildProjectArchitecture>;
-  changes: ProjectChange[];
-  focus: "materials" | "changes" | "sessions" | "tasks";
-  paths: string[];
-  suggestions: AiSuggestion[];
-  workSessions: WorkSessionCandidate[];
-}) {
-  const content = {
-    materials: {
-      title: "项目材料",
-      body: paths.length ? `${architecture.shapeLabel}，识别 ${paths.length} 个文件信号。` : "暂无可用项目文件信号。",
-      action: "查看架构入口",
-      href: "",
-      items: [architecture.entrypoints[0]?.path, architecture.coreModules[0]?.path, architecture.dependencySignals[0]?.path].filter(Boolean) as string[],
-    },
-    changes: {
-      title: "待确认变更",
-      body: suggestions.length || changes.length ? "这些候选需要审查后才会进入项目档案。" : "暂无待确认变更。",
-      action: "去变更审查",
-      href: "/tasks",
-      items: [...suggestions.map((item) => item.title), ...changes.map((item) => item.title)].slice(0, 3),
-    },
-    sessions: {
-      title: "今日候选",
-      body: workSessions.length ? "这些 Git 变化可继续生成证据包。" : "暂无今日 Git 变化候选。",
-      action: "刷新变化",
-      href: "",
-      items: workSessions.slice(0, 3).map((item) => item.taskIntent || `${item.changedFiles} 个文件变化`),
-    },
-    tasks: {
-      title: "进行中任务",
-      body: activeTasks.length ? "这些任务会参与每日回顾和成果输出。" : "暂无进行中任务。",
-      action: "查看任务",
-      href: "/tasks",
-      items: activeTasks.slice(0, 3).map((item) => item.title),
-    },
-  }[focus];
-
-  return (
-    <Card shadow="card" padding="md" className="mb-6 border-brand/20 bg-brand-soft/40">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-brand">已选入口</p>
-          <h3 className="mt-1 text-lg font-semibold text-ink">{content.title}</h3>
-          <p className="mt-1 text-sm leading-6 text-body">{content.body}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {content.items.length ? content.items.map((item) => (
-              <span className="max-w-full break-all rounded-field bg-elevated px-3 py-1.5 font-mono text-xs text-muted" key={item}>
-                {item.includes("/") ? compactProjectPath(item) : item}
-              </span>
-            )) : <span className="rounded-field bg-elevated px-3 py-1.5 text-xs text-muted">无</span>}
-          </div>
-        </div>
-        {content.href ? (
-          <Link href={content.href}>
-            <Button variant="primary" size="sm">
-              {content.action} <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
-        ) : null}
-      </div>
-    </Card>
-  );
-}
-
-function FlowGuideDialog({
-  onClose,
-  open,
-  state,
-}: {
-  onClose: () => void;
-  open: boolean;
-  state: ReturnType<typeof resolveProjectFlowState>;
-}) {
-  if (!open) {
-    return null;
-  }
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/35 p-4" role="dialog" aria-modal="true" aria-label="独立上手流程">
-      <div className="max-h-[86vh] w-full max-w-5xl overflow-auto rounded-card border border-line bg-elevated shadow-cardLg">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line p-5">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">独立上手流程</p>
-            <h2 className="mt-2 text-2xl font-semibold text-ink">{state.title}</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-body">{state.description}</p>
-          </div>
-          <Button variant="ghost" size="sm" onClick={onClose} aria-label="关闭上手流程">
-            <X className="h-4 w-4" />
-            关闭
-          </Button>
-        </div>
-        <div className="space-y-5 p-5">
-          <p className="rounded-field bg-surfaceAlt px-4 py-3 text-sm leading-6 text-muted">{state.helper}</p>
-          <FlowStepStrip state={state} />
-          {state.primaryHref ? (
-            <Link className="inline-flex" href={state.primaryHref} onClick={onClose}>
-              <Button variant="primary" size="md">
-                下一步：{state.primaryAction} <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-          ) : (
-            <div className="inline-flex rounded-field bg-brand-soft px-4 py-2 text-sm font-semibold text-brand">
-              下一步：{state.primaryAction}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FlowStepStrip({ state }: { state: ReturnType<typeof resolveProjectFlowState> }) {
-  const colors = [
-    "bg-emerald-50 border-emerald-100 text-emerald-900",
-    "bg-cyan-50 border-cyan-100 text-cyan-900",
-    "bg-blue-50 border-blue-100 text-blue-900",
-    "bg-amber-50 border-amber-100 text-amber-900",
-    "bg-indigo-50 border-indigo-100 text-indigo-900",
-    "bg-slate-100 border-slate-200 text-slate-800",
-  ];
-  return (
-    <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
-      {projectFlowSteps.map((step, index) => {
-        const done = state.completedSteps.includes(step.key);
-        const active = state.nextStep === step.key && !done;
-        return (
-          <div className={`rounded-card border p-4 ${colors[index % colors.length]} ${active ? "ring-2 ring-brand/40" : ""}`} key={step.key}>
-            <div className="flex items-center gap-2">
-              <span className={`grid h-7 w-7 place-items-center rounded-full text-xs font-semibold ${done ? "bg-success text-white" : active ? "bg-brand text-white" : "bg-white/80 text-ink"}`}>
-                {index + 1}
-              </span>
-              <p className="text-sm font-semibold">{step.label}</p>
-            </div>
-            <p className="mt-3 text-xs leading-5 opacity-80">{step.description}</p>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function ArchitectureQuickEntry({
-  architecture,
-  hasUsableProjectZip,
-  paths,
-  selectedProjectId,
-}: {
-  architecture: ReturnType<typeof buildProjectArchitecture>;
-  hasUsableProjectZip: boolean;
-  paths: string[];
-  selectedProjectId: string;
-}) {
-  if (!hasUsableProjectZip) {
-    return (
-      <Card shadow="card" padding="md">
-        <p className="text-xs font-semibold text-muted">架构入口</p>
-        <p className="mt-2 text-sm leading-6 text-muted">导入完整项目 zip 后，这里会显示项目形态、入口、核心和依赖数量。</p>
-      </Card>
-    );
-  }
-  const facts = [
-    ["形态", architecture.shapeLabel],
-    ["入口", `${architecture.entrypoints.length} 个`],
-    ["核心", `${architecture.coreModules.length} 个`],
-    ["依赖", `${architecture.dependencySignals.length} 个`],
-  ];
-  return (
-    <Card shadow="card" padding="none" className="overflow-hidden border-brand/20">
-      <SectionHeader
-        eyebrow="架构入口"
-        title={architecture.summary || architecture.shapeLabel}
-        icon={<FolderTree className="h-4 w-4" />}
-        actions={
-          <Link href={`/projects/${selectedProjectId}/files`}>
-            <Button variant="primary" size="sm">
-              完整结构 <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
-        }
-      />
-      <div className="grid grid-cols-2 gap-2 p-4">
-        {facts.map(([label, value]) => (
-          <div className="rounded-field border border-line bg-surfaceAlt px-3 py-2" key={label}>
-            <p className="text-xs text-muted">{label}</p>
-            <p className="mt-1 truncate text-sm font-semibold text-ink">{value}</p>
-          </div>
-        ))}
-      </div>
-      <div className="border-t border-line px-4 py-3 text-xs text-muted">
-        {paths.length} 个文件信号 · {architecture.shapeTags.join(" / ")}
-      </div>
-    </Card>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* 独立 zip 导入入口                                                    */
-/* ------------------------------------------------------------------ */
-
-type ZipImportPanelProps = {
-  file: File | null;
-  setFile: (file: File | null) => void;
-  importing: boolean;
-  onImportZip: (event: FormEvent<HTMLFormElement>) => void;
-  canClose: boolean;
-  onClose: () => void;
-};
-
-function ZipImportPanel(props: ZipImportPanelProps) {
-  return (
-    <Card shadow="card" padding="none" className="overflow-hidden border-brand/20">
-      <form className="p-5" onSubmit={props.onImportZip}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Upload className="h-4 w-4 text-brand" />
-              <h3 className="text-sm font-semibold text-ink">添加项目</h3>
-            </div>
-            <p className="mt-1 text-xs leading-5 text-muted">
-              选择完整项目 zip，创建新的项目画像和文件结构理解。
-            </p>
-          </div>
-          {props.canClose ? (
-            <Button variant="ghost" size="sm" onClick={props.onClose} type="button">
-              收起
-            </Button>
-          ) : null}
-        </div>
-        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
-          <label className="block rounded-field border border-dashed border-lineStrong bg-surfaceAlt p-4 transition hover:border-brand">
-            <span className="mb-2 block text-sm font-medium text-body">选择项目 zip</span>
-            <input
-              accept=".zip,application/zip"
-              className="w-full text-sm text-muted"
-              onChange={(event) => props.setFile(event.target.files?.[0] ?? null)}
-              type="file"
-            />
-          </label>
-          <Button variant="primary" type="submit" fullWidth disabled={!props.file || props.importing}>
-            {props.importing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {props.importing ? "导入中..." : "导入并建档"}
-          </Button>
-        </div>
-      </form>
-    </Card>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* 项目接入卡：本地项目接入                                             */
-/* ------------------------------------------------------------------ */
-
-type ProjectAccessCardProps = {
-  step: Step;
-  hasSelectedProject: boolean;
-  projectPath: string;
-  setProjectPath: (value: string) => void;
-  savingProjectPath: boolean;
-  onSavePath: () => void;
-  writingProtocol: boolean;
-  onWriteProtocol: () => void;
-  scanningAgentResults: boolean;
-  onScanAgentResults: () => void;
-  syncingContext: boolean;
-  onSyncContext: () => void;
-  onCopyGlobalRule: () => void;
-};
-
-function ProjectAccessCard(props: ProjectAccessCardProps) {
-  const { step, hasSelectedProject } = props;
-  const hint = accessHint(step, hasSelectedProject);
-
-  return (
-    <Card shadow="card" padding="none" className="overflow-hidden">
-      {/* 顶部状态条：轻量提示当前阶段，但不门控导入入口 */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-brand-soft px-5 py-3">
-        <div className="flex items-center gap-2">
-          <Badge label="项目接入" tone="brand" dot />
-          <p className="text-sm text-body">{hint.title}</p>
-        </div>
-        {hint.cta && hint.ctaHref ? (
-          <Link className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-hover" href={hint.ctaHref}>
-            {hint.cta} <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        ) : null}
-      </div>
-
-      <div className="p-5">
-          <div className="flex items-center gap-2">
-            <FolderTree className="h-4 w-4 text-brand" />
-            <h3 className="text-sm font-semibold text-ink">本地项目接入</h3>
-          </div>
-          <p className="mt-1 text-xs leading-5 text-muted">
-            绑定真实项目文件夹后，才能扫描 Agent 结果、读取 Git evidence、同步上下文。不会扫描用户主目录。
-          </p>
-          <input
-            className="mt-3 h-10 w-full rounded-field border border-line bg-elevated px-3 text-sm outline-none transition focus:border-brand focus-visible:shadow-focus disabled:cursor-not-allowed disabled:bg-surfaceAlt disabled:text-muted"
-            onChange={(event) => props.setProjectPath(event.target.value)}
-            placeholder={hasSelectedProject ? "真实项目文件夹路径" : "先在项目下拉选择一个项目"}
-            value={props.projectPath}
-            disabled={!hasSelectedProject}
-          />
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <Button
-              variant="primary"
-              size="sm"
-              disabled={!hasSelectedProject || !props.projectPath.trim() || props.savingProjectPath}
-              onClick={props.onSavePath}
-              title="只记录本地项目根目录，切换项目和刷新页面后继续复用，不写入目标项目文件。"
-            >
-              {props.savingProjectPath ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-              保存路径
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!hasSelectedProject || !props.projectPath.trim() || props.writingProtocol}
-              onClick={props.onWriteProtocol}
-              title="在目标项目生成 ProjectFlow 协议、上下文目录和结果收件箱，供 Agent 按规则写回结果。"
-            >
-              {props.writingProtocol ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileCode2 className="h-3.5 w-3.5" />}
-              写入/刷新协议
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!hasSelectedProject || !props.projectPath.trim() || props.scanningAgentResults}
-              onClick={props.onScanAgentResults}
-              title="读取目标项目的 ProjectFlow 结果收件箱，把 Agent 写回内容转成待审查变更。"
-            >
-              {props.scanningAgentResults ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
-              扫描 Agent Result
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!hasSelectedProject || !props.projectPath.trim() || props.syncingContext}
-              onClick={props.onSyncContext}
-              title="把已经采纳和确认的项目档案写回目标项目上下文目录，供后续 Agent 读取。"
-            >
-              {props.syncingContext ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FolderTree className="h-3.5 w-3.5" />}
-              同步确认上下文
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!hasSelectedProject}
-              onClick={props.onCopyGlobalRule}
-              title="复制给其他 Agent 使用的通用规则，让它们按 ProjectFlow 协议输出结果。"
-            >
-              <Clipboard className="h-3.5 w-3.5" />
-              复制规则
-            </Button>
-          </div>
-      </div>
-    </Card>
-  );
-}
-
-function accessHint(step: Step, hasSelectedProject: boolean): { title: string; cta?: string; ctaHref?: string } {
-  switch (step.kind) {
-    case "no_project":
-      return { title: "还没有项目 —— 导入项目 zip 即可创建第一个项目。", cta: undefined };
-    case "no_material":
-      return { title: "当前项目还没有可分析的材料，导入完整 zip 后生成画像。", cta: undefined };
-    case "no_path":
-      return { title: "绑定本地项目文件夹路径后，才能扫描 Agent 结果与今日变化。", cta: undefined };
-    case "has_pending":
-      return { title: `当前有 ${step.count} 条待确认变更。`, cta: "去变更审查", ctaHref: "/tasks" };
-    case "scan_updates":
-      return { title: "项目已就绪，扫描 Agent Result 或刷新今日变化获取新候选。", cta: undefined };
-    default:
-      return { title: hasSelectedProject ? "项目接入就绪。" : "导入项目 zip 开始。" };
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* 今日变化闭环                                                        */
-/* ------------------------------------------------------------------ */
-
-type EvidenceFlowPanelProps = {
-  workSessions: WorkSessionCandidate[];
-  bundles: EvidenceBundle[];
-  hasProjectPath: boolean;
-  selectedProjectId: string;
-  scanningWorkSessions: boolean;
-  creatingEvidenceFor: string;
-  draftingChangeFor: string;
-  onScanWorkSessions: () => void;
-  onCreateEvidenceBundle: (sessionId: string) => void;
-  onDraftChange: (bundleId: string) => void;
-};
-
-function EvidenceFlowPanel(props: EvidenceFlowPanelProps) {
-  const bundleBySession = new Map(props.bundles.map((bundle) => [bundle.workSessionId, bundle]));
-  const visibleSessions = props.workSessions.slice(0, 3);
-  const workSessionIds = new Set(visibleSessions.map((session) => session.sessionId));
-  const orphanBundles = props.bundles
-    .filter((bundle) => !workSessionIds.has(bundle.workSessionId))
-    .slice(0, Math.max(0, 3 - visibleSessions.length));
-
-  return (
-    <Card shadow="card" padding="none" className="overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <History className="h-4 w-4 text-brand" />
-            <h3 className="text-sm font-semibold text-ink">今日变化闭环</h3>
-          </div>
-          <p className="mt-1 text-xs leading-5 text-muted">开发后回来刷新变化，把 Git evidence 变成可审查事实，采纳后进入项目档案和输出来源。</p>
-        </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={!props.hasProjectPath || props.scanningWorkSessions}
-          onClick={props.onScanWorkSessions}
-          title={props.hasProjectPath ? "读取已绑定项目的 Git 变化，生成今日工作候选。" : "先保存真实项目文件夹路径。"}
-        >
-          {props.scanningWorkSessions ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
-          刷新变化
-        </Button>
-      </div>
-
-      {visibleSessions.length || orphanBundles.length ? (
-        <div className="divide-y divide-line">
-          {visibleSessions.map((session) => (
-            <EvidenceFlowRow
-              bundle={bundleBySession.get(session.sessionId)}
-              creatingEvidenceFor={props.creatingEvidenceFor}
-              draftingChangeFor={props.draftingChangeFor}
-              key={session.sessionId}
-              onCreateEvidenceBundle={props.onCreateEvidenceBundle}
-              onDraftChange={props.onDraftChange}
-              selectedProjectId={props.selectedProjectId}
-              session={session}
-            />
-          ))}
-          {orphanBundles.map((bundle) => (
-            <EvidenceFlowRow
-              bundle={bundle}
-              creatingEvidenceFor={props.creatingEvidenceFor}
-              draftingChangeFor={props.draftingChangeFor}
-              key={bundle.id}
-              onCreateEvidenceBundle={props.onCreateEvidenceBundle}
-              onDraftChange={props.onDraftChange}
-              selectedProjectId={props.selectedProjectId}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="p-5 text-sm leading-6 text-muted">
-          {props.hasProjectPath
-            ? "还没有今日变化。点击刷新后，如果当前项目有 Git 改动或提交，这里会出现候选工作会话。"
-            : "先保存本地项目路径，ProjectFlow 才能从这个项目读取 Git evidence。"}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-function EvidenceFlowRow({
-  bundle,
-  creatingEvidenceFor,
-  draftingChangeFor,
-  onCreateEvidenceBundle,
-  onDraftChange,
-  selectedProjectId,
-  session,
-}: {
-  bundle?: EvidenceBundle;
-  creatingEvidenceFor: string;
-  draftingChangeFor: string;
-  onCreateEvidenceBundle: (sessionId: string) => void;
-  onDraftChange: (bundleId: string) => void;
-  selectedProjectId: string;
-  session?: WorkSessionCandidate;
-}) {
-  const sessionId = session?.sessionId ?? bundle?.workSessionId ?? "";
-  const status = evidenceStatus(bundle);
-  const files = (bundle?.files.length ? bundle.files : session?.files ?? []).slice(0, 2);
-  const title = bundle?.taskIntent || session?.taskIntent || "今日工作候选";
-  const metrics = bundle
-    ? `${bundle.changedFiles} 文件 · +${bundle.addedLines}/-${bundle.deletedLines}`
-    : session
-      ? `${session.changedFiles} 文件 · +${session.addedLines}/-${session.deletedLines}`
-      : "等待证据";
-
-  return (
-    <article className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_auto]">
-      <div className="min-w-0">
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          <Badge label={status.label} tone={status.tone} />
-          <span className="text-xs text-muted">{metrics}</span>
-        </div>
-        <p className="line-clamp-2 text-sm font-semibold leading-6 text-ink">{title}</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {files.length ? files.map((file) => (
-            <span className="max-w-full break-all rounded-field bg-surfaceAlt px-2 py-1 font-mono text-xs text-muted" key={file}>
-              {compactProjectPath(file)}
-            </span>
-          )) : <span className="text-xs text-muted">暂无文件证据</span>}
-        </div>
-      </div>
-      <EvidenceFlowAction
-        bundle={bundle}
-        creating={creatingEvidenceFor === sessionId}
-        drafting={Boolean(bundle && draftingChangeFor === bundle.id)}
-        onCreateEvidenceBundle={() => sessionId && onCreateEvidenceBundle(sessionId)}
-        onDraftChange={() => bundle && onDraftChange(bundle.id)}
-        selectedProjectId={selectedProjectId}
-      />
-    </article>
-  );
-}
-
-function EvidenceFlowAction({
-  bundle,
-  creating,
-  drafting,
-  onCreateEvidenceBundle,
-  onDraftChange,
-  selectedProjectId,
-}: {
-  bundle?: EvidenceBundle;
-  creating: boolean;
-  drafting: boolean;
-  onCreateEvidenceBundle: () => void;
-  onDraftChange: () => void;
-  selectedProjectId: string;
-}) {
-  if (!bundle) {
-    return (
-      <Button variant="secondary" size="sm" disabled={creating} onClick={onCreateEvidenceBundle}>
-        {creating ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileCode2 className="h-3.5 w-3.5" />}
-        生成证据包
-      </Button>
-    );
-  }
-  if (bundle.nextAction === "GENERATE_CHANGE") {
-    return (
-      <Button variant="primary" size="sm" disabled={drafting} onClick={onDraftChange}>
-        {drafting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
-        生成候选变更
-      </Button>
-    );
-  }
-  if (bundle.nextAction === "REVIEW_CHANGE") {
-    return (
-      <Link href="/tasks">
-        <Button variant="primary" size="sm">
-          去变更审查 <ArrowRight className="h-3.5 w-3.5" />
-        </Button>
-      </Link>
-    );
-  }
-  if (bundle.nextAction === "VIEW_MEMORY") {
-    return (
-      <Link href="/project-intelligence">
-        <Button variant="secondary" size="sm">
-          看项目档案 <ArrowRight className="h-3.5 w-3.5" />
-        </Button>
-      </Link>
-    );
-  }
-  return selectedProjectId ? (
-    <Link href="/ai-review">
-      <Button variant="secondary" size="sm">
-        生成输出 <ArrowRight className="h-3.5 w-3.5" />
-      </Button>
-    </Link>
-  ) : null;
-}
-
-function evidenceStatus(bundle?: EvidenceBundle): { label: string; tone: "brand" | "warning" | "success" | "slate" } {
-  if (!bundle) {
-    return { label: "待生成证据", tone: "slate" };
-  }
-  if (bundle.status === "READY_FOR_CHANGE") {
-    return { label: "证据包就绪", tone: "brand" };
-  }
-  if (bundle.status === "CHANGE_DRAFTED") {
-    return { label: "待审查", tone: "warning" };
-  }
-  if (bundle.status === "CHANGE_ACCEPTED") {
-    return { label: "已入档案", tone: "success" };
-  }
-  return { label: "已归档", tone: "slate" };
-}
-
-/* ------------------------------------------------------------------ */
-/* 最近活动流                                                          */
-/* ------------------------------------------------------------------ */
-
-type ActivityFeedProps = {
-  evolutionRecords: ProjectEvolutionRecord[];
-  pendingSuggestions: AiSuggestion[];
-  workSessions: WorkSessionCandidate[];
-  hasProjectPath: boolean;
-  onScanWorkSessions: () => void;
-  scanningWorkSessions: boolean;
-  selectedProjectId: string;
-};
-
-function ActivityFeed(props: ActivityFeedProps) {
-  type FeedItem = {
-    id: string;
-    badge: React.ReactNode;
-    badgeTone: "brand" | "warning" | "success" | "slate";
-    title: string;
-    impact: string;
-    href?: string;
-    hrefLabel?: string;
-  };
-
-  const pendingItems = props.pendingSuggestions.slice(0, 3).map<FeedItem>((suggestion) => ({
-      id: `sug-${suggestion.id}`,
-      badge: "待确认",
-      badgeTone: "warning",
-      title: suggestion.title,
-      impact: "候选信息尚未进入项目档案，审查后才会影响后续输出。",
-      href: "/tasks",
-      hrefLabel: "审查",
-    }));
-  const acceptedItems = props.evolutionRecords.slice(0, 3).map<FeedItem>((record) => ({
-      id: `evo-${record.id}`,
-      badge: "已采纳",
-      badgeTone: "success",
-      title: record.summary,
-      impact: activityImpactSummary(record.detectedChanges || record.summary, "已沉淀到项目成长记录，可用于每日回顾和成果输出。"),
-    }));
-  const groups = [
-    { key: "pending", title: "待审查", items: pendingItems, empty: "暂无待审查候选。" },
-    { key: "accepted", title: "已入档", items: acceptedItems, empty: "暂无已采纳变化。" },
-  ];
-
-  if (groups.every((group) => group.items.length === 0)) {
-    return (
-      <div className="p-5">
-        <p className="text-sm leading-6 text-muted">
-          {props.hasProjectPath
-            ? "点击下方刷新，ProjectFlow 会读取已绑定项目的今日 Git evidence 生成可审查候选。"
-            : "先绑定真实项目路径，ProjectFlow 才能读取 Git evidence。不会扫描用户主目录或全局 Agent 日志。"}
-        </p>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="mt-3"
-          disabled={!props.hasProjectPath || props.scanningWorkSessions}
-          onClick={props.onScanWorkSessions}
-        >
-          {props.scanningWorkSessions ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
-          刷新变化
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <div className="border-b border-line px-5 py-3">
-        <div className="flex items-center justify-between gap-3 rounded-field bg-surfaceAlt px-3 py-2 text-xs text-muted">
-          <span>今日变化在左侧闭环处理，这里只留档案审计摘要。</span>
-          <InfoBubble label={`${props.workSessions.length} 个今日候选`} />
-        </div>
-      </div>
-      <div className="space-y-3 p-4">
-        {groups.map((group) => (
-          <ActivityGroup group={group} key={group.key} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ActivityGroup({
-  group,
-}: {
-  group: {
-    key: string;
-    title: string;
-    empty: string;
-    items: Array<{
-      id: string;
-      badge: React.ReactNode;
-      badgeTone: "brand" | "warning" | "success" | "slate";
-      title: string;
-      impact: string;
-      href?: string;
-      hrefLabel?: string;
-    }>;
-  };
-}) {
-  return (
-    <section className="rounded-field border border-line bg-surfaceAlt/70 p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-ink">{group.title}</p>
-        <InfoBubble label={`${group.items.length} 条`} />
-      </div>
-      {group.items.length ? (
-        <div className="space-y-2">
-          {group.items.map((item) => (
-            <article className="rounded-field border border-line bg-elevated p-3" key={item.id}>
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <Badge label={item.badge} tone={item.badgeTone} />
-                {item.href ? (
-                  <Link className="shrink-0" href={item.href}>
-                    <Button variant="ghost" size="sm">
-                      {item.hrefLabel} <ArrowRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </Link>
-                ) : null}
-              </div>
-              <p className="line-clamp-2 text-sm font-semibold leading-6 text-ink">{item.title}</p>
-              <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted">{item.impact}</p>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <p className="rounded-field bg-elevated px-3 py-2 text-xs text-muted">{group.empty}</p>
-      )}
-    </section>
-  );
-}
-
-function activityImpactSummary(value: string | undefined, fallback: string) {
-  const clean = firstMeaningfulText(value);
-  return clean || fallback;
-}
-
-function firstMeaningfulText(value: string | undefined) {
-  return (value ?? "")
-    .split(/\r?\n/)
-    .map((line) => line.replace(/^[-*#>\s]+/, "").trim())
-    .find(Boolean) ?? "";
-}
-
-/* ------------------------------------------------------------------ */
-/* 局部小组件                                                          */
-/* ------------------------------------------------------------------ */
-
-function MiniFact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 rounded-field border border-line bg-surfaceAlt p-3">
-      <p className="text-xs text-muted">{label}</p>
-      <p className="mt-1 break-all text-sm font-semibold leading-5 text-ink">{value}</p>
-    </div>
-  );
-}
-
-function workSessionListResult(projectId: string, projectPath: string, sessions: WorkSessionCandidate[]): WorkSessionScanResult {
-  return {
-    projectId,
-    projectPath,
-    branchName: sessions[0]?.branchName ?? "",
-    scannedAt: new Date().toISOString(),
-    sessions,
-    warnings: [],
-  };
-}
-
-function projectAnalysisContainsNoise(analysis: ProjectAnalysis) {
-  return [
-    analysis.summary,
-    analysis.architecture,
-    analysis.message,
-    ...analysis.modules,
-    ...analysis.risks,
-    ...analysis.importantFiles,
-    ...analysis.evidence,
-    ...analysis.limitations,
-  ].some((value) => {
-    const lower = value.toLowerCase().replaceAll("\\", "/");
-    return lower.includes(".codex-run/")
-      || lower.includes("old-git-")
-      || lower.includes(".git/objects/")
-      || lower.includes(".git/config")
-      || lower.includes(".git/head");
-  });
 }

@@ -6,6 +6,7 @@ const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
 
 const tasks = read("src/app/tasks/page.tsx");
+const changeReviewList = read("src/components/tasks/ChangeReviewList.tsx");
 const devLogs = read("src/app/dev-logs/page.tsx");
 const intelligence = read("src/app/project-intelligence/page.tsx");
 const outputs = read("src/app/ai-review/page.tsx");
@@ -20,8 +21,8 @@ assert.ok(existsSync(join(root, "src/app/project-intelligence/timeline/page.tsx"
 assert.ok(existsSync(join(root, "src/app/project-intelligence/fact-sources/page.tsx")), "fact source chain page should exist");
 assert.ok(existsSync(join(root, "src/app/project-intelligence/changes/page.tsx")), "archive changes page should exist");
 
-assert.match(tasks, /href=\{`\/project-changes\/\$\{change\.id\}/, "change review list should link each structured change to its detail page");
-assert.match(tasks, /完整审查/, "change review list should expose a clear detail review action");
+assert.match(changeReviewList, /href=\{`\/project-changes\/\$\{change\.id\}/, "change review list should link each structured change to its detail page");
+assert.match(changeReviewList, /完整审查/, "change review list should expose a clear detail review action");
 
 assert.match(devLogs, /\/dev-logs\/sources\?projectId=/, "daily review source counts should link to the source detail page");
 assert.doesNotMatch(devLogs, />有<\/span>|>无<\/span>/, "daily source cards should not duplicate counts with yes/no labels");
