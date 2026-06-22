@@ -1,8 +1,6 @@
 package com.projectflow.service;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -13,8 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 import org.springframework.http.HttpStatus;
 import org.slf4j.Logger;
@@ -35,7 +31,6 @@ import com.projectflow.dto.V2ProjectDtos.ProjectEvolutionRecordResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisResponse;
-import com.projectflow.dto.V2ProjectDtos.ProjectMaterialResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectProfileResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectSnapshotResponse;
 import com.projectflow.dto.ProjectDtos.ProjectResponse;
@@ -73,7 +68,6 @@ import com.projectflow.support.AppException;
 @Service
 public class ProjectIntelligenceService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProjectIntelligenceService.class);
-    private static final int MAX_MATERIAL_CHARS = 500_000;
     private static final int MAX_FILE_SNIPPET_CHARS = 6_000;
     private static final int MODEL_ANALYSIS_MAX_TOKENS = 100_000;
 
@@ -89,6 +83,7 @@ public class ProjectIntelligenceService {
     private final ObjectMapper objectMapper;
     private final ModelGatewayService modelGatewayService;
     private final ProjectMemoryService projectMemoryService;
+    private final ProjectMaterialService projectMaterialService;
     private final ProjectZipScanService projectZipScanService;
 
     public ProjectIntelligenceService(
@@ -104,6 +99,7 @@ public class ProjectIntelligenceService {
         ObjectMapper objectMapper,
         ModelGatewayService modelGatewayService,
         ProjectMemoryService projectMemoryService,
+        ProjectMaterialService projectMaterialService,
         ProjectZipScanService projectZipScanService
     ) {
         this.projectRepository = projectRepository;
@@ -118,16 +114,8 @@ public class ProjectIntelligenceService {
         this.objectMapper = objectMapper;
         this.modelGatewayService = modelGatewayService;
         this.projectMemoryService = projectMemoryService;
+        this.projectMaterialService = projectMaterialService;
         this.projectZipScanService = projectZipScanService;
-    }
-
-    @Transactional(readOnly = true)
-    public List<ProjectMaterialResponse> listMaterials(UUID userId, UUID projectId) {
-        ProjectSpace project = findOwnedProject(userId, projectId);
-        return materialRepository.findByProjectIdOrderByCreatedAtDesc(project.getId())
-            .stream()
-            .map(this::toMaterialResponse)
-            .toList();
     }
 
     @Transactional(readOnly = true)
@@ -296,44 +284,17 @@ public class ProjectIntelligenceService {
     }
 
     @Transactional
-    @Deprecated(since = "3.2", forRemoval = false)
-    public ProjectMaterialResponse createTextMaterial(UUID userId, UUID projectId, MaterialSourceType sourceType, String content) {
-        ProjectSpace project = findOwnedProject(userId, projectId);
-        return toMaterialResponse(saveMaterial(project.getId(), sourceType, null, content));
-    }
-
-    @Transactional
-    @Deprecated(since = "3.2", forRemoval = false)
-    public ProjectMaterialResponse createFileMaterial(UUID userId, UUID projectId, MaterialSourceType sourceType, MultipartFile file) {
-        ProjectSpace project = findOwnedProject(userId, projectId);
-        String fileName = cleanFileName(file.getOriginalFilename());
-        String content = readUploadedFile(fileName, file);
-        MaterialSourceType detectedType = sourceType == null || sourceType == MaterialSourceType.OTHER
-            ? detectFileSourceType(fileName)
-            : sourceType;
-        return toMaterialResponse(saveMaterial(project.getId(), detectedType, fileName, content));
-    }
-
-    @Transactional
-    @Deprecated(since = "3.2", forRemoval = false)
-    public ProjectMaterialResponse createZipMaterial(UUID userId, UUID projectId, MultipartFile file) {
-        ProjectSpace project = findOwnedProject(userId, projectId);
-        String content = projectZipScanService.scan(file).content();
-        return toMaterialResponse(saveMaterial(project.getId(), MaterialSourceType.PROJECT_ZIP, cleanFileName(file.getOriginalFilename()), content));
-    }
-
-    @Transactional
     public ProjectImportAnalyzeResponse importProjectZip(UUID userId, UUID projectId, MultipartFile file) {
         ZipProjectScan scan = projectZipScanService.scan(file);
         ProjectSpace project = projectId == null
             ? findReusableImportedProject(userId, scan.profile()).orElseGet(() -> createImportedProject(userId, scan.profile()))
             : findOwnedProject(userId, projectId);
-        ProjectMaterial material = saveMaterial(project.getId(), MaterialSourceType.PROJECT_ZIP, cleanFileName(file.getOriginalFilename()), scan.content());
+        ProjectMaterial material = projectMaterialService.saveMaterial(project.getId(), MaterialSourceType.PROJECT_ZIP, file.getOriginalFilename(), scan.content());
         List<AiSuggestion> suggestions = generateProjectProfileSuggestions(project, material, scan.profile());
 
         return new ProjectImportAnalyzeResponse(
             toProjectResponse(project),
-            toMaterialResponse(material),
+            projectMaterialService.toMaterialResponse(material),
             scan.profile(),
             suggestions.stream().map(this::toSuggestionResponse).toList(),
             false,
@@ -341,15 +302,10 @@ public class ProjectIntelligenceService {
         );
     }
 
-    @Transactional(readOnly = true)
-    public ProjectMaterialResponse materialDetail(UUID userId, UUID materialId) {
-        return toMaterialResponse(findOwnedMaterial(userId, materialId));
-    }
-
     @Transactional
     @Deprecated(since = "3.2", forRemoval = false)
     public AnalyzeMaterialResponse analyzeMaterial(UUID userId, UUID materialId) {
-        ProjectMaterial material = findOwnedMaterial(userId, materialId);
+        ProjectMaterial material = projectMaterialService.findOwnedMaterial(userId, materialId);
         ProjectSpace project = findOwnedProjectById(material.getProjectId());
         ProjectSnapshot previousSnapshot = snapshotRepository.findFirstByProjectIdOrderByCreatedAtDesc(project.getId()).orElse(null);
         String summary = material.getNormalizedSummary();
@@ -514,13 +470,6 @@ public class ProjectIntelligenceService {
             .stream()
             .map(this::toEvolutionResponse)
             .toList();
-    }
-
-    private ProjectMaterial saveMaterial(UUID projectId, MaterialSourceType sourceType, String fileName, String content) {
-        String normalized = normalizeContent(content);
-        ProjectMaterial material = new ProjectMaterial(projectId);
-        material.update(sourceType, fileName, truncate(content.trim(), MAX_MATERIAL_CHARS), normalized);
-        return materialRepository.save(material);
     }
 
     private ProjectAnalysisResponse localProjectAnalysis(ProjectSpace project, String materialContent) {
@@ -1180,49 +1129,11 @@ public class ProjectIntelligenceService {
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
     }
 
-    private ProjectMaterial findOwnedMaterial(UUID userId, UUID materialId) {
-        ProjectMaterial material = materialRepository.findById(materialId)
-            .orElseThrow(() -> new AppException("PROJECT_MATERIAL_NOT_FOUND", "Project material was not found", HttpStatus.NOT_FOUND));
-        findOwnedProject(userId, material.getProjectId());
-        return material;
-    }
-
     private AiSuggestion findOwnedSuggestion(UUID userId, UUID suggestionId) {
         AiSuggestion suggestion = suggestionRepository.findById(suggestionId)
             .orElseThrow(() -> new AppException("AI_SUGGESTION_NOT_FOUND", "AI suggestion was not found", HttpStatus.NOT_FOUND));
         findOwnedProject(userId, suggestion.getProjectId());
         return suggestion;
-    }
-
-    private String readUploadedFile(String fileName, MultipartFile file) {
-        try {
-            byte[] bytes = file.getBytes();
-            if (fileName.endsWith(".docx")) {
-                return extractDocxText(bytes);
-            }
-            return new String(bytes, StandardCharsets.UTF_8);
-        } catch (IOException exception) {
-            throw new AppException("MATERIAL_READ_FAILED", "Project material could not be read", HttpStatus.BAD_REQUEST);
-        }
-    }
-
-    private String extractDocxText(byte[] bytes) throws IOException {
-        try (ZipInputStream zipInputStream = new ZipInputStream(new ByteArrayInputStream(bytes))) {
-            ZipEntry entry;
-            while ((entry = zipInputStream.getNextEntry()) != null) {
-                if ("word/document.xml".equals(entry.getName())) {
-                    String xml = new String(zipInputStream.readAllBytes(), StandardCharsets.UTF_8);
-                    return xml
-                        .replaceAll("</w:p>", "\n")
-                        .replaceAll("<[^>]+>", "")
-                        .replace("&lt;", "<")
-                        .replace("&gt;", ">")
-                        .replace("&amp;", "&")
-                        .trim();
-                }
-            }
-        }
-        throw new AppException("DOCX_READ_FAILED", "DOCX content could not be extracted", HttpStatus.BAD_REQUEST);
     }
 
     private String extractIndexedFileContent(String materialContent, String path) {
@@ -1237,32 +1148,6 @@ public class ProjectIntelligenceService {
             ? materialContent.substring(contentStart)
             : materialContent.substring(contentStart, nextSection);
         return truncate(content.trim(), MAX_FILE_SNIPPET_CHARS);
-    }
-
-    private MaterialSourceType detectFileSourceType(String fileName) {
-        if (fileName.endsWith(".docx")) {
-            return MaterialSourceType.DOCX_FILE;
-        }
-        if (fileName.endsWith(".md")) {
-            return MaterialSourceType.README_MARKDOWN;
-        }
-        if (fileName.endsWith(".json") || fileName.endsWith(".log")) {
-            return MaterialSourceType.JSON_LOG;
-        }
-        return MaterialSourceType.TEXT_FILE;
-    }
-
-    private ProjectMaterialResponse toMaterialResponse(ProjectMaterial material) {
-        return new ProjectMaterialResponse(
-            material.getId(),
-            material.getProjectId(),
-            material.getSourceType(),
-            material.getFileName(),
-            material.getContent(),
-            material.getNormalizedSummary(),
-            material.getCreatedAt(),
-            material.getUpdatedAt()
-        );
     }
 
     private AiSuggestionResponse toSuggestionResponse(AiSuggestion suggestion) {
@@ -1373,11 +1258,6 @@ public class ProjectIntelligenceService {
         return value == null || value.toString().isBlank() ? defaultText(fallback, "") : value.toString();
     }
 
-    private String normalizeContent(String content) {
-        String trimmed = truncate(content.trim(), MAX_MATERIAL_CHARS);
-        return firstSentence(trimmed).isBlank() ? "已保存项目材料，等待 AI 解析。" : firstSentence(trimmed);
-    }
-
     private String inferStage(String content) {
         if (containsAny(content, "V2", "AI", "provider", "材料", "suggestion")) {
             return "V2 Core 构建";
@@ -1451,10 +1331,6 @@ public class ProjectIntelligenceService {
             case README_MARKDOWN -> "Markdown";
             default -> "项目";
         };
-    }
-
-    private String cleanFileName(String fileName) {
-        return fileName == null ? "uploaded-material" : fileName.replace("\\", "/").substring(fileName.replace("\\", "/").lastIndexOf('/') + 1).toLowerCase();
     }
 
     private String defaultText(String value, String fallback) {

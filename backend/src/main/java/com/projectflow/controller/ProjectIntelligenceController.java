@@ -43,6 +43,7 @@ import com.projectflow.service.ProjectChangeReviewService;
 import com.projectflow.service.ProjectIntelligenceService;
 import com.projectflow.service.ProjectAnalysisJobService;
 import com.projectflow.service.ProjectAnalysisRecordService;
+import com.projectflow.service.ProjectMaterialService;
 import com.projectflow.service.ProjectMemoryService;
 
 import jakarta.validation.Valid;
@@ -55,6 +56,7 @@ public class ProjectIntelligenceController {
     private final ProjectAnalysisRecordService projectAnalysisRecordService;
     private final ProjectMemoryService projectMemoryService;
     private final ProjectChangeReviewService projectChangeReviewService;
+    private final ProjectMaterialService projectMaterialService;
     private final AuthService authService;
 
     public ProjectIntelligenceController(
@@ -63,6 +65,7 @@ public class ProjectIntelligenceController {
         ProjectAnalysisRecordService projectAnalysisRecordService,
         ProjectMemoryService projectMemoryService,
         ProjectChangeReviewService projectChangeReviewService,
+        ProjectMaterialService projectMaterialService,
         AuthService authService
     ) {
         this.projectIntelligenceService = projectIntelligenceService;
@@ -70,6 +73,7 @@ public class ProjectIntelligenceController {
         this.projectAnalysisRecordService = projectAnalysisRecordService;
         this.projectMemoryService = projectMemoryService;
         this.projectChangeReviewService = projectChangeReviewService;
+        this.projectMaterialService = projectMaterialService;
         this.authService = authService;
     }
 
@@ -89,7 +93,7 @@ public class ProjectIntelligenceController {
         @PathVariable UUID projectId
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.listMaterials(user.id(), projectId));
+        return ApiResponse.ok(projectMaterialService.listMaterials(user.id(), projectId));
     }
 
     @PostMapping("/projects/{projectId}/analysis/run")
@@ -167,7 +171,7 @@ public class ProjectIntelligenceController {
         @Valid @RequestBody ProjectMaterialTextRequest request
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.createTextMaterial(user.id(), projectId, request.sourceType(), request.content()));
+        return ApiResponse.ok(projectMaterialService.createTextMaterial(user.id(), projectId, request.sourceType(), request.content()));
     }
 
     @PostMapping("/projects/{projectId}/materials/file")
@@ -179,7 +183,7 @@ public class ProjectIntelligenceController {
         @RequestPart("file") MultipartFile file
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.createFileMaterial(user.id(), projectId, sourceType, file));
+        return ApiResponse.ok(projectMaterialService.createFileMaterial(user.id(), projectId, sourceType, file));
     }
 
     @PostMapping("/projects/{projectId}/materials/zip")
@@ -190,7 +194,7 @@ public class ProjectIntelligenceController {
         @RequestPart("file") MultipartFile file
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.createZipMaterial(user.id(), projectId, file));
+        return ApiResponse.ok(projectMaterialService.createZipMaterial(user.id(), projectId, file));
     }
 
     @GetMapping("/project-materials/{materialId}")
@@ -199,7 +203,7 @@ public class ProjectIntelligenceController {
         @PathVariable UUID materialId
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.materialDetail(user.id(), materialId));
+        return ApiResponse.ok(projectMaterialService.materialDetail(user.id(), materialId));
     }
 
     @PostMapping("/project-materials/{materialId}/analyze")
