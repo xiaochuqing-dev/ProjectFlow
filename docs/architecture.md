@@ -28,36 +28,47 @@ flowchart LR
 
 ## Frontend Architecture
 
-The frontend will use Next.js App Router with a `src/` directory.
+The frontend uses Next.js App Router with a `src/` directory.
 
-Planned route groups:
+Current route groups:
 
 ```text
 frontend/src/app/
-+-- (auth)/
-|   +-- login/
-|   `-- register/
-+-- (app)/
-|   +-- dashboard/
-|   +-- projects/
-|   +-- tasks/
-|   +-- dev-logs/
-|   +-- imports/
-|   +-- ai-outputs/
-|   `-- settings/
++-- login/
++-- register/
++-- dashboard/
++-- projects/
++-- projects/[projectId]/
++-- projects/[projectId]/files/
++-- project-analysis-records/[recordId]/
++-- project-changes/[changeId]/
++-- project-intelligence/
++-- project-intelligence/[section]/
++-- project-intelligence/[section]/[itemId]/
++-- tasks/
++-- dev-logs/
++-- dev-logs/[section]/
++-- dev-logs/[section]/[itemId]/
++-- ai-review/
++-- ai-review/[section]/
++-- ai-review/[section]/[itemId]/
++-- work-sessions/[sessionId]/
++-- imports/
++-- settings/
 `-- page.tsx
 ```
 
-Planned frontend layers:
+Frontend layers:
 
 | Layer | Purpose |
 | --- | --- |
 | `app/` | Routes and layouts |
 | `components/` | Reusable UI components |
-| `features/` | Domain components for projects, tasks, logs, imports, AI outputs |
-| `lib/api/` | API client and request helpers |
+| `features/` | Domain components where a page grows beyond route-level composition |
+| `lib/api.ts` | Typed API client and request helpers |
 | `lib/auth/` | Auth token handling and route guards |
-| `types/` | Shared frontend types |
+| `lib/project-insights.ts` | Project/file insight classification rules |
+| `components/ui/` | Shared cards, badges, toasts, project context bar, and layout primitives |
 
 ## Backend Architecture
 
@@ -85,6 +96,19 @@ backend/src/main/java/com/projectflow/
 | DTO | API request and response models |
 | Security | JWT, password hashing, authenticated user context |
 | Support | Shared error responses, parser utilities, AI provider contracts |
+
+Recent service/controller split:
+
+| Area | Primary classes |
+| --- | --- |
+| Project import and legacy suggestions | `ProjectIntelligenceController`, `ProjectIntelligenceService` |
+| Project materials | `ProjectMaterialController`, `ProjectMaterialService` |
+| Project analysis jobs and records | `ProjectAnalysisController`, `ProjectAnalysisService`, `ProjectAnalysisJobService`, `ProjectAnalysisRecordService` |
+| Project memory and fact sources | `ProjectMemoryController`, `ProjectMemoryService` |
+| Structured change review | `ProjectChangeController`, `ProjectChangeReviewService` |
+| Zip scanning | `ProjectZipScanService` |
+| Model calls and fallback | `ModelGatewayService` |
+| Work sessions and evidence | `WorkSessionScanController`, `WorkSessionScanService`, `EvidenceBundleService`, `EvidenceDraftChangeService` |
 
 ## Key Flows
 
@@ -155,12 +179,10 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant AI as AI Provider
     F->>B: POST /api/ai-outputs
-    B->>R: Set task state PENDING/RUNNING
-    B->>DB: Load project logs and tasks
-    B->>AI: Generate structured output
-    AI-->>B: Generated Markdown
+    B->>DB: Load confirmed memory, daily review sources, tasks, and logs
+    B->>AI: Generate structured output when provider is available
+    AI-->>B: Generated Markdown or local-template fallback
     B->>DB: Save ai_outputs row
-    B->>R: Set task state SUCCEEDED
     F->>B: GET /api/ai-outputs/{id}
 ```
 
