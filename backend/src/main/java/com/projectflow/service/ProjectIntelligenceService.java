@@ -2,14 +2,9 @@ package com.projectflow.service;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -90,9 +85,7 @@ public class ProjectIntelligenceService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProjectIntelligenceService.class);
     private static final int MAX_MATERIAL_CHARS = 500_000;
     private static final int MAX_FILE_SNIPPET_CHARS = 6_000;
-    private static final int MAX_MODEL_ATTEMPTS = 2;
     private static final int MODEL_ANALYSIS_MAX_TOKENS = 100_000;
-    private static final Duration MODEL_REQUEST_TIMEOUT = Duration.ofSeconds(75);
 
     private final ProjectRepository projectRepository;
     private final AiProviderRepository aiProviderRepository;
@@ -106,10 +99,9 @@ public class ProjectIntelligenceService {
     private final TaskRepository taskRepository;
     private final DevLogRepository devLogRepository;
     private final ObjectMapper objectMapper;
-    private final AiProviderUrlGuard aiProviderUrlGuard;
+    private final ModelGatewayService modelGatewayService;
     private final LocalProjectPathGuard localProjectPathGuard;
     private final ProjectZipScanService projectZipScanService;
-    private final HttpClient httpClient;
 
     public ProjectIntelligenceService(
         ProjectRepository projectRepository,
@@ -124,7 +116,7 @@ public class ProjectIntelligenceService {
         TaskRepository taskRepository,
         DevLogRepository devLogRepository,
         ObjectMapper objectMapper,
-        AiProviderUrlGuard aiProviderUrlGuard,
+        ModelGatewayService modelGatewayService,
         LocalProjectPathGuard localProjectPathGuard,
         ProjectZipScanService projectZipScanService
     ) {
@@ -140,12 +132,9 @@ public class ProjectIntelligenceService {
         this.taskRepository = taskRepository;
         this.devLogRepository = devLogRepository;
         this.objectMapper = objectMapper;
-        this.aiProviderUrlGuard = aiProviderUrlGuard;
+        this.modelGatewayService = modelGatewayService;
         this.localProjectPathGuard = localProjectPathGuard;
         this.projectZipScanService = projectZipScanService;
-        this.httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(8))
-            .build();
     }
 
     @Transactional(readOnly = true)
@@ -187,7 +176,7 @@ public class ProjectIntelligenceService {
                 项目材料：
                 %s
                 """.formatted(project.getName(), project.getDescription(), truncate(analysisMaterial, 20_000));
-            JsonNode json = callModelJson(provider, prompt, MODEL_ANALYSIS_MAX_TOKENS);
+            JsonNode json = modelGatewayService.callJson(provider, prompt, MODEL_ANALYSIS_MAX_TOKENS);
             return new ProjectAnalysisResponse(
                 chineseTextOr(json, "summary", fallback.summary()),
                 chineseTextOr(json, "architecture", fallback.architecture()),
@@ -223,7 +212,7 @@ public class ProjectIntelligenceService {
                 provider.getName(),
                 "LOCAL_RULE",
                 fallback.confidence(),
-                "模型分析失败，已保留本地规则结果。" + modelFailureMessage(exception)
+                "模型分析失败，已保留本地规则结果。" + modelGatewayService.failureMessage(exception)
             );
         }
     }
@@ -284,7 +273,7 @@ public class ProjectIntelligenceService {
                     fileContent.isBlank() ? "[未索引到文件内容，只能依据路径分析]" : truncate(fileContent, MAX_FILE_SNIPPET_CHARS),
                     fileStructureContext(analysisMaterial, requestedPath)
                 );
-            JsonNode json = callModelJson(provider, prompt, MODEL_ANALYSIS_MAX_TOKENS);
+            JsonNode json = modelGatewayService.callJson(provider, prompt, MODEL_ANALYSIS_MAX_TOKENS);
             return new ProjectFileAnalysisResponse(
                 requestedPath,
                 textOr(json, "fileType", fallback.fileType()),
@@ -317,7 +306,7 @@ public class ProjectIntelligenceService {
                 true,
                 provider.getName(),
                 "LOCAL_RULE",
-                "模型分析失败，已使用本地规则解释。" + modelFailureMessage(exception)
+                "模型分析失败，已使用本地规则解释。" + modelGatewayService.failureMessage(exception)
             );
         }
     }
@@ -779,81 +768,6 @@ public class ProjectIntelligenceService {
             .orElse(null);
     }
 
-    private JsonNode callModelJson(AiProvider provider, String prompt, int outputTokenLimit) throws IOException, InterruptedException {
-        Map<String, Object> body = Map.of(
-            "model", provider.getModelName(),
-            "messages", List.of(
-                Map.of(
-                    "role",
-                    "system",
-                    "content",
-                    "只返回合法 JSON，不要 Markdown 代码块。所有自然语言字段必须使用简体中文；技术名、文件路径和代码标识符保留原文。"
-                ),
-                Map.of("role", "user", "content", prompt)
-            ),
-            "temperature", Math.min(provider.getTemperature(), 0.3),
-            "max_tokens", Math.min(provider.getMaxTokens(), outputTokenLimit)
-        );
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(aiProviderUrlGuard.chatCompletionsUri(provider.getBaseUrl()))
-            .timeout(MODEL_REQUEST_TIMEOUT)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer " + provider.getApiKey())
-            .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
-            .build();
-        for (int attempt = 1; attempt <= MAX_MODEL_ATTEMPTS; attempt++) {
-            try {
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                    return parseModelJson(response.body());
-                }
-                if (attempt < MAX_MODEL_ATTEMPTS && isTransientModelStatus(response.statusCode())) {
-                    pauseBeforeRetry(attempt);
-                    continue;
-                }
-                throw new NonRetryableModelException("model HTTP " + response.statusCode());
-            } catch (HttpTimeoutException exception) {
-                if (attempt >= MAX_MODEL_ATTEMPTS) {
-                    throw exception;
-                }
-                pauseBeforeRetry(attempt);
-            } catch (IOException exception) {
-                if (exception instanceof NonRetryableModelException || attempt >= MAX_MODEL_ATTEMPTS) {
-                    throw exception;
-                }
-                pauseBeforeRetry(attempt);
-            }
-        }
-        throw new IOException("model request failed");
-    }
-
-    private JsonNode parseModelJson(String responseBody) throws IOException {
-        JsonNode root = objectMapper.readTree(responseBody);
-        String content = root.at("/choices/0/message/content").asText("");
-        if (content.isBlank()) {
-            throw new IOException("empty model content");
-        }
-        return objectMapper.readTree(extractJsonObject(content));
-    }
-
-    private boolean isTransientModelStatus(int statusCode) {
-        return statusCode == 429 || statusCode == 500 || statusCode == 502 || statusCode == 503 || statusCode == 504;
-    }
-
-    private void pauseBeforeRetry(int attempt) throws InterruptedException {
-        Thread.sleep(400L * attempt);
-    }
-
-    private String modelFailureMessage(Exception exception) {
-        if (exception instanceof HttpTimeoutException) {
-            return "模型请求在 " + MODEL_REQUEST_TIMEOUT.toSeconds() + " 秒内未完成。";
-        }
-        String message = exception.getMessage();
-        return message == null || message.isBlank()
-            ? "失败类型：" + exception.getClass().getSimpleName()
-            : "原因：" + truncate(message, 180);
-    }
-
     private String fileStructureContext(String materialContent, String requestedPath) {
         String targetModule = moduleName(requestedPath);
         LinkedHashSet<String> relatedPaths = new LinkedHashSet<>();
@@ -868,21 +782,6 @@ public class ProjectIntelligenceService {
         return relatedPaths.isEmpty()
             ? "[未识别到相关项目结构]"
             : truncate(String.join("\n", relatedPaths.stream().map(path -> "- " + path).toList()), 6_000);
-    }
-
-    private static final class NonRetryableModelException extends IOException {
-        private NonRetryableModelException(String message) {
-            super(message);
-        }
-    }
-
-    private String extractJsonObject(String content) throws IOException {
-        int start = content.indexOf('{');
-        int end = content.lastIndexOf('}');
-        if (start < 0 || end <= start) {
-            throw new IOException("model content is not JSON");
-        }
-        return content.substring(start, end + 1);
     }
 
     private String textOr(JsonNode json, String field, String fallback) {
