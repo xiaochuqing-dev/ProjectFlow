@@ -5,10 +5,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-import com.projectflow.dto.V2ProjectDtos.EvidenceBundleResponse;
-import com.projectflow.dto.V2ProjectDtos.EvidenceSourceResponse;
-import com.projectflow.dto.V2ProjectDtos.WorkSessionCandidateResponse;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -88,50 +84,33 @@ public class EvidenceBundle {
         this.updatedAt = Instant.now();
     }
 
-    public void updateFromWorkSession(WorkSessionCandidateResponse session) {
-        this.agentType = nonBlank(session.agentType(), "UNKNOWN");
-        this.taskIntent = nonBlank(session.taskIntent(), "");
-        this.branchName = nonBlank(session.branchName(), "");
-        this.attributionConfidence = nonBlank(session.attributionConfidence(), "MEDIUM");
-        this.changedFiles = session.changedFiles();
-        this.addedLines = session.addedLines();
-        this.deletedLines = session.deletedLines();
-        this.files = joinLines(session.files());
-        this.objectiveEvidence = joinLines(session.evidence());
+    public void updateFromWorkSession(
+        String agentType,
+        String taskIntent,
+        String branchName,
+        String attributionConfidence,
+        int changedFiles,
+        int addedLines,
+        int deletedLines,
+        List<String> files,
+        List<String> evidence,
+        String baseCommit
+    ) {
+        this.agentType = nonBlank(agentType, "UNKNOWN");
+        this.taskIntent = nonBlank(taskIntent, "");
+        this.branchName = nonBlank(branchName, "");
+        this.attributionConfidence = nonBlank(attributionConfidence, "MEDIUM");
+        this.changedFiles = changedFiles;
+        this.addedLines = addedLines;
+        this.deletedLines = deletedLines;
+        this.files = joinLines(files);
+        this.objectiveEvidence = joinLines(evidence);
         this.agentClaims = "";
         this.sources = "GIT_EVIDENCE\t%s\t%d files, +%d/-%d lines".formatted(
-            nonBlank(session.baseCommit(), session.branchName()),
-            session.changedFiles(),
-            session.addedLines(),
-            session.deletedLines()
-        );
-    }
-
-    public EvidenceBundleResponse toResponse() {
-        return toResponse("READY_FOR_CHANGE", "GENERATE_CHANGE", null);
-    }
-
-    public EvidenceBundleResponse toResponse(String status, String nextAction, UUID changeId) {
-        return new EvidenceBundleResponse(
-            id,
-            projectId,
-            workSessionId,
-            agentType,
-            taskIntent,
-            branchName,
-            attributionConfidence,
+            nonBlank(baseCommit, branchName),
             changedFiles,
             addedLines,
-            deletedLines,
-            splitLines(files),
-            splitLines(objectiveEvidence),
-            splitLines(agentClaims),
-            sourceResponses(),
-            status,
-            nextAction,
-            changeId,
-            createdAt,
-            updatedAt
+            deletedLines
         );
     }
 
@@ -147,19 +126,56 @@ public class EvidenceBundle {
         return workSessionId;
     }
 
+    public String getAgentType() {
+        return agentType;
+    }
+
+    public String getTaskIntent() {
+        return taskIntent;
+    }
+
+    public String getBranchName() {
+        return branchName;
+    }
+
+    public String getAttributionConfidence() {
+        return attributionConfidence;
+    }
+
+    public int getChangedFiles() {
+        return changedFiles;
+    }
+
+    public int getAddedLines() {
+        return addedLines;
+    }
+
+    public int getDeletedLines() {
+        return deletedLines;
+    }
+
     public List<String> getFiles() {
         return splitLines(files);
     }
 
-    private List<EvidenceSourceResponse> sourceResponses() {
-        return splitLines(sources).stream()
-            .map(line -> line.split("\\t", 3))
-            .map(parts -> new EvidenceSourceResponse(
-                parts.length > 0 ? parts[0] : "UNKNOWN",
-                parts.length > 1 ? parts[1] : "",
-                parts.length > 2 ? parts[2] : ""
-            ))
-            .toList();
+    public List<String> getObjectiveEvidence() {
+        return splitLines(objectiveEvidence);
+    }
+
+    public List<String> getAgentClaims() {
+        return splitLines(agentClaims);
+    }
+
+    public List<String> getSourceLines() {
+        return splitLines(sources);
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 
     private static String nonBlank(String value, String fallback) {

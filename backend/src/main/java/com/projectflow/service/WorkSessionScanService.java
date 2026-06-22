@@ -91,7 +91,7 @@ public class WorkSessionScanService {
         ProjectSpace project = projectRepository.findByIdAndUserId(projectId, userId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
         return workSessionRepository.findByProjectIdOrderByEndTimeDesc(project.getId()).stream()
-            .map(WorkSession::toResponse)
+            .map(this::toWorkSessionResponse)
             .toList();
     }
 
@@ -101,9 +101,9 @@ public class WorkSessionScanService {
             .orElseThrow(() -> new AppException("WORK_SESSION_NOT_FOUND", "Work session was not found", HttpStatus.NOT_FOUND));
         projectRepository.findByIdAndUserId(session.getProjectId(), userId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
-        WorkSessionCandidateResponse before = session.toResponse();
+        WorkSessionCandidateResponse before = toWorkSessionResponse(session);
         session.correctAttribution(request.agentType(), request.taskIntent());
-        WorkSessionCandidateResponse corrected = workSessionRepository.save(session).toResponse();
+        WorkSessionCandidateResponse corrected = toWorkSessionResponse(workSessionRepository.save(session));
         saveFeedback(before, corrected);
         return corrected;
     }
@@ -113,7 +113,7 @@ public class WorkSessionScanService {
         ProjectSpace project = projectRepository.findByIdAndUserId(projectId, userId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
         return feedbackRepository.findByProjectIdOrderByUpdatedAtDesc(project.getId()).stream()
-            .map(AgentSignatureFeedback::toResponse)
+            .map(this::toFeedbackResponse)
             .toList();
     }
 
@@ -122,8 +122,60 @@ public class WorkSessionScanService {
         UUID sessionId = UUID.fromString(candidate.sessionId());
         WorkSession session = workSessionRepository.findById(sessionId)
             .orElseGet(() -> new WorkSession(sessionId, projectId));
-        session.updateFromCandidate(candidateWithFeedback);
-        return workSessionRepository.save(session).toResponse();
+        session.updateFromCandidate(
+            candidateWithFeedback.agentType(),
+            candidateWithFeedback.agentName(),
+            candidateWithFeedback.taskIntent(),
+            candidateWithFeedback.branchName(),
+            candidateWithFeedback.baseCommit(),
+            candidateWithFeedback.startTime(),
+            candidateWithFeedback.endTime(),
+            candidateWithFeedback.attributionConfidence(),
+            candidateWithFeedback.detectionMethod(),
+            candidateWithFeedback.changedFiles(),
+            candidateWithFeedback.addedLines(),
+            candidateWithFeedback.deletedLines(),
+            candidateWithFeedback.affectedModules(),
+            candidateWithFeedback.evidence(),
+            candidateWithFeedback.files()
+        );
+        return toWorkSessionResponse(workSessionRepository.save(session));
+    }
+
+    private WorkSessionCandidateResponse toWorkSessionResponse(WorkSession session) {
+        return new WorkSessionCandidateResponse(
+            session.getId().toString(),
+            session.getProjectId(),
+            session.getAgentType(),
+            session.getAgentName(),
+            session.getTaskIntent(),
+            session.getBranchName(),
+            session.getBaseCommit(),
+            session.getStartTime(),
+            session.getEndTime(),
+            session.getAttributionConfidence(),
+            session.getDetectionMethod(),
+            session.getChangedFiles(),
+            session.getAddedLines(),
+            session.getDeletedLines(),
+            session.getAffectedModules(),
+            session.getEvidence(),
+            session.getFiles()
+        );
+    }
+
+    private AgentSignatureFeedbackResponse toFeedbackResponse(AgentSignatureFeedback feedback) {
+        return new AgentSignatureFeedbackResponse(
+            feedback.getId(),
+            feedback.getProjectId(),
+            feedback.getAgentName(),
+            feedback.getOriginalAgentType(),
+            feedback.getCorrectedAgentType(),
+            feedback.getCorrectedTaskIntent(),
+            feedback.getScope(),
+            feedback.getCreatedAt(),
+            feedback.getUpdatedAt()
+        );
     }
 
     private WorkSessionCandidateResponse applyFeedback(UUID projectId, WorkSessionCandidateResponse candidate) {

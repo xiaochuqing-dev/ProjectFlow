@@ -5,8 +5,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-import com.projectflow.dto.V2ProjectDtos.WorkSessionCandidateResponse;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -94,25 +92,41 @@ public class WorkSession {
         this.updatedAt = Instant.now();
     }
 
-    public void updateFromCandidate(WorkSessionCandidateResponse candidate) {
+    public void updateFromCandidate(
+        String agentType,
+        String agentName,
+        String taskIntent,
+        String branchName,
+        String baseCommit,
+        Instant startTime,
+        Instant endTime,
+        String attributionConfidence,
+        String detectionMethod,
+        int changedFiles,
+        int addedLines,
+        int deletedLines,
+        List<String> affectedModules,
+        List<String> evidence,
+        List<String> files
+    ) {
         boolean userCorrected = "USER_CORRECTED".equals(this.detectionMethod);
         if (!userCorrected) {
-            this.agentType = nonBlank(candidate.agentType(), "UNKNOWN");
-            this.agentName = nonBlank(candidate.agentName(), "Unknown");
-            this.taskIntent = nonBlank(candidate.taskIntent(), "根据今日 Git 证据生成的候选工作会话");
-            this.attributionConfidence = nonBlank(candidate.attributionConfidence(), "MEDIUM");
-            this.detectionMethod = nonBlank(candidate.detectionMethod(), "GIT_EVIDENCE");
+            this.agentType = nonBlank(agentType, "UNKNOWN");
+            this.agentName = nonBlank(agentName, "Unknown");
+            this.taskIntent = nonBlank(taskIntent, "根据今日 Git 证据生成的候选工作会话");
+            this.attributionConfidence = nonBlank(attributionConfidence, "MEDIUM");
+            this.detectionMethod = nonBlank(detectionMethod, "GIT_EVIDENCE");
         }
-        this.branchName = nonBlank(candidate.branchName(), "");
-        this.baseCommit = nonBlank(candidate.baseCommit(), "");
-        this.startTime = candidate.startTime() == null ? Instant.now() : candidate.startTime();
-        this.endTime = candidate.endTime() == null ? Instant.now() : candidate.endTime();
-        this.changedFiles = candidate.changedFiles();
-        this.addedLines = candidate.addedLines();
-        this.deletedLines = candidate.deletedLines();
-        this.affectedModules = joinLines(candidate.affectedModules());
-        this.evidence = joinLines(candidate.evidence());
-        this.files = joinLines(candidate.files());
+        this.branchName = nonBlank(branchName, "");
+        this.baseCommit = nonBlank(baseCommit, "");
+        this.startTime = startTime == null ? Instant.now() : startTime;
+        this.endTime = endTime == null ? Instant.now() : endTime;
+        this.changedFiles = changedFiles;
+        this.addedLines = addedLines;
+        this.deletedLines = deletedLines;
+        this.affectedModules = joinLines(affectedModules);
+        this.evidence = joinLines(evidence);
+        this.files = joinLines(files);
     }
 
     public void correctAttribution(String agentType, String taskIntent) {
@@ -123,28 +137,6 @@ public class WorkSession {
         this.detectionMethod = "USER_CORRECTED";
     }
 
-    public WorkSessionCandidateResponse toResponse() {
-        return new WorkSessionCandidateResponse(
-            id.toString(),
-            projectId,
-            agentType,
-            agentName,
-            taskIntent,
-            branchName,
-            baseCommit,
-            startTime,
-            endTime,
-            attributionConfidence,
-            detectionMethod,
-            changedFiles,
-            addedLines,
-            deletedLines,
-            splitLines(affectedModules),
-            splitLines(evidence),
-            splitLines(files)
-        );
-    }
-
     public UUID getId() {
         return id;
     }
@@ -153,8 +145,64 @@ public class WorkSession {
         return projectId;
     }
 
+    public String getAgentType() {
+        return agentType;
+    }
+
+    public String getAgentName() {
+        return agentName;
+    }
+
+    public String getTaskIntent() {
+        return taskIntent;
+    }
+
+    public String getBranchName() {
+        return branchName;
+    }
+
+    public String getBaseCommit() {
+        return baseCommit;
+    }
+
+    public Instant getStartTime() {
+        return startTime;
+    }
+
     public Instant getEndTime() {
         return endTime;
+    }
+
+    public String getAttributionConfidence() {
+        return attributionConfidence;
+    }
+
+    public String getDetectionMethod() {
+        return detectionMethod;
+    }
+
+    public int getChangedFiles() {
+        return changedFiles;
+    }
+
+    public int getAddedLines() {
+        return addedLines;
+    }
+
+    public int getDeletedLines() {
+        return deletedLines;
+    }
+
+    public List<String> getAffectedModules() {
+        return splitLines(affectedModules);
+    }
+
+    public List<String> getEvidence() {
+        return splitLines(evidence);
+    }
+
+    public List<String> getFiles() {
+        return splitLines(files);
     }
 
     private static String normalizeAgentType(String value) {

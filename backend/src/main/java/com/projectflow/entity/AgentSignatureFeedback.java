@@ -3,8 +3,6 @@ package com.projectflow.entity;
 import java.time.Instant;
 import java.util.UUID;
 
-import com.projectflow.dto.V2ProjectDtos.AgentSignatureFeedbackResponse;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -69,18 +67,20 @@ public class AgentSignatureFeedback {
         this.correctedTaskIntent = correctedTaskIntent == null ? "" : correctedTaskIntent.trim();
     }
 
-    public AgentSignatureFeedbackResponse toResponse() {
-        return new AgentSignatureFeedbackResponse(
-            id,
-            projectId,
-            agentName,
-            originalAgentType,
-            correctedAgentType,
-            correctedTaskIntent,
-            scope,
-            createdAt,
-            updatedAt
-        );
+    public UUID getId() {
+        return id;
+    }
+
+    public UUID getProjectId() {
+        return projectId;
+    }
+
+    public String getAgentName() {
+        return agentName;
+    }
+
+    public String getOriginalAgentType() {
+        return originalAgentType;
     }
 
     public String getCorrectedAgentType() {
@@ -89,6 +89,18 @@ public class AgentSignatureFeedback {
 
     public String getCorrectedTaskIntent() {
         return correctedTaskIntent;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 
     private static String nonBlank(String value, String fallback) {

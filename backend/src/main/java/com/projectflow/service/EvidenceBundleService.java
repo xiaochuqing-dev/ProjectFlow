@@ -50,7 +50,18 @@ public class EvidenceBundleService {
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
         EvidenceBundle bundle = evidenceBundleRepository.findByWorkSessionId(workSessionId)
             .orElseGet(() -> new EvidenceBundle(session.getProjectId(), workSessionId));
-        bundle.updateFromWorkSession(session.toResponse());
+        bundle.updateFromWorkSession(
+            session.getAgentType(),
+            session.getTaskIntent(),
+            session.getBranchName(),
+            session.getAttributionConfidence(),
+            session.getChangedFiles(),
+            session.getAddedLines(),
+            session.getDeletedLines(),
+            session.getFiles(),
+            session.getEvidence(),
+            session.getBaseCommit()
+        );
         projectChangeSchemaRepairService.ensureEvidenceBundleSourceTypeAllowed();
         return toResponse(evidenceBundleRepository.save(bundle));
     }
@@ -66,8 +77,8 @@ public class EvidenceBundleService {
 
     private EvidenceBundleResponse toResponse(EvidenceBundle bundle) {
         return projectChangeRepository.findBySourceTypeAndSourceRef(ProjectChangeSourceType.EVIDENCE_BUNDLE, bundle.getId().toString())
-            .map(change -> bundle.toResponse(status(change), nextAction(change), change.getId()))
-            .orElseGet(() -> bundle.toResponse("READY_FOR_CHANGE", "GENERATE_CHANGE", null));
+            .map(change -> EvidenceBundleResponseFactory.toResponse(bundle, status(change), nextAction(change), change.getId()))
+            .orElseGet(() -> EvidenceBundleResponseFactory.toResponse(bundle, "READY_FOR_CHANGE", "GENERATE_CHANGE", null));
     }
 
     private String status(ProjectChange change) {

@@ -47,7 +47,7 @@ public class EvidenceDraftChangeService {
             .orElseThrow(() -> new AppException("EVIDENCE_BUNDLE_NOT_FOUND", "Evidence bundle was not found", HttpStatus.NOT_FOUND));
         projectRepository.findByIdAndUserId(bundle.getProjectId(), userId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
-        EvidenceBundleResponse evidence = bundle.toResponse();
+        EvidenceBundleResponse evidence = EvidenceBundleResponseFactory.toResponse(bundle, "READY_FOR_CHANGE", "GENERATE_CHANGE", null);
         projectChangeSchemaRepairService.ensureEvidenceBundleSourceTypeAllowed();
         ProjectChange change = projectChangeRepository.findBySourceTypeAndSourceRef(ProjectChangeSourceType.EVIDENCE_BUNDLE, evidenceBundleId.toString())
             .orElseGet(() -> new ProjectChange(bundle.getProjectId(), null));
