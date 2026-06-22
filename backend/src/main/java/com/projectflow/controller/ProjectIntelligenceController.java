@@ -42,6 +42,7 @@ import com.projectflow.service.AuthService;
 import com.projectflow.service.ProjectIntelligenceService;
 import com.projectflow.service.ProjectAnalysisJobService;
 import com.projectflow.service.ProjectAnalysisRecordService;
+import com.projectflow.service.ProjectMemoryService;
 
 import jakarta.validation.Valid;
 
@@ -51,17 +52,20 @@ public class ProjectIntelligenceController {
     private final ProjectIntelligenceService projectIntelligenceService;
     private final ProjectAnalysisJobService projectAnalysisJobService;
     private final ProjectAnalysisRecordService projectAnalysisRecordService;
+    private final ProjectMemoryService projectMemoryService;
     private final AuthService authService;
 
     public ProjectIntelligenceController(
         ProjectIntelligenceService projectIntelligenceService,
         ProjectAnalysisJobService projectAnalysisJobService,
         ProjectAnalysisRecordService projectAnalysisRecordService,
+        ProjectMemoryService projectMemoryService,
         AuthService authService
     ) {
         this.projectIntelligenceService = projectIntelligenceService;
         this.projectAnalysisJobService = projectAnalysisJobService;
         this.projectAnalysisRecordService = projectAnalysisRecordService;
+        this.projectMemoryService = projectMemoryService;
         this.authService = authService;
     }
 
@@ -252,7 +256,7 @@ public class ProjectIntelligenceController {
         @PathVariable UUID projectId
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.getMemory(user.id(), projectId));
+        return ApiResponse.ok(projectMemoryService.getMemory(user.id(), projectId));
     }
 
     @GetMapping("/projects/{projectId}/changes")
@@ -307,7 +311,7 @@ public class ProjectIntelligenceController {
         @PathVariable UUID projectId
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.listFactSources(user.id(), projectId));
+        return ApiResponse.ok(projectMemoryService.listFactSources(user.id(), projectId));
     }
 
     @PatchMapping("/projects/{projectId}/memory")
@@ -317,7 +321,7 @@ public class ProjectIntelligenceController {
         @Valid @RequestBody ProjectMemoryUpdateRequest request
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.updateMemory(user.id(), projectId, request));
+        return ApiResponse.ok(projectMemoryService.updateMemory(user.id(), projectId, request));
     }
 
     @PatchMapping("/projects/{projectId}/memory/local-path")
@@ -327,7 +331,7 @@ public class ProjectIntelligenceController {
         @Valid @RequestBody ProjectLocalPathRequest request
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectIntelligenceService.updateLocalProjectPath(user.id(), projectId, request));
+        return ApiResponse.ok(projectMemoryService.updateLocalProjectPath(user.id(), projectId, request));
     }
 
     @GetMapping("/projects/{projectId}/snapshots")
