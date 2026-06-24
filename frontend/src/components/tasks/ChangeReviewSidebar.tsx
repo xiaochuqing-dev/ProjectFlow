@@ -2,7 +2,7 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { FileDiff, FileText, Layers3, RefreshCw, Save, ShieldAlert } from "lucide-react";
 import type { AiSuggestion, ProjectChange, ProjectMaterial, TaskItem } from "@/lib/api";
-import { changeKindLabels, changeMemoryTargets, impactLabels } from "./change-review-utils";
+import { changeDisplayTitle, changeKindLabels, changeMemoryTargets, changeOutcomeSummary, impactLabels } from "./change-review-utils";
 
 type EditState = {
   id: string;
@@ -61,7 +61,7 @@ function AcceptedWriteTarget({ selectedChange }: { selectedChange?: ProjectChang
       <div className="space-y-3 p-5 text-sm leading-6 text-slate-600">
         {selectedChange ? (
           <>
-            <p className="font-medium text-slate-950">{selectedChange.title}</p>
+            <p className="font-medium text-slate-950">{changeDisplayTitle(selectedChange)}</p>
             <div className="flex flex-wrap gap-2">
               {changeMemoryTargets(selectedChange).map((target) => (
                 <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs text-slate-700" key={target}>
@@ -107,8 +107,8 @@ function ReviewEntry({
               </span>
               <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-muted">{selectedChange.sourceType}</span>
             </div>
-            <p className="font-semibold text-slate-950">{selectedChange.title}</p>
-            <p className="mt-2 line-clamp-4">{selectedChange.summary}</p>
+            <p className="font-semibold text-slate-950">{changeDisplayTitle(selectedChange)}</p>
+            <p className="mt-2 line-clamp-3">{changeOutcomeSummary(selectedChange)}</p>
           </div>
           <Link href={`/project-changes/${selectedChange.id}`}>
             <button className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800" type="button">

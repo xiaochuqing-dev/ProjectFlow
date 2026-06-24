@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Check, ClipboardCheck, RefreshCw, Trash2 } from "lucide-react";
 import type { AiSuggestion, Project, ProjectChange } from "@/lib/api";
-import { changeKindLabels, changePreview, impactLabels, suggestionLabels } from "./change-review-utils";
+import { archiveTargetsLabel, changeDisplayTitle, changeOutcomeSummary, changeKindLabels, changePreview, impactLabels, suggestionLabels } from "./change-review-utils";
 
 type ChangeReviewListProps = {
   applying: boolean;
@@ -48,9 +48,10 @@ export function ChangeReviewList(props: ChangeReviewListProps) {
               <p className="mt-1 text-xs text-muted">{new Date(change.createdAt).toLocaleString()}</p>
             </div>
             <Link className="min-w-0 text-left" href={`/project-changes/${change.id}`}>
-              <h3 className="font-semibold text-slate-950">{change.title}</h3>
-              <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{change.summary}</p>
-              <p className="mt-2 line-clamp-1 font-mono text-xs text-muted">{changePreview(change)}</p>
+              <h3 className="font-semibold text-slate-950">{changeDisplayTitle(change)}</h3>
+              <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{changeOutcomeSummary(change)}</p>
+              <p className="mt-2 line-clamp-1 text-xs font-semibold text-slate-500">{archiveTargetsLabel(change)}</p>
+              <p className="mt-1 line-clamp-1 text-xs text-muted">{changePreview(change)}</p>
             </Link>
             <div className="flex flex-wrap items-start gap-2">
               <Link

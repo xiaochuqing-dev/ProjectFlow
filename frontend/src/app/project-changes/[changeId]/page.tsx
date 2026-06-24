@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, RefreshCw, Save, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Badge, Button, Card, InfoBubble } from "@/components/ui";
+import { archiveTargetsLabel, changeDisplayTitle, changeOutcomeSummary, compactPath, parseAffectedFiles } from "@/components/tasks/change-review-utils";
 import {
   acceptProjectChange,
   getProjectChange,
@@ -130,7 +131,7 @@ export default function ProjectChangeDetailPage() {
   }
 
   return (
-    <AppShell eyebrow="自动化审查" title={change?.title ?? "结构化变更详情"}>
+    <AppShell eyebrow="自动化审查" title={change ? changeDisplayTitle(change) : "结构化变更详情"}>
       <div className="min-h-[calc(100vh-4rem)] bg-surface p-6">
         <section className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-white p-4 shadow-panel">
           <div className="min-w-0">
@@ -138,10 +139,10 @@ export default function ProjectChangeDetailPage() {
               <ArrowLeft className="h-4 w-4" />
               返回上一步
             </button>
-            <h2 className="truncate text-xl font-semibold text-slate-950">{change?.title ?? "读取结构化变更"}</h2>
+            <h2 className="truncate text-xl font-semibold text-slate-950">结构化变更详情</h2>
             {change ? (
               <p className="mt-1 text-sm text-muted">
-                {new Date(change.createdAt).toLocaleString()} · {change.sourceType} · {change.status}
+                {new Date(change.createdAt).toLocaleString()} · {statusLabel(change.status)} · {sourceLabel(change.sourceType)}
               </p>
             ) : null}
           </div>
@@ -166,34 +167,42 @@ export default function ProjectChangeDetailPage() {
             <div className="space-y-5">
               <Card shadow="card">
                 <div className="border-b border-line p-5">
+                  <p className="mb-2 text-sm font-semibold text-brand">项目资产入库台</p>
                   <div className="mb-3 flex flex-wrap items-center gap-2">
                     <Badge label={changeKindLabels[draft.changeKind]} tone="brand" />
                     <Badge label={impactLabels[draft.impactLevel]} tone={draft.impactLevel === "MAJOR" ? "warning" : "slate"} />
-                    <InfoBubble label={change.sourceType} />
-                    <InfoBubble label={change.status} />
+                    <InfoBubble label={sourceLabel(change.sourceType)} />
+                    <InfoBubble label={statusLabel(change.status)} />
                   </div>
-                  <h3 className="text-lg font-semibold leading-7 text-slate-950">{draft.title}</h3>
-                  <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{draft.summary || "系统暂未生成摘要，请查看证据卡片后决定是否采纳或修正。"}</p>
+                  <h3 className="text-lg font-semibold leading-7 text-slate-950">{changeDisplayTitle(draft)}</h3>
+                  <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{changeOutcomeSummary({ ...change, ...draft })}</p>
+                  <p className="mt-3 text-sm font-semibold text-slate-600">{archiveTargetsLabel({ ...change, ...draft })}</p>
                 </div>
-                <div className="grid gap-3 p-5 md:grid-cols-3">
+                <div className="grid gap-3 p-5 md:grid-cols-4">
                   <MiniEvidence title="涉及文件" value={fileCount(draft.affectedFiles)} />
                   <MiniEvidence title="测试证据" value={draft.testEvidence ? "已记录" : "未采集"} />
                   <MiniEvidence title="构建证据" value={draft.buildEvidence ? "已记录" : "未采集"} />
+                  <MiniEvidence title="审查判断" value={reviewReadiness(draft)} />
                 </div>
               </Card>
 
               <Card shadow="card">
                 <div className="border-b border-line p-5">
-                  <h3 className="font-semibold text-slate-950">证据卡片</h3>
-                  <p className="mt-1 text-sm text-muted">先看系统提炼的证据，原始长文本在卡片内展开。</p>
+                  <h3 className="font-semibold text-slate-950">审查判断</h3>
+                  <p className="mt-1 text-sm text-muted">当前页只保留入库判断。完整文件、Git、测试和构建证据进入独立追溯页。</p>
                 </div>
                 <div className="grid gap-3 p-5 md:grid-cols-2">
-                  <EvidenceCard label="变更细节" value={draft.details} />
-                  <EvidenceCard label="影响文件" mono value={draft.affectedFiles} />
-                  <EvidenceCard label="关联任务" value={draft.relatedTasks} />
-                  <EvidenceCard label="风险备注" value={draft.riskNotes} />
-                  <EvidenceCard label="测试证据" value={draft.testEvidence} />
-                  <EvidenceCard label="构建证据" value={draft.buildEvidence} />
+                  <ReviewSignal label="是否可采纳" value={reviewReadiness(draft)} />
+                  <ReviewSignal label="缺少测试" value={draft.testEvidence && !draft.testEvidence.includes("未采集") ? "否" : "是，建议补充或人工确认"} />
+                  <ReviewSignal label="缺少构建" value={draft.buildEvidence && !draft.buildEvidence.includes("未采集") ? "否" : "是，建议补充或人工确认"} />
+                  <ReviewSignal label="关键文件" value={keyFilePreview(draft.affectedFiles)} />
+                </div>
+                <div className="border-t border-line p-5">
+                  <Link href={`/project-changes/${change.id}/evidence`}>
+                    <Button variant="secondary">
+                      查看完整证据 <ArrowRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </Link>
                 </div>
               </Card>
 
@@ -243,7 +252,7 @@ export default function ProjectChangeDetailPage() {
               <Card shadow="card" padding="md">
                 <h3 className="font-semibold text-slate-950">来源与去向</h3>
                 <dl className="mt-4 space-y-3 text-sm">
-                  <InfoLine label="来源" value={change.sourceType} />
+                  <InfoLine label="来源" value={sourceLabel(change.sourceType)} />
                   <InfoLine label="来源引用" value={change.sourceRef || "无"} />
                   <InfoLine label="更新时间" value={new Date(change.updatedAt).toLocaleString()} />
                 </dl>
@@ -284,17 +293,6 @@ function MiniEvidence({ title, value }: { title: string; value: string }) {
       <p className="text-xs text-muted">{title}</p>
       <p className="mt-1 font-semibold text-slate-950">{value}</p>
     </div>
-  );
-}
-
-function EvidenceCard({ label, mono = false, value }: { label: string; mono?: boolean; value: string }) {
-  return (
-    <details className="rounded-md border border-line bg-slate-50 p-3">
-      <summary className="cursor-pointer font-semibold text-slate-950">{label}</summary>
-      <p className={`mt-3 max-h-72 overflow-auto whitespace-pre-wrap text-sm leading-6 text-slate-700 ${mono ? "font-mono text-xs" : ""}`}>
-        {value || "未采集。"}
-      </p>
-    </details>
   );
 }
 
@@ -407,4 +405,43 @@ function targetText(target: string, change: ProjectChangePayload) {
 function fileCount(value: string) {
   const count = value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).length;
   return count ? `${count} 个` : "未记录";
+}
+
+function ReviewSignal({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-line bg-slate-50 p-4">
+      <p className="text-xs text-muted">{label}</p>
+      <p className="mt-2 text-sm font-semibold leading-6 text-slate-800">{value}</p>
+    </div>
+  );
+}
+
+function reviewReadiness(change: ProjectChangePayload) {
+  if (change.riskNotes && !change.testEvidence) return "需人工复核";
+  if (change.testEvidence?.includes("未采集") || change.buildEvidence?.includes("未采集")) return "可采纳，但需注意验证缺口";
+  return "可采纳";
+}
+
+function keyFilePreview(value: string) {
+  const files = parseAffectedFiles(value);
+  if (!files.length) return "未记录关键文件";
+  return files.slice(0, 2).map(compactPath).join("、") + (files.length > 2 ? ` 等 ${files.length} 个` : "");
+}
+
+function sourceLabel(value: string) {
+  if (value === "EVIDENCE_BUNDLE") return "证据包";
+  if (value === "AGENT_RESULT") return "Agent 结果";
+  if (value === "PROJECT_ZIP") return "项目 zip";
+  if (value === "MODEL_SUMMARY") return "模型总结";
+  if (value === "USER_MANUAL") return "用户手动";
+  return value;
+}
+
+function statusLabel(value: string) {
+  if (value === "PENDING") return "待确认";
+  if (value === "EDITED") return "已修正";
+  if (value === "ACCEPTED") return "已采纳";
+  if (value === "IGNORED") return "已忽略";
+  if (value === "MERGED") return "已合并";
+  return value;
 }

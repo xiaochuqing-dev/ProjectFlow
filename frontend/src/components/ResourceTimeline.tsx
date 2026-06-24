@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowRight, FileText, Search } from "lucide-react";
 import { Badge, Button, Card, InfoBubble } from "@/components/ui";
 
 export type ResourceTimelineItem = {
@@ -51,7 +51,7 @@ export function ResourceTimeline({ emptyText, items, title }: ResourceTimelinePr
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-ink">{title}</h2>
-            <p className="mt-1 text-sm text-muted">按月份、日期和状态管理长期记录，列表只保留摘要，完整内容进入卡片详情。</p>
+            <p className="mt-1 text-sm text-muted">按月份、日期和状态管理长期记录，列表只保留摘要，完整内容进入独立详情。</p>
           </div>
           <InfoBubble label={`${filtered.length}/${items.length} 条`} />
         </div>
@@ -96,8 +96,8 @@ export function ResourceTimeline({ emptyText, items, title }: ResourceTimelinePr
 
 function ResourceCard({ item }: { item: ResourceTimelineItem }) {
   return (
-    <details className="group rounded-card border border-line bg-surfaceAlt p-4 transition hover:border-lineStrong hover:bg-elevated hover:shadow-sm">
-      <summary className="grid cursor-pointer list-none gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+    <article className="rounded-card border border-line bg-surfaceAlt p-4 transition hover:border-lineStrong hover:bg-elevated hover:shadow-sm">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <Badge label={item.status} tone={statusTone(item.status)} />
@@ -111,25 +111,22 @@ function ResourceCard({ item }: { item: ResourceTimelineItem }) {
           <span className="max-w-44 truncate rounded-field bg-elevated px-2 py-1 text-xs text-muted" title={item.source}>
             {item.source}
           </span>
-          <span className="inline-flex h-8 items-center gap-1 rounded-field px-2 text-xs font-semibold text-brand group-open:bg-brand-soft">
-            详情 <ArrowRight className="h-3.5 w-3.5 transition group-open:rotate-90" />
-          </span>
+          {item.href ? (
+            <Link href={item.href}>
+              <Button variant="secondary" size="sm">
+                查看详情 <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          ) : (
+            <span className="inline-flex h-8 items-center gap-1 rounded-field px-2 text-xs font-semibold text-muted">
+              <FileText className="h-3.5 w-3.5" />
+              仅摘要
+            </span>
+          )}
         </div>
-      </summary>
-      <div className="mt-4 border-t border-line pt-4">
-        {item.meta ? <p className="mb-3 break-all font-mono text-xs text-muted">{item.meta}</p> : null}
-        <div className="prose-reset whitespace-pre-line text-sm leading-6 text-body">
-          {item.detail ?? item.summary}
-        </div>
-        {item.href ? (
-          <Link className="mt-4 inline-flex" href={item.href}>
-            <Button variant="secondary" size="sm">
-              打开完整页 <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
-        ) : null}
       </div>
-    </details>
+      {item.meta ? <p className="mt-3 truncate border-t border-line pt-3 font-mono text-xs text-muted" title={item.meta}>{compactPath(item.meta)}</p> : null}
+    </article>
   );
 }
 
@@ -168,6 +165,16 @@ function safeDate(value: string) {
 
 function uniqueOptions(values: string[]) {
   return Array.from(new Set(values.filter(Boolean))).sort().reverse();
+}
+
+function compactPath(value: string) {
+  const normalized = value.replace(/^sourceId:\s*/i, "").replace(/\\/g, "/");
+  if (normalized.length <= 72) return value;
+  const parts = normalized.split("/").filter(Boolean);
+  if (parts.length >= 3) {
+    return `${parts[0]}/.../${parts.at(-1)}`;
+  }
+  return `...${normalized.slice(-69)}`;
 }
 
 function statusTone(status: string): "slate" | "brand" | "success" | "warning" | "danger" {
