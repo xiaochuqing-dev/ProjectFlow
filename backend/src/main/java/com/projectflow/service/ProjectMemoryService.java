@@ -115,7 +115,7 @@ public class ProjectMemoryService {
         memory.update(
             defaultText(positioning, memory.getPositioning()),
             defaultText(stage, memory.getCurrentStage()),
-            appendLines(memory.getCompletedCapabilities(), newLogs),
+            appendCapabilityLines(memory.getCompletedCapabilities(), newLogs),
             appendLines(memory.getInProgressCapabilities(), newTasks),
             appendLines(memory.getCurrentRisks(), risks),
             appendLines(memory.getTechnicalDecisions(), decisions),
@@ -133,13 +133,14 @@ public class ProjectMemoryService {
         List<String> learnings = new ArrayList<>();
         List<String> assets = new ArrayList<>();
         String summaryLine = defaultText(change.getSummary(), change.getDetails());
+        String capabilityLine = acceptedCapabilitySummary(change);
 
         switch (change.getChangeKind()) {
             case RISK -> risks.add(defaultText(change.getRiskNotes(), summaryLine));
             case DECISION -> decisions.add(defaultText(change.getDecisionNotes(), summaryLine));
             case LEARNING -> learnings.add(defaultText(change.getLearningNotes(), summaryLine));
             case ASSET -> assets.add(defaultText(change.getAssetCandidates(), summaryLine));
-            default -> completed.add(summaryLine);
+            default -> completed.add(capabilityLine);
         }
         if (change.getRiskNotes() != null && !change.getRiskNotes().isBlank()) {
             risks.add(change.getRiskNotes());
@@ -157,7 +158,7 @@ public class ProjectMemoryService {
         ProjectMemory memory = appendFromSuggestionApplication(project, null, null, List.of(), completed, risks, decisions, learnings, assets, List.of());
         UUID sourceId = change.getId();
         if (!completed.isEmpty()) {
-            recordFactSource(project.getId(), "completedCapabilities", summaryLine, ProjectFactSourceType.ACCEPTED_CHANGE, sourceId, true);
+            recordFactSource(project.getId(), "completedCapabilities", capabilityLine, ProjectFactSourceType.ACCEPTED_CHANGE, sourceId, true);
         }
         if (!risks.isEmpty()) {
             recordFactSource(project.getId(), "currentRisks", String.join("\n", risks), ProjectFactSourceType.ACCEPTED_CHANGE, sourceId, true);
@@ -283,8 +284,46 @@ public class ProjectMemoryService {
         return String.join("\n", lines.values().stream().map(item -> "- " + item).toList());
     }
 
+    private String appendCapabilityLines(String existing, List<String> additions) {
+        return appendLines(existing, additions.stream()
+            .map(this::removeRawPathEvidence)
+            .filter(item -> !item.isBlank())
+            .toList());
+    }
+
     private String cleanMemoryLine(String value) {
         return value == null ? "" : value.trim().replaceFirst("^(?:[-*]\\s*)+", "").trim();
+    }
+
+    private String acceptedCapabilitySummary(ProjectChange change) {
+        String summary = removeRawPathEvidence(defaultText(change.getSummary(), change.getDetails()));
+        if (!summary.isBlank()) {
+            return summary;
+        }
+        return cleanMemoryLine(change.getTitle());
+    }
+
+    private String removeRawPathEvidence(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        String withoutFileTail = value
+            .replaceAll("(?s)(代表文件包括|涉及文件|影响文件)[:：]?.*$", "")
+            .trim();
+        return String.join("\n", withoutFileTail.lines()
+            .map(this::cleanMemoryLine)
+            .filter(line -> !line.isBlank())
+            .filter(line -> !isRawPathLine(line))
+            .toList());
+    }
+
+    private boolean isRawPathLine(String value) {
+        String normalized = cleanMemoryLine(value).replace('\\', '/');
+        if (!normalized.contains("/")) {
+            return false;
+        }
+        return normalized.matches("(?i)^(backend|frontend|src|app|apps|services|docs|test|tests|scripts|config|docker|\\.github|\\.vscode|\\.projectflow)/.*")
+            || normalized.matches("(?i).*\\.(java|kt|js|jsx|ts|tsx|vue|py|go|rs|php|cs|rb|sql|graphql|properties|ya?ml|xml|md|txt|css|scss|html|json|toml|gradle|ps1|bat)$");
     }
 
     private String normalizeMemoryLine(String value) {

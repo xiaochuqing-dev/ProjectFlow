@@ -11,8 +11,10 @@ import com.projectflow.dto.V2ProjectDtos.ProjectChangePatchRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectChangeResponse;
 import com.projectflow.entity.ProjectChange;
 import com.projectflow.entity.ProjectChangeStatus;
+import com.projectflow.entity.ProjectEvolutionRecord;
 import com.projectflow.entity.ProjectSpace;
 import com.projectflow.repository.ProjectChangeRepository;
+import com.projectflow.repository.ProjectEvolutionRecordRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.support.AppException;
 
@@ -20,17 +22,20 @@ import com.projectflow.support.AppException;
 public class ProjectChangeReviewService {
     private final ProjectRepository projectRepository;
     private final ProjectChangeRepository changeRepository;
+    private final ProjectEvolutionRecordRepository evolutionRepository;
     private final ProjectMemoryService projectMemoryService;
     private final ProjectIntelligenceService projectIntelligenceService;
 
     public ProjectChangeReviewService(
         ProjectRepository projectRepository,
         ProjectChangeRepository changeRepository,
+        ProjectEvolutionRecordRepository evolutionRepository,
         ProjectMemoryService projectMemoryService,
         ProjectIntelligenceService projectIntelligenceService
     ) {
         this.projectRepository = projectRepository;
         this.changeRepository = changeRepository;
+        this.evolutionRepository = evolutionRepository;
         this.projectMemoryService = projectMemoryService;
         this.projectIntelligenceService = projectIntelligenceService;
     }
@@ -82,6 +87,7 @@ public class ProjectChangeReviewService {
         }
         projectMemoryService.applyAcceptedChange(project, change);
         change.markAccepted();
+        recordAcceptedChangeEvolution(project, change);
         return toChangeResponse(change);
     }
 
@@ -137,5 +143,23 @@ public class ProjectChangeReviewService {
             return fallback;
         }
         return value.trim();
+    }
+
+    private void recordAcceptedChangeEvolution(ProjectSpace project, ProjectChange change) {
+        ProjectEvolutionRecord record = new ProjectEvolutionRecord(project.getId(), change.getMaterialId());
+        record.update(
+            "采纳结构化变更：" + change.getTitle(),
+            defaultText(change.getSummary(), change.getDetails()),
+            defaultText(change.getAssetCandidates(), change.getSummary()),
+            defaultText(change.getRiskNotes(), "暂无新增风险。"),
+            defaultText(change.getDecisionNotes(), "暂无新增技术决策。"),
+            defaultText(change.getLearningNotes(), "暂无新增经验沉淀。"),
+            defaultText(change.getRelatedTasks(), "继续根据项目档案安排下一步。")
+        );
+        evolutionRepository.save(record);
+    }
+
+    private String defaultText(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
     }
 }

@@ -229,10 +229,31 @@ class V2CoreControllerTest {
             .andExpect(content().string(not(containsString("DATABASE_PASSWORD=secret"))))
             .andReturn();
 
-        org.assertj.core.api.Assertions.assertThat(stringArray(objectMapper.readTree(result.getResponse().getContentAsString()).at("/data/projectProfile/techStack")))
+        JsonNode zipResponse = objectMapper.readTree(result.getResponse().getContentAsString());
+        org.assertj.core.api.Assertions.assertThat(stringArray(zipResponse.at("/data/projectProfile/techStack")))
             .contains("Next.js", "React", "Java");
+        String materialContent = zipResponse.at("/data/material/content").asText();
+        org.assertj.core.api.Assertions.assertThat(materialContent)
+            .doesNotContain("node_modules")
+            .doesNotContain(".next/static")
+            .doesNotContain("frontend/dist")
+            .doesNotContain("backend/target")
+            .doesNotContain("build/generated");
 
-        String projectId = objectMapper.readTree(result.getResponse().getContentAsString()).get("data").get("project").get("id").asText();
+        String suggestedCapabilities = "";
+        for (JsonNode suggestion : zipResponse.at("/data/suggestions")) {
+            if ("UPDATE_PROJECT_MEMORY".equals(suggestion.get("type").asText())) {
+                suggestedCapabilities = suggestion.at("/payload/completedCapabilities").asText();
+            }
+        }
+        org.assertj.core.api.Assertions.assertThat(suggestedCapabilities)
+            .contains("完整项目结构")
+            .contains("主要技术栈")
+            .doesNotContain("src/app/page.tsx")
+            .doesNotContain("backend/src/test/java/AppTest.java")
+            .doesNotContain("package.json");
+
+        String projectId = zipResponse.get("data").get("project").get("id").asText();
 
         mockMvc.perform(get("/api/projects/" + projectId + "/tasks")
                 .header("Authorization", "Bearer " + token))
@@ -1064,6 +1085,9 @@ class V2CoreControllerTest {
             .asText();
         org.assertj.core.api.Assertions.assertThat(completedCapabilities.split("durable evidence review workflow", -1).length - 1)
             .isEqualTo(1);
+        org.assertj.core.api.Assertions.assertThat(completedCapabilities)
+            .doesNotContain("frontend/src/app/tasks/page.tsx")
+            .doesNotContain("backend/src/main/java/com/projectflow/service/ProjectIntelligenceService.java");
 
         mockMvc.perform(get("/api/projects/" + projectId + "/fact-sources")
                 .header("Authorization", "Bearer " + token))
@@ -1348,6 +1372,11 @@ class V2CoreControllerTest {
             addZipEntry(zip, "projectflow-v2/start-projectflow.ps1", "npm.cmd run dev");
             addZipEntry(zip, "projectflow-v2/src/app/page.tsx", "export default function Page() { return null; }");
             addZipEntry(zip, "projectflow-v2/backend/src/test/java/AppTest.java", "class AppTest {}");
+            addZipEntry(zip, "projectflow-v2/frontend/node_modules/react/index.js", "generated dependency");
+            addZipEntry(zip, "projectflow-v2/frontend/.next/static/chunks/app.js", "generated next output");
+            addZipEntry(zip, "projectflow-v2/frontend/dist/app.js", "generated dist output");
+            addZipEntry(zip, "projectflow-v2/backend/target/classes/App.class", "generated class output");
+            addZipEntry(zip, "projectflow-v2/build/generated/file.js", "generated build output");
             addZipEntry(zip, "projectflow-v2/frontend/.next-dev.err.log", "generated development error output");
             addZipEntry(zip, "projectflow-v2/.env", "DATABASE_PASSWORD=secret");
         }

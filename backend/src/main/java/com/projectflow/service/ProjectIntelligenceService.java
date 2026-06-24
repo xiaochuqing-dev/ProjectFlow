@@ -368,7 +368,7 @@ public class ProjectIntelligenceService {
             Map.of(
                 "positioning", profile.summary(),
                 "currentStage", profile.currentStage(),
-                "completedCapabilities", String.join("\n", profile.moduleStructure()),
+                "completedCapabilities", completedCapabilitySummary(profile),
                 "nextStepSuggestions", profile.mostImportantGap()
             )
         ));
@@ -411,6 +411,24 @@ public class ProjectIntelligenceService {
         AiSuggestion suggestion = new AiSuggestion(projectId, materialId);
         suggestion.update(type, title, reason, writePayload(payload));
         return suggestionRepository.save(suggestion);
+    }
+
+    private String completedCapabilitySummary(ProjectProfileResponse profile) {
+        List<String> capabilities = new ArrayList<>();
+        capabilities.add("已导入完整项目结构，识别到 " + profile.moduleStructure().size() + " 个可追踪结构条目。");
+        if (!profile.techStack().isEmpty()) {
+            capabilities.add("已识别主要技术栈：" + String.join("、", profile.techStack()) + "。");
+        }
+        if (profile.hasTests()) {
+            capabilities.add("已发现测试目录或测试文件，可作为后续回归验收线索。");
+        }
+        if (profile.hasStartScript()) {
+            capabilities.add("已发现本地启动入口，可支持后续运行验证。");
+        }
+        if (profile.hasDeployConfig()) {
+            capabilities.add("已发现部署或容器配置，可沉淀为交付环境线索。");
+        }
+        return String.join("\n", capabilities);
     }
 
     private String cleanMemoryText(String value, String fallback) {

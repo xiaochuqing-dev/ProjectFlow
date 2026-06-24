@@ -297,13 +297,20 @@ public class WorkSessionScanService {
     private static boolean ignoredPath(String path) {
         String normalized = path.replace("\\", "/");
         return normalized.startsWith(".projectflow/")
+            || normalized.startsWith(".codex-run/")
+            || normalized.contains("/.codex-run/")
             || normalized.startsWith(".git/")
+            || normalized.contains("/.git/")
             || normalized.contains("/node_modules/")
             || normalized.startsWith("node_modules/")
             || normalized.contains("/target/")
             || normalized.startsWith("target/")
             || normalized.contains("/.next/")
-            || normalized.startsWith(".next/");
+            || normalized.startsWith(".next/")
+            || normalized.contains("/dist/")
+            || normalized.startsWith("dist/")
+            || normalized.contains("/build/")
+            || normalized.startsWith("build/");
     }
 
     private static String moduleName(String path) {

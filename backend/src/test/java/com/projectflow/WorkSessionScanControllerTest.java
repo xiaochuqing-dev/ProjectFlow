@@ -1,6 +1,7 @@
 package com.projectflow;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -115,7 +116,11 @@ class WorkSessionScanControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.sourceType").value("EVIDENCE_BUNDLE"))
             .andExpect(jsonPath("$.data.status").value("PENDING"))
-            .andExpect(jsonPath("$.data.title").value(containsString("Evidence Bundle")))
+            .andExpect(jsonPath("$.data.title").value(not(containsString("Evidence Bundle"))))
+            .andExpect(jsonPath("$.data.title").value(containsString("更新")))
+            .andExpect(jsonPath("$.data.summary").value(containsString("本次")))
+            .andExpect(jsonPath("$.data.summary").value(not(containsString("归因 UNKNOWN"))))
+            .andExpect(jsonPath("$.data.details").value(containsString("涉及模块")))
             .andExpect(jsonPath("$.data.affectedFiles").value(containsString("src/app/page.tsx")))
             .andReturn();
 
@@ -145,6 +150,19 @@ class WorkSessionScanControllerTest {
         mockMvc.perform(post("/api/project-changes/" + changeId + "/accept")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/fact-sources")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].sourceType").value("ACCEPTED_CHANGE"))
+            .andExpect(jsonPath("$.data[0].sourceId").value(changeId))
+            .andExpect(jsonPath("$.data[0].confirmedByUser").value(true));
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/evolution-records")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].summary").value(containsString("采纳结构化变更")))
+            .andExpect(jsonPath("$.data[0].detectedChanges").value(containsString("今日变化概览")));
 
         mockMvc.perform(post("/api/projects/" + projectId + "/context/sync")
                 .header("Authorization", "Bearer " + token))
@@ -257,7 +275,8 @@ class WorkSessionScanControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.sourceType").value("EVIDENCE_BUNDLE"))
             .andExpect(jsonPath("$.data.status").value("PENDING"))
-            .andExpect(jsonPath("$.data.title").value(containsString("Evidence Bundle")));
+            .andExpect(jsonPath("$.data.title").value(not(containsString("Evidence Bundle"))))
+            .andExpect(jsonPath("$.data.title").value(containsString("确认项目画像")));
     }
 
     @Test
