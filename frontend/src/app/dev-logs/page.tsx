@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { BookOpenText, CalendarDays, CheckCircle2, Clock3, FilePenLine, History, RefreshCw, Save, ShieldAlert } from "lucide-react";
+import { ArrowRight, BookOpenText, CalendarDays, CheckCircle2, Clock3, FilePenLine, History, RefreshCw, Save, ShieldAlert } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Badge, ProjectContextBar, Toast } from "@/components/ui";
 import { SourceCardList, type SourceCardItem } from "@/components/sources/SourceCardList";
@@ -298,24 +298,36 @@ function DailySourceGrid({
         <BookOpenText className="h-4 w-4 text-slate-700" />
         <h2 className="font-semibold">每日回顾来源</h2>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        {items.map(([label, value, ready]) => (
-          <SourceStateCard href={href} key={label} label={label} ready={ready} value={value} />
-        ))}
-      </div>
+      <Link className="block rounded-md border border-emerald-200 bg-emerald-50 p-4 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm" href={href}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-semibold text-emerald-950">来源汇总</p>
+            <p className="mt-1 text-sm leading-5 text-emerald-900">集中查看当天日志、演进、任务和风险决策来源。</p>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-800 px-3 py-1 text-xs font-semibold text-white">
+            查看全部来源
+            <ArrowRight className="h-3.5 w-3.5" />
+          </span>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {items.map(([label, value, ready]) => (
+            <SourceStateChip key={label} label={label} ready={ready} value={value} />
+          ))}
+        </div>
+      </Link>
     </section>
   );
 }
 
-function SourceStateCard({ href, label, ready, value }: { href: string; label: string; ready: boolean; value: string }) {
+function SourceStateChip({ label, ready, value }: { label: string; ready: boolean; value: string }) {
   return (
-    <Link className={`rounded-md border px-3 py-2 transition hover:-translate-y-0.5 hover:shadow-sm ${ready ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-line bg-slate-50 text-slate-500"}`} href={href}>
+    <div className={`rounded-md border px-3 py-2 ${ready ? "border-emerald-200 bg-white text-emerald-800" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs">{label}</p>
-        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-slate-500">查看</span>
+        <span className={`h-2 w-2 rounded-full ${ready ? "bg-emerald-700" : "bg-slate-300"}`} />
       </div>
       <p className="mt-1 font-semibold">{value}</p>
-    </Link>
+    </div>
   );
 }
 

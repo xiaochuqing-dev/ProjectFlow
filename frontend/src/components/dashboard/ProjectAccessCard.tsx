@@ -24,7 +24,7 @@ export function ZipImportPanel(props: ZipImportPanelProps) {
               <h3 className="text-sm font-semibold text-ink">添加项目</h3>
             </div>
             <p className="mt-1 text-xs leading-5 text-muted">
-              选择完整项目 zip，创建新的项目画像和文件结构理解。
+              选择完整项目 zip，创建新的项目画像和文件结构理解。node_modules、.next、target、dist、build 会按运行产物处理，不计入源码重点。
             </p>
           </div>
           {props.canClose ? (

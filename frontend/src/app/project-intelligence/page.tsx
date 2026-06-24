@@ -3,7 +3,7 @@
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { DatabaseZap, RefreshCw, Save, ShieldCheck } from "lucide-react";
+import { ArrowRight, DatabaseZap, ListChecks, RefreshCw, Save, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Badge, ProjectContextBar, Toast } from "@/components/ui";
 import { useAutoDismissNotice } from "@/hooks/useAutoDismissNotice";
@@ -23,6 +23,7 @@ import {
   type ProjectMemoryPayload,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
+import { capabilityBulletItems } from "@/lib/project-memory-display";
 import { useProjectAnalysisJobs } from "@/lib/use-project-analysis-jobs";
 
 const fieldConfig: Array<{
@@ -89,6 +90,7 @@ function ProjectIntelligencePageContent() {
     }
     return entries;
   }, [pendingFacts]);
+  const completedCapabilityItems = useMemo(() => capabilityBulletItems(formValue.completedCapabilities), [formValue.completedCapabilities]);
 
   useEffect(() => {
     refreshProjectContext(selectedProjectId);
@@ -275,6 +277,7 @@ function ProjectIntelligencePageContent() {
                     key={field.key}
                     latestSource={latestSource}
                     onChange={(value) => updateField(field.key, value)}
+                    projectId={selectedProjectId}
                     value={formValue[field.key]}
                   />
                 );
@@ -290,34 +293,57 @@ function ProjectIntelligencePageContent() {
               </div>
               <div className="space-y-3 p-5">
                 <ArchiveEntryCard
+                  count={completedCapabilityItems.length}
+                  href={`/project-intelligence/capabilities?projectId=${selectedProjectId}`}
+                  label="能力清单"
+                  latestAt={memory?.updatedAt ?? undefined}
+                  latestLabel={completedCapabilityItems[0] || "暂无确认能力"}
+                  text="用能力点查看已沉淀成果。"
+                  tone="emerald"
+                />
+                <ArchiveEntryCard
                   count={evolutionRecords.length}
                   href={`/project-intelligence/timeline?projectId=${selectedProjectId}`}
                   label="成长时间线"
+                  latestAt={latestAt(evolutionRecords)}
+                  latestLabel={evolutionRecords[0]?.summary || "暂无记录"}
                   text="按时间查看项目如何演进。"
+                  tone="sky"
                 />
                 <ArchiveEntryCard
                   count={factSources.length}
                   href={`/project-intelligence/fact-sources?projectId=${selectedProjectId}`}
                   label="字段来源链"
+                  latestAt={latestAt(factSources)}
+                  latestLabel={confirmedCountLabel(factSources)}
                   text="解释每个档案字段的来源。"
+                  tone="indigo"
                 />
                 <ArchiveEntryCard
                   count={pendingFacts.length}
                   href={`/tasks?projectId=${selectedProjectId}&type=project-memory`}
                   label="待确认档案"
+                  latestLabel={pendingFacts.length ? "需要审查" : "无待确认"}
                   text="审查还没进入正式档案的候选。"
+                  tone="amber"
                 />
                 <ArchiveEntryCard
                   count={evolutionRecords.length}
                   href={`/project-intelligence/changes?projectId=${selectedProjectId}`}
                   label="档案变化"
+                  latestAt={latestAt(evolutionRecords)}
+                  latestLabel={evolutionRecords[0]?.summary || "暂无记录"}
                   text="查看每次档案更新改了什么。"
+                  tone="rose"
                 />
                 <ArchiveEntryCard
                   count={analysisRecords.length}
                   href={`/project-intelligence/analysis-records?projectId=${selectedProjectId}`}
                   label="分析记录"
-                  text={analysisRecords[0] ? `最近：${analysisRecords[0].summary}` : "暂无分析记录。"}
+                  latestAt={latestAt(analysisRecords)}
+                  latestLabel={analysisRecords[0] ? analysisTypeLabel(analysisRecords[0]) : "暂无记录"}
+                  text="查看项目分析和文件分析历史。"
+                  tone="slate"
                 />
               </div>
             </section>
@@ -374,14 +400,17 @@ function ArchiveFieldReview({
   field,
   latestSource,
   onChange,
+  projectId,
   value,
 }: {
   candidateCount: number;
   field: { key: keyof ProjectMemoryPayload; label: string; source: string; rows: number };
   latestSource?: ProjectFactSource;
   onChange: (value: string) => void;
+  projectId: string;
   value: string;
 }) {
+  const isCompletedCapabilities = field.key === "completedCapabilities";
   return (
     <section className="border-b border-line p-5 odd:md:border-r">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -398,9 +427,13 @@ function ArchiveFieldReview({
           {candidateCount ? <span className="rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-800">候选 {candidateCount}</span> : null}
         </div>
       </div>
-      <p className="min-h-20 whitespace-pre-line rounded-md border border-line bg-slate-50 p-3 text-sm leading-6 text-slate-700">
-        {value || "暂无已确认内容。采纳结构化变更或运行项目分析后，会形成可审查候选。"}
-      </p>
+      {isCompletedCapabilities ? (
+        <CompletedCapabilitiesCard projectId={projectId} value={value} />
+      ) : (
+        <p className="min-h-20 whitespace-pre-line rounded-md border border-line bg-slate-50 p-3 text-sm leading-6 text-slate-700">
+          {value || "暂无已确认内容。采纳结构化变更或运行项目分析后，会形成可审查候选。"}
+        </p>
+      )}
       {latestSource?.sourceId ? <p className="mt-2 break-all font-mono text-xs text-muted">sourceId: {latestSource.sourceId}</p> : null}
       <details className="mt-3 rounded-md border border-line bg-white">
         <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
@@ -419,6 +452,35 @@ function ArchiveFieldReview({
   );
 }
 
+function CompletedCapabilitiesCard({ projectId, value }: { projectId: string; value: string }) {
+  const items = capabilityBulletItems(value, 3);
+  return (
+    <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 gap-3">
+          <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-700 text-white">
+            <ListChecks className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="font-semibold text-emerald-950">能力清单</p>
+            <p className="mt-1 text-sm leading-5 text-emerald-900">已完成能力只保留可理解的能力点，原始路径不在这里展开。</p>
+          </div>
+        </div>
+        <span className="rounded-full bg-emerald-800 px-2.5 py-1 text-xs font-semibold text-white">{items.length} 项</span>
+      </div>
+      <ul className="mt-3 space-y-1 text-sm leading-6 text-emerald-950">
+        {(items.length ? items : ["暂无已确认能力。"]).slice(0, 3).map((item) => (
+          <li className="line-clamp-1" key={item}>- {item}</li>
+        ))}
+      </ul>
+      <Link className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-emerald-900 hover:text-emerald-700" href={`/project-intelligence/capabilities?projectId=${projectId}`}>
+        查看能力详情
+        <ArrowRight className="h-4 w-4" />
+      </Link>
+    </div>
+  );
+}
+
 function suggestionFieldKey(suggestion: AiSuggestion) {
   const payloadField = suggestion.payload.fieldKey;
   if (typeof payloadField === "string") {
@@ -429,14 +491,99 @@ function suggestionFieldKey(suggestion: AiSuggestion) {
   return match?.key ?? "";
 }
 
-function ArchiveEntryCard({ count, href, label, text }: { count: number; href: string; label: string; text: string }) {
+function ArchiveEntryCard({
+  count,
+  href,
+  label,
+  latestAt,
+  latestLabel,
+  text,
+  tone = "slate",
+}: {
+  count: number;
+  href: string;
+  label: string;
+  latestAt?: string;
+  latestLabel?: string;
+  text: string;
+  tone?: ArchiveEntryTone;
+}) {
+  const styles = archiveEntryToneStyles[tone];
   return (
-    <Link className="block rounded-md border border-line bg-slate-50 p-4 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm" href={href}>
+    <Link className={`relative block overflow-hidden rounded-md border p-4 pl-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm ${styles.card}`} href={href}>
+      <span className={`absolute inset-y-0 left-0 w-1 ${styles.marker}`} />
       <div className="flex items-center justify-between gap-3">
         <p className="font-semibold text-slate-950">{label}</p>
-        <span className="rounded-full bg-white px-2.5 py-1 text-xs text-slate-600">{count}</span>
+        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles.count}`}>{count} 条</span>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
+        <span className={`rounded-md px-2 py-1 ${styles.chip}`}>{latestAt ? `最新 ${formatShortDate(latestAt)}` : "暂无更新"}</span>
+        {latestLabel ? <span className={`max-w-full truncate rounded-md px-2 py-1 ${styles.chip}`}>{latestLabel}</span> : null}
       </div>
       <p className="mt-2 text-sm leading-5 text-slate-600">{text}</p>
     </Link>
   );
+}
+
+type ArchiveEntryTone = "emerald" | "sky" | "indigo" | "amber" | "rose" | "slate";
+
+const archiveEntryToneStyles: Record<ArchiveEntryTone, { card: string; marker: string; count: string; chip: string }> = {
+  emerald: {
+    card: "border-emerald-200 bg-emerald-50",
+    marker: "bg-emerald-700",
+    count: "bg-emerald-800 text-white",
+    chip: "bg-white text-emerald-900",
+  },
+  sky: {
+    card: "border-sky-200 bg-sky-50",
+    marker: "bg-sky-700",
+    count: "bg-sky-800 text-white",
+    chip: "bg-white text-sky-900",
+  },
+  indigo: {
+    card: "border-indigo-200 bg-indigo-50",
+    marker: "bg-indigo-700",
+    count: "bg-indigo-800 text-white",
+    chip: "bg-white text-indigo-900",
+  },
+  amber: {
+    card: "border-amber-200 bg-amber-50",
+    marker: "bg-amber-700",
+    count: "bg-amber-800 text-white",
+    chip: "bg-white text-amber-900",
+  },
+  rose: {
+    card: "border-rose-200 bg-rose-50",
+    marker: "bg-rose-700",
+    count: "bg-rose-800 text-white",
+    chip: "bg-white text-rose-900",
+  },
+  slate: {
+    card: "border-slate-200 bg-slate-50",
+    marker: "bg-slate-700",
+    count: "bg-slate-800 text-white",
+    chip: "bg-white text-slate-700",
+  },
+};
+
+function latestAt(items: Array<{ createdAt?: string; updatedAt?: string }>) {
+  return items
+    .map((item) => item.updatedAt || item.createdAt || "")
+    .filter(Boolean)
+    .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0];
+}
+
+function formatShortDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+function confirmedCountLabel(items: ProjectFactSource[]) {
+  const confirmed = items.filter((item) => item.confirmedByUser).length;
+  return confirmed ? `已确认 ${confirmed} 项` : "暂无确认来源";
+}
+
+function analysisTypeLabel(record: ProjectAnalysisRecord) {
+  return record.recordType === "FILE" ? "最新文件分析" : "最新项目分析";
 }
