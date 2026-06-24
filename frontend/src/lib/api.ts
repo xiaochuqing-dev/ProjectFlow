@@ -1,6 +1,7 @@
 import type { AuthResult } from "./auth";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api";
+const CONFIGURED_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
+const DEFAULT_API_PORT = process.env.NEXT_PUBLIC_API_PORT ?? "8080";
 
 type ApiResponse<T> = {
   data: T;
@@ -16,6 +17,16 @@ type ApiErrorResponse = {
 
 const NETWORK_ERROR_MESSAGE = "暂时连接不到本地服务。请确认启动脚本窗口还在运行，或等待几秒后再试。";
 const RESPONSE_ERROR_MESSAGE = "服务返回内容暂时无法识别，请刷新页面后重试。";
+
+function apiBaseUrl() {
+  if (CONFIGURED_API_BASE_URL) {
+    return CONFIGURED_API_BASE_URL;
+  }
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:${DEFAULT_API_PORT}/api`;
+  }
+  return `http://127.0.0.1:${DEFAULT_API_PORT}/api`;
+}
 
 function isNetworkError(error: unknown) {
   return error instanceof TypeError && error.message.toLowerCase().includes("fetch");
@@ -41,7 +52,7 @@ async function fetchWithFriendlyError(url: string, options: RequestInit): Promis
 }
 
 async function postJson<T>(path: string, body: unknown, retryNetwork = false): Promise<T> {
-  const request = () => fetchWithFriendlyError(`${API_BASE_URL}${path}`, {
+  const request = () => fetchWithFriendlyError(`${apiBaseUrl()}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -68,7 +79,7 @@ async function postJson<T>(path: string, body: unknown, retryNetwork = false): P
 }
 
 async function requestJson<T>(path: string, options: RequestInit): Promise<T> {
-  const response = await fetchWithFriendlyError(`${API_BASE_URL}${path}`, options);
+  const response = await fetchWithFriendlyError(`${apiBaseUrl()}${path}`, options);
   const payload = await readApiPayload<T>(response);
   if (!response.ok) {
     throw new Error(payload.error?.message ?? "请求失败，请稍后重试");
@@ -866,13 +877,24 @@ export function createTextMaterial(
 }
 
 async function postFormData<T>(token: string, path: string, formData: FormData): Promise<T> {
-  const response = await fetchWithFriendlyError(`${API_BASE_URL}${path}`, {
+  const request = () => fetchWithFriendlyError(`${apiBaseUrl()}${path}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
     },
     body: formData,
   });
+
+  let response: Response;
+  try {
+    response = await request();
+  } catch (error) {
+    if (!(error instanceof Error) || error.message !== NETWORK_ERROR_MESSAGE) {
+      throw error;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 350));
+    response = await request();
+  }
   const payload = await readApiPayload<T>(response);
   if (!response.ok) {
     throw new Error(payload.error?.message ?? "请求失败，请稍后重试");

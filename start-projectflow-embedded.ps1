@@ -176,6 +176,8 @@ try {
     Assert-PortFree -Port 3000
     Assert-PortFree -Port 8080
 
+    $env:NEXT_PUBLIC_API_BASE_URL = "http://127.0.0.1:8080/api"
+    $env:NEXT_PUBLIC_API_PORT = "8080"
     Invoke-Checked -Label "Building frontend..." -FilePath $npmPath -Arguments @("run", "build") -WorkingDirectory $frontendDir
 
     $backendLog = Join-Path $logDir "backend-embedded.log"
@@ -185,7 +187,7 @@ try {
     $frontendUrl = "http://127.0.0.1:3000/login"
     $backendHealthUrl = "http://127.0.0.1:8080/api/health"
 
-    $backendCommand = "`$env:SPRING_PROFILES_ACTIVE='embedded'; `$env:PROJECTFLOW_DATA_DIR=" + (Quote-ForPowerShell $dataDir) + "; `$env:FRONTEND_ORIGIN='http://127.0.0.1:3000'; & " + (Quote-ForPowerShell $mavenPath) + " spring-boot:run"
+    $backendCommand = "`$env:SPRING_PROFILES_ACTIVE='embedded'; `$env:PROJECTFLOW_DATA_DIR=" + (Quote-ForPowerShell $dataDir) + "; `$env:FRONTEND_ORIGIN='http://127.0.0.1:3000,http://localhost:3000'; & " + (Quote-ForPowerShell $mavenPath) + " spring-boot:run"
     $frontendCommand = "`$env:NEXT_PUBLIC_API_BASE_URL='http://127.0.0.1:8080/api'; & " + (Quote-ForPowerShell $npmPath) + " run start -- --hostname 127.0.0.1 --port 3000"
 
     Write-Host "Starting embedded backend..."

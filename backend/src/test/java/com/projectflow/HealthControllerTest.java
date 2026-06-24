@@ -1,7 +1,9 @@
 package com.projectflow;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -26,5 +28,19 @@ class HealthControllerTest {
             .andExpect(content().contentTypeCompatibleWith("application/json"))
             .andExpect(jsonPath("$.status").value("UP"))
             .andExpect(jsonPath("$.service").value("projectflow-api"));
+    }
+
+    @Test
+    void corsAllowsLocalhostAndLoopbackFrontendOrigins() throws Exception {
+        expectCorsAllowed("http://localhost:3000");
+        expectCorsAllowed("http://127.0.0.1:3000");
+    }
+
+    private void expectCorsAllowed(String origin) throws Exception {
+        mockMvc.perform(options("/api/health")
+                .header("Origin", origin)
+                .header("Access-Control-Request-Method", "GET"))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Access-Control-Allow-Origin", origin));
     }
 }
