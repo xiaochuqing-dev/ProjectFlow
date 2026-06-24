@@ -17,6 +17,8 @@ type ApiErrorResponse = {
 
 const NETWORK_ERROR_MESSAGE = "暂时连接不到本地服务。请确认启动脚本窗口还在运行，或等待几秒后再试。";
 const RESPONSE_ERROR_MESSAGE = "服务返回内容暂时无法识别，请刷新页面后重试。";
+const ZIP_UPLOAD_LIMIT_BYTES = 512 * 1024 * 1024;
+const ZIP_UPLOAD_TOO_LARGE_MESSAGE = "项目 zip 超过本地导入上限。请删除 node_modules、构建产物、日志和大型二进制资源后重新压缩。";
 
 function apiBaseUrl() {
   if (CONFIGURED_API_BASE_URL) {
@@ -36,6 +38,9 @@ async function readApiPayload<T>(response: Response): Promise<ApiResponse<T> & A
   try {
     return (await response.json()) as ApiResponse<T> & ApiErrorResponse;
   } catch {
+    if (response.status === 413) {
+      throw new Error(ZIP_UPLOAD_TOO_LARGE_MESSAGE);
+    }
     throw new Error(RESPONSE_ERROR_MESSAGE);
   }
 }
@@ -922,6 +927,9 @@ export function uploadProjectZip(token: string, projectId: string, file: File): 
 }
 
 export function importProjectZip(token: string, file: File, projectId?: string): Promise<ProjectImportAnalyzeResult> {
+  if (file.size > ZIP_UPLOAD_LIMIT_BYTES) {
+    return Promise.reject(new Error(ZIP_UPLOAD_TOO_LARGE_MESSAGE));
+  }
   const formData = new FormData();
   formData.append("file", file);
   const query = projectId ? `?projectId=${projectId}` : "";

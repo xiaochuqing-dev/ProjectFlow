@@ -64,12 +64,24 @@ class SecurityGuardrailTest {
 
     @Test
     void projectZipUploadGuardRejectsOversizedZipBeforeScanning() {
-        ProjectZipUploadGuard guard = new ProjectZipUploadGuard(1024);
+        ProjectZipUploadGuard guard = new ProjectZipUploadGuard(1024, 512);
 
         assertThatThrownBy(() -> guard.assertUploadBudget(1025))
             .isInstanceOf(AppException.class)
             .extracting("status")
             .isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
         guard.assertUploadBudget(1024);
+        guard.assertReadBudget(256, 256);
+        assertThatThrownBy(() -> guard.assertReadBudget(512, 1))
+            .isInstanceOf(AppException.class)
+            .extracting("status")
+            .isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
+    }
+
+    @Test
+    void projectZipUploadGuardAllowsLargeLocalProjectZipWithinFileBudget() {
+        ProjectZipUploadGuard guard = new ProjectZipUploadGuard(512L * 1024 * 1024, 64L * 1024 * 1024);
+
+        guard.assertUploadBudget(250L * 1024 * 1024);
     }
 }

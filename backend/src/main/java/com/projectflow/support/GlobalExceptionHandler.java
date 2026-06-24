@@ -30,6 +30,6 @@ public class GlobalExceptionHandler {
     ResponseEntity<ApiErrorResponse> handleMaxUploadSizeExceeded() {
         return ResponseEntity
             .status(HttpStatus.PAYLOAD_TOO_LARGE)
-            .body(new ApiErrorResponse(new ApiError("UPLOAD_TOO_LARGE", "Project zip is too large. Please remove node_modules, build outputs, logs, and binary assets, then upload again.")));
+            .body(new ApiErrorResponse(new ApiError("UPLOAD_TOO_LARGE", "项目 zip 超过本地导入上限。请删除 node_modules、构建产物、日志和大型二进制资源后重新压缩。")));
     }
 }
