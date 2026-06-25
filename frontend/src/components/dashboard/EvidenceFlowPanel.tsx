@@ -31,19 +31,19 @@ export function EvidenceFlowPanel(props: EvidenceFlowPanelProps) {
         <div>
           <div className="flex items-center gap-2">
             <History className="h-4 w-4 text-brand" />
-            <h3 className="text-sm font-semibold text-ink">今日变化闭环</h3>
+            <h3 className="text-sm font-semibold text-ink">本次开发总结</h3>
           </div>
-          <p className="mt-1 text-xs leading-5 text-muted">开发后回来刷新变化，把 Git evidence 变成可审查事实，采纳后进入项目档案和输出来源。</p>
+          <p className="mt-1 text-xs leading-5 text-muted">开发后回来刷新今日开发，把 Git evidence 整理成待确认内容，采纳后进入项目资产和输出来源。</p>
         </div>
         <Button
           variant="secondary"
           size="sm"
           disabled={!props.hasProjectPath || props.scanningWorkSessions}
           onClick={props.onScanWorkSessions}
-          title={props.hasProjectPath ? "读取已绑定项目的 Git 变化，生成今日工作候选。" : "先保存真实项目文件夹路径。"}
+          title={props.hasProjectPath ? "读取已绑定项目的 Git 变化，生成今日开发候选。" : "先绑定真实项目文件夹路径。"}
         >
           {props.scanningWorkSessions ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
-          刷新变化
+          刷新今日开发
         </Button>
       </div>
 
@@ -76,8 +76,8 @@ export function EvidenceFlowPanel(props: EvidenceFlowPanelProps) {
       ) : (
         <div className="p-5 text-sm leading-6 text-muted">
           {props.hasProjectPath
-            ? "还没有今日变化。点击刷新后，如果当前项目有 Git 改动或提交，这里会出现候选工作会话。"
-            : "先保存本地项目路径，ProjectFlow 才能从这个项目读取 Git evidence。"}
+            ? "还没有今日开发记录。点击刷新后，如果当前项目有 Git 改动或提交，这里会出现本次开发候选。"
+            : "先绑定本地项目路径，ProjectFlow 才能从这个项目读取 Git evidence。"}
         </div>
       )}
     </Card>
@@ -158,7 +158,7 @@ function EvidenceFlowAction({
     return (
       <Button variant="secondary" size="sm" disabled={creating} onClick={onCreateEvidenceBundle}>
         {creating ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileCode2 className="h-3.5 w-3.5" />}
-        生成证据包
+        整理原始依据
       </Button>
     );
   }
@@ -166,7 +166,7 @@ function EvidenceFlowAction({
     return (
       <Button variant="primary" size="sm" disabled={drafting} onClick={onDraftChange}>
         {drafting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
-        生成候选变更
+        生成待确认内容
       </Button>
     );
   }
@@ -174,7 +174,7 @@ function EvidenceFlowAction({
     return (
       <Link href="/tasks">
         <Button variant="primary" size="sm">
-          去变更审查 <ArrowRight className="h-3.5 w-3.5" />
+          去开发成果审查 <ArrowRight className="h-3.5 w-3.5" />
         </Button>
       </Link>
     );
@@ -183,7 +183,7 @@ function EvidenceFlowAction({
     return (
       <Link href="/project-intelligence">
         <Button variant="secondary" size="sm">
-          看项目档案 <ArrowRight className="h-3.5 w-3.5" />
+          看项目资产 <ArrowRight className="h-3.5 w-3.5" />
         </Button>
       </Link>
     );
@@ -199,16 +199,16 @@ function EvidenceFlowAction({
 
 function evidenceStatus(bundle?: EvidenceBundle): { label: string; tone: "brand" | "warning" | "success" | "slate" } {
   if (!bundle) {
-    return { label: "待生成证据", tone: "slate" };
+    return { label: "待整理依据", tone: "slate" };
   }
   if (bundle.status === "READY_FOR_CHANGE") {
-    return { label: "证据包就绪", tone: "brand" };
+    return { label: "原始依据就绪", tone: "brand" };
   }
   if (bundle.status === "CHANGE_DRAFTED") {
     return { label: "待审查", tone: "warning" };
   }
   if (bundle.status === "CHANGE_ACCEPTED") {
-    return { label: "已入档案", tone: "success" };
+    return { label: "已入资产", tone: "success" };
   }
   return { label: "已归档", tone: "slate" };
 }

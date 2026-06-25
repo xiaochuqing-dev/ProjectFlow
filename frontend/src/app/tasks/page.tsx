@@ -37,7 +37,7 @@ type EditState = {
 
 export default function TasksPage() {
   return (
-    <Suspense fallback={<AppShell eyebrow="从 agent result 到确认资产" title="变更审查"><div className="min-h-[calc(100vh-4rem)] bg-surface p-8"><div className="h-1 bg-slate-950" /></div></AppShell>}>
+    <Suspense fallback={<AppShell eyebrow="从今日开发到项目资产" title="开发成果审查"><div className="min-h-[calc(100vh-4rem)] bg-surface p-8"><div className="h-1 bg-slate-950" /></div></AppShell>}>
       <TasksPageContent />
     </Suspense>
   );
@@ -165,7 +165,7 @@ function TasksPageContent() {
     setNotice("");
     try {
       await Promise.all(ids.map((id) => acceptProjectChange(session.accessToken, id)));
-      setNotice(`已采纳 ${ids.length} 条结构化变更，已写入项目档案和事实来源。`);
+      setNotice(`已采纳 ${ids.length} 条待确认内容，已写入项目资产和可信依据。`);
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "采纳结构化变更失败");
@@ -185,7 +185,7 @@ function TasksPageContent() {
     setNotice("");
     try {
       await applyAiSuggestions(session.accessToken, selectedProjectId, ids);
-      setNotice(`已采纳 ${ids.length} 条变更，并生成项目档案/任务/回顾证据。`);
+      setNotice(`已采纳 ${ids.length} 条候选内容，并生成项目资产、开发证据和回顾来源。`);
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "采纳变更失败");
@@ -227,7 +227,7 @@ function TasksPageContent() {
   }
 
   return (
-    <AppShell eyebrow="从 agent result 到确认资产" title="变更审查">
+    <AppShell eyebrow="从今日开发到项目资产" title="开发成果审查">
       <div className="min-h-[calc(100vh-4rem)] bg-surface p-8">
         <ProjectContextBar
           actions={(
@@ -253,11 +253,19 @@ function TasksPageContent() {
           selectedProjectId={selectedProjectId}
         />
 
-        <section className="mb-6 grid gap-3 rounded-md border border-line bg-white p-4 text-sm shadow-panel lg:grid-cols-4">
-          <FlowStep title="1. 采纳" text="结构化变更会进入已采纳列表，并按类型写入项目档案字段和事实来源。" />
-          <FlowStep title="2. 项目档案" text="能力、风险、技术决策、经验和成果素材会在项目画像页继续审查和确认。" />
-          <FlowStep title="3. 上下文同步" text="点击工作台的同步确认上下文后，已采纳信息会写回本地项目上下文。" />
-          <FlowStep title="4. 输出复用" text="成果输出、每日回顾、README 草稿和 Agent 后续任务会优先使用这些已确认信息。" />
+        <section className="mb-6 rounded-md border border-line bg-white p-4 text-sm shadow-panel">
+          <div className="mb-4">
+            <p className="font-semibold text-slate-950">确认哪些开发成果可以进入项目资产</p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              这里不处理通用待办，而是把今日开发、Agent 写回和证据依据整理成待确认内容。采纳后会进入项目资产、可信依据和项目时间线。
+            </p>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-4">
+            <FlowStep title="1. 确认入档" text="待确认内容会进入已采纳列表，并按类型写入项目资产字段和可信依据。" />
+            <FlowStep title="2. 项目资产" text="能力、风险、技术决策、经验和成果素材会在项目理解页继续查看和修正。" />
+            <FlowStep title="3. 上下文同步" text="点击工作台的同步确认上下文后，已采纳信息会写回本地项目上下文。" />
+            <FlowStep title="4. 输出复用" text="成果输出、每日回顾、README 草稿和 Agent 后续任务会优先使用这些已确认信息。" />
+          </div>
         </section>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">

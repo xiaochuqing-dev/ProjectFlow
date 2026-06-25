@@ -37,7 +37,7 @@ assert.match(intelligence, /CompletedCapabilitiesCard/, "completed capabilities 
 assert.match(intelligence, /\/project-intelligence\/fact-sources\?projectId=/, "project profile should link to fact source page");
 assert.match(intelligence, /\/project-intelligence\/changes\?projectId=/, "project profile should link to archive changes page");
 assert.match(intelligence, /ArchiveEntryCard/, "project profile right rail should use navigation entries instead of long embedded lists");
-assert.match(intelligence, /项目档案审查工作台/, "project profile should present archive fields as a review workbench");
+assert.match(intelligence, /项目资产工作台/, "project profile should present archive fields as an asset workbench");
 assert.match(intelligence, /手动修正字段/, "manual archive editing should be a secondary correction action");
 assert.match(intelligence, /archiveEntryToneStyles/, "project profile entry cards should use distinct color markers");
 

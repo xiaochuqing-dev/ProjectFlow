@@ -24,7 +24,7 @@ export function ZipImportPanel(props: ZipImportPanelProps) {
               <h3 className="text-sm font-semibold text-ink">添加项目</h3>
             </div>
             <p className="mt-1 text-xs leading-5 text-muted">
-              选择完整项目 zip，创建新的项目画像和文件结构理解。node_modules、.next、target、dist、build 会按运行产物处理，不计入源码重点。
+              选择完整项目 zip，创建新的项目理解和文件结构理解。node_modules、.next、target、dist、build 会按运行产物处理，不计入源码重点。
             </p>
           </div>
           {props.canClose ? (
@@ -102,58 +102,67 @@ export function ProjectAccessCard(props: ProjectAccessCardProps) {
           value={props.projectPath}
           disabled={!hasSelectedProject}
         />
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
           <Button
             variant="primary"
             size="sm"
             disabled={!hasSelectedProject || !props.projectPath.trim() || props.savingProjectPath}
             onClick={props.onSavePath}
-            title="只记录本地项目根目录，切换项目和刷新页面后继续复用，不写入目标项目文件。"
+            title="绑定真实项目根目录，后续刷新今日开发会复用这个路径，不写入目标项目文件。"
           >
             {props.savingProjectPath ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-            保存路径
+            绑定本地项目
           </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={!hasSelectedProject || !props.projectPath.trim() || props.writingProtocol}
-            onClick={props.onWriteProtocol}
-            title="在目标项目生成 ProjectFlow 协议、上下文目录和结果收件箱，供 Agent 按规则写回结果。"
-          >
-            {props.writingProtocol ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileCode2 className="h-3.5 w-3.5" />}
-            写入/刷新协议
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={!hasSelectedProject || !props.projectPath.trim() || props.scanningAgentResults}
-            onClick={props.onScanAgentResults}
-            title="读取目标项目的 ProjectFlow 结果收件箱，把 Agent 写回内容转成待审查变更。"
-          >
-            {props.scanningAgentResults ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
-            扫描 Agent Result
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={!hasSelectedProject || !props.projectPath.trim() || props.syncingContext}
-            onClick={props.onSyncContext}
-            title="把已经采纳和确认的项目档案写回目标项目上下文目录，供后续 Agent 读取。"
-          >
-            {props.syncingContext ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FolderTree className="h-3.5 w-3.5" />}
-            同步确认上下文
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={!hasSelectedProject}
-            onClick={props.onCopyGlobalRule}
-            title="复制给其他 Agent 使用的通用规则，让它们按 ProjectFlow 协议输出结果。"
-          >
-            <Clipboard className="h-3.5 w-3.5" />
-            复制规则
-          </Button>
+          <span className="self-center text-xs text-muted">刷新今日开发在下方闭环卡执行。</span>
         </div>
+
+        <details className="mt-4 rounded-field border border-line bg-surfaceAlt">
+          <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-body hover:bg-elevated">
+            Agent 高级设置
+          </summary>
+          <div className="grid gap-2 border-t border-line p-3 sm:grid-cols-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!hasSelectedProject || !props.projectPath.trim() || props.writingProtocol}
+              onClick={props.onWriteProtocol}
+              title="在目标项目生成 ProjectFlow 协议、上下文目录和结果收件箱，供 Agent 按规则写回结果。"
+            >
+              {props.writingProtocol ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileCode2 className="h-3.5 w-3.5" />}
+              写入/刷新协议
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!hasSelectedProject || !props.projectPath.trim() || props.scanningAgentResults}
+              onClick={props.onScanAgentResults}
+              title="读取目标项目的 ProjectFlow 结果收件箱，把 Agent 写回内容转成待确认内容。"
+            >
+              {props.scanningAgentResults ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
+              扫描 Agent 写回内容
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!hasSelectedProject || !props.projectPath.trim() || props.syncingContext}
+              onClick={props.onSyncContext}
+              title="把已经采纳和确认的项目资产写回目标项目上下文目录，供后续 Agent 读取。"
+            >
+              {props.syncingContext ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FolderTree className="h-3.5 w-3.5" />}
+              同步确认上下文
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!hasSelectedProject}
+              onClick={props.onCopyGlobalRule}
+              title="复制给其他 Agent 使用的通用规则，让它们按 ProjectFlow 协议输出结果。"
+            >
+              <Clipboard className="h-3.5 w-3.5" />
+              复制 Agent 规则
+            </Button>
+          </div>
+        </details>
       </div>
     </Card>
   );
@@ -166,11 +175,11 @@ function accessHint(step: DashboardStep, hasSelectedProject: boolean): { title: 
     case "no_material":
       return { title: "当前项目还没有可分析的材料，导入完整 zip 后生成画像。", cta: undefined };
     case "no_path":
-      return { title: "绑定本地项目文件夹路径后，才能扫描 Agent 结果与今日变化。", cta: undefined };
+      return { title: "绑定本地项目文件夹路径后，才能刷新今日开发与扫描 Agent 写回内容。", cta: undefined };
     case "has_pending":
-      return { title: `当前有 ${step.count} 条待确认变更。`, cta: "去变更审查", ctaHref: "/tasks" };
+      return { title: `当前有 ${step.count} 条待确认内容。`, cta: "去开发成果审查", ctaHref: "/tasks" };
     case "scan_updates":
-      return { title: "项目已就绪，扫描 Agent Result 或刷新今日变化获取新候选。", cta: undefined };
+      return { title: "项目已就绪，刷新今日开发获取新的待确认内容。", cta: undefined };
     default:
       return { title: hasSelectedProject ? "项目接入就绪。" : "导入项目 zip 开始。" };
   }

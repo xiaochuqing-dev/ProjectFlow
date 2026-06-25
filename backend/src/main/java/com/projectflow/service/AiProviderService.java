@@ -49,12 +49,17 @@ public class AiProviderService {
 
     @Transactional
     public AiProviderResponse create(UUID userId, AiProviderRequest request) {
-        AiProvider provider = new AiProvider(userId);
+        String baseUrl = aiProviderUrlGuard.validateBaseUrl(normalizeBaseUrl(request.baseUrl()));
+        String modelName = request.modelName().trim();
+        AiProvider provider = aiProviderRepository
+            .findByUserIdAndTypeAndBaseUrlAndModelName(userId, request.type(), baseUrl, modelName)
+            .orElseGet(() -> new AiProvider(userId));
+        String apiKey = blankToNull(request.apiKey());
         provider.update(
             request.name().trim(),
-            aiProviderUrlGuard.validateBaseUrl(normalizeBaseUrl(request.baseUrl())),
-            blankToNull(request.apiKey()),
-            request.modelName().trim(),
+            baseUrl,
+            apiKey == null ? provider.getApiKey() : apiKey,
+            modelName,
             request.type(),
             request.temperature(),
             request.maxTokens(),

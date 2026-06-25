@@ -37,7 +37,7 @@ const fieldConfig: Array<{
   { key: "completedCapabilities", label: "已完成能力", source: "采纳记录 / 每日回顾", rows: 5 },
   { key: "inProgressCapabilities", label: "进行中能力", source: "任务变化 / agent result", rows: 5 },
   { key: "currentRisks", label: "当前风险", source: "风险建议 / 用户手动", rows: 5 },
-  { key: "technicalDecisions", label: "技术决策", source: "变更审查采纳", rows: 5 },
+  { key: "technicalDecisions", label: "技术决策", source: "开发成果审查采纳", rows: 5 },
   { key: "developerLearnings", label: "经验沉淀", source: "每日回顾 / 模型总结", rows: 5 },
   { key: "showcaseAssets", label: "可展示成果", source: "成果素材采纳", rows: 5 },
   { key: "nextStepSuggestions", label: "下一步目标", source: "用户确认 / agent result", rows: 5 },
@@ -45,7 +45,7 @@ const fieldConfig: Array<{
 
 export default function ProjectIntelligencePage() {
   return (
-    <Suspense fallback={<AppShell eyebrow="长期档案" title="项目画像"><div className="min-h-[calc(100vh-4rem)] bg-surface p-8"><div className="h-1 bg-slate-950" /></div></AppShell>}>
+    <Suspense fallback={<AppShell eyebrow="项目理解与项目资产" title="项目理解"><div className="min-h-[calc(100vh-4rem)] bg-surface p-8"><div className="h-1 bg-slate-950" /></div></AppShell>}>
       <ProjectIntelligencePageContent />
     </Suspense>
   );
@@ -141,7 +141,7 @@ function ProjectIntelligencePageContent() {
       setFactSources(sourceItems);
       setAnalysisRecords(analysisItems);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "项目画像加载失败");
+      setError(exception instanceof Error ? exception.message : "项目理解加载失败");
     } finally {
       setLoading(false);
     }
@@ -162,9 +162,9 @@ function ProjectIntelligencePageContent() {
       setMemory(updated);
       setFormValue(toPayload(updated));
       setFactSources(await listProjectFactSources(session.accessToken, selectedProjectId));
-      setNotice("项目档案已保存。后续成果输出会优先使用这些已确认内容。");
+      setNotice("项目资产已保存。后续成果输出会优先使用这些已确认内容。");
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "项目档案保存失败");
+      setError(exception instanceof Error ? exception.message : "项目资产保存失败");
     } finally {
       setSaving(false);
     }
@@ -186,12 +186,12 @@ function ProjectIntelligencePageContent() {
       await enqueueProjectAnalysis();
       setNotice("分析任务已提交。刷新页面不会中断任务。");
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "项目画像分析失败。请先导入完整项目 zip。");
+      setError(exception instanceof Error ? exception.message : "项目理解分析失败。请先导入完整项目 zip。");
     }
   }
 
   return (
-    <AppShell eyebrow="长期档案" title="项目画像">
+    <AppShell eyebrow="项目理解与项目资产" title="项目理解">
       <div className="min-h-[calc(100vh-4rem)] bg-surface p-8">
         <ProjectContextBar
           actions={(
@@ -254,8 +254,8 @@ function ProjectIntelligencePageContent() {
               <div className="flex items-center gap-2">
                 <DatabaseZap className="h-4 w-4 text-slate-700" />
                 <div>
-                  <h2 className="font-semibold">项目档案审查工作台</h2>
-                  <p className="mt-1 text-xs text-muted">默认展示已确认内容和来源。只有需要修正时才展开编辑框。</p>
+                  <h2 className="font-semibold">项目资产工作台</h2>
+                  <p className="mt-1 text-xs text-muted">默认展示已确认资产和可信依据。只有需要修正时才展开编辑框。</p>
                 </div>
               </div>
               <button
@@ -289,7 +289,7 @@ function ProjectIntelligencePageContent() {
           <aside className="space-y-5">
             <section className="rounded-md border border-line bg-white shadow-panel">
               <div className="border-b border-line px-5 py-4">
-                <h2 className="font-semibold">项目档案入口</h2>
+                <h2 className="font-semibold">项目资产入口</h2>
               </div>
               <div className="space-y-3 p-5">
                 <ArchiveEntryCard
@@ -304,36 +304,36 @@ function ProjectIntelligencePageContent() {
                 <ArchiveEntryCard
                   count={evolutionRecords.length}
                   href={`/project-intelligence/timeline?projectId=${selectedProjectId}`}
-                  label="成长时间线"
+                  label="项目时间线"
                   latestAt={latestAt(evolutionRecords)}
                   latestLabel={evolutionRecords[0]?.summary || "暂无记录"}
-                  text="按时间查看项目如何演进。"
+                  text="按时间查看项目如何一步步变强。"
                   tone="sky"
                 />
                 <ArchiveEntryCard
                   count={factSources.length}
                   href={`/project-intelligence/fact-sources?projectId=${selectedProjectId}`}
-                  label="字段来源链"
+                  label="可信依据"
                   latestAt={latestAt(factSources)}
                   latestLabel={confirmedCountLabel(factSources)}
-                  text="解释每个档案字段的来源。"
+                  text="解释每项资产为什么可信。"
                   tone="indigo"
                 />
                 <ArchiveEntryCard
                   count={pendingFacts.length}
                   href={`/tasks?projectId=${selectedProjectId}&type=project-memory`}
-                  label="待确认档案"
+                  label="待确认内容"
                   latestLabel={pendingFacts.length ? "需要审查" : "无待确认"}
-                  text="审查还没进入正式档案的候选。"
+                  text="审查还没进入正式项目资产的候选。"
                   tone="amber"
                 />
                 <ArchiveEntryCard
                   count={evolutionRecords.length}
                   href={`/project-intelligence/changes?projectId=${selectedProjectId}`}
-                  label="档案变化"
+                  label="时间线变化"
                   latestAt={latestAt(evolutionRecords)}
                   latestLabel={evolutionRecords[0]?.summary || "暂无记录"}
-                  text="查看每次档案更新改了什么。"
+                  text="查看每次项目资产更新改了什么。"
                   tone="rose"
                 />
                 <ArchiveEntryCard
@@ -351,7 +351,7 @@ function ProjectIntelligencePageContent() {
             <section className="rounded-md border border-line bg-white p-5 shadow-panel">
               <p className="font-semibold text-slate-950">确认原则</p>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                AI、zip 分析和 agent result 都只是候选。用户确认后，才进入正式项目档案和输出来源。
+                AI、zip 分析和 agent result 都只是候选。用户确认后，才进入正式项目资产和成果输出来源。
               </p>
             </section>
           </aside>
@@ -434,7 +434,14 @@ function ArchiveFieldReview({
           {value || "暂无已确认内容。采纳结构化变更或运行项目分析后，会形成可审查候选。"}
         </p>
       )}
-      {latestSource?.sourceId ? <p className="mt-2 break-all font-mono text-xs text-muted">sourceId: {latestSource.sourceId}</p> : null}
+      {latestSource?.sourceId ? (
+        <details className="mt-2 rounded-md border border-line bg-white">
+          <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+            为什么可信？
+          </summary>
+          <p className="break-all border-t border-line p-3 font-mono text-xs text-muted">高级信息：{latestSource.sourceId}</p>
+        </details>
+      ) : null}
       <details className="mt-3 rounded-md border border-line bg-white">
         <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
           手动修正字段

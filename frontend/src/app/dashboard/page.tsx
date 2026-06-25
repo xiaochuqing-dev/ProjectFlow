@@ -19,6 +19,7 @@ import { EvidenceFlowPanel } from "@/components/dashboard/EvidenceFlowPanel";
 import { FlowGuideDialog } from "@/components/dashboard/FlowGuideDialog";
 import { InteractiveStat, MiniFact, StatsFocusPanel } from "@/components/dashboard/DashboardStats";
 import { ProjectAccessCard, ZipImportPanel } from "@/components/dashboard/ProjectAccessCard";
+import { OutputOptionsCard } from "@/components/dashboard/OutputOptionsCard";
 import type { DashboardStep } from "@/components/dashboard/types";
 import {
   Badge,
@@ -273,7 +274,7 @@ export default function DashboardPage() {
       });
       rememberSelectedProjectId(result.project.id);
       setSelectedProjectId(result.project.id);
-      setNotice("项目 zip 已导入，已生成基础画像和结构理解。");
+      setNotice("项目 zip 已导入，已生成基础项目理解和结构理解。");
       setFile(null);
       setShowZipImport(false);
       await refreshProjectContext(result.project.id);
@@ -329,7 +330,7 @@ export default function DashboardPage() {
       const memoryRecord = await saveProjectLocalPath(session.accessToken, selectedProjectId, projectPath.trim());
       setMemory(memoryRecord);
       setProjectPath(memoryRecord.localProjectPath ?? projectPath.trim());
-      setNotice("已保存本地项目路径；扫描和同步会复用这个路径。");
+      setNotice("已绑定本地项目；刷新今日开发和同步上下文会复用这个路径。");
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "本地项目路径保存失败");
     } finally {
@@ -385,7 +386,7 @@ export default function DashboardPage() {
   async function handleRunAnalysis() {
     const session = readSession();
     if (!session || !selectedProjectId || !hasUsableProjectZip) {
-      setError("先导入包含源码、配置或文档的完整项目 zip，再运行项目画像分析。");
+      setError("先导入包含源码、配置或文档的完整项目 zip，再运行项目理解分析。");
       return;
     }
 
@@ -395,7 +396,7 @@ export default function DashboardPage() {
       await enqueueProjectAnalysis();
       setNotice("分析任务已提交。可离开或刷新页面，任务会继续运行。");
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "项目画像分析失败");
+      setError(exception instanceof Error ? exception.message : "项目理解分析失败");
     }
   }
 
@@ -413,7 +414,7 @@ export default function DashboardPage() {
       const result = await scanProjectWorkSessions(session.accessToken, selectedProjectId);
       setWorkSessionScan(result);
       setScanWarnings(result.warnings);
-      setNotice(result.sessions.length ? `已生成 ${result.sessions.length} 个今日变化候选。` : "今天暂未发现可归因的 Git 变化。");
+      setNotice(result.sessions.length ? `已生成 ${result.sessions.length} 条今日开发候选。` : "今天暂未发现可归因的 Git 变化。");
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "今日变化扫描失败");
     } finally {
@@ -452,7 +453,7 @@ export default function DashboardPage() {
     setNotice("");
     try {
       await draftProjectChangeFromEvidenceBundle(session.accessToken, bundleId);
-      setNotice("已从证据包生成候选变更。下一步进入变更审查，采纳后会写入项目档案和事实来源。");
+      setNotice("已从原始依据生成待确认内容。下一步进入开发成果审查，采纳后会写入项目资产和可信依据。");
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "候选变更生成失败");
@@ -525,7 +526,7 @@ export default function DashboardPage() {
                 label={configuredProvider ? `模型：${configuredProvider.name}` : "未配置模型"}
                 tone={configuredProvider ? "success" : "warning"}
                 dot
-                title={configuredProvider ? "当前可用于项目画像分析的模型配置。" : "未配置模型时仍可使用本地规则分析。"}
+                title={configuredProvider ? "当前可用于项目理解分析的模型配置。" : "未配置模型时仍可使用本地规则分析。"}
               />
               <Button
                 variant="ghost"
@@ -548,7 +549,6 @@ export default function DashboardPage() {
           }
         />
 
-        {/* 关键指标行 */}
         <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <InteractiveStat
             active={statsFocus === "materials"}
@@ -559,7 +559,7 @@ export default function DashboardPage() {
           />
           <InteractiveStat
             active={statsFocus === "changes"}
-            hint="去变更审查"
+            hint="去开发成果审查"
             label="待确认变更"
             onClick={() => setStatsFocus(statsFocus === "changes" ? "" : "changes")}
             tone={pendingReviewCount ? "warning" : "slate"}
@@ -597,7 +597,6 @@ export default function DashboardPage() {
         <FlowGuideDialog onClose={() => setShowFlowGuide(false)} open={showFlowGuide} state={projectFlowState} />
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px]">
-          {/* 主列 */}
           <div className="space-y-5">
             {shouldShowZipImport ? (
               <ZipImportPanel
@@ -613,7 +612,6 @@ export default function DashboardPage() {
               />
             ) : null}
 
-            {/* 项目接入卡：只处理已选项目的本地路径、协议、扫描和同步 */}
             <ProjectAccessCard
               step={currentStep}
               hasSelectedProject={Boolean(selectedProjectId)}
@@ -643,10 +641,10 @@ export default function DashboardPage() {
               workSessions={todaySessions}
             />
 
-            {/* 项目画像速览（极简，不再重复完整画像） */}
+            {/* 项目理解速览（极简，不再重复完整理解） */}
             <Card shadow="card">
               <SectionHeader
-                eyebrow="项目画像"
+                eyebrow="项目理解"
                 title={selectedProject?.name ?? "先导入项目"}
                 actions={
                   selectedProjectId ? (
@@ -656,7 +654,7 @@ export default function DashboardPage() {
                         size="sm"
                         disabled={analyzing || !hasUsableProjectZip}
                         onClick={handleRunAnalysis}
-                        title={hasUsableProjectZip ? "基于当前有效项目 zip 重新生成项目画像。" : "当前项目还没有可分析的源码、配置或文档目录结构。"}
+                        title={hasUsableProjectZip ? "基于当前有效项目 zip 重新生成项目理解。" : "当前项目还没有可分析的源码、配置或文档目录结构。"}
                       >
                         {analyzing ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileCode2 className="h-3.5 w-3.5" />}
                         {latestProjectJob?.status === "QUEUED"
@@ -670,7 +668,7 @@ export default function DashboardPage() {
                                 : "本地规则分析"}
                       </Button>
                       <Link className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-hover" href="/project-intelligence">
-                        完整画像 <ArrowRight className="h-4 w-4" />
+                        完整项目理解 <ArrowRight className="h-4 w-4" />
                       </Link>
                     </div>
                   ) : null
@@ -681,7 +679,7 @@ export default function DashboardPage() {
                   <p className="max-w-4xl text-base leading-7 text-body">
                     {analysis?.summary || (!hasUsableProjectZip && hasProjectZipMaterial
                       ? "当前项目材料没有识别到有效源码、配置或文档结构；如果这是旧导入，建议重新导入完整项目 zip，或删除这个错误项目记录。"
-                      : memory?.positioning || selectedProject.description || "已导入项目材料，正在使用本地规则生成基础项目画像。配置模型后可生成更完整的架构、风险和文件解释。")}
+                      : memory?.positioning || selectedProject.description || "已导入项目材料，正在使用本地规则生成基础项目理解。配置模型后可生成更完整的架构、风险和文件解释。")}
                   </p>
                   {analysis ? (
                     <div className="mt-4 rounded-card border border-line bg-surfaceAlt p-4">
@@ -718,12 +716,14 @@ export default function DashboardPage() {
                   title={selectedProject ? "先导入项目材料" : "先创建或导入项目"}
                   description={
                     selectedProject
-                      ? "当前项目还没有 zip 或 agent 材料。导入后才能生成项目画像、架构理解和文件解释。"
+                      ? "当前项目还没有 zip 或 agent 材料。导入后才能生成项目理解、架构理解和文件解释。"
                       : "ProjectFlow 需要先拿到真实项目，才会展示画像、风险和文件理解。请从下方导入完整项目 zip。"
                   }
                 />
               )}
             </Card>
+
+            <OutputOptionsCard selectedProjectId={selectedProjectId} />
 
           </div>
 
@@ -753,7 +753,7 @@ export default function DashboardPage() {
             <Card shadow="card" padding="md">
               <p className="text-sm font-semibold text-ink">模型状态</p>
               <p className="mt-2 text-sm leading-6 text-muted">
-                {configuredProvider ? "已配置模型。深度分析结果必须经用户确认后写入项目档案。" : "未配置 API。文件理解页会显示本地规则解释，深度分析入口会引导到设置页。"}
+                {configuredProvider ? "已配置模型。深度分析结果必须经用户确认后写入项目资产。" : "未配置 API。文件理解页会显示本地规则解释，深度分析入口会引导到设置页。"}
               </p>
               {!configuredProvider ? (
                 <Link className="mt-3 inline-flex" href="/settings">
@@ -796,3 +796,4 @@ export default function DashboardPage() {
     </AppShell>
   );
 }
+

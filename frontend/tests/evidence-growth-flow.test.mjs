@@ -17,10 +17,10 @@ assert.match(api, /nextAction: "GENERATE_CHANGE"/, "evidence bundles should expo
 assert.match(api, /draftProjectChangeFromEvidenceBundle/, "frontend API should create structured changes from evidence bundles");
 
 assert.match(dashboard, /EvidenceFlowPanel/, "dashboard should render the evidence-to-review flow");
-assert.match(evidenceFlowPanel, /今日变化闭环/, "dashboard evidence panel should name the post-development feedback loop");
-assert.match(evidenceFlowPanel, /生成证据包/, "dashboard evidence panel should let users create evidence packages from work sessions");
-assert.match(evidenceFlowPanel, /生成候选变更/, "dashboard evidence panel should let users turn evidence into reviewable changes");
-assert.match(dashboard, /采纳后会写入项目档案和事实来源/, "dashboard should explain what happens after review");
+assert.match(evidenceFlowPanel, /本次开发总结/, "dashboard evidence panel should name the post-development feedback loop");
+assert.match(evidenceFlowPanel, /整理原始依据/, "dashboard evidence panel should let users prepare evidence from work sessions");
+assert.match(evidenceFlowPanel, /生成待确认内容/, "dashboard evidence panel should let users turn evidence into reviewable changes");
+assert.match(dashboard, /采纳后会写入项目资产和可信依据/, "dashboard should explain what happens after review");
 assert.doesNotMatch(
   evidenceFlowPanel,
   /!bundleBySession\.has\(bundle\.workSessionId\)/,
@@ -33,7 +33,7 @@ assert.match(changeReviewSidebar, /采纳后写入/, "change review should previ
 assert.match(changeReviewSidebar, /changeMemoryTargets/, "change review should derive project-memory target fields");
 assert.match(changeReviewSidebar, /每日回顾、README 草稿、周报/, "change review should explain downstream reuse");
 
-assert.match(intelligence, /成长时间线/, "project profile should expose project growth history");
+assert.match(intelligence, /项目时间线/, "project profile should expose project growth history");
 assert.match(intelligence, /输出来源/, "project profile copy should connect growth records to outputs");
 
 assert.match(outputs, /生成依据/, "output generation should show source readiness");

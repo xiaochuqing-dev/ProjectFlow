@@ -98,8 +98,8 @@ export default function SettingsPage() {
         defaultEnabled: true,
         purposeTags: ["项目分析", "材料解析", "成果生成"],
       });
-      setProviders((current) => [provider, ...current]);
-      setNotice("Provider 已保存。API key 不会回显到前端。");
+      setProviders((current) => mergeSavedProvider(current, provider));
+      setNotice("Provider 已保存。重复保存同一模型配置会更新原记录，不会新增一条。API key 不会回显到前端。");
       event.currentTarget.reset();
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Provider 保存失败");
@@ -318,4 +318,13 @@ export default function SettingsPage() {
       </div>
     </AppShell>
   );
+}
+
+function mergeSavedProvider(current: AiProvider[], provider: AiProvider) {
+  if (!provider.id) {
+    return current;
+  }
+  return current.some((item) => item.id === provider.id)
+    ? current.map((item) => (item.id === provider.id ? provider : item))
+    : [provider, ...current];
 }

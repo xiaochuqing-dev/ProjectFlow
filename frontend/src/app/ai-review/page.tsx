@@ -35,7 +35,7 @@ const outputLabels: Record<AiOutputType, string> = {
 };
 
 const outputDescriptions: Record<AiOutputType, string> = {
-  WEEKLY_REPORT: "基于已确认档案、每日回顾和任务证据，整理阶段汇报。",
+  WEEKLY_REPORT: "基于已确认项目资产、每日回顾和今日开发证据，整理阶段汇报。",
   PROJECT_SUMMARY: "面向作品集、项目复盘和对外介绍，突出定位、能力和工程决策。",
   RESUME_BULLET: "压缩为简历可用项目经历，强调动作、技术和结果。",
   README_SECTION: "生成可继续编辑的 README 段落，保留来源线索。",
@@ -173,10 +173,10 @@ export default function AiReviewPage() {
           )}
           leadingExtras={(
             <>
-              <SourceQuickFilter active={activeSourcePanel === "memory"} label="项目档案" value={memory ? 1 : 0} onClick={() => setActiveSourcePanel("memory")} />
+              <SourceQuickFilter active={activeSourcePanel === "memory"} label="项目资产" value={memory ? 1 : 0} onClick={() => setActiveSourcePanel("memory")} />
               <SourceQuickFilter active={activeSourcePanel === "reviews"} label="每日回顾" value={reviewLogs.length} onClick={() => setActiveSourcePanel("reviews")} />
-              <SourceQuickFilter active={activeSourcePanel === "tasks"} label="任务证据" value={tasks.length} onClick={() => setActiveSourcePanel("tasks")} />
-              <SourceQuickFilter active={activeSourcePanel === "growth"} label="成长记录" value={evolutionRecords.length} onClick={() => setActiveSourcePanel("growth")} />
+              <SourceQuickFilter active={activeSourcePanel === "tasks"} label="今日开发" value={tasks.length} onClick={() => setActiveSourcePanel("tasks")} />
+              <SourceQuickFilter active={activeSourcePanel === "growth"} label="项目时间线" value={evolutionRecords.length} onClick={() => setActiveSourcePanel("growth")} />
             </>
           )}
           onSelect={selectProject}
@@ -192,10 +192,10 @@ export default function AiReviewPage() {
                 <h2 className="font-semibold">生成依据</h2>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <OutputSourceMetric href={`/project-intelligence/fact-sources?projectId=${selectedProjectId}`} label="项目档案" ready={Boolean(memory)} value={memory ? "已连接" : "缺失"} />
-                <OutputSourceMetric href={`/project-intelligence/timeline?projectId=${selectedProjectId}`} label="成长记录" ready={evolutionRecords.length > 0} value={`${evolutionRecords.length} 条`} />
+                <OutputSourceMetric href={`/project-intelligence/fact-sources?projectId=${selectedProjectId}`} label="项目资产" ready={Boolean(memory)} value={memory ? "已连接" : "缺失"} />
+                <OutputSourceMetric href={`/project-intelligence/timeline?projectId=${selectedProjectId}`} label="项目时间线" ready={evolutionRecords.length > 0} value={`${evolutionRecords.length} 条`} />
                 <OutputSourceMetric href={`/dev-logs/sources?projectId=${selectedProjectId}&date=${new Date().toISOString().slice(0, 10)}`} label="每日回顾" ready={reviewLogs.length > 0} value={`${reviewLogs.length} 条`} />
-                <OutputSourceMetric href={`/tasks?projectId=${selectedProjectId}`} label="任务证据" ready={tasks.length > 0} value={`${tasks.length} 条`} />
+                <OutputSourceMetric href={`/tasks?projectId=${selectedProjectId}`} label="今日开发" ready={tasks.length > 0} value={`${tasks.length} 条`} />
               </div>
               <p className="mt-3 text-xs leading-5 text-muted">
                 输出优先使用已确认档案和成长记录；缺少来源时仍可生成草稿，但需要人工补充。
@@ -350,8 +350,8 @@ function buildSourcePanel(
   }
   if (active === "tasks") {
     return {
-      title: "任务证据来源",
-      empty: "无任务证据。",
+      title: "今日开发来源",
+      empty: "无今日开发证据。",
       items: tasks.slice(0, 6).map((task) => ({
         title: task.title,
         body: task.description || task.status,
@@ -361,8 +361,8 @@ function buildSourcePanel(
   }
   if (active === "growth") {
     return {
-      title: "成长记录来源",
-      empty: "无成长记录。",
+      title: "项目时间线来源",
+      empty: "无项目时间线记录。",
       items: evolutionRecords.slice(0, 5).map((record) => ({
         title: record.summary,
         body: firstUsefulLine(record.detectedChanges) || "已记录项目变化。",
@@ -371,8 +371,8 @@ function buildSourcePanel(
     };
   }
   return {
-    title: "项目档案来源",
-    empty: "无已确认项目档案。",
+    title: "项目资产来源",
+    empty: "无已确认项目资产。",
     items: memory ? [
       sourceCardItem("定位", memory.positioning),
       sourceCardItem("能力", memory.completedCapabilities),
@@ -415,7 +415,7 @@ function buildFallbackDraft(
   if (type === "RESUME_BULLET") {
     return `# ${projectName} 简历描述
 
-- 基于 ${projectName} 的已确认项目档案，沉淀开发过程、技术决策和成果素材。
+- 基于 ${projectName} 的已确认项目资产，沉淀开发过程、技术决策和成果素材。
 - 推进 ${doneTasks.length} 个已完成任务，形成可复用的项目证据。
 - 来源：
 ${sources}`;
@@ -439,7 +439,7 @@ ${sources}`;
 
   return `# ${projectName} ${outputLabels[type]}
 
-## 项目档案
+## 项目资产
 ${memory?.positioning || "暂无项目定位。"}
 
 ## 已确认能力

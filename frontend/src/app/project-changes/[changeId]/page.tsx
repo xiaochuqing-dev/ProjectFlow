@@ -80,7 +80,7 @@ export default function ProjectChangeDetailPage() {
       const updated = await updateProjectChange(session.accessToken, params.changeId, draft);
       setChange(updated);
       setDraft(toPayload(updated));
-      setNotice("修正已保存。采纳时会使用修正后的内容写入项目档案。");
+      setNotice("修正已保存。采纳时会使用修正后的内容写入项目资产。");
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "结构化变更保存失败");
     } finally {
@@ -99,7 +99,7 @@ export default function ProjectChangeDetailPage() {
       const updated = await acceptProjectChange(session.accessToken, params.changeId);
       setChange(updated);
       setDraft(toPayload(updated));
-      setNotice("已采纳。项目档案、字段来源链、成长时间线和输出来源会使用这条确认事实。");
+      setNotice("已采纳。项目资产、可信依据、项目时间线和输出来源会使用这条确认事实。");
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "采纳结构化变更失败");
     } finally {
@@ -131,7 +131,7 @@ export default function ProjectChangeDetailPage() {
   }
 
   return (
-    <AppShell eyebrow="自动化审查" title={change ? changeDisplayTitle(change) : "结构化变更详情"}>
+    <AppShell eyebrow="自动化审查" title={change ? changeDisplayTitle(change) : "待确认内容详情"}>
       <div className="min-h-[calc(100vh-4rem)] bg-surface p-6">
         <section className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-white p-4 shadow-panel">
           <div className="min-w-0">
@@ -139,7 +139,7 @@ export default function ProjectChangeDetailPage() {
               <ArrowLeft className="h-4 w-4" />
               返回上一步
             </button>
-            <h2 className="truncate text-xl font-semibold text-slate-950">结构化变更详情</h2>
+            <h2 className="truncate text-xl font-semibold text-slate-950">待确认内容详情</h2>
             {change ? (
               <p className="mt-1 text-sm text-muted">
                 {new Date(change.createdAt).toLocaleString()} · {statusLabel(change.status)} · {sourceLabel(change.sourceType)}
@@ -208,8 +208,8 @@ export default function ProjectChangeDetailPage() {
 
               <Card shadow="card">
                 <div className="border-b border-line p-5">
-                  <h3 className="font-semibold text-slate-950">建议沉淀到项目档案</h3>
-                  <p className="mt-1 text-sm text-muted">采纳后，这些候选会成为项目档案和后续输出的确认来源。</p>
+                  <h3 className="font-semibold text-slate-950">建议沉淀到项目资产</h3>
+                  <p className="mt-1 text-sm text-muted">采纳后，这些候选会成为项目资产和后续输出的确认来源。</p>
                 </div>
                 <div className="grid gap-3 p-5 md:grid-cols-2">
                   {changeMemoryTargets(draft).map((target) => (
@@ -259,12 +259,12 @@ export default function ProjectChangeDetailPage() {
                 <div className="mt-4 grid gap-2">
                   <Link href={`/project-intelligence?projectId=${change.projectId}`}>
                     <Button fullWidth variant="secondary">
-                      看项目档案 <ArrowRight className="h-3.5 w-3.5" />
+                      看项目资产 <ArrowRight className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
                   <Link href={`/project-intelligence/timeline?projectId=${change.projectId}`}>
                     <Button fullWidth variant="secondary">
-                      看成长记录 <ArrowRight className="h-3.5 w-3.5" />
+                      看项目时间线 <ArrowRight className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
                 </div>
@@ -272,7 +272,7 @@ export default function ProjectChangeDetailPage() {
               <Card shadow="card" padding="md">
                 <h3 className="font-semibold text-slate-950">审查原则</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  AI 和本地规则只生成候选。采纳后才写入正式项目档案；不确定就忽略或展开修正区修改。
+                  AI 和本地规则只生成候选。采纳后才写入正式项目资产；不确定就忽略或展开修正区修改。
                 </p>
               </Card>
             </aside>

@@ -15,8 +15,8 @@ type AppShellProps = {
 
 const navItems = [
   { label: "工作台", href: "/dashboard", icon: LayoutDashboard },
-  { label: "变更审查", href: "/tasks", icon: ClipboardCheck },
-  { label: "项目画像", href: "/project-intelligence", icon: DatabaseZap },
+  { label: "开发成果审查", href: "/tasks", icon: ClipboardCheck },
+  { label: "项目理解", href: "/project-intelligence", icon: DatabaseZap },
   { label: "每日回顾", href: "/dev-logs", icon: BookOpenText },
   { label: "成果输出", href: "/ai-review", icon: Sparkles },
   { label: "设置", href: "/settings", icon: Settings },
