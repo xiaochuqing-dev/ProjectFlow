@@ -91,7 +91,7 @@ public class ProjectAnalysisService {
                 true,
                 provider.getName(),
                 "MODEL_ANALYSIS",
-                textOr(json, "confidence", "medium"),
+                normalizeConfidence(json),
                 "模型已完成项目分析；结论已附带文件证据和分析局限。"
             );
         } catch (Exception exception) {
@@ -191,7 +191,7 @@ public class ProjectAnalysisService {
                 true,
                 provider.getName(),
                 "MODEL_ANALYSIS",
-                textOr(json, "confidence", "medium"),
+                normalizeConfidence(json),
                 "模型已根据已索引的文件内容生成中文解释。"
             );
         } catch (Exception exception) {
@@ -352,6 +352,23 @@ public class ProjectAnalysisService {
             return fallback;
         }
         return value.asText();
+    }
+
+    // 模型有时把 confidence 返回成整句中文（如"中等偏高，材料覆盖了完整的目录..."），
+    // 而 confidence 列只有 VARCHAR(40)，会溢出。这里统一压成 high/medium/low。
+    private String normalizeConfidence(JsonNode json) {
+        String raw = textOr(json, "confidence", "medium");
+        if (raw.length() <= 20) {
+            return raw;
+        }
+        String lower = raw.toLowerCase();
+        if (lower.contains("high") || lower.contains("高") || raw.contains("充分") || raw.contains("完整")) {
+            return "high";
+        }
+        if (lower.contains("low") || lower.contains("低") || raw.contains("不足") || raw.contains("有限")) {
+            return "low";
+        }
+        return "medium";
     }
 
     private String chineseTextOr(JsonNode json, String field, String fallback) {
