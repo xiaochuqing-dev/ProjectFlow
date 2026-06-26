@@ -558,6 +558,22 @@ export type ProjectMemoryPayload = {
   nextStepSuggestions: string;
 };
 
+export type CapabilityCandidate = {
+  summary: string;
+  problem: string;
+  value: string;
+  readme: string;
+  resume: string;
+  interview: string;
+};
+
+export type CapabilityInterpretResponse = {
+  degraded: boolean;
+  source: "MODEL" | "LOCAL_RULE";
+  message: string;
+  candidate: CapabilityCandidate;
+};
+
 export type ProjectSnapshot = {
   id: string;
   projectId: string;
@@ -1128,6 +1144,17 @@ export function saveProjectLocalPath(token: string, projectId: string, localProj
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ localProjectPath }),
+  });
+}
+
+export function interpretCapability(token: string, projectId: string, capabilityFact: string): Promise<CapabilityInterpretResponse> {
+  return requestJson<CapabilityInterpretResponse>(`/projects/${projectId}/memory/capabilities/interpret`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ capabilityFact }),
   });
 }
 

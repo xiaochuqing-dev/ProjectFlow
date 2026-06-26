@@ -221,6 +221,29 @@ public final class V2ProjectDtos {
     ) {
     }
 
+    public record CapabilityInterpretRequest(
+        @NotBlank @Size(max = 2000) String capabilityFact
+    ) {
+    }
+
+    public record CapabilityInterpretResponse(
+        boolean degraded,
+        String source,
+        String message,
+        CapabilityCandidate candidate
+    ) {
+    }
+
+    public record CapabilityCandidate(
+        String summary,
+        String problem,
+        String value,
+        String readme,
+        String resume,
+        String interview
+    ) {
+    }
+
     public record ProjectSnapshotResponse(
         UUID id,
         UUID projectId,
