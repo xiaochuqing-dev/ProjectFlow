@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   GitPullRequestArrow,
   RefreshCw,
@@ -45,8 +45,13 @@ export default function TasksPage() {
 
 function TasksPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const queryProjectId = searchParams.get("projectId") ?? "";
   const { projects, selectedProject, selectedProjectId, selectProject, loadingProjects, projectError } = useProjectSelection({ queryProjectId });
+  function handleSelectProject(projectId: string) {
+    selectProject(projectId);
+    router.replace(`/tasks?projectId=${projectId}`);
+  }
   const [changes, setChanges] = useState<ProjectChange[]>([]);
   const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);
   const [materials, setMaterials] = useState<ProjectMaterial[]>([]);
@@ -248,7 +253,7 @@ function TasksPageContent() {
               <Badge label={`已忽略 ${ignoredChanges.length}`} tone="slate" />
             </>
           )}
-          onSelect={selectProject}
+          onSelect={handleSelectProject}
           projects={projects}
           selectedProjectId={selectedProjectId}
         />

@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Clipboard, ListChecks, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Badge, ProjectContextBar, Toast } from "@/components/ui";
@@ -22,8 +22,13 @@ export default function CompletedCapabilitiesPage() {
 
 function CompletedCapabilitiesContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const queryProjectId = searchParams.get("projectId") ?? "";
   const { projects, selectedProject, selectedProjectId, selectProject, loadingProjects, projectError } = useProjectSelection({ queryProjectId });
+  function handleSelectProject(projectId: string) {
+    selectProject(projectId);
+    router.replace(`/project-intelligence/capabilities?projectId=${projectId}`);
+  }
   const [memory, setMemory] = useState<ProjectMemory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -126,7 +131,7 @@ function CompletedCapabilitiesContent() {
               <Badge label={`版本 ${memory?.version ?? "-"}`} />
             </>
           )}
-          onSelect={selectProject}
+          onSelect={handleSelectProject}
           projects={projects}
           selectedProjectId={selectedProjectId}
         />
