@@ -55,6 +55,13 @@ export function resolveProjectFlowState(input: ProjectFlowStateInput): ProjectFl
   const hasEvidenceBundles = input.evidenceBundles.length > 0;
   const hasPendingChanges = input.pendingChanges.length > 0;
   const hasOutputs = Boolean(input.outputs?.length);
+  const hasConfirmedAssets = Boolean(
+    input.memory?.completedCapabilities?.trim()
+    || input.memory?.technicalDecisions?.trim()
+    || input.memory?.developerLearnings?.trim()
+    || input.memory?.showcaseAssets?.trim()
+    || input.memory?.currentRisks?.trim()
+  );
 
   const completedSteps: ProjectFlowStepKey[] = [];
   if (hasProject) completedSteps.push("import");
@@ -81,6 +88,9 @@ export function resolveProjectFlowState(input: ProjectFlowStateInput): ProjectFl
   }
   if (hasWorkSessions) {
     return state("HAS_WORK_SESSIONS", "整理原始依据", `已发现 ${input.workSessions.length} 轮开发活动。`, "整理原始依据", "develop", completedSteps, "原始依据会汇总文件、行数、Git evidence 和 Agent 声明。");
+  }
+  if (hasConfirmedAssets) {
+    return state("READY_TO_OUTPUT", "生成成果输出", "项目已沉淀出可复用资产，可以生成 README、简历描述、项目复盘或周报。", "生成成果输出", "output", completedSteps, "成果输出会优先使用已确认项目资产、项目时间线和每日回顾。", "/ai-review");
   }
   return state("READY_TO_OUTPUT", "刷新今日开发或生成输出", "项目已接入。开发后刷新今日开发；已有确认内容时可生成输出。", "刷新今日开发", "develop", completedSteps, "完整流程是：导入项目 -> 看到项目理解 -> 绑定路径 -> 开发一天 -> 刷新今日开发 -> 审查 -> 生成输出。");
 }

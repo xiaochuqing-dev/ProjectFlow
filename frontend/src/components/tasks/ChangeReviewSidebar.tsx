@@ -34,14 +34,14 @@ export function ChangeReviewSidebar(props: ChangeReviewSidebarProps) {
         selectedChange={props.selectedChange}
       />
       <SourceMaterial latestMaterial={props.latestMaterial} selectedChange={props.selectedChange} selectedSuggestion={props.selectedSuggestion} />
-      <TaskEvidence tasks={props.tasks} />
-      <section className="rounded-md border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
-        <div className="mb-2 flex items-center gap-2 font-semibold">
+      <DevelopmentEvidence tasks={props.tasks} />
+      <details className="rounded-md border border-amber-200 bg-amber-50 text-sm leading-6 text-amber-900">
+        <summary className="flex cursor-pointer items-center gap-2 px-5 py-4 font-semibold hover:bg-amber-100">
           <ShieldAlert className="h-4 w-4" />
-          审查边界
-        </div>
-        采纳前是候选建议，采纳后才进入项目档案和成果资产。忽略不会删除原始材料，只是把这条候选变更移出待确认队列。
-      </section>
+          查看审查说明
+        </summary>
+        <p className="px-5 pb-5">采纳前是候选建议，采纳后才进入项目资产和成果素材。忽略不会删除原始材料，只是把这条候选成果移出待确认队列。</p>
+      </details>
     </aside>
   );
 }
@@ -55,7 +55,7 @@ function AcceptedWriteTarget({ selectedChange }: { selectedChange?: ProjectChang
           <h2 className="font-semibold">采纳后写入</h2>
         </div>
         <Link className="text-xs font-semibold text-slate-700 hover:text-slate-950" href="/project-intelligence">
-          看项目档案
+          看项目资产
         </Link>
       </div>
       <div className="space-y-3 p-5 text-sm leading-6 text-slate-600">
@@ -72,7 +72,7 @@ function AcceptedWriteTarget({ selectedChange }: { selectedChange?: ProjectChang
             <p>采纳后会写入上方字段的事实来源，并被每日回顾、README 草稿、周报和后续同步上下文复用。</p>
           </>
         ) : (
-          <p className="text-muted">选择一条待确认变更后，这里会显示它最终进入项目档案的字段。</p>
+          <p className="text-muted">选择一条待确认成果后，这里会显示它最终进入项目资产的字段。</p>
         )}
       </div>
     </section>
@@ -116,7 +116,7 @@ function ReviewEntry({
             </button>
           </Link>
           <p className="text-xs leading-5 text-muted">
-            列表页只负责筛选和快速采纳。摘要、证据、风险和档案候选的完整审查统一进入独立页，避免在侧栏堆大表单。
+            列表页只负责筛选和快速采纳。摘要、证据、风险和资产候选的完整审查统一进入独立页，避免在侧栏堆大表单。
           </p>
         </div>
       ) : editing ? (
@@ -155,12 +155,12 @@ function ReviewEntry({
             type="submit"
           >
             {savingSuggestion ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            保存候选变更
+            保存候选成果
           </button>
         </form>
       ) : (
         <div className="p-5 text-sm leading-6 text-muted">
-          从左侧选择一条结构化变更。完整审查页会展示自动摘要、证据卡片、档案候选和手动修正入口。
+          从左侧选择一条待确认成果。完整审查页会展示自动摘要、证据卡片、资产候选和手动修正入口。
         </div>
       )}
     </section>
@@ -201,12 +201,12 @@ function SourceMaterial({
   );
 }
 
-function TaskEvidence({ tasks }: { tasks: TaskItem[] }) {
+function DevelopmentEvidence({ tasks }: { tasks: TaskItem[] }) {
   return (
     <section className="rounded-md border border-line bg-white shadow-panel">
       <div className="flex items-center gap-2 border-b border-line px-5 py-4">
         <Layers3 className="h-4 w-4 text-slate-700" />
-        <h2 className="font-semibold">任务证据</h2>
+        <h2 className="font-semibold">开发证据</h2>
       </div>
       <div className="divide-y divide-line">
         {tasks.slice(0, 5).map((task) => (
@@ -218,7 +218,7 @@ function TaskEvidence({ tasks }: { tasks: TaskItem[] }) {
             <p className="line-clamp-3 leading-5 text-slate-600">{task.description || "暂无验收说明。"}</p>
           </article>
         ))}
-        {tasks.length === 0 ? <p className="p-5 text-sm text-muted">采纳任务类变更后会形成任务证据。</p> : null}
+        {tasks.length === 0 ? <p className="p-5 text-sm text-muted">采纳开发类成果后会形成开发证据。</p> : null}
       </div>
     </section>
   );

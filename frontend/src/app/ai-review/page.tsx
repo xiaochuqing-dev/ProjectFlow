@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Clipboard, Download, FileText, History, Layers3, RefreshCw, Save, Sparkles } from "lucide-react";
+import { Clipboard, Download, FileText, Gauge, History, Layers3, RefreshCw, Save, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ProjectContextBar, Toast } from "@/components/ui";
 import { SourceCardList, type SourceCardItem } from "@/components/sources/SourceCardList";
@@ -66,6 +66,22 @@ export default function AiReviewPage() {
   const doneTasks = tasks.filter((task) => task.status === "DONE");
   const reviewLogs = logs.filter((log) => log.category === "REVIEW");
   const sourcePanel = buildSourcePanel(activeSourcePanel, memory, reviewLogs, tasks, evolutionRecords);
+  const outputReadiness = useMemo(() => {
+    const connected = [
+      { key: "assets", label: "项目资产", ready: Boolean(memory) },
+      { key: "reviews", label: "每日回顾", ready: reviewLogs.length > 0 },
+      { key: "dev", label: "今日开发", ready: tasks.length > 0 },
+      { key: "timeline", label: "项目时间线", ready: evolutionRecords.length > 0 },
+    ];
+    const score = connected.filter((item) => item.ready).length;
+    const level = score >= 4 ? "高" : score >= 2 ? "中" : "低";
+    const missing = [
+      { key: "tests", label: "测试结果" },
+      { key: "release", label: "上线记录" },
+      { key: "risks", label: "风险决策" },
+    ];
+    return { connected, score, level, missing };
+  }, [memory, reviewLogs.length, tasks.length, evolutionRecords.length]);
 
   useEffect(() => {
     refreshProjectContext(selectedProjectId);
@@ -198,8 +214,33 @@ export default function AiReviewPage() {
                 <OutputSourceMetric href={`/tasks?projectId=${selectedProjectId}`} label="今日开发" ready={tasks.length > 0} value={`${tasks.length} 条`} />
               </div>
               <p className="mt-3 text-xs leading-5 text-muted">
-                输出优先使用已确认档案和成长记录；缺少来源时仍可生成草稿，但需要人工补充。
+                输出优先使用已确认项目资产和成长记录；缺少来源时仍可生成草稿，但需要人工补充。
               </p>
+            </section>
+
+            <section className="rounded-md border border-line bg-white p-5 shadow-panel">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Gauge className="h-4 w-4 text-slate-700" />
+                  <h2 className="font-semibold">输出素材完整度</h2>
+                </div>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold text-white ${outputReadiness.level === "高" ? "bg-emerald-700" : outputReadiness.level === "中" ? "bg-amber-600" : "bg-rose-600"}`}>
+                  {outputReadiness.level} · {outputReadiness.score}/4
+                </span>
+              </div>
+              <p className="mb-3 text-xs leading-5 text-muted">这是生成结果参考度，不是项目质量评分。素材越完整，输出越具体可用。</p>
+              <p className="mb-1 text-xs font-semibold text-slate-700">已连接素材</p>
+              <ul className="mb-3 space-y-1 text-sm leading-6 text-slate-700">
+                {outputReadiness.connected.map((item) => (
+                  <li key={item.key}>{item.ready ? "✓" : "—"} {item.label}</li>
+                ))}
+              </ul>
+              <p className="mb-1 text-xs font-semibold text-slate-700">建议补充素材</p>
+              <ul className="space-y-1 text-sm leading-6 text-slate-700">
+                {outputReadiness.missing.map((item) => (
+                  <li key={item.key}>— {item.label}</li>
+                ))}
+              </ul>
             </section>
 
             <form className="rounded-md border border-line bg-white p-5 shadow-panel" onSubmit={handleGenerate}>
