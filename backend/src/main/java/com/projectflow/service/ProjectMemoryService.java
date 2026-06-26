@@ -7,19 +7,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.projectflow.dto.V2ProjectDtos.CapabilityCandidate;
+import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretRequest;
+import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFactSourceResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectLocalPathRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectMemoryResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectMemoryUpdateRequest;
+import com.projectflow.entity.AiProvider;
+import com.projectflow.entity.AiProviderType;
 import com.projectflow.entity.ProjectChange;
 import com.projectflow.entity.ProjectFactSource;
 import com.projectflow.entity.ProjectFactSourceType;
 import com.projectflow.entity.ProjectMemory;
 import com.projectflow.entity.ProjectSpace;
+import com.projectflow.repository.AiProviderRepository;
 import com.projectflow.repository.ProjectFactSourceRepository;
 import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
@@ -27,21 +36,30 @@ import com.projectflow.support.AppException;
 
 @Service
 public class ProjectMemoryService {
+    private static final Logger log = LoggerFactory.getLogger(ProjectMemoryService.class);
+    private static final int CAPABILITY_INTERPRET_MAX_TOKENS = 1200;
+
     private final ProjectRepository projectRepository;
     private final ProjectMemoryRepository memoryRepository;
     private final ProjectFactSourceRepository factSourceRepository;
     private final LocalProjectPathGuard localProjectPathGuard;
+    private final AiProviderRepository aiProviderRepository;
+    private final ModelGatewayService modelGatewayService;
 
     public ProjectMemoryService(
         ProjectRepository projectRepository,
         ProjectMemoryRepository memoryRepository,
         ProjectFactSourceRepository factSourceRepository,
-        LocalProjectPathGuard localProjectPathGuard
+        LocalProjectPathGuard localProjectPathGuard,
+        AiProviderRepository aiProviderRepository,
+        ModelGatewayService modelGatewayService
     ) {
         this.projectRepository = projectRepository;
         this.memoryRepository = memoryRepository;
         this.factSourceRepository = factSourceRepository;
         this.localProjectPathGuard = localProjectPathGuard;
+        this.aiProviderRepository = aiProviderRepository;
+        this.modelGatewayService = modelGatewayService;
     }
 
     @Transactional(readOnly = true)
@@ -97,6 +115,95 @@ public class ProjectMemoryService {
         ProjectMemory memory = memoryRepository.findByProjectId(project.getId()).orElseGet(() -> initialMemory(project));
         memory.rememberLocalProjectPath(projectRoot.toString());
         return toMemoryResponse(memoryRepository.save(memory));
+    }
+
+    @Transactional(readOnly = true)
+    public CapabilityInterpretResponse interpretCapability(UUID userId, UUID projectId, CapabilityInterpretRequest request) {
+        ProjectSpace project = findOwnedProject(userId, projectId);
+        ProjectMemory memory = memoryRepository.findByProjectId(project.getId()).orElseGet(() -> initialMemory(project));
+        AiProvider provider = configuredProvider(userId);
+        if (provider == null) {
+            return new CapabilityInterpretResponse(true, "LOCAL_RULE", "未配置可用模型，已用本地规则生成候选解读。", localCandidate(request.capabilityFact(), memory));
+        }
+        try {
+            String prompt = capabilityInterpretPrompt(project.getName(), memory, request.capabilityFact());
+            JsonNode json = modelGatewayService.callJson(provider, prompt, CAPABILITY_INTERPRET_MAX_TOKENS);
+            return new CapabilityInterpretResponse(false, "MODEL", "模型已生成候选解读，采纳后才进入正式项目资产。", modelCandidate(json));
+        } catch (Exception exception) {
+            log.warn("Capability interpretation fell back to local rules: projectId={}, provider={}, error={}",
+                projectId, provider.getName(), exception.getMessage());
+            return new CapabilityInterpretResponse(true, "LOCAL_RULE", "模型不可用，已用本地规则生成候选解读。" + modelGatewayService.failureMessage(exception), localCandidate(request.capabilityFact(), memory));
+        }
+    }
+
+    private AiProvider configuredProvider(UUID userId) {
+        return aiProviderRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)
+            .stream()
+            .filter(provider -> provider.getType() != AiProviderType.MOCK)
+            .filter(provider -> provider.getApiKey() != null && !provider.getApiKey().isBlank())
+            .findFirst()
+            .orElse(null);
+    }
+
+    private String capabilityInterpretPrompt(String projectName, ProjectMemory memory, String capabilityFact) {
+        return """
+            你是 ProjectFlow 的能力解读助手。只依据下方项目资产和这条能力事实生成候选解读，所有自然语言必须使用简体中文。
+            返回严格 JSON，字段为：summary, problem, value, readme, resume, interview。
+
+            质量要求：
+            1. summary 用一句话说明这个能力是什么。
+            2. problem 说明这个能力解决了什么工程问题。
+            3. value 说明为什么这个能力对项目长期维护或复用有价值。
+            4. readme 是可直接用于 README 项目亮点的一句表达。
+            5. resume 是可直接用于简历项目经历的一句表达。
+            6. interview 是面试时可以展开讲解的一个要点。
+            7. 技术名、文件路径和代码标识符保留原文。
+
+            项目名称：%s
+            项目定位：%s
+            技术决策：%s
+            能力事实：%s
+            """.formatted(
+                projectName,
+                truncate(memory.getPositioning(), 300),
+                truncate(memory.getTechnicalDecisions(), 300),
+                truncate(capabilityFact, 500)
+            );
+    }
+
+    private CapabilityCandidate modelCandidate(JsonNode json) {
+        return new CapabilityCandidate(
+            text(json, "summary"),
+            text(json, "problem"),
+            text(json, "value"),
+            text(json, "readme"),
+            text(json, "resume"),
+            text(json, "interview")
+        );
+    }
+
+    private CapabilityCandidate localCandidate(String capabilityFact, ProjectMemory memory) {
+        String name = capabilityFact == null || capabilityFact.isBlank() ? "项目能力" : capabilityFact.replaceAll("^[-•\\d.\\s]+", "").split("[，。；:：]")[0];
+        return new CapabilityCandidate(
+            "已沉淀“" + name + "”相关能力。",
+            "帮助用户把这条开发成果整理成可解释、可复用的项目能力。",
+            "它说明项目已经能把真实开发活动沉淀成后续可复用的工程资产。",
+            "沉淀了“" + name + "”能力，可结合项目资产和开发证据用于 README 项目亮点。",
+            "在项目中落地“" + name + "”，负责把开发过程整理成可追溯、可复用的工程资产。",
+            "可围绕“" + name + "”展开面试讲解：遇到的工程问题、采取的做法、产出的可复用资产。"
+        );
+    }
+
+    private String text(JsonNode json, String field) {
+        String value = json.path(field).asText("");
+        return value == null || value.isBlank() ? "" : value.trim();
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.isBlank()) {
+            return "暂无";
+        }
+        return value.length() <= maxLength ? value : value.substring(0, maxLength) + "...";
     }
 
     ProjectMemory appendFromSuggestionApplication(
@@ -240,7 +347,7 @@ public class ProjectMemoryService {
     private ProjectMemory initialMemory(ProjectSpace project) {
         ProjectMemory memory = new ProjectMemory(project.getId());
         memory.update(
-            defaultText(project.getDescription(), project.getName() + " 的长期项目档案"),
+            defaultText(project.getDescription(), project.getName() + " 的长期项目资产"),
             project.getStatus().name(),
             "暂无已确认能力。",
             "暂无进行中能力。",

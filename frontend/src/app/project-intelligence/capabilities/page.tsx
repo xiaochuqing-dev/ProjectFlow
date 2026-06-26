@@ -3,13 +3,13 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Clipboard, ListChecks, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clipboard, ListChecks, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Badge, ProjectContextBar, Toast } from "@/components/ui";
 import { useProjectSelection } from "@/hooks/useProjectSelection";
-import { getProjectMemory, type ProjectMemory } from "@/lib/api";
+import { getProjectMemory, interpretCapability, updateProjectMemory, type CapabilityInterpretResponse, type ProjectMemory, type ProjectMemoryPayload } from "@/lib/api";
 import { readSession } from "@/lib/auth";
-import { capabilityBulletItems } from "@/lib/project-memory-display";
+import { buildCapabilityAssets, type CapabilityAsset, type CapabilityAssetStatus } from "@/lib/capability-assets";
 
 export default function CompletedCapabilitiesPage() {
   return (
@@ -27,7 +27,13 @@ function CompletedCapabilitiesContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [activeName, setActiveName] = useState<string | null>(null);
   const capabilityAssets = useMemo(() => buildCapabilityAssets(memory), [memory]);
+  const activeAsset = capabilityAssets.find((item) => item.name === activeName) ?? null;
+  const [interpretFor, setInterpretFor] = useState<string | null>(null);
+  const [interpretResult, setInterpretResult] = useState<CapabilityInterpretResponse | null>(null);
+  const [interpreting, setInterpreting] = useState(false);
+  const [adoptedSummary, setAdoptedSummary] = useState("");
 
   useEffect(() => {
     const session = readSession();
@@ -51,6 +57,64 @@ function CompletedCapabilitiesContent() {
       setNotice("已复制可复用表达。");
     } catch {
       setError("复制失败，请手动复制表达内容。");
+    }
+  }
+
+  async function generateInterpret(asset: CapabilityAsset) {
+    const session = readSession();
+    if (!session || !selectedProjectId) {
+      return;
+    }
+    setInterpretFor(asset.name);
+    setInterpreting(true);
+    setInterpretResult(null);
+    setError("");
+    try {
+      const result = await interpretCapability(session.accessToken, selectedProjectId, asset.rawFact);
+      setInterpretResult(result);
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "生成能力解读失败。");
+    } finally {
+      setInterpreting(false);
+    }
+  }
+
+  async function adoptCandidate(asset: CapabilityAsset) {
+    const session = readSession();
+    if (!session || !selectedProjectId || !memory) {
+      return;
+    }
+    const candidate = interpretResult?.candidate;
+    if (!candidate) {
+      return;
+    }
+    setInterpreting(true);
+    setError("");
+    try {
+      const existing = memory.completedCapabilities || "";
+      const line = `- ${candidate.summary}`;
+      const next = existing ? `${existing.replace(/暂无已确认能力。?/, "").trim()}\n${line}` : line;
+      const payload: ProjectMemoryPayload = {
+        positioning: memory.positioning,
+        currentStage: memory.currentStage,
+        completedCapabilities: next,
+        inProgressCapabilities: memory.inProgressCapabilities,
+        currentRisks: memory.currentRisks,
+        technicalDecisions: memory.technicalDecisions,
+        developerLearnings: memory.developerLearnings,
+        showcaseAssets: memory.showcaseAssets,
+        nextStepSuggestions: memory.nextStepSuggestions,
+      };
+      const updated = await updateProjectMemory(session.accessToken, selectedProjectId, payload);
+      setMemory(updated);
+      setAdoptedSummary(candidate.summary);
+      setInterpretResult(null);
+      setInterpretFor(null);
+      setNotice("候选解读已采纳为正式能力说明。");
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "采纳失败。");
+    } finally {
+      setInterpreting(false);
     }
   }
 
@@ -89,15 +153,29 @@ function CompletedCapabilitiesContent() {
             <span className="rounded-full bg-emerald-800 px-3 py-1 text-sm font-semibold text-white">{capabilityAssets.length} 项</span>
           </div>
 
-          <div className="grid gap-4 p-5 lg:grid-cols-2">
-            {capabilityAssets.map((asset, index) => (
-              <CapabilityAssetCard asset={asset} index={index} key={`${asset.name}-${index}`} onCopy={copyExpression} />
+          <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
+            {capabilityAssets.map((asset) => (
+              <CapabilityAssetCard
+                asset={asset}
+                adopted={adoptedSummary === asset.rawFact ? null : adoptedSummary}
+                interpretResult={interpretFor === asset.name ? interpretResult : null}
+                interpreting={interpretFor === asset.name && interpreting}
+                key={asset.name}
+                onAdopt={() => adoptCandidate(asset)}
+                onCopy={copyExpression}
+                onGenerate={() => generateInterpret(asset)}
+                onView={() => setActiveName(asset.name)}
+              />
             ))}
             {capabilityAssets.length === 0 ? (
               <p className="rounded-md border border-line bg-slate-50 p-4 text-sm text-muted">暂无已确认能力。采纳开发成果或保存项目资产后，会先形成能力候选，再经用户确认进入这里。</p>
             ) : null}
           </div>
         </section>
+
+        {activeAsset ? (
+          <CapabilityAssetDetailDrawer asset={activeAsset} onClose={() => setActiveName(null)} onCopy={copyExpression} />
+        ) : null}
 
         <Toast error={error || projectError} notice={notice} />
         {loading || loadingProjects ? <div className="fixed inset-x-0 bottom-0 h-1 bg-slate-950" /> : null}
@@ -106,107 +184,162 @@ function CompletedCapabilitiesContent() {
   );
 }
 
-type CapabilityAsset = {
-  name: string;
-  problem: string;
-  importance: string;
-  recognized: string[];
-  evidence: string[];
-  reusableExpression: string;
-};
-
-function CapabilityAssetCard({ asset, index, onCopy }: { asset: CapabilityAsset; index: number; onCopy: (value: string) => void }) {
+function CapabilityAssetCard({
+  asset,
+  adopted,
+  interpretResult,
+  interpreting,
+  onAdopt,
+  onCopy,
+  onGenerate,
+  onView,
+}: {
+  asset: CapabilityAsset;
+  adopted: string | null;
+  interpretResult: CapabilityInterpretResponse | null;
+  interpreting: boolean;
+  onAdopt: () => void;
+  onCopy: (value: string) => void;
+  onGenerate: () => void;
+  onView: () => void;
+}) {
   return (
-    <article className="rounded-md border border-emerald-100 bg-emerald-50 p-4">
+    <article className="flex flex-col rounded-md border border-emerald-100 bg-emerald-50 p-4">
       <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-700" />
-            <span className="text-xs font-semibold text-emerald-800">能力 {index + 1}</span>
-          </div>
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-700" />
           <h3 className="text-base font-semibold text-emerald-950">{asset.name}</h3>
         </div>
+        <StatusBadge status={asset.status} />
+      </div>
+      <p className="text-sm leading-6 text-emerald-950">{asset.oneLine}</p>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {asset.scenes.map((scene) => (
+          <span key={scene} className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-emerald-800">{scene}</span>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center gap-2 text-xs text-emerald-700">
+        <ShieldCheck className="h-3.5 w-3.5" />
+        <span>{asset.evidenceCount} 条来源证据</span>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <button className="inline-flex items-center gap-1 rounded-md bg-emerald-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-900" onClick={onView} type="button">
+          查看详情
+        </button>
         <button className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 text-xs font-semibold text-emerald-900 hover:bg-emerald-100" onClick={() => onCopy(asset.reusableExpression)} type="button">
           <Clipboard className="h-3.5 w-3.5" />
           复制表达
         </button>
+        <button className="ml-auto inline-flex items-center gap-1 rounded-md border border-emerald-300 px-2 py-1 text-xs font-semibold text-emerald-800 hover:bg-white disabled:opacity-60" disabled={interpreting} onClick={onGenerate} type="button" title="生成候选解读，采纳后才进入正式项目资产">
+          {interpreting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+          生成能力解读
+        </button>
       </div>
-      <CapabilityBlock title="解决什么问题" value={asset.problem} />
-      <CapabilityBlock title="为什么重要" value={asset.importance} />
-      <div className="mt-3">
-        <p className="text-xs font-semibold text-emerald-800">已识别内容</p>
-        <ul className="mt-1 space-y-1 text-sm leading-6 text-emerald-950">
-          {asset.recognized.map((item) => <li key={item}>- {item}</li>)}
-        </ul>
-      </div>
-      <details className="mt-3 rounded-md border border-emerald-200 bg-white">
-        <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm font-semibold text-emerald-900 hover:bg-emerald-50">
-          <ShieldCheck className="h-4 w-4" />
-          来源证据
-        </summary>
-        <ul className="space-y-1 border-t border-emerald-100 p-3 text-sm leading-6 text-emerald-950">
-          {asset.evidence.map((item) => <li key={item}>- {item}</li>)}
-        </ul>
-      </details>
-      <CapabilityBlock title="可复用表达" value={asset.reusableExpression} />
+      {adopted ? (
+        <p className="mt-3 rounded-md border border-emerald-200 bg-white px-3 py-2 text-xs text-emerald-800">已采纳候选：{adopted}</p>
+      ) : null}
+      {interpretResult ? (
+        <CapabilityCandidatePanel result={interpretResult} onAdopt={onAdopt} onRetry={onGenerate} />
+      ) : null}
     </article>
   );
 }
 
-function CapabilityBlock({ title, value }: { title: string; value: string }) {
+function CapabilityCandidatePanel({ result, onAdopt, onRetry }: { result: CapabilityInterpretResponse; onAdopt: () => void; onRetry: () => void }) {
+  const candidate = result.candidate;
   return (
-    <div className="mt-3">
-      <p className="text-xs font-semibold text-emerald-800">{title}</p>
-      <p className="mt-1 text-sm leading-6 text-emerald-950">{value}</p>
+    <div className="mt-3 rounded-md border border-sky-200 bg-sky-50 p-3">
+      <div className="mb-2 flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-sky-700" />
+        <span className="text-xs font-semibold text-sky-900">候选解读</span>
+        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${result.degraded ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800"}`}>
+          {result.source === "MODEL" ? "模型生成" : "本地规则"}
+        </span>
+      </div>
+      <p className="text-xs leading-5 text-sky-800">{result.message}</p>
+      <dl className="mt-2 space-y-1 text-xs leading-5 text-sky-950">
+        <div><dt className="font-semibold">说明</dt><dd>{candidate.summary}</dd></div>
+        <div><dt className="font-semibold">解决的问题</dt><dd>{candidate.problem}</dd></div>
+        <div><dt className="font-semibold">简历表达</dt><dd>{candidate.resume}</dd></div>
+      </dl>
+      <div className="mt-2 flex gap-2">
+        <button className="rounded-md bg-sky-700 px-3 py-1 text-xs font-semibold text-white hover:bg-sky-800" onClick={onAdopt} type="button">采纳为正式能力说明</button>
+        <button className="rounded-md border border-sky-300 px-3 py-1 text-xs font-semibold text-sky-800 hover:bg-white" onClick={onRetry} type="button">重新生成</button>
+      </div>
     </div>
   );
 }
 
-function buildCapabilityAssets(memory: ProjectMemory | null): CapabilityAsset[] {
-  const items = capabilityBulletItems(memory?.completedCapabilities ?? "");
-  return items.map((item) => ({
-    name: capabilityName(item),
-    problem: capabilityProblem(item),
-    importance: "它说明项目已经不只是保存过程记录，而是能把真实开发活动沉淀成后续 README、简历描述、项目复盘和面试讲解可以复用的工程资产。",
-    recognized: recognizedItems(item, memory),
-    evidence: [
-      "来自已确认项目资产。",
-      memory?.updatedAt ? `最近更新于 ${new Date(memory.updatedAt).toLocaleString()}` : "暂无更细来源时间。",
-      "更细证据可在相关资产卡的“为什么可信？”中继续追溯。",
-    ],
-    reusableExpression: reusableExpression(item),
-  }));
+function CapabilityAssetDetailDrawer({ asset, onClose, onCopy }: { asset: CapabilityAsset; onClose: () => void; onCopy: (value: string) => void }) {
+  return (
+    <div className="fixed inset-0 z-40 flex justify-end" role="dialog" aria-modal="true">
+      <button className="absolute inset-0 bg-slate-950/40" onClick={onClose} type="button" aria-label="关闭详情" />
+      <div className="relative flex h-full w-full max-w-xl flex-col overflow-y-auto bg-white shadow-xl">
+        <div className="sticky top-0 flex items-center justify-between border-b border-line bg-white px-6 py-4">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-emerald-700" />
+            <h2 className="text-lg font-semibold text-slate-950">{asset.name}</h2>
+          </div>
+          <button className="rounded-md px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100" onClick={onClose} type="button">关闭</button>
+        </div>
+        <div className="space-y-5 p-6">
+          <DetailBlock title="能力说明" value={asset.oneLine} />
+          <DetailBlock title="解决什么问题" value={asset.detail.problem} />
+          <DetailBlock title="为什么重要" value={asset.detail.importance} />
+          <div>
+            <p className="text-xs font-semibold text-slate-700">已识别内容</p>
+            <ul className="mt-1 space-y-1 text-sm leading-6 text-slate-800">
+              {asset.detail.recognized.map((item) => <li key={item}>- {item}</li>)}
+            </ul>
+          </div>
+          <details className="rounded-md border border-line bg-slate-50">
+            <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+              <ShieldCheck className="h-4 w-4" />
+              来源证据
+            </summary>
+            <ul className="space-y-1 border-t border-line p-3 text-sm leading-6 text-slate-800">
+              {asset.detail.evidence.map((item) => <li key={item}>- {item}</li>)}
+            </ul>
+          </details>
+          <DetailBlock title="可复用表达 · README" value={asset.detail.readme} action={(
+            <button className="mt-2 inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50" onClick={() => onCopy(asset.detail.readme)} type="button">
+              <Clipboard className="h-3.5 w-3.5" /> 复制
+            </button>
+          )} />
+          <DetailBlock title="可复用表达 · 简历" value={asset.detail.resume} action={(
+            <button className="mt-2 inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50" onClick={() => onCopy(asset.detail.resume)} type="button">
+              <Clipboard className="h-3.5 w-3.5" /> 复制
+            </button>
+          )} />
+          <DetailBlock title="面试讲解点" value={asset.detail.interview} />
+          <div className="flex items-center justify-between rounded-md border border-line bg-slate-50 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <StatusBadge status={asset.status} />
+              <span className="text-xs text-muted">{asset.evidenceCount} 条来源证据</span>
+            </div>
+            <Link className="text-sm font-semibold text-emerald-800 hover:text-emerald-700" href={`/project-intelligence?projectId=`}>手动修正入口</Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function capabilityName(value: string) {
-  return value.replace(/^[-•\d.\s]+/, "").split(/[，。；:：]/)[0].slice(0, 42) || "项目能力";
+function StatusBadge({ status }: { status: CapabilityAssetStatus }) {
+  const styles: Record<CapabilityAssetStatus, string> = {
+    "已确认": "bg-emerald-100 text-emerald-800",
+    "可补充": "bg-amber-100 text-amber-800",
+    "待补证据": "bg-slate-200 text-slate-700",
+  };
+  return <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles[status]}`}>{status}</span>;
 }
 
-function capabilityProblem(value: string) {
-  if (/zip|结构|目录|技术栈|文件/i.test(value)) {
-    return "帮助用户从导入项目中理解工程结构、核心模块和运行线索，减少首次理解项目的成本。";
-  }
-  if (/Git|证据|变化|开发/i.test(value)) {
-    return "帮助用户把零散开发变化整理成可审查、可追溯、可复用的开发成果。";
-  }
-  if (/输出|README|简历|周报|复盘/i.test(value)) {
-    return "帮助用户把已确认项目资产转化为对外展示和阶段汇报材料。";
-  }
-  return "帮助用户把一次具体开发成果沉淀为后续可复用、可展示的项目能力。";
-}
-
-function recognizedItems(value: string, memory: ProjectMemory | null) {
-  return [
-    value,
-    memory?.technicalDecisions ? `相关技术决策：${firstLine(memory.technicalDecisions)}` : "暂无关联技术决策。",
-    memory?.showcaseAssets ? `可展示成果：${firstLine(memory.showcaseAssets)}` : "暂无单独成果素材。",
-  ];
-}
-
-function reusableExpression(value: string) {
-  return `沉淀了“${capabilityName(value)}”能力，可结合项目资产、开发证据和用户确认内容，用于 README、简历项目亮点和面试讲解。`;
-}
-
-function firstLine(value: string) {
-  return value.split(/\r?\n/).map((line) => line.trim()).find(Boolean) ?? value;
+function DetailBlock({ title, value, action }: { title: string; value: string; action?: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-slate-700">{title}</p>
+      <p className="mt-1 text-sm leading-6 text-slate-800">{value}</p>
+      {action}
+    </div>
+  );
 }

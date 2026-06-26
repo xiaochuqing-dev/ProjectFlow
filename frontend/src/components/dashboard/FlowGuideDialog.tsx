@@ -43,6 +43,13 @@ export function FlowGuideDialog({
               下一步：{state.primaryAction}
             </div>
           )}
+          {state.secondaryAction && state.secondaryHref ? (
+            <Link className="ml-3 inline-flex" href={state.secondaryHref} onClick={onClose}>
+              <Button variant="ghost" size="md">
+                {state.secondaryAction}
+              </Button>
+            </Link>
+          ) : null}
         </div>
       </div>
     </div>
