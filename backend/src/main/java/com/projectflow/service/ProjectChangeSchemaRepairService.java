@@ -10,6 +10,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import com.projectflow.entity.ProjectAnalysisJobType;
 import com.projectflow.entity.ProjectChangeSourceType;
 
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -27,6 +28,7 @@ public class ProjectChangeSchemaRepairService {
     @EventListener(ApplicationReadyEvent.class)
     public void repairOnStartup() {
         ensureEvidenceBundleSourceTypeAllowed();
+        ensureAnalysisJobTypeAllowed();
     }
 
     public void ensureEvidenceBundleSourceTypeAllowed() {
@@ -50,6 +52,27 @@ public class ProjectChangeSchemaRepairService {
         jdbcTemplate.execute("ALTER TABLE project_changes ALTER COLUMN source_type " + h2EnumDefinition());
     }
 
+    public void ensureAnalysisJobTypeAllowed() {
+        if (!isH2Database()) {
+            return;
+        }
+
+        String jobType = jdbcTemplate.query(
+            """
+                SELECT data_type
+                FROM information_schema.columns
+                WHERE table_name = 'project_analysis_jobs'
+                  AND column_name = 'job_type'
+                """,
+            resultSet -> resultSet.next() ? resultSet.getString("data_type") : ""
+        );
+        if (!"enum".equalsIgnoreCase(jobType)) {
+            return;
+        }
+
+        jdbcTemplate.execute("ALTER TABLE project_analysis_jobs ALTER COLUMN job_type " + h2JobTypeEnumDefinition());
+    }
+
     private boolean isH2Database() {
         try (Connection connection = dataSource.getConnection()) {
             return connection.getMetaData().getDatabaseProductName().toLowerCase().contains("h2");
@@ -60,6 +83,13 @@ public class ProjectChangeSchemaRepairService {
 
     private String h2EnumDefinition() {
         return Arrays.stream(ProjectChangeSourceType.values())
+            .map(Enum::name)
+            .map(value -> "'" + value + "'")
+            .collect(Collectors.joining(",", "ENUM(", ")"));
+    }
+
+    private String h2JobTypeEnumDefinition() {
+        return Arrays.stream(ProjectAnalysisJobType.values())
             .map(Enum::name)
             .map(value -> "'" + value + "'")
             .collect(Collectors.joining(",", "ENUM(", ")"));
