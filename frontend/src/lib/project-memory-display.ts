@@ -49,7 +49,7 @@ function isPathLikeLine(value: string) {
 function inferCapabilitiesFromPaths(paths: string[]) {
   if (paths.length === 0) return [];
   const normalized = paths.map((path) => path.replace(/\\/g, "/").toLowerCase());
-  const capabilities: string[] = ["已导入完整项目结构，可作为后续项目画像和变更追溯的基础证据。"];
+  const capabilities: string[] = ["已导入完整项目结构，可作为后续项目理解和变更追溯的基础证据。"];
   if (normalized.some((path) => path.startsWith("backend/")) && normalized.some((path) => path.startsWith("frontend/"))) {
     capabilities.push("已形成前后端分层的工作台结构，包含 API 服务和前端交互界面。");
   }

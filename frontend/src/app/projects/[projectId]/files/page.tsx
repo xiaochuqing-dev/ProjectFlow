@@ -95,7 +95,7 @@ export default function ProjectFilesPage() {
   }
 
   return (
-    <AppShell eyebrow="项目画像" title="文件理解">
+    <AppShell eyebrow="项目理解" title="文件理解">
       <div className="min-h-[calc(100vh-4rem)] bg-surface p-6">
         <section className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-white p-4 shadow-panel">
           <div className="min-w-0">

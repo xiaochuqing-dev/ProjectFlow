@@ -83,7 +83,7 @@ function Header({ onBack, projectId, title }: { onBack: () => void; projectId: s
         <h2 className="text-xl font-semibold text-slate-950">{title}</h2>
       </div>
       <Link className="rounded-md border border-line px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" href={`/project-intelligence?projectId=${projectId}`}>
-        回到项目画像
+        回到项目理解
       </Link>
     </section>
   );
@@ -105,7 +105,7 @@ function toTimelineItem(record: ProjectEvolutionRecord): ResourceTimelineItem {
     date: record.createdAt,
     type: "成长记录",
     status: "已入档",
-    source: record.materialId ? "项目材料" : "项目档案",
+    source: record.materialId ? "项目材料" : "项目资产",
     meta: record.materialId ? `materialId: ${record.materialId}` : undefined,
     detail,
   };

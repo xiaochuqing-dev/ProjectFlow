@@ -34,7 +34,7 @@ export function buildDailyReviewSourceItems({
       date: record.createdAt,
       type: "项目演进",
       status: "已入档",
-      source: record.materialId ? "项目材料" : "项目档案",
+      source: record.materialId ? "项目材料" : "项目资产",
       detail: [
         record.detectedChanges ? `变化内容\n${record.detectedChanges}` : "",
         record.keyAchievements ? `关键成果\n${record.keyAchievements}` : "",
@@ -46,7 +46,7 @@ export function buildDailyReviewSourceItems({
       title: task.title,
       summary: task.description || "当天可作为证据的已完成任务。",
       date: task.updatedAt || task.createdAt,
-      type: "任务证据",
+      type: "开发证据",
       status: task.status,
       source: task.priority,
       detail: task.description || "暂无任务说明。",
@@ -66,9 +66,9 @@ function memorySourceItems(memory: ProjectMemory | null, date: string): Resource
     title: item.title,
     summary: item.value,
     date: memory?.updatedAt || `${date}T00:00:00`,
-    type: "项目档案",
+    type: "项目资产",
     status: "已确认",
-    source: "项目档案",
+    source: "项目资产",
     detail: item.value,
   }));
 }

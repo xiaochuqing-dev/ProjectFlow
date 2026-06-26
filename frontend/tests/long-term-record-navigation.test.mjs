@@ -34,8 +34,8 @@ assert.doesNotMatch(devLogs, />有<\/span>|>无<\/span>/, "daily source cards sh
 assert.match(intelligence, /\/project-intelligence\/timeline\?projectId=/, "project profile should link to growth timeline page");
 assert.match(intelligence, /\/project-intelligence\/capabilities\?projectId=/, "project profile should link completed capabilities to a focused page");
 assert.match(intelligence, /CompletedCapabilitiesCard/, "completed capabilities should render as a compact entry card on the profile");
-assert.match(intelligence, /\/project-intelligence\/fact-sources\?projectId=/, "project profile should link to fact source page");
-assert.match(intelligence, /\/project-intelligence\/changes\?projectId=/, "project profile should link to archive changes page");
+assert.doesNotMatch(intelligence, /label="可信依据"/, "可信依据 should not be a primary right-rail entry");
+assert.doesNotMatch(intelligence, /label="时间线变化"/, "时间线变化 should be merged into project timeline");
 assert.match(intelligence, /ArchiveEntryCard/, "project profile right rail should use navigation entries instead of long embedded lists");
 assert.match(intelligence, /项目资产工作台/, "project profile should present archive fields as an asset workbench");
 assert.match(intelligence, /手动修正字段/, "manual archive editing should be a secondary correction action");

@@ -291,60 +291,33 @@ function ProjectIntelligencePageContent() {
               <div className="border-b border-line px-5 py-4">
                 <h2 className="font-semibold">项目资产入口</h2>
               </div>
-              <div className="space-y-3 p-5">
-                <ArchiveEntryCard
-                  count={completedCapabilityItems.length}
-                  href={`/project-intelligence/capabilities?projectId=${selectedProjectId}`}
-                  label="能力清单"
-                  latestAt={memory?.updatedAt ?? undefined}
-                  latestLabel={completedCapabilityItems[0] || "暂无确认能力"}
-                  text="用能力点查看已沉淀成果。"
-                  tone="emerald"
-                />
-                <ArchiveEntryCard
-                  count={evolutionRecords.length}
-                  href={`/project-intelligence/timeline?projectId=${selectedProjectId}`}
-                  label="项目时间线"
-                  latestAt={latestAt(evolutionRecords)}
-                  latestLabel={evolutionRecords[0]?.summary || "暂无记录"}
-                  text="按时间查看项目如何一步步变强。"
-                  tone="sky"
-                />
-                <ArchiveEntryCard
-                  count={factSources.length}
-                  href={`/project-intelligence/fact-sources?projectId=${selectedProjectId}`}
-                  label="可信依据"
-                  latestAt={latestAt(factSources)}
-                  latestLabel={confirmedCountLabel(factSources)}
-                  text="解释每项资产为什么可信。"
-                  tone="indigo"
-                />
-                <ArchiveEntryCard
-                  count={pendingFacts.length}
-                  href={`/tasks?projectId=${selectedProjectId}&type=project-memory`}
-                  label="待确认内容"
-                  latestLabel={pendingFacts.length ? "需要审查" : "无待确认"}
-                  text="审查还没进入正式项目资产的候选。"
-                  tone="amber"
-                />
-                <ArchiveEntryCard
-                  count={evolutionRecords.length}
-                  href={`/project-intelligence/changes?projectId=${selectedProjectId}`}
-                  label="时间线变化"
-                  latestAt={latestAt(evolutionRecords)}
-                  latestLabel={evolutionRecords[0]?.summary || "暂无记录"}
-                  text="查看每次项目资产更新改了什么。"
-                  tone="rose"
-                />
-                <ArchiveEntryCard
-                  count={analysisRecords.length}
-                  href={`/project-intelligence/analysis-records?projectId=${selectedProjectId}`}
-                  label="分析记录"
-                  latestAt={latestAt(analysisRecords)}
-                  latestLabel={analysisRecords[0] ? analysisTypeLabel(analysisRecords[0]) : "暂无记录"}
-                  text="查看项目分析和文件分析历史。"
-                  tone="slate"
-                />
+              <div className="space-y-4 p-5">
+                <div className="space-y-3">
+                  <ArchiveEntryCard
+                    count={completedCapabilityItems.length}
+                    href={`/project-intelligence/capabilities?projectId=${selectedProjectId}`}
+                    label="能力与成果"
+                    latestAt={memory?.updatedAt ?? undefined}
+                    latestLabel={completedCapabilityItems[0] || "暂无确认能力"}
+                    text="查看已沉淀的项目能力、成果表达和可复用素材。"
+                    tone="emerald"
+                  />
+                  <ArchiveEntryCard
+                    count={pendingFacts.length}
+                    href={`/tasks?projectId=${selectedProjectId}&type=project-memory`}
+                    label="待确认成果"
+                    latestLabel={pendingFacts.length ? "需要审查" : "无待确认"}
+                    text="确认哪些今日开发内容可以进入项目资产。"
+                    tone="amber"
+                  />
+                </div>
+                <div className="rounded-md border border-line bg-slate-50 p-3">
+                  <p className="text-xs font-semibold text-slate-700">辅助查看</p>
+                  <div className="mt-3 grid gap-2">
+                    <SmallEntryLink href={`/project-intelligence/timeline?projectId=${selectedProjectId}`} label="项目时间线" text={`${evolutionRecords.length} 条 · 能力、决策、风险和资产更新`} />
+                    <SmallEntryLink href={`/project-intelligence/analysis-records?projectId=${selectedProjectId}`} label="分析记录" text={`${analysisRecords.length} 条 · 项目分析和文件分析历史`} />
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -469,8 +442,8 @@ function CompletedCapabilitiesCard({ projectId, value }: { projectId: string; va
             <ListChecks className="h-4 w-4" />
           </span>
           <div className="min-w-0">
-            <p className="font-semibold text-emerald-950">能力清单</p>
-            <p className="mt-1 text-sm leading-5 text-emerald-900">已完成能力只保留可理解的能力点，原始路径不在这里展开。</p>
+            <p className="font-semibold text-emerald-950">能力与成果</p>
+            <p className="mt-1 text-sm leading-5 text-emerald-900">已完成能力会整理成可解释、可复用的能力资产。</p>
           </div>
         </div>
         <span className="rounded-full bg-emerald-800 px-2.5 py-1 text-xs font-semibold text-white">{items.length} 项</span>
@@ -496,6 +469,15 @@ function suggestionFieldKey(suggestion: AiSuggestion) {
   const title = suggestion.title.toLowerCase();
   const match = fieldConfig.find((field) => title.includes(field.label.toLowerCase()) || title.includes(String(field.key).toLowerCase()));
   return match?.key ?? "";
+}
+
+function SmallEntryLink({ href, label, text }: { href: string; label: string; text: string }) {
+  return (
+    <Link className="block rounded-md bg-white px-3 py-2 text-sm transition hover:-translate-y-0.5 hover:shadow-sm" href={href}>
+      <span className="font-semibold text-slate-950">{label}</span>
+      <span className="ml-2 text-xs text-muted">{text}</span>
+    </Link>
+  );
 }
 
 function ArchiveEntryCard({

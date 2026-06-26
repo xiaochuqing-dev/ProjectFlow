@@ -230,7 +230,7 @@ export default function SettingsPage() {
                 </div>
               ))}
               {providers.length === 0 ? (
-                <div className="p-8 text-center text-sm text-muted">还没有真实模型配置。项目 zip 仍可生成本地项目画像。</div>
+                <div className="p-8 text-center text-sm text-muted">还没有真实模型配置。项目 zip 仍可生成本地项目理解。</div>
               ) : null}
             </div>
           </div>

@@ -1,7 +1,7 @@
 import type { ProjectChange } from "@/lib/api";
 
 export const suggestionLabels = {
-  UPDATE_PROJECT_MEMORY: "项目档案",
+  UPDATE_PROJECT_MEMORY: "项目资产",
   CREATE_TASK: "任务",
   CREATE_DEV_LOG: "每日回顾",
   RECORD_TECHNICAL_DECISION: "技术决策",
@@ -62,7 +62,7 @@ export function changeOutcomeSummary(change: Pick<ProjectChange, "summary" | "de
   const files = parseAffectedFiles(change.affectedFiles).filter((file) => !isRuntimeArtifact(file));
   if (detailLine) return detailLine.trim();
   if (files.length) return `本次变更影响 ${files.length} 个开发相关文件，完整证据可在详情页追溯。`;
-  return "本次变更已进入结构化审查，等待确认是否写入项目档案。";
+  return "本次变更已进入结构化审查，等待确认是否写入项目资产。";
 }
 
 export function changeMemoryTargets(change: ProjectChange) {
