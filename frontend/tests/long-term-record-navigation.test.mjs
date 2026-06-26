@@ -37,9 +37,9 @@ assert.match(intelligence, /CompletedCapabilitiesCard/, "completed capabilities 
 assert.doesNotMatch(intelligence, /label="可信依据"/, "可信依据 should not be a primary right-rail entry");
 assert.doesNotMatch(intelligence, /label="时间线变化"/, "时间线变化 should be merged into project timeline");
 assert.match(intelligence, /ArchiveEntryCard/, "project profile right rail should use navigation entries instead of long embedded lists");
-assert.match(intelligence, /项目资产工作台/, "project profile should present archive fields as an asset workbench");
-assert.match(intelligence, /手动修正字段/, "manual archive editing should be a secondary correction action");
-assert.match(intelligence, /archiveEntryToneStyles/, "project profile entry cards should use distinct color markers");
+assert.match(intelligence, /项目资产总览/, "project profile should present a read-only asset overview by default");
+assert.match(intelligence, /编辑项目资产/, "project profile should gate field editing behind an edit mode entry");
+assert.match(intelligence, /ProjectAssetPanels/, "project profile should reuse extracted asset panel components");
 
 assert.match(resourceTimeline, /FilterSelect/, "long-term resource pages should share month/type/status filters");
 assert.match(resourceTimeline, /groupByDay/, "long-term resource pages should group records by date");
