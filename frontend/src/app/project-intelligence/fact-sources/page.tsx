@@ -13,9 +13,9 @@ import { resolveSelectedProjectId } from "@/lib/project-selection";
 const fieldLabels: Record<string, string> = {
   positioning: "项目定位",
   currentStage: "当前阶段",
-  completedCapabilities: "已完成能力",
+  completedCapabilities: "能力与成果",
   inProgressCapabilities: "进行中能力",
-  currentRisks: "当前风险",
+  currentRisks: "风险记录",
   technicalDecisions: "技术决策",
   developerLearnings: "经验沉淀",
   showcaseAssets: "可展示成果",
@@ -102,7 +102,7 @@ function FactSourcesPageContent() {
         <section className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
           <aside className="rounded-md border border-line bg-white shadow-panel">
             <div className="border-b border-line px-5 py-4">
-              <h3 className="font-semibold text-slate-950">字段 · {fields.length} 项</h3>
+              <h3 className="font-semibold text-slate-950">资产分类 · {fields.length} 类</h3>
             </div>
             <div className="p-3">
               {fields.length ? fields.map((field) => (
@@ -115,15 +115,15 @@ function FactSourcesPageContent() {
                   <span>{fieldLabels[field] ?? field}</span>
                   <span>{sources.filter((source) => source.fieldKey === field).length}</span>
                 </button>
-              )) : <p className="p-2 text-sm text-muted">暂无可信依据字段。</p>}
+              )) : <p className="p-2 text-sm text-muted">暂无资产来源。</p>}
             </div>
           </aside>
 
           <div className="rounded-md border border-line bg-white shadow-panel">
             <ResourceTimeline
-              emptyText="保存项目资产或采纳变更后会生成可信依据。"
+              emptyText="保存项目资产或采纳变更后会生成资产来源。"
               items={sourceItems}
-              title={`${fieldLabels[selectedField] ?? (selectedField || "字段来源")} · ${selectedSources.length} 条`}
+              title={`${fieldLabels[selectedField] ?? (selectedField || "资产来源")} · ${selectedSources.length} 条`}
             />
           </div>
         </section>
@@ -133,19 +133,24 @@ function FactSourcesPageContent() {
 }
 
 function toFactSourceItem(source: ProjectFactSource): ResourceTimelineItem {
+  const assetLabel = fieldLabels[source.fieldKey] ?? source.fieldKey;
   return {
     id: source.id,
-    title: fieldLabels[source.fieldKey] ?? source.fieldKey,
-    summary: source.value || "暂无字段内容。",
+    title: assetLabel,
+    summary: source.value || "暂无资产内容。",
     date: source.updatedAt || source.createdAt,
     type: source.sourceType,
     status: source.confirmedByUser ? "已确认" : "待确认",
     source: source.sourceType,
     detail: [
-      `字段：${fieldLabels[source.fieldKey] ?? source.fieldKey}`,
-      `置信度：${source.confidence}`,
+      `资产分类：${assetLabel}`,
+      `可信状态：${source.confirmedByUser ? "已确认" : "待确认"}`,
+      `来源类型：${source.sourceType}`,
       "",
+      `关联资产内容：`,
       source.value,
+      "",
+      `高级信息：来源类型 ${source.sourceType} · 置信度 ${source.confidence}${source.sourceId ? ` · 标识 ${source.sourceId}` : ""}`,
     ].join("\n"),
   };
 }

@@ -3,7 +3,7 @@
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight, DatabaseZap, ListChecks, RefreshCw, Save, ShieldCheck } from "lucide-react";
+import { DatabaseZap, Pencil, RefreshCw, Save, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Badge, ProjectContextBar, Toast } from "@/components/ui";
 import { useAutoDismissNotice } from "@/hooks/useAutoDismissNotice";
@@ -25,23 +25,13 @@ import {
 import { readSession } from "@/lib/auth";
 import { capabilityBulletItems } from "@/lib/project-memory-display";
 import { useProjectAnalysisJobs } from "@/lib/use-project-analysis-jobs";
-
-const fieldConfig: Array<{
-  key: keyof ProjectMemoryPayload;
-  label: string;
-  source: string;
-  rows: number;
-}> = [
-  { key: "positioning", label: "项目定位", source: "用户确认 / zip 分析 / 建议采纳", rows: 4 },
-  { key: "currentStage", label: "当前阶段", source: "用户确认优先", rows: 2 },
-  { key: "completedCapabilities", label: "已完成能力", source: "采纳记录 / 每日回顾", rows: 5 },
-  { key: "inProgressCapabilities", label: "进行中能力", source: "任务变化 / agent result", rows: 5 },
-  { key: "currentRisks", label: "当前风险", source: "风险建议 / 用户手动", rows: 5 },
-  { key: "technicalDecisions", label: "技术决策", source: "开发成果审查采纳", rows: 5 },
-  { key: "developerLearnings", label: "经验沉淀", source: "每日回顾 / 模型总结", rows: 5 },
-  { key: "showcaseAssets", label: "可展示成果", source: "成果素材采纳", rows: 5 },
-  { key: "nextStepSuggestions", label: "下一步目标", source: "用户确认 / agent result", rows: 5 },
-];
+import {
+  ArchiveEntryCard,
+  ArchiveFieldReview,
+  CompletedCapabilitiesCard,
+  SmallEntryLink,
+  fieldConfig,
+} from "@/components/project-intelligence/ProjectAssetPanels";
 
 export default function ProjectIntelligencePage() {
   return (
@@ -63,6 +53,7 @@ function ProjectIntelligencePageContent() {
   const [analysisRecords, setAnalysisRecords] = useState<ProjectAnalysisRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -163,6 +154,7 @@ function ProjectIntelligencePageContent() {
       setFormValue(toPayload(updated));
       setFactSources(await listProjectFactSources(session.accessToken, selectedProjectId));
       setNotice("项目资产已保存。后续成果输出会优先使用这些已确认内容。");
+      setEditing(false);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "项目资产保存失败");
     } finally {
@@ -221,7 +213,7 @@ function ProjectIntelligencePageContent() {
         />
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <form className="rounded-md border border-line bg-white shadow-panel" onSubmit={handleSave}>
+          <div className="rounded-md border border-line bg-white shadow-panel">
             {analysis ? (
               <div className="border-b border-line bg-slate-50 p-5">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -254,37 +246,59 @@ function ProjectIntelligencePageContent() {
               <div className="flex items-center gap-2">
                 <DatabaseZap className="h-4 w-4 text-slate-700" />
                 <div>
-                  <h2 className="font-semibold">项目资产工作台</h2>
-                  <p className="mt-1 text-xs text-muted">默认展示已确认资产和可信依据。只有需要修正时才展开编辑框。</p>
+                  <h2 className="font-semibold">项目资产总览</h2>
+                  <p className="mt-1 text-xs text-muted">默认展示已确认资产。需要修正时点击“编辑项目资产”展开字段编辑。</p>
                 </div>
               </div>
-              <button
-                className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-                disabled={saving || !selectedProjectId}
-                type="submit"
-              >
-                {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {saving ? "保存中..." : "保存手动修正"}
-              </button>
+              {editing ? (
+                <button
+                  className="inline-flex items-center gap-2 rounded-md border border-line px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  onClick={() => setEditing(false)}
+                  type="button"
+                >
+                  收起编辑
+                </button>
+              ) : (
+                <button
+                  className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  onClick={() => setEditing(true)}
+                  type="button"
+                >
+                  <Pencil className="h-4 w-4" />
+                  编辑项目资产
+                </button>
+              )}
             </div>
-            <div className="grid gap-0 md:grid-cols-2">
-              {fieldConfig.map((field) => {
-                const latestSource = latestSourceByField.get(field.key);
-                return (
-                  <ArchiveFieldReview
-                    candidateCount={pendingFactsByField.get(field.key)?.length ?? 0}
-                    field={field}
-                    key={field.key}
-                    latestSource={latestSource}
-                    onChange={(value) => updateField(field.key, value)}
-                    projectId={selectedProjectId}
-                    value={formValue[field.key]}
-                  />
-                );
-              })}
-            </div>
+
+            {editing ? (
+              <form className="grid gap-0 md:grid-cols-2" onSubmit={handleSave}>
+                {fieldConfig.map((field) => {
+                  const latestSource = latestSourceByField.get(field.key);
+                  return (
+                    <ArchiveFieldReview
+                      candidateCount={pendingFactsByField.get(field.key)?.length ?? 0}
+                      field={field}
+                      key={field.key}
+                      latestSource={latestSource}
+                      onChange={(value) => updateField(field.key, value)}
+                      projectId={selectedProjectId}
+                      value={formValue[field.key]}
+                    />
+                  );
+                })}
+                <div className="col-span-full flex items-center justify-end gap-3 border-t border-line p-4">
+                  <button className="rounded-md border border-line px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" onClick={() => setEditing(false)} type="button">取消</button>
+                  <button className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60" disabled={saving || !selectedProjectId} type="submit">
+                    {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {saving ? "保存中..." : "保存手动修正"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <AssetOverviewGrid formValue={formValue} latestSourceByField={latestSourceByField} projectId={selectedProjectId} />
+            )}
             {loading || loadingProjects ? <div className="h-1 bg-slate-950" /> : null}
-          </form>
+          </div>
 
           <aside className="space-y-5">
             <section className="rounded-md border border-line bg-white shadow-panel">
@@ -336,6 +350,46 @@ function ProjectIntelligencePageContent() {
   );
 }
 
+function AssetOverviewGrid({
+  formValue,
+  latestSourceByField,
+  projectId,
+}: {
+  formValue: ProjectMemoryPayload;
+  latestSourceByField: Map<string, ProjectFactSource>;
+  projectId: string;
+}) {
+  return (
+    <div className="grid gap-0 md:grid-cols-2">
+      {fieldConfig.map((field) => {
+        const latestSource = latestSourceByField.get(field.key);
+        if (field.key === "completedCapabilities") {
+          return <CompletedCapabilitiesCard key={field.key} projectId={projectId} value={formValue[field.key]} />;
+        }
+        return (
+          <section key={field.key} className="border-b border-line p-5 odd:md:border-r">
+            <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+              <h3 className="font-semibold text-slate-950">{field.label}</h3>
+              <span className={`rounded-md px-2 py-1 text-xs ${latestSource?.confirmedByUser ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-muted"}`}>
+                {latestSource ? `${latestSource.sourceType} · ${latestSource.confirmedByUser ? "已确认" : "待确认"}` : "暂无来源"}
+              </span>
+            </div>
+            <p className="min-h-16 whitespace-pre-line rounded-md border border-line bg-slate-50 p-3 text-sm leading-6 text-slate-700">
+              {formValue[field.key] || "暂无已确认内容。"}
+            </p>
+            {latestSource?.sourceId ? (
+              <details className="mt-2 rounded-md border border-line bg-white">
+                <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">为什么可信？</summary>
+                <p className="break-all border-t border-line p-3 font-mono text-xs text-muted">高级信息：{latestSource.sourceId}</p>
+              </details>
+            ) : null}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 function emptyPayload(): ProjectMemoryPayload {
   return {
     positioning: "",
@@ -364,103 +418,6 @@ function toPayload(memory: ProjectMemory): ProjectMemoryPayload {
   };
 }
 
-function sourceLabel(source: ProjectFactSource) {
-  return `${source.sourceType} · ${source.confirmedByUser ? "已确认" : source.confidence}`;
-}
-
-function ArchiveFieldReview({
-  candidateCount,
-  field,
-  latestSource,
-  onChange,
-  projectId,
-  value,
-}: {
-  candidateCount: number;
-  field: { key: keyof ProjectMemoryPayload; label: string; source: string; rows: number };
-  latestSource?: ProjectFactSource;
-  onChange: (value: string) => void;
-  projectId: string;
-  value: string;
-}) {
-  const isCompletedCapabilities = field.key === "completedCapabilities";
-  return (
-    <section className="border-b border-line p-5 odd:md:border-r">
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="font-semibold text-slate-950">{field.label}</h3>
-          <p className="mt-1 text-xs text-muted">
-            {latestSource ? `更新于 ${new Date(latestSource.updatedAt).toLocaleString()}` : field.source}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <span className={`rounded-md px-2 py-1 text-xs ${latestSource?.confirmedByUser ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-muted"}`}>
-            {latestSource ? sourceLabel(latestSource) : "暂无来源"}
-          </span>
-          {candidateCount ? <span className="rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-800">候选 {candidateCount}</span> : null}
-        </div>
-      </div>
-      {isCompletedCapabilities ? (
-        <CompletedCapabilitiesCard projectId={projectId} value={value} />
-      ) : (
-        <p className="min-h-20 whitespace-pre-line rounded-md border border-line bg-slate-50 p-3 text-sm leading-6 text-slate-700">
-          {value || "暂无已确认内容。采纳结构化变更或运行项目分析后，会形成可审查候选。"}
-        </p>
-      )}
-      {latestSource?.sourceId ? (
-        <details className="mt-2 rounded-md border border-line bg-white">
-          <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-            为什么可信？
-          </summary>
-          <p className="break-all border-t border-line p-3 font-mono text-xs text-muted">高级信息：{latestSource.sourceId}</p>
-        </details>
-      ) : null}
-      <details className="mt-3 rounded-md border border-line bg-white">
-        <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-          手动修正字段
-        </summary>
-        <div className="border-t border-line p-3">
-          <textarea
-            className="w-full resize-y rounded-md border border-line bg-white px-3 py-2 text-sm leading-6 outline-none focus:border-slate-950"
-            onChange={(event) => onChange(event.target.value)}
-            rows={field.rows}
-            value={value}
-          />
-        </div>
-      </details>
-    </section>
-  );
-}
-
-function CompletedCapabilitiesCard({ projectId, value }: { projectId: string; value: string }) {
-  const items = capabilityBulletItems(value, 3);
-  return (
-    <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 gap-3">
-          <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-700 text-white">
-            <ListChecks className="h-4 w-4" />
-          </span>
-          <div className="min-w-0">
-            <p className="font-semibold text-emerald-950">能力与成果</p>
-            <p className="mt-1 text-sm leading-5 text-emerald-900">已完成能力会整理成可解释、可复用的能力资产。</p>
-          </div>
-        </div>
-        <span className="rounded-full bg-emerald-800 px-2.5 py-1 text-xs font-semibold text-white">{items.length} 项</span>
-      </div>
-      <ul className="mt-3 space-y-1 text-sm leading-6 text-emerald-950">
-        {(items.length ? items : ["暂无已确认能力。"]).slice(0, 3).map((item) => (
-          <li className="line-clamp-1" key={item}>- {item}</li>
-        ))}
-      </ul>
-      <Link className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-emerald-900 hover:text-emerald-700" href={`/project-intelligence/capabilities?projectId=${projectId}`}>
-        查看能力详情
-        <ArrowRight className="h-4 w-4" />
-      </Link>
-    </div>
-  );
-}
-
 function suggestionFieldKey(suggestion: AiSuggestion) {
   const payloadField = suggestion.payload.fieldKey;
   if (typeof payloadField === "string") {
@@ -469,110 +426,4 @@ function suggestionFieldKey(suggestion: AiSuggestion) {
   const title = suggestion.title.toLowerCase();
   const match = fieldConfig.find((field) => title.includes(field.label.toLowerCase()) || title.includes(String(field.key).toLowerCase()));
   return match?.key ?? "";
-}
-
-function SmallEntryLink({ href, label, text }: { href: string; label: string; text: string }) {
-  return (
-    <Link className="block rounded-md bg-white px-3 py-2 text-sm transition hover:-translate-y-0.5 hover:shadow-sm" href={href}>
-      <span className="font-semibold text-slate-950">{label}</span>
-      <span className="ml-2 text-xs text-muted">{text}</span>
-    </Link>
-  );
-}
-
-function ArchiveEntryCard({
-  count,
-  href,
-  label,
-  latestAt,
-  latestLabel,
-  text,
-  tone = "slate",
-}: {
-  count: number;
-  href: string;
-  label: string;
-  latestAt?: string;
-  latestLabel?: string;
-  text: string;
-  tone?: ArchiveEntryTone;
-}) {
-  const styles = archiveEntryToneStyles[tone];
-  return (
-    <Link className={`relative block overflow-hidden rounded-md border p-4 pl-5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm ${styles.card}`} href={href}>
-      <span className={`absolute inset-y-0 left-0 w-1 ${styles.marker}`} />
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-semibold text-slate-950">{label}</p>
-        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles.count}`}>{count} 条</span>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
-        <span className={`rounded-md px-2 py-1 ${styles.chip}`}>{latestAt ? `最新 ${formatShortDate(latestAt)}` : "暂无更新"}</span>
-        {latestLabel ? <span className={`max-w-full truncate rounded-md px-2 py-1 ${styles.chip}`}>{latestLabel}</span> : null}
-      </div>
-      <p className="mt-2 text-sm leading-5 text-slate-600">{text}</p>
-    </Link>
-  );
-}
-
-type ArchiveEntryTone = "emerald" | "sky" | "indigo" | "amber" | "rose" | "slate";
-
-const archiveEntryToneStyles: Record<ArchiveEntryTone, { card: string; marker: string; count: string; chip: string }> = {
-  emerald: {
-    card: "border-emerald-200 bg-emerald-50",
-    marker: "bg-emerald-700",
-    count: "bg-emerald-800 text-white",
-    chip: "bg-white text-emerald-900",
-  },
-  sky: {
-    card: "border-sky-200 bg-sky-50",
-    marker: "bg-sky-700",
-    count: "bg-sky-800 text-white",
-    chip: "bg-white text-sky-900",
-  },
-  indigo: {
-    card: "border-indigo-200 bg-indigo-50",
-    marker: "bg-indigo-700",
-    count: "bg-indigo-800 text-white",
-    chip: "bg-white text-indigo-900",
-  },
-  amber: {
-    card: "border-amber-200 bg-amber-50",
-    marker: "bg-amber-700",
-    count: "bg-amber-800 text-white",
-    chip: "bg-white text-amber-900",
-  },
-  rose: {
-    card: "border-rose-200 bg-rose-50",
-    marker: "bg-rose-700",
-    count: "bg-rose-800 text-white",
-    chip: "bg-white text-rose-900",
-  },
-  slate: {
-    card: "border-slate-200 bg-slate-50",
-    marker: "bg-slate-700",
-    count: "bg-slate-800 text-white",
-    chip: "bg-white text-slate-700",
-  },
-};
-
-function latestAt(items: Array<{ createdAt?: string; updatedAt?: string }>) {
-  return items
-    .map((item) => item.updatedAt || item.createdAt || "")
-    .filter(Boolean)
-    .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0];
-}
-
-function formatShortDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString(undefined, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
-}
-
-function confirmedCountLabel(items: ProjectFactSource[]) {
-  const confirmed = items.filter((item) => item.confirmedByUser).length;
-  return confirmed ? `已确认 ${confirmed} 项` : "暂无确认来源";
-}
-
-function analysisTypeLabel(record: ProjectAnalysisRecord) {
-  return record.recordType === "FILE" ? "最新文件分析" : "最新项目分析";
 }
