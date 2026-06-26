@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, KeyRound, RefreshCw, Settings2, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ProjectContextBar, Toast } from "@/components/ui";
@@ -18,8 +19,23 @@ import {
 import { readSession } from "@/lib/auth";
 
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={<AppShell eyebrow="个人设置" title="设置"><div className="min-h-[calc(100vh-4rem)] bg-surface p-8"><div className="h-1 bg-slate-950" /></div></AppShell>}>
+      <SettingsPageContent />
+    </Suspense>
+  );
+}
+
+function SettingsPageContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const queryProjectId = searchParams.get("projectId") ?? "";
   const [providers, setProviders] = useState<AiProvider[]>([]);
-  const { projects, selectedProjectId, selectProject, projectError } = useProjectSelection();
+  const { projects, selectedProjectId, selectProject, projectError } = useProjectSelection({ queryProjectId });
+  function handleSelectProject(projectId: string) {
+    selectProject(projectId);
+    router.replace(`/settings?projectId=${projectId}`);
+  }
   const [usageRecords, setUsageRecords] = useState<ModelUsageRecord[]>([]);
   const [saving, setSaving] = useState(false);
   const [loadingUsage, setLoadingUsage] = useState(false);
@@ -265,7 +281,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <ProjectContextBar
-              onSelect={selectProject}
+              onSelect={handleSelectProject}
               projects={projects}
               selectedProjectId={selectedProjectId}
             />
