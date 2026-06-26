@@ -7,9 +7,10 @@ import { ArrowLeft, CheckCircle2, Clipboard, ListChecks, RefreshCw, ShieldCheck,
 import { AppShell } from "@/components/AppShell";
 import { Badge, ProjectContextBar, Toast } from "@/components/ui";
 import { useProjectSelection } from "@/hooks/useProjectSelection";
-import { getProjectMemory, interpretCapability, updateProjectMemory, type CapabilityInterpretResponse, type ProjectMemory, type ProjectMemoryPayload } from "@/lib/api";
+import { getProjectMemory, updateProjectMemory, type CapabilityInterpretResponse, type ProjectAnalysisJob, type ProjectMemory, type ProjectMemoryPayload } from "@/lib/api";
 import { readSession } from "@/lib/auth";
 import { buildCapabilityAssets, type CapabilityAsset, type CapabilityAssetStatus } from "@/lib/capability-assets";
+import { useProjectAnalysisJobs } from "@/lib/use-project-analysis-jobs";
 
 export default function CompletedCapabilitiesPage() {
   return (
@@ -30,10 +31,16 @@ function CompletedCapabilitiesContent() {
   const [activeName, setActiveName] = useState<string | null>(null);
   const capabilityAssets = useMemo(() => buildCapabilityAssets(memory), [memory]);
   const activeAsset = capabilityAssets.find((item) => item.name === activeName) ?? null;
-  const [interpretFor, setInterpretFor] = useState<string | null>(null);
-  const [interpretResult, setInterpretResult] = useState<CapabilityInterpretResponse | null>(null);
-  const [interpreting, setInterpreting] = useState(false);
+  const { jobs, enqueueCapabilityInterpret } = useProjectAnalysisJobs(selectedProjectId);
+  const interpretJobs = useMemo(
+    () => jobs.filter((job) => job.jobType === "CAPABILITY_INTERPRET"),
+    [jobs],
+  );
   const [adoptedSummary, setAdoptedSummary] = useState("");
+
+  function interpretJobFor(asset: CapabilityAsset): ProjectAnalysisJob | null {
+    return interpretJobs.find((job) => (job.filePath ?? "") === asset.rawFact) ?? null;
+  }
 
   useEffect(() => {
     const session = readSession();
@@ -65,34 +72,23 @@ function CompletedCapabilitiesContent() {
     if (!session || !selectedProjectId) {
       return;
     }
-    setInterpretFor(asset.name);
-    setInterpreting(true);
-    setInterpretResult(null);
     setError("");
     try {
-      const result = await interpretCapability(session.accessToken, selectedProjectId, asset.rawFact);
-      setInterpretResult(result);
+      await enqueueCapabilityInterpret(asset.rawFact);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "生成能力解读失败。");
-    } finally {
-      setInterpreting(false);
+      setError(exception instanceof Error ? exception.message : "提交能力解读任务失败。");
     }
   }
 
-  async function adoptCandidate(asset: CapabilityAsset) {
+  async function adoptCandidate(asset: CapabilityAsset, candidate: CapabilityInterpretResponse) {
     const session = readSession();
     if (!session || !selectedProjectId || !memory) {
       return;
     }
-    const candidate = interpretResult?.candidate;
-    if (!candidate) {
-      return;
-    }
-    setInterpreting(true);
     setError("");
     try {
       const existing = memory.completedCapabilities || "";
-      const line = `- ${candidate.summary}`;
+      const line = `- ${candidate.candidate.summary}`;
       const next = existing ? `${existing.replace(/暂无已确认能力。?/, "").trim()}\n${line}` : line;
       const payload: ProjectMemoryPayload = {
         positioning: memory.positioning,
@@ -107,14 +103,10 @@ function CompletedCapabilitiesContent() {
       };
       const updated = await updateProjectMemory(session.accessToken, selectedProjectId, payload);
       setMemory(updated);
-      setAdoptedSummary(candidate.summary);
-      setInterpretResult(null);
-      setInterpretFor(null);
+      setAdoptedSummary(candidate.candidate.summary);
       setNotice("候选解读已采纳为正式能力说明。");
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "采纳失败。");
-    } finally {
-      setInterpreting(false);
     }
   }
 
@@ -154,19 +146,21 @@ function CompletedCapabilitiesContent() {
           </div>
 
           <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
-            {capabilityAssets.map((asset) => (
-              <CapabilityAssetCard
-                asset={asset}
-                adopted={adoptedSummary === asset.rawFact ? null : adoptedSummary}
-                interpretResult={interpretFor === asset.name ? interpretResult : null}
-                interpreting={interpretFor === asset.name && interpreting}
-                key={asset.name}
-                onAdopt={() => adoptCandidate(asset)}
-                onCopy={copyExpression}
-                onGenerate={() => generateInterpret(asset)}
-                onView={() => setActiveName(asset.name)}
-              />
-            ))}
+            {capabilityAssets.map((asset) => {
+              const job = interpretJobFor(asset);
+              return (
+                <CapabilityAssetCard
+                  adopted={adoptedSummary && job?.status === "SUCCEEDED" && job.capabilityInterpretResult?.candidate.summary === adoptedSummary ? null : adoptedSummary}
+                  asset={asset}
+                  job={job}
+                  key={asset.name}
+                  onAdopt={(result) => adoptCandidate(asset, result)}
+                  onCopy={copyExpression}
+                  onGenerate={() => generateInterpret(asset)}
+                  onView={() => setActiveName(asset.name)}
+                />
+              );
+            })}
             {capabilityAssets.length === 0 ? (
               <p className="rounded-md border border-line bg-slate-50 p-4 text-sm text-muted">暂无已确认能力。采纳开发成果或保存项目资产后，会先形成能力候选，再经用户确认进入这里。</p>
             ) : null}
@@ -187,8 +181,7 @@ function CompletedCapabilitiesContent() {
 function CapabilityAssetCard({
   asset,
   adopted,
-  interpretResult,
-  interpreting,
+  job,
   onAdopt,
   onCopy,
   onGenerate,
@@ -196,13 +189,13 @@ function CapabilityAssetCard({
 }: {
   asset: CapabilityAsset;
   adopted: string | null;
-  interpretResult: CapabilityInterpretResponse | null;
-  interpreting: boolean;
-  onAdopt: () => void;
+  job: ProjectAnalysisJob | null;
+  onAdopt: (result: CapabilityInterpretResponse) => void;
   onCopy: (value: string) => void;
   onGenerate: () => void;
   onView: () => void;
 }) {
+  const interpreting = job != null && (job.status === "QUEUED" || job.status === "RUNNING");
   return (
     <article className="flex flex-col rounded-md border border-emerald-100 bg-emerald-50 p-4">
       <div className="mb-3 flex items-start justify-between gap-3">
@@ -238,8 +231,17 @@ function CapabilityAssetCard({
       {adopted ? (
         <p className="mt-3 rounded-md border border-emerald-200 bg-white px-3 py-2 text-xs text-emerald-800">已采纳候选：{adopted}</p>
       ) : null}
-      {interpretResult ? (
-        <CapabilityCandidatePanel result={interpretResult} onAdopt={onAdopt} onRetry={onGenerate} />
+      {job?.status === "QUEUED" || job?.status === "RUNNING" ? (
+        <p className="mt-3 inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+          正在生成候选解读，刷新或离开页面不会丢失。
+        </p>
+      ) : null}
+      {job?.status === "FAILED" ? (
+        <p className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">生成失败：{job.errorMessage ?? "请重新生成。"}</p>
+      ) : null}
+      {job?.status === "SUCCEEDED" && job.capabilityInterpretResult ? (
+        <CapabilityCandidatePanel result={job.capabilityInterpretResult} onAdopt={() => onAdopt(job.capabilityInterpretResult!)} onRetry={onGenerate} />
       ) : null}
     </article>
   );

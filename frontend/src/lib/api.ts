@@ -720,7 +720,7 @@ export type ProjectFileAnalysis = {
 };
 
 export type ProjectAnalysisJobStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED";
-export type ProjectAnalysisJobType = "PROJECT" | "FILE";
+export type ProjectAnalysisJobType = "PROJECT" | "FILE" | "CAPABILITY_INTERPRET";
 
 export type ProjectAnalysisJob = {
   id: string;
@@ -730,6 +730,7 @@ export type ProjectAnalysisJob = {
   status: ProjectAnalysisJobStatus;
   projectResult: ProjectAnalysis | null;
   fileResult: ProjectFileAnalysis | null;
+  capabilityInterpretResult: CapabilityInterpretResponse | null;
   errorMessage: string | null;
   recordId: string | null;
   createdAt: string;
@@ -1147,8 +1148,8 @@ export function saveProjectLocalPath(token: string, projectId: string, localProj
   });
 }
 
-export function interpretCapability(token: string, projectId: string, capabilityFact: string): Promise<CapabilityInterpretResponse> {
-  return requestJson<CapabilityInterpretResponse>(`/projects/${projectId}/memory/capabilities/interpret`, {
+export function interpretCapability(token: string, projectId: string, capabilityFact: string): Promise<ProjectAnalysisJob> {
+  return requestJson<ProjectAnalysisJob>(`/projects/${projectId}/capabilities/interpret`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

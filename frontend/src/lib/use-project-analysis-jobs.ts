@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   analyzeProjectFile,
   getProjectAnalysisJob,
+  interpretCapability,
   listProjectAnalysisJobs,
   runProjectAnalysis,
   type ProjectAnalysisJob,
@@ -104,12 +105,23 @@ export function useProjectAnalysisJobs(projectId: string) {
     return job;
   }
 
+  async function enqueueCapabilityInterpret(capabilityFact: string) {
+    const session = readSession();
+    if (!session || !projectId) {
+      throw new Error("登录状态或项目无效");
+    }
+    const job = await interpretCapability(session.accessToken, projectId, capabilityFact);
+    setJobs((current) => mergeJobs(current, [job]));
+    return job;
+  }
+
   return {
     jobs,
     loadingJobs,
     jobError,
     enqueueProjectAnalysis,
     enqueueFileAnalysis,
+    enqueueCapabilityInterpret,
   };
 }
 

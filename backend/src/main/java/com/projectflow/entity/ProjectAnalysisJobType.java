@@ -2,5 +2,6 @@ package com.projectflow.entity;
 
 public enum ProjectAnalysisJobType {
     PROJECT,
-    FILE
+    FILE,
+    CAPABILITY_INTERPRET
 }

@@ -13,6 +13,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisJobResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisResponse;
@@ -80,6 +81,21 @@ public class ProjectAnalysisJobService {
         return toResponse(result.job());
     }
 
+    public ProjectAnalysisJobResponse startCapabilityInterpret(UUID userId, UUID projectId, String capabilityFact) {
+        String fact = capabilityFact == null ? "" : capabilityFact.trim();
+        StartJobResult result = transactionTemplate.execute(status -> {
+            findOwnedProject(userId, projectId);
+            java.util.Optional<ProjectAnalysisJob> active = activeJob(projectId, ProjectAnalysisJobType.CAPABILITY_INTERPRET, fact);
+            return active
+                .map(job -> new StartJobResult(job, false))
+                .orElseGet(() -> new StartJobResult(jobRepository.save(new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.CAPABILITY_INTERPRET, fact)), true));
+        });
+        if (result.created()) {
+            jobRunner.execute(result.job().getId());
+        }
+        return toResponse(result.job());
+    }
+
     @Transactional(readOnly = true)
     public ProjectAnalysisJobResponse getJob(UUID userId, UUID jobId) {
         return toResponse(findOwnedJob(userId, jobId));
@@ -127,6 +143,7 @@ public class ProjectAnalysisJobService {
     private ProjectAnalysisJobResponse toResponse(ProjectAnalysisJob job) {
         ProjectAnalysisResponse projectResult = null;
         ProjectFileAnalysisResponse fileResult = null;
+        CapabilityInterpretResponse capabilityInterpretResult = null;
         String errorMessage = job.getErrorMessage();
         if (job.getResultJson() != null && !job.getResultJson().isBlank()) {
             try {
@@ -136,6 +153,8 @@ public class ProjectAnalysisJobService {
                         projectResult = null;
                         errorMessage = "旧分析结果包含 .codex-run、old-git 或 Git 内部对象，已失效；请重新分析。";
                     }
+                } else if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_INTERPRET) {
+                    capabilityInterpretResult = objectMapper.readValue(job.getResultJson(), CapabilityInterpretResponse.class);
                 } else {
                     fileResult = objectMapper.readValue(job.getResultJson(), ProjectFileAnalysisResponse.class);
                     if (containsProjectNoise(fileResult)) {
@@ -155,6 +174,7 @@ public class ProjectAnalysisJobService {
             job.getStatus(),
             projectResult,
             fileResult,
+            capabilityInterpretResult,
             errorMessage,
             job.getRecordId(),
             job.getCreatedAt(),

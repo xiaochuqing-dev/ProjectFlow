@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretRequest;
+import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisResponse;
@@ -27,6 +29,7 @@ public class ProjectAnalysisJobRunner {
     private final ModelUsageRecordRepository modelUsageRecordRepository;
     private final ProjectAnalysisService projectAnalysisService;
     private final ProjectAnalysisRecordService projectAnalysisRecordService;
+    private final ProjectMemoryService projectMemoryService;
     private final ObjectMapper objectMapper;
 
     public ProjectAnalysisJobRunner(
@@ -34,12 +37,14 @@ public class ProjectAnalysisJobRunner {
         ModelUsageRecordRepository modelUsageRecordRepository,
         ProjectAnalysisService projectAnalysisService,
         ProjectAnalysisRecordService projectAnalysisRecordService,
+        ProjectMemoryService projectMemoryService,
         ObjectMapper objectMapper
     ) {
         this.jobRepository = jobRepository;
         this.modelUsageRecordRepository = modelUsageRecordRepository;
         this.projectAnalysisService = projectAnalysisService;
         this.projectAnalysisRecordService = projectAnalysisRecordService;
+        this.projectMemoryService = projectMemoryService;
         this.objectMapper = objectMapper;
     }
 
@@ -61,6 +66,15 @@ public class ProjectAnalysisJobRunner {
                 String resultJson = objectMapper.writeValueAsString(result);
                 markSucceeded(jobId, resultJson, recordId);
                 recordUsage(job, "PROJECT_ANALYSIS", result.providerName(), result.modelUsed(), resultJson, startedAt);
+            } else if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_INTERPRET) {
+                CapabilityInterpretResponse result = projectMemoryService.interpretCapability(
+                    job.getUserId(),
+                    job.getProjectId(),
+                    new CapabilityInterpretRequest(job.getFilePath() == null ? "" : job.getFilePath())
+                );
+                String resultJson = objectMapper.writeValueAsString(result);
+                markSucceeded(jobId, resultJson, null);
+                recordUsage(job, "CAPABILITY_INTERPRET", result.source(), !result.degraded(), resultJson, startedAt);
             } else {
                 ProjectFileAnalysisResponse result = projectAnalysisService.analyzeProjectFile(
                     job.getUserId(),
@@ -120,7 +134,7 @@ public class ProjectAnalysisJobRunner {
     private void recordFailedUsage(ProjectAnalysisJob job, Exception exception, long startedAt) {
         modelUsageRecordRepository.save(new ModelUsageRecord(
             job.getProjectId(),
-            job.getJobType() == ProjectAnalysisJobType.PROJECT ? "PROJECT_ANALYSIS" : "FILE_ANALYSIS",
+            job.getJobType() == ProjectAnalysisJobType.PROJECT ? "PROJECT_ANALYSIS" : job.getJobType() == ProjectAnalysisJobType.CAPABILITY_INTERPRET ? "CAPABILITY_INTERPRET" : "FILE_ANALYSIS",
             "unknown",
             "unknown",
             0,
