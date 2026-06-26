@@ -118,8 +118,21 @@ export function ChangeReviewList(props: ChangeReviewListProps) {
           </div>
         ) : null}
         {!props.loading && props.pendingChanges.length === 0 && props.pendingSuggestions.length === 0 ? (
-          <div className="grid min-h-80 place-items-center p-8 text-center text-sm text-muted">
-            暂无待确认变更。回到工作台扫描 agent result 或导入项目 zip 后，这里会集中处理候选事实、风险、决策和成果素材。
+          <div className="grid place-items-center gap-4 p-10 text-center">
+            <div>
+              <p className="text-base font-semibold text-slate-950">暂无待确认开发成果</p>
+              <p className="mt-2 text-sm leading-6 text-muted">先回到工作台刷新今日开发，让 ProjectFlow 把 Git 变化和 Agent 写回整理成待确认成果。</p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link className="inline-flex items-center gap-1.5 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800" href="/dashboard">
+                <RefreshCw className="h-4 w-4" />
+                回到工作台刷新今日开发
+              </Link>
+              <Link className="inline-flex items-center gap-1.5 rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" href="/project-intelligence">
+                查看已确认项目资产
+              </Link>
+            </div>
+            <p className="max-w-md text-xs leading-5 text-muted">也可以在工作台的 Agent 高级设置中扫描 Agent 写回内容，或在项目理解页重新运行项目理解来产生新的候选。</p>
           </div>
         ) : null}
         {props.loading || props.loadingProjects ? <div className="h-1 bg-slate-950" /> : null}

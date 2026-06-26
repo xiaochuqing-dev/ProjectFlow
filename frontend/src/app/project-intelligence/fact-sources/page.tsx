@@ -24,7 +24,7 @@ const fieldLabels: Record<string, string> = {
 
 export default function FactSourcesPage() {
   return (
-    <Suspense fallback={<AppShell eyebrow="项目档案可信来源" title="字段来源链"><div className="min-h-[calc(100vh-4rem)] bg-surface p-6"><div className="h-1 bg-slate-950" /></div></AppShell>}>
+    <Suspense fallback={<AppShell eyebrow="项目资产可信来源" title="可信依据"><div className="min-h-[calc(100vh-4rem)] bg-surface p-6"><div className="h-1 bg-slate-950" /></div></AppShell>}>
       <FactSourcesPageContent />
     </Suspense>
   );
@@ -50,7 +50,7 @@ function FactSourcesPageContent() {
   useEffect(() => {
     const session = readSession();
     if (!session) {
-      setError("请先登录后再查看字段来源链。");
+      setError("请先登录后再查看可信依据。");
       setLoading(false);
       return;
     }
@@ -75,12 +75,12 @@ function FactSourcesPageContent() {
         setSources(items);
         setActiveField(items[0]?.fieldKey ?? "");
       })
-      .catch((exception) => setError(exception instanceof Error ? exception.message : "字段来源加载失败"))
+      .catch((exception) => setError(exception instanceof Error ? exception.message : "可信依据加载失败"))
       .finally(() => setLoading(false));
   }, [selectedProjectId]);
 
   return (
-    <AppShell eyebrow="项目档案可信来源" title={project ? `${project.name} · 字段来源链` : "字段来源链"}>
+    <AppShell eyebrow="项目资产可信来源" title={project ? `${project.name} · 可信依据` : "可信依据"}>
       <div className="min-h-[calc(100vh-4rem)] bg-surface p-6">
         <section className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-white p-4 shadow-panel">
           <div>
@@ -88,11 +88,11 @@ function FactSourcesPageContent() {
               <ArrowLeft className="h-4 w-4" />
               返回上一步
             </button>
-            <h2 className="text-xl font-semibold text-slate-950">字段来源链</h2>
-            <p className="mt-1 text-sm text-muted">解释项目档案字段为什么可信。</p>
+            <h2 className="text-xl font-semibold text-slate-950">可信依据</h2>
+            <p className="mt-1 text-sm text-muted">查看项目资产从哪里来，哪些内容经过用户确认。</p>
           </div>
           <Link className="rounded-md border border-line px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" href={`/project-intelligence?projectId=${selectedProjectId}`}>
-            回到项目画像
+            回到项目理解
           </Link>
         </section>
 
@@ -115,13 +115,13 @@ function FactSourcesPageContent() {
                   <span>{fieldLabels[field] ?? field}</span>
                   <span>{sources.filter((source) => source.fieldKey === field).length}</span>
                 </button>
-              )) : <p className="p-2 text-sm text-muted">暂无字段来源。</p>}
+              )) : <p className="p-2 text-sm text-muted">暂无可信依据字段。</p>}
             </div>
           </aside>
 
           <div className="rounded-md border border-line bg-white shadow-panel">
             <ResourceTimeline
-              emptyText="保存项目档案或采纳变更后会生成字段来源。"
+              emptyText="保存项目资产或采纳变更后会生成可信依据。"
               items={sourceItems}
               title={`${fieldLabels[selectedField] ?? (selectedField || "字段来源")} · ${selectedSources.length} 条`}
             />
@@ -141,7 +141,6 @@ function toFactSourceItem(source: ProjectFactSource): ResourceTimelineItem {
     type: source.sourceType,
     status: source.confirmedByUser ? "已确认" : "待确认",
     source: source.sourceType,
-    meta: source.sourceId ? `sourceId: ${source.sourceId}` : undefined,
     detail: [
       `字段：${fieldLabels[source.fieldKey] ?? source.fieldKey}`,
       `置信度：${source.confidence}`,

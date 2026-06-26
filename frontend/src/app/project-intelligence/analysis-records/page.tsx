@@ -78,7 +78,7 @@ function AnalysisRecordsPageContent() {
             <p className="mt-1 text-sm text-muted">项目分析和文件分析的历史结果。</p>
           </div>
           <Link className="rounded-md border border-line px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" href={`/project-intelligence?projectId=${selectedProjectId}`}>
-            回到项目画像
+            回到项目理解
           </Link>
         </section>
 

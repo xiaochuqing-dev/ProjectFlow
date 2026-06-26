@@ -116,7 +116,7 @@ export default function ProjectChangeEvidencePage() {
               <Card shadow="card" padding="md">
                 <h3 className="font-semibold text-slate-950">追溯说明</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  审查页用于判断是否采纳；本页用于事后核查完整证据。这里可以很长，但不会挤占变更列表和项目档案入口。
+                  审查页用于判断是否采纳；本页用于事后核查完整证据。这里可以很长，但不会挤占变更列表和项目资产入口。
                 </p>
               </Card>
               <Card shadow="card" padding="md">

@@ -61,7 +61,7 @@ export default function AnalysisRecordDetailPage() {
           <div className="min-w-0">
             <Link className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-slate-600 hover:text-slate-950" href="/project-intelligence">
               <ArrowLeft className="h-4 w-4" />
-              返回项目画像
+              返回项目理解
             </Link>
             <h2 className="truncate text-lg font-semibold text-slate-950">
               {record ? recordTitle(record) : "分析记录"}
@@ -129,7 +129,7 @@ export default function AnalysisRecordDetailPage() {
                   <h3 className="font-semibold text-slate-950">处理原则</h3>
                 </div>
                 <p className="text-sm leading-6 text-slate-600">
-                  这条记录是分析结果，不会自动覆盖项目档案。需要进入项目画像页手动确认后，才应成为后续回顾、成果输出或 agent 上下文的正式来源。
+                  这条记录是分析结果，不会自动覆盖项目资产。需要进入项目理解页手动确认后，才应成为后续回顾、成果输出或 agent 上下文的正式来源。
                 </p>
               </div>
             </aside>

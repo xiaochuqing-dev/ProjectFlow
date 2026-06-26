@@ -124,7 +124,7 @@ function DailySourcesPageContent() {
         {loading ? <div className="h-1 bg-slate-950" /> : null}
 
         <ResourceTimeline
-          emptyText="当天还没有可用于每日回顾的来源。保存开发日志、采纳变更或确认项目档案后会出现在这里。"
+          emptyText="当天还没有可用于每日回顾的来源。保存开发日志、采纳变更或确认项目资产后会出现在这里。"
           items={sourceItems}
           title={`每日回顾来源 · ${sourceItems.length} 条`}
         />

@@ -165,6 +165,9 @@ export default function DevLogsPage() {
               </button>
             </div>
             <div className="space-y-4 p-5">
+              <p className="rounded-md border border-line bg-slate-50 p-3 text-xs leading-5 text-muted">
+                保存后会成为成果输出和经验沉淀的来源；进入正式项目资产仍需要在开发成果审查或项目资产页确认。
+              </p>
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-slate-700">标题</span>
                 <input
@@ -214,8 +217,8 @@ export default function DevLogsPage() {
             />
             <SourcePanel
               icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
-              title="任务证据"
-              empty="暂无任务证据。"
+              title="开发证据"
+              empty="暂无开发证据。"
               items={[
                 ...completedTasks.slice(0, 4).map((task) => `已完成：${task.title}`),
                 ...activeTasks.slice(0, 4).map((task) => `进行中：${task.title}`),
@@ -373,7 +376,7 @@ ${memory?.currentRisks || "暂无已确认风险。"}
 技术决策：
 ${memory?.technicalDecisions || "暂无技术决策。"}
 
-## 项目档案更新
+## 项目资产更新
 已完成能力：
 ${memory?.completedCapabilities || "暂无已确认能力。"}
 

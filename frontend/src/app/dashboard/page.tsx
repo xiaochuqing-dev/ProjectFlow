@@ -553,22 +553,22 @@ export default function DashboardPage() {
           <InteractiveStat
             active={statsFocus === "materials"}
             hint={hasUsableProjectZip ? `${paths.length} 个文件信号` : "暂无源码结构"}
-            label="项目材料"
+            label="项目资料"
             onClick={() => setStatsFocus(statsFocus === "materials" ? "" : "materials")}
             value={materials.length}
           />
           <InteractiveStat
             active={statsFocus === "changes"}
             hint="去开发成果审查"
-            label="待确认变更"
+            label="待确认成果"
             onClick={() => setStatsFocus(statsFocus === "changes" ? "" : "changes")}
             tone={pendingReviewCount ? "warning" : "slate"}
             value={pendingReviewCount}
           />
           <InteractiveStat
             active={statsFocus === "sessions"}
-            hint="Work Session"
-            label="今日候选"
+            hint="今日开发记录"
+            label="今日开发记录"
             onClick={() => setStatsFocus(statsFocus === "sessions" ? "" : "sessions")}
             tone={todaySessions.length ? "brand" : "slate"}
             value={todaySessions.length}
@@ -576,7 +576,7 @@ export default function DashboardPage() {
           <InteractiveStat
             active={statsFocus === "tasks"}
             hint={memory?.currentStage || selectedProject?.status || "—"}
-            label="进行中任务"
+            label="下一步任务"
             onClick={() => setStatsFocus(statsFocus === "tasks" ? "" : "tasks")}
             value={activeTasks.length}
           />
