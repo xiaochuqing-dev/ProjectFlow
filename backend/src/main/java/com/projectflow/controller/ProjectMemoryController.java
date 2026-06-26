@@ -6,7 +6,6 @@ import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,8 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.projectflow.dto.ApiResponse;
 import com.projectflow.dto.AuthDtos.AuthUser;
-import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretRequest;
-import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFactSourceResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectLocalPathRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectMemoryResponse;
@@ -72,15 +69,5 @@ public class ProjectMemoryController {
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
         return ApiResponse.ok(projectMemoryService.updateLocalProjectPath(user.id(), projectId, request));
-    }
-
-    @PostMapping("/projects/{projectId}/memory/capabilities/interpret")
-    ApiResponse<CapabilityInterpretResponse> interpretCapability(
-        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @PathVariable UUID projectId,
-        @Valid @RequestBody CapabilityInterpretRequest request
-    ) {
-        AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(projectMemoryService.interpretCapability(user.id(), projectId, request));
     }
 }

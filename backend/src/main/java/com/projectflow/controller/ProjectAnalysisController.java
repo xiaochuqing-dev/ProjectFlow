@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.projectflow.dto.ApiResponse;
 import com.projectflow.dto.AuthDtos.AuthUser;
 import com.projectflow.dto.V2ProjectDtos.AnalyzeMaterialResponse;
+import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisJobResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisRecordResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisRequest;
@@ -62,6 +63,16 @@ public class ProjectAnalysisController {
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
         return ApiResponse.ok(projectAnalysisJobService.startFileAnalysis(user.id(), projectId, request.path()));
+    }
+
+    @PostMapping("/projects/{projectId}/capabilities/interpret")
+    ApiResponse<ProjectAnalysisJobResponse> interpretCapability(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId,
+        @Valid @RequestBody CapabilityInterpretRequest request
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectAnalysisJobService.startCapabilityInterpret(user.id(), projectId, request.capabilityFact()));
     }
 
     @GetMapping("/analysis-jobs/{jobId}")
