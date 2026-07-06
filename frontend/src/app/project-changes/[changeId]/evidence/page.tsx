@@ -33,6 +33,11 @@ export default function ProjectChangeEvidencePage() {
   }, [params.changeId]);
 
   const fileGroups = useMemo(() => groupFilesByModule(parseAffectedFiles(change?.affectedFiles ?? "")), [change?.affectedFiles]);
+  const gitEvidence = useMemo(() => {
+    if (!change) return "";
+    const refs = change.evidenceRefs.filter((ref) => ref.startsWith("commit:") || ref.startsWith("file:") || ref.startsWith("url:"));
+    return refs.join("\n");
+  }, [change]);
 
   async function copyPath(path: string) {
     try {
@@ -105,7 +110,8 @@ export default function ProjectChangeEvidencePage() {
                 </div>
               </Card>
 
-              <EvidenceSection title="Git evidence" value={change.details} />
+              <EvidenceSection title="主要变化" value={change.details} />
+              <EvidenceSection title="Git 证据" value={gitEvidence} />
               <EvidenceSection title="测试证据" value={change.testEvidence} />
               <EvidenceSection title="构建证据" value={change.buildEvidence} />
               <EvidenceSection title="风险备注" value={change.riskNotes} />

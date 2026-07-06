@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -23,7 +24,12 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.projectflow.entity.ProjectChange;
+import com.projectflow.entity.ProjectChangeImpactLevel;
+import com.projectflow.entity.ProjectChangeKind;
+import com.projectflow.entity.ProjectChangeSourceType;
 import com.projectflow.repository.ProjectReviewCursorRepository;
+import com.projectflow.repository.ProjectChangeRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -35,6 +41,8 @@ class ProjectSedimentControllerTest {
     private ObjectMapper objectMapper;
     @Autowired
     private ProjectReviewCursorRepository cursorRepository;
+    @Autowired
+    private ProjectChangeRepository changeRepository;
 
     @Test
     void confirmsFourActionsAndAdvancesCursorOnlyAfterTheBatchIsResolved() throws Exception {
@@ -90,6 +98,29 @@ class ProjectSedimentControllerTest {
             .andExpect(jsonPath("$.data", hasSize(1)));
         assertThat(cursorRepository.findByProjectId(UUID.fromString(projectId))).get()
             .extracting(cursor -> cursor.getLastReviewedCommitSha()).isEqualTo(run(root, "git", "rev-parse", "HEAD").trim());
+
+        JsonNode cards = body(mockMvc.perform(post("/api/projects/" + projectId + "/capabilities/analyze")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].status").value("CANDIDATE"))
+            .andExpect(jsonPath("$.data[0].evidenceRefs[0]").isNotEmpty())
+            .andReturn()).path("data");
+        assertThat(cards.size()).isBetween(3, 8);
+
+        String confirmedCardId = cards.get(0).path("id").asText();
+        String untouchedCardId = cards.get(1).path("id").asText();
+        mockMvc.perform(patch("/api/capability-cards/" + confirmedCardId)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"action\":\"CONFIRM\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/capability-cards")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[?(@.id == '" + confirmedCardId + "')].status").value("CONFIRMED"))
+            .andExpect(jsonPath("$.data[?(@.id == '" + untouchedCardId + "')].status").value("CANDIDATE"));
     }
 
     @Test
@@ -110,6 +141,37 @@ class ProjectSedimentControllerTest {
         mockMvc.perform(get("/api/projects/" + projectId + "/sediments").header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data", hasSize(1)));
+    }
+
+    @Test
+    void confirmEndpointCanIgnoreLegacyProjectChanges() throws Exception {
+        String token = register();
+        String projectId = createProject(token);
+        ProjectChange change = new ProjectChange(UUID.fromString(projectId), null);
+        change.update(
+            ProjectChangeSourceType.USER_MANUAL,
+            "manual",
+            null,
+            ProjectChangeKind.DOCS,
+            ProjectChangeImpactLevel.MINOR,
+            "旧版候选",
+            "旧版候选摘要",
+            "",
+            "README.md",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+        );
+        change = changeRepository.save(change);
+
+        confirm(token, change.getId().toString(), "IGNORE", null)
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.changeStatus").value("IGNORED"))
+            .andExpect(jsonPath("$.data.batchStatus").value("LEGACY_CHANGE"));
     }
 
     private org.springframework.test.web.servlet.ResultActions confirm(String token, String changeId, String action, String targetId) throws Exception {

@@ -5,6 +5,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -46,10 +48,10 @@ class ModelSegmentEnricherTest {
         when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenReturn(objectMapper.readTree("""
             {
               "segments": [{
-                "segmentTitle": "扫描游标",
-                "plainSummary": "从确认点读取新变化。",
+                "segmentTitle": "新增扫描游标并从确认点读取变化",
+                "plainSummary": "新增扫描游标，从最后确认点读取新变化并保留证据。",
                 "includedAtomIds": ["real", "invented"],
-                "mainChanges": ["新增扫描游标"],
+                "mainChanges": ["新增扫描游标", "从确认点读取提交", "保留提交与文件证据"],
                 "userVisibleValue": "避免漏掉跨天提交。",
                 "evidenceRefs": ["commit:real", "commit:invented"],
                 "affectedFiles": ["backend/Scan.java", "missing.java"],
@@ -109,6 +111,31 @@ class ModelSegmentEnricherTest {
 
         assertThat(enricher.enrich(userId, atoms(), fallback(), warnings)).isEqualTo(fallback());
         assertThat(warnings).singleElement().asString().contains("模型归并失败");
+    }
+
+    @Test
+    void lowQualityModelOutputRetriesThenReportsExplicitFallback() throws Exception {
+        UUID userId = UUID.randomUUID();
+        when(providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)).thenReturn(List.of(provider(userId)));
+        when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenReturn(objectMapper.readTree("""
+            {"segments":[{
+              "segmentTitle":"backend 开发推进","plainSummary":"这一组变化围绕 backend 展开，共包含 1 条原子变化。",
+              "includedAtomIds":["real"],"mainChanges":["修改后端"],"userVisibleValue":"相关能力已归并",
+              "evidenceRefs":["commit:real"],"affectedFiles":["backend/Scan.java"],"confidence":"LOW","needsUserReview":true
+            }]}
+            """));
+        ModelSegmentEnricher enricher = new ModelSegmentEnricher(
+            providerRepository, modelGatewayService, new SegmentEvidenceValidator(), new com.projectflow.service.SegmentQualityGate()
+        );
+
+        var result = enricher.enrichWithDiagnostics(userId, atoms(), fallback());
+
+        assertThat(result.segments()).isEqualTo(fallback());
+        assertThat(result.mode()).isEqualTo("LOCAL_RULE");
+        assertThat(result.modelStatus()).isEqualTo("QUALITY_REJECTED");
+        assertThat(result.providerName()).isEqualTo("DeepSeek");
+        assertThat(result.fallbackReason()).contains("质量");
+        verify(modelGatewayService, times(2)).callJson(any(), anyString(), anyInt());
     }
 
     private AiProvider provider(UUID userId) {

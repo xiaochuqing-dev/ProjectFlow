@@ -3,7 +3,7 @@
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  GitPullRequestArrow,
+  Trash2,
   RefreshCw,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -13,10 +13,8 @@ import { Badge, ProjectContextBar, Toast } from "@/components/ui";
 import { useAutoDismissNotice } from "@/hooks/useAutoDismissNotice";
 import { useProjectSelection } from "@/hooks/useProjectSelection";
 import {
-  acceptProjectChange,
   confirmProjectChange,
   applyAiSuggestions,
-  ignoreProjectChange,
   listAiSuggestions,
   listProjectChanges,
   listProjectMaterials,
@@ -177,11 +175,29 @@ function TasksPageContent() {
     setError("");
     setNotice("");
     try {
-      await Promise.all(ids.map((id) => acceptProjectChange(session.accessToken, id)));
+      await Promise.all(ids.map((id) => confirmProjectChange(session.accessToken, id, "NEW_SEDIMENT", null)));
       setNotice(`已确认 ${ids.length} 条兼容待确认内容，已写入项目沉淀和可信依据。`);
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "确认兼容候选失败");
+    } finally {
+      setApplying(false);
+    }
+  }
+
+  async function handleIgnoreSelected() {
+    const session = readSession();
+    if (!session || !selectedProjectId || selectedChangeIds.length === 0) return;
+    setApplying(true);
+    setError("");
+    try {
+      const selected = changes.filter((item) => selectedChangeIds.includes(item.id));
+      await Promise.all(selected.map((item) => confirmProjectChange(session.accessToken, item.id, "IGNORE", null)));
+      setNotice(`已忽略 ${selected.length} 条选中建议；原始证据仍保留。`);
+      setSelectedChangeIds([]);
+      await refreshProjectContext(selectedProjectId);
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "批量忽略失败");
     } finally {
       setApplying(false);
     }
@@ -217,7 +233,7 @@ function TasksPageContent() {
     setError("");
     setNotice("");
     try {
-      await ignoreProjectChange(session.accessToken, id);
+      await confirmProjectChange(session.accessToken, id, "IGNORE", null);
       setNotice("建议沉淀已忽略。");
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
@@ -230,19 +246,12 @@ function TasksPageContent() {
   async function handleConfirmChange(changeId: string, action: SedimentAction, targetSedimentId: string | null) {
     const session = readSession();
     if (!session || !selectedProjectId) return;
-    const change = changes.find((item) => item.id === changeId);
     setApplying(action !== "IGNORE");
     setIgnoringId(action === "IGNORE" ? changeId : "");
     setError("");
     setNotice("");
     try {
-      if (change?.developmentSegmentId) {
-        await confirmProjectChange(session.accessToken, changeId, action, targetSedimentId);
-      } else if (action === "IGNORE") {
-        await ignoreProjectChange(session.accessToken, changeId);
-      } else {
-        await acceptProjectChange(session.accessToken, changeId);
-      }
+      await confirmProjectChange(session.accessToken, changeId, action, targetSedimentId);
       setNotice(action === "IGNORE" ? "建议已忽略。" : "建议已确认并写入项目沉淀。");
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
@@ -273,11 +282,11 @@ function TasksPageContent() {
             <button
               className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
               disabled={applying || selectedChangeIds.length === 0}
-              onClick={() => handleAcceptChanges()}
+              onClick={handleIgnoreSelected}
               type="button"
             >
-              {applying ? <RefreshCw className="h-4 w-4 animate-spin" /> : <GitPullRequestArrow className="h-4 w-4" />}
-              新建选中 {selectedChangeIds.length}
+              {applying ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              忽略选中 {selectedChangeIds.length}
             </button>
           )}
           leadingExtras={(

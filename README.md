@@ -1,10 +1,18 @@
 # ProjectFlow
 
-ProjectFlow V3.3 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+ProjectFlow V3.3.2 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+
+## V3.3.2 Analysis Quality
+
+- Development segments describe concrete results, user/developer-visible behavior, affected scope, evidence, and uncertainty. A backend quality gate rejects directory-level or count-only summaries.
+- Scans persist a fingerprint from the review boundary, local HEAD, worktree state, atom IDs, prompt version, model configuration, and remote state. An unchanged fingerprint reuses the existing batch.
+- The workbench exposes model status, fallback reason, worktree state, GitHub state, Agent result count, remote relation, commit links, and scan timings.
+- GitHub CLI is optional enrichment. Missing installation/login/upstream, permission failures, proxy/network timeouts, and fetch failures degrade quickly to local Git analysis.
+- **分析项目能力** analyzes the whole confirmed project evidence set and creates independent structured capability cards. Legacy `completedCapabilities` remains a collapsed compatibility field only.
 
 It is built for developers who use agents such as Codex, Claude Code, or other coding assistants to modify real projects and then need a clear way to understand what changed, review the evidence, maintain a project profile, and generate reusable output such as daily reviews, README material, reports, and resume-ready summaries.
 
-## V3.3 Workflow
+## V3.3.2 Workflow
 
 ProjectFlow is not a Kanban board, daily-report generator, or hosted PR/CI system. Its primary workflow is:
 
@@ -19,7 +27,7 @@ The governing rule is: rules collect facts, models interpret, rules validate, an
 
 Local Git is the primary data source. Agent result files are an enhancement that adds task intent, verification, and unfinished work. GitHub CLI is an optional enhancement for repository metadata and commit links; missing installation, login, or remote access never blocks local Git analysis, and ProjectFlow does not read or store GitHub tokens.
 
-数据源边界：本地 Git 是主数据源；Agent result 是增强数据源；GitHub CLI 是可选增强数据源。V3.3 不再以“今日开发”为主边界。
+数据源边界：本地 Git 是主数据源；Agent result 是增强数据源；GitHub CLI 是可选增强数据源。V3.3.2 不再以“今日开发”为主边界。
 
 ## Core Concepts
 
@@ -72,7 +80,7 @@ ProjectFlow/
 +-- .projectflow/             local agent protocol/context/runtime data
 +-- docker-compose.yml        PostgreSQL and Redis mode
 +-- .env.example              repo-safe environment template
-+-- start.bat                 simple V3.3 Windows entry
++-- start.bat                 simple V3.3.2 Windows entry
 +-- start-projectflow.bat     embedded Windows launcher
 +-- start-projectflow.ps1     Docker/team startup orchestration
 `-- README.md
@@ -142,7 +150,9 @@ Important endpoint groups:
 - `/api/projects/{projectId}/changes`
 - `/api/project-changes/{changeId}`
 - `/api/projects/{projectId}/sediments`
-- `/api/project-changes/{changeId}/confirm-sediment`
+- `/api/project-changes/{changeId}/confirm`
+- `/api/projects/{projectId}/capabilities/analyze`
+- `/api/projects/{projectId}/capability-cards`
 - `/api/projects/{projectId}/agent-bridge/health`
 - `/api/projects/{projectId}/github/status`
 - `/api/projects/{projectId}/fact-sources`

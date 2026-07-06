@@ -27,7 +27,19 @@ public final class V33WorkflowDtos {
         int segmentCount,
         String status,
         List<String> warnings,
-        boolean firstScan
+        boolean firstScan,
+        String scanFingerprint,
+        boolean worktreeDirty,
+        String githubStatus,
+        String remoteRelation,
+        String segmentationMode,
+        String modelStatus,
+        String modelProvider,
+        String fallbackReason,
+        long gitScanMs,
+        long modelSegmentMs,
+        long githubInspectMs,
+        long totalScanMs
     ) {
     }
 
@@ -46,7 +58,14 @@ public final class V33WorkflowDtos {
         String confidence,
         String status,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String generationMode,
+        String modelProvider,
+        String fallbackReason,
+        String qualityStatus,
+        String qualityReason,
+        List<String> commitUrls,
+        List<String> uncertainties
     ) {
     }
 
@@ -85,6 +104,35 @@ public final class V33WorkflowDtos {
     ) {
     }
 
+    public record CapabilityCardResponse(
+        UUID id,
+        UUID projectId,
+        String name,
+        String summary,
+        String problemSolved,
+        String featureEntry,
+        List<String> sourceRefs,
+        List<String> evidenceRefs,
+        String readmeExpression,
+        String resumeExpression,
+        String interviewExpression,
+        String status,
+        String generationMode,
+        String modelProvider,
+        String fallbackReason,
+        Instant createdAt,
+        Instant updatedAt
+    ) {
+    }
+
+    public record CapabilityCardPatchRequest(@NotNull CapabilityCardAction action) {
+    }
+
+    public enum CapabilityCardAction {
+        CONFIRM,
+        IGNORE
+    }
+
     public record AgentBridgeHealthResponse(
         boolean pathAccessible,
         boolean sameGitRepository,
@@ -110,6 +158,10 @@ public final class V33WorkflowDtos {
         String primaryLanguage,
         String remoteUrl,
         String commitUrlTemplate,
+        String status,
+        String remoteRelation,
+        int localAhead,
+        int remoteAhead,
         List<String> warnings
     ) {
     }
