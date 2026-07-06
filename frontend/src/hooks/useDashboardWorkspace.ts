@@ -26,6 +26,9 @@ export function workSessionListResult(projectId: string, projectPath: string, se
     scannedAt: new Date().toISOString(),
     sessions,
     warnings: [],
+    batch: null,
+    segments: [],
+    firstScan: false,
   };
 }
 

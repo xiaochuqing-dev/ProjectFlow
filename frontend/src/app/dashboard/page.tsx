@@ -15,7 +15,7 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { ArchitectureQuickEntry } from "@/components/dashboard/ArchitectureQuickEntry";
-import { EvidenceFlowPanel } from "@/components/dashboard/EvidenceFlowPanel";
+import { PendingChangesPanel } from "@/components/dashboard/PendingChangesPanel";
 import { FlowGuideDialog } from "@/components/dashboard/FlowGuideDialog";
 import { InteractiveStat, MiniFact, StatsFocusPanel } from "@/components/dashboard/DashboardStats";
 import { ProjectAccessCard, ZipImportPanel } from "@/components/dashboard/ProjectAccessCard";
@@ -34,8 +34,6 @@ import {
 } from "@/components/ui";
 import {
   deleteProject,
-  createEvidenceBundle,
-  draftProjectChangeFromEvidenceBundle,
   getProjectMemory,
   importProjectZip,
   listAiOutputs,
@@ -104,8 +102,6 @@ export default function DashboardPage() {
   const [scanningWorkSessions, setScanningWorkSessions] = useState(false);
   const [syncingContext, setSyncingContext] = useState(false);
   const [scanningAgentResults, setScanningAgentResults] = useState(false);
-  const [creatingEvidenceFor, setCreatingEvidenceFor] = useState("");
-  const [draftingChangeFor, setDraftingChangeFor] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const { beginContextRequest, isLatestContextRequest } = useDashboardWorkspace();
@@ -414,51 +410,11 @@ export default function DashboardPage() {
       const result = await scanProjectWorkSessions(session.accessToken, selectedProjectId);
       setWorkSessionScan(result);
       setScanWarnings(result.warnings);
-      setNotice(result.sessions.length ? `已生成 ${result.sessions.length} 条今日开发候选。` : "今天暂未发现可归因的 Git 变化。");
+      setNotice(result.segments.length ? `已归并为 ${result.segments.length} 个开发推进段。` : "当前没有待整理变更。");
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "今日变化扫描失败");
+      setError(exception instanceof Error ? exception.message : "新变化分析失败");
     } finally {
       setScanningWorkSessions(false);
-    }
-  }
-
-  async function handleCreateEvidenceBundle(sessionId: string) {
-    const session = readSession();
-    if (!session || !selectedProjectId) {
-      return;
-    }
-
-    setCreatingEvidenceFor(sessionId);
-    setError("");
-    setNotice("");
-    try {
-      const bundle = await createEvidenceBundle(session.accessToken, sessionId);
-      setNotice(`证据包已生成：${bundle.changedFiles} 个文件，下一步生成候选变更。`);
-      await refreshProjectContext(selectedProjectId);
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "证据包生成失败");
-    } finally {
-      setCreatingEvidenceFor("");
-    }
-  }
-
-  async function handleDraftChangeFromEvidence(bundleId: string) {
-    const session = readSession();
-    if (!session || !selectedProjectId) {
-      return;
-    }
-
-    setDraftingChangeFor(bundleId);
-    setError("");
-    setNotice("");
-    try {
-      await draftProjectChangeFromEvidenceBundle(session.accessToken, bundleId);
-      setNotice("已从原始依据生成待确认内容。下一步进入开发成果审查，采纳后会写入项目资产和可信依据。");
-      await refreshProjectContext(selectedProjectId);
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "候选变更生成失败");
-    } finally {
-      setDraftingChangeFor("");
     }
   }
 
@@ -482,7 +438,7 @@ export default function DashboardPage() {
   }
 
   async function handleCopyGlobalRule() {
-    const rule = globalRule || "If the current project root contains `.projectflow/agent-protocol.md`, read it before work. After finishing development work, write a ProjectFlow Agent Result to `.projectflow/inbox/` or the task result file. Do not directly modify ProjectFlow task state.";
+    const rule = globalRule || "ProjectFlow：开始任务前请阅读 `.projectflow/AGENT_PROTOCOL.md`，任务结束后按协议写入 `.projectflow/agent-results/`。";
     try {
       await navigator.clipboard.writeText(rule);
       setNotice("已复制全局 agent 规则。");
@@ -501,7 +457,7 @@ export default function DashboardPage() {
           </Button>
         </Link>
       }
-      eyebrow="V3.1 Core"
+      eyebrow="ProjectFlow V3.3"
       title="工作台"
     >
       <PageContainer>
@@ -559,16 +515,16 @@ export default function DashboardPage() {
           />
           <InteractiveStat
             active={statsFocus === "changes"}
-            hint="去开发成果审查"
-            label="待确认成果"
+            hint="去沉淀确认"
+            label="建议沉淀"
             onClick={() => setStatsFocus(statsFocus === "changes" ? "" : "changes")}
             tone={pendingReviewCount ? "warning" : "slate"}
             value={pendingReviewCount}
           />
           <InteractiveStat
             active={statsFocus === "sessions"}
-            hint="今日开发记录"
-            label="今日开发记录"
+            hint="待整理变更"
+            label="待整理变更"
             onClick={() => setStatsFocus(statsFocus === "sessions" ? "" : "sessions")}
             tone={todaySessions.length ? "brand" : "slate"}
             value={todaySessions.length}
@@ -628,16 +584,12 @@ export default function DashboardPage() {
               onCopyGlobalRule={handleCopyGlobalRule}
             />
 
-            <EvidenceFlowPanel
+            <PendingChangesPanel
               bundles={evidenceBundles}
-              creatingEvidenceFor={creatingEvidenceFor}
-              draftingChangeFor={draftingChangeFor}
               hasProjectPath={hasProjectPath}
-              onCreateEvidenceBundle={handleCreateEvidenceBundle}
-              onDraftChange={handleDraftChangeFromEvidence}
-              onScanWorkSessions={handleScanWorkSessions}
-              scanningWorkSessions={scanningWorkSessions}
-              selectedProjectId={selectedProjectId}
+              onScan={handleScanWorkSessions}
+              scan={workSessionScan}
+              scanning={scanningWorkSessions}
               workSessions={todaySessions}
             />
 

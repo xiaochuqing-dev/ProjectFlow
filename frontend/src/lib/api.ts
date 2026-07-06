@@ -623,7 +623,10 @@ export type ProjectChangeSourceType =
   | "PROJECT_ZIP"
   | "MATERIAL_UPDATE"
   | "USER_MANUAL"
-  | "MODEL_SUMMARY";
+  | "MODEL_SUMMARY"
+  | "DEVELOPMENT_SEGMENT";
+
+export type SedimentAction = "NEW_SEDIMENT" | "MERGE_EXISTING" | "EVIDENCE_ONLY" | "IGNORE";
 
 export type ProjectChangeStatus = "PENDING" | "EDITED" | "ACCEPTED" | "IGNORED" | "MERGED";
 
@@ -651,6 +654,35 @@ export type ProjectChange = {
   createdAt: string;
   updatedAt: string;
   reviewedAt: string | null;
+  developmentSegmentId: string | null;
+  suggestedAction: SedimentAction | null;
+  targetSedimentId: string | null;
+  problemSolved: string;
+  evidenceRefs: string[];
+  confidence: "HIGH" | "MEDIUM" | "LOW" | null;
+  needsUserReview: boolean;
+};
+
+export type ProjectSediment = {
+  id: string;
+  projectId: string;
+  title: string;
+  summary: string;
+  problemSolved: string;
+  sedimentType: string;
+  status: string;
+  sourceSegmentIds: string[];
+  evidenceRefs: string[];
+  developerNotes: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SedimentConfirmation = {
+  changeId: string;
+  changeStatus: ProjectChangeStatus;
+  sediment: ProjectSediment | null;
+  batchStatus: string;
 };
 
 export type ProjectChangePayload = {
@@ -812,6 +844,44 @@ export type WorkSessionScanResult = {
   scannedAt: string;
   sessions: WorkSessionCandidate[];
   warnings: string[];
+  batch: ChangeBatch | null;
+  segments: DevelopmentSegment[];
+  firstScan: boolean;
+};
+
+export type ChangeBatch = {
+  id: string;
+  projectId: string;
+  scanStartedAt: string;
+  scanFinishedAt: string;
+  baseCommitSha: string;
+  headCommitSha: string;
+  branchName: string;
+  newCommitCount: number;
+  changedFileCount: number;
+  agentResultCount: number;
+  segmentCount: number;
+  status: "PENDING" | "PARTIAL" | "REVIEWED" | "FAILED";
+  warnings: string[];
+  firstScan: boolean;
+};
+
+export type DevelopmentSegment = {
+  id: string;
+  projectId: string;
+  batchId: string;
+  title: string;
+  plainSummary: string;
+  mainChanges: string[];
+  userVisibleValue: string;
+  includedCommitRefs: string[];
+  includedAgentResultRefs: string[];
+  affectedFiles: string[];
+  evidenceRefs: string[];
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+  status: "PENDING" | "CONFIRMED" | "IGNORED" | "NEEDS_REVIEW";
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type EvidenceSource = {
@@ -1045,6 +1115,45 @@ export function acceptProjectChange(token: string, changeId: string): Promise<Pr
     headers: {
       Authorization: `Bearer ${token}`,
     },
+  });
+}
+
+export function confirmProjectChange(
+  token: string,
+  changeId: string,
+  action: SedimentAction,
+  targetSedimentId: string | null,
+): Promise<SedimentConfirmation> {
+  return requestJson<SedimentConfirmation>(`/project-changes/${changeId}/confirm`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ action, targetSedimentId }),
+  });
+}
+
+export function listProjectSediments(token: string, projectId: string): Promise<ProjectSediment[]> {
+  return requestJson<ProjectSediment[]>(`/projects/${projectId}/sediments`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getProjectSediment(token: string, sedimentId: string): Promise<ProjectSediment> {
+  return requestJson<ProjectSediment>(`/project-sediments/${sedimentId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function updateProjectSedimentNotes(token: string, sedimentId: string, developerNotes: string): Promise<ProjectSediment> {
+  return requestJson<ProjectSediment>(`/project-sediments/${sedimentId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ developerNotes }),
   });
 }
 
