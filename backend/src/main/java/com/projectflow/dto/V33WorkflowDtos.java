@@ -97,4 +97,20 @@ public final class V33WorkflowDtos {
         List<String> warnings
     ) {
     }
+
+    public record GitHubStatusResponse(
+        boolean ghInstalled,
+        boolean ghAuthenticated,
+        boolean repoDetected,
+        String nameWithOwner,
+        String url,
+        String defaultBranch,
+        String currentBranch,
+        String visibility,
+        String primaryLanguage,
+        String remoteUrl,
+        String commitUrlTemplate,
+        List<String> warnings
+    ) {
+    }
 }
