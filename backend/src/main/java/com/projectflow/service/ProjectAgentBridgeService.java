@@ -48,7 +48,9 @@ import com.projectflow.support.AppException;
 
 @Service
 public class ProjectAgentBridgeService {
-    private static final String GLOBAL_RULE = "If the current project root contains `.projectflow/agent-protocol.md`, read it before work. After finishing development work, write a ProjectFlow Agent Result to `.projectflow/inbox/` or the task result file. Do not directly modify ProjectFlow task state.";
+    private static final String GLOBAL_RULE = "ProjectFlow：开始任务前请阅读 `.projectflow/AGENT_PROTOCOL.md`，任务结束后按协议写入 `.projectflow/agent-results/`。";
+    private static final String ENTRY_START = "<!-- PROJECTFLOW ENTRY START -->";
+    private static final String ENTRY_END = "<!-- PROJECTFLOW ENTRY END -->";
     private static final int MAX_AGENT_RESULT_CHARS = 200_000;
 
     private final ProjectRepository projectRepository;
@@ -86,15 +88,20 @@ public class ProjectAgentBridgeService {
         Path projectRoot = resolveProjectRoot(request.projectPath());
         ProjectMemory memory = rememberProjectPath(project, projectRoot);
         Path projectFlowDir = projectRoot.resolve(".projectflow");
-        boolean alreadyLinked = Files.exists(projectFlowDir.resolve("agent-protocol.md"));
+        boolean alreadyLinked = Files.exists(projectFlowDir.resolve("AGENT_PROTOCOL.md"));
         List<Path> writtenFiles = new ArrayList<>();
 
         try {
             Files.createDirectories(projectFlowDir.resolve("context"));
             Files.createDirectories(projectFlowDir.resolve("tasks"));
             Files.createDirectories(projectFlowDir.resolve("inbox"));
+            Files.createDirectories(projectFlowDir.resolve("agent-results"));
+            Files.createDirectories(projectFlowDir.resolve("templates"));
 
-            writeFile(projectFlowDir.resolve("agent-protocol.md"), protocolContent(), writtenFiles);
+            writeFile(projectFlowDir.resolve("AGENT_PROTOCOL.md"), protocolContent(), writtenFiles);
+            writeFile(projectFlowDir.resolve("agent-protocol.md"), legacyProtocolPointer(), writtenFiles);
+            writeFile(projectFlowDir.resolve("templates/result.json"), resultJsonTemplate(), writtenFiles);
+            ensureAgentEntry(projectRoot.resolve("AGENTS.md"), writtenFiles);
             writeFile(projectFlowDir.resolve("context/project-profile.md"), projectProfileContent(project, memory), writtenFiles);
             writeFile(projectFlowDir.resolve("context/requirements.md"), requirementsContent(request.requirements()), writtenFiles);
             writeFile(projectFlowDir.resolve("context/confirmed-decisions.md"), sectionOrFallback(memory == null ? "" : memory.getTechnicalDecisions(), "No confirmed decisions yet."), writtenFiles);
@@ -183,6 +190,20 @@ public class ProjectAgentBridgeService {
 
     private List<Path> findResultFiles(Path projectFlowDir) {
         List<Path> files = new ArrayList<>();
+        Path results = projectFlowDir.resolve("agent-results");
+        if (Files.isDirectory(results)) {
+            try (Stream<Path> stream = Files.walk(results, 2)) {
+                stream
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().equals("result.json")
+                        || (path.getFileName().toString().equals("summary.md") && !Files.exists(path.resolveSibling("result.json"))))
+                    .filter(path -> path.toAbsolutePath().normalize().startsWith(results.toAbsolutePath().normalize()))
+                    .sorted()
+                    .forEach(files::add);
+            } catch (IOException exception) {
+                throw new AppException("AGENT_RESULT_SCAN_FAILED", "Agent result directory could not be scanned", HttpStatus.BAD_REQUEST);
+            }
+        }
         Path inbox = projectFlowDir.resolve("inbox");
         if (Files.isDirectory(inbox)) {
             Path defaultInbox = inbox.resolve("agent-result.md");
@@ -482,7 +503,11 @@ public class ProjectAgentBridgeService {
 
     private String readResult(Path resultFile) {
         try {
-            return Files.readString(resultFile, StandardCharsets.UTF_8);
+            String content = Files.readString(resultFile, StandardCharsets.UTF_8);
+            if (resultFile.getFileName().toString().equals("result.json")) {
+                return structuredResultToMarkdown(content);
+            }
+            return content;
         } catch (IOException exception) {
             throw new AppException("AGENT_RESULT_READ_FAILED", "Agent result could not be read", HttpStatus.BAD_REQUEST);
         }
@@ -504,6 +529,8 @@ public class ProjectAgentBridgeService {
         return """
             # ProjectFlow Agent Protocol
 
+            Protocol-Version: 3.3
+
             ## Before Work
             - Read `.projectflow/context/project-profile.md` if it exists.
             - Read `.projectflow/context/requirements.md` if it exists.
@@ -513,14 +540,16 @@ public class ProjectAgentBridgeService {
 
             ## If User Starts Work Directly In Agent
             - It is allowed to work without a ProjectFlow task brief.
-            - After finishing, create a result file under `.projectflow/inbox/`.
-            - Use filename format: `YYYYMMDD-HHMM-agent-result.md`.
+            - After finishing, create `.projectflow/agent-results/<timestamp-topic>/result.json` and optionally `summary.md`.
 
             ## Result Rules
             - Do not directly modify ProjectFlow task state files as completed.
             - Do not invent product decisions as confirmed facts.
             - Record changed files, summary, risks, decisions, and suggested task updates.
             - ProjectFlow will import the result and ask the user to confirm updates.
+            - All paths must be repository-relative; never write local absolute paths.
+            - If a test or build was not run, write `not_run`.
+            - Do not present plans or unverified work as completed capability.
 
             ## Required Result Format
             # ProjectFlow Agent Result
@@ -547,6 +576,100 @@ public class ProjectAgentBridgeService {
             ## Dev Log
             <short development process record>
             """;
+    }
+
+    private String legacyProtocolPointer() {
+        return "# ProjectFlow Agent Protocol compatibility pointer\n\nRead `.projectflow/AGENT_PROTOCOL.md` for the V3.3 protocol.\n";
+    }
+
+    private String resultJsonTemplate() {
+        return """
+            {
+              "taskGoal": "",
+              "actualChanges": [],
+              "keyFiles": [],
+              "verification": {"build": "not_run", "tests": "not_run", "manualCheck": "not_run"},
+              "unfinished": [],
+              "sedimentCandidates": []
+            }
+            """;
+    }
+
+    private void ensureAgentEntry(Path agentsFile, List<Path> writtenFiles) throws IOException {
+        String existing = Files.exists(agentsFile) ? Files.readString(agentsFile, StandardCharsets.UTF_8) : "";
+        if (existing.contains(ENTRY_START)) {
+            return;
+        }
+        String entry = ENTRY_START + "\n> " + GLOBAL_RULE + "\n" + ENTRY_END + "\n\n";
+        Files.writeString(agentsFile, entry + existing, StandardCharsets.UTF_8);
+        writtenFiles.add(agentsFile);
+    }
+
+    private String structuredResultToMarkdown(String content) throws IOException {
+        Map<String, Object> result = objectMapper.readValue(content, new TypeReference<>() { });
+        String taskGoal = stringValue(result.get("taskGoal"));
+        List<String> actualChanges = stringList(result.get("actualChanges"));
+        List<String> keyFiles = stringList(result.get("keyFiles"));
+        if (taskGoal.isBlank() || keyFiles.stream().anyMatch(this::unsafeRepositoryPath)) {
+            return "";
+        }
+        Map<String, Object> verification = result.get("verification") instanceof Map<?, ?> raw
+            ? raw.entrySet().stream().collect(java.util.stream.Collectors.toMap(entry -> String.valueOf(entry.getKey()), Map.Entry::getValue))
+            : Map.of();
+        List<String> unfinished = stringList(result.get("unfinished"));
+        List<String> candidates = stringList(result.get("sedimentCandidates"));
+        return """
+            # ProjectFlow Agent Result
+
+            Status: ready_for_review
+
+            ## Summary
+            %s
+
+            ## Changed Files
+            %s
+
+            ## Task Updates
+            %s
+
+            ## Decisions
+            - not_reported
+
+            ## Risks
+            %s
+
+            ## Dev Log
+            Verification: build=%s; tests=%s; manualCheck=%s
+            Sediment candidates: %s
+            """.formatted(
+            taskGoal,
+            markdownList(keyFiles),
+            markdownList(actualChanges),
+            unfinished.isEmpty() ? "- none" : markdownList(unfinished),
+            stringValue(verification.getOrDefault("build", "not_run")),
+            stringValue(verification.getOrDefault("tests", "not_run")),
+            stringValue(verification.getOrDefault("manualCheck", "not_run")),
+            candidates.isEmpty() ? "none" : String.join(", ", candidates)
+        );
+    }
+
+    private boolean unsafeRepositoryPath(String value) {
+        if (value == null || value.isBlank()) return true;
+        Path path = Path.of(value).normalize();
+        return path.isAbsolute() || path.startsWith("..");
+    }
+
+    private List<String> stringList(Object value) {
+        if (!(value instanceof List<?> list)) return List.of();
+        return list.stream().filter(String.class::isInstance).map(String.class::cast).map(String::trim).filter(item -> !item.isBlank()).toList();
+    }
+
+    private String stringValue(Object value) {
+        return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    private String markdownList(List<String> values) {
+        return values.isEmpty() ? "- none" : values.stream().map(value -> "- " + value).collect(java.util.stream.Collectors.joining("\n"));
     }
 
     private String projectProfileContent(ProjectSpace project, ProjectMemory memory) {

@@ -84,4 +84,17 @@ public final class V33WorkflowDtos {
         String batchStatus
     ) {
     }
+
+    public record AgentBridgeHealthResponse(
+        boolean pathAccessible,
+        boolean sameGitRepository,
+        boolean protocolExists,
+        boolean resultsDirectoryExists,
+        boolean agentsFileExists,
+        boolean entryRulePresent,
+        String protocolVersion,
+        List<String> detectedRuleFiles,
+        List<String> warnings
+    ) {
+    }
 }
