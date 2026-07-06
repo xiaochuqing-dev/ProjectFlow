@@ -1,7 +1,7 @@
 package com.projectflow;
 
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -51,7 +51,8 @@ class PendingChangeScanControllerTest {
             .andExpect(jsonPath("$.data.firstScan").value(true))
             .andExpect(jsonPath("$.data.batch.newCommitCount").value(30))
             .andExpect(jsonPath("$.data.batch.warnings[0]").value(containsString("首次扫描")))
-            .andExpect(jsonPath("$.data.segments", hasSize(0)))
+            .andExpect(jsonPath("$.data.segments.length()").value(greaterThanOrEqualTo(2)))
+            .andExpect(jsonPath("$.data.batch.segmentCount").value(greaterThanOrEqualTo(2)))
             .andReturn();
 
         String firstBatchId = json(first).at("/data/batch/id").asText();

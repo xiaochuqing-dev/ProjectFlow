@@ -16,10 +16,12 @@ import com.projectflow.dto.V33WorkflowDtos.ChangeBatchResponse;
 import com.projectflow.dto.V33WorkflowDtos.DevelopmentSegmentResponse;
 import com.projectflow.entity.ChangeBatch;
 import com.projectflow.entity.DevelopmentSegment;
+import com.projectflow.entity.DevelopmentSegmentStatus;
 import com.projectflow.entity.ProjectReviewCursor;
 import com.projectflow.repository.ChangeBatchRepository;
 import com.projectflow.repository.DevelopmentSegmentRepository;
 import com.projectflow.repository.ProjectReviewCursorRepository;
+import com.projectflow.service.DevelopmentSegmentationService.SegmentDraft;
 
 @Service
 public class PendingChangeScanService {
@@ -96,6 +98,39 @@ public class PendingChangeScanService {
     @Transactional(readOnly = true)
     public List<DevelopmentSegmentResponse> listSegments(UUID batchId) {
         return segmentRepository.findByBatchIdOrderByCreatedAtAsc(batchId).stream().map(this::toResponse).toList();
+    }
+
+    @Transactional
+    public List<DevelopmentSegmentResponse> persistSegments(UUID projectId, UUID batchId, List<SegmentDraft> drafts) {
+        List<DevelopmentSegment> existing = segmentRepository.findByBatchIdOrderByCreatedAtAsc(batchId);
+        if (!existing.isEmpty()) {
+            return existing.stream().map(this::toResponse).toList();
+        }
+        List<DevelopmentSegment> segments = new ArrayList<>();
+        for (SegmentDraft draft : drafts) {
+            DevelopmentSegment segment = new DevelopmentSegment(projectId, batchId);
+            segment.updateContent(
+                draft.title(),
+                draft.plainSummary(),
+                draft.mainChanges(),
+                draft.userVisibleValue(),
+                draft.includedAtomIds(),
+                List.of(),
+                draft.affectedFiles(),
+                draft.evidenceRefs(),
+                draft.confidence(),
+                DevelopmentSegmentStatus.PENDING
+            );
+            segments.add(segment);
+        }
+        return segmentRepository.saveAll(segments).stream().map(this::toResponse).toList();
+    }
+
+    @Transactional
+    public ChangeBatchResponse updateSegmentCount(UUID batchId, int segmentCount) {
+        ChangeBatch batch = batchRepository.findById(batchId).orElseThrow();
+        batch.updateSegmentCount(segmentCount);
+        return toResponse(batchRepository.save(batch));
     }
 
     private CommandResult command(Path projectRoot, List<String> command) {

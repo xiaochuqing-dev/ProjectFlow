@@ -32,6 +32,8 @@ import com.projectflow.support.AppException;
 import com.projectflow.dto.V33WorkflowDtos.ChangeBatchResponse;
 import com.projectflow.dto.V33WorkflowDtos.DevelopmentSegmentResponse;
 import com.projectflow.service.PendingChangeScanService.ScanPlan;
+import com.projectflow.service.DevelopmentSegmentationService.ChangeAtom;
+import com.projectflow.service.DevelopmentSegmentationService.SegmentDraft;
 
 @Service
 public class WorkSessionScanService {
@@ -41,6 +43,8 @@ public class WorkSessionScanService {
     private final AgentSignatureFeedbackRepository feedbackRepository;
     private final LocalProjectPathGuard localProjectPathGuard;
     private final PendingChangeScanService pendingChangeScanService;
+    private final DevelopmentSegmentationService developmentSegmentationService;
+    private final ModelSegmentEnricher modelSegmentEnricher;
 
     public WorkSessionScanService(
         ProjectRepository projectRepository,
@@ -48,7 +52,9 @@ public class WorkSessionScanService {
         WorkSessionRepository workSessionRepository,
         AgentSignatureFeedbackRepository feedbackRepository,
         LocalProjectPathGuard localProjectPathGuard,
-        PendingChangeScanService pendingChangeScanService
+        PendingChangeScanService pendingChangeScanService,
+        DevelopmentSegmentationService developmentSegmentationService,
+        ModelSegmentEnricher modelSegmentEnricher
     ) {
         this.projectRepository = projectRepository;
         this.memoryRepository = memoryRepository;
@@ -56,6 +62,8 @@ public class WorkSessionScanService {
         this.feedbackRepository = feedbackRepository;
         this.localProjectPathGuard = localProjectPathGuard;
         this.pendingChangeScanService = pendingChangeScanService;
+        this.developmentSegmentationService = developmentSegmentationService;
+        this.modelSegmentEnricher = modelSegmentEnricher;
     }
 
     @Transactional
@@ -85,7 +93,11 @@ public class WorkSessionScanService {
         ChangeBatchResponse batch = pendingChangeScanService.persist(
             project.getId(), scanPlan, evidence.commitCount(), evidence.changedFileCount(), 0, warnings
         );
-        List<DevelopmentSegmentResponse> segments = pendingChangeScanService.listSegments(batch.id());
+        List<ChangeAtom> atoms = evidence.toAtoms();
+        List<SegmentDraft> drafts = developmentSegmentationService.group(atoms);
+        drafts = modelSegmentEnricher.enrich(userId, atoms, drafts, warnings);
+        List<DevelopmentSegmentResponse> segments = pendingChangeScanService.persistSegments(project.getId(), batch.id(), drafts);
+        batch = pendingChangeScanService.updateSegmentCount(batch.id(), segments.size());
         return new WorkSessionScanResponse(
             project.getId(),
             projectRoot.toString(),
@@ -339,6 +351,7 @@ public class WorkSessionScanService {
         private final LinkedHashMap<String, FileStat> files = new LinkedHashMap<>();
         private final LinkedHashSet<String> modules = new LinkedHashSet<>();
         private final List<String> commitSummaries = new ArrayList<>();
+        private final LinkedHashMap<String, AtomAccumulator> atoms = new LinkedHashMap<>();
         private Instant startTime;
         private Instant endTime;
         private String baseCommit = "";
@@ -361,6 +374,7 @@ public class WorkSessionScanService {
                 endTime = commit.time();
             }
             commitSummaries.add(commitSummary(commit));
+            atoms.putIfAbsent(commit.hash(), new AtomAccumulator(commit));
         }
 
         private void addNumstat(CommitCursor commit, String line) {
@@ -373,6 +387,7 @@ public class WorkSessionScanService {
             String file = parts[2];
             files.merge(file, new FileStat(added, deleted), FileStat::merge);
             modules.add(moduleName(file));
+            atoms.computeIfAbsent(commit.hash(), ignored -> new AtomAccumulator(commit)).addFile(file);
             if (startTime == null || commit.time().isBefore(startTime)) {
                 startTime = commit.time();
             }
@@ -391,6 +406,13 @@ public class WorkSessionScanService {
 
         private int changedFileCount() {
             return files.size();
+        }
+
+        private List<ChangeAtom> toAtoms() {
+            return atoms.values().stream()
+                .filter(atom -> !atom.files.isEmpty())
+                .map(AtomAccumulator::toAtom)
+                .toList();
         }
 
         private WorkSessionCandidateResponse toResponse() {
@@ -476,6 +498,35 @@ public class WorkSessionScanService {
                 }
             }
             return normalized.length() <= 80 ? normalized : "..." + normalized.substring(normalized.length() - 77);
+        }
+    }
+
+    private static final class AtomAccumulator {
+        private final CommitCursor commit;
+        private final LinkedHashSet<String> files = new LinkedHashSet<>();
+        private final LinkedHashSet<String> modules = new LinkedHashSet<>();
+
+        private AtomAccumulator(CommitCursor commit) {
+            this.commit = commit;
+        }
+
+        private void addFile(String file) {
+            files.add(file);
+            modules.add(moduleName(file));
+        }
+
+        private ChangeAtom toAtom() {
+            List<String> refs = new ArrayList<>();
+            refs.add("commit:" + commit.hash());
+            files.forEach(file -> refs.add("file:" + file));
+            return new ChangeAtom(
+                commit.hash(),
+                commit.subject(),
+                commit.time(),
+                List.copyOf(modules),
+                List.copyOf(files),
+                refs
+            );
         }
     }
 
