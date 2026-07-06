@@ -24,7 +24,12 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.projectflow.entity.ProjectChange;
+import com.projectflow.entity.ProjectChangeImpactLevel;
+import com.projectflow.entity.ProjectChangeKind;
+import com.projectflow.entity.ProjectChangeSourceType;
 import com.projectflow.repository.ProjectReviewCursorRepository;
+import com.projectflow.repository.ProjectChangeRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -36,6 +41,8 @@ class ProjectSedimentControllerTest {
     private ObjectMapper objectMapper;
     @Autowired
     private ProjectReviewCursorRepository cursorRepository;
+    @Autowired
+    private ProjectChangeRepository changeRepository;
 
     @Test
     void confirmsFourActionsAndAdvancesCursorOnlyAfterTheBatchIsResolved() throws Exception {
@@ -134,6 +141,37 @@ class ProjectSedimentControllerTest {
         mockMvc.perform(get("/api/projects/" + projectId + "/sediments").header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data", hasSize(1)));
+    }
+
+    @Test
+    void confirmEndpointCanIgnoreLegacyProjectChanges() throws Exception {
+        String token = register();
+        String projectId = createProject(token);
+        ProjectChange change = new ProjectChange(UUID.fromString(projectId), null);
+        change.update(
+            ProjectChangeSourceType.USER_MANUAL,
+            "manual",
+            null,
+            ProjectChangeKind.DOCS,
+            ProjectChangeImpactLevel.MINOR,
+            "旧版候选",
+            "旧版候选摘要",
+            "",
+            "README.md",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+        );
+        change = changeRepository.save(change);
+
+        confirm(token, change.getId().toString(), "IGNORE", null)
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.changeStatus").value("IGNORED"))
+            .andExpect(jsonPath("$.data.batchStatus").value("LEGACY_CHANGE"));
     }
 
     private org.springframework.test.web.servlet.ResultActions confirm(String token, String changeId, String action, String targetId) throws Exception {

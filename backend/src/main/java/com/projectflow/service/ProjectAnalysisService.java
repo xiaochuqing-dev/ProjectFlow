@@ -278,9 +278,10 @@ public class ProjectAnalysisService {
         String role = inferFileRole(path, fileType);
         String riskLevel = inferFileRiskLevel(path, fileType);
         List<String> evidence = new ArrayList<>();
+        String firstSignal = "";
         evidence.add(path + "：文件路径和扩展名已从导入项目中确认。");
         if (!fileContent.isBlank()) {
-            String firstSignal = fileContent.lines()
+            firstSignal = fileContent.lines()
                 .map(String::trim)
                 .filter(line -> !line.isBlank())
                 .findFirst()
@@ -295,7 +296,7 @@ public class ProjectAnalysisService {
             role,
             role + (fileContent.isBlank()
                 ? "。当前未索引到文件正文，只能依据路径和文件类型给出基础判断。"
-                : "。已读取导入时保存的安全文本片段，可供模型进一步解释。"),
+                : "。已读取导入时保存的安全文本片段：" + truncate(firstSignal, 120)),
             inferFileImportance(path, fileType),
             riskLevel,
             inferFileRiskNotes(path, fileType, riskLevel),

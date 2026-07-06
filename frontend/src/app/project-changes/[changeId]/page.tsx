@@ -8,10 +8,8 @@ import { AppShell } from "@/components/AppShell";
 import { Badge, Button, Card, InfoBubble } from "@/components/ui";
 import { archiveTargetsLabel, changeDisplayTitle, changeOutcomeSummary, compactPath, parseAffectedFiles } from "@/components/tasks/change-review-utils";
 import {
-  acceptProjectChange,
   confirmProjectChange,
   getProjectChange,
-  ignoreProjectChange,
   listProjectSediments,
   updateProjectChange,
   type ProjectChange,
@@ -108,13 +106,7 @@ export default function ProjectChangeDetailPage() {
     setError("");
     setNotice("");
     try {
-      if (change?.developmentSegmentId) {
-        await confirmProjectChange(session.accessToken, params.changeId, action, action === "MERGE_EXISTING" || action === "EVIDENCE_ONLY" ? targetSedimentId : null);
-      } else if (action === "IGNORE") {
-        await ignoreProjectChange(session.accessToken, params.changeId);
-      } else {
-        await acceptProjectChange(session.accessToken, params.changeId);
-      }
+      await confirmProjectChange(session.accessToken, params.changeId, action, action === "MERGE_EXISTING" || action === "EVIDENCE_ONLY" ? targetSedimentId : null);
       const updated = await getProjectChange(session.accessToken, params.changeId);
       setChange(updated);
       setDraft(toPayload(updated));

@@ -13,10 +13,8 @@ import { Badge, ProjectContextBar, Toast } from "@/components/ui";
 import { useAutoDismissNotice } from "@/hooks/useAutoDismissNotice";
 import { useProjectSelection } from "@/hooks/useProjectSelection";
 import {
-  acceptProjectChange,
   confirmProjectChange,
   applyAiSuggestions,
-  ignoreProjectChange,
   listAiSuggestions,
   listProjectChanges,
   listProjectMaterials,
@@ -177,7 +175,7 @@ function TasksPageContent() {
     setError("");
     setNotice("");
     try {
-      await Promise.all(ids.map((id) => acceptProjectChange(session.accessToken, id)));
+      await Promise.all(ids.map((id) => confirmProjectChange(session.accessToken, id, "NEW_SEDIMENT", null)));
       setNotice(`已确认 ${ids.length} 条兼容待确认内容，已写入项目沉淀和可信依据。`);
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
@@ -194,9 +192,7 @@ function TasksPageContent() {
     setError("");
     try {
       const selected = changes.filter((item) => selectedChangeIds.includes(item.id));
-      await Promise.all(selected.map((item) => item.developmentSegmentId
-        ? confirmProjectChange(session.accessToken, item.id, "IGNORE", null)
-        : ignoreProjectChange(session.accessToken, item.id)));
+      await Promise.all(selected.map((item) => confirmProjectChange(session.accessToken, item.id, "IGNORE", null)));
       setNotice(`已忽略 ${selected.length} 条选中建议；原始证据仍保留。`);
       setSelectedChangeIds([]);
       await refreshProjectContext(selectedProjectId);
@@ -237,7 +233,7 @@ function TasksPageContent() {
     setError("");
     setNotice("");
     try {
-      await ignoreProjectChange(session.accessToken, id);
+      await confirmProjectChange(session.accessToken, id, "IGNORE", null);
       setNotice("建议沉淀已忽略。");
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
@@ -250,19 +246,12 @@ function TasksPageContent() {
   async function handleConfirmChange(changeId: string, action: SedimentAction, targetSedimentId: string | null) {
     const session = readSession();
     if (!session || !selectedProjectId) return;
-    const change = changes.find((item) => item.id === changeId);
     setApplying(action !== "IGNORE");
     setIgnoringId(action === "IGNORE" ? changeId : "");
     setError("");
     setNotice("");
     try {
-      if (change?.developmentSegmentId) {
-        await confirmProjectChange(session.accessToken, changeId, action, targetSedimentId);
-      } else if (action === "IGNORE") {
-        await ignoreProjectChange(session.accessToken, changeId);
-      } else {
-        await acceptProjectChange(session.accessToken, changeId);
-      }
+      await confirmProjectChange(session.accessToken, changeId, action, targetSedimentId);
       setNotice(action === "IGNORE" ? "建议已忽略。" : "建议已确认并写入项目沉淀。");
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {

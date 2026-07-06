@@ -1,0 +1,45 @@
+{
+  "taskGoal": "补完 codex/projectflow-v3.3.2 分支未完成的 V3.3.2 工作，完成构建测试验证，并合并到本地 master。",
+  "actualChanges": [
+    "修复项目 zip 扫描在 UTF-8 文件名解码失败时未回退 GBK 的问题。",
+    "修复文件分析模型降级后本地摘要丢失可见代码信号的问题。",
+    "统一项目变更详情页和任务列表页的确认、忽略操作到 /project-changes/{changeId}/confirm 四动作端点。",
+    "让 confirm 端点兼容旧版 ProjectChange 的 NEW_SEDIMENT 和 IGNORE 操作，并保留 MERGE_EXISTING、EVIDENCE_ONLY 对 V3.3 开发推进段证据的要求。",
+    "补充旧版 ProjectChange 通过 confirm 端点忽略的后端集成测试。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/controller/ProjectChangeController.java",
+    "backend/src/main/java/com/projectflow/service/ProjectAnalysisService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectZipScanService.java",
+    "backend/src/test/java/com/projectflow/ProjectSedimentControllerTest.java",
+    "frontend/src/app/project-changes/[changeId]/page.tsx",
+    "frontend/src/app/tasks/page.tsx"
+  ],
+  "verification": {
+    "build": "frontend: npm.cmd run build passed",
+    "tests": "backend: mvn.cmd -q test passed; focused ProjectSedimentControllerTest and V2CoreControllerTest passed",
+    "manualCheck": "reviewed docs/superpowers V3.3.2 plan/spec, checked frontend/backend API path alignment, confirmed current branch stays merge-ready"
+  },
+  "unfinished": [
+    "backend/.projectflow/local-data/projectflow.lock.db and backend/.projectflow/local-data/projectflow.mv.db are already present in the branch diff; not removed because deleting files requires user confirmation.",
+    "No push to origin was performed because the user requested local master merge, not remote push."
+  ],
+  "sedimentCandidates": [
+    {
+      "title": "V3.3.2 change review uses a unified confirmation endpoint",
+      "evidence": [
+        "frontend/src/app/tasks/page.tsx",
+        "frontend/src/app/project-changes/[changeId]/page.tsx",
+        "backend/src/main/java/com/projectflow/controller/ProjectChangeController.java",
+        "backend/src/test/java/com/projectflow/ProjectSedimentControllerTest.java"
+      ]
+    },
+    {
+      "title": "Project zip import keeps GBK fallback for Chinese archive names",
+      "evidence": [
+        "backend/src/main/java/com/projectflow/service/ProjectZipScanService.java",
+        "backend/src/test/java/com/projectflow/V2CoreControllerTest.java"
+      ]
+    }
+  ]
+}

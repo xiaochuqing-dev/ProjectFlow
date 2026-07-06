@@ -110,7 +110,7 @@ public class ProjectZipScanService {
                 hasSource
             );
             return new ZipProjectScan(tree.append(keyFiles).append(fileSnippets).toString(), profile);
-        } catch (IOException exception) {
+        } catch (IOException | IllegalArgumentException exception) {
             throw new AppException("ZIP_READ_FAILED", "项目 zip 无法读取；如果是中文路径或旧压缩工具生成的 zip，ProjectFlow 会自动尝试 GBK 编码。若仍失败，请重新压缩为标准 zip。", HttpStatus.BAD_REQUEST);
         }
     }
