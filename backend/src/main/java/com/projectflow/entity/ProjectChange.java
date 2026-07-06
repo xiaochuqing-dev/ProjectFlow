@@ -105,8 +105,8 @@ public class ProjectChange {
     @Column(name = "evidence_confidence", length = 20)
     private EvidenceConfidence evidenceConfidence;
 
-    @Column(name = "needs_user_review", nullable = false)
-    private boolean needsUserReview;
+    @Column(name = "needs_user_review")
+    private Boolean needsUserReview;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -225,7 +225,7 @@ public class ProjectChange {
     public String getProblemSolved() { return problemSolved; }
     public List<String> getEvidenceRefs() { return List.copyOf(evidenceRefs); }
     public EvidenceConfidence getEvidenceConfidence() { return evidenceConfidence; }
-    public boolean isNeedsUserReview() { return needsUserReview; }
+    public boolean isNeedsUserReview() { return Boolean.TRUE.equals(needsUserReview); }
 
     public Instant getCreatedAt() {
         return createdAt;

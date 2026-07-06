@@ -9,6 +9,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.projectflow.entity.ChangeBatch;
 import com.projectflow.entity.ChangeBatchStatus;
@@ -44,6 +46,12 @@ class V33PersistenceTest {
 
     @Autowired
     private ProjectSedimentRepository sedimentRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private TestEntityManager entityManager;
 
     @Test
     void persistsTheV33SedimentationRelationshipsAndListFields() {
@@ -134,5 +142,24 @@ class V33PersistenceTest {
                 assertThat(saved.getSourceSegmentIds()).containsExactly(segment.getId().toString());
                 assertThat(saved.getEvidenceRefs()).containsExactly("commit:abc123");
             });
+    }
+
+    @Test
+    void readsLegacyProjectChangeWhenV33ReviewFlagIsNull() {
+        UUID projectId = UUID.randomUUID();
+        ProjectChange change = new ProjectChange(projectId, null);
+        change.update(
+            ProjectChangeSourceType.USER_MANUAL, "legacy", null,
+            ProjectChangeKind.UNKNOWN, ProjectChangeImpactLevel.UNCERTAIN,
+            "Legacy change", "Existing V3.2 row", "", "", "", "", "", "", "", "", ""
+        );
+        changeRepository.saveAndFlush(change);
+
+        jdbcTemplate.update("UPDATE project_changes SET needs_user_review = NULL WHERE id = ?", change.getId());
+        entityManager.clear();
+
+        assertThat(changeRepository.findById(change.getId())).get()
+            .extracting(ProjectChange::isNeedsUserReview)
+            .isEqualTo(false);
     }
 }
