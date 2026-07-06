@@ -52,7 +52,7 @@ public class ChangeBatch {
     private boolean firstScan;
     @Column(name = "scan_fingerprint", length = 64)
     private String scanFingerprint = "";
-    @Column(name = "worktree_dirty", nullable = false)
+    @Column(name = "worktree_dirty")
     private boolean worktreeDirty;
     @Column(name = "github_status", length = 40)
     private String githubStatus = "";
@@ -66,13 +66,13 @@ public class ChangeBatch {
     private String modelProvider = "";
     @Column(name = "fallback_reason", columnDefinition = "text")
     private String fallbackReason = "";
-    @Column(name = "git_scan_ms", nullable = false)
+    @Column(name = "git_scan_ms")
     private long gitScanMs;
-    @Column(name = "model_segment_ms", nullable = false)
+    @Column(name = "model_segment_ms")
     private long modelSegmentMs;
-    @Column(name = "github_inspect_ms", nullable = false)
+    @Column(name = "github_inspect_ms")
     private long githubInspectMs;
-    @Column(name = "total_scan_ms", nullable = false)
+    @Column(name = "total_scan_ms")
     private long totalScanMs;
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;

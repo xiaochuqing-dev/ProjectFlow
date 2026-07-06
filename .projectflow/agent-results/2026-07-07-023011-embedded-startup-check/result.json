@@ -1,0 +1,32 @@
+{
+  "taskGoal": "验证 start-projectflow.bat 是否能打开并运行最新构建，修复启动验证中发现的旧本地 H2 数据库升级兼容问题。",
+  "actualChanges": [
+    "确认 start-projectflow.bat 调用 start-projectflow-embedded.ps1，启动流程会先执行前端生产构建，再启动 embedded 后端和 Next.js 生产前端。",
+    "将 ChangeBatch 新增扫描诊断字段的数据库列约束改为可空，避免旧 H2 本地库加列时因历史行没有默认值而产生 DDL 警告。",
+    "重新运行 embedded 启动脚本，确认前端 3000 和后端 8080 均启动并通过健康检查。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/entity/ChangeBatch.java",
+    "start-projectflow.bat",
+    "start-projectflow-embedded.ps1"
+  ],
+  "verification": {
+    "build": "frontend: npm.cmd run build passed; start-projectflow-embedded.ps1 also completed frontend build during startup",
+    "tests": "backend: mvn.cmd -q test passed",
+    "manualCheck": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\start-projectflow-embedded.ps1 -CheckOnly passed; .\\start-projectflow-embedded.ps1 -NoBrowser reached http://127.0.0.1:3000/login and http://127.0.0.1:8080/api/health without DDL warnings"
+  },
+  "unfinished": [
+    "The actual double-click .bat path was not left running after verification because the non-interactive script exits after startup validation in this environment.",
+    "No push to origin was performed."
+  ],
+  "sedimentCandidates": [
+    {
+      "title": "Embedded startup supports upgrading existing local H2 data after V3.3.2 scan diagnostics",
+      "evidence": [
+        "backend/src/main/java/com/projectflow/entity/ChangeBatch.java",
+        "logs/backend-embedded.log",
+        "logs/frontend-embedded.log"
+      ]
+    }
+  ]
+}
