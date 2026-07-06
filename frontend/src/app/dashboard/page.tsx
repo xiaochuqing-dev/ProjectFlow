@@ -35,6 +35,7 @@ import {
 import {
   deleteProject,
   getProjectMemory,
+  getProjectGitHubStatus,
   importProjectZip,
   listAiOutputs,
   listAiProviders,
@@ -61,6 +62,7 @@ import {
   type ProjectEvolutionRecord,
   type ProjectMaterial,
   type ProjectMemory,
+  type GitHubStatus,
   type TaskItem,
   type WorkSessionCandidate,
   type WorkSessionScanResult,
@@ -92,6 +94,7 @@ export default function DashboardPage() {
   const [projectPath, setProjectPath] = useState("");
   const [globalRule, setGlobalRule] = useState("");
   const [workSessionScan, setWorkSessionScan] = useState<WorkSessionScanResult | null>(null);
+  const [githubStatus, setGithubStatus] = useState<GitHubStatus | null>(null);
   const [scanWarnings, setScanWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -227,7 +230,7 @@ export default function DashboardPage() {
 
     setLoading(true);
     try {
-      const [materialItems, suggestionItems, evolutionItems, taskItems, memoryRecord, workSessions, bundles, conflicts, changeItems, outputItems] = await Promise.all([
+      const [materialItems, suggestionItems, evolutionItems, taskItems, memoryRecord, workSessions, bundles, conflicts, changeItems, outputItems, github] = await Promise.all([
         listProjectMaterials(session.accessToken, projectId),
         listAiSuggestions(session.accessToken, projectId),
         listProjectEvolutionRecords(session.accessToken, projectId),
@@ -238,6 +241,7 @@ export default function DashboardPage() {
         listProjectChangeConflicts(session.accessToken, projectId),
         listProjectChanges(session.accessToken, projectId),
         listAiOutputs(session.accessToken, projectId),
+        getProjectGitHubStatus(session.accessToken, projectId).catch(() => null),
       ]);
       if (!isLatestContextRequest(requestId)) {
         return;
@@ -251,6 +255,7 @@ export default function DashboardPage() {
       setOutputs(outputItems);
       setTasks(taskItems);
       setMemory(memoryRecord);
+      setGithubStatus(github);
       setProjectPath(memoryRecord.localProjectPath ?? "");
       setWorkSessionScan(workSessions.length ? workSessionListResult(projectId, memoryRecord.localProjectPath ?? "", workSessions) : null);
     } catch (exception) {
@@ -278,6 +283,7 @@ export default function DashboardPage() {
     setMemory(null);
     setProjectPath("");
     setWorkSessionScan(null);
+    setGithubStatus(null);
     setScanWarnings([]);
     setStatsFocus("");
   }
@@ -611,6 +617,7 @@ export default function DashboardPage() {
             <PendingChangesPanel
               bundles={evidenceBundles}
               hasProjectPath={hasProjectPath}
+              github={githubStatus}
               onScan={handleScanWorkSessions}
               scan={workSessionScan}
               scanning={scanningWorkSessions}

@@ -826,6 +826,10 @@ export type GitHubStatus = {
   primaryLanguage: string;
   remoteUrl: string;
   commitUrlTemplate: string;
+  status: "CONNECTED" | "NOT_INSTALLED" | "NOT_AUTHENTICATED" | "NO_REMOTE" | "CONNECTION_TIMEOUT" | "PERMISSION_DENIED" | "FETCH_FAILED" | "CALL_FAILED" | "JSON_PARSE_FAILED";
+  remoteRelation: "synced" | "local_ahead" | "remote_ahead" | "diverged" | "no_upstream" | "github_unavailable";
+  localAhead: number;
+  remoteAhead: number;
   warnings: string[];
 };
 
@@ -892,6 +896,18 @@ export type ChangeBatch = {
   status: "PENDING" | "PARTIAL" | "REVIEWED" | "FAILED";
   warnings: string[];
   firstScan: boolean;
+  scanFingerprint: string;
+  worktreeDirty: boolean;
+  githubStatus: string;
+  remoteRelation: string;
+  segmentationMode: "MODEL" | "LOCAL_RULE";
+  modelStatus: string;
+  modelProvider: string;
+  fallbackReason: string;
+  gitScanMs: number;
+  modelSegmentMs: number;
+  githubInspectMs: number;
+  totalScanMs: number;
 };
 
 export type DevelopmentSegment = {
@@ -908,6 +924,33 @@ export type DevelopmentSegment = {
   evidenceRefs: string[];
   confidence: "HIGH" | "MEDIUM" | "LOW";
   status: "PENDING" | "CONFIRMED" | "IGNORED" | "NEEDS_REVIEW";
+  createdAt: string;
+  updatedAt: string;
+  generationMode: "MODEL" | "LOCAL_RULE";
+  modelProvider: string;
+  fallbackReason: string;
+  qualityStatus: "PASS" | "NEEDS_MANUAL";
+  qualityReason: string;
+  commitUrls: string[];
+  uncertainties: string[];
+};
+
+export type CapabilityCard = {
+  id: string;
+  projectId: string;
+  name: string;
+  summary: string;
+  problemSolved: string;
+  featureEntry: string;
+  sourceRefs: string[];
+  evidenceRefs: string[];
+  readmeExpression: string;
+  resumeExpression: string;
+  interviewExpression: string;
+  status: "CANDIDATE" | "CONFIRMED" | "NEEDS_EVIDENCE" | "IGNORED";
+  generationMode: "MODEL" | "LOCAL_RULE";
+  modelProvider: string;
+  fallbackReason: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -1165,6 +1208,27 @@ export function confirmProjectChange(
 export function listProjectSediments(token: string, projectId: string): Promise<ProjectSediment[]> {
   return requestJson<ProjectSediment[]>(`/projects/${projectId}/sediments`, {
     headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function analyzeProjectCapabilities(token: string, projectId: string): Promise<CapabilityCard[]> {
+  return requestJson<CapabilityCard[]>(`/projects/${projectId}/capabilities/analyze`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function listProjectCapabilityCards(token: string, projectId: string): Promise<CapabilityCard[]> {
+  return requestJson<CapabilityCard[]>(`/projects/${projectId}/capability-cards`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function updateCapabilityCard(token: string, cardId: string, action: "CONFIRM" | "IGNORE"): Promise<CapabilityCard> {
+  return requestJson<CapabilityCard>(`/capability-cards/${cardId}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ action }),
   });
 }
 

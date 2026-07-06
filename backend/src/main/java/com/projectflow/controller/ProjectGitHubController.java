@@ -50,7 +50,7 @@ public class ProjectGitHubController {
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
         @PathVariable UUID projectId
     ) {
-        return ApiResponse.ok(inspect(authorizationHeader, projectId));
+        return ApiResponse.ok(inspect(authorizationHeader, projectId, false));
     }
 
     @PostMapping("/refresh")
@@ -58,16 +58,16 @@ public class ProjectGitHubController {
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
         @PathVariable UUID projectId
     ) {
-        return ApiResponse.ok(inspect(authorizationHeader, projectId));
+        return ApiResponse.ok(inspect(authorizationHeader, projectId, true));
     }
 
-    private GitHubStatusResponse inspect(String authorizationHeader, UUID projectId) {
+    private GitHubStatusResponse inspect(String authorizationHeader, UUID projectId, boolean refreshRemote) {
         AuthUser user = authService.currentUser(authorizationHeader);
         projectRepository.findByIdAndUserId(projectId, user.id())
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
         ProjectMemory memory = memoryRepository.findByProjectId(projectId)
             .orElseThrow(() -> new AppException("PROJECT_PATH_REQUIRED", "Bind a local project path before checking GitHub", HttpStatus.BAD_REQUEST));
         Path root = localProjectPathGuard.requireGitProjectDirectory(memory.getLocalProjectPath()).path();
-        return gitHubCliService.inspect(root);
+        return gitHubCliService.inspect(root, refreshRemote);
     }
 }

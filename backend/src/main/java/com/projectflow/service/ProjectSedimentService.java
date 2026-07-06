@@ -44,6 +44,7 @@ public class ProjectSedimentService {
     private final ProjectSedimentRepository sedimentRepository;
     private final ProjectReviewCursorRepository cursorRepository;
     private final ProjectChangeSchemaRepairService schemaRepairService;
+    private final SedimentSuggestionPolicy suggestionPolicy;
 
     public ProjectSedimentService(
         ProjectRepository projectRepository,
@@ -52,7 +53,8 @@ public class ProjectSedimentService {
         ChangeBatchRepository batchRepository,
         ProjectSedimentRepository sedimentRepository,
         ProjectReviewCursorRepository cursorRepository,
-        ProjectChangeSchemaRepairService schemaRepairService
+        ProjectChangeSchemaRepairService schemaRepairService,
+        SedimentSuggestionPolicy suggestionPolicy
     ) {
         this.projectRepository = projectRepository;
         this.changeRepository = changeRepository;
@@ -61,16 +63,22 @@ public class ProjectSedimentService {
         this.sedimentRepository = sedimentRepository;
         this.cursorRepository = cursorRepository;
         this.schemaRepairService = schemaRepairService;
+        this.suggestionPolicy = suggestionPolicy;
     }
 
     @Transactional
     public void createSuggestions(UUID projectId, List<DevelopmentSegmentResponse> segments) {
         schemaRepairService.ensureEvidenceBundleSourceTypeAllowed();
+        List<SedimentSuggestionPolicy.ExistingSediment> existing = sedimentRepository.findByProjectIdOrderByUpdatedAtDesc(projectId).stream()
+            .map(item -> new SedimentSuggestionPolicy.ExistingSediment(item.getId(), item.getTitle(), item.getProblemSolved()))
+            .toList();
         for (DevelopmentSegmentResponse segment : segments) {
             if (changeRepository.findByDevelopmentSegmentId(segment.id()).isPresent()) {
                 continue;
             }
             ProjectChange change = new ProjectChange(projectId, null);
+            List<String> evidenceRefs = new ArrayList<>(segment.evidenceRefs());
+            segment.commitUrls().forEach(url -> evidenceRefs.add("url:" + url));
             change.update(
                 ProjectChangeSourceType.DEVELOPMENT_SEGMENT,
                 segment.id().toString(),
@@ -82,16 +90,17 @@ public class ProjectSedimentService {
                 String.join("\n", segment.mainChanges()),
                 String.join("\n", segment.affectedFiles()),
                 "",
-                evidenceOfType(segment.evidenceRefs(), "test"),
-                evidenceOfType(segment.evidenceRefs(), "build"),
+                evidenceOfType(evidenceRefs, "test"),
+                evidenceOfType(evidenceRefs, "build"),
                 "",
                 "",
                 "",
                 segment.userVisibleValue()
             );
+            var suggestion = suggestionPolicy.suggest(segment.title(), segment.userVisibleValue(), segment.affectedFiles(), evidenceRefs, existing);
             change.updateSedimentSuggestion(
-                segment.id(), SedimentAction.NEW_SEDIMENT, null, segment.userVisibleValue(),
-                segment.evidenceRefs(), com.projectflow.entity.EvidenceConfidence.valueOf(segment.confidence()), true
+                segment.id(), suggestion.action(), suggestion.targetSedimentId(), suggestion.reason(),
+                evidenceRefs, com.projectflow.entity.EvidenceConfidence.valueOf(segment.confidence()), true
             );
             changeRepository.save(change);
         }

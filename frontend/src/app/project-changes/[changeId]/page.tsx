@@ -3,17 +3,21 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, RefreshCw, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, RefreshCw, Save } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Badge, Button, Card, InfoBubble } from "@/components/ui";
 import { archiveTargetsLabel, changeDisplayTitle, changeOutcomeSummary, compactPath, parseAffectedFiles } from "@/components/tasks/change-review-utils";
 import {
   acceptProjectChange,
+  confirmProjectChange,
   getProjectChange,
   ignoreProjectChange,
+  listProjectSediments,
   updateProjectChange,
   type ProjectChange,
   type ProjectChangePayload,
+  type ProjectSediment,
+  type SedimentAction,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
 
@@ -50,6 +54,9 @@ export default function ProjectChangeDetailPage() {
   const [acting, setActing] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [sediments, setSediments] = useState<ProjectSediment[]>([]);
+  const [action, setAction] = useState<SedimentAction>("NEW_SEDIMENT");
+  const [targetSedimentId, setTargetSedimentId] = useState("");
 
   useEffect(() => {
     const session = readSession();
@@ -60,9 +67,14 @@ export default function ProjectChangeDetailPage() {
     }
 
     getProjectChange(session.accessToken, params.changeId)
-      .then((item) => {
+      .then(async (item) => {
         setChange(item);
         setDraft(toPayload(item));
+        setAction(item.suggestedAction ?? "NEW_SEDIMENT");
+        setTargetSedimentId(item.targetSedimentId ?? "");
+        if (item.developmentSegmentId) {
+          setSediments(await listProjectSediments(session.accessToken, item.projectId));
+        }
       })
       .catch((exception) => setError(exception instanceof Error ? exception.message : "建议沉淀加载失败"))
       .finally(() => setLoading(false));
@@ -88,39 +100,27 @@ export default function ProjectChangeDetailPage() {
     }
   }
 
-  async function handleAccept() {
+  async function handleConfirm() {
     const session = readSession();
     if (!session) return;
 
-    setActing("accept");
+    setActing("confirm");
     setError("");
     setNotice("");
     try {
-      const updated = await acceptProjectChange(session.accessToken, params.changeId);
+      if (change?.developmentSegmentId) {
+        await confirmProjectChange(session.accessToken, params.changeId, action, action === "MERGE_EXISTING" || action === "EVIDENCE_ONLY" ? targetSedimentId : null);
+      } else if (action === "IGNORE") {
+        await ignoreProjectChange(session.accessToken, params.changeId);
+      } else {
+        await acceptProjectChange(session.accessToken, params.changeId);
+      }
+      const updated = await getProjectChange(session.accessToken, params.changeId);
       setChange(updated);
       setDraft(toPayload(updated));
-      setNotice("已确认。项目沉淀、可信依据、项目时间线和输出来源会使用这条事实。");
+      setNotice(action === "IGNORE" ? "已忽略，原始证据仍保留。" : "已按所选方式写入项目沉淀。");
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "确认建议沉淀失败");
-    } finally {
-      setActing("");
-    }
-  }
-
-  async function handleIgnore() {
-    const session = readSession();
-    if (!session) return;
-
-    setActing("ignore");
-    setError("");
-    setNotice("");
-    try {
-      const updated = await ignoreProjectChange(session.accessToken, params.changeId);
-      setChange(updated);
-      setDraft(toPayload(updated));
-      setNotice("已忽略。这不会删除原始证据，只会移出待确认队列。");
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "忽略建议沉淀失败");
     } finally {
       setActing("");
     }
@@ -147,13 +147,23 @@ export default function ProjectChangeDetailPage() {
             ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button disabled={!change || acting !== "" || change.status === "ACCEPTED"} loading={acting === "accept"} onClick={handleAccept} variant="primary">
-              {acting === "accept" ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              确认沉淀
-            </Button>
-            <Button disabled={!change || acting !== "" || change.status === "IGNORED"} loading={acting === "ignore"} onClick={handleIgnore} variant="danger">
-              {acting === "ignore" ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              忽略
+            {change?.developmentSegmentId ? (
+              <select className="rounded-md border border-line bg-white px-3 py-2 text-sm" onChange={(event) => setAction(event.target.value as SedimentAction)} value={action}>
+                <option value="NEW_SEDIMENT">新建沉淀</option>
+                <option value="MERGE_EXISTING">合并已有沉淀</option>
+                <option value="EVIDENCE_ONLY">只补充证据</option>
+                <option value="IGNORE">忽略</option>
+              </select>
+            ) : null}
+            {action === "MERGE_EXISTING" || action === "EVIDENCE_ONLY" ? (
+              <select className="max-w-64 rounded-md border border-line bg-white px-3 py-2 text-sm" onChange={(event) => setTargetSedimentId(event.target.value)} value={targetSedimentId}>
+                <option value="">选择目标沉淀</option>
+                {sediments.map((sediment) => <option key={sediment.id} value={sediment.id}>{sediment.title}</option>)}
+              </select>
+            ) : null}
+            <Button disabled={!change || acting !== "" || ["ACCEPTED", "IGNORED", "MERGED"].includes(change.status) || ((action === "MERGE_EXISTING" || action === "EVIDENCE_ONLY") && !targetSedimentId)} loading={acting === "confirm"} onClick={handleConfirm} variant={action === "IGNORE" ? "danger" : "primary"}>
+              {acting === "confirm" ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              {action === "IGNORE" ? "忽略建议" : "确认处理"}
             </Button>
           </div>
         </section>

@@ -25,6 +25,8 @@ class GitHubCliServiceTest {
         executor.reply("gh repo view --json nameWithOwner,url,defaultBranchRef,primaryLanguage,visibility", 0, """
             {"nameWithOwner":"example/projectflow","url":"https://github.com/example/projectflow","defaultBranchRef":{"name":"master"},"primaryLanguage":{"name":"TypeScript"},"visibility":"PUBLIC"}
             """);
+        executor.reply("git rev-parse --abbrev-ref --symbolic-full-name @{upstream}", 0, "origin/master");
+        executor.reply("git rev-list --left-right --count HEAD...@{upstream}", 0, "0\t0");
 
         var status = new GitHubCliService(executor, new ObjectMapper()).inspect(Path.of("."));
 
@@ -36,6 +38,8 @@ class GitHubCliServiceTest {
         assertThat(status.currentBranch()).isEqualTo("master");
         assertThat(status.primaryLanguage()).isEqualTo("TypeScript");
         assertThat(status.commitUrlTemplate()).isEqualTo("https://github.com/example/projectflow/commit/{sha}");
+        assertThat(status.status()).isEqualTo("CONNECTED");
+        assertThat(status.remoteRelation()).isEqualTo("synced");
         assertThat(executor.commands()).noneMatch(command -> command.contains("--show-token"));
     }
 
@@ -52,6 +56,8 @@ class GitHubCliServiceTest {
         assertThat(status.repoDetected()).isTrue();
         assertThat(status.remoteUrl()).isEqualTo("git@github.com:example/projectflow.git");
         assertThat(status.warnings()).singleElement().asString().contains("本地 Git 分析仍可使用");
+        assertThat(status.status()).isEqualTo("NOT_INSTALLED");
+        assertThat(status.remoteRelation()).isEqualTo("github_unavailable");
     }
 
     @Test
@@ -69,6 +75,23 @@ class GitHubCliServiceTest {
         assertThat(status.repoDetected()).isFalse();
         assertThat(status.warnings()).anyMatch(warning -> warning.contains("尚未登录"));
         assertThat(status.toString()).doesNotContain("secret-value");
+        assertThat(status.status()).isEqualTo("NOT_AUTHENTICATED");
+    }
+
+    @Test
+    void refreshTimeoutDegradesWithoutBlockingLocalStatus() {
+        StubExecutor executor = new StubExecutor();
+        executor.reply("git remote -v", 0, "origin\thttps://github.com/example/projectflow.git (fetch)");
+        executor.reply("git branch --show-current", 0, "master");
+        executor.reply("gh --version", 0, "gh version");
+        executor.reply("gh auth status", 0, "Logged in");
+        executor.timeout("git fetch --quiet --prune origin");
+
+        var status = new GitHubCliService(executor, new ObjectMapper()).inspect(Path.of("."), true);
+
+        assertThat(status.status()).isEqualTo("CONNECTION_TIMEOUT");
+        assertThat(status.remoteRelation()).isEqualTo("github_unavailable");
+        assertThat(status.warnings()).anyMatch(value -> value.contains("代理") && value.contains("本地 Git"));
     }
 
     private static final class StubExecutor implements LocalCommandExecutor {
@@ -77,6 +100,10 @@ class GitHubCliServiceTest {
 
         void reply(String command, int exitCode, String output) {
             replies.put(command, new CommandResult(exitCode, output, false));
+        }
+
+        void timeout(String command) {
+            replies.put(command, new CommandResult(-1, "", true));
         }
 
         List<String> commands() {

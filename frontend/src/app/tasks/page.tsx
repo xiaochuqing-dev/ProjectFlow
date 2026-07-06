@@ -3,7 +3,7 @@
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  GitPullRequestArrow,
+  Trash2,
   RefreshCw,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -187,6 +187,26 @@ function TasksPageContent() {
     }
   }
 
+  async function handleIgnoreSelected() {
+    const session = readSession();
+    if (!session || !selectedProjectId || selectedChangeIds.length === 0) return;
+    setApplying(true);
+    setError("");
+    try {
+      const selected = changes.filter((item) => selectedChangeIds.includes(item.id));
+      await Promise.all(selected.map((item) => item.developmentSegmentId
+        ? confirmProjectChange(session.accessToken, item.id, "IGNORE", null)
+        : ignoreProjectChange(session.accessToken, item.id)));
+      setNotice(`已忽略 ${selected.length} 条选中建议；原始证据仍保留。`);
+      setSelectedChangeIds([]);
+      await refreshProjectContext(selectedProjectId);
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "批量忽略失败");
+    } finally {
+      setApplying(false);
+    }
+  }
+
   async function handleApply(ids = selectedSuggestionIds) {
     const session = readSession();
     if (!session || !selectedProjectId || ids.length === 0) {
@@ -273,11 +293,11 @@ function TasksPageContent() {
             <button
               className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
               disabled={applying || selectedChangeIds.length === 0}
-              onClick={() => handleAcceptChanges()}
+              onClick={handleIgnoreSelected}
               type="button"
             >
-              {applying ? <RefreshCw className="h-4 w-4 animate-spin" /> : <GitPullRequestArrow className="h-4 w-4" />}
-              新建选中 {selectedChangeIds.length}
+              {applying ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              忽略选中 {selectedChangeIds.length}
             </button>
           )}
           leadingExtras={(

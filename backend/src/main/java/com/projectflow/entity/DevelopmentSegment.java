@@ -53,6 +53,22 @@ public class DevelopmentSegment {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private DevelopmentSegmentStatus status = DevelopmentSegmentStatus.NEEDS_REVIEW;
+    @Column(name = "generation_mode", length = 40)
+    private String generationMode = "LOCAL_RULE";
+    @Column(name = "model_provider", length = 160)
+    private String modelProvider = "";
+    @Column(name = "fallback_reason", columnDefinition = "text")
+    private String fallbackReason = "";
+    @Column(name = "quality_status", length = 40)
+    private String qualityStatus = "NEEDS_MANUAL";
+    @Column(name = "quality_reason", columnDefinition = "text")
+    private String qualityReason = "";
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "commit_urls", columnDefinition = "text")
+    private List<String> commitUrls = new ArrayList<>();
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "uncertainties", columnDefinition = "text")
+    private List<String> uncertainties = new ArrayList<>();
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
     @Column(name = "updated_at", nullable = false)
@@ -106,6 +122,18 @@ public class DevelopmentSegment {
     }
 
     public void markConfirmed() { status = DevelopmentSegmentStatus.CONFIRMED; }
+    public void updateAnalysis(
+        String mode, String provider, String fallback, String quality, String qualityDetail,
+        List<String> urls, List<String> uncertaintyItems
+    ) {
+        generationMode = safe(mode);
+        modelProvider = safe(provider);
+        fallbackReason = safe(fallback);
+        qualityStatus = safe(quality);
+        qualityReason = safe(qualityDetail);
+        commitUrls = copy(urls);
+        uncertainties = copy(uncertaintyItems);
+    }
     public void markIgnored() { status = DevelopmentSegmentStatus.IGNORED; }
     private static List<String> copy(List<String> values) { return values == null ? new ArrayList<>() : new ArrayList<>(values); }
 
@@ -122,6 +150,14 @@ public class DevelopmentSegment {
     public List<String> getEvidenceRefs() { return List.copyOf(evidenceRefs); }
     public EvidenceConfidence getConfidence() { return confidence; }
     public DevelopmentSegmentStatus getStatus() { return status; }
+    public String getGenerationMode() { return generationMode; }
+    public String getModelProvider() { return modelProvider; }
+    public String getFallbackReason() { return fallbackReason; }
+    public String getQualityStatus() { return qualityStatus; }
+    public String getQualityReason() { return qualityReason; }
+    public List<String> getCommitUrls() { return List.copyOf(commitUrls); }
+    public List<String> getUncertainties() { return List.copyOf(uncertainties); }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+    private static String safe(String value) { return value == null ? "" : value.trim(); }
 }

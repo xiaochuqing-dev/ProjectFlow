@@ -1,12 +1,12 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-07-06
+Last updated: 2026-07-07
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.3 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
+ProjectFlow V3.3.2 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
 
 Current direction:
 
@@ -20,7 +20,7 @@ Do not treat ProjectFlow as a generic Kanban app, SaaS admin panel, hotel/librar
 
 ## Current Stage
 
-The project has moved beyond the V1/V2 planning baseline. Current V3.3 focus:
+The project has moved beyond the V1/V2 planning baseline. Current V3.3.2 focus:
 
 - Workbench first screen exposes: add/import project → bind local path → analyze new changes → review development segments → confirm sediment → reuse output.
 - Scan boundaries use the last confirmed review cursor rather than the current day.
@@ -36,6 +36,9 @@ The project has moved beyond the V1/V2 planning baseline. Current V3.3 focus:
 - "Project facts" UI language should become "项目画像" / "项目档案".
 - Model API value should move upstream into project analysis, module/file explanation, risk identification, agent result parsing, and profile update suggestions.
 - Model-not-configured and model-failed states must keep local-rule fallback usable.
+- Segment output must describe concrete results and pass evidence plus quality validation.
+- Scan fingerprints stabilize repeated analysis and diagnostics explain model, fallback, GitHub, worktree, and remote state.
+- Capability output is stored as structured cards generated from the whole confirmed project evidence set.
 
 Recent implementation report says these are already present:
 

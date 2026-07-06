@@ -46,6 +46,10 @@ class WorkSessionScanControllerTest {
         Path projectPath = createGitProject("scan-project");
 
         writeProtocol(token, projectId, projectPath);
+        Path resultDir = Files.createDirectories(projectPath.resolve(".projectflow/agent-results/scan-test"));
+        Files.writeString(resultDir.resolve("result.json"), """
+            {"taskGoal":"实现首页变化概览","actualChanges":["新增变化概览入口"],"keyFiles":["src/app/today.tsx"],"verification":{"build":"passed","tests":"passed","manualCheck":"not_run"},"unfinished":[],"sedimentCandidates":[]}
+            """);
 
         MvcResult scanResult = mockMvc.perform(post("/api/projects/" + projectId + "/scan")
                 .header("Authorization", "Bearer " + token))
@@ -61,11 +65,27 @@ class WorkSessionScanControllerTest {
             .andExpect(jsonPath("$.data.sessions[0].evidence[0]").value(containsString("本轮 Git 变化")))
             .andExpect(jsonPath("$.data.sessions[0].evidence[1]").value(containsString("主要涉及")))
             .andExpect(jsonPath("$.data.warnings[0]").value(containsString("首次扫描")))
+            .andExpect(jsonPath("$.data.batch.scanFingerprint").isNotEmpty())
+            .andExpect(jsonPath("$.data.batch.modelStatus").value("NOT_CONFIGURED"))
+            .andExpect(jsonPath("$.data.batch.agentResultCount").value(1))
+            .andExpect(jsonPath("$.data.batch.githubStatus").isNotEmpty())
+            .andExpect(jsonPath("$.data.batch.worktreeDirty").value(false))
+            .andExpect(jsonPath("$.data.batch.totalScanMs").value(greaterThanOrEqualTo(0)))
+            .andExpect(jsonPath("$.data.segments[0].generationMode").value("LOCAL_RULE"))
+            .andExpect(jsonPath("$.data.segments[0].qualityStatus").value("PASS"))
+            .andExpect(jsonPath("$.data.segments[0].fallbackReason").value(containsString("未配置")))
+            .andExpect(jsonPath("$.data.segments[0].includedAgentResultRefs[0]").value(containsString("agent-result:")))
             .andReturn();
 
         String sessionId = objectMapper.readTree(scanResult.getResponse().getContentAsString())
             .at("/data/sessions/0/sessionId")
             .asText();
+        String batchId = objectMapper.readTree(scanResult.getResponse().getContentAsString()).at("/data/batch/id").asText();
+
+        mockMvc.perform(post("/api/projects/" + projectId + "/scan").header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.batch.id").value(batchId))
+            .andExpect(jsonPath("$.data.warnings[-1]").value(containsString("扫描指纹未变化")));
 
         mockMvc.perform(get("/api/projects/" + projectId + "/work-sessions")
                 .header("Authorization", "Bearer " + token))
@@ -198,6 +218,7 @@ class WorkSessionScanControllerTest {
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.sessions.length()").value(greaterThanOrEqualTo(2)))
+            .andExpect(jsonPath("$.data.batch.worktreeDirty").value(true))
             .andReturn();
 
         String uncommittedSessionId = objectMapper.readTree(conflictScan.getResponse().getContentAsString())

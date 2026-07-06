@@ -71,20 +71,54 @@ public class DevelopmentSegmentationService {
             files.addAll(atom.files());
             evidence.addAll(atom.evidenceRefs());
             if (changes.size() < 5) {
-                changes.add(cleanTitle(atom.title()));
+                changes.add(concreteChange(atom));
             }
         }
-        String displayTopic = topic.isBlank() ? "项目" : topic;
+        ChangeAtom primary = atoms.get(0);
+        String result = concreteChange(primary);
+        while (changes.size() < 3) {
+            if (changes.size() == 1) {
+                changes.add("影响 " + fileSummary(files));
+            } else {
+                changes.add("保留可追溯证据 " + evidenceSummary(evidence));
+            }
+        }
         return new SegmentDraft(
-            displayTopic + " 开发推进",
-            "这一组变化围绕 " + displayTopic + " 展开，共包含 " + atoms.size() + " 条原子变化。",
+            result,
+            summaryOf(changes),
             List.copyOf(ids),
             changes,
-            "相关能力、修复与证据已归并，可继续确认是否形成项目沉淀。",
+            "用户或开发者可直接获得“" + result + "”对应的行为变化，并能从文件与提交证据追溯来源。",
             List.copyOf(evidence),
             List.copyOf(files),
             atoms.size() <= 3 ? EvidenceConfidence.HIGH : EvidenceConfidence.MEDIUM
         );
+    }
+
+    private String concreteChange(ChangeAtom atom) {
+        String cleaned = cleanTitle(atom.title());
+        cleaned = cleaned.replaceFirst("(?i)^(add|implement|create|introduce|update|improve|fix|repair|refactor|remove|delete|document|explain|test|verify|support|enable)\\s+", "");
+        if (cleaned.matches("^(新增|增加|接入|修复|调整|改造|重构|移除|删除|同步|验证|配置|优化|补充|实现).+")) {
+            return cleaned;
+        }
+        String lower = atom.title() == null ? "" : atom.title().toLowerCase(Locale.ROOT);
+        String action = lower.startsWith("fix") ? "修复" : lower.startsWith("refactor") ? "重构"
+            : lower.startsWith("docs") ? "补充" : lower.startsWith("test") ? "验证" : lower.startsWith("remove") ? "移除" : "新增";
+        return action + cleaned;
+    }
+
+    private String summaryOf(List<String> changes) {
+        return changes.stream().limit(3).reduce((left, right) -> left + "；" + right).orElse("整理可追溯开发变化") + "。";
+    }
+
+    private String fileSummary(LinkedHashSet<String> files) {
+        if (files.isEmpty()) return "项目行为与维护流程";
+        String first = files.iterator().next();
+        return first + (files.size() > 1 ? " 等 " + files.size() + " 个文件" : "");
+    }
+
+    private String evidenceSummary(LinkedHashSet<String> evidence) {
+        return evidence.stream().findFirst().orElse("本地 Git 变化");
     }
 
     private String topicKey(ChangeAtom atom) {
@@ -116,12 +150,22 @@ public class DevelopmentSegmentationService {
         Instant occurredAt,
         List<String> modules,
         List<String> files,
-        List<String> evidenceRefs
+        List<String> evidenceRefs,
+        List<String> diffHints,
+        String sourceType
     ) {
         public ChangeAtom {
             modules = modules == null ? List.of() : List.copyOf(modules);
             files = files == null ? List.of() : List.copyOf(files);
             evidenceRefs = evidenceRefs == null ? List.of() : List.copyOf(evidenceRefs);
+            diffHints = diffHints == null ? List.of() : List.copyOf(diffHints);
+            sourceType = sourceType == null ? "GIT" : sourceType;
+        }
+
+        public ChangeAtom(
+            String id, String title, Instant occurredAt, List<String> modules, List<String> files, List<String> evidenceRefs
+        ) {
+            this(id, title, occurredAt, modules, files, evidenceRefs, List.of(), "GIT");
         }
     }
 

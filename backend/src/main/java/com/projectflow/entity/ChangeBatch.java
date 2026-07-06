@@ -50,6 +50,30 @@ public class ChangeBatch {
     private List<String> warnings = new ArrayList<>();
     @Column(name = "first_scan", nullable = false)
     private boolean firstScan;
+    @Column(name = "scan_fingerprint", length = 64)
+    private String scanFingerprint = "";
+    @Column(name = "worktree_dirty", nullable = false)
+    private boolean worktreeDirty;
+    @Column(name = "github_status", length = 40)
+    private String githubStatus = "";
+    @Column(name = "remote_relation", length = 40)
+    private String remoteRelation = "";
+    @Column(name = "segmentation_mode", length = 40)
+    private String segmentationMode = "";
+    @Column(name = "model_status", length = 40)
+    private String modelStatus = "";
+    @Column(name = "model_provider", length = 160)
+    private String modelProvider = "";
+    @Column(name = "fallback_reason", columnDefinition = "text")
+    private String fallbackReason = "";
+    @Column(name = "git_scan_ms", nullable = false)
+    private long gitScanMs;
+    @Column(name = "model_segment_ms", nullable = false)
+    private long modelSegmentMs;
+    @Column(name = "github_inspect_ms", nullable = false)
+    private long githubInspectMs;
+    @Column(name = "total_scan_ms", nullable = false)
+    private long totalScanMs;
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
     @Column(name = "updated_at", nullable = false)
@@ -92,6 +116,24 @@ public class ChangeBatch {
     }
 
     public void updateSegmentCount(int count) { this.segmentCount = Math.max(0, count); }
+    public void updateTotalScanMs(long value) { this.totalScanMs = Math.max(0, value); }
+    public void updateDiagnostics(
+        String fingerprint, boolean dirty, String github, String remote, String mode, String model,
+        String provider, String fallback, long gitMs, long modelMs, long githubMs, long totalMs
+    ) {
+        this.scanFingerprint = safe(fingerprint);
+        this.worktreeDirty = dirty;
+        this.githubStatus = safe(github);
+        this.remoteRelation = safe(remote);
+        this.segmentationMode = safe(mode);
+        this.modelStatus = safe(model);
+        this.modelProvider = safe(provider);
+        this.fallbackReason = safe(fallback);
+        this.gitScanMs = Math.max(0, gitMs);
+        this.modelSegmentMs = Math.max(0, modelMs);
+        this.githubInspectMs = Math.max(0, githubMs);
+        this.totalScanMs = Math.max(0, totalMs);
+    }
     public void markPartial() { this.status = ChangeBatchStatus.PARTIAL; }
     public void markReviewed() { this.status = ChangeBatchStatus.REVIEWED; }
     public void markFailed(List<String> failureWarnings) {
@@ -114,6 +156,19 @@ public class ChangeBatch {
     public ChangeBatchStatus getStatus() { return status; }
     public List<String> getWarnings() { return List.copyOf(warnings); }
     public boolean isFirstScan() { return firstScan; }
+    public String getScanFingerprint() { return scanFingerprint; }
+    public boolean isWorktreeDirty() { return worktreeDirty; }
+    public String getGithubStatus() { return githubStatus; }
+    public String getRemoteRelation() { return remoteRelation; }
+    public String getSegmentationMode() { return segmentationMode; }
+    public String getModelStatus() { return modelStatus; }
+    public String getModelProvider() { return modelProvider; }
+    public String getFallbackReason() { return fallbackReason; }
+    public long getGitScanMs() { return gitScanMs; }
+    public long getModelSegmentMs() { return modelSegmentMs; }
+    public long getGithubInspectMs() { return githubInspectMs; }
+    public long getTotalScanMs() { return totalScanMs; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+    private static String safe(String value) { return value == null ? "" : value.trim(); }
 }

@@ -6,15 +6,22 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.projectflow.dto.V2ProjectDtos.WorkSessionCandidateResponse;
 import com.projectflow.dto.V2ProjectDtos.WorkSessionPatchRequest;
@@ -31,7 +38,10 @@ import com.projectflow.repository.WorkSessionRepository;
 import com.projectflow.support.AppException;
 import com.projectflow.dto.V33WorkflowDtos.ChangeBatchResponse;
 import com.projectflow.dto.V33WorkflowDtos.DevelopmentSegmentResponse;
+import com.projectflow.dto.V33WorkflowDtos.GitHubStatusResponse;
 import com.projectflow.service.PendingChangeScanService.ScanPlan;
+import com.projectflow.service.PendingChangeScanService.ScanDiagnostics;
+import com.projectflow.service.PendingChangeScanService.SegmentDiagnostics;
 import com.projectflow.service.DevelopmentSegmentationService.ChangeAtom;
 import com.projectflow.service.DevelopmentSegmentationService.SegmentDraft;
 
@@ -46,6 +56,8 @@ public class WorkSessionScanService {
     private final DevelopmentSegmentationService developmentSegmentationService;
     private final ModelSegmentEnricher modelSegmentEnricher;
     private final ProjectSedimentService projectSedimentService;
+    private final GitHubCliService gitHubCliService;
+    private final ObjectMapper objectMapper;
 
     public WorkSessionScanService(
         ProjectRepository projectRepository,
@@ -56,7 +68,9 @@ public class WorkSessionScanService {
         PendingChangeScanService pendingChangeScanService,
         DevelopmentSegmentationService developmentSegmentationService,
         ModelSegmentEnricher modelSegmentEnricher,
-        ProjectSedimentService projectSedimentService
+        ProjectSedimentService projectSedimentService,
+        GitHubCliService gitHubCliService,
+        ObjectMapper objectMapper
     ) {
         this.projectRepository = projectRepository;
         this.memoryRepository = memoryRepository;
@@ -67,10 +81,13 @@ public class WorkSessionScanService {
         this.developmentSegmentationService = developmentSegmentationService;
         this.modelSegmentEnricher = modelSegmentEnricher;
         this.projectSedimentService = projectSedimentService;
+        this.gitHubCliService = gitHubCliService;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
     public WorkSessionScanResponse scan(UUID userId, UUID projectId) {
+        long scanStarted = System.nanoTime();
         ProjectSpace project = projectRepository.findByIdAndUserId(projectId, userId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
         ProjectMemory memory = memoryRepository.findByProjectId(project.getId())
@@ -78,11 +95,19 @@ public class WorkSessionScanService {
         Path projectRoot = localProjectPathGuard.requireGitProjectDirectory(memory.getLocalProjectPath()).path();
 
         List<String> warnings = new ArrayList<>();
+        long gitStarted = System.nanoTime();
         String branchName = runGit(projectRoot, warnings, "branch", "--show-current").trim();
         ScanPlan scanPlan = pendingChangeScanService.prepare(projectRoot, project.getId(), branchName);
         warnings.addAll(scanPlan.warnings());
         GitEvidence evidence = readPendingCommits(project.getId(), projectRoot, branchName, warnings, scanPlan.gitLogArguments());
-        WorkSessionCandidateResponse uncommitted = readUncommittedChanges(project.getId(), projectRoot, branchName, warnings);
+        GitEvidence uncommittedEvidence = readUncommittedEvidence(project.getId(), projectRoot, branchName, warnings);
+        List<ChangeAtom> agentResultAtoms = readAgentResultAtoms(projectRoot, warnings);
+        WorkSessionCandidateResponse uncommitted = uncommittedEvidence.hasChanges() ? uncommittedEvidence.toResponse() : null;
+        long gitScanMs = elapsedMs(gitStarted);
+        long githubStarted = System.nanoTime();
+        GitHubStatusResponse github = gitHubCliService.inspect(projectRoot);
+        long githubInspectMs = elapsedMs(githubStarted);
+        warnings.addAll(github.warnings());
         List<WorkSessionCandidateResponse> sessions = new ArrayList<>();
         if (uncommitted != null) {
             sessions.add(uncommitted);
@@ -93,15 +118,41 @@ public class WorkSessionScanService {
         List<WorkSessionCandidateResponse> persistedSessions = sessions.stream()
             .map(candidate -> saveCandidate(project.getId(), candidate))
             .toList();
-        ChangeBatchResponse batch = pendingChangeScanService.persist(
-            project.getId(), scanPlan, evidence.commitCount(), evidence.changedFileCount(), 0, warnings
+        List<ChangeAtom> atoms = new ArrayList<>(evidence.toAtoms());
+        atoms.addAll(uncommittedEvidence.toAtoms());
+        atoms.addAll(agentResultAtoms);
+        boolean worktreeDirty = uncommitted != null;
+        String fingerprint = fingerprint(
+            project.getId(), scanPlan, projectRoot, atoms, modelSegmentEnricher.configurationKey(userId), github.status(), github.remoteRelation()
         );
-        List<ChangeAtom> atoms = evidence.toAtoms();
+        var reusable = pendingChangeScanService.findReusable(project.getId(), fingerprint);
+        if (reusable != null) {
+            warnings.add("扫描指纹未变化，已复用已有开发推进段。");
+            return new WorkSessionScanResponse(
+                project.getId(), projectRoot.toString(), branchName, Instant.now(), persistedSessions, warnings,
+                reusable.batch(), reusable.segments(), scanPlan.firstScan()
+            );
+        }
         List<SegmentDraft> drafts = developmentSegmentationService.group(atoms);
-        drafts = modelSegmentEnricher.enrich(userId, atoms, drafts, warnings);
-        List<DevelopmentSegmentResponse> segments = pendingChangeScanService.persistSegments(project.getId(), batch.id(), drafts);
-        batch = pendingChangeScanService.updateSegmentCount(batch.id(), segments.size());
+        long modelStarted = System.nanoTime();
+        var enrichment = modelSegmentEnricher.enrichWithDiagnostics(userId, atoms, drafts);
+        long modelSegmentMs = elapsedMs(modelStarted);
+        drafts = enrichment.segments();
+        if (!enrichment.fallbackReason().isBlank()) warnings.add(enrichment.fallbackReason());
+        long totalScanMs = elapsedMs(scanStarted);
+        ChangeBatchResponse batch = pendingChangeScanService.persist(
+            project.getId(), scanPlan, evidence.commitCount(), evidence.changedFileCount(), agentResultAtoms.size(), warnings,
+            new ScanDiagnostics(
+                fingerprint, worktreeDirty, github.status(), github.remoteRelation(), enrichment.mode(), enrichment.modelStatus(),
+                enrichment.providerName(), enrichment.fallbackReason(), gitScanMs, modelSegmentMs, githubInspectMs, totalScanMs
+            )
+        );
+        List<DevelopmentSegmentResponse> segments = pendingChangeScanService.persistSegments(
+            project.getId(), batch.id(), drafts,
+            new SegmentDiagnostics(enrichment.mode(), enrichment.providerName(), enrichment.fallbackReason(), github.status(), github.commitUrlTemplate())
+        );
         projectSedimentService.createSuggestions(project.getId(), segments);
+        batch = pendingChangeScanService.finish(batch.id(), segments.size(), elapsedMs(scanStarted));
         return new WorkSessionScanResponse(
             project.getId(),
             projectRoot.toString(),
@@ -273,7 +324,7 @@ public class WorkSessionScanService {
         return evidence;
     }
 
-    private WorkSessionCandidateResponse readUncommittedChanges(UUID projectId, Path projectRoot, String branchName, List<String> warnings) {
+    private GitEvidence readUncommittedEvidence(UUID projectId, Path projectRoot, String branchName, List<String> warnings) {
         String output = runGit(projectRoot, warnings, "diff", "--numstat", "HEAD", "--");
         GitEvidence evidence = new GitEvidence(projectId, branchName);
         CommitCursor cursor = new CommitCursor("WORKTREE", "Unknown", Instant.now(), "Uncommitted working tree changes");
@@ -284,7 +335,73 @@ public class WorkSessionScanService {
                 evidence.addNumstat(cursor, line);
             }
         }
-        return evidence.hasChanges() ? evidence.toResponse() : null;
+        return evidence;
+    }
+
+    private List<ChangeAtom> readAgentResultAtoms(Path projectRoot, List<String> warnings) {
+        Path resultsRoot = projectRoot.resolve(".projectflow/agent-results").toAbsolutePath().normalize();
+        if (!Files.isDirectory(resultsRoot)) return List.of();
+        List<ChangeAtom> atoms = new ArrayList<>();
+        try (Stream<Path> paths = Files.walk(resultsRoot, 3)) {
+            for (Path path : paths.filter(Files::isRegularFile).filter(item -> item.getFileName().toString().equals("result.json")).sorted().limit(50).toList()) {
+                Path normalized = path.toAbsolutePath().normalize();
+                if (!normalized.startsWith(resultsRoot) || Files.size(normalized) > 1_000_000) continue;
+                try {
+                    JsonNode json = objectMapper.readTree(Files.readString(normalized, StandardCharsets.UTF_8));
+                    List<String> changes = jsonStrings(json.path("actualChanges"), 6);
+                    List<String> files = jsonStrings(json.path("keyFiles"), 40).stream().filter(this::safeRelativeEvidencePath).toList();
+                    String relative = projectRoot.relativize(normalized).toString().replace('\\', '/');
+                    String title = changes.isEmpty() ? json.path("taskGoal").asText("Agent result") : changes.get(0);
+                    List<String> refs = new ArrayList<>();
+                    refs.add("agent-result:" + relative);
+                    files.forEach(file -> refs.add("file:" + file));
+                    atoms.add(new ChangeAtom(
+                        "agent:" + relative, title, Files.getLastModifiedTime(normalized).toInstant(),
+                        files.stream().map(WorkSessionScanService::moduleName).distinct().toList(), files, refs,
+                        changes, "AGENT_RESULT"
+                    ));
+                } catch (Exception exception) {
+                    warnings.add("Agent result 无法解析，已跳过：" + projectRoot.relativize(normalized).toString().replace('\\', '/'));
+                }
+            }
+        } catch (IOException exception) {
+            warnings.add("Agent result 目录读取失败，本次继续使用本地 Git 分析。");
+        }
+        return atoms;
+    }
+
+    private List<String> jsonStrings(JsonNode value, int limit) {
+        if (!value.isArray()) return List.of();
+        List<String> result = new ArrayList<>();
+        value.forEach(item -> {
+            if (result.size() < limit && item.isTextual() && !item.asText().isBlank()) result.add(item.asText().trim());
+        });
+        return result;
+    }
+
+    private boolean safeRelativeEvidencePath(String value) {
+        if (value == null || value.isBlank() || value.length() > 1_000) return false;
+        String normalized = value.replace('\\', '/');
+        return !normalized.startsWith("/") && !normalized.matches("^[A-Za-z]:.*")
+            && Stream.of(normalized.split("/")).noneMatch(part -> part.equals(".."));
+    }
+
+    private String fingerprint(
+        UUID projectId, ScanPlan plan, Path root, List<ChangeAtom> atoms, String modelConfig, String githubStatus, String remoteRelation
+    ) {
+        String worktree = runGit(root, new ArrayList<>(), "status", "--porcelain=v1", "--untracked-files=all");
+        String atomIds = atoms.stream().map(ChangeAtom::id).sorted().reduce("", (left, right) -> left + "|" + right);
+        String input = String.join("\n", projectId.toString(), plan.branchName(), plan.baseCommitSha(), plan.headCommitSha(), worktree,
+            atomIds, "v3.3.2", modelConfig, githubStatus, remoteRelation);
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(input.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+
+    private long elapsedMs(long started) {
+        return Math.max(0, (System.nanoTime() - started) / 1_000_000L);
     }
 
     private String runGit(Path projectRoot, List<String> warnings, String... args) {
@@ -529,7 +646,9 @@ public class WorkSessionScanService {
                 commit.time(),
                 List.copyOf(modules),
                 List.copyOf(files),
-                refs
+                refs,
+                List.of("commit=" + commit.subject(), "files=" + String.join(",", files.stream().limit(8).toList())),
+                "WORKTREE".equals(commit.hash()) ? "WORKTREE" : "GIT_COMMIT"
             );
         }
     }

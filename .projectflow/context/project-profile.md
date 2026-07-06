@@ -1,3 +1,3 @@
 # Project profile
 
-ProjectFlow V3.3 is a local development-change understanding and project-sedimentation tool for AI-assisted solo developers. It is not a generic project manager, team PR/CI system, or daily-report generator. Its core value is turning real changes into confirmed, traceable, reusable project sediment.
+ProjectFlow V3.3.2 is a local development-change understanding and project-sedimentation tool for AI-assisted solo developers. It adds result-level segment quality gates, explainable stable scans, optional GitHub evidence enrichment, and whole-project capability analysis while preserving user confirmation as the boundary for official facts.

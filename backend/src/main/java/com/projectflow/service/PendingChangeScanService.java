@@ -32,15 +32,18 @@ public class PendingChangeScanService {
     private final ProjectReviewCursorRepository cursorRepository;
     private final ChangeBatchRepository batchRepository;
     private final DevelopmentSegmentRepository segmentRepository;
+    private final SegmentQualityGate qualityGate;
 
     public PendingChangeScanService(
         ProjectReviewCursorRepository cursorRepository,
         ChangeBatchRepository batchRepository,
-        DevelopmentSegmentRepository segmentRepository
+        DevelopmentSegmentRepository segmentRepository,
+        SegmentQualityGate qualityGate
     ) {
         this.cursorRepository = cursorRepository;
         this.batchRepository = batchRepository;
         this.segmentRepository = segmentRepository;
+        this.qualityGate = qualityGate;
     }
 
     public ScanPlan prepare(Path projectRoot, UUID projectId, String branchName) {
@@ -85,13 +88,16 @@ public class PendingChangeScanService {
     }
 
     @Transactional
-    public ChangeBatchResponse persist(UUID projectId, ScanPlan plan, int commitCount, int changedFileCount, int agentResultCount, List<String> allWarnings) {
+    public ChangeBatchResponse persist(UUID projectId, ScanPlan plan, int commitCount, int changedFileCount, int agentResultCount, List<String> allWarnings, ScanDiagnostics diagnostics) {
         ChangeBatch batch = batchRepository
-            .findFirstByProjectIdAndBranchNameAndBaseCommitShaAndHeadCommitShaOrderByScanStartedAtDesc(
-                projectId, plan.branchName(), plan.baseCommitSha(), plan.headCommitSha()
-            )
+            .findFirstByProjectIdAndScanFingerprintOrderByScanStartedAtDesc(projectId, diagnostics.scanFingerprint())
             .orElseGet(() -> new ChangeBatch(projectId, plan.baseCommitSha(), plan.headCommitSha(), plan.branchName(), plan.firstScan()));
         batch.complete(commitCount, changedFileCount, agentResultCount, allWarnings);
+        batch.updateDiagnostics(
+            diagnostics.scanFingerprint(), diagnostics.worktreeDirty(), diagnostics.githubStatus(), diagnostics.remoteRelation(),
+            diagnostics.segmentationMode(), diagnostics.modelStatus(), diagnostics.modelProvider(), diagnostics.fallbackReason(),
+            diagnostics.gitScanMs(), diagnostics.modelSegmentMs(), diagnostics.githubInspectMs(), diagnostics.totalScanMs()
+        );
         return toResponse(batchRepository.save(batch));
     }
 
@@ -101,26 +107,37 @@ public class PendingChangeScanService {
     }
 
     @Transactional
-    public List<DevelopmentSegmentResponse> persistSegments(UUID projectId, UUID batchId, List<SegmentDraft> drafts) {
+    public List<DevelopmentSegmentResponse> persistSegments(UUID projectId, UUID batchId, List<SegmentDraft> drafts, SegmentDiagnostics diagnostics) {
         List<DevelopmentSegment> existing = segmentRepository.findByBatchIdOrderByCreatedAtAsc(batchId);
         if (!existing.isEmpty()) {
             return existing.stream().map(this::toResponse).toList();
         }
         List<DevelopmentSegment> segments = new ArrayList<>();
+        List<String> titles = new ArrayList<>();
         for (SegmentDraft draft : drafts) {
+            var quality = qualityGate.evaluate(draft, titles);
+            titles.add(draft.title());
             DevelopmentSegment segment = new DevelopmentSegment(projectId, batchId);
             segment.updateContent(
                 draft.title(),
                 draft.plainSummary(),
                 draft.mainChanges(),
                 draft.userVisibleValue(),
-                draft.includedAtomIds(),
-                List.of(),
+                draft.includedAtomIds().stream().filter(id -> !id.startsWith("agent:")).toList(),
+                draft.includedAtomIds().stream().filter(id -> id.startsWith("agent:")).map(id -> "agent-result:" + id.substring(6)).toList(),
                 draft.affectedFiles(),
                 draft.evidenceRefs(),
                 draft.confidence(),
-                DevelopmentSegmentStatus.PENDING
+                "PASS".equals(quality.status()) ? DevelopmentSegmentStatus.PENDING : DevelopmentSegmentStatus.NEEDS_REVIEW
             );
+            List<String> urls = draft.evidenceRefs().stream()
+                .filter(ref -> ref.startsWith("commit:"))
+                .map(ref -> diagnostics.commitUrlTemplate().isBlank() ? "" : diagnostics.commitUrlTemplate().replace("{sha}", ref.substring(7)))
+                .filter(url -> !url.isBlank()).toList();
+            List<String> uncertainties = new ArrayList<>();
+            if (!diagnostics.fallbackReason().isBlank()) uncertainties.add(diagnostics.fallbackReason());
+            if (!"CONNECTED".equals(diagnostics.githubStatus())) uncertainties.add("GitHub 远程证据未完整接入");
+            segment.updateAnalysis(diagnostics.generationMode(), diagnostics.modelProvider(), diagnostics.fallbackReason(), quality.status(), quality.reason(), urls, uncertainties);
             segments.add(segment);
         }
         return segmentRepository.saveAll(segments).stream().map(this::toResponse).toList();
@@ -158,7 +175,10 @@ public class PendingChangeScanService {
             batch.getId(), batch.getProjectId(), batch.getScanStartedAt(), batch.getScanFinishedAt(),
             batch.getBaseCommitSha(), batch.getHeadCommitSha(), batch.getBranchName(), batch.getNewCommitCount(),
             batch.getChangedFileCount(), batch.getAgentResultCount(), batch.getSegmentCount(), batch.getStatus().name(),
-            batch.getWarnings(), batch.isFirstScan()
+            batch.getWarnings(), batch.isFirstScan(), batch.getScanFingerprint(), batch.isWorktreeDirty(),
+            batch.getGithubStatus(), batch.getRemoteRelation(), batch.getSegmentationMode(), batch.getModelStatus(),
+            batch.getModelProvider(), batch.getFallbackReason(), batch.getGitScanMs(), batch.getModelSegmentMs(),
+            batch.getGithubInspectMs(), batch.getTotalScanMs()
         );
     }
 
@@ -167,7 +187,9 @@ public class PendingChangeScanService {
             segment.getId(), segment.getProjectId(), segment.getBatchId(), segment.getTitle(), segment.getPlainSummary(),
             segment.getMainChanges(), segment.getUserVisibleValue(), segment.getIncludedCommitRefs(),
             segment.getIncludedAgentResultRefs(), segment.getAffectedFiles(), segment.getEvidenceRefs(),
-            segment.getConfidence().name(), segment.getStatus().name(), segment.getCreatedAt(), segment.getUpdatedAt()
+            segment.getConfidence().name(), segment.getStatus().name(), segment.getCreatedAt(), segment.getUpdatedAt(),
+            segment.getGenerationMode(), segment.getModelProvider(), segment.getFallbackReason(), segment.getQualityStatus(),
+            segment.getQualityReason(), segment.getCommitUrls(), segment.getUncertainties()
         );
     }
 
@@ -179,6 +201,50 @@ public class PendingChangeScanService {
         List<String> gitLogArguments,
         List<String> warnings
     ) {
+    }
+
+    @Transactional
+    public ChangeBatchResponse finish(UUID batchId, int segmentCount, long totalScanMs) {
+        ChangeBatch batch = batchRepository.findById(batchId).orElseThrow();
+        batch.updateSegmentCount(segmentCount);
+        batch.updateTotalScanMs(totalScanMs);
+        return toResponse(batchRepository.save(batch));
+    }
+
+    @Transactional(readOnly = true)
+    public ReusableScan findReusable(UUID projectId, String fingerprint) {
+        return batchRepository.findFirstByProjectIdAndScanFingerprintOrderByScanStartedAtDesc(projectId, fingerprint)
+            .map(batch -> new ReusableScan(toResponse(batch), listSegments(batch.getId())))
+            .filter(value -> !value.segments().isEmpty())
+            .orElse(null);
+    }
+
+    public record ScanDiagnostics(
+        String scanFingerprint,
+        boolean worktreeDirty,
+        String githubStatus,
+        String remoteRelation,
+        String segmentationMode,
+        String modelStatus,
+        String modelProvider,
+        String fallbackReason,
+        long gitScanMs,
+        long modelSegmentMs,
+        long githubInspectMs,
+        long totalScanMs
+    ) {
+    }
+
+    public record SegmentDiagnostics(
+        String generationMode,
+        String modelProvider,
+        String fallbackReason,
+        String githubStatus,
+        String commitUrlTemplate
+    ) {
+    }
+
+    public record ReusableScan(ChangeBatchResponse batch, List<DevelopmentSegmentResponse> segments) {
     }
 
     private record CommandResult(int exitCode, String output) {
