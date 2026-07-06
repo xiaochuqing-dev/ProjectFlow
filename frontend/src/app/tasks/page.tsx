@@ -159,7 +159,7 @@ function TasksPageContent() {
       const updated = await updateAiSuggestion(session.accessToken, editing.id, editing.title, editing.reason, payload);
       setSuggestions((current) => current.map((suggestion) => (suggestion.id === updated.id ? updated : suggestion)));
       setEditing(null);
-      setNotice("候选变更已保存，采纳时会使用编辑后的内容。");
+      setNotice("兼容候选已保存，确认时会使用编辑后的内容。");
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "候选变更保存失败");
     } finally {
@@ -178,10 +178,10 @@ function TasksPageContent() {
     setNotice("");
     try {
       await Promise.all(ids.map((id) => acceptProjectChange(session.accessToken, id)));
-      setNotice(`已采纳 ${ids.length} 条待确认内容，已写入项目资产和可信依据。`);
+      setNotice(`已确认 ${ids.length} 条兼容待确认内容，已写入项目沉淀和可信依据。`);
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "采纳结构化变更失败");
+      setError(exception instanceof Error ? exception.message : "确认兼容候选失败");
     } finally {
       setApplying(false);
     }
@@ -198,10 +198,10 @@ function TasksPageContent() {
     setNotice("");
     try {
       await applyAiSuggestions(session.accessToken, selectedProjectId, ids);
-      setNotice(`已采纳 ${ids.length} 条候选内容，并生成项目资产、开发证据和回顾来源。`);
+      setNotice(`已确认 ${ids.length} 条旧版候选，并生成项目沉淀、开发证据和回顾来源。`);
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "采纳变更失败");
+      setError(exception instanceof Error ? exception.message : "确认旧版候选失败");
     } finally {
       setApplying(false);
     }
@@ -218,10 +218,10 @@ function TasksPageContent() {
     setNotice("");
     try {
       await ignoreProjectChange(session.accessToken, id);
-      setNotice("结构化变更已忽略。");
+      setNotice("建议沉淀已忽略。");
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "忽略结构化变更失败");
+      setError(exception instanceof Error ? exception.message : "忽略建议沉淀失败");
     } finally {
       setIgnoringId("");
     }
@@ -283,7 +283,7 @@ function TasksPageContent() {
           leadingExtras={(
             <>
               <Badge label={`待确认 ${pendingChanges.length}`} tone="warning" />
-              <Badge label={`已采纳 ${acceptedChanges.length}`} tone="success" />
+              <Badge label={`已确认 ${acceptedChanges.length}`} tone="success" />
               <Badge label={`已忽略 ${ignoredChanges.length}`} tone="slate" />
             </>
           )}

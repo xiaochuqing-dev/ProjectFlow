@@ -66,7 +66,7 @@ function ProjectTimelinePageContent() {
         <Header onBack={() => router.back()} projectId={selectedProjectId} title="成长时间线" />
         {error ? <div className="mb-5 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div> : null}
         {loading ? <div className="h-1 bg-slate-950" /> : null}
-        <ResourceTimeline emptyText="暂无成长记录。采纳结构化变更后会在这里形成时间线。" items={timelineItems} title={`按时间沉淀的项目变化 · ${records.length} 条`} />
+        <ResourceTimeline emptyText="暂无成长记录。确认建议沉淀后会在这里形成时间线。" items={timelineItems} title={`按时间沉淀的项目变化 · ${records.length} 条`} />
       </div>
     </AppShell>
   );
@@ -105,7 +105,7 @@ function toTimelineItem(record: ProjectEvolutionRecord): ResourceTimelineItem {
     date: record.createdAt,
     type: "成长记录",
     status: "已入档",
-    source: record.materialId ? "项目材料" : "项目资产",
+    source: record.materialId ? "项目材料" : "项目沉淀",
     meta: record.materialId ? `materialId: ${record.materialId}` : undefined,
     detail,
   };

@@ -30,7 +30,15 @@ target/
 data/
 uploads/
 tmp/
-.projectflow/
+.projectflow/*
+!.projectflow/AGENT_PROTOCOL.md
+!.projectflow/agent-protocol.md
+!.projectflow/context/
+!.projectflow/context/*.md
+!.projectflow/templates/
+!.projectflow/templates/result.json
+!.projectflow/agent-results/
+!.projectflow/agent-results/.gitkeep
 
 # Local planning and design references
 /*.docx

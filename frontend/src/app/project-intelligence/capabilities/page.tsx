@@ -109,9 +109,9 @@ function CompletedCapabilitiesContent() {
       const updated = await updateProjectMemory(session.accessToken, selectedProjectId, payload);
       setMemory(updated);
       setAdoptedSummary(candidate.candidate.summary);
-      setNotice("候选解读已采纳为正式能力说明。");
+      setNotice("候选解读已确认为正式能力说明。");
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "采纳失败。");
+      setError(exception instanceof Error ? exception.message : "确认失败。");
     }
   }
 
@@ -167,7 +167,7 @@ function CompletedCapabilitiesContent() {
               );
             })}
             {capabilityAssets.length === 0 ? (
-              <p className="rounded-md border border-line bg-slate-50 p-4 text-sm text-muted">暂无已确认能力。采纳开发成果或保存项目资产后，会先形成能力候选，再经用户确认进入这里。</p>
+              <p className="rounded-md border border-line bg-slate-50 p-4 text-sm text-muted">暂无已确认能力。建议沉淀经用户确认后会进入这里。</p>
             ) : null}
           </div>
         </section>
@@ -228,13 +228,13 @@ function CapabilityAssetCard({
           <Clipboard className="h-3.5 w-3.5" />
           复制表达
         </button>
-        <button className="ml-auto inline-flex items-center gap-1 rounded-md border border-emerald-300 px-2 py-1 text-xs font-semibold text-emerald-800 hover:bg-white disabled:opacity-60" disabled={interpreting} onClick={onGenerate} type="button" title="生成候选解读，采纳后才进入正式项目资产">
+        <button className="ml-auto inline-flex items-center gap-1 rounded-md border border-emerald-300 px-2 py-1 text-xs font-semibold text-emerald-800 hover:bg-white disabled:opacity-60" disabled={interpreting} onClick={onGenerate} type="button" title="生成候选解读，用户确认后才进入正式项目沉淀">
           {interpreting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
           生成能力解读
         </button>
       </div>
       {adopted ? (
-        <p className="mt-3 rounded-md border border-emerald-200 bg-white px-3 py-2 text-xs text-emerald-800">已采纳候选：{adopted}</p>
+        <p className="mt-3 rounded-md border border-emerald-200 bg-white px-3 py-2 text-xs text-emerald-800">已确认候选：{adopted}</p>
       ) : null}
       {job?.status === "QUEUED" || job?.status === "RUNNING" ? (
         <p className="mt-3 inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
@@ -270,7 +270,7 @@ function CapabilityCandidatePanel({ result, onAdopt, onRetry }: { result: Capabi
         <div><dt className="font-semibold">简历表达</dt><dd>{candidate.resume}</dd></div>
       </dl>
       <div className="mt-2 flex gap-2">
-        <button className="rounded-md bg-sky-700 px-3 py-1 text-xs font-semibold text-white hover:bg-sky-800" onClick={onAdopt} type="button">采纳为正式能力说明</button>
+        <button className="rounded-md bg-sky-700 px-3 py-1 text-xs font-semibold text-white hover:bg-sky-800" onClick={onAdopt} type="button">确认为正式能力说明</button>
         <button className="rounded-md border border-sky-300 px-3 py-1 text-xs font-semibold text-sky-800 hover:bg-white" onClick={onRetry} type="button">重新生成</button>
       </div>
     </div>

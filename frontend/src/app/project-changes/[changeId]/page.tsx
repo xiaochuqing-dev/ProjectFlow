@@ -54,7 +54,7 @@ export default function ProjectChangeDetailPage() {
   useEffect(() => {
     const session = readSession();
     if (!session) {
-      setError("请先登录后再审查结构化变更。");
+      setError("请先登录后再查看建议沉淀。");
       setLoading(false);
       return;
     }
@@ -64,7 +64,7 @@ export default function ProjectChangeDetailPage() {
         setChange(item);
         setDraft(toPayload(item));
       })
-      .catch((exception) => setError(exception instanceof Error ? exception.message : "结构化变更加载失败"))
+      .catch((exception) => setError(exception instanceof Error ? exception.message : "建议沉淀加载失败"))
       .finally(() => setLoading(false));
   }, [params.changeId]);
 
@@ -80,9 +80,9 @@ export default function ProjectChangeDetailPage() {
       const updated = await updateProjectChange(session.accessToken, params.changeId, draft);
       setChange(updated);
       setDraft(toPayload(updated));
-      setNotice("修正已保存。采纳时会使用修正后的内容写入项目资产。");
+      setNotice("修正已保存。确认时会使用修正后的内容写入项目沉淀。");
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "结构化变更保存失败");
+      setError(exception instanceof Error ? exception.message : "建议沉淀保存失败");
     } finally {
       setSaving(false);
     }
@@ -99,9 +99,9 @@ export default function ProjectChangeDetailPage() {
       const updated = await acceptProjectChange(session.accessToken, params.changeId);
       setChange(updated);
       setDraft(toPayload(updated));
-      setNotice("已采纳。项目资产、可信依据、项目时间线和输出来源会使用这条确认事实。");
+      setNotice("已确认。项目沉淀、可信依据、项目时间线和输出来源会使用这条事实。");
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "采纳结构化变更失败");
+      setError(exception instanceof Error ? exception.message : "确认建议沉淀失败");
     } finally {
       setActing("");
     }
@@ -120,7 +120,7 @@ export default function ProjectChangeDetailPage() {
       setDraft(toPayload(updated));
       setNotice("已忽略。这不会删除原始证据，只会移出待确认队列。");
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "忽略结构化变更失败");
+      setError(exception instanceof Error ? exception.message : "忽略建议沉淀失败");
     } finally {
       setActing("");
     }
@@ -149,7 +149,7 @@ export default function ProjectChangeDetailPage() {
           <div className="flex flex-wrap gap-2">
             <Button disabled={!change || acting !== "" || change.status === "ACCEPTED"} loading={acting === "accept"} onClick={handleAccept} variant="primary">
               {acting === "accept" ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              采纳
+              确认沉淀
             </Button>
             <Button disabled={!change || acting !== "" || change.status === "IGNORED"} loading={acting === "ignore"} onClick={handleIgnore} variant="danger">
               {acting === "ignore" ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -167,7 +167,7 @@ export default function ProjectChangeDetailPage() {
             <div className="space-y-5">
               <Card shadow="card">
                 <div className="border-b border-line p-5">
-                  <p className="mb-2 text-sm font-semibold text-brand">项目资产入库台</p>
+                  <p className="mb-2 text-sm font-semibold text-brand">沉淀确认</p>
                   <div className="mb-3 flex flex-wrap items-center gap-2">
                     <Badge label={changeKindLabels[draft.changeKind]} tone="brand" />
                     <Badge label={impactLabels[draft.impactLevel]} tone={draft.impactLevel === "MAJOR" ? "warning" : "slate"} />
@@ -192,7 +192,7 @@ export default function ProjectChangeDetailPage() {
                   <p className="mt-1 text-sm text-muted">当前页只保留入库判断。完整文件、Git、测试和构建证据进入独立追溯页。</p>
                 </div>
                 <div className="grid gap-3 p-5 md:grid-cols-2">
-                  <ReviewSignal label="是否可采纳" value={reviewReadiness(draft)} />
+                  <ReviewSignal label="是否可确认" value={reviewReadiness(draft)} />
                   <ReviewSignal label="缺少测试" value={draft.testEvidence && !draft.testEvidence.includes("未采集") ? "否" : "是，建议补充或人工确认"} />
                   <ReviewSignal label="缺少构建" value={draft.buildEvidence && !draft.buildEvidence.includes("未采集") ? "否" : "是，建议补充或人工确认"} />
                   <ReviewSignal label="关键文件" value={keyFilePreview(draft.affectedFiles)} />
@@ -208,8 +208,8 @@ export default function ProjectChangeDetailPage() {
 
               <Card shadow="card">
                 <div className="border-b border-line p-5">
-                  <h3 className="font-semibold text-slate-950">建议沉淀到项目资产</h3>
-                  <p className="mt-1 text-sm text-muted">采纳后，这些候选会成为项目资产和后续输出的确认来源。</p>
+                  <h3 className="font-semibold text-slate-950">建议写入项目沉淀</h3>
+                  <p className="mt-1 text-sm text-muted">确认后，这些候选会成为项目沉淀和后续输出的来源。</p>
                 </div>
                 <div className="grid gap-3 p-5 md:grid-cols-2">
                   {changeMemoryTargets(draft).map((target) => (
@@ -259,7 +259,7 @@ export default function ProjectChangeDetailPage() {
                 <div className="mt-4 grid gap-2">
                   <Link href={`/project-intelligence?projectId=${change.projectId}`}>
                     <Button fullWidth variant="secondary">
-                      看项目资产 <ArrowRight className="h-3.5 w-3.5" />
+                      看项目沉淀 <ArrowRight className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
                   <Link href={`/project-intelligence/timeline?projectId=${change.projectId}`}>
@@ -272,14 +272,14 @@ export default function ProjectChangeDetailPage() {
               <Card shadow="card" padding="md">
                 <h3 className="font-semibold text-slate-950">审查原则</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  AI 和本地规则只生成候选。采纳后才写入正式项目资产；不确定就忽略或展开修正区修改。
+                  AI 和本地规则只生成候选。用户确认后才写入正式项目沉淀；不确定就忽略或展开修正区修改。
                 </p>
               </Card>
             </aside>
           </form>
         ) : !loading ? (
           <section className="rounded-md border border-line bg-white p-8 text-center text-sm text-muted shadow-panel">
-            没有找到这条结构化变更。
+            没有找到这条建议沉淀。
           </section>
         ) : null}
       </div>
@@ -300,7 +300,7 @@ function ArchiveCandidate({ target, text }: { target: string; text: string }) {
   return (
     <article className="rounded-md border border-line bg-slate-50 p-4">
       <p className="font-semibold text-slate-950">{target}</p>
-      <p className="mt-2 line-clamp-4 whitespace-pre-line text-sm leading-6 text-slate-600">{text || "采纳后按变更摘要写入。"}</p>
+      <p className="mt-2 line-clamp-4 whitespace-pre-line text-sm leading-6 text-slate-600">{text || "确认后按变化摘要写入。"}</p>
     </article>
   );
 }
@@ -418,8 +418,8 @@ function ReviewSignal({ label, value }: { label: string; value: string }) {
 
 function reviewReadiness(change: ProjectChangePayload) {
   if (change.riskNotes && !change.testEvidence) return "需人工复核";
-  if (change.testEvidence?.includes("未采集") || change.buildEvidence?.includes("未采集")) return "可采纳，但需注意验证缺口";
-  return "可采纳";
+  if (change.testEvidence?.includes("未采集") || change.buildEvidence?.includes("未采集")) return "可确认，但需注意验证缺口";
+  return "可确认";
 }
 
 function keyFilePreview(value: string) {
@@ -440,7 +440,7 @@ function sourceLabel(value: string) {
 function statusLabel(value: string) {
   if (value === "PENDING") return "待确认";
   if (value === "EDITED") return "已修正";
-  if (value === "ACCEPTED") return "已采纳";
+  if (value === "ACCEPTED") return "已确认";
   if (value === "IGNORED") return "已忽略";
   if (value === "MERGED") return "已合并";
   return value;

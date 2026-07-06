@@ -24,7 +24,7 @@ assert.match(api, /batch: ChangeBatch \| null/, "scan responses should expose a 
 assert.match(api, /segments: DevelopmentSegment\[\]/, "scan responses should expose deterministic segments");
 
 assert.match(tasks, /ChangeReviewSidebar/, "change review route should render the write-target sidebar");
-assert.match(changeReviewSidebar, /采纳后写入/, "change review should preview where accepted facts go");
+assert.match(changeReviewSidebar, /确认后写入/, "change review should preview where confirmed facts go");
 assert.match(changeReviewSidebar, /changeMemoryTargets/, "change review should derive project-memory target fields");
 assert.match(changeReviewSidebar, /每日回顾、README 草稿、周报/, "change review should explain downstream reuse");
 

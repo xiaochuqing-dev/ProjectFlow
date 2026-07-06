@@ -17,13 +17,13 @@ export function OutputOptionsCard({ selectedProjectId }: { selectedProjectId: st
         }
       />
       <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
-        <OutputOption title="README 草稿" text="把已确认项目资产整理成可继续编辑的项目介绍。" />
+        <OutputOption title="README 草稿" text="把已确认项目沉淀整理成可继续编辑的项目介绍。" />
         <OutputOption title="简历描述" text="压缩为简历项目经历，突出动作、技术和结果。" />
-        <OutputOption title="项目复盘" text="用项目理解、今日开发和项目时间线整理阶段总结。" />
+        <OutputOption title="项目复盘" text="用项目理解、开发推进段和项目时间线整理阶段总结。" />
         <OutputOption title="周报" text="把近期确认内容转成可复用的阶段汇报。" />
       </div>
       <p className="border-t border-line px-5 py-3 text-xs leading-5 text-muted">
-        确认今日开发内容后，这些输出会优先引用项目资产和可信依据；来源不足时仍可生成草稿，但需要人工补充。
+        确认建议沉淀后，这些输出会优先引用项目沉淀和可信依据；来源不足时仍可生成草稿，但需要人工补充。
       </p>
     </Card>
   );

@@ -326,7 +326,7 @@ export default function DashboardPage() {
       const memoryRecord = await saveProjectLocalPath(session.accessToken, selectedProjectId, projectPath.trim());
       setMemory(memoryRecord);
       setProjectPath(memoryRecord.localProjectPath ?? projectPath.trim());
-      setNotice("已绑定本地项目；刷新今日开发和同步上下文会复用这个路径。");
+      setNotice("已绑定本地项目；分析新变化和同步上下文会复用这个路径。");
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "本地项目路径保存失败");
     } finally {
@@ -705,7 +705,7 @@ export default function DashboardPage() {
             <Card shadow="card" padding="md">
               <p className="text-sm font-semibold text-ink">模型状态</p>
               <p className="mt-2 text-sm leading-6 text-muted">
-                {configuredProvider ? "已配置模型。深度分析结果必须经用户确认后写入项目资产。" : "未配置 API。文件理解页会显示本地规则解释，深度分析入口会引导到设置页。"}
+                {configuredProvider ? "已配置模型。深度分析结果必须经用户确认后写入项目沉淀。" : "未配置 API。文件理解页会显示本地规则解释，深度分析入口会引导到设置页。"}
               </p>
               {!configuredProvider ? (
                 <Link className="mt-3 inline-flex" href="/settings">

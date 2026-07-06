@@ -51,7 +51,7 @@ export default function ProjectChangeEvidencePage() {
           <div className="min-w-0">
             <button className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-slate-600 hover:text-slate-950" onClick={() => router.back()} type="button">
               <ArrowLeft className="h-4 w-4" />
-              返回结构化变更详情
+              返回建议沉淀详情
             </button>
             <h2 className="truncate text-xl font-semibold text-slate-950">{change ? changeDisplayTitle(change) : "完整证据"}</h2>
             <p className="mt-1 text-sm text-muted">这里承载完整路径、Git evidence、测试证据、构建证据和来源材料。</p>
@@ -116,7 +116,7 @@ export default function ProjectChangeEvidencePage() {
               <Card shadow="card" padding="md">
                 <h3 className="font-semibold text-slate-950">追溯说明</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  审查页用于判断是否采纳；本页用于事后核查完整证据。这里可以很长，但不会挤占变更列表和项目资产入口。
+                  确认页用于判断如何沉淀；本页用于事后核查完整证据。这里可以很长，但不会挤占建议列表和项目沉淀入口。
                 </p>
               </Card>
               <Card shadow="card" padding="md">

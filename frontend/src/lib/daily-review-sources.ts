@@ -34,7 +34,7 @@ export function buildDailyReviewSourceItems({
       date: record.createdAt,
       type: "项目演进",
       status: "已入档",
-      source: record.materialId ? "项目材料" : "项目资产",
+      source: record.materialId ? "项目材料" : "项目沉淀",
       detail: [
         record.detectedChanges ? `变化内容\n${record.detectedChanges}` : "",
         record.keyAchievements ? `关键成果\n${record.keyAchievements}` : "",
@@ -66,9 +66,9 @@ function memorySourceItems(memory: ProjectMemory | null, date: string): Resource
     title: item.title,
     summary: item.value,
     date: memory?.updatedAt || `${date}T00:00:00`,
-    type: "项目资产",
+    type: "项目沉淀",
     status: "已确认",
-    source: "项目资产",
+    source: "项目沉淀",
     detail: item.value,
   }));
 }

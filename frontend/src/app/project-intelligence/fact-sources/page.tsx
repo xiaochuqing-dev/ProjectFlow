@@ -24,7 +24,7 @@ const fieldLabels: Record<string, string> = {
 
 export default function FactSourcesPage() {
   return (
-    <Suspense fallback={<AppShell eyebrow="项目资产可信来源" title="可信依据"><div className="min-h-[calc(100vh-4rem)] bg-surface p-6"><div className="h-1 bg-slate-950" /></div></AppShell>}>
+    <Suspense fallback={<AppShell eyebrow="项目沉淀可信来源" title="可信依据"><div className="min-h-[calc(100vh-4rem)] bg-surface p-6"><div className="h-1 bg-slate-950" /></div></AppShell>}>
       <FactSourcesPageContent />
     </Suspense>
   );
@@ -80,7 +80,7 @@ function FactSourcesPageContent() {
   }, [selectedProjectId]);
 
   return (
-    <AppShell eyebrow="项目资产可信来源" title={project ? `${project.name} · 可信依据` : "可信依据"}>
+    <AppShell eyebrow="项目沉淀可信来源" title={project ? `${project.name} · 可信依据` : "可信依据"}>
       <div className="min-h-[calc(100vh-4rem)] bg-surface p-6">
         <section className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-white p-4 shadow-panel">
           <div>
@@ -89,7 +89,7 @@ function FactSourcesPageContent() {
               返回上一步
             </button>
             <h2 className="text-xl font-semibold text-slate-950">可信依据</h2>
-            <p className="mt-1 text-sm text-muted">查看项目资产从哪里来，哪些内容经过用户确认。</p>
+            <p className="mt-1 text-sm text-muted">查看项目沉淀从哪里来，哪些内容经过用户确认。</p>
           </div>
           <Link className="rounded-md border border-line px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50" href={`/project-intelligence?projectId=${selectedProjectId}`}>
             回到项目理解
@@ -121,7 +121,7 @@ function FactSourcesPageContent() {
 
           <div className="rounded-md border border-line bg-white shadow-panel">
             <ResourceTimeline
-              emptyText="保存项目资产或采纳变更后会生成资产来源。"
+              emptyText="确认建议沉淀后会生成来源记录。"
               items={sourceItems}
               title={`${fieldLabels[selectedField] ?? (selectedField || "资产来源")} · ${selectedSources.length} 条`}
             />

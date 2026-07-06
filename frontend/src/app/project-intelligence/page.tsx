@@ -161,7 +161,7 @@ function ProjectIntelligencePageContent() {
       setNotice("兼容档案字段已保存。后续输出仍优先使用已确认项目沉淀。");
       setEditing(false);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "项目资产保存失败");
+      setError(exception instanceof Error ? exception.message : "兼容档案字段保存失败");
     } finally {
       setSaving(false);
     }

@@ -129,7 +129,7 @@ export default function AnalysisRecordDetailPage() {
                   <h3 className="font-semibold text-slate-950">处理原则</h3>
                 </div>
                 <p className="text-sm leading-6 text-slate-600">
-                  这条记录是分析结果，不会自动覆盖项目资产。需要进入项目理解页手动确认后，才应成为后续回顾、成果输出或 agent 上下文的正式来源。
+                  这条记录只是分析结果，不会自动进入项目沉淀。需要用户手动确认后，才会成为后续回顾、成果输出或 Agent 上下文的正式来源。
                 </p>
               </div>
             </aside>

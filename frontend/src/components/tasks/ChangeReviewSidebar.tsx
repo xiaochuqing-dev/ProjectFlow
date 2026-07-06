@@ -40,7 +40,7 @@ export function ChangeReviewSidebar(props: ChangeReviewSidebarProps) {
           <ShieldAlert className="h-4 w-4" />
           查看审查说明
         </summary>
-        <p className="px-5 pb-5">采纳前是候选建议，采纳后才进入项目资产和成果素材。忽略不会删除原始材料，只是把这条候选成果移出待确认队列。</p>
+        <p className="px-5 pb-5">确认前只是建议，确认后才进入项目沉淀和成果素材。忽略不会删除原始证据，只会把建议移出待确认队列。</p>
       </details>
     </aside>
   );
@@ -52,10 +52,10 @@ function AcceptedWriteTarget({ selectedChange }: { selectedChange?: ProjectChang
       <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
         <div className="flex items-center gap-2">
           <Layers3 className="h-4 w-4 text-slate-700" />
-          <h2 className="font-semibold">采纳后写入</h2>
+          <h2 className="font-semibold">确认后写入</h2>
         </div>
         <Link className="text-xs font-semibold text-slate-700 hover:text-slate-950" href="/project-intelligence">
-          看项目资产
+          看项目沉淀
         </Link>
       </div>
       <div className="space-y-3 p-5 text-sm leading-6 text-slate-600">
@@ -69,10 +69,10 @@ function AcceptedWriteTarget({ selectedChange }: { selectedChange?: ProjectChang
                 </span>
               ))}
             </div>
-            <p>采纳后会写入上方字段的事实来源，并被每日回顾、README 草稿、周报和后续同步上下文复用。</p>
+            <p>确认后会写入上方字段的事实来源，并被每日回顾、README 草稿、周报和后续同步上下文复用。</p>
           </>
         ) : (
-          <p className="text-muted">选择一条待确认成果后，这里会显示它最终进入项目资产的字段。</p>
+          <p className="text-muted">选择一条建议沉淀后，这里会显示其兼容档案写入位置。</p>
         )}
       </div>
     </section>
@@ -116,7 +116,7 @@ function ReviewEntry({
             </button>
           </Link>
           <p className="text-xs leading-5 text-muted">
-            列表页只负责筛选和快速采纳。摘要、证据、风险和资产候选的完整审查统一进入独立页，避免在侧栏堆大表单。
+            列表页只负责筛选和快速确认。摘要、证据、风险和兼容字段修正统一进入独立页，避免在侧栏堆大表单。
           </p>
         </div>
       ) : editing ? (
@@ -218,7 +218,7 @@ function DevelopmentEvidence({ tasks }: { tasks: TaskItem[] }) {
             <p className="line-clamp-3 leading-5 text-slate-600">{task.description || "暂无验收说明。"}</p>
           </article>
         ))}
-        {tasks.length === 0 ? <p className="p-5 text-sm text-muted">采纳开发类成果后会形成开发证据。</p> : null}
+        {tasks.length === 0 ? <p className="p-5 text-sm text-muted">确认开发类沉淀后会形成开发证据。</p> : null}
       </div>
     </section>
   );

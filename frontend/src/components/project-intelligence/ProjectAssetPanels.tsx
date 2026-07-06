@@ -9,14 +9,14 @@ export const fieldConfig: Array<{
   source: string;
   rows: number;
 }> = [
-  { key: "positioning", label: "项目定位", source: "用户确认 / zip 分析 / 建议采纳", rows: 4 },
+  { key: "positioning", label: "项目定位", source: "用户确认 / zip 分析 / 建议确认", rows: 4 },
   { key: "currentStage", label: "当前阶段", source: "用户确认优先", rows: 2 },
-  { key: "completedCapabilities", label: "已完成能力", source: "采纳记录 / 每日回顾", rows: 5 },
+  { key: "completedCapabilities", label: "已完成能力", source: "确认记录 / 每日回顾", rows: 5 },
   { key: "inProgressCapabilities", label: "进行中能力", source: "任务变化 / agent result", rows: 5 },
   { key: "currentRisks", label: "当前风险", source: "风险建议 / 用户手动", rows: 5 },
-  { key: "technicalDecisions", label: "技术决策", source: "开发成果审查采纳", rows: 5 },
+  { key: "technicalDecisions", label: "技术决策", source: "沉淀确认（兼容字段）", rows: 5 },
   { key: "developerLearnings", label: "经验沉淀", source: "每日回顾 / 模型总结", rows: 5 },
-  { key: "showcaseAssets", label: "可展示成果", source: "成果素材采纳", rows: 5 },
+  { key: "showcaseAssets", label: "可展示成果", source: "成果素材确认", rows: 5 },
   { key: "nextStepSuggestions", label: "下一步目标", source: "用户确认 / agent result", rows: 5 },
 ];
 
@@ -60,7 +60,7 @@ export function ArchiveFieldReview({
         <CompletedCapabilitiesCard projectId={projectId} value={value} />
       ) : (
         <p className="min-h-20 whitespace-pre-line rounded-md border border-line bg-slate-50 p-3 text-sm leading-6 text-slate-700">
-          {value || "暂无已确认内容。采纳结构化变更或运行项目分析后，会形成可审查候选。"}
+          {value || "暂无已确认内容。分析新变化后会形成建议沉淀。"}
         </p>
       )}
       {latestSource?.sourceId ? (

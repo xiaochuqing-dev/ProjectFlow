@@ -97,7 +97,7 @@ export function ChangeReviewList(props: ChangeReviewListProps) {
                 onClick={props.onApplySuggestions}
                 type="button"
               >
-                采纳旧版候选 {props.selectedSuggestionIds.length}
+                确认旧版候选 {props.selectedSuggestionIds.length}
               </button>
             </div>
           </details>
@@ -142,7 +142,7 @@ function SedimentActionControls({
   if (!change.developmentSegmentId) {
     return (
       <button className="inline-flex h-9 items-center justify-center gap-1 rounded-md bg-slate-950 px-3 text-xs font-semibold text-white disabled:opacity-60" disabled={applying} onClick={() => onConfirm(change.id, "NEW_SEDIMENT", null)} type="button">
-        <Check className="h-3.5 w-3.5" />兼容采纳
+        <Check className="h-3.5 w-3.5" />兼容确认
       </button>
     );
   }

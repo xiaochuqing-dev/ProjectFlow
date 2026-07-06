@@ -36,7 +36,7 @@ assert.match(intelligence, /只有用户确认后/, "sediment page should explai
 assert.doesNotMatch(intelligence, /字段来源链/, "project intelligence first layer should not expose fact-source-chain jargon");
 assert.doesNotMatch(intelligence, /长期档案/, "project intelligence first layer should avoid long-term archive jargon");
 
-assert.match(outputs, /项目资产/, "output page should refer to confirmed project assets as source material");
-assert.match(outputs, /今日开发/, "output page should connect outputs back to daily development evidence");
+assert.match(outputs, /项目沉淀/, "output page should refer to confirmed project sediments as source material");
+assert.match(outputs, /开发推进段/, "output page should connect outputs back to grouped development evidence");
 
 console.log("asset workbench language checks passed");
