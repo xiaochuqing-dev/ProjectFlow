@@ -59,7 +59,7 @@ class WorkSessionScanControllerTest {
             .andExpect(jsonPath("$.data.sessions[0].taskIntent").value(containsString("更新")))
             .andExpect(jsonPath("$.data.sessions[0].evidence[0]").value(containsString("本轮 Git 变化")))
             .andExpect(jsonPath("$.data.sessions[0].evidence[1]").value(containsString("主要涉及")))
-            .andExpect(jsonPath("$.data.warnings.length()").value(0))
+            .andExpect(jsonPath("$.data.warnings[0]").value(containsString("首次扫描")))
             .andReturn();
 
         String sessionId = objectMapper.readTree(scanResult.getResponse().getContentAsString())

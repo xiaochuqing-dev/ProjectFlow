@@ -5,8 +5,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -31,6 +29,9 @@ import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.repository.WorkSessionRepository;
 import com.projectflow.support.AppException;
+import com.projectflow.dto.V33WorkflowDtos.ChangeBatchResponse;
+import com.projectflow.dto.V33WorkflowDtos.DevelopmentSegmentResponse;
+import com.projectflow.service.PendingChangeScanService.ScanPlan;
 
 @Service
 public class WorkSessionScanService {
@@ -39,19 +40,22 @@ public class WorkSessionScanService {
     private final WorkSessionRepository workSessionRepository;
     private final AgentSignatureFeedbackRepository feedbackRepository;
     private final LocalProjectPathGuard localProjectPathGuard;
+    private final PendingChangeScanService pendingChangeScanService;
 
     public WorkSessionScanService(
         ProjectRepository projectRepository,
         ProjectMemoryRepository memoryRepository,
         WorkSessionRepository workSessionRepository,
         AgentSignatureFeedbackRepository feedbackRepository,
-        LocalProjectPathGuard localProjectPathGuard
+        LocalProjectPathGuard localProjectPathGuard,
+        PendingChangeScanService pendingChangeScanService
     ) {
         this.projectRepository = projectRepository;
         this.memoryRepository = memoryRepository;
         this.workSessionRepository = workSessionRepository;
         this.feedbackRepository = feedbackRepository;
         this.localProjectPathGuard = localProjectPathGuard;
+        this.pendingChangeScanService = pendingChangeScanService;
     }
 
     @Transactional
@@ -64,7 +68,9 @@ public class WorkSessionScanService {
 
         List<String> warnings = new ArrayList<>();
         String branchName = runGit(projectRoot, warnings, "branch", "--show-current").trim();
-        GitEvidence evidence = readTodayCommits(project.getId(), projectRoot, branchName, warnings);
+        ScanPlan scanPlan = pendingChangeScanService.prepare(projectRoot, project.getId(), branchName);
+        warnings.addAll(scanPlan.warnings());
+        GitEvidence evidence = readPendingCommits(project.getId(), projectRoot, branchName, warnings, scanPlan.gitLogArguments());
         WorkSessionCandidateResponse uncommitted = readUncommittedChanges(project.getId(), projectRoot, branchName, warnings);
         List<WorkSessionCandidateResponse> sessions = new ArrayList<>();
         if (uncommitted != null) {
@@ -76,13 +82,20 @@ public class WorkSessionScanService {
         List<WorkSessionCandidateResponse> persistedSessions = sessions.stream()
             .map(candidate -> saveCandidate(project.getId(), candidate))
             .toList();
+        ChangeBatchResponse batch = pendingChangeScanService.persist(
+            project.getId(), scanPlan, evidence.commitCount(), evidence.changedFileCount(), 0, warnings
+        );
+        List<DevelopmentSegmentResponse> segments = pendingChangeScanService.listSegments(batch.id());
         return new WorkSessionScanResponse(
             project.getId(),
             projectRoot.toString(),
             branchName,
             Instant.now(),
             persistedSessions,
-            warnings
+            warnings,
+            batch,
+            segments,
+            scanPlan.firstScan()
         );
     }
 
@@ -214,16 +227,14 @@ public class WorkSessionScanService {
         feedbackRepository.save(feedback);
     }
 
-    private GitEvidence readTodayCommits(UUID projectId, Path projectRoot, String branchName, List<String> warnings) {
-        String since = LocalDate.now(ZoneId.systemDefault()).atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime().toString();
-        String output = runGit(
-            projectRoot,
-            warnings,
-            "log",
-            "--since=" + since,
-            "--numstat",
-            "--pretty=format:__PF_COMMIT__%x09%H%x09%an%x09%aI%x09%s"
-        );
+    private GitEvidence readPendingCommits(
+        UUID projectId,
+        Path projectRoot,
+        String branchName,
+        List<String> warnings,
+        List<String> gitLogArguments
+    ) {
+        String output = runGit(projectRoot, warnings, gitLogArguments.toArray(String[]::new));
         GitEvidence evidence = new GitEvidence(projectId, branchName);
         CommitCursor current = null;
         for (String rawLine : output.split("\\R")) {
@@ -372,6 +383,14 @@ public class WorkSessionScanService {
 
         private boolean hasChanges() {
             return !files.isEmpty();
+        }
+
+        private int commitCount() {
+            return commitSummaries.size();
+        }
+
+        private int changedFileCount() {
+            return files.size();
         }
 
         private WorkSessionCandidateResponse toResponse() {
