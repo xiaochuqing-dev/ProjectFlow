@@ -5,4 +5,4 @@
 - Do not let GitHub CLI failures block local change analysis.
 - Do not write unsupported AI inference into confirmed sediment.
 - Do not show full diffs, payloads, source IDs, or absolute paths by default.
-- Do not return to a “今日开发” business boundary or use the term “托管块”.
+- Do not return to a “今日开发” business boundary or revive deprecated Agent-entry wording.

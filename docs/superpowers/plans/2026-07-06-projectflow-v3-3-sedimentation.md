@@ -464,7 +464,7 @@ First screen fields: title, one-line summary, problem solved, status, source cou
 
 - [ ] **Step 4: Synchronize secondary page language**
 
-Use “项目沉淀” in daily UI. Keep “项目资产” only in product-level positioning. Remove “托管块” everywhere. Do not make daily review the pending-change boundary.
+Use “项目沉淀” in daily UI. Keep “项目资产” only in product-level positioning. Remove deprecated Agent-entry wording everywhere. Do not make daily review the pending-change boundary.
 
 - [ ] **Step 5: Run GREEN and all frontend tests**
 
@@ -505,7 +505,7 @@ git commit -m "feat: add evidence-backed project sediment views"
 
 - [ ] **Step 1: Write failing documentation checks**
 
-Assert V3.3 positioning, the four-stage workflow, local Git/Agent result/GitHub CLI roles, retained core entry points, new protocol paths, and absence of `托管块`. Assert `start.bat` delegates to the supported embedded launcher and prints V3.3 plus the access URL.
+Assert V3.3 positioning, the four-stage workflow, local Git/Agent result/GitHub CLI roles, retained core entry points, and new protocol paths. Assert `start.bat` delegates to the supported embedded launcher and prints V3.3 plus the access URL.
 
 - [ ] **Step 2: Run RED**
 

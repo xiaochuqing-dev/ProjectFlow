@@ -53,7 +53,8 @@ class ModelSegmentEnricherTest {
                 "userVisibleValue": "避免漏掉跨天提交。",
                 "evidenceRefs": ["commit:real", "commit:invented"],
                 "affectedFiles": ["backend/Scan.java", "missing.java"],
-                "confidence": "HIGH"
+                "confidence": "HIGH",
+                "needsUserReview": true
               }]
             }
             """));
@@ -81,6 +82,32 @@ class ModelSegmentEnricherTest {
         List<SegmentDraft> result = enricher.enrich(userId, atoms(), fallback(), warnings);
 
         assertThat(result).isEqualTo(fallback());
+        assertThat(warnings).singleElement().asString().contains("模型归并失败");
+    }
+
+    @Test
+    void modelCannotMarkASegmentAsNotNeedingUserReview() throws Exception {
+        UUID userId = UUID.randomUUID();
+        when(providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)).thenReturn(List.of(provider(userId)));
+        when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenReturn(objectMapper.readTree("""
+            {
+              "segments": [{
+                "segmentTitle": "扫描游标",
+                "plainSummary": "从确认点读取新变化。",
+                "includedAtomIds": ["real"],
+                "mainChanges": ["新增扫描游标"],
+                "userVisibleValue": "避免漏掉跨天提交。",
+                "evidenceRefs": ["commit:real"],
+                "affectedFiles": ["backend/Scan.java"],
+                "confidence": "HIGH",
+                "needsUserReview": false
+              }]
+            }
+            """));
+        ModelSegmentEnricher enricher = new ModelSegmentEnricher(providerRepository, modelGatewayService, new SegmentEvidenceValidator());
+        List<String> warnings = new ArrayList<>();
+
+        assertThat(enricher.enrich(userId, atoms(), fallback(), warnings)).isEqualTo(fallback());
         assertThat(warnings).singleElement().asString().contains("模型归并失败");
     }
 

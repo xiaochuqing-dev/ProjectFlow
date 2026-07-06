@@ -51,6 +51,9 @@ public class ModelSegmentEnricher {
             }
             List<SegmentDraft> validated = new ArrayList<>();
             for (JsonNode item : segments) {
+                if (!item.path("needsUserReview").asBoolean(false)) {
+                    throw new IllegalArgumentException("model segments must require user review");
+                }
                 SegmentDraft candidate = new SegmentDraft(
                     requiredText(item, "segmentTitle"),
                     requiredText(item, "plainSummary"),
@@ -98,8 +101,9 @@ public class ModelSegmentEnricher {
         }
         return """
             你是 ProjectFlow V3.3 的开发推进段归并器。只依据给定事实返回严格 JSON：
-            {"segments":[{"segmentTitle":"","plainSummary":"","includedAtomIds":[],"mainChanges":[],"userVisibleValue":"","evidenceRefs":[],"affectedFiles":[],"confidence":"HIGH|MEDIUM|LOW"}]}
+            {"segments":[{"segmentTitle":"","plainSummary":"","includedAtomIds":[],"mainChanges":[],"userVisibleValue":"","evidenceRefs":[],"affectedFiles":[],"confidence":"HIGH|MEDIUM|LOW","needsUserReview":true}]}
             不能发明 atom、commit 或文件；文档和测试若服务于同一功能，应与功能归为一段；最多返回 8 段。
+            needsUserReview 必须为 true，模型不能替用户确认项目事实。
 
             事实：
             """ + facts;
