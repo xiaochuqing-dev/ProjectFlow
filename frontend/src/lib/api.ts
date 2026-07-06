@@ -801,6 +801,33 @@ export type AgentBridgeWriteResult = {
   alreadyLinked: boolean;
 };
 
+export type AgentBridgeHealth = {
+  pathAccessible: boolean;
+  sameGitRepository: boolean;
+  protocolExists: boolean;
+  resultsDirectoryExists: boolean;
+  agentsFileExists: boolean;
+  entryRulePresent: boolean;
+  protocolVersion: string;
+  detectedRuleFiles: string[];
+  warnings: string[];
+};
+
+export type GitHubStatus = {
+  ghInstalled: boolean;
+  ghAuthenticated: boolean;
+  repoDetected: boolean;
+  nameWithOwner: string;
+  url: string;
+  defaultBranch: string;
+  currentBranch: string;
+  visibility: string;
+  primaryLanguage: string;
+  remoteUrl: string;
+  commitUrlTemplate: string;
+  warnings: string[];
+};
+
 export type AgentResultScanResult = {
   importedResults: number;
   materials: ProjectMaterial[];
@@ -1321,6 +1348,18 @@ export function scanProjectFlowAgentResults(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ projectPath, requirements: "" }),
+  });
+}
+
+export function getAgentBridgeHealth(token: string, projectId: string): Promise<AgentBridgeHealth> {
+  return requestJson<AgentBridgeHealth>(`/projects/${projectId}/agent-bridge/health`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getProjectGitHubStatus(token: string, projectId: string): Promise<GitHubStatus> {
+  return requestJson<GitHubStatus>(`/projects/${projectId}/github/status`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
 }
 

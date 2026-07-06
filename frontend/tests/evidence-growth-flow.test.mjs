@@ -9,24 +9,19 @@ const changeReviewSidebar = readFileSync(join(root, "src/components/tasks/Change
 const intelligence = readFileSync(join(root, "src/app/project-intelligence/page.tsx"), "utf8");
 const outputs = readFileSync(join(root, "src/app/ai-review/page.tsx"), "utf8");
 const api = readFileSync(join(root, "src/lib/api.ts"), "utf8");
-const evidenceFlowPanel = readFileSync(join(root, "src/components/dashboard/EvidenceFlowPanel.tsx"), "utf8");
+const pendingChangesPanel = readFileSync(join(root, "src/components/dashboard/PendingChangesPanel.tsx"), "utf8");
 const projectAccessCard = readFileSync(join(root, "src/components/dashboard/ProjectAccessCard.tsx"), "utf8");
 
 assert.match(api, /status: "READY_FOR_CHANGE"/, "evidence bundles should expose lifecycle status");
 assert.match(api, /nextAction: "GENERATE_CHANGE"/, "evidence bundles should expose the next user action");
 assert.match(api, /draftProjectChangeFromEvidenceBundle/, "frontend API should create structured changes from evidence bundles");
 
-assert.match(dashboard, /EvidenceFlowPanel/, "dashboard should render the evidence-to-review flow");
-assert.match(evidenceFlowPanel, /本次开发总结/, "dashboard evidence panel should name the post-development feedback loop");
-assert.match(evidenceFlowPanel, /整理原始依据/, "dashboard evidence panel should let users prepare evidence from work sessions");
-assert.match(evidenceFlowPanel, /生成待确认内容/, "dashboard evidence panel should let users turn evidence into reviewable changes");
-assert.match(dashboard, /采纳后会写入项目资产和可信依据/, "dashboard should explain what happens after review");
-assert.doesNotMatch(
-  evidenceFlowPanel,
-  /!bundleBySession\.has\(bundle\.workSessionId\)/,
-  "orphan evidence bundles should be compared against visible work sessions, not against their own bundle map",
-);
-assert.match(evidenceFlowPanel, /workSessionIds/, "dashboard evidence panel should keep evidence bundles visible when the matching work session is no longer in the current slice");
+assert.match(dashboard, /PendingChangesPanel/, "dashboard should render the V3.3 pending-change flow");
+assert.match(pendingChangesPanel, /分析新变化/, "dashboard should expose the cursor-based scan action");
+assert.match(pendingChangesPanel, /开发推进段/, "dashboard should group raw changes into reviewable segments");
+assert.match(pendingChangesPanel, /进入沉淀确认/, "dashboard should route segments to explicit user confirmation");
+assert.match(api, /batch: ChangeBatch \| null/, "scan responses should expose a stable change batch");
+assert.match(api, /segments: DevelopmentSegment\[\]/, "scan responses should expose deterministic segments");
 
 assert.match(tasks, /ChangeReviewSidebar/, "change review route should render the write-target sidebar");
 assert.match(changeReviewSidebar, /采纳后写入/, "change review should preview where accepted facts go");

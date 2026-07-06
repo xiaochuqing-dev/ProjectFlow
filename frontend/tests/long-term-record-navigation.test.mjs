@@ -25,7 +25,7 @@ assert.ok(existsSync(join(root, "src/app/project-intelligence/fact-sources/page.
 assert.ok(existsSync(join(root, "src/app/project-intelligence/changes/page.tsx")), "archive changes page should exist");
 
 assert.match(changeReviewList, /href=\{`\/project-changes\/\$\{change\.id\}/, "change review list should link each structured change to its detail page");
-assert.match(changeReviewList, /完整审查/, "change review list should expose a clear detail review action");
+assert.match(changeReviewList, /href=\{`\/project-changes\/\$\{change\.id\}/, "change review list should expose a detail review link");
 
 assert.match(devLogs, /\/dev-logs\/sources\?projectId=/, "daily review source summary should link to the source detail page");
 assert.equal(devLogs.match(/\/dev-logs\/sources\?projectId=/g)?.length ?? 0, 1, "daily review sources should expose one merged source entry instead of four duplicate buttons");
@@ -33,12 +33,12 @@ assert.doesNotMatch(devLogs, />有<\/span>|>无<\/span>/, "daily source cards sh
 
 assert.match(intelligence, /\/project-intelligence\/timeline\?projectId=/, "project profile should link to growth timeline page");
 assert.match(intelligence, /\/project-intelligence\/capabilities\?projectId=/, "project profile should link completed capabilities to a focused page");
-assert.match(intelligence, /CompletedCapabilitiesCard/, "completed capabilities should render as a compact entry card on the profile");
+assert.match(intelligence, /SedimentOverview/, "confirmed sediments should render as the default overview");
 assert.doesNotMatch(intelligence, /label="可信依据"/, "可信依据 should not be a primary right-rail entry");
 assert.doesNotMatch(intelligence, /label="时间线变化"/, "时间线变化 should be merged into project timeline");
 assert.match(intelligence, /ArchiveEntryCard/, "project profile right rail should use navigation entries instead of long embedded lists");
-assert.match(intelligence, /项目资产总览/, "project profile should present a read-only asset overview by default");
-assert.match(intelligence, /编辑项目资产/, "project profile should gate field editing behind an edit mode entry");
+assert.match(intelligence, /项目沉淀/, "project profile should present confirmed sediments by default");
+assert.match(intelligence, /兼容档案字段/, "legacy profile fields should stay behind a compatibility entry");
 assert.match(intelligence, /ProjectAssetPanels/, "project profile should reuse extracted asset panel components");
 
 assert.match(resourceTimeline, /FilterSelect/, "long-term resource pages should share month/type/status filters");

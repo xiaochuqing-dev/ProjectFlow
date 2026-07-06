@@ -19,7 +19,7 @@ assert.ok(lineCount("src/app/project-intelligence/capabilities/page.tsx") <= 400
 
 const requiredFiles = [
   "src/components/dashboard/ProjectAccessCard.tsx",
-  "src/components/dashboard/EvidenceFlowPanel.tsx",
+  "src/components/dashboard/PendingChangesPanel.tsx",
   "src/components/dashboard/ActivityFeed.tsx",
   "src/components/dashboard/ArchitectureQuickEntry.tsx",
   "src/components/dashboard/FlowGuideDialog.tsx",
@@ -33,7 +33,7 @@ for (const file of requiredFiles) {
 }
 
 const dashboard = read("src/app/dashboard/page.tsx");
-assert.doesNotMatch(dashboard, /function EvidenceFlowPanel/, "dashboard page should not define the evidence flow component locally");
+assert.doesNotMatch(dashboard, /function PendingChangesPanel/, "dashboard page should not define the pending-change flow locally");
 assert.doesNotMatch(dashboard, /function ActivityFeed/, "dashboard page should not define the activity feed locally");
 assert.doesNotMatch(dashboard, /function ProjectAccessCard/, "dashboard page should not define project access locally");
 
