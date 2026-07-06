@@ -752,7 +752,7 @@ export type ProjectFileAnalysis = {
 };
 
 export type ProjectAnalysisJobStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED";
-export type ProjectAnalysisJobType = "PROJECT" | "FILE" | "CAPABILITY_INTERPRET";
+export type ProjectAnalysisJobType = "PROJECT" | "FILE" | "CAPABILITY_INTERPRET" | "WORK_SESSION_SCAN";
 
 export type ProjectAnalysisJob = {
   id: string;
@@ -763,6 +763,7 @@ export type ProjectAnalysisJob = {
   projectResult: ProjectAnalysis | null;
   fileResult: ProjectFileAnalysis | null;
   capabilityInterpretResult: CapabilityInterpretResponse | null;
+  workSessionScanResult: WorkSessionScanResult | null;
   errorMessage: string | null;
   recordId: string | null;
   createdAt: string;
@@ -1365,6 +1366,15 @@ export function getProjectGitHubStatus(token: string, projectId: string): Promis
 
 export function scanProjectWorkSessions(token: string, projectId: string): Promise<WorkSessionScanResult> {
   return requestJson<WorkSessionScanResult>(`/projects/${projectId}/scan`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function startProjectWorkSessionScan(token: string, projectId: string): Promise<ProjectAnalysisJob> {
+  return requestJson<ProjectAnalysisJob>(`/projects/${projectId}/scan/jobs`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

@@ -18,6 +18,7 @@ import com.projectflow.dto.V2ProjectDtos.ChangeConflictResponse;
 import com.projectflow.dto.V2ProjectDtos.ContextSyncResponse;
 import com.projectflow.dto.V2ProjectDtos.EvidenceBundleResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectChangeResponse;
+import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisJobResponse;
 import com.projectflow.dto.V2ProjectDtos.WorkSessionCandidateResponse;
 import com.projectflow.dto.V2ProjectDtos.WorkSessionPatchRequest;
 import com.projectflow.dto.V2ProjectDtos.WorkSessionScanResponse;
@@ -26,6 +27,7 @@ import com.projectflow.service.ChangeConflictService;
 import com.projectflow.service.EvidenceDraftChangeService;
 import com.projectflow.service.EvidenceBundleService;
 import com.projectflow.service.ProjectContextSyncService;
+import com.projectflow.service.ProjectAnalysisJobService;
 import com.projectflow.service.WorkSessionScanService;
 
 import jakarta.validation.Valid;
@@ -39,6 +41,7 @@ public class WorkSessionScanController {
     private final EvidenceDraftChangeService evidenceDraftChangeService;
     private final ChangeConflictService changeConflictService;
     private final ProjectContextSyncService projectContextSyncService;
+    private final ProjectAnalysisJobService projectAnalysisJobService;
     private final AuthService authService;
 
     public WorkSessionScanController(
@@ -47,6 +50,7 @@ public class WorkSessionScanController {
         EvidenceDraftChangeService evidenceDraftChangeService,
         ChangeConflictService changeConflictService,
         ProjectContextSyncService projectContextSyncService,
+        ProjectAnalysisJobService projectAnalysisJobService,
         AuthService authService
     ) {
         this.workSessionScanService = workSessionScanService;
@@ -54,6 +58,7 @@ public class WorkSessionScanController {
         this.evidenceDraftChangeService = evidenceDraftChangeService;
         this.changeConflictService = changeConflictService;
         this.projectContextSyncService = projectContextSyncService;
+        this.projectAnalysisJobService = projectAnalysisJobService;
         this.authService = authService;
     }
 
@@ -64,6 +69,15 @@ public class WorkSessionScanController {
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
         return ApiResponse.ok(workSessionScanService.scan(user.id(), projectId));
+    }
+
+    @PostMapping("/projects/{projectId}/scan/jobs")
+    ApiResponse<ProjectAnalysisJobResponse> startScanJob(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectAnalysisJobService.startWorkSessionScan(user.id(), projectId));
     }
 
     @GetMapping("/projects/{projectId}/work-sessions")

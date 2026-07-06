@@ -17,6 +17,7 @@ import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisJobResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisResponse;
+import com.projectflow.dto.V2ProjectDtos.WorkSessionScanResponse;
 import com.projectflow.entity.ProjectAnalysisJob;
 import com.projectflow.entity.ProjectAnalysisJobStatus;
 import com.projectflow.entity.ProjectAnalysisJobType;
@@ -96,6 +97,20 @@ public class ProjectAnalysisJobService {
         return toResponse(result.job());
     }
 
+    public ProjectAnalysisJobResponse startWorkSessionScan(UUID userId, UUID projectId) {
+        StartJobResult result = transactionTemplate.execute(status -> {
+            findOwnedProject(userId, projectId);
+            java.util.Optional<ProjectAnalysisJob> active = activeJob(projectId, ProjectAnalysisJobType.WORK_SESSION_SCAN, null);
+            return active
+                .map(job -> new StartJobResult(job, false))
+                .orElseGet(() -> new StartJobResult(jobRepository.save(new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.WORK_SESSION_SCAN, null)), true));
+        });
+        if (result.created()) {
+            jobRunner.execute(result.job().getId());
+        }
+        return toResponse(result.job());
+    }
+
     @Transactional(readOnly = true)
     public ProjectAnalysisJobResponse getJob(UUID userId, UUID jobId) {
         return toResponse(findOwnedJob(userId, jobId));
@@ -144,6 +159,7 @@ public class ProjectAnalysisJobService {
         ProjectAnalysisResponse projectResult = null;
         ProjectFileAnalysisResponse fileResult = null;
         CapabilityInterpretResponse capabilityInterpretResult = null;
+        WorkSessionScanResponse workSessionScanResult = null;
         String errorMessage = job.getErrorMessage();
         if (job.getResultJson() != null && !job.getResultJson().isBlank()) {
             try {
@@ -155,6 +171,8 @@ public class ProjectAnalysisJobService {
                     }
                 } else if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_INTERPRET) {
                     capabilityInterpretResult = objectMapper.readValue(job.getResultJson(), CapabilityInterpretResponse.class);
+                } else if (job.getJobType() == ProjectAnalysisJobType.WORK_SESSION_SCAN) {
+                    workSessionScanResult = objectMapper.readValue(job.getResultJson(), WorkSessionScanResponse.class);
                 } else {
                     fileResult = objectMapper.readValue(job.getResultJson(), ProjectFileAnalysisResponse.class);
                     if (containsProjectNoise(fileResult)) {
@@ -175,6 +193,7 @@ public class ProjectAnalysisJobService {
             projectResult,
             fileResult,
             capabilityInterpretResult,
+            workSessionScanResult,
             errorMessage,
             job.getRecordId(),
             job.getCreatedAt(),

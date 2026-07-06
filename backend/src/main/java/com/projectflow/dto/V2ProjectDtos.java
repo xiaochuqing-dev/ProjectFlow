@@ -129,6 +129,7 @@ public final class V2ProjectDtos {
         ProjectAnalysisResponse projectResult,
         ProjectFileAnalysisResponse fileResult,
         CapabilityInterpretResponse capabilityInterpretResult,
+        WorkSessionScanResponse workSessionScanResult,
         String errorMessage,
         UUID recordId,
         Instant createdAt,

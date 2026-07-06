@@ -7,6 +7,7 @@ import {
   interpretCapability,
   listProjectAnalysisJobs,
   runProjectAnalysis,
+  startProjectWorkSessionScan,
   type ProjectAnalysisJob,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
@@ -115,6 +116,16 @@ export function useProjectAnalysisJobs(projectId: string) {
     return job;
   }
 
+  async function enqueueWorkSessionScan() {
+    const session = readSession();
+    if (!session || !projectId) {
+      throw new Error("登录状态或项目无效");
+    }
+    const job = await startProjectWorkSessionScan(session.accessToken, projectId);
+    setJobs((current) => mergeJobs(current, [job]));
+    return job;
+  }
+
   return {
     jobs,
     loadingJobs,
@@ -122,6 +133,7 @@ export function useProjectAnalysisJobs(projectId: string) {
     enqueueProjectAnalysis,
     enqueueFileAnalysis,
     enqueueCapabilityInterpret,
+    enqueueWorkSessionScan,
   };
 }
 

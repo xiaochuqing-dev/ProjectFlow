@@ -1,0 +1,26 @@
+{
+  "taskGoal": "修复首页分析新变化任务在刷新或离开页面后丢失状态和结果，以及长模型分析持续转圈的问题。",
+  "actualChanges": [
+    "复用 ProjectAnalysisJob 增加 WORK_SESSION_SCAN 持久化后台任务，保存完整扫描结果并支持应用重启恢复。",
+    "新增异步扫描入口并保留原同步接口；任务详情和列表继续执行用户与项目所有权校验。",
+    "首页改用持久化任务轮询，刷新或路由返回后恢复排队、运行、失败和成功结果，成功后刷新项目上下文。",
+    "新增后端集成回归测试，覆盖任务提交、完成结果恢复和跨用户拒绝访问。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ProjectAnalysisJobService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectAnalysisJobRunner.java",
+    "backend/src/main/java/com/projectflow/controller/WorkSessionScanController.java",
+    "backend/src/test/java/com/projectflow/WorkSessionScanControllerTest.java",
+    "frontend/src/lib/use-project-analysis-jobs.ts",
+    "frontend/src/app/dashboard/page.tsx"
+  ],
+  "verification": {
+    "build": "frontend npm.cmd run build passed",
+    "tests": "focused persistent scan regression passed; backend mvn.cmd -q test passed",
+    "manualCheck": "not_run"
+  },
+  "unfinished": [],
+  "sedimentCandidates": [
+    "长分析操作已统一复用持久化任务、轮询恢复和应用重启续跑机制。"
+  ]
+}

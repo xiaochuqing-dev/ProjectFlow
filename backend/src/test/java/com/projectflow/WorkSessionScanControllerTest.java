@@ -23,6 +23,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @SpringBootTest
@@ -222,6 +223,37 @@ class WorkSessionScanControllerTest {
     }
 
     @Test
+    void startsPersistentChangeScanJobAndRestoresItsResult() throws Exception {
+        String token = register("scan-job-owner", "scan-job-owner@example.com");
+        String otherToken = register("scan-job-other", "scan-job-other@example.com");
+        String projectId = createProject(token, "Persistent Scan Project");
+        Path projectPath = createGitProject("persistent-scan-project");
+        writeProtocol(token, projectId, projectPath);
+
+        MvcResult startResult = mockMvc.perform(post("/api/projects/" + projectId + "/scan/jobs")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").isNotEmpty())
+            .andExpect(jsonPath("$.data.jobType").value("WORK_SESSION_SCAN"))
+            .andReturn();
+
+        String jobId = objectMapper.readTree(startResult.getResponse().getContentAsString()).at("/data/id").asText();
+        JsonNode completed = awaitJob(token, jobId);
+        org.assertj.core.api.Assertions.assertThat(completed.path("status").asText()).isEqualTo("SUCCEEDED");
+        org.assertj.core.api.Assertions.assertThat(completed.at("/workSessionScanResult/segments").size()).isGreaterThanOrEqualTo(1);
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/analysis-jobs")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].id").value(jobId))
+            .andExpect(jsonPath("$.data[0].workSessionScanResult.projectId").value(projectId));
+
+        mockMvc.perform(get("/api/analysis-jobs/" + jobId)
+                .header("Authorization", "Bearer " + otherToken))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
     void scanRequiresBoundProjectPath() throws Exception {
         String token = register("scan-no-path-owner", "scan-no-path-owner@example.com");
         String projectId = createProject(token, "Unbound Scan Project");
@@ -328,6 +360,22 @@ class WorkSessionScanControllerTest {
             .andReturn();
 
         return result.getResponse().getContentAsString().split("\"accessToken\":\"")[1].split("\"")[0];
+    }
+
+    private JsonNode awaitJob(String token, String jobId) throws Exception {
+        JsonNode job = null;
+        for (int attempt = 0; attempt < 80; attempt++) {
+            MvcResult result = mockMvc.perform(get("/api/analysis-jobs/" + jobId)
+                    .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn();
+            job = objectMapper.readTree(result.getResponse().getContentAsString()).get("data");
+            if (job.path("status").asText().equals("SUCCEEDED") || job.path("status").asText().equals("FAILED")) {
+                return job;
+            }
+            Thread.sleep(50);
+        }
+        throw new AssertionError("Change scan job did not finish: " + jobId);
     }
 
     private String createProject(String token, String name) throws Exception {

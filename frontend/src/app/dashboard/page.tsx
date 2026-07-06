@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -48,7 +48,6 @@ import {
   listProjects,
   listTasks,
   saveProjectLocalPath,
-  scanProjectWorkSessions,
   scanProjectFlowAgentResults,
   syncProjectContext,
   writeProjectFlowProtocol,
@@ -99,19 +98,21 @@ export default function DashboardPage() {
   const [deletingProject, setDeletingProject] = useState(false);
   const [savingProjectPath, setSavingProjectPath] = useState(false);
   const [writingProtocol, setWritingProtocol] = useState(false);
-  const [scanningWorkSessions, setScanningWorkSessions] = useState(false);
   const [syncingContext, setSyncingContext] = useState(false);
   const [scanningAgentResults, setScanningAgentResults] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const { beginContextRequest, isLatestContextRequest } = useDashboardWorkspace();
+  const handledScanJobs = useRef(new Set<string>());
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId),
     [projects, selectedProjectId],
   );
-  const { jobs, jobError, enqueueProjectAnalysis } = useProjectAnalysisJobs(selectedProjectId);
+  const { jobs, jobError, enqueueProjectAnalysis, enqueueWorkSessionScan } = useProjectAnalysisJobs(selectedProjectId);
   const latestProjectJob = jobs.find((job) => job.jobType === "PROJECT") ?? null;
+  const latestScanJob = jobs.find((job) => job.jobType === "WORK_SESSION_SCAN") ?? null;
+  const scanningWorkSessions = latestScanJob?.status === "QUEUED" || latestScanJob?.status === "RUNNING";
   const analyzing = latestProjectJob?.status === "QUEUED" || latestProjectJob?.status === "RUNNING";
   const rawAnalysis = latestProjectJob?.status === "SUCCEEDED" ? latestProjectJob.projectResult : null;
   const analysisRejectedByNoise = rawAnalysis ? projectAnalysisContainsNoise(rawAnalysis) : false;
@@ -185,6 +186,35 @@ export default function DashboardPage() {
     refreshProjectContext(selectedProjectId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (!latestScanJob || scanningWorkSessions || handledScanJobs.current.has(latestScanJob.id)) {
+      return;
+    }
+    handledScanJobs.current.add(latestScanJob.id);
+    if (latestScanJob.status === "FAILED") {
+      setError(latestScanJob.errorMessage ?? "新变化分析失败");
+      return;
+    }
+    const result = latestScanJob.workSessionScanResult;
+    if (!result) {
+      return;
+    }
+    let cancelled = false;
+    void refreshProjectContext(selectedProjectId).then(() => {
+      if (cancelled) {
+        return;
+      }
+      setWorkSessionScan(result);
+      setScanWarnings(result.warnings);
+      setNotice(result.segments.length ? `已归并为 ${result.segments.length} 个开发推进段。` : "当前没有待整理变更。");
+    });
+    return () => {
+      cancelled = true;
+    };
+    // refreshProjectContext uses the dashboard request guard; the terminal job id/status is the trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latestScanJob?.id, latestScanJob?.status, scanningWorkSessions, selectedProjectId]);
 
   async function refreshProjectContext(projectId: string) {
     const session = readSession();
@@ -397,24 +427,18 @@ export default function DashboardPage() {
   }
 
   async function handleScanWorkSessions() {
-    const session = readSession();
-    if (!session || !selectedProjectId) {
+    if (!selectedProjectId) {
       return;
     }
 
-    setScanningWorkSessions(true);
     setError("");
     setNotice("");
     setScanWarnings([]);
     try {
-      const result = await scanProjectWorkSessions(session.accessToken, selectedProjectId);
-      setWorkSessionScan(result);
-      setScanWarnings(result.warnings);
-      setNotice(result.segments.length ? `已归并为 ${result.segments.length} 个开发推进段。` : "当前没有待整理变更。");
+      await enqueueWorkSessionScan();
+      setNotice("变化分析已提交。可离开或刷新页面，任务会继续运行。");
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "新变化分析失败");
-    } finally {
-      setScanningWorkSessions(false);
     }
   }
 

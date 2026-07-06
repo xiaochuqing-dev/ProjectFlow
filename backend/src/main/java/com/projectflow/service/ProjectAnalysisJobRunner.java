@@ -14,6 +14,7 @@ import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisResponse;
+import com.projectflow.dto.V2ProjectDtos.WorkSessionScanResponse;
 import com.projectflow.entity.ModelUsageRecord;
 import com.projectflow.entity.ProjectAnalysisJob;
 import com.projectflow.entity.ProjectAnalysisJobStatus;
@@ -30,6 +31,7 @@ public class ProjectAnalysisJobRunner {
     private final ProjectAnalysisService projectAnalysisService;
     private final ProjectAnalysisRecordService projectAnalysisRecordService;
     private final ProjectMemoryService projectMemoryService;
+    private final WorkSessionScanService workSessionScanService;
     private final ObjectMapper objectMapper;
 
     public ProjectAnalysisJobRunner(
@@ -38,6 +40,7 @@ public class ProjectAnalysisJobRunner {
         ProjectAnalysisService projectAnalysisService,
         ProjectAnalysisRecordService projectAnalysisRecordService,
         ProjectMemoryService projectMemoryService,
+        WorkSessionScanService workSessionScanService,
         ObjectMapper objectMapper
     ) {
         this.jobRepository = jobRepository;
@@ -45,6 +48,7 @@ public class ProjectAnalysisJobRunner {
         this.projectAnalysisService = projectAnalysisService;
         this.projectAnalysisRecordService = projectAnalysisRecordService;
         this.projectMemoryService = projectMemoryService;
+        this.workSessionScanService = workSessionScanService;
         this.objectMapper = objectMapper;
     }
 
@@ -75,6 +79,10 @@ public class ProjectAnalysisJobRunner {
                 String resultJson = objectMapper.writeValueAsString(result);
                 markSucceeded(jobId, resultJson, null);
                 recordUsage(job, "CAPABILITY_INTERPRET", result.source(), !result.degraded(), resultJson, startedAt);
+            } else if (job.getJobType() == ProjectAnalysisJobType.WORK_SESSION_SCAN) {
+                WorkSessionScanResponse result = workSessionScanService.scan(job.getUserId(), job.getProjectId());
+                String resultJson = objectMapper.writeValueAsString(result);
+                markSucceeded(jobId, resultJson, null);
             } else {
                 ProjectFileAnalysisResponse result = projectAnalysisService.analyzeProjectFile(
                     job.getUserId(),
@@ -132,9 +140,15 @@ public class ProjectAnalysisJobRunner {
     }
 
     private void recordFailedUsage(ProjectAnalysisJob job, Exception exception, long startedAt) {
+        String operation = switch (job.getJobType()) {
+            case PROJECT -> "PROJECT_ANALYSIS";
+            case CAPABILITY_INTERPRET -> "CAPABILITY_INTERPRET";
+            case WORK_SESSION_SCAN -> "WORK_SESSION_SCAN";
+            case FILE -> "FILE_ANALYSIS";
+        };
         modelUsageRecordRepository.save(new ModelUsageRecord(
             job.getProjectId(),
-            job.getJobType() == ProjectAnalysisJobType.PROJECT ? "PROJECT_ANALYSIS" : job.getJobType() == ProjectAnalysisJobType.CAPABILITY_INTERPRET ? "CAPABILITY_INTERPRET" : "FILE_ANALYSIS",
+            operation,
             "unknown",
             "unknown",
             0,
