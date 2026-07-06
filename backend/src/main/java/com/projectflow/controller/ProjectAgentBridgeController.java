@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,6 +18,8 @@ import com.projectflow.dto.V2ProjectDtos.AgentResultScanResponse;
 import com.projectflow.dto.V2ProjectDtos.AgentTaskBriefResponse;
 import com.projectflow.service.AuthService;
 import com.projectflow.service.ProjectAgentBridgeService;
+import com.projectflow.service.AgentBridgeHealthService;
+import com.projectflow.dto.V33WorkflowDtos.AgentBridgeHealthResponse;
 
 import jakarta.validation.Valid;
 
@@ -25,10 +28,25 @@ import jakarta.validation.Valid;
 public class ProjectAgentBridgeController {
     private final ProjectAgentBridgeService projectAgentBridgeService;
     private final AuthService authService;
+    private final AgentBridgeHealthService agentBridgeHealthService;
 
-    public ProjectAgentBridgeController(ProjectAgentBridgeService projectAgentBridgeService, AuthService authService) {
+    public ProjectAgentBridgeController(
+        ProjectAgentBridgeService projectAgentBridgeService,
+        AuthService authService,
+        AgentBridgeHealthService agentBridgeHealthService
+    ) {
         this.projectAgentBridgeService = projectAgentBridgeService;
         this.authService = authService;
+        this.agentBridgeHealthService = agentBridgeHealthService;
+    }
+
+    @GetMapping("/projects/{projectId}/agent-bridge/health")
+    ApiResponse<AgentBridgeHealthResponse> health(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(agentBridgeHealthService.health(user.id(), projectId));
     }
 
     @PostMapping("/projects/{projectId}/agent-bridge/protocol")

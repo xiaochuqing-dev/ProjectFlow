@@ -1,3 +1,9 @@
+<!-- PROJECTFLOW V3.3 CONTEXT START -->
+ProjectFlow 当前版本为 V3.3。后续 Agent 必须按“待整理变更 → 开发推进段 → 建议沉淀 → 项目沉淀”理解产品，不要回到旧的“今日开发 / 项目资产字段”主线。
+
+开始任务前请阅读 `.projectflow/AGENT_PROTOCOL.md`。完成开发任务后，按协议把结果写入 `.projectflow/agent-results/`。不要删除添加项目、zip 导入、本地项目绑定、模型配置、登录等核心入口。
+<!-- PROJECTFLOW V3.3 CONTEXT END -->
+
 # ProjectFlow Local Rules
 
 For substantial ProjectFlow work, read `PROJECT_CONTEXT.md` first, then inspect only the task-relevant docs and source files.

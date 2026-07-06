@@ -13,15 +13,15 @@ const outputOptionsCard = read("src/components/dashboard/OutputOptionsCard.tsx")
 const intelligence = read("src/app/project-intelligence/page.tsx");
 const outputs = read("src/app/ai-review/page.tsx");
 
-assert.match(appShell, /开发成果审查/, "navigation should name review as developer-result review instead of generic task management");
-assert.match(appShell, /项目理解/, "navigation should expose project understanding as the project analysis entry");
+assert.match(appShell, /沉淀确认/, "navigation should expose the V3.3 confirmation workflow");
+assert.match(appShell, /项目沉淀/, "navigation should expose confirmed project sediments");
 assert.doesNotMatch(appShell, /变更审查|项目画像/, "main navigation should avoid legacy internal-facing labels");
 
-assert.match(tasks, /开发成果审查/, "review page should present itself as an asset intake desk");
-assert.match(tasks, /确认哪些开发成果可以进入项目资产/, "review page should explain confirmation as asset intake");
+assert.match(tasks, /title="沉淀确认"/, "review page should present itself as sediment confirmation");
+assert.match(tasks, /确认开发推进段应如何进入项目沉淀/, "review page should explain the sediment decision");
 assert.doesNotMatch(tasks, /任务管理/, "review page should not imply generic task management");
 
-assert.match(dashboard, /刷新今日开发/, "dashboard should use the user-facing daily-development refresh wording");
+assert.match(dashboard, /PendingChangesPanel/, "dashboard should expose the cursor-based pending-change workflow");
 assert.match(dashboard, /OutputOptionsCard/, "dashboard should surface output value before the final output page");
 assert.match(outputOptionsCard, /当前可生成/, "dashboard output card should surface output value before the final output page");
 assert.match(outputOptionsCard, /README 草稿/, "dashboard should show README as a reusable output option");
@@ -31,13 +31,12 @@ assert.match(projectAccessCard, /绑定本地项目/, "local project access shou
 assert.match(projectAccessCard, /Agent 高级设置/, "agent protocol actions should be grouped under advanced settings");
 assert.match(projectAccessCard, /<details/, "advanced agent actions should be collapsed by default");
 
-assert.match(intelligence, /项目理解/, "project intelligence page should distinguish project understanding");
-assert.match(intelligence, /项目资产/, "project intelligence page should emphasize confirmed assets");
-assert.match(intelligence, /为什么可信/, "asset cards should provide a natural trust explanation entry");
+assert.match(intelligence, /title="项目沉淀"/, "project intelligence page should emphasize confirmed sediments");
+assert.match(intelligence, /只有用户确认后/, "sediment page should explain its trust boundary");
 assert.doesNotMatch(intelligence, /字段来源链/, "project intelligence first layer should not expose fact-source-chain jargon");
 assert.doesNotMatch(intelligence, /长期档案/, "project intelligence first layer should avoid long-term archive jargon");
 
-assert.match(outputs, /项目资产/, "output page should refer to confirmed project assets as source material");
-assert.match(outputs, /今日开发/, "output page should connect outputs back to daily development evidence");
+assert.match(outputs, /项目沉淀/, "output page should refer to confirmed project sediments as source material");
+assert.match(outputs, /开发推进段/, "output page should connect outputs back to grouped development evidence");
 
 console.log("asset workbench language checks passed");

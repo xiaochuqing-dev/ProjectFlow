@@ -1,9 +1,14 @@
 package com.projectflow.entity;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import com.projectflow.support.StringListConverter;
+
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -78,6 +83,30 @@ public class ProjectChange {
 
     @Column(name = "asset_candidates", columnDefinition = "text")
     private String assetCandidates;
+
+    @Column(name = "development_segment_id")
+    private UUID developmentSegmentId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "suggested_action", length = 40)
+    private SedimentAction suggestedAction;
+
+    @Column(name = "target_sediment_id")
+    private UUID targetSedimentId;
+
+    @Column(name = "problem_solved", columnDefinition = "text")
+    private String problemSolved;
+
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "evidence_refs", columnDefinition = "text")
+    private List<String> evidenceRefs = new ArrayList<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "evidence_confidence", length = 20)
+    private EvidenceConfidence evidenceConfidence;
+
+    @Column(name = "needs_user_review", nullable = false)
+    private boolean needsUserReview;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -190,6 +219,14 @@ public class ProjectChange {
         return assetCandidates;
     }
 
+    public UUID getDevelopmentSegmentId() { return developmentSegmentId; }
+    public SedimentAction getSuggestedAction() { return suggestedAction; }
+    public UUID getTargetSedimentId() { return targetSedimentId; }
+    public String getProblemSolved() { return problemSolved; }
+    public List<String> getEvidenceRefs() { return List.copyOf(evidenceRefs); }
+    public EvidenceConfidence getEvidenceConfidence() { return evidenceConfidence; }
+    public boolean isNeedsUserReview() { return needsUserReview; }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -250,5 +287,28 @@ public class ProjectChange {
     public void markIgnored() {
         this.status = ProjectChangeStatus.IGNORED;
         this.reviewedAt = Instant.now();
+    }
+
+    public void markMerged() {
+        this.status = ProjectChangeStatus.MERGED;
+        this.reviewedAt = Instant.now();
+    }
+
+    public void updateSedimentSuggestion(
+        UUID developmentSegmentId,
+        SedimentAction suggestedAction,
+        UUID targetSedimentId,
+        String problemSolved,
+        List<String> evidenceRefs,
+        EvidenceConfidence evidenceConfidence,
+        boolean needsUserReview
+    ) {
+        this.developmentSegmentId = developmentSegmentId;
+        this.suggestedAction = suggestedAction;
+        this.targetSedimentId = targetSedimentId;
+        this.problemSolved = problemSolved == null ? "" : problemSolved.trim();
+        this.evidenceRefs = evidenceRefs == null ? new ArrayList<>() : new ArrayList<>(evidenceRefs);
+        this.evidenceConfidence = evidenceConfidence == null ? EvidenceConfidence.LOW : evidenceConfidence;
+        this.needsUserReview = needsUserReview;
     }
 }

@@ -9,12 +9,16 @@ import { useAutoDismissNotice } from "@/hooks/useAutoDismissNotice";
 import { useProjectSelection } from "@/hooks/useProjectSelection";
 import {
   createAiProvider,
+  getAgentBridgeHealth,
+  getProjectGitHubStatus,
   listAiProviders,
   listProjectModelUsageRecords,
   testAiProvider,
   type AiProvider,
   type AiProviderType,
   type ModelUsageRecord,
+  type AgentBridgeHealth,
+  type GitHubStatus,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
 
@@ -37,6 +41,8 @@ function SettingsPageContent() {
     router.replace(`/settings?projectId=${projectId}`);
   }
   const [usageRecords, setUsageRecords] = useState<ModelUsageRecord[]>([]);
+  const [agentHealth, setAgentHealth] = useState<AgentBridgeHealth | null>(null);
+  const [githubStatus, setGithubStatus] = useState<GitHubStatus | null>(null);
   const [saving, setSaving] = useState(false);
   const [loadingUsage, setLoadingUsage] = useState(false);
   const [testingProviderId, setTestingProviderId] = useState("");
@@ -50,9 +56,12 @@ function SettingsPageContent() {
   useEffect(() => {
     if (!selectedProjectId) {
       setUsageRecords([]);
+      setAgentHealth(null);
+      setGithubStatus(null);
       return;
     }
     refreshUsageRecords(selectedProjectId);
+    refreshConnectionStatus(selectedProjectId);
   }, [selectedProjectId]);
 
   useAutoDismissNotice(error, notice, () => {
@@ -89,6 +98,17 @@ function SettingsPageContent() {
     } finally {
       setLoadingUsage(false);
     }
+  }
+
+  async function refreshConnectionStatus(projectId: string) {
+    const session = readSession();
+    if (!session) return;
+    const [agentResult, githubResult] = await Promise.allSettled([
+      getAgentBridgeHealth(session.accessToken, projectId),
+      getProjectGitHubStatus(session.accessToken, projectId),
+    ]);
+    setAgentHealth(agentResult.status === "fulfilled" ? agentResult.value : null);
+    setGithubStatus(githubResult.status === "fulfilled" ? githubResult.value : null);
   }
 
   async function handleSaveProvider(event: FormEvent<HTMLFormElement>) {
@@ -218,6 +238,36 @@ function SettingsPageContent() {
 
         <section className="space-y-6">
           <Toast error={error || projectError} notice={notice} />
+
+          <div className="rounded-md border border-line bg-white shadow-panel">
+            <div className="border-b border-line px-5 py-3">
+              <h2 className="font-semibold text-slate-950">项目接入状态</h2>
+            </div>
+            <div className="grid gap-4 p-5 md:grid-cols-2">
+              <section className="rounded-md bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-semibold text-slate-950">Agent 写回协议</h3>
+                  <span className={`rounded-md px-2 py-1 text-xs font-medium ${agentHealth?.protocolExists && agentHealth.entryRulePresent ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>
+                    {agentHealth?.protocolExists && agentHealth.entryRulePresent ? "已接入" : "需检查"}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-slate-600">协议版本 {agentHealth?.protocolVersion ?? "未知"}，写回目录与 AGENTS.md 入口规则会分别检查。</p>
+                {agentHealth?.warnings.length ? <p className="mt-2 text-xs leading-5 text-amber-800">{agentHealth.warnings.join("；")}</p> : null}
+              </section>
+              <section className="rounded-md bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-semibold text-slate-950">GitHub CLI</h3>
+                  <span className={`rounded-md px-2 py-1 text-xs font-medium ${githubStatus?.ghAuthenticated && githubStatus.repoDetected ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-700"}`}>
+                    {githubStatus?.ghAuthenticated && githubStatus.repoDetected ? "已接入" : "可选增强"}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {githubStatus?.nameWithOwner || "未读取远程仓库信息"}。本地 Git 分析仍可使用，GitHub CLI 只补充仓库与 commit 链接。
+                </p>
+                {githubStatus?.warnings.length ? <p className="mt-2 text-xs leading-5 text-muted">{githubStatus.warnings.join("；")}</p> : null}
+              </section>
+            </div>
+          </div>
 
           <div className="rounded-md border border-line bg-white shadow-panel">
             <div className="border-b border-line px-5 py-3">

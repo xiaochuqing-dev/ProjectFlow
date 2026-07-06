@@ -5,8 +5,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -31,6 +29,11 @@ import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.repository.WorkSessionRepository;
 import com.projectflow.support.AppException;
+import com.projectflow.dto.V33WorkflowDtos.ChangeBatchResponse;
+import com.projectflow.dto.V33WorkflowDtos.DevelopmentSegmentResponse;
+import com.projectflow.service.PendingChangeScanService.ScanPlan;
+import com.projectflow.service.DevelopmentSegmentationService.ChangeAtom;
+import com.projectflow.service.DevelopmentSegmentationService.SegmentDraft;
 
 @Service
 public class WorkSessionScanService {
@@ -39,19 +42,31 @@ public class WorkSessionScanService {
     private final WorkSessionRepository workSessionRepository;
     private final AgentSignatureFeedbackRepository feedbackRepository;
     private final LocalProjectPathGuard localProjectPathGuard;
+    private final PendingChangeScanService pendingChangeScanService;
+    private final DevelopmentSegmentationService developmentSegmentationService;
+    private final ModelSegmentEnricher modelSegmentEnricher;
+    private final ProjectSedimentService projectSedimentService;
 
     public WorkSessionScanService(
         ProjectRepository projectRepository,
         ProjectMemoryRepository memoryRepository,
         WorkSessionRepository workSessionRepository,
         AgentSignatureFeedbackRepository feedbackRepository,
-        LocalProjectPathGuard localProjectPathGuard
+        LocalProjectPathGuard localProjectPathGuard,
+        PendingChangeScanService pendingChangeScanService,
+        DevelopmentSegmentationService developmentSegmentationService,
+        ModelSegmentEnricher modelSegmentEnricher,
+        ProjectSedimentService projectSedimentService
     ) {
         this.projectRepository = projectRepository;
         this.memoryRepository = memoryRepository;
         this.workSessionRepository = workSessionRepository;
         this.feedbackRepository = feedbackRepository;
         this.localProjectPathGuard = localProjectPathGuard;
+        this.pendingChangeScanService = pendingChangeScanService;
+        this.developmentSegmentationService = developmentSegmentationService;
+        this.modelSegmentEnricher = modelSegmentEnricher;
+        this.projectSedimentService = projectSedimentService;
     }
 
     @Transactional
@@ -64,7 +79,9 @@ public class WorkSessionScanService {
 
         List<String> warnings = new ArrayList<>();
         String branchName = runGit(projectRoot, warnings, "branch", "--show-current").trim();
-        GitEvidence evidence = readTodayCommits(project.getId(), projectRoot, branchName, warnings);
+        ScanPlan scanPlan = pendingChangeScanService.prepare(projectRoot, project.getId(), branchName);
+        warnings.addAll(scanPlan.warnings());
+        GitEvidence evidence = readPendingCommits(project.getId(), projectRoot, branchName, warnings, scanPlan.gitLogArguments());
         WorkSessionCandidateResponse uncommitted = readUncommittedChanges(project.getId(), projectRoot, branchName, warnings);
         List<WorkSessionCandidateResponse> sessions = new ArrayList<>();
         if (uncommitted != null) {
@@ -76,13 +93,25 @@ public class WorkSessionScanService {
         List<WorkSessionCandidateResponse> persistedSessions = sessions.stream()
             .map(candidate -> saveCandidate(project.getId(), candidate))
             .toList();
+        ChangeBatchResponse batch = pendingChangeScanService.persist(
+            project.getId(), scanPlan, evidence.commitCount(), evidence.changedFileCount(), 0, warnings
+        );
+        List<ChangeAtom> atoms = evidence.toAtoms();
+        List<SegmentDraft> drafts = developmentSegmentationService.group(atoms);
+        drafts = modelSegmentEnricher.enrich(userId, atoms, drafts, warnings);
+        List<DevelopmentSegmentResponse> segments = pendingChangeScanService.persistSegments(project.getId(), batch.id(), drafts);
+        batch = pendingChangeScanService.updateSegmentCount(batch.id(), segments.size());
+        projectSedimentService.createSuggestions(project.getId(), segments);
         return new WorkSessionScanResponse(
             project.getId(),
             projectRoot.toString(),
             branchName,
             Instant.now(),
             persistedSessions,
-            warnings
+            warnings,
+            batch,
+            segments,
+            scanPlan.firstScan()
         );
     }
 
@@ -214,16 +243,14 @@ public class WorkSessionScanService {
         feedbackRepository.save(feedback);
     }
 
-    private GitEvidence readTodayCommits(UUID projectId, Path projectRoot, String branchName, List<String> warnings) {
-        String since = LocalDate.now(ZoneId.systemDefault()).atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime().toString();
-        String output = runGit(
-            projectRoot,
-            warnings,
-            "log",
-            "--since=" + since,
-            "--numstat",
-            "--pretty=format:__PF_COMMIT__%x09%H%x09%an%x09%aI%x09%s"
-        );
+    private GitEvidence readPendingCommits(
+        UUID projectId,
+        Path projectRoot,
+        String branchName,
+        List<String> warnings,
+        List<String> gitLogArguments
+    ) {
+        String output = runGit(projectRoot, warnings, gitLogArguments.toArray(String[]::new));
         GitEvidence evidence = new GitEvidence(projectId, branchName);
         CommitCursor current = null;
         for (String rawLine : output.split("\\R")) {
@@ -328,6 +355,7 @@ public class WorkSessionScanService {
         private final LinkedHashMap<String, FileStat> files = new LinkedHashMap<>();
         private final LinkedHashSet<String> modules = new LinkedHashSet<>();
         private final List<String> commitSummaries = new ArrayList<>();
+        private final LinkedHashMap<String, AtomAccumulator> atoms = new LinkedHashMap<>();
         private Instant startTime;
         private Instant endTime;
         private String baseCommit = "";
@@ -350,6 +378,7 @@ public class WorkSessionScanService {
                 endTime = commit.time();
             }
             commitSummaries.add(commitSummary(commit));
+            atoms.putIfAbsent(commit.hash(), new AtomAccumulator(commit));
         }
 
         private void addNumstat(CommitCursor commit, String line) {
@@ -362,6 +391,7 @@ public class WorkSessionScanService {
             String file = parts[2];
             files.merge(file, new FileStat(added, deleted), FileStat::merge);
             modules.add(moduleName(file));
+            atoms.computeIfAbsent(commit.hash(), ignored -> new AtomAccumulator(commit)).addFile(file);
             if (startTime == null || commit.time().isBefore(startTime)) {
                 startTime = commit.time();
             }
@@ -372,6 +402,21 @@ public class WorkSessionScanService {
 
         private boolean hasChanges() {
             return !files.isEmpty();
+        }
+
+        private int commitCount() {
+            return commitSummaries.size();
+        }
+
+        private int changedFileCount() {
+            return files.size();
+        }
+
+        private List<ChangeAtom> toAtoms() {
+            return atoms.values().stream()
+                .filter(atom -> !atom.files.isEmpty())
+                .map(AtomAccumulator::toAtom)
+                .toList();
         }
 
         private WorkSessionCandidateResponse toResponse() {
@@ -457,6 +502,35 @@ public class WorkSessionScanService {
                 }
             }
             return normalized.length() <= 80 ? normalized : "..." + normalized.substring(normalized.length() - 77);
+        }
+    }
+
+    private static final class AtomAccumulator {
+        private final CommitCursor commit;
+        private final LinkedHashSet<String> files = new LinkedHashSet<>();
+        private final LinkedHashSet<String> modules = new LinkedHashSet<>();
+
+        private AtomAccumulator(CommitCursor commit) {
+            this.commit = commit;
+        }
+
+        private void addFile(String file) {
+            files.add(file);
+            modules.add(moduleName(file));
+        }
+
+        private ChangeAtom toAtom() {
+            List<String> refs = new ArrayList<>();
+            refs.add("commit:" + commit.hash());
+            files.forEach(file -> refs.add("file:" + file));
+            return new ChangeAtom(
+                commit.hash(),
+                commit.subject(),
+                commit.time(),
+                List.copyOf(modules),
+                List.copyOf(files),
+                refs
+            );
         }
     }
 

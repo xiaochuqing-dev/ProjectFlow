@@ -48,8 +48,8 @@ assert.match(workSessionDetail, /FileChangeSummary/, "git evidence detail page s
 assert.match(workSessionDetail, /EvidenceTimeline/, "git evidence detail page should show evidence as structured timeline items");
 
 assert.match(changeDetail, /自动化审查/, "structured change detail should be positioned as automated review");
-assert.match(changeDetail, /项目资产入库台/, "structured change detail should prioritize the archive intake decision");
-assert.match(changeDetail, /建议沉淀到项目资产/, "structured change detail should show asset candidates before manual correction");
+assert.match(changeDetail, /沉淀确认/, "suggested sediment detail should prioritize the confirmation decision");
+assert.match(changeDetail, /建议写入项目沉淀/, "suggested sediment detail should show sediment candidates before manual correction");
 assert.match(changeDetail, /修正 AI 总结/, "manual change editing should be a secondary correction action");
 assert.match(changeDetail, /\/project-changes\/\$\{change\.id\}\/evidence/, "structured change detail should send long evidence to the evidence page");
 assert.doesNotMatch(changeDetail, /function EvidenceCard/, "structured change detail should not inline long evidence cards");

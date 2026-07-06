@@ -14,6 +14,7 @@ import {
   listProjectAnalysisRecords,
   listProjectEvolutionRecords,
   listProjectFactSources,
+  listProjectSediments,
   updateProjectMemory,
   type AiSuggestion,
   type ProjectAnalysisRecord,
@@ -21,6 +22,7 @@ import {
   type ProjectFactSource,
   type ProjectMemory,
   type ProjectMemoryPayload,
+  type ProjectSediment,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
 import { capabilityBulletItems } from "@/lib/project-memory-display";
@@ -28,14 +30,13 @@ import { useProjectAnalysisJobs } from "@/lib/use-project-analysis-jobs";
 import {
   ArchiveEntryCard,
   ArchiveFieldReview,
-  CompletedCapabilitiesCard,
   SmallEntryLink,
   fieldConfig,
 } from "@/components/project-intelligence/ProjectAssetPanels";
 
 export default function ProjectIntelligencePage() {
   return (
-    <Suspense fallback={<AppShell eyebrow="项目理解与项目资产" title="项目理解"><div className="min-h-[calc(100vh-4rem)] bg-surface p-8"><div className="h-1 bg-slate-950" /></div></AppShell>}>
+    <Suspense fallback={<AppShell eyebrow="已确认且可追溯" title="项目沉淀"><div className="min-h-[calc(100vh-4rem)] bg-surface p-8"><div className="h-1 bg-slate-950" /></div></AppShell>}>
       <ProjectIntelligencePageContent />
     </Suspense>
   );
@@ -51,6 +52,7 @@ function ProjectIntelligencePageContent() {
   const [evolutionRecords, setEvolutionRecords] = useState<ProjectEvolutionRecord[]>([]);
   const [factSources, setFactSources] = useState<ProjectFactSource[]>([]);
   const [analysisRecords, setAnalysisRecords] = useState<ProjectAnalysisRecord[]>([]);
+  const [sediments, setSediments] = useState<ProjectSediment[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -112,18 +114,20 @@ function ProjectIntelligencePageContent() {
       setEvolutionRecords([]);
       setFactSources([]);
       setAnalysisRecords([]);
+      setSediments([]);
       return;
     }
 
     setLoading(true);
     setError("");
     try {
-      const [memoryRecord, suggestionItems, evolutionItems, sourceItems, analysisItems] = await Promise.all([
+      const [memoryRecord, suggestionItems, evolutionItems, sourceItems, analysisItems, sedimentItems] = await Promise.all([
         getProjectMemory(session.accessToken, projectId),
         listAiSuggestions(session.accessToken, projectId),
         listProjectEvolutionRecords(session.accessToken, projectId),
         listProjectFactSources(session.accessToken, projectId),
         listProjectAnalysisRecords(session.accessToken, projectId),
+        listProjectSediments(session.accessToken, projectId),
       ]);
       setMemory(memoryRecord);
       setFormValue(toPayload(memoryRecord));
@@ -131,6 +135,7 @@ function ProjectIntelligencePageContent() {
       setEvolutionRecords(evolutionItems);
       setFactSources(sourceItems);
       setAnalysisRecords(analysisItems);
+      setSediments(sedimentItems);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "项目理解加载失败");
     } finally {
@@ -153,10 +158,10 @@ function ProjectIntelligencePageContent() {
       setMemory(updated);
       setFormValue(toPayload(updated));
       setFactSources(await listProjectFactSources(session.accessToken, selectedProjectId));
-      setNotice("项目资产已保存。后续成果输出会优先使用这些已确认内容。");
+      setNotice("兼容档案字段已保存。后续输出仍优先使用已确认项目沉淀。");
       setEditing(false);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "项目资产保存失败");
+      setError(exception instanceof Error ? exception.message : "兼容档案字段保存失败");
     } finally {
       setSaving(false);
     }
@@ -183,7 +188,7 @@ function ProjectIntelligencePageContent() {
   }
 
   return (
-    <AppShell eyebrow="项目理解与项目资产" title="项目理解">
+    <AppShell eyebrow="已确认且可追溯" title="项目沉淀">
       <div className="min-h-[calc(100vh-4rem)] bg-surface p-8">
         <ProjectContextBar
           actions={(
@@ -246,8 +251,8 @@ function ProjectIntelligencePageContent() {
               <div className="flex items-center gap-2">
                 <DatabaseZap className="h-4 w-4 text-slate-700" />
                 <div>
-                  <h2 className="font-semibold">项目资产总览</h2>
-                  <p className="mt-1 text-xs text-muted">默认展示已确认资产。需要修正时点击“编辑项目资产”展开字段编辑。</p>
+                  <h2 className="font-semibold">已确认沉淀</h2>
+                  <p className="mt-1 text-xs text-muted">只展示有真实来源且经过确认的内容，主观备注进入独立详情。</p>
                 </div>
               </div>
               {editing ? (
@@ -265,7 +270,7 @@ function ProjectIntelligencePageContent() {
                   type="button"
                 >
                   <Pencil className="h-4 w-4" />
-                  编辑项目资产
+                  兼容档案字段
                 </button>
               )}
             </div>
@@ -295,7 +300,7 @@ function ProjectIntelligencePageContent() {
                 </div>
               </form>
             ) : (
-              <AssetOverviewGrid formValue={formValue} latestSourceByField={latestSourceByField} projectId={selectedProjectId} />
+              <SedimentOverview sediments={sediments} projectId={selectedProjectId} />
             )}
             {loading || loadingProjects ? <div className="h-1 bg-slate-950" /> : null}
           </div>
@@ -303,25 +308,25 @@ function ProjectIntelligencePageContent() {
           <aside className="space-y-5">
             <section className="rounded-md border border-line bg-white shadow-panel">
               <div className="border-b border-line px-5 py-4">
-                <h2 className="font-semibold">项目资产入口</h2>
+                <h2 className="font-semibold">项目沉淀入口</h2>
               </div>
               <div className="space-y-4 p-5">
                 <div className="space-y-3">
                   <ArchiveEntryCard
                     count={completedCapabilityItems.length}
                     href={`/project-intelligence/capabilities?projectId=${selectedProjectId}`}
-                    label="能力与成果"
+                    label="能力沉淀"
                     latestAt={memory?.updatedAt ?? undefined}
                     latestLabel={completedCapabilityItems[0] || "暂无确认能力"}
-                    text="查看已沉淀的项目能力、成果表达和可复用素材。"
+                    text="查看已确认能力、真实证据和可复用素材。"
                     tone="emerald"
                   />
                   <ArchiveEntryCard
                     count={pendingFacts.length}
                     href={`/tasks?projectId=${selectedProjectId}&type=project-memory`}
-                    label="待确认成果"
+                    label="建议沉淀"
                     latestLabel={pendingFacts.length ? "需要审查" : "无待确认"}
-                    text="确认哪些今日开发内容可以进入项目资产。"
+                    text="确认开发推进段应新建、合并、补证据或忽略。"
                     tone="amber"
                   />
                 </div>
@@ -338,7 +343,7 @@ function ProjectIntelligencePageContent() {
             <section className="rounded-md border border-line bg-white p-5 shadow-panel">
               <p className="font-semibold text-slate-950">确认原则</p>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                AI、zip 分析和 agent result 都只是候选。用户确认后，才进入正式项目资产和成果输出来源。
+                AI、zip 分析和 Agent result 都只是候选。只有用户确认后，内容才进入项目沉淀和成果输出来源。
               </p>
             </section>
           </aside>
@@ -350,42 +355,32 @@ function ProjectIntelligencePageContent() {
   );
 }
 
-function AssetOverviewGrid({
-  formValue,
-  latestSourceByField,
-  projectId,
-}: {
-  formValue: ProjectMemoryPayload;
-  latestSourceByField: Map<string, ProjectFactSource>;
-  projectId: string;
-}) {
+function SedimentOverview({ sediments, projectId }: { sediments: ProjectSediment[]; projectId: string }) {
+  if (sediments.length === 0) {
+    return (
+      <div className="p-8 text-center">
+        <p className="font-semibold text-slate-950">还没有已确认沉淀</p>
+        <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted">先在工作台分析新变化，再到沉淀确认选择新建、合并、补证据或忽略。</p>
+        <Link className="mt-4 inline-flex rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800" href={`/tasks?projectId=${projectId}`}>进入沉淀确认</Link>
+      </div>
+    );
+  }
   return (
-    <div className="grid gap-0 md:grid-cols-2">
-      {fieldConfig.map((field) => {
-        const latestSource = latestSourceByField.get(field.key);
-        if (field.key === "completedCapabilities") {
-          return <CompletedCapabilitiesCard key={field.key} projectId={projectId} value={formValue[field.key]} />;
-        }
-        return (
-          <section key={field.key} className="border-b border-line p-5 odd:md:border-r">
-            <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
-              <h3 className="font-semibold text-slate-950">{field.label}</h3>
-              <span className={`rounded-md px-2 py-1 text-xs ${latestSource?.confirmedByUser ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-muted"}`}>
-                {latestSource ? `${latestSource.sourceType} · ${latestSource.confirmedByUser ? "已确认" : "待确认"}` : "暂无来源"}
-              </span>
-            </div>
-            <p className="min-h-16 whitespace-pre-line rounded-md border border-line bg-slate-50 p-3 text-sm leading-6 text-slate-700">
-              {formValue[field.key] || "暂无已确认内容。"}
-            </p>
-            {latestSource?.sourceId ? (
-              <details className="mt-2 rounded-md border border-line bg-white">
-                <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">为什么可信？</summary>
-                <p className="break-all border-t border-line p-3 font-mono text-xs text-muted">高级信息：{latestSource.sourceId}</p>
-              </details>
-            ) : null}
-          </section>
-        );
-      })}
+    <div className="divide-y divide-line">
+      {sediments.map((sediment) => (
+        <Link className="block px-5 py-4 hover:bg-slate-50" href={`/project-sediments/${sediment.id}`} key={sediment.id}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="font-semibold text-slate-950">{sediment.title}</h3>
+            <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">已确认</span>
+          </div>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{sediment.summary}</p>
+          <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted">
+            <span>{sediment.sourceSegmentIds.length} 个开发推进段</span>
+            <span>{sediment.evidenceRefs.length} 条证据</span>
+            <span>更新于 {new Date(sediment.updatedAt).toLocaleString()}</span>
+          </div>
+        </Link>
+      ))}
     </div>
   );
 }

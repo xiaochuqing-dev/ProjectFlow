@@ -834,14 +834,14 @@ class V2CoreControllerTest {
             .andExpect(jsonPath("$.data.projectFlowDir").value(projectPath.toAbsolutePath().normalize().resolve(".projectflow").toString()))
             .andExpect(jsonPath("$.data.alreadyLinked").value(false))
             .andExpect(jsonPath("$.data.writtenFiles", hasSize(greaterThanOrEqualTo(5))))
-            .andExpect(jsonPath("$.data.globalRule").value(containsString(".projectflow/agent-protocol.md")));
+            .andExpect(jsonPath("$.data.globalRule").value(containsString(".projectflow/AGENT_PROTOCOL.md")));
 
-        String protocol = Files.readString(projectPath.resolve(".projectflow/agent-protocol.md"));
+        String protocol = Files.readString(projectPath.resolve(".projectflow/AGENT_PROTOCOL.md"));
         String requirements = Files.readString(projectPath.resolve(".projectflow/context/requirements.md"));
 
         org.assertj.core.api.Assertions.assertThat(protocol)
             .contains("ProjectFlow Agent Protocol")
-            .contains(".projectflow/inbox/")
+            .contains(".projectflow/agent-results/")
             .contains("Do not directly modify ProjectFlow task state");
         org.assertj.core.api.Assertions.assertThat(requirements)
             .contains("Agent result write-back is required")

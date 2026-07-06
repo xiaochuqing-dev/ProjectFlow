@@ -1,0 +1,12 @@
+{
+  "taskGoal": "",
+  "actualChanges": [],
+  "keyFiles": [],
+  "verification": {
+    "build": "not_run",
+    "tests": "not_run",
+    "manualCheck": "not_run"
+  },
+  "unfinished": [],
+  "sedimentCandidates": []
+}

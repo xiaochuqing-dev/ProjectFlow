@@ -14,16 +14,20 @@ import { useAutoDismissNotice } from "@/hooks/useAutoDismissNotice";
 import { useProjectSelection } from "@/hooks/useProjectSelection";
 import {
   acceptProjectChange,
+  confirmProjectChange,
   applyAiSuggestions,
   ignoreProjectChange,
   listAiSuggestions,
   listProjectChanges,
   listProjectMaterials,
+  listProjectSediments,
   listTasks,
   updateAiSuggestion,
   type AiSuggestion,
   type ProjectChange,
   type ProjectMaterial,
+  type ProjectSediment,
+  type SedimentAction,
   type TaskItem,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
@@ -37,7 +41,7 @@ type EditState = {
 
 export default function TasksPage() {
   return (
-    <Suspense fallback={<AppShell eyebrow="从今日开发到项目资产" title="开发成果审查"><div className="min-h-[calc(100vh-4rem)] bg-surface p-8"><div className="h-1 bg-slate-950" /></div></AppShell>}>
+    <Suspense fallback={<AppShell eyebrow="待整理变更到项目沉淀" title="沉淀确认"><div className="min-h-[calc(100vh-4rem)] bg-surface p-8"><div className="h-1 bg-slate-950" /></div></AppShell>}>
       <TasksPageContent />
     </Suspense>
   );
@@ -56,6 +60,7 @@ function TasksPageContent() {
   const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);
   const [materials, setMaterials] = useState<ProjectMaterial[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [sediments, setSediments] = useState<ProjectSediment[]>([]);
   const [selectedChangeIds, setSelectedChangeIds] = useState<string[]>([]);
   const [selectedSuggestionIds, setSelectedSuggestionIds] = useState<string[]>([]);
   const [editing, setEditing] = useState<EditState | null>(null);
@@ -91,6 +96,7 @@ function TasksPageContent() {
       setSuggestions([]);
       setMaterials([]);
       setTasks([]);
+      setSediments([]);
       setSelectedChangeIds([]);
       setSelectedSuggestionIds([]);
       setEditing(null);
@@ -100,16 +106,18 @@ function TasksPageContent() {
     setLoading(true);
     setError("");
     try {
-      const [changeItems, suggestionItems, materialItems, taskItems] = await Promise.all([
+      const [changeItems, suggestionItems, materialItems, taskItems, sedimentItems] = await Promise.all([
         listProjectChanges(session.accessToken, projectId),
         listAiSuggestions(session.accessToken, projectId),
         listProjectMaterials(session.accessToken, projectId),
         listTasks(session.accessToken, projectId),
+        listProjectSediments(session.accessToken, projectId),
       ]);
       setChanges(changeItems);
       setSuggestions(suggestionItems);
       setMaterials(materialItems);
       setTasks(taskItems);
+      setSediments(sedimentItems);
       setSelectedChangeIds(changeItems.filter((change) => change.status === "PENDING" || change.status === "EDITED").map((change) => change.id));
       setSelectedSuggestionIds(suggestionItems.filter((suggestion) => suggestion.status === "PENDING").map((suggestion) => suggestion.id));
       setEditing(null);
@@ -151,7 +159,7 @@ function TasksPageContent() {
       const updated = await updateAiSuggestion(session.accessToken, editing.id, editing.title, editing.reason, payload);
       setSuggestions((current) => current.map((suggestion) => (suggestion.id === updated.id ? updated : suggestion)));
       setEditing(null);
-      setNotice("候选变更已保存，采纳时会使用编辑后的内容。");
+      setNotice("兼容候选已保存，确认时会使用编辑后的内容。");
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "候选变更保存失败");
     } finally {
@@ -170,10 +178,10 @@ function TasksPageContent() {
     setNotice("");
     try {
       await Promise.all(ids.map((id) => acceptProjectChange(session.accessToken, id)));
-      setNotice(`已采纳 ${ids.length} 条待确认内容，已写入项目资产和可信依据。`);
+      setNotice(`已确认 ${ids.length} 条兼容待确认内容，已写入项目沉淀和可信依据。`);
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "采纳结构化变更失败");
+      setError(exception instanceof Error ? exception.message : "确认兼容候选失败");
     } finally {
       setApplying(false);
     }
@@ -190,10 +198,10 @@ function TasksPageContent() {
     setNotice("");
     try {
       await applyAiSuggestions(session.accessToken, selectedProjectId, ids);
-      setNotice(`已采纳 ${ids.length} 条候选内容，并生成项目资产、开发证据和回顾来源。`);
+      setNotice(`已确认 ${ids.length} 条旧版候选，并生成项目沉淀、开发证据和回顾来源。`);
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "采纳变更失败");
+      setError(exception instanceof Error ? exception.message : "确认旧版候选失败");
     } finally {
       setApplying(false);
     }
@@ -210,11 +218,37 @@ function TasksPageContent() {
     setNotice("");
     try {
       await ignoreProjectChange(session.accessToken, id);
-      setNotice("结构化变更已忽略。");
+      setNotice("建议沉淀已忽略。");
       await refreshProjectContext(selectedProjectId);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "忽略结构化变更失败");
+      setError(exception instanceof Error ? exception.message : "忽略建议沉淀失败");
     } finally {
+      setIgnoringId("");
+    }
+  }
+
+  async function handleConfirmChange(changeId: string, action: SedimentAction, targetSedimentId: string | null) {
+    const session = readSession();
+    if (!session || !selectedProjectId) return;
+    const change = changes.find((item) => item.id === changeId);
+    setApplying(action !== "IGNORE");
+    setIgnoringId(action === "IGNORE" ? changeId : "");
+    setError("");
+    setNotice("");
+    try {
+      if (change?.developmentSegmentId) {
+        await confirmProjectChange(session.accessToken, changeId, action, targetSedimentId);
+      } else if (action === "IGNORE") {
+        await ignoreProjectChange(session.accessToken, changeId);
+      } else {
+        await acceptProjectChange(session.accessToken, changeId);
+      }
+      setNotice(action === "IGNORE" ? "建议已忽略。" : "建议已确认并写入项目沉淀。");
+      await refreshProjectContext(selectedProjectId);
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "建议沉淀确认失败");
+    } finally {
+      setApplying(false);
       setIgnoringId("");
     }
   }
@@ -232,7 +266,7 @@ function TasksPageContent() {
   }
 
   return (
-    <AppShell eyebrow="从今日开发到项目资产" title="开发成果审查">
+    <AppShell eyebrow="待整理变更到项目沉淀" title="沉淀确认">
       <div className="min-h-[calc(100vh-4rem)] bg-surface p-8">
         <ProjectContextBar
           actions={(
@@ -243,13 +277,13 @@ function TasksPageContent() {
               type="button"
             >
               {applying ? <RefreshCw className="h-4 w-4 animate-spin" /> : <GitPullRequestArrow className="h-4 w-4" />}
-              采纳选中 {selectedChangeIds.length}
+              新建选中 {selectedChangeIds.length}
             </button>
           )}
           leadingExtras={(
             <>
               <Badge label={`待确认 ${pendingChanges.length}`} tone="warning" />
-              <Badge label={`已采纳 ${acceptedChanges.length}`} tone="success" />
+              <Badge label={`已确认 ${acceptedChanges.length}`} tone="success" />
               <Badge label={`已忽略 ${ignoredChanges.length}`} tone="slate" />
             </>
           )}
@@ -260,16 +294,16 @@ function TasksPageContent() {
 
         <section className="mb-6 rounded-md border border-line bg-white p-4 text-sm shadow-panel">
           <div className="mb-4">
-            <p className="font-semibold text-slate-950">确认哪些开发成果可以进入项目资产</p>
+            <p className="font-semibold text-slate-950">确认开发推进段应如何进入项目沉淀</p>
             <p className="mt-1 text-sm leading-6 text-slate-600">
-              这里不处理通用待办，而是把今日开发、Agent 写回和证据依据整理成待确认内容。采纳后会进入项目资产、可信依据和项目时间线。
+              规则负责采证，模型负责理解，规则再次校验证据。你最终决定新建、合并、只补证据或忽略。
             </p>
           </div>
           <div className="grid gap-3 lg:grid-cols-4">
-            <FlowStep title="1. 确认入档" text="待确认内容会进入已采纳列表，并按类型写入项目资产字段和可信依据。" />
-            <FlowStep title="2. 项目资产" text="能力、风险、技术决策、经验和成果素材会在项目理解页继续查看和修正。" />
-            <FlowStep title="3. 上下文同步" text="点击工作台的同步确认上下文后，已采纳信息会写回本地项目上下文。" />
-            <FlowStep title="4. 输出复用" text="成果输出、每日回顾、README 草稿和 Agent 后续任务会优先使用这些已确认信息。" />
+            <FlowStep title="1. 查看开发推进段" text="先理解这一组变化解决了什么问题，并核对来源概览。" />
+            <FlowStep title="2. 选择处理方式" text="新建、合并、补证据或忽略，ProjectFlow 不替你作最终决定。" />
+            <FlowStep title="3. 形成项目沉淀" text="确认后的内容进入稳定详情页，原始证据继续保留。" />
+            <FlowStep title="4. 后续复用" text="README、复盘和成果输出优先引用已确认沉淀。" />
           </div>
         </section>
 
@@ -279,14 +313,14 @@ function TasksPageContent() {
             ignoringId={ignoringId}
             loading={loading}
             loadingProjects={loadingProjects}
-            onAcceptChange={handleAcceptChanges}
+            onConfirmChange={handleConfirmChange}
             onApplySuggestions={() => handleApply()}
-            onIgnoreChange={handleIgnoreChange}
             onStartEditingSuggestion={startEditing}
             onToggleChange={toggleChange}
             onToggleSuggestion={toggleSuggestion}
             pendingChanges={pendingChanges}
             pendingSuggestions={pendingSuggestions}
+            sediments={sediments}
             selectedChangeIds={selectedChangeIds}
             selectedProject={selectedProject}
             selectedSuggestionIds={selectedSuggestionIds}

@@ -166,7 +166,7 @@ export default function DevLogsPage() {
             </div>
             <div className="space-y-4 p-5">
               <p className="rounded-md border border-line bg-slate-50 p-3 text-xs leading-5 text-muted">
-                保存后会成为成果输出和经验沉淀的来源；进入正式项目资产仍需要在开发成果审查或项目资产页确认。
+                保存后会成为成果输出和经验沉淀的来源；进入正式项目沉淀仍需要在沉淀确认页由用户确认。
               </p>
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-slate-700">标题</span>
@@ -376,7 +376,7 @@ ${memory?.currentRisks || "暂无已确认风险。"}
 技术决策：
 ${memory?.technicalDecisions || "暂无技术决策。"}
 
-## 项目资产更新
+## 项目沉淀更新
 已完成能力：
 ${memory?.completedCapabilities || "暂无已确认能力。"}
 

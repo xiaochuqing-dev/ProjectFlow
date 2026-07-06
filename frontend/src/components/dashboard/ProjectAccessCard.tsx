@@ -108,12 +108,12 @@ export function ProjectAccessCard(props: ProjectAccessCardProps) {
             size="sm"
             disabled={!hasSelectedProject || !props.projectPath.trim() || props.savingProjectPath}
             onClick={props.onSavePath}
-            title="绑定真实项目根目录，后续刷新今日开发会复用这个路径，不写入目标项目文件。"
+            title="绑定真实项目根目录，后续分析新变化会复用这个路径，不写入目标项目文件。"
           >
             {props.savingProjectPath ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             绑定本地项目
           </Button>
-          <span className="self-center text-xs text-muted">刷新今日开发在下方闭环卡执行。</span>
+          <span className="self-center text-xs text-muted">分析新变化在下方主流程卡执行。</span>
         </div>
 
         <details className="mt-4 rounded-field border border-line bg-surfaceAlt">
@@ -146,7 +146,7 @@ export function ProjectAccessCard(props: ProjectAccessCardProps) {
               size="sm"
               disabled={!hasSelectedProject || !props.projectPath.trim() || props.syncingContext}
               onClick={props.onSyncContext}
-              title="把已经采纳和确认的项目资产写回目标项目上下文目录，供后续 Agent 读取。"
+              title="把已经确认的项目沉淀写回目标项目上下文目录，供后续 Agent 读取。"
             >
               {props.syncingContext ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FolderTree className="h-3.5 w-3.5" />}
               同步确认上下文
@@ -175,11 +175,11 @@ function accessHint(step: DashboardStep, hasSelectedProject: boolean): { title: 
     case "no_material":
       return { title: "当前项目还没有可分析的材料，导入完整 zip 后生成画像。", cta: undefined };
     case "no_path":
-      return { title: "绑定本地项目文件夹路径后，才能刷新今日开发与扫描 Agent 写回内容。", cta: undefined };
+      return { title: "绑定本地项目文件夹路径后，才能分析新变化与扫描 Agent 写回内容。", cta: undefined };
     case "has_pending":
-      return { title: `当前有 ${step.count} 条待确认内容。`, cta: "去开发成果审查", ctaHref: "/tasks" };
+      return { title: `当前有 ${step.count} 条建议沉淀。`, cta: "去沉淀确认", ctaHref: "/tasks" };
     case "scan_updates":
-      return { title: "项目已就绪，刷新今日开发获取新的待确认内容。", cta: undefined };
+      return { title: "项目已就绪，分析新变化获取待整理变更。", cta: undefined };
     default:
       return { title: hasSelectedProject ? "项目接入就绪。" : "导入项目 zip 开始。" };
   }

@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.projectflow.dto.V33WorkflowDtos.ChangeBatchResponse;
+import com.projectflow.dto.V33WorkflowDtos.DevelopmentSegmentResponse;
+
 import com.projectflow.entity.AiSuggestionStatus;
 import com.projectflow.entity.AiSuggestionType;
 import com.projectflow.entity.MaterialSourceType;
@@ -313,7 +316,10 @@ public final class V2ProjectDtos {
         String branchName,
         Instant scannedAt,
         List<WorkSessionCandidateResponse> sessions,
-        List<String> warnings
+        List<String> warnings,
+        ChangeBatchResponse batch,
+        List<DevelopmentSegmentResponse> segments,
+        boolean firstScan
     ) {
     }
 
@@ -431,7 +437,14 @@ public final class V2ProjectDtos {
         String assetCandidates,
         Instant createdAt,
         Instant updatedAt,
-        Instant reviewedAt
+        Instant reviewedAt,
+        UUID developmentSegmentId,
+        String suggestedAction,
+        UUID targetSedimentId,
+        String problemSolved,
+        List<String> evidenceRefs,
+        String confidence,
+        boolean needsUserReview
     ) {
     }
 

@@ -1,27 +1,31 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-06-21
+Last updated: 2026-07-06
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow is a local-first developer workbench that turns real project activity into durable engineering assets.
+ProjectFlow V3.3 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
 
 Current direction:
 
-- Agent tools such as Codex modify real projects.
-- ProjectFlow records, reviews, and confirms what changed.
-- Confirmed changes become project profile data, daily reviews, task evidence, technical decisions, risks, and output material.
+- Local Git supplies objective change evidence; Agent results add task intent and verification context.
+- The primary workflow is 待整理变更 → 开发推进段 → 建议沉淀 → 项目沉淀.
+- Rules collect and validate facts, models interpret them, and users make the final confirmation.
 - AI/model calls are candidate generators only; user confirmation is required before treating output as official project facts.
+- GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
 
 Do not treat ProjectFlow as a generic Kanban app, SaaS admin panel, hotel/library system, or marketing site. The product should feel like a serious developer tool focused on project understanding.
 
 ## Current Stage
 
-The project has moved beyond the V1/V2 planning baseline. Current V3.2 focus:
+The project has moved beyond the V1/V2 planning baseline. Current V3.3 focus:
 
-- Workbench first screen should expose the independent user loop: import project -> see profile -> bind local path -> develop -> refresh changes -> review -> generate output.
+- Workbench first screen exposes: add/import project → bind local path → analyze new changes → review development segments → confirm sediment → reuse output.
+- Scan boundaries use the last confirmed review cursor rather than the current day.
+- Suggested sediment supports NEW_SEDIMENT, MERGE_EXISTING, EVIDENCE_ONLY, and IGNORE.
+- Subjective fields without confirmed evidence stay hidden from the default project-sediment view.
 - ProjectFlow must be usable without reading docs or requiring an agent to explain the workflow.
 - Workbench actions should prioritize the next concrete step, not a flat set of unrelated buttons.
 - Evidence Bundle lifecycle is now product-visible through `status`, `nextAction`, and `changeId`.
@@ -244,26 +248,26 @@ ProjectFlow can write `.projectflow` files into a real project path:
 
 ```text
 .projectflow/
-  agent-protocol.md
+  AGENT_PROTOCOL.md
+  agent-protocol.md              compatibility pointer
+  agent-results/<timestamp-topic>/
+    result.json
+    summary.md
+  templates/
   context/
     project-profile.md
     requirements.md
     confirmed-decisions.md
     known-risks.md
     update-history.md
-  inbox/
-  tasks/<task-id>/
-    brief.md
-    result.md
-    status.json
 ```
 
 Agent result requirements:
 
-- Result starts with `# ProjectFlow Agent Result`.
-- It should include `Summary`, `Changed Files`, `Task Updates`, `Decisions`, `Risks`, and `Dev Log`.
-- Agent must not directly mark ProjectFlow task state as complete.
-- ProjectFlow scans results, imports them as material, creates suggestions, and creates `ProjectChange` records for review.
+- Read `.projectflow/AGENT_PROTOCOL.md` before substantial work.
+- Write structured `result.json` with task goal, actual changes, repository-relative key files, verification, unfinished work, and sediment candidates.
+- Use `not_run` for checks that were not run; never present plans as completed capability.
+- ProjectFlow imports Agent results as candidate evidence. Users still make the final sediment decision.
 
 ## Implementation Habits
 

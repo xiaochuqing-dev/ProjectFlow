@@ -31,7 +31,7 @@ export function ActivityFeed(props: ActivityFeedProps) {
       badge: "待确认",
       badgeTone: "warning",
       title: suggestion.title,
-      impact: "候选信息尚未进入项目资产，确认后才会影响后续输出。",
+      impact: "候选信息尚未进入项目沉淀，确认后才会影响后续输出。",
       href: "/tasks",
       hrefLabel: "审查",
     }));

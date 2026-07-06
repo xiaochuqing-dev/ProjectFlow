@@ -1,0 +1,42 @@
+{
+  "taskGoal": "Upgrade ProjectFlow to the V3.3 pending-change and project-sedimentation workflow.",
+  "actualChanges": [
+    "Added persistent review cursors, change batches, development segments, and project sediments.",
+    "Changed scanning from a today boundary to a confirmed cursor with safe first-scan and rewritten-history fallbacks.",
+    "Added deterministic grouping, strict model JSON enrichment, evidence validation, and mandatory user review.",
+    "Added new, merge, evidence-only, and ignore confirmation actions with cursor advancement after batch resolution.",
+    "Upgraded the Agent write-back protocol and added health reporting.",
+    "Added fail-open GitHub CLI enrichment without token access.",
+    "Reframed the primary frontend around pending changes, sediment confirmation, and evidence-backed sediment details.",
+    "Updated launchers, README, AGENTS, project context, and compatibility language for V3.3."
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/PendingChangeScanService.java",
+    "backend/src/main/java/com/projectflow/service/DevelopmentSegmentationService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectSedimentService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectAgentBridgeService.java",
+    "backend/src/main/java/com/projectflow/service/GitHubCliService.java",
+    "frontend/src/components/dashboard/PendingChangesPanel.tsx",
+    "frontend/src/app/tasks/page.tsx",
+    "frontend/src/app/project-intelligence/page.tsx",
+    "frontend/src/app/project-sediments/[sedimentId]/page.tsx",
+    "README.md",
+    "PROJECT_CONTEXT.md",
+    "AGENTS.md"
+  ],
+  "verification": {
+    "build": "npm.cmd run build: passed",
+    "tests": "mvn.cmd -q test: 87 passed; node --test tests/*.test.mjs: 17 passed",
+    "manualCheck": "start-projectflow-embedded.ps1 -CheckOnly: passed"
+  },
+  "unfinished": [
+    "The long-running interactive application flow was not kept open during automated verification."
+  ],
+  "sedimentCandidates": [
+    "Cursor-based pending-change scanning with history-rewrite fallback",
+    "Evidence-validated development segmentation with mandatory user review",
+    "Four-action project sediment confirmation and batch cursor advancement",
+    "Structured Agent result protocol with safe compatibility handling",
+    "Fail-open GitHub CLI repository enrichment"
+  ]
+}

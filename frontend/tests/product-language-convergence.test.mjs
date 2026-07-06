@@ -9,7 +9,7 @@ const userFacingFiles = [
   "src/app/dashboard/page.tsx",
   "src/components/dashboard/DashboardStats.tsx",
   "src/components/dashboard/ActivityFeed.tsx",
-  "src/components/dashboard/EvidenceFlowPanel.tsx",
+  "src/components/dashboard/PendingChangesPanel.tsx",
   "src/app/tasks/page.tsx",
   "src/components/tasks/ChangeReviewList.tsx",
   "src/components/tasks/ChangeReviewSidebar.tsx",
@@ -45,8 +45,8 @@ for (const file of userFacingFiles) {
 }
 
 const projectIntelligence = read("src/app/project-intelligence/page.tsx");
-assert.match(projectIntelligence, /能力与成果/, "project understanding right rail should expose 能力与成果 as a primary entry");
-assert.match(projectIntelligence, /待确认成果/, "project understanding right rail should expose 待确认成果 as a primary entry");
+assert.match(projectIntelligence, /SedimentOverview/, "project sediment should be the primary overview");
+assert.match(projectIntelligence, /建议沉淀/, "project sediment should expose pending recommendations as a secondary entry");
 assert.doesNotMatch(projectIntelligence, /label="可信依据"/, "可信依据 should not be a primary right-rail entry");
 assert.doesNotMatch(projectIntelligence, /label="时间线变化"/, "时间线变化 should be merged into project timeline");
 

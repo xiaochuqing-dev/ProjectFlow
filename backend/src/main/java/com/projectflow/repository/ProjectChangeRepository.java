@@ -17,4 +17,6 @@ public interface ProjectChangeRepository extends JpaRepository<ProjectChange, UU
     Optional<ProjectChange> findByLinkedSuggestionId(UUID linkedSuggestionId);
 
     Optional<ProjectChange> findBySourceTypeAndSourceRef(ProjectChangeSourceType sourceType, String sourceRef);
+
+    Optional<ProjectChange> findByDevelopmentSegmentId(UUID developmentSegmentId);
 }

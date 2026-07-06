@@ -16,7 +16,7 @@ assert.match(source, /READY_TO_OUTPUT/, "state resolver should include output-re
 assert.match(source, /导入项目/, "flow copy should guide import without docs");
 assert.match(source, /绑定路径/, "flow copy should guide path binding without docs");
 assert.match(source, /整理原始依据/, "flow copy should guide evidence preparation without exposing bundles first");
-assert.match(source, /开发成果审查/, "flow copy should guide review");
+assert.match(source, /沉淀确认/, "flow copy should guide sediment confirmation");
 assert.match(source, /生成输出/, "flow copy should guide output generation");
 
 console.log("project-flow-state static checks passed");

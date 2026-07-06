@@ -1,23 +1,25 @@
 # ProjectFlow
 
-ProjectFlow is a local-first developer workbench for turning real project activity into confirmed engineering assets.
+ProjectFlow V3.3 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
 
 It is built for developers who use agents such as Codex, Claude Code, or other coding assistants to modify real projects and then need a clear way to understand what changed, review the evidence, maintain a project profile, and generate reusable output such as daily reviews, README material, reports, and resume-ready summaries.
 
-## What ProjectFlow Does
+## V3.3 Workflow
 
-ProjectFlow is not just a Kanban board. The current V3.2 product loop is:
+ProjectFlow is not a Kanban board, daily-report generator, or hosted PR/CI system. Its primary workflow is:
 
-1. Import a project zip.
-2. See the first project profile and architecture snapshot.
-3. Bind the real local project folder.
-4. Develop normally in the real project.
-5. Refresh Git / agent evidence after work.
-6. Review structured project changes.
-7. Accept useful facts into the project archive.
-8. Generate daily reviews, README sections, reports, and portfolio material from confirmed sources.
+1. Add a project through zip import and bind its real local folder.
+2. Analyze **待整理变更** from the last confirmed review cursor to the current Git HEAD.
+3. Group objective Git and Agent-result evidence into human-readable **开发推进段**.
+4. Produce evidence-backed **建议沉淀**.
+5. Let the user confirm new, merge, evidence-only, or ignore.
+6. Preserve confirmed content as traceable **项目沉淀** for README, resume, interview, review, and Agent context reuse.
 
-The key rule is simple: evidence is not automatically treated as truth. Evidence becomes a project asset only after review and acceptance.
+The governing rule is: rules collect facts, models interpret, rules validate, and users confirm. ProjectFlow no longer uses “今日开发” as the primary boundary; a persistent review cursor covers changes accumulated across days.
+
+Local Git is the primary data source. Agent result files are an enhancement that adds task intent, verification, and unfinished work. GitHub CLI is an optional enhancement for repository metadata and commit links; missing installation, login, or remote access never blocks local Git analysis, and ProjectFlow does not read or store GitHub tokens.
+
+数据源边界：本地 Git 是主数据源；Agent result 是增强数据源；GitHub CLI 是可选增强数据源。V3.3 不再以“今日开发”为主边界。
 
 ## Core Concepts
 
@@ -25,9 +27,11 @@ The key rule is simple: evidence is not automatically treated as truth. Evidence
 | --- | --- |
 | Project Profile | Current understanding of the project: purpose, architecture, modules, risks, decisions, progress, and output material |
 | Project Material | Imported zip, local files, agent result, or historical source material used for analysis |
-| Work Session | A detected slice of development activity, usually from local Git evidence |
-| Evidence Bundle | Objective evidence for a work session, such as changed files, line counts, commit/worktree context, and agent claims |
-| Project Change | Editable review object generated from evidence; accepted changes update the project archive |
+| Change Batch | New changes between the last confirmed review cursor and the current HEAD |
+| Development Segment | A deterministic, evidence-backed grouping of related commits, files, and Agent results |
+| Suggested Sediment | A user-reviewed proposal to create, merge, add evidence, or ignore |
+| Project Sediment | Confirmed project capability or outcome with sources and developer notes |
+| Work Session / Evidence Bundle / Project Change | Compatibility records retained for existing data and old links |
 | Project Memory | Confirmed project archive used by daily review, output generation, and `.projectflow/context` sync |
 | Fact Source | Field-level trace explaining where a profile field came from |
 | Growth Timeline | Long-term history of how the project changed over time |
@@ -37,11 +41,12 @@ The key rule is simple: evidence is not automatically treated as truth. Evidence
 - JWT authentication with project-scoped ownership checks.
 - Project creation, switching, deletion, and local path binding.
 - Complete project zip import with architecture/file understanding.
-- Local Git scanning from the bound project path.
-- Evidence Bundle lifecycle: create, update, convert to candidate change, review, accept, or ignore.
-- Project profile and project archive pages with source traceability.
+- Cursor-based local Git scanning with safe first-scan and rewritten-history fallbacks.
+- Rule-based grouping plus optional model enrichment and evidence validation.
+- Project sediment confirmation and focused evidence-backed detail pages.
 - Daily review and output generation using confirmed project archive data.
-- `.projectflow` protocol/context sync for agent collaboration.
+- `.projectflow/AGENT_PROTOCOL.md`, structured Agent results, context sync, and health checks.
+- Optional GitHub CLI status and remote-link enrichment with local-only fallback.
 - AI provider configuration with local-template fallback when a model is unavailable.
 - Embedded Windows startup mode using H2 local data.
 - Docker/team startup mode using PostgreSQL and Redis.
@@ -67,6 +72,7 @@ ProjectFlow/
 +-- .projectflow/             local agent protocol/context/runtime data
 +-- docker-compose.yml        PostgreSQL and Redis mode
 +-- .env.example              repo-safe environment template
++-- start.bat                 simple V3.3 Windows entry
 +-- start-projectflow.bat     embedded Windows launcher
 +-- start-projectflow.ps1     Docker/team startup orchestration
 `-- README.md
@@ -74,10 +80,10 @@ ProjectFlow/
 
 ## Local Development
 
-Windows embedded mode:
+Windows embedded mode (recommended):
 
 ```powershell
-.\start-projectflow.bat
+.\start.bat
 ```
 
 This starts the H2-backed backend and production frontend, then opens:
@@ -135,6 +141,10 @@ Important endpoint groups:
 - `/api/evidence-bundles/{bundleId}/draft-changes`
 - `/api/projects/{projectId}/changes`
 - `/api/project-changes/{changeId}`
+- `/api/projects/{projectId}/sediments`
+- `/api/project-changes/{changeId}/confirm-sediment`
+- `/api/projects/{projectId}/agent-bridge/health`
+- `/api/projects/{projectId}/github/status`
 - `/api/projects/{projectId}/fact-sources`
 - `/api/projects/{projectId}/context/sync`
 - `/api/projects/{projectId}/ai-outputs`
