@@ -6,5 +6,6 @@ public enum ProjectChangeSourceType {
     PROJECT_ZIP,
     MATERIAL_UPDATE,
     USER_MANUAL,
-    MODEL_SUMMARY
+    MODEL_SUMMARY,
+    DEVELOPMENT_SEGMENT
 }

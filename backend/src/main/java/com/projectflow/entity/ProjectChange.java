@@ -289,6 +289,11 @@ public class ProjectChange {
         this.reviewedAt = Instant.now();
     }
 
+    public void markMerged() {
+        this.status = ProjectChangeStatus.MERGED;
+        this.reviewedAt = Instant.now();
+    }
+
     public void updateSedimentSuggestion(
         UUID developmentSegmentId,
         SedimentAction suggestedAction,

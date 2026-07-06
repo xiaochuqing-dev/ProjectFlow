@@ -134,7 +134,14 @@ public class ProjectChangeReviewService {
             change.getAssetCandidates(),
             change.getCreatedAt(),
             change.getUpdatedAt(),
-            change.getReviewedAt()
+            change.getReviewedAt(),
+            change.getDevelopmentSegmentId(),
+            change.getSuggestedAction() == null ? null : change.getSuggestedAction().name(),
+            change.getTargetSedimentId(),
+            change.getProblemSolved(),
+            change.getEvidenceRefs(),
+            change.getEvidenceConfidence() == null ? null : change.getEvidenceConfidence().name(),
+            change.isNeedsUserReview()
         );
     }
 

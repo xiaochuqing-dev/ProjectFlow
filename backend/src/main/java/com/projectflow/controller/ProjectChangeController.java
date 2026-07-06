@@ -18,6 +18,9 @@ import com.projectflow.dto.V2ProjectDtos.ProjectChangePatchRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectChangeResponse;
 import com.projectflow.service.AuthService;
 import com.projectflow.service.ProjectChangeReviewService;
+import com.projectflow.dto.V33WorkflowDtos.SedimentConfirmRequest;
+import com.projectflow.dto.V33WorkflowDtos.SedimentConfirmationResponse;
+import com.projectflow.service.ProjectSedimentService;
 
 import jakarta.validation.Valid;
 
@@ -26,10 +29,26 @@ import jakarta.validation.Valid;
 public class ProjectChangeController {
     private final ProjectChangeReviewService projectChangeReviewService;
     private final AuthService authService;
+    private final ProjectSedimentService projectSedimentService;
 
-    public ProjectChangeController(ProjectChangeReviewService projectChangeReviewService, AuthService authService) {
+    public ProjectChangeController(
+        ProjectChangeReviewService projectChangeReviewService,
+        AuthService authService,
+        ProjectSedimentService projectSedimentService
+    ) {
         this.projectChangeReviewService = projectChangeReviewService;
         this.authService = authService;
+        this.projectSedimentService = projectSedimentService;
+    }
+
+    @PostMapping("/project-changes/{changeId}/confirm")
+    ApiResponse<SedimentConfirmationResponse> confirmChange(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID changeId,
+        @Valid @RequestBody SedimentConfirmRequest request
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectSedimentService.confirm(user.id(), changeId, request.action(), request.targetSedimentId()));
     }
 
     @GetMapping("/projects/{projectId}/changes")
@@ -66,6 +85,10 @@ public class ProjectChangeController {
         @PathVariable UUID changeId
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
+        if (projectSedimentService.isV33Change(user.id(), changeId)) {
+            projectSedimentService.confirm(user.id(), changeId, com.projectflow.entity.SedimentAction.NEW_SEDIMENT, null);
+            return ApiResponse.ok(projectChangeReviewService.getChange(user.id(), changeId));
+        }
         return ApiResponse.ok(projectChangeReviewService.acceptChange(user.id(), changeId));
     }
 
@@ -75,6 +98,10 @@ public class ProjectChangeController {
         @PathVariable UUID changeId
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
+        if (projectSedimentService.isV33Change(user.id(), changeId)) {
+            projectSedimentService.confirm(user.id(), changeId, com.projectflow.entity.SedimentAction.IGNORE, null);
+            return ApiResponse.ok(projectChangeReviewService.getChange(user.id(), changeId));
+        }
         return ApiResponse.ok(projectChangeReviewService.ignoreChange(user.id(), changeId));
     }
 }

@@ -45,6 +45,7 @@ public class WorkSessionScanService {
     private final PendingChangeScanService pendingChangeScanService;
     private final DevelopmentSegmentationService developmentSegmentationService;
     private final ModelSegmentEnricher modelSegmentEnricher;
+    private final ProjectSedimentService projectSedimentService;
 
     public WorkSessionScanService(
         ProjectRepository projectRepository,
@@ -54,7 +55,8 @@ public class WorkSessionScanService {
         LocalProjectPathGuard localProjectPathGuard,
         PendingChangeScanService pendingChangeScanService,
         DevelopmentSegmentationService developmentSegmentationService,
-        ModelSegmentEnricher modelSegmentEnricher
+        ModelSegmentEnricher modelSegmentEnricher,
+        ProjectSedimentService projectSedimentService
     ) {
         this.projectRepository = projectRepository;
         this.memoryRepository = memoryRepository;
@@ -64,6 +66,7 @@ public class WorkSessionScanService {
         this.pendingChangeScanService = pendingChangeScanService;
         this.developmentSegmentationService = developmentSegmentationService;
         this.modelSegmentEnricher = modelSegmentEnricher;
+        this.projectSedimentService = projectSedimentService;
     }
 
     @Transactional
@@ -98,6 +101,7 @@ public class WorkSessionScanService {
         drafts = modelSegmentEnricher.enrich(userId, atoms, drafts, warnings);
         List<DevelopmentSegmentResponse> segments = pendingChangeScanService.persistSegments(project.getId(), batch.id(), drafts);
         batch = pendingChangeScanService.updateSegmentCount(batch.id(), segments.size());
+        projectSedimentService.createSuggestions(project.getId(), segments);
         return new WorkSessionScanResponse(
             project.getId(),
             projectRoot.toString(),

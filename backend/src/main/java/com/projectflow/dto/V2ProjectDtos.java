@@ -437,7 +437,14 @@ public final class V2ProjectDtos {
         String assetCandidates,
         Instant createdAt,
         Instant updatedAt,
-        Instant reviewedAt
+        Instant reviewedAt,
+        UUID developmentSegmentId,
+        String suggestedAction,
+        UUID targetSedimentId,
+        String problemSolved,
+        List<String> evidenceRefs,
+        String confidence,
+        boolean needsUserReview
     ) {
     }
 

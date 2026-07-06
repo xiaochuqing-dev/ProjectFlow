@@ -305,7 +305,7 @@ class WorkSessionScanControllerTest {
             .at("/data/id")
             .asText();
 
-        jdbcTemplate.execute("ALTER TABLE project_changes ALTER COLUMN source_type ENUM('AGENT_RESULT','MATERIAL_UPDATE','MODEL_SUMMARY','PROJECT_ZIP','USER_MANUAL')");
+        jdbcTemplate.execute("ALTER TABLE project_changes ALTER COLUMN source_type ENUM('AGENT_RESULT','MATERIAL_UPDATE','MODEL_SUMMARY','PROJECT_ZIP','USER_MANUAL','DEVELOPMENT_SEGMENT')");
 
         mockMvc.perform(post("/api/evidence-bundles/" + bundleId + "/draft-changes")
                 .header("Authorization", "Bearer " + token))

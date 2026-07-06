@@ -2,6 +2,7 @@ package com.projectflow.entity;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -76,6 +77,33 @@ public class ProjectSediment {
     }
 
     public void updateDeveloperNotes(String notes) { this.developerNotes = notes == null ? "" : notes.trim(); }
+
+    public void merge(String newSummary, String newProblemSolved, String segmentId, List<String> newEvidenceRefs) {
+        if (newSummary != null && !newSummary.isBlank() && !summary.contains(newSummary.trim())) {
+            summary = summary.isBlank() ? newSummary.trim() : summary + "\n" + newSummary.trim();
+        }
+        if (problemSolved.isBlank() && newProblemSolved != null) {
+            problemSolved = newProblemSolved.trim();
+        }
+        addSourceAndEvidence(segmentId, newEvidenceRefs);
+    }
+
+    public void addEvidence(String segmentId, List<String> newEvidenceRefs) {
+        addSourceAndEvidence(segmentId, newEvidenceRefs);
+    }
+
+    private void addSourceAndEvidence(String segmentId, List<String> newEvidenceRefs) {
+        LinkedHashSet<String> segments = new LinkedHashSet<>(sourceSegmentIds);
+        if (segmentId != null && !segmentId.isBlank()) {
+            segments.add(segmentId);
+        }
+        sourceSegmentIds = new ArrayList<>(segments);
+        LinkedHashSet<String> evidence = new LinkedHashSet<>(evidenceRefs);
+        if (newEvidenceRefs != null) {
+            evidence.addAll(newEvidenceRefs);
+        }
+        evidenceRefs = new ArrayList<>(evidence);
+    }
 
     public UUID getId() { return id; }
     public UUID getProjectId() { return projectId; }

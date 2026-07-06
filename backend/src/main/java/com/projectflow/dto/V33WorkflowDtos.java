@@ -4,6 +4,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import com.projectflow.entity.SedimentAction;
+
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
 public final class V33WorkflowDtos {
     private V33WorkflowDtos() {
     }
@@ -42,6 +47,41 @@ public final class V33WorkflowDtos {
         String status,
         Instant createdAt,
         Instant updatedAt
+    ) {
+    }
+
+    public record SedimentConfirmRequest(
+        @NotNull SedimentAction action,
+        UUID targetSedimentId
+    ) {
+    }
+
+    public record ProjectSedimentPatchRequest(
+        @Size(max = 20_000) String developerNotes
+    ) {
+    }
+
+    public record ProjectSedimentResponse(
+        UUID id,
+        UUID projectId,
+        String title,
+        String summary,
+        String problemSolved,
+        String sedimentType,
+        String status,
+        List<String> sourceSegmentIds,
+        List<String> evidenceRefs,
+        String developerNotes,
+        Instant createdAt,
+        Instant updatedAt
+    ) {
+    }
+
+    public record SedimentConfirmationResponse(
+        UUID changeId,
+        String changeStatus,
+        ProjectSedimentResponse sediment,
+        String batchStatus
     ) {
     }
 }
