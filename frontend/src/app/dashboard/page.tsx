@@ -71,33 +71,38 @@ import { buildProjectArchitecture, compactProjectPath, projectZipPaths } from "@
 import { resolveProjectFlowState } from "@/lib/project-flow-state";
 import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 import { readSession } from "@/lib/auth";
+import { clearDashboardSnapshot, patchDashboardSnapshot, readDashboardSnapshot } from "@/lib/dashboard-snapshot";
 import { projectAnalysisContainsNoise, useDashboardWorkspace, workSessionListResult } from "@/hooks/useDashboardWorkspace";
 import { useGitHubActions } from "@/hooks/useGitHubActions";
 import { useProjectAnalysisJobs } from "@/lib/use-project-analysis-jobs";
 
 export default function DashboardPage() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  // 回到工作台时优先恢复 sessionStorage 快照，避免出现空白页与 ~10s 等待；
+  // 快照随后由后台静默刷新覆盖。首次进入或退出登录后无快照。
+  const initialSnapshot = typeof window !== "undefined" ? readDashboardSnapshot() : null;
+  const [projects, setProjects] = useState<Project[]>(initialSnapshot?.projects ?? []);
   const [providers, setProviders] = useState<AiProvider[]>([]);
-  const [materials, setMaterials] = useState<ProjectMaterial[]>([]);
-  const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);
-  const [evolutionRecords, setEvolutionRecords] = useState<ProjectEvolutionRecord[]>([]);
-  const [evidenceBundles, setEvidenceBundles] = useState<EvidenceBundle[]>([]);
-  const [changeConflicts, setChangeConflicts] = useState<ChangeConflict[]>([]);
-  const [changes, setChanges] = useState<ProjectChange[]>([]);
-  const [outputs, setOutputs] = useState<AiOutput[]>([]);
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [memory, setMemory] = useState<ProjectMemory | null>(null);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [materials, setMaterials] = useState<ProjectMaterial[]>(initialSnapshot?.materials ?? []);
+  const [suggestions, setSuggestions] = useState<AiSuggestion[]>(initialSnapshot?.suggestions ?? []);
+  const [evolutionRecords, setEvolutionRecords] = useState<ProjectEvolutionRecord[]>(initialSnapshot?.evolutionRecords ?? []);
+  const [evidenceBundles, setEvidenceBundles] = useState<EvidenceBundle[]>(initialSnapshot?.evidenceBundles ?? []);
+  const [changeConflicts, setChangeConflicts] = useState<ChangeConflict[]>(initialSnapshot?.changeConflicts ?? []);
+  const [changes, setChanges] = useState<ProjectChange[]>(initialSnapshot?.changes ?? []);
+  const [outputs, setOutputs] = useState<AiOutput[]>(initialSnapshot?.outputs ?? []);
+  const [tasks, setTasks] = useState<TaskItem[]>(initialSnapshot?.tasks ?? []);
+  const [memory, setMemory] = useState<ProjectMemory | null>(initialSnapshot?.memory ?? null);
+  const [selectedProjectId, setSelectedProjectId] = useState(initialSnapshot?.selectedProjectId ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [showZipImport, setShowZipImport] = useState(false);
   const [showFlowGuide, setShowFlowGuide] = useState(false);
   const [statsFocus, setStatsFocus] = useState<"materials" | "changes" | "sessions" | "tasks" | "">("");
-  const [projectPath, setProjectPath] = useState("");
+  const [projectPath, setProjectPath] = useState(initialSnapshot?.memory?.localProjectPath ?? "");
   const [globalRule, setGlobalRule] = useState("");
-  const [workSessionScan, setWorkSessionScan] = useState<WorkSessionScanResult | null>(null);
-  const [githubStatus, setGithubStatus] = useState<GitHubStatus | null>(null);
+  const [workSessionScan, setWorkSessionScan] = useState<WorkSessionScanResult | null>(initialSnapshot?.workSessionScan ?? null);
+  const [githubStatus, setGithubStatus] = useState<GitHubStatus | null>(initialSnapshot?.githubStatus ?? null);
   const [scanWarnings, setScanWarnings] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  // 有快照时先用旧数据渲染、不显示加载条；后台静默刷新。
+  const [loading, setLoading] = useState(!initialSnapshot);
   const [importing, setImporting] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
   const [savingProjectPath, setSavingProjectPath] = useState(false);
@@ -177,15 +182,27 @@ export default function DashboardPage() {
       return;
     }
 
-    setLoading(true);
+    const hasSnapshot = Boolean(readDashboardSnapshot());
+    // 有快照时后台静默刷新，不切回 loading 状态，避免短暂空白。
+    if (!hasSnapshot) {
+      setLoading(true);
+    }
     Promise.all([listProjects(session.accessToken), listAiProviders(session.accessToken)])
       .then(([projectItems, providerItems]) => {
         setProjects(projectItems);
         setProviders(providerItems);
-        setSelectedProjectId(resolveSelectedProjectId(projectItems));
+        // 优先沿用快照里已恢复的选中项目，避免回到工作台时项目被重置为列表第一项。
+        setSelectedProjectId(resolveSelectedProjectId(projectItems, selectedProjectId));
+        // 项目列表刷新后补写快照中的 projects，保证后续快照含最新项目集合。
+        patchDashboardSnapshot({ projects: projectItems, selectedProjectId: resolveSelectedProjectId(projectItems, selectedProjectId) });
       })
       .catch((exception) => setError(exception instanceof Error ? exception.message : "工作台数据加载失败"))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!hasSnapshot) {
+          setLoading(false);
+        }
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -225,13 +242,20 @@ export default function DashboardPage() {
   async function refreshProjectContext(projectId: string) {
     const session = readSession();
     const requestId = beginContextRequest();
-    clearProjectContextViewState();
+    // 不在请求开始时清空已有视图：后台刷新进行中应保留快照/旧数据，
+    // 避免回到工作台或切换项目时出现短暂空白。仅在请求失败时清空。
 
     if (!session || !projectId) {
+      if (isLatestContextRequest(requestId)) {
+        clearProjectContextViewState();
+      }
       return;
     }
 
-    setLoading(true);
+    const hasSnapshot = Boolean(readDashboardSnapshot());
+    if (!hasSnapshot) {
+      setLoading(true);
+    }
     try {
       const [materialItems, suggestionItems, evolutionItems, taskItems, memoryRecord, workSessions, bundles, conflicts, changeItems, outputItems, github] = await Promise.all([
         listProjectMaterials(session.accessToken, projectId),
@@ -249,6 +273,7 @@ export default function DashboardPage() {
       if (!isLatestContextRequest(requestId)) {
         return;
       }
+      const workSessionResult = workSessions.length ? workSessionListResult(projectId, memoryRecord.localProjectPath ?? "", workSessions) : null;
       setMaterials(materialItems);
       setSuggestions(suggestionItems);
       setEvolutionRecords(evolutionItems);
@@ -260,7 +285,21 @@ export default function DashboardPage() {
       setMemory(memoryRecord);
       setGithubStatus(github);
       setProjectPath(memoryRecord.localProjectPath ?? "");
-      setWorkSessionScan(workSessions.length ? workSessionListResult(projectId, memoryRecord.localProjectPath ?? "", workSessions) : null);
+      setWorkSessionScan(workSessionResult);
+      patchDashboardSnapshot({
+        selectedProjectId: projectId,
+        materials: materialItems,
+        suggestions: suggestionItems,
+        evolutionRecords: evolutionItems,
+        evidenceBundles: bundles,
+        changeConflicts: conflicts,
+        changes: changeItems,
+        outputs: outputItems,
+        tasks: taskItems,
+        memory: memoryRecord,
+        workSessionScan: workSessionResult,
+        githubStatus: github,
+      });
     } catch (exception) {
       if (!isLatestContextRequest(requestId)) {
         return;
@@ -305,7 +344,9 @@ export default function DashboardPage() {
       const result = await importProjectZip(session.accessToken, file);
       setProjects((current) => {
         const exists = current.some((project) => project.id === result.project.id);
-        return exists ? current.map((project) => (project.id === result.project.id ? result.project : project)) : [result.project, ...current];
+        const nextProjects = exists ? current.map((project) => (project.id === result.project.id ? result.project : project)) : [result.project, ...current];
+        patchDashboardSnapshot({ projects: nextProjects, selectedProjectId: result.project.id });
+        return nextProjects;
       });
       rememberSelectedProjectId(result.project.id);
       setSelectedProjectId(result.project.id);
@@ -342,7 +383,10 @@ export default function DashboardPage() {
       setSelectedProjectId(nextProjectId);
       setNotice("已删除 ProjectFlow 项目记录；本地源码文件未被删除。");
       if (!nextProjectId) {
+        clearDashboardSnapshot();
         await refreshProjectContext("");
+      } else {
+        patchDashboardSnapshot({ projects: updatedProjects, selectedProjectId: nextProjectId });
       }
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "项目删除失败");

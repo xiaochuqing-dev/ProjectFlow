@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BookOpenText, ClipboardCheck, DatabaseZap, LayoutDashboard, LogOut, Settings, Sparkles } from "lucide-react";
 import { clearSession, readSession, type AuthUser } from "@/lib/auth";
+import { clearDashboardSnapshot } from "@/lib/dashboard-snapshot";
 
 type AppShellProps = {
   title: string;
@@ -38,6 +39,8 @@ export function AppShell({ title, eyebrow, actions, children }: AppShellProps) {
 
   function handleLogout() {
     clearSession();
+    // 退出登录后清掉工作台快照，避免下次登录残留上一个用户的数据。
+    clearDashboardSnapshot();
     router.replace("/login");
   }
 

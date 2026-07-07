@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowRight, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { login, register } from "@/lib/api";
 import { saveSession } from "@/lib/auth";
+import { clearDashboardSnapshot } from "@/lib/dashboard-snapshot";
 
 type AuthPanelProps = {
   mode: "login" | "register";
@@ -31,6 +32,8 @@ export function AuthPanel({ mode }: AuthPanelProps) {
         ? await register(username, email, password)
         : await login(email, password);
       saveSession(result);
+      // 登录/注册成功后清掉可能残留的旧工作台快照，避免新会话看到上一个用户的数据。
+      clearDashboardSnapshot();
       router.push("/dashboard");
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "请求失败，请稍后重试");
