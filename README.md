@@ -1,18 +1,21 @@
 # ProjectFlow
 
-ProjectFlow V3.3.2 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+ProjectFlow V3.3.3 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
 
-## V3.3.2 Analysis Quality
+## V3.3.3 Analysis Progress, Evidence-Aware Modeling, and Chinese Quality
 
-- Development segments describe concrete results, user/developer-visible behavior, affected scope, evidence, and uncertainty. A backend quality gate rejects directory-level or count-only summaries.
-- Scans persist a fingerprint from the review boundary, local HEAD, worktree state, atom IDs, prompt version, model configuration, and remote state. An unchanged fingerprint reuses the existing batch.
-- The workbench exposes model status, fallback reason, worktree state, GitHub state, Agent result count, remote relation, commit links, and scan timings.
-- GitHub CLI is optional enrichment. Missing installation/login/upstream, permission failures, proxy/network timeouts, and fetch failures degrade quickly to local Git analysis.
-- **分析项目能力** analyzes the whole confirmed project evidence set and creates independent structured capability cards. Legacy `completedCapabilities` remains a collapsed compatibility field only.
+- **Analysis progress visibility**: analyzing new changes shows the current stage (Git scan / GitHub inspect / model enrichment / persist), elapsed time, and input scale. Long model runs tell the user the analysis continues and the page can be left safely.
+- **Model-result retention priority**: the quality gate is now a *marker*, not a batch rejector. As long as the model returns a parseable structure, results are retained and tagged with `PASS` / `NEEDS_REVIEW` / `NEEDS_CHINESE_REWRITE` / `NEEDS_EVIDENCE` / `PARTIAL_EVIDENCE` / `LOW_CONFIDENCE`. Local-rule fallback is used only when the model is fully unavailable (not configured / call failed / no content / unparseable JSON / all evidence invalid).
+- **Forced Chinese for user-visible content**: titles, summaries, main changes, capability names, README/resume/interview expressions, and fallback summaries must be natural Simplified Chinese. English commit messages, file paths, class names, and interface names may remain only in evidence details.
+- **Model configuration precondition**: entries that depend on model quality (**分析新变化**, **分析项目能力**) check whether a model is configured first. If not configured, ProjectFlow shows Git facts with a "facts-only, no model interpretation" notice and guides the user to configure a model rather than fabricating low-quality local-template results.
+- **Unified analysis input snapshot**: local Git, worktree diff (unstaged/staged/untracked), GitHub state, Agent results, and scan scope are organized into a structured snapshot fed to the model. The model is told it is judging the *real* development state from multi-source evidence — not choosing between GitHub and local Git. Rules provide facts; the model interprets flexibly; the user confirms.
+- **Analysis scope display**: every completed scan shows what sources participated (local Git / worktree diff / staged / untracked / Agent result count / GitHub status / model status / merge mode / uncommitted content / remote-unsynced / evidence gaps), not a vague "model merge failed".
+- **GitHub on the home screen**: the workbench shows GitHub status and action entries directly under "GitHub" (not "GitHub 增强"): login guide (copy `gh auth login --web --clipboard`), refresh sync status (read-only, never pull/merge/rebase), re-check. ProjectFlow never reads, displays, or stores GitHub tokens.
+- **Capability page quality**: **分析项目能力** requires a configured model and generates Chinese, concrete, product-specific capability cards tied to real ProjectFlow features — no template names like "项目资产沉淀能力", no raw commit-message card names.
 
 It is built for developers who use agents such as Codex, Claude Code, or other coding assistants to modify real projects and then need a clear way to understand what changed, review the evidence, maintain a project profile, and generate reusable output such as daily reviews, README material, reports, and resume-ready summaries.
 
-## V3.3.2 Workflow
+## V3.3.3 Workflow
 
 ProjectFlow is not a Kanban board, daily-report generator, or hosted PR/CI system. Its primary workflow is:
 
@@ -27,7 +30,7 @@ The governing rule is: rules collect facts, models interpret, rules validate, an
 
 Local Git is the primary data source. Agent result files are an enhancement that adds task intent, verification, and unfinished work. GitHub CLI is an optional enhancement for repository metadata and commit links; missing installation, login, or remote access never blocks local Git analysis, and ProjectFlow does not read or store GitHub tokens.
 
-数据源边界：本地 Git 是主数据源；Agent result 是增强数据源；GitHub CLI 是可选增强数据源。V3.3.2 不再以“今日开发”为主边界。
+数据源边界：本地 Git 是主数据源；Agent result 是增强数据源；GitHub CLI 是可选增强数据源。V3.3.3 不再以“今日开发”为主边界。
 
 ## Core Concepts
 
@@ -80,7 +83,7 @@ ProjectFlow/
 +-- .projectflow/             local agent protocol/context/runtime data
 +-- docker-compose.yml        PostgreSQL and Redis mode
 +-- .env.example              repo-safe environment template
-+-- start.bat                 simple V3.3.2 Windows entry
++-- start.bat                 simple V3.3.3 Windows entry
 +-- start-projectflow.bat     embedded Windows launcher
 +-- start-projectflow.ps1     Docker/team startup orchestration
 `-- README.md

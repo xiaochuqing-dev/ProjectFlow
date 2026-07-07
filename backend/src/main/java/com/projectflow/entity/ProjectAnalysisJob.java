@@ -56,6 +56,20 @@ public class ProjectAnalysisJob {
     @Column(name = "completed_at")
     private Instant completedAt;
 
+    // V3.3.3: 分析进度可视化。stage 是当前阶段枚举字符串，stageMessage 是面向用户的中文说明。
+    @Column(name = "stage", length = 40)
+    private String stage = "";
+
+    @Column(name = "stage_message", length = 500)
+    private String stageMessage = "";
+
+    @Column(name = "current_step_started_at")
+    private Instant currentStepStartedAt;
+
+    // V3.3.3: 输入规模快照（提交/文件/Agent result 数量、GitHub 是否参与、模型是否参与等），JSON 文本。
+    @Column(name = "input_summary", columnDefinition = "text")
+    private String inputSummary;
+
     protected ProjectAnalysisJob() {
     }
 
@@ -66,6 +80,8 @@ public class ProjectAnalysisJob {
         this.jobType = jobType;
         this.filePath = filePath;
         this.status = ProjectAnalysisJobStatus.QUEUED;
+        this.stage = "QUEUED";
+        this.stageMessage = "等待任务启动";
     }
 
     @PrePersist
@@ -73,6 +89,9 @@ public class ProjectAnalysisJob {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
+        if (this.currentStepStartedAt == null) {
+            this.currentStepStartedAt = now;
+        }
     }
 
     @PreUpdate
@@ -84,6 +103,18 @@ public class ProjectAnalysisJob {
         this.status = ProjectAnalysisJobStatus.RUNNING;
         this.startedAt = Instant.now();
         this.errorMessage = null;
+        this.currentStepStartedAt = Instant.now();
+    }
+
+    // V3.3.3: 阶段推进。每完成一个阶段调用一次，前端据此显示"现在在做什么"和已等待时间。
+    public void advanceStage(String stage, String message) {
+        this.stage = stage == null ? "" : stage.trim();
+        this.stageMessage = message == null ? "" : message.trim();
+        this.currentStepStartedAt = Instant.now();
+    }
+
+    public void recordInputSummary(String summary) {
+        this.inputSummary = summary;
     }
 
     public void markSucceeded(String resultJson, UUID recordId) {
@@ -92,12 +123,18 @@ public class ProjectAnalysisJob {
         this.recordId = recordId;
         this.errorMessage = null;
         this.completedAt = Instant.now();
+        this.stage = "SUCCEEDED";
+        this.stageMessage = "分析完成";
+        this.currentStepStartedAt = this.completedAt;
     }
 
     public void markFailed(String errorMessage) {
         this.status = ProjectAnalysisJobStatus.FAILED;
         this.errorMessage = errorMessage;
         this.completedAt = Instant.now();
+        this.stage = "FAILED";
+        this.stageMessage = "分析失败";
+        this.currentStepStartedAt = this.completedAt;
     }
 
     public UUID getId() {
@@ -150,5 +187,21 @@ public class ProjectAnalysisJob {
 
     public Instant getCompletedAt() {
         return completedAt;
+    }
+
+    public String getStage() {
+        return stage;
+    }
+
+    public String getStageMessage() {
+        return stageMessage;
+    }
+
+    public Instant getCurrentStepStartedAt() {
+        return currentStepStartedAt;
+    }
+
+    public String getInputSummary() {
+        return inputSummary;
     }
 }

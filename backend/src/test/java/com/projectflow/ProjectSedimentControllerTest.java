@@ -99,28 +99,11 @@ class ProjectSedimentControllerTest {
         assertThat(cursorRepository.findByProjectId(UUID.fromString(projectId))).get()
             .extracting(cursor -> cursor.getLastReviewedCommitSha()).isEqualTo(run(root, "git", "rev-parse", "HEAD").trim());
 
-        JsonNode cards = body(mockMvc.perform(post("/api/projects/" + projectId + "/capabilities/analyze")
+        // V3.3.3: 未配置模型时，"分析项目能力"不生成完整卡片，而是明确提示去配置模型。
+        mockMvc.perform(post("/api/projects/" + projectId + "/capabilities/analyze")
                 .header("Authorization", "Bearer " + token))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data[0].status").value("CANDIDATE"))
-            .andExpect(jsonPath("$.data[0].evidenceRefs[0]").isNotEmpty())
-            .andReturn()).path("data");
-        assertThat(cards.size()).isBetween(3, 8);
-
-        String confirmedCardId = cards.get(0).path("id").asText();
-        String untouchedCardId = cards.get(1).path("id").asText();
-        mockMvc.perform(patch("/api/capability-cards/" + confirmedCardId)
-                .header("Authorization", "Bearer " + token)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"action\":\"CONFIRM\"}"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
-
-        mockMvc.perform(get("/api/projects/" + projectId + "/capability-cards")
-                .header("Authorization", "Bearer " + token))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data[?(@.id == '" + confirmedCardId + "')].status").value("CONFIRMED"))
-            .andExpect(jsonPath("$.data[?(@.id == '" + untouchedCardId + "')].status").value("CANDIDATE"));
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("MODEL_NOT_CONFIGURED"));
     }
 
     @Test

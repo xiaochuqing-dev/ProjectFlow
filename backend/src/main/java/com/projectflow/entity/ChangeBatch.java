@@ -74,6 +74,9 @@ public class ChangeBatch {
     private long githubInspectMs;
     @Column(name = "total_scan_ms")
     private long totalScanMs;
+    // V3.3.3: 分析口径 JSON——记录本次用了哪些来源（本地Git/工作区/GitHub/Agent result/模型）。
+    @Column(name = "analysis_scope", columnDefinition = "text")
+    private String analysisScope = "";
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
     @Column(name = "updated_at", nullable = false)
@@ -134,6 +137,10 @@ public class ChangeBatch {
         this.githubInspectMs = Math.max(0, githubMs);
         this.totalScanMs = Math.max(0, totalMs);
     }
+    // V3.3.3: 记录本次分析口径（哪些来源参与、是否有未提交/未同步内容、证据缺口等）。
+    public void recordAnalysisScope(String scope) {
+        this.analysisScope = scope == null ? "" : scope;
+    }
     public void markPartial() { this.status = ChangeBatchStatus.PARTIAL; }
     public void markReviewed() { this.status = ChangeBatchStatus.REVIEWED; }
     public void markFailed(List<String> failureWarnings) {
@@ -168,6 +175,7 @@ public class ChangeBatch {
     public long getModelSegmentMs() { return modelSegmentMs; }
     public long getGithubInspectMs() { return githubInspectMs; }
     public long getTotalScanMs() { return totalScanMs; }
+    public String getAnalysisScope() { return analysisScope; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     private static String safe(String value) { return value == null ? "" : value.trim(); }

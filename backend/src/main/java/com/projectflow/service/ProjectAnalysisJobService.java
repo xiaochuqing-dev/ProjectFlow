@@ -199,7 +199,11 @@ public class ProjectAnalysisJobService {
             job.getCreatedAt(),
             job.getUpdatedAt(),
             job.getStartedAt(),
-            job.getCompletedAt()
+            job.getCompletedAt(),
+            job.getStage(),
+            job.getStageMessage(),
+            job.getCurrentStepStartedAt(),
+            job.getInputSummary()
         );
     }
 

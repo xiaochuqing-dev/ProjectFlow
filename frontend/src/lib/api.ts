@@ -778,6 +778,11 @@ export type ProjectAnalysisJob = {
   updatedAt: string;
   startedAt: string | null;
   completedAt: string | null;
+  // V3.3.3: 分析进度可视化。stage 是当前阶段，stageMessage 是中文说明，currentStepStartedAt 用于计算已等待时间。
+  stage: string;
+  stageMessage: string;
+  currentStepStartedAt: string | null;
+  inputSummary: string | null;
 };
 
 export type ProjectAnalysisRecordType = "PROJECT" | "FILE";
@@ -916,6 +921,8 @@ export type ChangeBatch = {
   modelSegmentMs: number;
   githubInspectMs: number;
   totalScanMs: number;
+  // V3.3.3: 分析口径 JSON——记录本次用了哪些来源。
+  analysisScope: string | null;
 };
 
 export type DevelopmentSegment = {
@@ -937,7 +944,8 @@ export type DevelopmentSegment = {
   generationMode: "MODEL" | "LOCAL_RULE";
   modelProvider: string;
   fallbackReason: string;
-  qualityStatus: "PASS" | "NEEDS_MANUAL";
+  // V3.3.3: 质量门槛改为标记器，状态细化。
+  qualityStatus: "PASS" | "NEEDS_REVIEW" | "NEEDS_CHINESE_REWRITE" | "NEEDS_EVIDENCE" | "PARTIAL_EVIDENCE" | "LOW_CONFIDENCE" | "NEEDS_MANUAL";
   qualityReason: string;
   commitUrls: string[];
   uncertainties: string[];
@@ -1421,6 +1429,29 @@ export function getAgentBridgeHealth(token: string, projectId: string): Promise<
 
 export function getProjectGitHubStatus(token: string, projectId: string): Promise<GitHubStatus> {
   return requestJson<GitHubStatus>(`/projects/${projectId}/github/status`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// V3.3.3: GitHub 刷新同步状态——只读取远程提交信息，不修改本地代码。
+export function refreshProjectGitHub(token: string, projectId: string): Promise<GitHubStatus> {
+  return requestJson<GitHubStatus>(`/projects/${projectId}/github/refresh`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export type GitHubLoginGuide = {
+  ghInstalled: boolean;
+  status: string;
+  command: string;
+  instructions: string[];
+  warnings: string[];
+};
+
+// V3.3.3: GitHub 登录指引。不读取、不展示、不保存 token；只提供命令让用户在终端执行。
+export function getGitHubLoginGuide(token: string, projectId: string): Promise<GitHubLoginGuide> {
+  return requestJson<GitHubLoginGuide>(`/projects/${projectId}/github/login-guide`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }

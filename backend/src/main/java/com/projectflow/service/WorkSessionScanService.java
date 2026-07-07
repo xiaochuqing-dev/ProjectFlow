@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -28,10 +29,12 @@ import com.projectflow.dto.V2ProjectDtos.WorkSessionPatchRequest;
 import com.projectflow.dto.V2ProjectDtos.WorkSessionScanResponse;
 import com.projectflow.dto.V2ProjectDtos.AgentSignatureFeedbackResponse;
 import com.projectflow.entity.AgentSignatureFeedback;
+import com.projectflow.entity.ProjectAnalysisJob;
 import com.projectflow.entity.ProjectMemory;
 import com.projectflow.entity.ProjectSpace;
 import com.projectflow.entity.WorkSession;
 import com.projectflow.repository.AgentSignatureFeedbackRepository;
+import com.projectflow.repository.ProjectAnalysisJobRepository;
 import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.repository.WorkSessionRepository;
@@ -39,6 +42,11 @@ import com.projectflow.support.AppException;
 import com.projectflow.dto.V33WorkflowDtos.ChangeBatchResponse;
 import com.projectflow.dto.V33WorkflowDtos.DevelopmentSegmentResponse;
 import com.projectflow.dto.V33WorkflowDtos.GitHubStatusResponse;
+import com.projectflow.service.AnalysisInputSnapshot.AgentResultFacts;
+import com.projectflow.service.AnalysisInputSnapshot.GitFacts;
+import com.projectflow.service.AnalysisInputSnapshot.GitHubFacts;
+import com.projectflow.service.AnalysisInputSnapshot.ScanScopeFacts;
+import com.projectflow.service.AnalysisInputSnapshot.WorktreeFacts;
 import com.projectflow.service.PendingChangeScanService.ScanPlan;
 import com.projectflow.service.PendingChangeScanService.ScanDiagnostics;
 import com.projectflow.service.PendingChangeScanService.SegmentDiagnostics;
@@ -57,6 +65,7 @@ public class WorkSessionScanService {
     private final ModelSegmentEnricher modelSegmentEnricher;
     private final ProjectSedimentService projectSedimentService;
     private final GitHubCliService gitHubCliService;
+    private final ProjectAnalysisJobRepository jobRepository;
     private final ObjectMapper objectMapper;
 
     public WorkSessionScanService(
@@ -70,6 +79,7 @@ public class WorkSessionScanService {
         ModelSegmentEnricher modelSegmentEnricher,
         ProjectSedimentService projectSedimentService,
         GitHubCliService gitHubCliService,
+        ProjectAnalysisJobRepository jobRepository,
         ObjectMapper objectMapper
     ) {
         this.projectRepository = projectRepository;
@@ -82,11 +92,17 @@ public class WorkSessionScanService {
         this.modelSegmentEnricher = modelSegmentEnricher;
         this.projectSedimentService = projectSedimentService;
         this.gitHubCliService = gitHubCliService;
+        this.jobRepository = jobRepository;
         this.objectMapper = objectMapper;
     }
 
     @Transactional
     public WorkSessionScanResponse scan(UUID userId, UUID projectId) {
+        return scan(userId, projectId, null);
+    }
+
+    @Transactional
+    public WorkSessionScanResponse scan(UUID userId, UUID projectId, UUID jobId) {
         long scanStarted = System.nanoTime();
         ProjectSpace project = projectRepository.findByIdAndUserId(projectId, userId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
@@ -95,15 +111,19 @@ public class WorkSessionScanService {
         Path projectRoot = localProjectPathGuard.requireGitProjectDirectory(memory.getLocalProjectPath()).path();
 
         List<String> warnings = new ArrayList<>();
+        advanceStage(jobId, "GIT_SCAN", "正在读取本地 Git 提交与工作区变化");
         long gitStarted = System.nanoTime();
         String branchName = runGit(projectRoot, warnings, "branch", "--show-current").trim();
         ScanPlan scanPlan = pendingChangeScanService.prepare(projectRoot, project.getId(), branchName);
         warnings.addAll(scanPlan.warnings());
         GitEvidence evidence = readPendingCommits(project.getId(), projectRoot, branchName, warnings, scanPlan.gitLogArguments());
         GitEvidence uncommittedEvidence = readUncommittedEvidence(project.getId(), projectRoot, branchName, warnings);
+        WorktreeFacts worktreeFacts = readWorktreeFacts(projectRoot);
         List<ChangeAtom> agentResultAtoms = readAgentResultAtoms(projectRoot, warnings);
         WorkSessionCandidateResponse uncommitted = uncommittedEvidence.hasChanges() ? uncommittedEvidence.toResponse() : null;
         long gitScanMs = elapsedMs(gitStarted);
+
+        advanceStage(jobId, "GITHUB_INSPECT", "正在检查 GitHub 状态");
         long githubStarted = System.nanoTime();
         GitHubStatusResponse github = gitHubCliService.inspect(projectRoot);
         long githubInspectMs = elapsedMs(githubStarted);
@@ -128,23 +148,33 @@ public class WorkSessionScanService {
         var reusable = pendingChangeScanService.findReusable(project.getId(), fingerprint);
         if (reusable != null) {
             warnings.add("扫描指纹未变化，已复用已有开发推进段。");
+            advanceStage(jobId, "SUCCEEDED", "分析完成（复用已有结果）");
             return new WorkSessionScanResponse(
                 project.getId(), projectRoot.toString(), branchName, Instant.now(), persistedSessions, warnings,
                 reusable.batch(), reusable.segments(), scanPlan.firstScan()
             );
         }
+        // V3.3.3: 构建分析输入快照，把多来源证据整理成结构化事实交给模型。
+        AnalysisInputSnapshot snapshot = buildSnapshot(scanPlan, evidence, worktreeFacts, github, agentResultAtoms, modelSegmentEnricher.configurationKey(userId));
+        recordInputSummary(jobId, snapshot);
+
         List<SegmentDraft> drafts = developmentSegmentationService.group(atoms);
+        advanceStage(jobId, "MODEL_ENRICH", "正在调用模型分析开发推进段（可能需要几分钟，任务会继续运行）");
         long modelStarted = System.nanoTime();
-        var enrichment = modelSegmentEnricher.enrichWithDiagnostics(userId, atoms, drafts);
+        var enrichment = modelSegmentEnricher.enrichWithDiagnostics(userId, atoms, drafts, snapshot);
         long modelSegmentMs = elapsedMs(modelStarted);
         drafts = enrichment.segments();
         if (!enrichment.fallbackReason().isBlank()) warnings.add(enrichment.fallbackReason());
+        for (String qw : enrichment.qualityWarnings()) warnings.add(qw);
+
+        advanceStage(jobId, "PERSIST", "正在保存分析结果并生成建议沉淀");
         long totalScanMs = elapsedMs(scanStarted);
+        String analysisScopeJson = buildAnalysisScopeJson(snapshot, enrichment, worktreeDirty, github);
         ChangeBatchResponse batch = pendingChangeScanService.persist(
             project.getId(), scanPlan, evidence.commitCount(), evidence.changedFileCount(), agentResultAtoms.size(), warnings,
             new ScanDiagnostics(
                 fingerprint, worktreeDirty, github.status(), github.remoteRelation(), enrichment.mode(), enrichment.modelStatus(),
-                enrichment.providerName(), enrichment.fallbackReason(), gitScanMs, modelSegmentMs, githubInspectMs, totalScanMs
+                enrichment.providerName(), enrichment.fallbackReason(), gitScanMs, modelSegmentMs, githubInspectMs, totalScanMs, analysisScopeJson
             )
         );
         List<DevelopmentSegmentResponse> segments = pendingChangeScanService.persistSegments(
@@ -153,6 +183,7 @@ public class WorkSessionScanService {
         );
         projectSedimentService.createSuggestions(project.getId(), segments);
         batch = pendingChangeScanService.finish(batch.id(), segments.size(), elapsedMs(scanStarted));
+        advanceStage(jobId, "SUCCEEDED", "分析完成");
         return new WorkSessionScanResponse(
             project.getId(),
             projectRoot.toString(),
@@ -164,6 +195,115 @@ public class WorkSessionScanService {
             segments,
             scanPlan.firstScan()
         );
+    }
+
+    // V3.3.3: 推进 job 阶段，让前端轮询时看到"现在在做什么"。
+    private void advanceStage(UUID jobId, String stage, String message) {
+        if (jobId == null) return;
+        jobRepository.findById(jobId).ifPresent(job -> {
+            job.advanceStage(stage, message);
+            jobRepository.save(job);
+        });
+    }
+
+    private void recordInputSummary(UUID jobId, AnalysisInputSnapshot snapshot) {
+        if (jobId == null) return;
+        try {
+            String summary = objectMapper.writeValueAsString(snapshot.scanScope());
+            jobRepository.findById(jobId).ifPresent(job -> {
+                job.recordInputSummary(summary);
+                jobRepository.save(job);
+            });
+        } catch (Exception ignored) {
+            // 输入摘要不是关键路径，失败不影响分析。
+        }
+    }
+
+    // V3.3.3: 读取工作区事实（unstaged/staged/untracked）。
+    private WorktreeFacts readWorktreeFacts(Path projectRoot) {
+        String porcelain = runGit(projectRoot, new ArrayList<>(), "status", "--porcelain=v1", "--untracked-files=all");
+        boolean hasUnstaged = false;
+        boolean hasStaged = false;
+        boolean hasUntracked = false;
+        List<String> unstagedFiles = new ArrayList<>();
+        List<String> stagedFiles = new ArrayList<>();
+        List<String> untrackedFiles = new ArrayList<>();
+        for (String line : porcelain.split("\\R")) {
+            if (line.length() < 3) continue;
+            char x = line.charAt(0);
+            char y = line.charAt(1);
+            String file = line.substring(3).trim();
+            if (x == '?') {
+                hasUntracked = true;
+                untrackedFiles.add(file);
+            } else {
+                if (x != ' ' && x != '?') { hasStaged = true; stagedFiles.add(file); }
+                if (y != ' ' && y != '?') { hasUnstaged = true; unstagedFiles.add(file); }
+            }
+        }
+        boolean dirty = hasUnstaged || hasStaged || hasUntracked;
+        boolean possiblyUnfinished = dirty;
+        return new WorktreeFacts(hasUnstaged, hasStaged, hasUntracked, dirty,
+            unstagedFiles.stream().limit(20).toList(), stagedFiles.stream().limit(20).toList(),
+            untrackedFiles.stream().limit(20).toList(), possiblyUnfinished);
+    }
+
+    // V3.3.3: 构建多来源证据快照。
+    private AnalysisInputSnapshot buildSnapshot(ScanPlan plan, GitEvidence evidence, WorktreeFacts worktree, GitHubStatusResponse github, List<ChangeAtom> agentAtoms, String modelKey) {
+        GitFacts gitFacts = new GitFacts(
+            plan.branchName(), plan.headCommitSha(), plan.baseCommitSha(), plan.firstScan(),
+            evidence.commitCount(), evidence.commitSummaries().stream().limit(10).toList(),
+            new ArrayList<>(evidence.files().keySet()).stream().limit(30).toList(),
+            evidence.commitSummaries().stream().limit(6).toList()
+        );
+        boolean githubParticipated = github != null && "CONNECTED".equals(github.status());
+        GitHubFacts githubFacts = new GitHubFacts(
+            github.ghInstalled(), github.ghAuthenticated(), github.repoDetected(),
+            github.nameWithOwner(), "", github.localAhead(), github.remoteAhead(),
+            github.remoteRelation(), githubParticipated, github.status()
+        );
+        List<String> taskGoals = agentAtoms.stream().map(ChangeAtom::title).limit(8).toList();
+        List<String> agentFiles = agentAtoms.stream().flatMap(a -> a.files().stream()).distinct().limit(30).toList();
+        Set<String> gitFileSet = new LinkedHashSet<>(evidence.files().keySet());
+        boolean overlaps = agentFiles.stream().anyMatch(gitFileSet::contains);
+        boolean onlyAgent = !evidence.hasChanges() && !agentAtoms.isEmpty();
+        AgentResultFacts agentFacts = new AgentResultFacts(agentAtoms.size(), taskGoals, agentFiles, overlaps, onlyAgent);
+        boolean evidenceGap = onlyAgent || (evidence.hasChanges() && agentAtoms.isEmpty()) || (!githubParticipated && "CONNECTED".equals("") == false);
+        ScanScopeFacts scope = new ScanScopeFacts(
+            evidence.commitCount(), evidence.changedFileCount(), agentAtoms.size(),
+            worktree.worktreeDirty(), githubParticipated, !"none".equals(modelKey), evidenceGap
+        );
+        return new AnalysisInputSnapshot(gitFacts, worktree, githubFacts, agentFacts, scope);
+    }
+
+    // V3.3.3: 构建分析口径 JSON，记录本次用了哪些来源。
+    private String buildAnalysisScopeJson(AnalysisInputSnapshot snapshot, ModelSegmentEnricher.EnrichmentResult enrichment, boolean worktreeDirty, GitHubStatusResponse github) {
+        try {
+            var scope = snapshot.scanScope();
+            var obj = objectMapper.createObjectNode();
+            obj.put("localGit", "参与");
+            obj.put("worktreeDiff", worktreeDirty ? "有" : "无");
+            obj.put("unstaged", snapshot.worktree().hasUnstaged() ? "有" : "无");
+            obj.put("staged", snapshot.worktree().hasStaged() ? "有" : "无");
+            obj.put("untracked", snapshot.worktree().hasUntracked() ? "有" : "无");
+            obj.put("agentResults", "读取 " + scope.inputAgentResultCount() + " 条");
+            obj.put("github", scope.githubParticipated() ? "参与" : "未参与");
+            obj.put("githubStatus", github.status());
+            obj.put("githubRemoteRelation", github.remoteRelation());
+            obj.put("model", "MODEL".equals(enrichment.mode()) ? "已使用" : "未配置/请求失败/未返回");
+            obj.put("modelStatus", enrichment.modelStatus());
+            obj.put("mergeMode", "MODEL".equals(enrichment.mode())
+                ? (enrichment.qualityWarnings().isEmpty() ? "模型分析" : "模型草稿需复核")
+                : "本地事实摘要");
+            obj.put("hasUncommitted", worktreeDirty);
+            obj.put("hasRemoteUnsynced", "remote_ahead".equals(github.remoteRelation()) || "diverged".equals(github.remoteRelation()));
+            obj.put("evidenceGap", scope.evidenceGap());
+            obj.put("inputCommits", scope.inputCommitCount());
+            obj.put("inputFiles", scope.inputFileCount());
+            return objectMapper.writeValueAsString(obj);
+        } catch (Exception exception) {
+            return "";
+        }
     }
 
     @Transactional(readOnly = true)
@@ -392,7 +532,7 @@ public class WorkSessionScanService {
         String worktree = runGit(root, new ArrayList<>(), "status", "--porcelain=v1", "--untracked-files=all");
         String atomIds = atoms.stream().map(ChangeAtom::id).sorted().reduce("", (left, right) -> left + "|" + right);
         String input = String.join("\n", projectId.toString(), plan.branchName(), plan.baseCommitSha(), plan.headCommitSha(), worktree,
-            atomIds, "v3.3.2", modelConfig, githubStatus, remoteRelation);
+            atomIds, "v3.3.3", modelConfig, githubStatus, remoteRelation);
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(input.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException exception) {
@@ -519,6 +659,15 @@ public class WorkSessionScanService {
 
         private boolean hasChanges() {
             return !files.isEmpty();
+        }
+
+        // V3.3.3: 暴露给快照构建器（同包可见）。
+        LinkedHashMap<String, FileStat> files() {
+            return files;
+        }
+
+        List<String> commitSummaries() {
+            return List.copyOf(commitSummaries);
         }
 
         private int commitCount() {

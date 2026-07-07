@@ -1,3 +1,3 @@
 # Project profile
 
-ProjectFlow V3.3.2 is a local development-change understanding and project-sedimentation tool for AI-assisted solo developers. It adds result-level segment quality gates, explainable stable scans, optional GitHub evidence enrichment, and whole-project capability analysis while preserving user confirmation as the boundary for official facts.
+ProjectFlow V3.3.3 is a local development-change understanding and project-sedimentation tool for AI-assisted solo developers. It adds full analysis-progress visibility, evidence-aware multi-source modeling (local Git / worktree diff / GitHub / Agent result snapshot), a marker-based quality gate that retains model results by default, forced Simplified-Chinese user-visible content, GitHub status with login guidance and read-only sync refresh on the home screen, and a model-configuration precondition for analysis entries — while preserving user confirmation as the boundary for official facts.

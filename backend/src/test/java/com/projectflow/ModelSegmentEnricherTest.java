@@ -114,7 +114,8 @@ class ModelSegmentEnricherTest {
     }
 
     @Test
-    void lowQualityModelOutputRetriesThenReportsExplicitFallback() throws Exception {
+    void lowQualityModelOutputIsRetainedWithReviewFlagNotDiscarded() throws Exception {
+        // V3.3.3: 模型返回可解析结构就保留，质量门槛改为标记器，不再整批丢弃模型结果。
         UUID userId = UUID.randomUUID();
         when(providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)).thenReturn(List.of(provider(userId)));
         when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenReturn(objectMapper.readTree("""
@@ -130,12 +131,17 @@ class ModelSegmentEnricherTest {
 
         var result = enricher.enrichWithDiagnostics(userId, atoms(), fallback());
 
-        assertThat(result.segments()).isEqualTo(fallback());
-        assertThat(result.mode()).isEqualTo("LOCAL_RULE");
-        assertThat(result.modelStatus()).isEqualTo("QUALITY_REJECTED");
-        assertThat(result.providerName()).isEqualTo("DeepSeek");
-        assertThat(result.fallbackReason()).contains("质量");
-        verify(modelGatewayService, times(2)).callJson(any(), anyString(), anyInt());
+        // 模型结果被保留（不是 fallback），模式为 MODEL。
+        assertThat(result.mode()).isEqualTo("MODEL");
+        assertThat(result.modelStatus()).isEqualTo("SUCCESS");
+        assertThat(result.segments()).singleElement().satisfies(segment -> {
+            assertThat(segment.title()).isEqualTo("backend 开发推进");
+            assertThat(segment.confidence()).isEqualTo(EvidenceConfidence.LOW);
+        });
+        // 质量问题转为标记，不再回退本地规则。
+        assertThat(result.fallbackReason()).contains("需人工复核");
+        // 不应重试两次——保留优先，一次就保留。
+        verify(modelGatewayService, times(1)).callJson(any(), anyString(), anyInt());
     }
 
     private AiProvider provider(UUID userId) {

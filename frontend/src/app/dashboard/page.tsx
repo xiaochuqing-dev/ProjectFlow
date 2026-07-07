@@ -72,6 +72,7 @@ import { resolveProjectFlowState } from "@/lib/project-flow-state";
 import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 import { readSession } from "@/lib/auth";
 import { projectAnalysisContainsNoise, useDashboardWorkspace, workSessionListResult } from "@/hooks/useDashboardWorkspace";
+import { useGitHubActions } from "@/hooks/useGitHubActions";
 import { useProjectAnalysisJobs } from "@/lib/use-project-analysis-jobs";
 
 export default function DashboardPage() {
@@ -116,6 +117,8 @@ export default function DashboardPage() {
   const latestProjectJob = jobs.find((job) => job.jobType === "PROJECT") ?? null;
   const latestScanJob = jobs.find((job) => job.jobType === "WORK_SESSION_SCAN") ?? null;
   const scanningWorkSessions = latestScanJob?.status === "QUEUED" || latestScanJob?.status === "RUNNING";
+  // V3.3.3: GitHub 状态与登录指引操作（刷新只读远程，登录不保存 token）。
+  const { refreshingGitHub, refreshGitHub: handleRefreshGitHub, showGitHubLogin: handleShowGitHubLogin } = useGitHubActions(selectedProjectId, setGithubStatus, setNotice, setError);
   const analyzing = latestProjectJob?.status === "QUEUED" || latestProjectJob?.status === "RUNNING";
   const rawAnalysis = latestProjectJob?.status === "SUCCEEDED" ? latestProjectJob.projectResult : null;
   const analysisRejectedByNoise = rawAnalysis ? projectAnalysisContainsNoise(rawAnalysis) : false;
@@ -622,6 +625,10 @@ export default function DashboardPage() {
               scan={workSessionScan}
               scanning={scanningWorkSessions}
               workSessions={todaySessions}
+              onRefreshGitHub={handleRefreshGitHub}
+              refreshingGitHub={refreshingGitHub}
+              onShowGitHubLogin={handleShowGitHubLogin}
+              activeJob={latestScanJob}
             />
 
             {/* 项目理解速览（极简，不再重复完整理解） */}

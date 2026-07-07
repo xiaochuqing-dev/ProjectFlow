@@ -17,7 +17,7 @@ assert.match(readme, /Agent result.*增强数据源/s, "README should explain ag
 assert.match(readme, /不再以.*今日开发.*主边界/s, "README should explain the cursor-based boundary");
 
 const agents = read("AGENTS.md");
-assert.match(agents, /PROJECTFLOW V3\.3 CONTEXT START/, "AGENTS should contain a bounded V3.3 context entry");
+assert.match(agents, /PROJECTFLOW V3\.3\.\d+ CONTEXT START/, "AGENTS should contain a bounded V3.3 context entry");
 assert.match(agents, /\.projectflow\/AGENT_PROTOCOL\.md/, "AGENTS should route agents to the detailed protocol");
 
 const context = read("PROJECT_CONTEXT.md");

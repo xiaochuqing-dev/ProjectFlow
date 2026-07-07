@@ -8,13 +8,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
 import com.projectflow.entity.EvidenceConfidence;
 import com.projectflow.repository.AiProviderRepository;
 import com.projectflow.service.DevelopmentSegmentationService.ChangeAtom;
 import com.projectflow.service.DevelopmentSegmentationService.SegmentDraft;
+import com.projectflow.service.SegmentQualityGate.QualityResult;
 
+/**
+ * V3.3.3: 模型结果保留优先。质量门槛改为"标记器"，不再把整批模型结果替换成本地摘要。
+ *
+ * 保留策略：
+ * - 模型返回可解析的结构化结果 → 即使有质量问题也保留，按 segment 打状态（需复核/需中文修正/需补证据）。
+ * - 只有以下情况才回退本地规则：模型未配置、调用失败、完全未返回、返回内容不是可解析 JSON、
+ *   引用的证据完全不可用导致无任何可用 segment。
+ */
 @Service
 public class ModelSegmentEnricher {
     private static final int MAX_PROMPT_ATOMS = 80;
@@ -24,26 +34,40 @@ public class ModelSegmentEnricher {
     private final ModelGatewayService modelGatewayService;
     private final SegmentEvidenceValidator evidenceValidator;
     private final SegmentQualityGate qualityGate;
+    private final ObjectMapper objectMapper;
 
     @Autowired
     public ModelSegmentEnricher(
         AiProviderRepository providerRepository,
         ModelGatewayService modelGatewayService,
         SegmentEvidenceValidator evidenceValidator,
-        SegmentQualityGate qualityGate
+        SegmentQualityGate qualityGate,
+        ObjectMapper objectMapper
     ) {
         this.providerRepository = providerRepository;
         this.modelGatewayService = modelGatewayService;
         this.evidenceValidator = evidenceValidator;
         this.qualityGate = qualityGate;
+        this.objectMapper = objectMapper;
     }
 
+    // 兼容旧测试构造器：不传 ObjectMapper 时仍可工作（quality gate 标记器模式）。
     public ModelSegmentEnricher(
         AiProviderRepository providerRepository,
         ModelGatewayService modelGatewayService,
         SegmentEvidenceValidator evidenceValidator
     ) {
-        this(providerRepository, modelGatewayService, evidenceValidator, new SegmentQualityGate());
+        this(providerRepository, modelGatewayService, evidenceValidator, new SegmentQualityGate(), new ObjectMapper());
+    }
+
+    // 兼容旧测试构造器。
+    public ModelSegmentEnricher(
+        AiProviderRepository providerRepository,
+        ModelGatewayService modelGatewayService,
+        SegmentEvidenceValidator evidenceValidator,
+        SegmentQualityGate qualityGate
+    ) {
+        this(providerRepository, modelGatewayService, evidenceValidator, qualityGate, new ObjectMapper());
     }
 
     public List<SegmentDraft> enrich(
@@ -60,37 +84,77 @@ public class ModelSegmentEnricher {
     }
 
     public EnrichmentResult enrichWithDiagnostics(UUID userId, List<ChangeAtom> atoms, List<SegmentDraft> fallback) {
+        return enrichWithDiagnostics(userId, atoms, fallback, null);
+    }
+
+    // V3.3.3: 接收分析输入快照，把多来源证据整理进 prompt。
+    public EnrichmentResult enrichWithDiagnostics(UUID userId, List<ChangeAtom> atoms, List<SegmentDraft> fallback, AnalysisInputSnapshot snapshot) {
         AiProvider provider = configuredProvider(userId);
         if (provider == null) {
-            return new EnrichmentResult(fallback, "LOCAL_RULE", "NOT_CONFIGURED", "", "未配置可用模型，已使用增强本地摘要。");
+            return new EnrichmentResult(fallback, "LOCAL_RULE", "NOT_CONFIGURED", "", "未配置可用模型，已使用增强本地摘要。", List.of(), "");
         }
         if (atoms.isEmpty()) {
-            return new EnrichmentResult(fallback, "LOCAL_RULE", "NO_CHANGES", provider.getName(), "没有可供模型分析的新变化。");
+            return new EnrichmentResult(fallback, "LOCAL_RULE", "NO_CHANGES", provider.getName(), "没有可供模型分析的新变化。", List.of(), "");
         }
         Exception lastFailure = null;
-        boolean qualityRejected = false;
+        boolean jsonParseFailed = false;
+        boolean evidenceRejected = false;
         for (int attempt = 0; attempt < 2; attempt++) {
             try {
-                JsonNode json = modelGatewayService.callJson(provider, prompt(atoms, fallback, attempt > 0), MAX_OUTPUT_TOKENS);
+                JsonNode json = modelGatewayService.callJson(provider, prompt(atoms, fallback, attempt > 0, snapshot), MAX_OUTPUT_TOKENS);
                 List<SegmentDraft> validated = parse(json, atoms);
+                // V3.3.3: 质量门槛改为标记器。不再因质量问题丢弃整批模型结果。
+                // 每个 segment 单独评估，保留可用内容，标记状态。
+                List<SegmentDraft> retained = new ArrayList<>();
+                List<String> qualityWarnings = new ArrayList<>();
                 List<String> titles = new ArrayList<>();
                 for (SegmentDraft candidate : validated) {
-                    var quality = qualityGate.evaluate(candidate, titles);
-                    if (!"PASS".equals(quality.status())) {
-                        qualityRejected = true;
-                        throw new IllegalArgumentException("segment quality rejected: " + quality.reason());
-                    }
+                    QualityResult quality = qualityGate.evaluate(candidate, titles);
                     titles.add(candidate.title());
+                    if (qualityGate.needsReviewFlag(quality) && !quality.status().equals("NEEDS_EVIDENCE")) {
+                        qualityWarnings.add(quality.reason());
+                    }
+                    retained.add(candidate);
                 }
-                return new EnrichmentResult(validated, "MODEL", "SUCCESS", provider.getName(), "");
+                if (retained.isEmpty()) {
+                    evidenceRejected = true;
+                    throw new IllegalArgumentException("no model segments survived evidence validation");
+                }
+                String summary = buildModelSummary(snapshot, retained.size());
+                String reason = qualityWarnings.isEmpty() ? "" : "模型已返回结果，其中 " + qualityWarnings.size() + " 条需人工复核。";
+                return new EnrichmentResult(retained, "MODEL", "SUCCESS", provider.getName(), reason, qualityWarnings, summary);
+            } catch (IllegalArgumentException exception) {
+                lastFailure = exception;
+                String message = exception.getMessage() == null ? "" : exception.getMessage().toLowerCase();
+                if (message.contains("segments must be an array") || message.contains("is required") || message.contains("must be an array")) {
+                    jsonParseFailed = true;
+                }
             } catch (Exception exception) {
                 lastFailure = exception;
             }
         }
-        String status = qualityRejected ? "QUALITY_REJECTED" : modelFailureStatus(lastFailure);
-        String reason = qualityRejected ? "模型输出质量不合格，重试后已使用增强本地摘要。"
+        // V3.3.3: 只有模型完全不可用才回退本地规则。
+        String status = jsonParseFailed ? "JSON_PARSE_FAILED"
+            : evidenceRejected ? "EVIDENCE_REJECTED"
+            : modelFailureStatus(lastFailure);
+        String reason = jsonParseFailed ? "模型返回内容无法解析为结构化结果，已使用增强本地摘要。"
+            : evidenceRejected ? "模型引用的证据完全不可用，已使用增强本地摘要。"
             : "模型归并失败，已使用增强本地摘要。";
-        return new EnrichmentResult(fallback, "LOCAL_RULE", status, provider.getName(), reason);
+        return new EnrichmentResult(fallback, "LOCAL_RULE", status, provider.getName(), reason, List.of(), "");
+    }
+
+    private String buildModelSummary(AnalysisInputSnapshot snapshot, int segmentCount) {
+        if (snapshot == null) return "";
+        StringBuilder sb = new StringBuilder();
+        sb.append("模型基于多来源证据归并 ").append(segmentCount).append(" 段。");
+        var scope = snapshot.scanScope();
+        if (scope != null) {
+            sb.append("输入：").append(scope.inputCommitCount()).append(" 提交 / ")
+              .append(scope.inputFileCount()).append(" 文件 / ").append(scope.inputAgentResultCount()).append(" Agent result。");
+            if (scope.includesUncommitted()) sb.append("含未提交变化。");
+            if (scope.githubParticipated()) sb.append("GitHub 参与。"); else sb.append("GitHub 未参与。");
+        }
+        return sb.toString();
     }
 
     private List<SegmentDraft> parse(JsonNode json, List<ChangeAtom> atoms) {
@@ -129,8 +193,30 @@ public class ModelSegmentEnricher {
             .orElse(null);
     }
 
-    private String prompt(List<ChangeAtom> atoms, List<SegmentDraft> fallback, boolean retry) {
+    // V3.3.3: 把多来源证据整理进 prompt，明确告诉模型"你在基于多来源证据判断真实开发状态"。
+    private String prompt(List<ChangeAtom> atoms, List<SegmentDraft> fallback, boolean retry, AnalysisInputSnapshot snapshot) {
         StringBuilder facts = new StringBuilder();
+        // 证据快照说明：让模型理解当前开发状态的多来源事实。
+        if (snapshot != null) {
+            facts.append("【分析输入快照】\n");
+            appendGitFacts(facts, snapshot.git());
+            appendWorktreeFacts(facts, snapshot.worktree());
+            appendGitHubFacts(facts, snapshot.github());
+            appendAgentResultFacts(facts, snapshot.agentResults());
+            facts.append("【扫描范围】");
+            var scope = snapshot.scanScope();
+            if (scope != null) {
+                facts.append("输入 ").append(scope.inputCommitCount()).append(" 提交 / ")
+                    .append(scope.inputFileCount()).append(" 文件 / ").append(scope.inputAgentResultCount())
+                    .append(" Agent result；");
+                facts.append(scope.includesUncommitted() ? "含未提交变化；" : "无未提交变化；");
+                facts.append(scope.githubParticipated() ? "GitHub 参与；" : "GitHub 未参与；");
+                facts.append(scope.modelParticipated() ? "模型参与。" : "模型未参与。");
+                if (scope.evidenceGap()) facts.append(" 存在证据缺口。");
+            }
+            facts.append("\n\n");
+        }
+        // 原子事实。
         if (atoms.size() <= MAX_PROMPT_ATOMS) {
             for (ChangeAtom atom : atoms) {
                 facts.append("ATOM ").append(atom.id()).append(" | ").append(atom.title()).append(" | files=")
@@ -146,16 +232,77 @@ public class ModelSegmentEnricher {
             }
         }
         return """
-            你是 ProjectFlow V3.3 的开发推进段归并器。只依据给定事实返回严格 JSON：
+            你是 ProjectFlow V3.3.3 的开发推进段归并器。你不是在 GitHub 和本地 Git 之间二选一，而是在基于多来源证据判断当前真实开发状态。
+            只依据给定事实返回严格 JSON：
             {"segments":[{"segmentTitle":"","plainSummary":"","includedAtomIds":[],"mainChanges":[],"userVisibleValue":"","evidenceRefs":[],"affectedFiles":[],"confidence":"HIGH|MEDIUM|LOW","needsUserReview":true}]}
             不能发明 atom、commit 或文件；文档和测试若服务于同一功能，应与功能归为一段；最多返回 8 段。
-            标题和摘要必须描述实际开发结果，禁止目录名加“开发推进”或仅报告数量。mainChanges 必须为 3 到 6 条具体变化。
+            标题和摘要必须描述实际开发结果，禁止目录名加"开发推进"或仅报告数量。mainChanges 必须为 3 到 6 条具体变化。
             needsUserReview 必须为 true，模型不能替用户确认项目事实。
+            用户可见主内容（segmentTitle、plainSummary、mainChanges、userVisibleValue）必须使用简体中文人话；英文 commit message、文件路径、类名、接口名只能出现在证据细节里，不能成为主标题或摘要。
+            如果变化未提交，请在摘要中说明"未提交工作区变化"；如果本地领先远程，请提示未推送；如果远程领先，请提示先同步本地；如果分叉，请标记当前分析可能不完整。
+            如果证据不完整，要说不完整；不要假设 GitHub 一定最新，也不要假设本地 commit 一定完整。
 
             %s
 
             事实：
-            """.formatted(retry ? "上一次输出未通过质量门槛，请改写为具体结果并避免重复标题。" : "") + facts;
+            """.formatted(retry ? "上一次输出未通过质量门槛，请改写为具体结果、简体中文人话，并避免重复标题。" : "") + facts;
+    }
+
+    private void appendGitFacts(StringBuilder sb, AnalysisInputSnapshot.GitFacts git) {
+        if (git == null) return;
+        sb.append("【本地 Git】分支 ").append(safe(git.branch())).append("；HEAD ").append(shortHash(git.headCommit()));
+        sb.append(git.firstScan() ? "；首次扫描。" : "；从确认点读取。");
+        sb.append(" 提交数：").append(git.commitCount()).append("。");
+        if (!git.commitMessages().isEmpty()) {
+            sb.append(" 提交线索：");
+            sb.append(String.join("；", git.commitMessages().stream().limit(6).toList()));
+            sb.append("。");
+        }
+        sb.append("\n");
+    }
+
+    private void appendWorktreeFacts(StringBuilder sb, AnalysisInputSnapshot.WorktreeFacts worktree) {
+        if (worktree == null) return;
+        sb.append("【工作区】");
+        sb.append(worktree.worktreeDirty() ? "存在未提交变化" : "无未提交变化");
+        sb.append("；unstaged=").append(worktree.hasUnstaged() ? "有" : "无");
+        sb.append("，staged=").append(worktree.hasStaged() ? "有" : "无");
+        sb.append("，untracked=").append(worktree.hasUntracked() ? "有" : "无");
+        sb.append("。");
+        if (worktree.possiblyUnfinished()) sb.append(" 可能是未完成开发，请在摘要中标注。");
+        sb.append("\n");
+    }
+
+    private void appendGitHubFacts(StringBuilder sb, AnalysisInputSnapshot.GitHubFacts github) {
+        if (github == null) return;
+        sb.append("【GitHub】");
+        if (!github.installed()) {
+            sb.append("未安装 GitHub CLI。");
+        } else if (!github.authenticated()) {
+            sb.append("已安装但未登录。");
+        } else if (!github.detected()) {
+            sb.append("已登录但无 remote。");
+        } else {
+            sb.append("已接入 ").append(safe(github.repo())).append("；");
+            sb.append("upstream=").append(safe(github.upstream())).append("；");
+            sb.append("localAhead=").append(github.localAhead()).append("，remoteAhead=").append(github.remoteAhead());
+            sb.append("，relation=").append(safe(github.relation())).append("。");
+        }
+        if (!github.githubParticipated()) sb.append(" 本次 GitHub 未参与分析。");
+        sb.append("\n");
+    }
+
+    private void appendAgentResultFacts(StringBuilder sb, AnalysisInputSnapshot.AgentResultFacts agent) {
+        if (agent == null) return;
+        sb.append("【Agent result】读取 ").append(agent.count()).append(" 条。");
+        if (agent.count() > 0) {
+            if (agent.onlyAgentResultsWithoutCode()) sb.append(" 只有 Agent result 缺少代码变化，请标注证据缺口。");
+            if (agent.overlapsWithGitDiff()) sb.append(" 与 Git diff 指向同一批文件，应合并分析。");
+            if (!agent.taskGoals().isEmpty()) {
+                sb.append(" 任务线索：").append(String.join("；", agent.taskGoals().stream().limit(4).toList())).append("。");
+            }
+        }
+        sb.append("\n");
     }
 
     public String configurationKey(UUID userId) {
@@ -201,12 +348,21 @@ public class ModelSegmentEnricher {
         }
     }
 
+    private static String safe(String value) { return value == null ? "" : value; }
+    private static String shortHash(String hash) { return hash == null || hash.length() <= 12 ? safe(hash) : hash.substring(0, 12); }
+
     public record EnrichmentResult(
         List<SegmentDraft> segments,
         String mode,
         String modelStatus,
         String providerName,
-        String fallbackReason
+        String fallbackReason,
+        List<String> qualityWarnings,
+        String modelSummary
     ) {
+        // 兼容旧构造：无 qualityWarnings/modelSummary。
+        public EnrichmentResult(List<SegmentDraft> segments, String mode, String modelStatus, String providerName, String fallbackReason) {
+            this(segments, mode, modelStatus, providerName, fallbackReason, List.of(), "");
+        }
     }
 }

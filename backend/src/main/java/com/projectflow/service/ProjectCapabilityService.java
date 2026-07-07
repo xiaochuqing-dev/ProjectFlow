@@ -56,30 +56,34 @@ public class ProjectCapabilityService {
         if (sources.isEmpty()) {
             throw new AppException("CAPABILITY_EVIDENCE_REQUIRED", "请先确认至少一条项目沉淀，再分析项目能力", HttpStatus.BAD_REQUEST);
         }
+        AiProvider provider = configuredProvider(userId);
+        // V3.3.3: 模型配置前置检查。未配置模型时不生成完整能力卡片，提示去配置模型。
+        if (provider == null) {
+            throw new AppException(
+                "MODEL_NOT_CONFIGURED",
+                "当前未配置模型，无法进行完整人话能力分析。请先在设置页配置模型，ProjectFlow 不会用低质量本地模板伪装成完整模型分析。",
+                HttpStatus.BAD_REQUEST
+            );
+        }
         cardRepository.deleteByProjectIdAndStatus(projectId, CapabilityCardStatus.CANDIDATE);
         cardRepository.deleteByProjectIdAndStatus(projectId, CapabilityCardStatus.NEEDS_EVIDENCE);
 
-        AiProvider provider = configuredProvider(userId);
-        String mode = provider == null ? "LOCAL_RULE" : "MODEL";
-        String fallback = provider == null ? "未配置可用模型，已基于确认沉淀与开发推进段生成候选能力。" : "";
+        String mode = "MODEL";
+        String fallback = "";
         List<CardDraft> drafts;
-        if (provider == null) {
+        try {
+            drafts = modelDrafts(provider, sources);
+        } catch (Exception exception) {
+            mode = "LOCAL_RULE";
+            fallback = "模型能力分析失败，已基于确认沉淀与开发推进段生成候选能力，建议配置或检查模型后重新分析。";
             drafts = localDrafts(sources);
-        } else {
-            try {
-                drafts = modelDrafts(provider, sources);
-            } catch (Exception exception) {
-                mode = "LOCAL_RULE";
-                fallback = "整体能力模型分析失败，已基于确认沉淀与开发推进段生成候选能力。";
-                drafts = localDrafts(sources);
-            }
         }
         List<ProjectCapabilityCard> cards = new ArrayList<>();
         for (CardDraft draft : drafts.stream().limit(8).toList()) {
             ProjectCapabilityCard card = new ProjectCapabilityCard(projectId);
             card.update(
                 draft.name(), draft.summary(), draft.problemSolved(), draft.featureEntry(), draft.sourceRefs(), draft.evidenceRefs(),
-                draft.readme(), draft.resume(), draft.interview(), mode, provider == null ? "" : provider.getName(), fallback
+                draft.readme(), draft.resume(), draft.interview(), mode, provider.getName(), fallback
             );
             cards.add(card);
         }
@@ -121,9 +125,12 @@ public class ProjectCapabilityService {
                 .append(String.join(",", source.getEvidenceRefs())).append('\n');
         }
         JsonNode json = modelGatewayService.callJson(provider, """
-            基于全部确认开发推进段整体分析项目能力。返回严格 JSON：
+            基于全部确认开发推进段整体分析 ProjectFlow 项目能力。返回严格 JSON：
             {"capabilities":[{"name":"","summary":"","problemSolved":"","featureEntry":"","sourceRefs":[],"evidenceRefs":[],"readme":"","resume":"","interview":""}]}
-            生成 3 到 8 张具体且不重复的卡片，不得发明来源或证据。事实：
+            生成 3 到 8 张具体且不重复的卡片，不得发明来源或证据。
+            能力名称必须贴合作品真实功能（如"扫描指纹复用稳定分析结果""待整理变更归并为开发推进段""GitHub 状态与本地 Git 多来源证据整合"），禁止泛化模板名（如"项目资产沉淀能力""技术理解能力"），禁止直接复读 commit message。
+            所有用户可见字段（name、summary、problemSolved、featureEntry、readme、resume、interview）必须使用简体中文人话；技术名、文件路径、类名可保留原文但不能成为主标题。
+            事实：
             """ + facts, 8_000);
         JsonNode values = json.path("capabilities");
         if (!values.isArray() || values.size() < 3 || values.size() > 8) throw new IllegalArgumentException("capabilities must contain 3 to 8 cards");

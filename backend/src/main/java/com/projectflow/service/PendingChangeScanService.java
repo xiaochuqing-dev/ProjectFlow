@@ -98,6 +98,10 @@ public class PendingChangeScanService {
             diagnostics.segmentationMode(), diagnostics.modelStatus(), diagnostics.modelProvider(), diagnostics.fallbackReason(),
             diagnostics.gitScanMs(), diagnostics.modelSegmentMs(), diagnostics.githubInspectMs(), diagnostics.totalScanMs()
         );
+        // V3.3.3: 记录分析口径（哪些来源参与、是否有未提交/未同步内容、证据缺口等）。
+        if (diagnostics.analysisScope() != null && !diagnostics.analysisScope().isBlank()) {
+            batch.recordAnalysisScope(diagnostics.analysisScope());
+        }
         return toResponse(batchRepository.save(batch));
     }
 
@@ -118,6 +122,10 @@ public class PendingChangeScanService {
             var quality = qualityGate.evaluate(draft, titles);
             titles.add(draft.title());
             DevelopmentSegment segment = new DevelopmentSegment(projectId, batchId);
+            // V3.3.3: PASS→PENDING（待确认），其余状态→NEEDS_REVIEW。保留模型结果，不丢弃。
+            DevelopmentSegmentStatus segmentStatus = "PASS".equals(quality.status())
+                ? DevelopmentSegmentStatus.PENDING
+                : DevelopmentSegmentStatus.NEEDS_REVIEW;
             segment.updateContent(
                 draft.title(),
                 draft.plainSummary(),
@@ -128,7 +136,7 @@ public class PendingChangeScanService {
                 draft.affectedFiles(),
                 draft.evidenceRefs(),
                 draft.confidence(),
-                "PASS".equals(quality.status()) ? DevelopmentSegmentStatus.PENDING : DevelopmentSegmentStatus.NEEDS_REVIEW
+                segmentStatus
             );
             List<String> urls = draft.evidenceRefs().stream()
                 .filter(ref -> ref.startsWith("commit:"))
@@ -137,6 +145,8 @@ public class PendingChangeScanService {
             List<String> uncertainties = new ArrayList<>();
             if (!diagnostics.fallbackReason().isBlank()) uncertainties.add(diagnostics.fallbackReason());
             if (!"CONNECTED".equals(diagnostics.githubStatus())) uncertainties.add("GitHub 远程证据未完整接入");
+            // V3.3.3: 把质量理由作为不确定性提示，让用户知道为什么需要复核。
+            if (!quality.reason().isBlank()) uncertainties.add(quality.reason());
             segment.updateAnalysis(diagnostics.generationMode(), diagnostics.modelProvider(), diagnostics.fallbackReason(), quality.status(), quality.reason(), urls, uncertainties);
             segments.add(segment);
         }
@@ -178,7 +188,7 @@ public class PendingChangeScanService {
             batch.getWarnings(), batch.isFirstScan(), batch.getScanFingerprint(), batch.isWorktreeDirty(),
             batch.getGithubStatus(), batch.getRemoteRelation(), batch.getSegmentationMode(), batch.getModelStatus(),
             batch.getModelProvider(), batch.getFallbackReason(), batch.getGitScanMs(), batch.getModelSegmentMs(),
-            batch.getGithubInspectMs(), batch.getTotalScanMs()
+            batch.getGithubInspectMs(), batch.getTotalScanMs(), batch.getAnalysisScope()
         );
     }
 
@@ -231,8 +241,17 @@ public class PendingChangeScanService {
         long gitScanMs,
         long modelSegmentMs,
         long githubInspectMs,
-        long totalScanMs
+        long totalScanMs,
+        String analysisScope
     ) {
+        // 兼容旧构造：无 analysisScope。
+        public ScanDiagnostics(
+            String scanFingerprint, boolean worktreeDirty, String githubStatus, String remoteRelation,
+            String segmentationMode, String modelStatus, String modelProvider, String fallbackReason,
+            long gitScanMs, long modelSegmentMs, long githubInspectMs, long totalScanMs
+        ) {
+            this(scanFingerprint, worktreeDirty, githubStatus, remoteRelation, segmentationMode, modelStatus, modelProvider, fallbackReason, gitScanMs, modelSegmentMs, githubInspectMs, totalScanMs, "");
+        }
     }
 
     public record SegmentDiagnostics(

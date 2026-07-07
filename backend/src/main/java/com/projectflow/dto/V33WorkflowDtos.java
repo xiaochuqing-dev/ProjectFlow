@@ -39,7 +39,8 @@ public final class V33WorkflowDtos {
         long gitScanMs,
         long modelSegmentMs,
         long githubInspectMs,
-        long totalScanMs
+        long totalScanMs,
+        String analysisScope
     ) {
     }
 
@@ -162,6 +163,16 @@ public final class V33WorkflowDtos {
         String remoteRelation,
         int localAhead,
         int remoteAhead,
+        List<String> warnings
+    ) {
+    }
+
+    // V3.3.3: GitHub 登录指引。ProjectFlow 不读取、不展示、不保存 token。
+    public record GitHubLoginGuideResponse(
+        boolean ghInstalled,
+        String status,
+        String command,
+        List<String> instructions,
         List<String> warnings
     ) {
     }

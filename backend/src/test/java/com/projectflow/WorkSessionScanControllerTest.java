@@ -75,6 +75,9 @@ class WorkSessionScanControllerTest {
             .andExpect(jsonPath("$.data.segments[0].qualityStatus").value("PASS"))
             .andExpect(jsonPath("$.data.segments[0].fallbackReason").value(containsString("未配置")))
             .andExpect(jsonPath("$.data.segments[0].includedAgentResultRefs[0]").value(containsString("agent-result:")))
+            // V3.3.3: 分析口径 JSON 必须记录本次用了哪些来源。
+            .andExpect(jsonPath("$.data.batch.analysisScope").value(containsString("localGit")))
+            .andExpect(jsonPath("$.data.batch.analysisScope").value(containsString("model")))
             .andReturn();
 
         String sessionId = objectMapper.readTree(scanResult.getResponse().getContentAsString())
@@ -262,6 +265,10 @@ class WorkSessionScanControllerTest {
         JsonNode completed = awaitJob(token, jobId);
         org.assertj.core.api.Assertions.assertThat(completed.path("status").asText()).isEqualTo("SUCCEEDED");
         org.assertj.core.api.Assertions.assertThat(completed.at("/workSessionScanResult/segments").size()).isGreaterThanOrEqualTo(1);
+        // V3.3.3: 完成的任务必须携带阶段进度字段。
+        org.assertj.core.api.Assertions.assertThat(completed.path("stage").asText()).isEqualTo("SUCCEEDED");
+        org.assertj.core.api.Assertions.assertThat(completed.path("stageMessage").asText()).isNotEmpty();
+        org.assertj.core.api.Assertions.assertThat(completed.path("currentStepStartedAt").isTextual()).isTrue();
 
         mockMvc.perform(get("/api/projects/" + projectId + "/analysis-jobs")
                 .header("Authorization", "Bearer " + token))
@@ -272,6 +279,50 @@ class WorkSessionScanControllerTest {
         mockMvc.perform(get("/api/analysis-jobs/" + jobId)
                 .header("Authorization", "Bearer " + otherToken))
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    // V3.3.3: GitHub 登录指引不读取、不展示、不保存 token；只提供命令让用户在终端执行。
+    void githubLoginGuideProvidesCommandWithoutExposingTokens() throws Exception {
+        String token = register("github-login-owner", "github-login-owner@example.com");
+        String projectId = createProject(token, "GitHub Login Project");
+        Path projectPath = createGitProject("github-login-project");
+        writeProtocol(token, projectId, projectPath);
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/github/login-guide")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.command").value(containsString("gh auth login")))
+            .andExpect(jsonPath("$.data.instructions[0]").value(containsString("不读取")))
+            .andExpect(jsonPath("$.data.instructions[*]").value(org.hamcrest.Matchers.hasItem(containsString("show-token"))));
+    }
+
+    @Test
+    // V3.3.3: 未配置模型时，分析项目能力返回 MODEL_NOT_CONFIGURED，不生成低质量本地模板卡片。
+    void capabilityAnalysisRequiresConfiguredModel() throws Exception {
+        String token = register("capability-owner", "capability-owner@example.com");
+        String projectId = createProject(token, "Capability Project");
+        Path projectPath = createGitProject("capability-project");
+        writeProtocol(token, projectId, projectPath);
+
+        mockMvc.perform(post("/api/projects/" + projectId + "/scan").header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk());
+
+        String changeId = objectMapper.readTree(mockMvc.perform(get("/api/projects/" + projectId + "/changes")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString())
+            .at("/data/0/id").asText();
+
+        mockMvc.perform(post("/api/project-changes/" + changeId + "/confirm")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"action\":\"NEW_SEDIMENT\",\"targetSedimentId\":null}"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/projects/" + projectId + "/capabilities/analyze")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("MODEL_NOT_CONFIGURED"));
     }
 
     @Test

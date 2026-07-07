@@ -6,7 +6,7 @@ Use this file as the first read for substantial ProjectFlow work. It is a compac
 
 ## Product Position
 
-ProjectFlow V3.3.2 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
+ProjectFlow V3.3.3 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
 
 Current direction:
 
@@ -16,11 +16,20 @@ Current direction:
 - AI/model calls are candidate generators only; user confirmation is required before treating output as official project facts.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
 
+V3.3.3 focus:
+
+- Analysis progress is visible (stage / elapsed time / input scale); long model runs no longer look like spinning.
+- Model results are retained by default and marked for review; the quality gate is a marker, not a batch rejector.
+- User-visible analysis content must be natural Simplified Chinese; English commits/paths/identifiers stay in evidence details only.
+- GitHub is surfaced on the home screen (not "GitHub 增强") with login guidance and read-only sync refresh.
+- Multi-source evidence (local Git / worktree diff / GitHub / Agent result / scan scope) is organized into an analysis input snapshot fed to the model.
+- Model-dependent entries (分析新变化, 分析项目能力) require a configured model; missing model shows facts-only and guides the user to configure one.
+
 Do not treat ProjectFlow as a generic Kanban app, SaaS admin panel, hotel/library system, or marketing site. The product should feel like a serious developer tool focused on project understanding.
 
 ## Current Stage
 
-The project has moved beyond the V1/V2 planning baseline. Current V3.3.2 focus:
+The project has moved beyond the V1/V2 planning baseline. Current V3.3.3 focus:
 
 - Workbench first screen exposes: add/import project → bind local path → analyze new changes → review development segments → confirm sediment → reuse output.
 - Scan boundaries use the last confirmed review cursor rather than the current day.

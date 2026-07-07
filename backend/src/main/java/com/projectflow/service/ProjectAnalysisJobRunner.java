@@ -80,7 +80,7 @@ public class ProjectAnalysisJobRunner {
                 markSucceeded(jobId, resultJson, null);
                 recordUsage(job, "CAPABILITY_INTERPRET", result.source(), !result.degraded(), resultJson, startedAt);
             } else if (job.getJobType() == ProjectAnalysisJobType.WORK_SESSION_SCAN) {
-                WorkSessionScanResponse result = workSessionScanService.scan(job.getUserId(), job.getProjectId());
+                WorkSessionScanResponse result = workSessionScanService.scan(job.getUserId(), job.getProjectId(), job.getId());
                 String resultJson = objectMapper.writeValueAsString(result);
                 markSucceeded(jobId, resultJson, null);
             } else {

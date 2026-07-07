@@ -135,7 +135,12 @@ public final class V2ProjectDtos {
         Instant createdAt,
         Instant updatedAt,
         Instant startedAt,
-        Instant completedAt
+        Instant completedAt,
+        // V3.3.3: 分析进度可视化字段。
+        String stage,
+        String stageMessage,
+        Instant currentStepStartedAt,
+        String inputSummary
     ) {
     }
 

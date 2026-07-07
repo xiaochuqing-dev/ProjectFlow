@@ -9,3 +9,7 @@
 - Do not accept directory names, counts, or generic “development progress” wording as a completed segment.
 - Do not silently present local fallback as successful model analysis.
 - Do not let confirmation of one capability candidate change the status of sibling candidates.
+- Do not let the quality gate discard a whole batch of model results when only some segments have quality issues — retain and tag them instead.
+- Do not surface English commit messages as user-visible titles/summaries/capability names; keep English only in evidence details.
+- Do not make GitHub a hard dependency or auto pull/merge/rebase; refresh is read-only.
+- Do not fabricate low-quality local-template results as if they were full model analysis when a model is not configured.
