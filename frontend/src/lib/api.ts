@@ -19,6 +19,8 @@ const NETWORK_ERROR_MESSAGE = "暂时连接不到本地服务。请确认启动�
 const RESPONSE_ERROR_MESSAGE = "服务返回内容暂时无法识别，请刷新页面后重试。";
 const ZIP_UPLOAD_LIMIT_BYTES = 512 * 1024 * 1024;
 const ZIP_UPLOAD_TOO_LARGE_MESSAGE = "项目 zip 超过本地导入上限。请删除 node_modules、构建产物、日志和大型二进制资源后重新压缩。";
+const NETWORK_RETRY_COUNT = 2;
+const NETWORK_RETRY_DELAY_MS = 350;
 
 function apiBaseUrl() {
   if (CONFIGURED_API_BASE_URL) {
@@ -45,36 +47,42 @@ async function readApiPayload<T>(response: Response): Promise<ApiResponse<T> & A
   }
 }
 
+function isRetryableResponse(response: Response) {
+  // 5xx is transient (backend GC, H2 lock, spring-boot:run warmup). 4xx is a real error, do not retry.
+  return response.status >= 500 && response.status < 600;
+}
+
 async function fetchWithFriendlyError(url: string, options: RequestInit): Promise<Response> {
-  try {
-    return await fetch(url, options);
-  } catch (error) {
-    if (isNetworkError(error)) {
-      throw new Error(NETWORK_ERROR_MESSAGE);
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      if (isRetryableResponse(response) && attempt < NETWORK_RETRY_COUNT) {
+        await new Promise((resolve) => window.setTimeout(resolve, NETWORK_RETRY_DELAY_MS));
+        continue;
+      }
+      return response;
+    } catch (error) {
+      // Network-level failure (backend not reachable / connection reset). Retry before surfacing.
+      if (isNetworkError(error) && attempt < NETWORK_RETRY_COUNT) {
+        await new Promise((resolve) => window.setTimeout(resolve, NETWORK_RETRY_DELAY_MS));
+        continue;
+      }
+      if (isNetworkError(error)) {
+        throw new Error(NETWORK_ERROR_MESSAGE);
+      }
+      throw error instanceof Error ? error : new Error("请求失败，请稍后重试");
     }
-    throw error instanceof Error ? error : new Error("请求失败，请稍后重试");
   }
 }
 
-async function postJson<T>(path: string, body: unknown, retryNetwork = false): Promise<T> {
-  const request = () => fetchWithFriendlyError(`${apiBaseUrl()}${path}`, {
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetchWithFriendlyError(`${apiBaseUrl()}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
   });
-
-  let response: Response;
-  try {
-    response = await request();
-  } catch (error) {
-    if (!retryNetwork || !(error instanceof Error) || error.message !== NETWORK_ERROR_MESSAGE) {
-      throw error;
-    }
-    await new Promise((resolve) => window.setTimeout(resolve, 350));
-    response = await request();
-  }
 
   const payload = await readApiPayload<T>(response);
   if (!response.ok) {
@@ -93,7 +101,7 @@ async function requestJson<T>(path: string, options: RequestInit): Promise<T> {
 }
 
 export function login(email: string, password: string): Promise<AuthResult> {
-  return postJson<AuthResult>("/auth/login", { email, password }, true);
+  return postJson<AuthResult>("/auth/login", { email, password });
 }
 
 export function register(username: string, email: string, password: string): Promise<AuthResult> {
@@ -1040,24 +1048,13 @@ export function createTextMaterial(
 }
 
 async function postFormData<T>(token: string, path: string, formData: FormData): Promise<T> {
-  const request = () => fetchWithFriendlyError(`${apiBaseUrl()}${path}`, {
+  const response = await fetchWithFriendlyError(`${apiBaseUrl()}${path}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
     },
     body: formData,
   });
-
-  let response: Response;
-  try {
-    response = await request();
-  } catch (error) {
-    if (!(error instanceof Error) || error.message !== NETWORK_ERROR_MESSAGE) {
-      throw error;
-    }
-    await new Promise((resolve) => window.setTimeout(resolve, 350));
-    response = await request();
-  }
   const payload = await readApiPayload<T>(response);
   if (!response.ok) {
     throw new Error(payload.error?.message ?? "请求失败，请稍后重试");
