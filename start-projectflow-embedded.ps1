@@ -113,16 +113,63 @@ function Get-PortPids {
     } | Sort-Object -Unique
 }
 
-function Assert-PortFree {
+function Stop-ProjectFlowProcesses {
     param (
         [Parameter(Mandatory = $true)]
         [int]$Port
     )
 
-    $pids = @(Get-PortPids -Port $Port)
-    if ($pids.Count -gt 0) {
-        throw "Port $Port is already in use by PID(s): $($pids -join ', '). Close the old ProjectFlow process and run this script again."
+    $portPids = @(Get-PortPids -Port $Port)
+    if ($portPids.Count -eq 0) {
+        return
     }
+
+    Write-Host "Port $Port is in use by PID(s): $($portPids -join ', '). Stopping previous ProjectFlow process..."
+
+    foreach ($procId in $portPids) {
+        $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$procId" -ErrorAction SilentlyContinue
+        if (-not $proc) { continue }
+
+        $cmdLine = $proc.CommandLine
+        $isProjectFlow = $cmdLine -and (
+            ($cmdLine -match [regex]::Escape($frontendDir)) -or
+            ($cmdLine -match [regex]::Escape($backendDir)) -or
+            ($cmdLine -match "ProjectFlowApplication") -or
+            ($cmdLine -match "spring-boot:run")
+        )
+
+        if (-not $isProjectFlow) {
+            throw "Port $Port is used by a non-ProjectFlow process (PID $procId). Close it manually and run this script again."
+        }
+
+        # Stop the Maven parent (spring-boot:run) too, so it does not linger as an orphan.
+        $toStop = @($procId)
+        $current = $proc
+        for ($i = 0; $i -lt 4; $i++) {
+            if (-not $current.ParentProcessId) { break }
+            $parent = Get-CimInstance Win32_Process -Filter "ProcessId=$($current.ParentProcessId)" -ErrorAction SilentlyContinue
+            if (-not $parent) { break }
+            if ($parent.CommandLine -and $parent.CommandLine -match "spring-boot:run") {
+                $toStop += $parent.ProcessId
+            }
+            $current = $parent
+        }
+
+        foreach ($id in ($toStop | Sort-Object -Unique)) {
+            Write-Host "  Stopping PID $id..."
+            Stop-Process -Id $id -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    $deadline = (Get-Date).AddSeconds(15)
+    while ((Get-Date) -lt $deadline) {
+        if (@(Get-PortPids -Port $Port).Count -eq 0) {
+            return
+        }
+        Start-Sleep -Milliseconds 500
+    }
+
+    throw "Port $Port is still in use after stopping previous ProjectFlow processes. Close it manually and run this script again."
 }
 
 function Start-ProjectJob {
@@ -175,8 +222,8 @@ try {
     New-Item -ItemType Directory -Force -Path $logDir, $dataDir | Out-Null
     Set-Location $root
 
-    Assert-PortFree -Port 3000
-    Assert-PortFree -Port 8080
+    Stop-ProjectFlowProcesses -Port 3000
+    Stop-ProjectFlowProcesses -Port 8080
 
     $env:NEXT_PUBLIC_API_BASE_URL = "http://127.0.0.1:8080/api"
     $env:NEXT_PUBLIC_API_PORT = "8080"
