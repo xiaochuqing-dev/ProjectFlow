@@ -18,6 +18,19 @@ export function PendingChangesPanel({ scan, workSessions, bundles, hasProjectPat
   const segments = scan?.segments ?? [];
   const batch = scan?.batch;
 
+  // ponytail: 后端 segment 的数组字段在偶发情况下可能为 null（Java record + Jackson 序列化），
+  // 这里统一兜底，避免 .map() 抛 "Cannot read properties of null" 触发 global-error。
+  const safeSegments = segments.map((segment) => ({
+    ...segment,
+    mainChanges: segment.mainChanges ?? [],
+    includedCommitRefs: segment.includedCommitRefs ?? [],
+    includedAgentResultRefs: segment.includedAgentResultRefs ?? [],
+    affectedFiles: segment.affectedFiles ?? [],
+    evidenceRefs: segment.evidenceRefs ?? [],
+    commitUrls: segment.commitUrls ?? [],
+    uncertainties: segment.uncertainties ?? [],
+  }));
+
   return (
     <Card shadow="card" padding="none" className="overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line px-5 py-4">
@@ -48,15 +61,15 @@ export function PendingChangesPanel({ scan, workSessions, bundles, hasProjectPat
       {batch ? (
         <div className="border-b border-line bg-surfaceAlt px-5 py-3 text-xs text-muted">
           <span className="font-semibold text-ink">{batch.newCommitCount} 个提交</span>
-          <span> · {batch.changedFileCount} 个文件 · {segments.length} 个开发推进段</span>
+          <span> · {batch.changedFileCount} 个文件 · {safeSegments.length} 个开发推进段</span>
           {batch.firstScan ? <span className="ml-2 text-warning-fg">首次扫描最近 30 个提交</span> : null}
           {batch.worktreeDirty ? <span className="ml-2 text-warning-fg">包含未提交变化</span> : null}
         </div>
       ) : null}
 
-      {segments.length > 0 ? (
+      {safeSegments.length > 0 ? (
         <div className="divide-y divide-line">
-          {segments.map((segment) => (
+          {safeSegments.map((segment) => (
             <article className="px-5 py-4" key={segment.id}>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge label={segment.qualityStatus === "NEEDS_MANUAL" ? "需人工整理" : segmentStatus(segment.status)} tone={segment.qualityStatus === "NEEDS_MANUAL" ? "warning" : segment.status === "PENDING" ? "warning" : "slate"} />
@@ -100,7 +113,7 @@ export function PendingChangesPanel({ scan, workSessions, bundles, hasProjectPat
               <Diagnostic label="工作区" value={batch.worktreeDirty ? "包含未提交变化" : "无未提交变化"} />
               <Diagnostic label="总耗时" value={`${batch.totalScanMs} ms`} />
               <Diagnostic label="Git / 模型 / GitHub" value={`${batch.gitScanMs} / ${batch.modelSegmentMs} / ${batch.githubInspectMs} ms`} />
-              <Diagnostic label="扫描指纹" value={batch.scanFingerprint.slice(0, 12)} />
+              <Diagnostic label="扫描指纹" value={(batch.scanFingerprint ?? "").slice(0, 12)} />
             </dl>
             {batch.fallbackReason ? <p className="mt-3 text-amber-800">{batch.fallbackReason}</p> : null}
           </details> : null}
