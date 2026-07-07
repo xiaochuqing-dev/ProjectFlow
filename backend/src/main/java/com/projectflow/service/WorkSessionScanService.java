@@ -19,7 +19,9 @@ import java.util.stream.Stream;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -67,6 +69,8 @@ public class WorkSessionScanService {
     private final GitHubCliService gitHubCliService;
     private final ProjectAnalysisJobRepository jobRepository;
     private final ObjectMapper objectMapper;
+    // V3.3.3: 阶段推进用独立事务提交，避免搭 scan 大事务的便车导致前端轮询看不到 stage 推进。
+    private final TransactionTemplate stageTransactionTemplate;
 
     public WorkSessionScanService(
         ProjectRepository projectRepository,
@@ -80,7 +84,8 @@ public class WorkSessionScanService {
         ProjectSedimentService projectSedimentService,
         GitHubCliService gitHubCliService,
         ProjectAnalysisJobRepository jobRepository,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        PlatformTransactionManager transactionManager
     ) {
         this.projectRepository = projectRepository;
         this.memoryRepository = memoryRepository;
@@ -94,6 +99,10 @@ public class WorkSessionScanService {
         this.gitHubCliService = gitHubCliService;
         this.jobRepository = jobRepository;
         this.objectMapper = objectMapper;
+        this.stageTransactionTemplate = new TransactionTemplate(transactionManager);
+        this.stageTransactionTemplate.setPropagationBehavior(
+            org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW
+        );
     }
 
     @Transactional
@@ -198,22 +207,27 @@ public class WorkSessionScanService {
     }
 
     // V3.3.3: 推进 job 阶段，让前端轮询时看到"现在在做什么"。
+    // 用 REQUIRES_NEW 独立事务提交，避免 scan 主事务未提交时前端读到旧 stage（H2 READ_COMMITTED）。
     private void advanceStage(UUID jobId, String stage, String message) {
         if (jobId == null) return;
-        jobRepository.findById(jobId).ifPresent(job -> {
-            job.advanceStage(stage, message);
-            jobRepository.save(job);
-        });
+        stageTransactionTemplate.executeWithoutResult(status ->
+            jobRepository.findById(jobId).ifPresent(job -> {
+                job.advanceStage(stage, message);
+                jobRepository.save(job);
+            })
+        );
     }
 
     private void recordInputSummary(UUID jobId, AnalysisInputSnapshot snapshot) {
         if (jobId == null) return;
         try {
             String summary = objectMapper.writeValueAsString(snapshot.scanScope());
-            jobRepository.findById(jobId).ifPresent(job -> {
-                job.recordInputSummary(summary);
-                jobRepository.save(job);
-            });
+            stageTransactionTemplate.executeWithoutResult(status ->
+                jobRepository.findById(jobId).ifPresent(job -> {
+                    job.recordInputSummary(summary);
+                    jobRepository.save(job);
+                })
+            );
         } catch (Exception ignored) {
             // 输入摘要不是关键路径，失败不影响分析。
         }
