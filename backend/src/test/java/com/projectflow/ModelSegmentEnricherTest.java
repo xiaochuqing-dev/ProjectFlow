@@ -144,6 +144,23 @@ class ModelSegmentEnricherTest {
         verify(modelGatewayService, times(1)).callJson(any(), anyString(), anyInt());
     }
 
+    @Test
+    void modelFailureDoesNotRetryExternallyAndFallsBack() throws Exception {
+        // 模型调用失败时不外层重试，单次失败即回退本地规则，避免 MODEL_ENRICH 阶段长时间卡住。
+        UUID userId = UUID.randomUUID();
+        when(providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)).thenReturn(List.of(provider(userId)));
+        when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenThrow(new IOException("model timeout"));
+        ModelSegmentEnricher enricher = new ModelSegmentEnricher(providerRepository, modelGatewayService, new SegmentEvidenceValidator());
+        List<String> warnings = new ArrayList<>();
+
+        var result = enricher.enrichWithDiagnostics(userId, atoms(), fallback(), null);
+
+        assertThat(result.mode()).isEqualTo("LOCAL_RULE");
+        assertThat(result.segments()).isEqualTo(fallback());
+        assertThat(result.fallbackReason()).contains("模型归并失败");
+        verify(modelGatewayService, times(1)).callJson(any(), anyString(), anyInt());
+    }
+
     private AiProvider provider(UUID userId) {
         AiProvider provider = new AiProvider(userId);
         provider.update("DeepSeek", "https://api.example.com", "test-key", "model", AiProviderType.DEEPSEEK, 0.2, 4_000, true, List.of("analysis"));

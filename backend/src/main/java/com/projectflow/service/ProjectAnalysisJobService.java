@@ -125,11 +125,18 @@ public class ProjectAnalysisJobService {
             .toList();
     }
 
+    // 服务重启后，残留的 QUEUED/RUNNING 任务已无法继续执行（异步线程已消失）。
+    // 不自动重跑——用户没有点击就不应触发分析。把它们标记为 FAILED，前端展示中断状态，
+    // 用户可自行重新点击分析按钮。
     @EventListener(ApplicationReadyEvent.class)
-    public void resumeInterruptedJobs() {
+    @Transactional
+    public void markInterruptedJobsFailed() {
         jobRepository.findAll().stream()
             .filter(job -> ACTIVE_STATUSES.contains(job.getStatus()))
-            .forEach(job -> jobRunner.execute(job.getId()));
+            .forEach(job -> {
+                job.markFailed("服务重启，分析任务已中断，请重新点击分析。");
+                jobRepository.save(job);
+            });
     }
 
     private java.util.Optional<ProjectAnalysisJob> activeJob(UUID projectId, ProjectAnalysisJobType type, String path) {

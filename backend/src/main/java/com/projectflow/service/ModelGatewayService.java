@@ -19,7 +19,7 @@ import com.projectflow.entity.AiProvider;
 public class ModelGatewayService {
     private static final int MAX_MODEL_ATTEMPTS = 2;
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(8);
-    private static final Duration MODEL_REQUEST_TIMEOUT = Duration.ofSeconds(75);
+    private static final Duration MODEL_REQUEST_TIMEOUT = Duration.ofSeconds(35);
 
     private final ObjectMapper objectMapper;
     private final AiProviderUrlGuard aiProviderUrlGuard;

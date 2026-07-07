@@ -99,39 +99,37 @@ public class ModelSegmentEnricher {
         Exception lastFailure = null;
         boolean jsonParseFailed = false;
         boolean evidenceRejected = false;
-        for (int attempt = 0; attempt < 2; attempt++) {
-            try {
-                JsonNode json = modelGatewayService.callJson(provider, prompt(atoms, fallback, attempt > 0, snapshot), MAX_OUTPUT_TOKENS);
-                List<SegmentDraft> validated = parse(json, atoms);
-                // V3.3.3: 质量门槛改为标记器。不再因质量问题丢弃整批模型结果。
-                // 每个 segment 单独评估，保留可用内容，标记状态。
-                List<SegmentDraft> retained = new ArrayList<>();
-                List<String> qualityWarnings = new ArrayList<>();
-                List<String> titles = new ArrayList<>();
-                for (SegmentDraft candidate : validated) {
-                    QualityResult quality = qualityGate.evaluate(candidate, titles);
-                    titles.add(candidate.title());
-                    if (qualityGate.needsReviewFlag(quality) && !quality.status().equals("NEEDS_EVIDENCE")) {
-                        qualityWarnings.add(quality.reason());
-                    }
-                    retained.add(candidate);
+        try {
+            JsonNode json = modelGatewayService.callJson(provider, prompt(atoms, fallback, false, snapshot), MAX_OUTPUT_TOKENS);
+            List<SegmentDraft> validated = parse(json, atoms);
+            // V3.3.3: 质量门槛改为标记器。不再因质量问题丢弃整批模型结果。
+            // 每个 segment 单独评估，保留可用内容，标记状态。
+            List<SegmentDraft> retained = new ArrayList<>();
+            List<String> qualityWarnings = new ArrayList<>();
+            List<String> titles = new ArrayList<>();
+            for (SegmentDraft candidate : validated) {
+                QualityResult quality = qualityGate.evaluate(candidate, titles);
+                titles.add(candidate.title());
+                if (qualityGate.needsReviewFlag(quality) && !quality.status().equals("NEEDS_EVIDENCE")) {
+                    qualityWarnings.add(quality.reason());
                 }
-                if (retained.isEmpty()) {
-                    evidenceRejected = true;
-                    throw new IllegalArgumentException("no model segments survived evidence validation");
-                }
-                String summary = buildModelSummary(snapshot, retained.size());
-                String reason = qualityWarnings.isEmpty() ? "" : "模型已返回结果，其中 " + qualityWarnings.size() + " 条需人工复核。";
-                return new EnrichmentResult(retained, "MODEL", "SUCCESS", provider.getName(), reason, qualityWarnings, summary);
-            } catch (IllegalArgumentException exception) {
-                lastFailure = exception;
-                String message = exception.getMessage() == null ? "" : exception.getMessage().toLowerCase();
-                if (message.contains("segments must be an array") || message.contains("is required") || message.contains("must be an array")) {
-                    jsonParseFailed = true;
-                }
-            } catch (Exception exception) {
-                lastFailure = exception;
+                retained.add(candidate);
             }
+            if (retained.isEmpty()) {
+                evidenceRejected = true;
+                throw new IllegalArgumentException("no model segments survived evidence validation");
+            }
+            String summary = buildModelSummary(snapshot, retained.size());
+            String reason = qualityWarnings.isEmpty() ? "" : "模型已返回结果，其中 " + qualityWarnings.size() + " 条需人工复核。";
+            return new EnrichmentResult(retained, "MODEL", "SUCCESS", provider.getName(), reason, qualityWarnings, summary);
+        } catch (IllegalArgumentException exception) {
+            lastFailure = exception;
+            String message = exception.getMessage() == null ? "" : exception.getMessage().toLowerCase();
+            if (message.contains("segments must be an array") || message.contains("is required") || message.contains("must be an array")) {
+                jsonParseFailed = true;
+            }
+        } catch (Exception exception) {
+            lastFailure = exception;
         }
         // V3.3.3: 只有模型完全不可用才回退本地规则。
         String status = jsonParseFailed ? "JSON_PARSE_FAILED"
