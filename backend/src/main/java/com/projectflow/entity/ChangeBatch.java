@@ -66,14 +66,16 @@ public class ChangeBatch {
     private String modelProvider = "";
     @Column(name = "fallback_reason", columnDefinition = "text")
     private String fallbackReason = "";
-    @Column(name = "git_scan_ms")
-    private long gitScanMs;
-    @Column(name = "model_segment_ms")
-    private long modelSegmentMs;
-    @Column(name = "github_inspect_ms")
-    private long githubInspectMs;
-    @Column(name = "total_scan_ms")
-    private long totalScanMs;
+    // 用 Long 包装类型 + nullable=false：避免 ddl-auto:update 给老行留 NULL 时，
+    // Hibernate 把 NULL 反序列化到 long 基本类型抛 PropertyAccessException（整个 batch 读不出来）。
+    @Column(name = "git_scan_ms", nullable = false)
+    private Long gitScanMs;
+    @Column(name = "model_segment_ms", nullable = false)
+    private Long modelSegmentMs;
+    @Column(name = "github_inspect_ms", nullable = false)
+    private Long githubInspectMs;
+    @Column(name = "total_scan_ms", nullable = false)
+    private Long totalScanMs;
     // V3.3.3: 分析口径 JSON——记录本次用了哪些来源（本地Git/工作区/GitHub/Agent result/模型）。
     @Column(name = "analysis_scope", columnDefinition = "text")
     private String analysisScope = "";
@@ -96,6 +98,11 @@ public class ChangeBatch {
         this.status = ChangeBatchStatus.PENDING;
         this.createdAt = this.scanStartedAt;
         this.updatedAt = this.scanStartedAt;
+        // 耗时字段默认 0，避免在 updateDiagnostics 之前持久化时写入 NULL。
+        this.gitScanMs = 0L;
+        this.modelSegmentMs = 0L;
+        this.githubInspectMs = 0L;
+        this.totalScanMs = 0L;
     }
 
     @PrePersist
@@ -171,10 +178,10 @@ public class ChangeBatch {
     public String getModelStatus() { return modelStatus; }
     public String getModelProvider() { return modelProvider; }
     public String getFallbackReason() { return fallbackReason; }
-    public long getGitScanMs() { return gitScanMs; }
-    public long getModelSegmentMs() { return modelSegmentMs; }
-    public long getGithubInspectMs() { return githubInspectMs; }
-    public long getTotalScanMs() { return totalScanMs; }
+    public long getGitScanMs() { return gitScanMs == null ? 0L : gitScanMs; }
+    public long getModelSegmentMs() { return modelSegmentMs == null ? 0L : modelSegmentMs; }
+    public long getGithubInspectMs() { return githubInspectMs == null ? 0L : githubInspectMs; }
+    public long getTotalScanMs() { return totalScanMs == null ? 0L : totalScanMs; }
     public String getAnalysisScope() { return analysisScope; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

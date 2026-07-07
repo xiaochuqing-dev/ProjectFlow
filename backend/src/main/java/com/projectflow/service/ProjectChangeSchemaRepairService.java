@@ -29,6 +29,25 @@ public class ProjectChangeSchemaRepairService {
     public void repairOnStartup() {
         ensureEvidenceBundleSourceTypeAllowed();
         ensureAnalysisJobTypeAllowed();
+        // ChangeBatch 的 4 个耗时字段在 v3.3.2 才加入，ddl-auto:update 只加列不补 NOT NULL，
+        // 老行这 4 列为 NULL。实体已改成 Long 可容忍，这里再把存量 NULL 补 0，让数据恢复正常。
+        backfillChangeBatchTimingNulls();
+    }
+
+    public void backfillChangeBatchTimingNulls() {
+        jdbcTemplate.update(
+            """
+                UPDATE change_batches
+                SET git_scan_ms = 0,
+                    model_segment_ms = 0,
+                    github_inspect_ms = 0,
+                    total_scan_ms = 0
+                WHERE git_scan_ms IS NULL
+                   OR model_segment_ms IS NULL
+                   OR github_inspect_ms IS NULL
+                   OR total_scan_ms IS NULL
+                """
+        );
     }
 
     public void ensureEvidenceBundleSourceTypeAllowed() {

@@ -12,6 +12,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import javax.sql.DataSource;
+
 import com.projectflow.entity.ChangeBatch;
 import com.projectflow.entity.ChangeBatchStatus;
 import com.projectflow.entity.DevelopmentSegment;
@@ -29,6 +31,7 @@ import com.projectflow.repository.DevelopmentSegmentRepository;
 import com.projectflow.repository.ProjectChangeRepository;
 import com.projectflow.repository.ProjectReviewCursorRepository;
 import com.projectflow.repository.ProjectSedimentRepository;
+import com.projectflow.service.ProjectChangeSchemaRepairService;
 
 @DataJpaTest
 class V33PersistenceTest {
@@ -49,6 +52,9 @@ class V33PersistenceTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private DataSource dataSource;
 
     @Autowired
     private TestEntityManager entityManager;
@@ -161,5 +167,78 @@ class V33PersistenceTest {
         assertThat(changeRepository.findById(change.getId())).get()
             .extracting(ProjectChange::isNeedsUserReview)
             .isEqualTo(false);
+    }
+
+    @Test
+    void readsLegacyChangeBatchWhenTimingColumnsAreNull() {
+        // v3.3.2 之前存在的 change_batches 行，4 个耗时列为 NULL；实体用 Long 容忍，getter 兜底返回 0。
+        // test 环境 create-drop 按 nullable=false 建表，先放宽列约束才能模拟生产老行的 NULL。
+        UUID projectId = UUID.randomUUID();
+        ChangeBatch batch = new ChangeBatch(projectId, "base-sha", "head-sha", "master", true);
+        batch.complete(1, 2, 0, List.of());
+        batchRepository.saveAndFlush(batch);
+        setTimingColumnsNullable();
+        jdbcTemplate.update(
+            """
+                UPDATE change_batches
+                SET git_scan_ms = NULL,
+                    model_segment_ms = NULL,
+                    github_inspect_ms = NULL,
+                    total_scan_ms = NULL
+                WHERE id = ?
+                """,
+            batch.getId()
+        );
+        entityManager.clear();
+
+        ChangeBatch reloaded = batchRepository.findById(batch.getId()).orElseThrow();
+        assertThat(reloaded.getGitScanMs()).isZero();
+        assertThat(reloaded.getModelSegmentMs()).isZero();
+        assertThat(reloaded.getGithubInspectMs()).isZero();
+        assertThat(reloaded.getTotalScanMs()).isZero();
+    }
+
+    @Test
+    void backfillsNullTimingColumnsOnStartup() {
+        UUID projectId = UUID.randomUUID();
+        ChangeBatch batch = new ChangeBatch(projectId, "base-sha", "head-sha", "master", true);
+        batch.complete(1, 2, 0, List.of());
+        batchRepository.saveAndFlush(batch);
+        setTimingColumnsNullable();
+        jdbcTemplate.update(
+            """
+                UPDATE change_batches
+                SET git_scan_ms = NULL,
+                    model_segment_ms = NULL,
+                    github_inspect_ms = NULL,
+                    total_scan_ms = NULL
+                WHERE id = ?
+                """,
+            batch.getId()
+        );
+        entityManager.clear();
+
+        new ProjectChangeSchemaRepairService(jdbcTemplate, dataSource).backfillChangeBatchTimingNulls();
+        entityManager.clear();
+
+        ChangeBatch reloaded = batchRepository.findById(batch.getId()).orElseThrow();
+        assertThat(reloaded.getGitScanMs()).isZero();
+        assertThat(reloaded.getModelSegmentMs()).isZero();
+        assertThat(reloaded.getGithubInspectMs()).isZero();
+        assertThat(reloaded.getTotalScanMs()).isZero();
+
+        long remaining = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM change_batches WHERE git_scan_ms IS NULL OR model_segment_ms IS NULL OR github_inspect_ms IS NULL OR total_scan_ms IS NULL",
+            Long.class
+        );
+        assertThat(remaining).isZero();
+    }
+
+    private void setTimingColumnsNullable() {
+        // 模拟生产 ddl-auto:update 下老行可空的状态：test 环境 create-drop 建表为 NOT NULL，需先放宽。
+        jdbcTemplate.execute("ALTER TABLE change_batches ALTER COLUMN git_scan_ms SET NULL");
+        jdbcTemplate.execute("ALTER TABLE change_batches ALTER COLUMN model_segment_ms SET NULL");
+        jdbcTemplate.execute("ALTER TABLE change_batches ALTER COLUMN github_inspect_ms SET NULL");
+        jdbcTemplate.execute("ALTER TABLE change_batches ALTER COLUMN total_scan_ms SET NULL");
     }
 }
