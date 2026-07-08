@@ -1,0 +1,69 @@
+{
+  "taskGoal": "V3.3.4 小阶段修复：调整模型等待策略让复杂分析有足够时间完成；细化模型失败诊断让人话可见；建立主视图可读性过滤机制去除 hash/URL/evidenceRefs/JSON/内部枚举/长路径等脏内容；前端主卡片兜底防止长内容撑爆布局。",
+  "actualChanges": [
+    {
+      "summary": "模型请求超时从固定 35 秒改为可配置（默认 240 秒，通过 projectflow.model.request-timeout-seconds / PROJECTFLOW_MODEL_TIMEOUT_SECONDS 覆盖），DeepSeek 处理多 commit 的开发推进段归并和能力分析不再因 35 秒上限过早失败。",
+      "entry": "后端 ModelGatewayService 构造器注入超时配置；application.yml 增加 projectflow.model 配置项。",
+      "verification": "backend 全量测试通过（135 tests）"
+    },
+    {
+      "summary": "新增 ModelFailureClassifier，把模型失败细分为 REQUEST_TIMEOUT / HTTP_401_OR_403 / HTTP_429 / HTTP_5XX / NETWORK_ERROR / JSON_PARSE_FAILED / EVIDENCE_REJECTED / UNKNOWN_CALL_FAILED 八类，并翻译成中文人话原因（如\"DeepSeek 请求超时，模型在设定时间内没有返回\"\"网络连接失败，可能与代理或 baseUrl 有关\"\"模型返回内容不是可解析结构\"）。",
+      "entry": "后端 ModelGatewayService 用 ModelHttpException 封装 HTTP 状态码；ModelSegmentEnricher 用分类器替代旧的字符串匹配；ProjectAnalysisService / ProjectMemoryService 的 failureMessage 自动受益。",
+      "verification": "ModelFailureClassifierTest 12 项通过；ModelSegmentEnricherTest 5 项通过"
+    },
+    {
+      "summary": "新增 DisplayContentSanitizer 统一主视图可读性过滤机制，对所有进入主视图的内容（开发推进段 title/plainSummary/mainChanges/userVisibleValue、能力卡片 name/summary/problemSolved/featureEntry/readme/resume/interview、本地事实摘要 fallback）执行：去除 commit hash、长 URL、evidenceRefs 前缀（commit:/file:/agent-result:/url:）、JSON 片段、内部枚举大写串、长路径列表、长数字串；title≤60、summary≤180、change≤120 字符截断；清洗后无可读中文用保守兜底（\"根据提交记录整理的变更\"\"整理了一组可追溯的开发变化\"）。",
+      "entry": "ModelSegmentEnricher.parse() 清洗模型输出；DevelopmentSegmentationService.draft() 清洗本地 fallback；ProjectCapabilityService modelDrafts()/localDrafts() 清洗能力卡片。",
+      "verification": "DisplayContentSanitizerTest 16 项通过"
+    },
+    {
+      "summary": "本地事实摘要不再把原始文件路径和 commit hash 塞进 mainChanges，改为\"N 个相关文件（可在证据细节查看）\"；evidenceSummary 改为\"保留可追溯证据，可在证据细节查看提交与文件来源\"。原始证据仍保留在 evidenceRefs / affectedFiles / 折叠证据细节区。",
+      "entry": "DevelopmentSegmentationService.fileSummary() / draft() 修改",
+      "verification": "DevelopmentSegmentationServiceTest 5 项通过"
+    },
+    {
+      "summary": "前端主视图兜底：开发推进段 plainSummary 加 line-clamp-4、mainChanges 每条加 line-clamp-2 且最多展示 6 条、commit URL 加 line-clamp-1 break-all；能力卡片 name/summary 加 break-words + line-clamp-3、Info 组件值加 break-words whitespace-pre-wrap；沉淀列表 title/summary 加 break-words + line-clamp-3；沉淀详情 summary/problemSolved 加 break-words；变更审查列表 title/summary 加 break-words。前端 status-labels.ts 新增 REQUEST_TIMEOUT/HTTP_401_OR_403/HTTP_429/HTTP_5XX/NETWORK_ERROR/UNKNOWN_CALL_FAILED 的人话映射和 modelFailureDetail 函数。",
+      "entry": "PendingChangesPanel.tsx、capabilities/page.tsx、project-intelligence/page.tsx、project-sediments/[sedimentId]/page.tsx、ChangeReviewList.tsx、status-labels.ts",
+      "verification": "frontend npm run build 通过"
+    }
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ModelGatewayService.java",
+    "backend/src/main/java/com/projectflow/service/ModelFailureClassifier.java",
+    "backend/src/main/java/com/projectflow/service/DisplayContentSanitizer.java",
+    "backend/src/main/java/com/projectflow/service/ModelSegmentEnricher.java",
+    "backend/src/main/java/com/projectflow/service/DevelopmentSegmentationService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectCapabilityService.java",
+    "backend/src/main/resources/application.yml",
+    "backend/src/test/java/com/projectflow/DisplayContentSanitizerTest.java",
+    "backend/src/test/java/com/projectflow/ModelFailureClassifierTest.java",
+    "backend/src/test/java/com/projectflow/ModelSegmentEnricherTest.java",
+    "frontend/src/lib/status-labels.ts",
+    "frontend/src/components/dashboard/PendingChangesPanel.tsx",
+    "frontend/src/app/project-intelligence/capabilities/page.tsx",
+    "frontend/src/app/project-intelligence/page.tsx",
+    "frontend/src/app/project-sediments/[sedimentId]/page.tsx",
+    "frontend/src/components/tasks/ChangeReviewList.tsx"
+  ],
+  "verification": {
+    "build": "pass (frontend npm run build 成功)",
+    "tests": "pass (backend 135 tests 全部通过，含新增 DisplayContentSanitizerTest 16 项 + ModelFailureClassifierTest 12 项)",
+    "manualCheck": "not_run (未启动完整应用做端到端 DeepSeek 调用验证；超时和失败分类的逻辑由单元测试覆盖)"
+  },
+  "unfinished": [
+    "未做真实 DeepSeek API 端到端调用验证（本地无真实 API key / 网络）；超时放宽到 240 秒的效果需用户在实际分析时确认。",
+    "DisplayContentSanitizer 的正则规则覆盖了已知的脏内容形态（hash/URL/JSON/枚举/路径列表/数字串），但模型可能产生新的脏内容形式，需后续观察补充规则。"
+  ],
+  "sedimentCandidates": [
+    {
+      "name": "主视图可读性过滤机制",
+      "summary": "DisplayContentSanitizer 作为统一的主视图内容清洗入口，已接入开发推进段、能力卡片、本地事实摘要三条内容生成路径，确保主视图只展示用户能理解的中文人话，技术原文进入折叠证据区。",
+      "evidenceRefs": ["commit:待提交", "file:backend/src/main/java/com/projectflow/service/DisplayContentSanitizer.java"]
+    },
+    {
+      "name": "模型失败诊断分类",
+      "summary": "ModelFailureClassifier 把模型失败从笼统的 CALL_FAILED 细分为 8 类具体原因，前后端统一翻译成人话，用户能看懂模型为什么没参与、当前结果是什么来源。",
+      "evidenceRefs": ["commit:待提交", "file:backend/src/main/java/com/projectflow/service/ModelFailureClassifier.java"]
+    }
+  ]
+}

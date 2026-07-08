@@ -370,10 +370,10 @@ function SedimentOverview({ sediments, projectId }: { sediments: ProjectSediment
       {sediments.map((sediment) => (
         <Link className="block px-5 py-4 hover:bg-slate-50" href={`/project-sediments/${sediment.id}`} key={sediment.id}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="font-semibold text-slate-950">{sediment.title}</h3>
+            <h3 className="font-semibold text-slate-950 break-words">{sediment.title}</h3>
             <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">已确认</span>
           </div>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{sediment.summary}</p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 break-words line-clamp-3">{sediment.summary}</p>
           <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted">
             <span>{sediment.sourceSegmentIds.length} 个开发推进段</span>
             <span>{sediment.evidenceRefs.length} 条证据</span>

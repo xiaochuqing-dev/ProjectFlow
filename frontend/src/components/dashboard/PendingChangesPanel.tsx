@@ -151,10 +151,12 @@ export function PendingChangesPanel({
                 <Badge label={generationModeLabel(segment.generationMode, segment.modelProvider)} />
                 <span className="text-xs text-muted">{segment.includedCommitRefs.length} 提交 · {segment.affectedFiles.length} 文件 · {segment.includedAgentResultRefs.length} Agent result</span>
               </div>
-              <h3 className="mt-2 text-sm font-semibold text-ink">{segment.title}</h3>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-muted">{segment.plainSummary}</p>
+              <h3 className="mt-2 text-sm font-semibold text-ink break-words">{segment.title}</h3>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-muted break-words line-clamp-4">{segment.plainSummary}</p>
               <ul className="mt-3 space-y-1 text-sm leading-6 text-slate-700">
-                {segment.mainChanges.map((change) => <li key={change}>• {change}</li>)}
+                {segment.mainChanges.slice(0, 6).map((change, index) => (
+                  <li className="break-words line-clamp-2" key={`${change}-${index}`}>• {change}</li>
+                ))}
               </ul>
               {segment.qualityReason || segment.fallbackReason ? (
                 <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">{qualityReasonText(segment)}</p>
@@ -163,7 +165,7 @@ export function PendingChangesPanel({
                 <summary className="cursor-pointer font-medium text-slate-700 hover:text-ink">查看证据细节</summary>
                 <div className="mt-2 space-y-2 rounded-field bg-surfaceAlt p-3">
                   <p>证据引用：{segment.evidenceRefs.length}</p>
-                  {segment.commitUrls.map((url) => <p key={url}><a className="font-medium text-brand hover:underline" href={url} rel="noreferrer" target="_blank">{url}</a></p>)}
+                  {segment.commitUrls.map((url) => <p key={url} className="min-w-0"><a className="font-medium text-brand hover:underline break-all line-clamp-1" href={url} rel="noreferrer" target="_blank">{url}</a></p>)}
                   <div className="flex flex-wrap gap-2">
                     {segment.affectedFiles.slice(0, 8).map((file) => (
                       <code className="max-w-full break-all rounded-field bg-white px-2 py-1" key={file}>{compactProjectPath(file)}</code>

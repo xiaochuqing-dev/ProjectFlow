@@ -78,17 +78,24 @@ public class DevelopmentSegmentationService {
         String result = concreteChange(primary);
         while (changes.size() < 3) {
             if (changes.size() == 1) {
+                // V3.3.4 小阶段修复：本地事实摘要不得把原始文件路径塞进 mainChanges。
                 changes.add("影响 " + fileSummary(files));
             } else {
-                changes.add("保留可追溯证据 " + evidenceSummary(evidence));
+                changes.add("保留可追溯证据，可在证据细节查看提交与文件来源");
             }
         }
+        // V3.3.4 小阶段修复：本地事实摘要也必须经过 DisplayContentSanitizer 清洗。
+        String sanitizedTitle = DisplayContentSanitizer.sanitizeTitle(result);
+        String sanitizedSummary = DisplayContentSanitizer.sanitizeSummary(summaryOf(changes));
+        List<String> sanitizedChanges = DisplayContentSanitizer.sanitizeChanges(changes);
         return new SegmentDraft(
-            result,
-            summaryOf(changes),
+            sanitizedTitle,
+            sanitizedSummary,
             List.copyOf(ids),
-            changes,
-            "用户或开发者可直接获得“" + result + "”对应的行为变化，并能从文件与提交证据追溯来源。",
+            sanitizedChanges,
+            DisplayContentSanitizer.sanitizeUserVisibleValue(
+                "用户或开发者可直接获得“" + result + "”对应的行为变化，并能从文件与提交证据追溯来源。"
+            ),
             List.copyOf(evidence),
             List.copyOf(files),
             atoms.size() <= 3 ? EvidenceConfidence.HIGH : EvidenceConfidence.MEDIUM
@@ -170,14 +177,10 @@ public class DevelopmentSegmentationService {
         return changes.stream().limit(3).reduce((left, right) -> left + "；" + right).orElse("整理可追溯开发变化") + "。";
     }
 
+    // V3.3.4 小阶段修复：本地事实摘要不得把原始文件路径塞进 mainChanges，只说明影响范围。
     private String fileSummary(LinkedHashSet<String> files) {
         if (files.isEmpty()) return "项目行为与维护流程";
-        String first = files.iterator().next();
-        return first + (files.size() > 1 ? " 等 " + files.size() + " 个文件" : "");
-    }
-
-    private String evidenceSummary(LinkedHashSet<String> evidence) {
-        return evidence.stream().findFirst().orElse("本地 Git 变化");
+        return files.size() + " 个相关文件（可在证据细节查看）";
     }
 
     private String topicKey(ChangeAtom atom) {

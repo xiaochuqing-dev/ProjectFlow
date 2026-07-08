@@ -64,10 +64,10 @@ export default function ProjectSedimentDetailPage() {
                   <Badge label="已确认" tone="success" />
                   <span className="text-xs text-muted">{sediment.sedimentType}</span>
                 </div>
-                <p className="mt-4 max-w-3xl text-base leading-7 text-slate-700">{sediment.summary}</p>
+                <p className="mt-4 max-w-3xl text-base leading-7 text-slate-700 break-words">{sediment.summary}</p>
                 <section className="mt-6 border-t border-line pt-5">
                   <h2 className="font-semibold text-slate-950">它解决的问题</h2>
-                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{sediment.problemSolved || "当前沉淀尚未补充问题说明。"}</p>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 break-words">{sediment.problemSolved || "当前沉淀尚未补充问题说明。"}</p>
                 </section>
               </Card>
 

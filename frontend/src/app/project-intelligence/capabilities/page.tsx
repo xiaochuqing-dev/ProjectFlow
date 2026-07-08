@@ -305,12 +305,12 @@ function CapabilityCardRow({
           <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-slate-500 transition-transform group-open:rotate-180" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-semibold text-slate-950">{card.name}</h3>
+              <h3 className="font-semibold text-slate-950 break-words">{card.name}</h3>
               <Badge label={statusLabel(card.status)} tone={card.status === "CONFIRMED" ? "success" : card.status === "NEEDS_EVIDENCE" ? "warning" : "slate"} />
               <Badge label={card.generationMode === "MODEL" ? `模型 · ${card.modelProvider}` : "本地事实摘要"} />
               <span className="text-xs text-slate-400 group-open:hidden">查看详情</span>
             </div>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{card.summary}</p>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600 break-words line-clamp-3">{card.summary}</p>
           </div>
         </summary>
 
@@ -349,7 +349,7 @@ function Info({ label, value, copy }: { label: string; value: string; copy?: () 
     <div>
       <dt className="text-xs font-semibold text-slate-700">{label}</dt>
       <dd className="mt-1 flex max-w-3xl items-start gap-2 text-slate-800">
-        <span>{value}</span>
+        <span className="min-w-0 break-words whitespace-pre-wrap">{value}</span>
         {copy ? <button aria-label={`复制${label}`} className="shrink-0 rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900" onClick={copy} type="button"><Clipboard className="h-3.5 w-3.5" /></button> : null}
       </dd>
     </div>

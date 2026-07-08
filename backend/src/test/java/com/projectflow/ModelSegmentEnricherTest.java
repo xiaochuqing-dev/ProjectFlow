@@ -84,7 +84,7 @@ class ModelSegmentEnricherTest {
         List<SegmentDraft> result = enricher.enrich(userId, atoms(), fallback(), warnings);
 
         assertThat(result).isEqualTo(fallback());
-        assertThat(warnings).singleElement().asString().contains("调用失败");
+        assertThat(warnings).singleElement().asString().contains("网络连接失败");
     }
 
     @Test
@@ -157,7 +157,7 @@ class ModelSegmentEnricherTest {
 
         assertThat(result.mode()).isEqualTo("LOCAL_RULE");
         assertThat(result.segments()).isEqualTo(fallback());
-        assertThat(result.fallbackReason()).contains("调用失败");
+        assertThat(result.fallbackReason()).contains("网络连接失败");
         verify(modelGatewayService, times(1)).callJson(any(), anyString(), anyInt());
     }
 

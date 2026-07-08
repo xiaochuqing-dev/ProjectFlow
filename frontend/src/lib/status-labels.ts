@@ -8,11 +8,34 @@ export function modelStatusLabel(status: string | undefined | null, providerName
   switch (status) {
     case "SUCCESS": return `${provider} 已参与`;
     case "NOT_CONFIGURED": return "未配置模型";
+    case "REQUEST_TIMEOUT": return `${provider} 请求超时`;
+    case "HTTP_401_OR_403": return `${provider} 鉴权失败`;
+    case "HTTP_429": return `${provider} 限流`;
+    case "HTTP_5XX": return `${provider} 服务异常`;
+    case "NETWORK_ERROR": return "网络连接失败";
     case "CALL_FAILED": return `${provider} 调用失败`;
+    case "UNKNOWN_CALL_FAILED": return `${provider} 调用失败`;
     case "JSON_PARSE_FAILED": return "模型返回格式无效";
     case "EVIDENCE_REJECTED": return "模型证据引用无效";
     case "NO_CHANGES": return "无新变化";
     default: return status && status.trim() ? status : "未配置模型";
+  }
+}
+
+// V3.3.4 小阶段修复：模型失败原因详细人话描述（用于诊断信息 / fallbackReason 展示）。
+export function modelFailureDetail(status: string | undefined | null, providerName?: string): string {
+  const provider = providerName && providerName.trim() ? providerName.trim() : "模型";
+  switch (status) {
+    case "REQUEST_TIMEOUT": return `${provider} 请求超时，模型在设定时间内没有返回，本次先展示本地事实摘要。`;
+    case "HTTP_401_OR_403": return `${provider} 返回鉴权失败（401/403），可能是 API key 错误或权限不足。`;
+    case "HTTP_429": return `${provider} 返回 429，可能是限流，请稍后重试。`;
+    case "HTTP_5XX": return `${provider} 服务异常（5xx），本次先展示本地事实摘要，可稍后重新分析。`;
+    case "NETWORK_ERROR": return "网络连接失败，可能与代理或 baseUrl 有关，本次先展示本地事实摘要。";
+    case "JSON_PARSE_FAILED": return "模型返回内容不是可解析结构，本次先展示本地事实摘要。";
+    case "EVIDENCE_REJECTED": return "模型结果引用的证据不可用，本次先展示本地事实摘要。";
+    case "CALL_FAILED":
+    case "UNKNOWN_CALL_FAILED": return `${provider} 调用失败，本次先展示本地事实摘要。`;
+    default: return "";
   }
 }
 

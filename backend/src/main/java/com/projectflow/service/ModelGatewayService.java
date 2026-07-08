@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -17,17 +18,24 @@ import com.projectflow.entity.AiProvider;
 
 @Service
 public class ModelGatewayService {
+    // V3.3.4 小阶段修复：复杂模型分析（开发推进段归并 / 能力分析）需要数分钟，
+    // 不再固定 35 秒上限。改为可配置，默认 240 秒，覆盖 DeepSeek 多 commit 分析场景。
     private static final int MAX_MODEL_ATTEMPTS = 2;
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(8);
-    private static final Duration MODEL_REQUEST_TIMEOUT = Duration.ofSeconds(35);
+    private final Duration modelRequestTimeout;
 
     private final ObjectMapper objectMapper;
     private final AiProviderUrlGuard aiProviderUrlGuard;
     private final HttpClient httpClient;
 
-    public ModelGatewayService(ObjectMapper objectMapper, AiProviderUrlGuard aiProviderUrlGuard) {
+    public ModelGatewayService(
+        ObjectMapper objectMapper,
+        AiProviderUrlGuard aiProviderUrlGuard,
+        @Value("${projectflow.model.request-timeout-seconds:240}") int requestTimeoutSeconds
+    ) {
         this.objectMapper = objectMapper;
         this.aiProviderUrlGuard = aiProviderUrlGuard;
+        this.modelRequestTimeout = Duration.ofSeconds(Math.max(30, requestTimeoutSeconds));
         this.httpClient = HttpClient.newBuilder()
             .connectTimeout(CONNECT_TIMEOUT)
             .build();
@@ -50,7 +58,7 @@ public class ModelGatewayService {
         );
         HttpRequest request = HttpRequest.newBuilder()
             .uri(aiProviderUrlGuard.chatCompletionsUri(provider.getBaseUrl()))
-            .timeout(MODEL_REQUEST_TIMEOUT)
+            .timeout(modelRequestTimeout)
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer " + provider.getApiKey())
             .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
@@ -65,14 +73,14 @@ public class ModelGatewayService {
                     pauseBeforeRetry(attempt);
                     continue;
                 }
-                throw new NonRetryableModelException("model HTTP " + response.statusCode());
+                throw new ModelHttpException(response.statusCode());
             } catch (HttpTimeoutException exception) {
                 if (attempt >= MAX_MODEL_ATTEMPTS) {
                     throw exception;
                 }
                 pauseBeforeRetry(attempt);
             } catch (IOException exception) {
-                if (exception instanceof NonRetryableModelException || attempt >= MAX_MODEL_ATTEMPTS) {
+                if (exception instanceof ModelHttpException || attempt >= MAX_MODEL_ATTEMPTS) {
                     throw exception;
                 }
                 pauseBeforeRetry(attempt);
@@ -82,13 +90,25 @@ public class ModelGatewayService {
     }
 
     public String failureMessage(Exception exception) {
-        if (exception instanceof HttpTimeoutException) {
-            return "模型请求在 " + MODEL_REQUEST_TIMEOUT.toSeconds() + " 秒内未完成。";
+        String code = ModelFailureClassifier.classifyException(exception);
+        return ModelFailureClassifier.humanReason(code, "");
+    }
+
+    /**
+     * V3.3.4 小阶段修复：把不可重试的 HTTP 错误码封装为可分类的异常，
+     * 让上层能区分 401/403、429、5xx 等具体原因。
+     */
+    public static final class ModelHttpException extends IOException {
+        private final int statusCode;
+
+        public ModelHttpException(int statusCode) {
+            super("model HTTP " + statusCode);
+            this.statusCode = statusCode;
         }
-        String message = exception.getMessage();
-        return message == null || message.isBlank()
-            ? "失败类型：" + exception.getClass().getSimpleName()
-            : "原因：" + truncate(message, 180);
+
+        public int statusCode() {
+            return statusCode;
+        }
     }
 
     private JsonNode parseModelJson(String responseBody) throws IOException {
@@ -115,18 +135,5 @@ public class ModelGatewayService {
             throw new IOException("model content is not JSON");
         }
         return content.substring(start, end + 1);
-    }
-
-    private String truncate(String value, int maxLength) {
-        if (value == null) {
-            return "";
-        }
-        return value.length() <= maxLength ? value : value.substring(0, maxLength) + "...";
-    }
-
-    private static final class NonRetryableModelException extends IOException {
-        private NonRetryableModelException(String message) {
-            super(message);
-        }
     }
 }

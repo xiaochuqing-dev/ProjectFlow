@@ -140,9 +140,7 @@ public class ModelSegmentEnricher {
         String status = jsonParseFailed ? "JSON_PARSE_FAILED"
             : evidenceRejected ? "EVIDENCE_REJECTED"
             : modelFailureStatus(lastFailure);
-        String reason = jsonParseFailed ? "模型返回内容无法识别为结构化结果，本次先展示本地事实摘要，可稍后重新分析。"
-            : evidenceRejected ? "模型结果引用的证据不可用，本次先展示本地事实摘要，可稍后重新分析。"
-            : provider.getName() + " 调用失败，本次先展示本地事实摘要，可稍后重新分析。";
+        String reason = ModelFailureClassifier.humanReason(status, provider.getName());
         return new EnrichmentResult(fallback, "LOCAL_RULE", status, provider.getName(), reason, List.of(), "");
     }
 
@@ -171,11 +169,11 @@ public class ModelSegmentEnricher {
                     throw new IllegalArgumentException("model segments must require user review");
                 }
                 SegmentDraft candidate = new SegmentDraft(
-                    requiredText(item, "segmentTitle"),
-                    requiredText(item, "plainSummary"),
+                    DisplayContentSanitizer.sanitizeTitle(requiredText(item, "segmentTitle")),
+                    DisplayContentSanitizer.sanitizeSummary(requiredText(item, "plainSummary")),
                     textArray(item, "includedAtomIds"),
-                    textArray(item, "mainChanges"),
-                    requiredText(item, "userVisibleValue"),
+                    DisplayContentSanitizer.sanitizeChanges(textArray(item, "mainChanges")),
+                    DisplayContentSanitizer.sanitizeUserVisibleValue(requiredText(item, "userVisibleValue")),
                     textArray(item, "evidenceRefs"),
                     textArray(item, "affectedFiles"),
                     confidence(item.path("confidence").asText())
@@ -317,12 +315,9 @@ public class ModelSegmentEnricher {
         return provider == null ? "none" : provider.getId() + ":" + provider.getModelName();
     }
 
+    // V3.3.4 小阶段修复：使用统一分类器，区分超时 / 鉴权 / 限流 / 5xx / 网络 / 未知。
     private String modelFailureStatus(Exception failure) {
-        if (failure == null) return "CALL_FAILED";
-        String message = failure.getMessage() == null ? "" : failure.getMessage().toLowerCase();
-        if (message.contains("json") || message.contains("array")) return "JSON_PARSE_FAILED";
-        if (message.contains("evidence")) return "EVIDENCE_REJECTED";
-        return "CALL_FAILED";
+        return ModelFailureClassifier.classifyException(failure);
     }
 
     private String requiredText(JsonNode node, String field) {

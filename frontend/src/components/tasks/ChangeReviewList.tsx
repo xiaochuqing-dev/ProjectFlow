@@ -51,8 +51,8 @@ export function ChangeReviewList(props: ChangeReviewListProps) {
                 <span className="text-xs text-muted">{change.confidence ?? "待校验"}</span>
               </div>
               <Link href={`/project-changes/${change.id}`}>
-                <h3 className="mt-3 font-semibold text-slate-950">{changeDisplayTitle(change)}</h3>
-                <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{changeOutcomeSummary(change)}</p>
+                <h3 className="mt-3 font-semibold text-slate-950 break-words">{changeDisplayTitle(change)}</h3>
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600 break-words">{changeOutcomeSummary(change)}</p>
               </Link>
               <details className="mt-3 text-xs text-muted">
                 <summary className="cursor-pointer font-medium text-slate-700">查看建议依据</summary>

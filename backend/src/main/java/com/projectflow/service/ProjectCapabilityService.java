@@ -156,12 +156,16 @@ public class ProjectCapabilityService {
     }
 
     private List<CardDraft> localDrafts(List<DevelopmentSegment> sources) {
+        // V3.3.4 小阶段修复：本地 fallback 也经过 DisplayContentSanitizer 清洗，避免原始路径 / 英文 commit 污染主视图。
         return sources.stream().limit(8).map(segment -> new CardDraft(
-            trim(segment.getTitle(), 180), segment.getPlainSummary(), segment.getUserVisibleValue(), entry(segment.getAffectedFiles()),
+            DisplayContentSanitizer.sanitizeCapabilityName(segment.getTitle()),
+            DisplayContentSanitizer.sanitizeCapabilitySummary(segment.getPlainSummary()),
+            DisplayContentSanitizer.sanitizeUserVisibleValue(segment.getUserVisibleValue()),
+            entry(segment.getAffectedFiles()),
             List.of("segment:" + segment.getId()), segment.getEvidenceRefs(),
-            segment.getTitle() + "：" + segment.getPlainSummary(),
-            "基于可追溯证据完成" + segment.getTitle(),
-            "可说明如何通过" + entry(segment.getAffectedFiles()) + "完成该能力，并展示提交与文件证据。"
+            DisplayContentSanitizer.sanitizeCapabilitySummary(segment.getTitle() + "：" + segment.getPlainSummary()),
+            DisplayContentSanitizer.sanitizeCapabilitySummary("基于可追溯证据完成" + segment.getTitle()),
+            DisplayContentSanitizer.sanitizeCapabilitySummary("可说明如何通过" + entry(segment.getAffectedFiles()) + "完成该能力，并展示提交与文件证据。")
         )).toList();
     }
 
@@ -188,9 +192,16 @@ public class ProjectCapabilityService {
         for (JsonNode value : values) {
             List<String> evidence = strings(value.path("evidenceRefs")).stream().filter(allowedEvidence::contains).toList();
             if (evidence.isEmpty()) throw new IllegalArgumentException("capability evidence is invalid");
+            // V3.3.4 小阶段修复：模型输出也必须经过 DisplayContentSanitizer 清洗，不能直接信任。
             result.add(new CardDraft(
-                required(value, "name"), required(value, "summary"), required(value, "problemSolved"), required(value, "featureEntry"),
-                strings(value.path("sourceRefs")), evidence, required(value, "readme"), required(value, "resume"), required(value, "interview")
+                DisplayContentSanitizer.sanitizeCapabilityName(required(value, "name")),
+                DisplayContentSanitizer.sanitizeCapabilitySummary(required(value, "summary")),
+                DisplayContentSanitizer.sanitizeCapabilitySummary(required(value, "problemSolved")),
+                DisplayContentSanitizer.sanitizeCapabilitySummary(required(value, "featureEntry")),
+                strings(value.path("sourceRefs")), evidence,
+                DisplayContentSanitizer.sanitizeCapabilitySummary(required(value, "readme")),
+                DisplayContentSanitizer.sanitizeCapabilitySummary(required(value, "resume")),
+                DisplayContentSanitizer.sanitizeCapabilitySummary(required(value, "interview"))
             ));
         }
         return result;
