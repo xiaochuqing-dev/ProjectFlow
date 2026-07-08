@@ -97,14 +97,73 @@ public class DevelopmentSegmentationService {
 
     private String concreteChange(ChangeAtom atom) {
         String cleaned = cleanTitle(atom.title());
-        cleaned = cleaned.replaceFirst("(?i)^(add|implement|create|introduce|update|improve|fix|repair|refactor|remove|delete|document|explain|test|verify|support|enable)\\s+", "");
-        if (cleaned.matches("^(新增|增加|接入|修复|调整|改造|重构|移除|删除|同步|验证|配置|优化|补充|实现).+")) {
+        cleaned = cleaned.replaceFirst("(?i)^(add|implement|create|introduce|update|improve|fix|repair|refactor|remove|delete|document|explain|test|verify|support|enable|stop|cut|restore|surface|commit|scan|bind|track|persist|split|merge|drop|guard|skip|polish|tune|align|wire|hook)\\s+", "");
+        if (cleaned.matches("^(新增|增加|接入|修复|调整|改造|重构|移除|删除|同步|验证|配置|优化|补充|实现|恢复|暴露|提交|扫描|绑定|跟踪|持久化|拆分|合并|丢弃|守护|跳过|打磨|调优|对齐|接通|挂载).+")) {
             return cleaned;
         }
         String lower = atom.title() == null ? "" : atom.title().toLowerCase(Locale.ROOT);
-        String action = lower.startsWith("fix") ? "修复" : lower.startsWith("refactor") ? "重构"
-            : lower.startsWith("docs") ? "补充" : lower.startsWith("test") ? "验证" : lower.startsWith("remove") ? "移除" : "新增";
-        return action + cleaned;
+        String action = actionOf(lower);
+        // V3.3.4: 如果去掉动作前缀后仍是英文（无中文字符），做一次常见词转写；
+        // 仍无法可靠转写则标为"根据提交记录整理的变更"，英文原文留在证据细节里。
+        String translated = translateCommonEnglish(cleaned);
+        if (containsChinese(translated)) {
+            return action + translated;
+        }
+        return action + "根据提交记录整理的变更";
+    }
+
+    // V3.3.4: 常见英文 commit action -> 中文动作。
+    private String actionOf(String lower) {
+        if (lower.startsWith("fix") || lower.startsWith("repair")) return "修复";
+        if (lower.startsWith("refactor")) return "重构";
+        if (lower.startsWith("docs") || lower.startsWith("document")) return "补充";
+        if (lower.startsWith("test")) return "验证";
+        if (lower.startsWith("remove") || lower.startsWith("delete") || lower.startsWith("drop")) return "移除";
+        if (lower.startsWith("stop") || lower.startsWith("cut") || lower.startsWith("skip")) return "调整";
+        if (lower.startsWith("restore") || lower.startsWith("revert")) return "恢复";
+        if (lower.startsWith("update") || lower.startsWith("improve") || lower.startsWith("polish") || lower.startsWith("tune") || lower.startsWith("align")) return "优化";
+        if (lower.startsWith("merge")) return "合并";
+        if (lower.startsWith("split")) return "拆分";
+        if (lower.startsWith("scan")) return "扫描";
+        if (lower.startsWith("bind")) return "绑定";
+        if (lower.startsWith("track")) return "跟踪";
+        if (lower.startsWith("persist") || lower.startsWith("commit")) return "持久化";
+        if (lower.startsWith("surface") || lower.startsWith("expose")) return "暴露";
+        if (lower.startsWith("guard")) return "守护";
+        if (lower.startsWith("wire") || lower.startsWith("hook") || lower.startsWith("enable") || lower.startsWith("support")) return "接通";
+        return "新增";
+    }
+
+    // V3.3.4: 对去掉动作前缀后的英文标题做常见词转写。无法可靠转写时原样返回（无中文字符）。
+    private String translateCommonEnglish(String value) {
+        if (value == null || value.isBlank()) return value;
+        String result = value;
+        // 仅当不含中文时才尝试转写，避免破坏已经是中文的标题。
+        if (containsChinese(result)) return result;
+        // 常见动名词/技术词 -> 中文，按词边界替换。
+        result = result.replaceAll("(?i)\\bauto[- ]?resuming\\b", "自动恢复");
+        result = result.replaceAll("(?i)\\banalysis\\s+jobs?\\b", "分析任务");
+        result = result.replaceAll("(?i)\\bmodel\\s+enrich(?:ment)?\\b", "模型归并");
+        result = result.replaceAll("(?i)\\btimeout\\b", "超时");
+        result = result.replaceAll("(?i)\\bpending\\s+changes?\\b", "待整理变更");
+        result = result.replaceAll("(?i)\\bsediment(?:ation)?\\b", "沉淀");
+        result = result.replaceAll("(?i)\\bconfirmation\\b", "确认");
+        result = result.replaceAll("(?i)\\bselected\\s+project\\b", "选中项目");
+        result = result.replaceAll("(?i)\\brefresh\\b", "刷新");
+        result = result.replaceAll("(?i)\\bpanel\\b", "面板");
+        result = result.replaceAll("(?i)\\bcapability\\s+cards?\\b", "能力卡片");
+        result = result.replaceAll("(?i)\\bcapabilit(?:y|ies)\\b", "能力");
+        result = result.replaceAll("(?i)\\bgithub\\b", "GitHub");
+        result = result.replaceAll("(?i)\\bdashboard\\b", "工作台");
+        result = result.replaceAll("(?i)\\bscan(?:ning)?\\b", "扫描");
+        result = result.replaceAll("(?i)\\bproject\\b", "项目");
+        result = result.replaceAll("(?i)\\bchanges?\\b", "变更");
+        return result;
+    }
+
+    private boolean containsChinese(String value) {
+        if (value == null || value.isEmpty()) return false;
+        return value.chars().anyMatch(character -> Character.UnicodeScript.of(character) == Character.UnicodeScript.HAN);
     }
 
     private String summaryOf(List<String> changes) {

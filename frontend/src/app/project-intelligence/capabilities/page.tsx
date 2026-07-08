@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Check, ChevronDown, Clipboard, RefreshCw, Sparkles, X } from "lucide-react";
@@ -8,14 +8,27 @@ import { AppShell } from "@/components/AppShell";
 import { Badge, Button, ProjectContextBar, Toast } from "@/components/ui";
 import { useProjectSelection } from "@/hooks/useProjectSelection";
 import {
-  analyzeProjectCapabilities,
+  getProjectAnalysisJob,
   getProjectMemory,
+  listProjectAnalysisJobs,
   listProjectCapabilityCards,
+  startCapabilityCardAnalysisJob,
   updateCapabilityCard,
   type CapabilityCard,
+  type ProjectAnalysisJob,
   type ProjectMemory,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
+
+// V3.3.4: 能力分析阶段中文映射。
+const CAPABILITY_STAGE_LABELS: Record<string, string> = {
+  QUEUED: "等待能力分析启动",
+  LOAD_EVIDENCE: "正在读取已确认沉淀和开发推进段",
+  MODEL_CAPABILITY_ANALYSIS: "正在调用模型分析项目能力",
+  PERSIST_CAPABILITY_CARDS: "正在保存能力卡片",
+  SUCCEEDED: "能力分析完成",
+  FAILED: "能力分析失败",
+};
 
 export default function CompletedCapabilitiesPage() {
   return (
@@ -33,16 +46,20 @@ function CompletedCapabilitiesContent() {
   const [cards, setCards] = useState<CapabilityCard[]>([]);
   const [memory, setMemory] = useState<ProjectMemory | null>(null);
   const [loading, setLoading] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
   const [actingId, setActingId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  // V3.3.4: 能力分析异步任务。刷新/离开页面后回来能恢复正在运行的 job。
+  const [capabilityJob, setCapabilityJob] = useState<ProjectAnalysisJob | null>(null);
+  const [startingJob, setStartingJob] = useState(false);
+  const pollRef = useRef<number | null>(null);
 
   useEffect(() => {
     const session = readSession();
     if (!session || !selectedProjectId) {
       setCards([]);
       setMemory(null);
+      setCapabilityJob(null);
       return;
     }
     setLoading(true);
@@ -50,33 +67,96 @@ function CompletedCapabilitiesContent() {
     Promise.all([
       listProjectCapabilityCards(session.accessToken, selectedProjectId),
       getProjectMemory(session.accessToken, selectedProjectId),
+      // V3.3.4: 进入页面时恢复正在运行的能力分析任务。
+      listProjectAnalysisJobs(session.accessToken, selectedProjectId).catch(() => []),
     ])
-      .then(([items, record]) => { setCards(items); setMemory(record); })
+      .then(([items, record, jobs]) => {
+        setCards(items);
+        setMemory(record);
+        const active = (jobs as ProjectAnalysisJob[])
+          .filter((job) => job.jobType === "CAPABILITY_CARD_ANALYSIS" && (job.status === "QUEUED" || job.status === "RUNNING"))
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+        setCapabilityJob(active ?? null);
+      })
       .catch((exception) => setError(exception instanceof Error ? exception.message : "能力与成果加载失败"))
       .finally(() => setLoading(false));
   }, [selectedProjectId]);
+
+  // V3.3.4: 轮询正在运行的能力分析任务，完成后重新拉取能力卡片。
+  useEffect(() => {
+    if (!capabilityJob || (capabilityJob.status !== "QUEUED" && capabilityJob.status !== "RUNNING")) {
+      if (pollRef.current) {
+        window.clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      return;
+    }
+    const session = readSession();
+    if (!session) return;
+    const jobId = capabilityJob.id;
+    const accessToken = session.accessToken;
+    let stopped = false;
+    async function poll() {
+      if (stopped) return;
+      try {
+        const updated = await getProjectAnalysisJob(accessToken, jobId);
+        setCapabilityJob(updated);
+        if (updated.status === "SUCCEEDED") {
+          // 完成后重新拉取能力卡片（已确认保留，候选被替换）。
+          const items = await listProjectCapabilityCards(accessToken, updated.projectId);
+          setCards(items);
+          setNotice("能力分析完成，已重新加载能力卡片。");
+          stopped = true;
+          if (pollRef.current) {
+            window.clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+        } else if (updated.status === "FAILED") {
+          setError(updated.errorMessage || "能力分析失败，请稍后重试。");
+          stopped = true;
+          if (pollRef.current) {
+            window.clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+        }
+      } catch (exception) {
+        if (!stopped) {
+          setError(exception instanceof Error ? exception.message : "能力分析状态刷新失败");
+        }
+      }
+    }
+    void poll();
+    pollRef.current = window.setInterval(poll, 1500);
+    return () => {
+      stopped = true;
+      if (pollRef.current) {
+        window.clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [capabilityJob?.id, capabilityJob?.status]);
 
   function handleSelectProject(projectId: string) {
     selectProject(projectId);
     router.replace(`/project-intelligence/capabilities?projectId=${projectId}`);
   }
 
+  // V3.3.4: 点击分析项目能力 -> 创建异步 job，后端异步执行，前端轮询。
   async function analyzeCapabilities() {
     const session = readSession();
     if (!session || !selectedProjectId) return;
-    setAnalyzing(true);
+    setStartingJob(true);
     setError("");
     setNotice("");
     try {
-      const items = await analyzeProjectCapabilities(session.accessToken, selectedProjectId);
-      setCards((current) => [...current.filter((item) => item.status === "CONFIRMED"), ...items]);
-      setNotice(`已基于全部确认沉淀生成 ${items.length} 张候选能力卡片。`);
+      const job = await startCapabilityCardAnalysisJob(session.accessToken, selectedProjectId);
+      setCapabilityJob(job);
+      setNotice("能力分析已启动，页面可以离开，任务会继续运行。");
     } catch (exception) {
-      const message = exception instanceof Error ? exception.message : "项目能力分析失败";
-      // V3.3.3: 未配置模型时，明确提示去配置模型，不用低质量本地模板伪装完整分析。
+      const message = exception instanceof Error ? exception.message : "项目能力分析启动失败";
       setError(message);
     } finally {
-      setAnalyzing(false);
+      setStartingJob(false);
     }
   }
 
@@ -107,6 +187,12 @@ function CompletedCapabilitiesContent() {
 
   const visibleCards = cards.filter((item) => item.status !== "IGNORED");
   const confirmedCount = visibleCards.filter((item) => item.status === "CONFIRMED").length;
+  const analyzing = startingJob || (capabilityJob?.status === "QUEUED" || capabilityJob?.status === "RUNNING") === true;
+  const stage = capabilityJob?.stage ?? "";
+  const stageMessage = capabilityJob?.stageMessage ?? "";
+  const showProgress = analyzing && stage && stage !== "SUCCEEDED" && stage !== "FAILED";
+  const elapsedMs = computeElapsedMs(capabilityJob);
+  const inputSummary = parseInputSummary(capabilityJob?.inputSummary);
 
   return (
     <AppShell eyebrow="项目理解" title={selectedProject ? `${selectedProject.name} · 能力与成果` : "能力与成果"}>
@@ -124,6 +210,7 @@ function CompletedCapabilitiesContent() {
             <div className="max-w-2xl">
               <h2 className="text-xl font-semibold text-slate-950">整体项目能力分析</h2>
               <p className="mt-1 text-sm leading-6 text-slate-600">基于已确认项目沉淀、开发推进段和证据引用，一次生成可逐条确认的结构化能力卡片。</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">重新分析会替换未确认候选能力，已确认能力会保留。</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button disabled={!selectedProjectId || analyzing} loading={analyzing} onClick={analyzeCapabilities} variant="primary">
@@ -133,6 +220,24 @@ function CompletedCapabilitiesContent() {
               <span className="text-xs text-slate-500">确认后可生成能力解读</span>
             </div>
           </header>
+
+          {/* V3.3.4: 能力分析进度可视化。用户能看到当前阶段、已等待时间、输入规模。 */}
+          {showProgress ? (
+            <div className="border-b border-line bg-slate-50 px-5 py-3 text-xs leading-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <RefreshCw className="h-3 w-3 animate-spin text-brand" />
+                <span className="font-semibold text-slate-900">{CAPABILITY_STAGE_LABELS[stage] ?? stage}</span>
+                {elapsedMs > 0 ? <span className="text-slate-500">已等待 {formatElapsed(elapsedMs)}</span> : null}
+              </div>
+              {stageMessage ? <p className="mt-1 text-slate-600">{stageMessage}</p> : null}
+              {inputSummary ? (
+                <p className="mt-1 text-slate-500">
+                  基于 {inputSummary.confirmedSegments} 条已确认沉淀{inputSummary.confirmedSegments > 0 ? "" : ""}。
+                </p>
+              ) : null}
+              <p className="mt-1 text-slate-500">页面可以离开，任务会继续运行，完成后能力卡片会自动刷新。</p>
+            </div>
+          ) : null}
 
           {visibleCards.length ? (
             <div className="divide-y divide-line">
@@ -167,6 +272,14 @@ function CompletedCapabilitiesContent() {
           </div>
         ) : null}
 
+        {/* V3.3.4: 任务失败时显示错误原因。 */}
+        {capabilityJob?.status === "FAILED" && error ? (
+          <div className="mt-4 rounded-md border border-danger/30 bg-danger-soft p-4 text-sm leading-6 text-danger-fg">
+            <p className="font-semibold">能力分析失败</p>
+            <p className="mt-1">{error}</p>
+          </div>
+        ) : null}
+
         <Toast error={error || projectError} notice={notice} />
         {loadingProjects ? <div className="fixed inset-x-0 bottom-0 h-1 bg-slate-950" /> : null}
       </div>
@@ -194,7 +307,7 @@ function CapabilityCardRow({
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-semibold text-slate-950">{card.name}</h3>
               <Badge label={statusLabel(card.status)} tone={card.status === "CONFIRMED" ? "success" : card.status === "NEEDS_EVIDENCE" ? "warning" : "slate"} />
-              <Badge label={card.generationMode === "MODEL" ? `模型 · ${card.modelProvider}` : "本地规则兜底"} />
+              <Badge label={card.generationMode === "MODEL" ? `模型 · ${card.modelProvider}` : "本地事实摘要"} />
               <span className="text-xs text-slate-400 group-open:hidden">查看详情</span>
             </div>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{card.summary}</p>
@@ -247,4 +360,35 @@ function statusLabel(status: CapabilityCard["status"]) {
   if (status === "CONFIRMED") return "已确认";
   if (status === "NEEDS_EVIDENCE") return "需补证据";
   return "候选";
+}
+
+// V3.3.4: 计算已等待时间。
+function computeElapsedMs(job: ProjectAnalysisJob | null | undefined): number {
+  if (!job || !job.currentStepStartedAt) return 0;
+  const start = new Date(job.currentStepStartedAt).getTime();
+  if (!Number.isFinite(start)) return 0;
+  const end = job.completedAt ? new Date(job.completedAt).getTime() : Date.now();
+  return Math.max(0, end - start);
+}
+
+function formatElapsed(ms: number): string {
+  if (ms < 1000) return `${ms} ms`;
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return `${seconds} 秒`;
+  const minutes = Math.floor(seconds / 60);
+  const rem = seconds % 60;
+  return `${minutes} 分 ${rem} 秒`;
+}
+
+function parseInputSummary(raw: string | undefined | null): { confirmedSegments: number } | null {
+  if (!raw || !raw.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && typeof parsed.confirmedSegments === "number") {
+      return { confirmedSegments: parsed.confirmedSegments };
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }

@@ -8,7 +8,9 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.projectflow.dto.V33WorkflowDtos.CapabilityCardAction;
@@ -18,9 +20,11 @@ import com.projectflow.entity.AiProviderType;
 import com.projectflow.entity.CapabilityCardStatus;
 import com.projectflow.entity.DevelopmentSegment;
 import com.projectflow.entity.DevelopmentSegmentStatus;
+import com.projectflow.entity.ProjectAnalysisJob;
 import com.projectflow.entity.ProjectCapabilityCard;
 import com.projectflow.repository.AiProviderRepository;
 import com.projectflow.repository.DevelopmentSegmentRepository;
+import com.projectflow.repository.ProjectAnalysisJobRepository;
 import com.projectflow.repository.ProjectCapabilityCardRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.support.AppException;
@@ -32,24 +36,41 @@ public class ProjectCapabilityService {
     private final ProjectCapabilityCardRepository cardRepository;
     private final AiProviderRepository providerRepository;
     private final ModelGatewayService modelGatewayService;
+    private final ProjectAnalysisJobRepository jobRepository;
+    // V3.3.4: 阶段推进用独立事务提交，前端轮询可看到 stage 推进。
+    private final TransactionTemplate stageTransactionTemplate;
 
     public ProjectCapabilityService(
         ProjectRepository projectRepository,
         DevelopmentSegmentRepository segmentRepository,
         ProjectCapabilityCardRepository cardRepository,
         AiProviderRepository providerRepository,
-        ModelGatewayService modelGatewayService
+        ModelGatewayService modelGatewayService,
+        ProjectAnalysisJobRepository jobRepository,
+        PlatformTransactionManager transactionManager
     ) {
         this.projectRepository = projectRepository;
         this.segmentRepository = segmentRepository;
         this.cardRepository = cardRepository;
         this.providerRepository = providerRepository;
         this.modelGatewayService = modelGatewayService;
+        this.jobRepository = jobRepository;
+        this.stageTransactionTemplate = new TransactionTemplate(transactionManager);
+        this.stageTransactionTemplate.setPropagationBehavior(
+            org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW
+        );
     }
 
     @Transactional
     public List<CapabilityCardResponse> analyze(UUID userId, UUID projectId) {
+        return analyze(userId, projectId, null);
+    }
+
+    // V3.3.4: 接收 jobId 以推进异步任务阶段。jobId 为 null 时退化为同步调用。
+    @Transactional
+    public List<CapabilityCardResponse> analyze(UUID userId, UUID projectId, UUID jobId) {
         ownedProject(userId, projectId);
+        advanceStage(jobId, "LOAD_EVIDENCE", "正在读取已确认沉淀和开发推进段");
         List<DevelopmentSegment> sources = segmentRepository.findByProjectIdOrderByCreatedAtDesc(projectId).stream()
             .filter(segment -> segment.getStatus() == DevelopmentSegmentStatus.CONFIRMED)
             .limit(24).toList();
@@ -65,9 +86,11 @@ public class ProjectCapabilityService {
                 HttpStatus.BAD_REQUEST
             );
         }
+        recordInputSummary(jobId, sources.size());
         cardRepository.deleteByProjectIdAndStatus(projectId, CapabilityCardStatus.CANDIDATE);
         cardRepository.deleteByProjectIdAndStatus(projectId, CapabilityCardStatus.NEEDS_EVIDENCE);
 
+        advanceStage(jobId, "MODEL_CAPABILITY_ANALYSIS", "正在调用模型分析项目能力（可能需要几分钟，任务会继续运行）");
         String mode = "MODEL";
         String fallback = "";
         List<CardDraft> drafts;
@@ -78,6 +101,7 @@ public class ProjectCapabilityService {
             fallback = "模型能力分析失败，已基于确认沉淀与开发推进段生成候选能力，建议配置或检查模型后重新分析。";
             drafts = localDrafts(sources);
         }
+        advanceStage(jobId, "PERSIST_CAPABILITY_CARDS", "正在保存能力卡片");
         List<ProjectCapabilityCard> cards = new ArrayList<>();
         for (CardDraft draft : drafts.stream().limit(8).toList()) {
             ProjectCapabilityCard card = new ProjectCapabilityCard(projectId);
@@ -88,6 +112,32 @@ public class ProjectCapabilityService {
             cards.add(card);
         }
         return cardRepository.saveAll(cards).stream().map(this::response).toList();
+    }
+
+    // V3.3.4: 阶段推进。用独立事务提交，避免 analyze 主事务未提交时前端读到旧 stage。
+    private void advanceStage(UUID jobId, String stage, String message) {
+        if (jobId == null) return;
+        stageTransactionTemplate.executeWithoutResult(status ->
+            jobRepository.findById(jobId).ifPresent(job -> {
+                job.advanceStage(stage, message);
+                jobRepository.save(job);
+            })
+        );
+    }
+
+    private void recordInputSummary(UUID jobId, int confirmedSegmentCount) {
+        if (jobId == null) return;
+        try {
+            String summary = "{\"confirmedSegments\":" + confirmedSegmentCount + "}";
+            stageTransactionTemplate.executeWithoutResult(status ->
+                jobRepository.findById(jobId).ifPresent(job -> {
+                    job.recordInputSummary(summary);
+                    jobRepository.save(job);
+                })
+            );
+        } catch (Exception ignored) {
+            // 输入摘要不是关键路径。
+        }
     }
 
     @Transactional(readOnly = true)

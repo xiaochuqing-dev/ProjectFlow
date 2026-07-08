@@ -70,7 +70,22 @@ public record AnalysisInputSnapshot(
         boolean includesUncommitted,
         boolean githubParticipated,
         boolean modelParticipated,
-        boolean evidenceGap
+        boolean evidenceGap,
+        // V3.3.4: 证据缺口的具体原因（无缺口时为空串）。供口径展示和模型 prompt 使用。
+        String evidenceGapReason
     ) {
+        // 兼容旧调用：未提供原因时默认空串。
+        public ScanScopeFacts(
+            int inputCommitCount,
+            int inputFileCount,
+            int inputAgentResultCount,
+            boolean includesUncommitted,
+            boolean githubParticipated,
+            boolean modelParticipated,
+            boolean evidenceGap
+        ) {
+            this(inputCommitCount, inputFileCount, inputAgentResultCount, includesUncommitted,
+                githubParticipated, modelParticipated, evidenceGap, "");
+        }
     }
 }

@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { useState } from "react";
-import { ArrowRight, ExternalLink, RefreshCw, ScanLine } from "lucide-react";
+import { ArrowRight, RefreshCw, ScanLine } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
-import type { EvidenceBundle, GitHubLoginGuide, GitHubStatus, ProjectAnalysisJob, WorkSessionCandidate, WorkSessionScanResult } from "@/lib/api";
+import type { EvidenceBundle, GitHubStatus, ProjectAnalysisJob, WorkSessionCandidate, WorkSessionScanResult } from "@/lib/api";
 import { compactProjectPath } from "@/lib/project-insights";
+import { generationModeLabel, githubDiagnosticLabel, githubStatusLabel, mergeModeLabel, modelStatusLabel, qualityStatusLabel as sharedQualityStatusLabel } from "@/lib/status-labels";
 
 type PendingChangesPanelProps = {
   scan: WorkSessionScanResult | null;
@@ -42,13 +42,10 @@ export function PendingChangesPanel({
   github,
   onRefreshGitHub,
   refreshingGitHub,
-  onShowGitHubLogin,
   activeJob,
 }: PendingChangesPanelProps) {
   const segments = scan?.segments ?? [];
   const batch = scan?.batch;
-  const [loginGuide, setLoginGuide] = useState<GitHubLoginGuide | null>(null);
-  const [guideError, setGuideError] = useState("");
 
   // ponytail: 后端 segment 的数组字段在偶发情况下可能为 null（Java record + Jackson 序列化），
   // 这里统一兜底，避免 .map() 抛 "Cannot read properties of null" 触发 global-error。
@@ -94,58 +91,28 @@ export function PendingChangesPanel({
         </Button>
       </div>
 
-      {/* V3.3.3: GitHub 状态与操作入口。页面统一叫 GitHub，不叫 GitHub 增强。 */}
+      {/* V3.3.4: GitHub 简要状态。接入与登录入口已前移到「项目接入」区域，这里只保留状态摘要。 */}
       <div className="border-b border-line px-5 py-3 text-xs leading-5 text-slate-600">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0 flex-1">
             <span className="font-semibold text-slate-800">GitHub：</span>
             {github ? githubSummary(github) : hasProjectPath ? "正在检查可选数据源。" : "绑定本地项目后可检查 GitHub CLI；本地 Git 分析不依赖它。"}
           </div>
-          {hasProjectPath && github ? (
-            <div className="flex shrink-0 items-center gap-2">
-              {github.status === "CONNECTED" ? (
-                <button
-                  className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                  disabled={refreshingGitHub}
-                  onClick={onRefreshGitHub}
-                  title="刷新同步状态只读取远程提交信息，不会修改本地代码。"
-                  type="button"
-                >
-                  <RefreshCw className={`h-3 w-3 ${refreshingGitHub ? "animate-spin" : ""}`} />
-                  刷新同步状态
-                </button>
-              ) : github.status === "NOT_AUTHENTICATED" ? (
-                <button
-                  className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  onClick={onShowGitHubLogin}
-                  type="button"
-                >
-                  登录 GitHub
-                </button>
-              ) : github.status === "NOT_INSTALLED" ? (
-                <a
-                  className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  href="https://cli.github.com/"
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  查看安装说明 <ExternalLink className="h-3 w-3" />
-                </a>
-              ) : (
-                <button
-                  className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                  disabled={refreshingGitHub}
-                  onClick={onRefreshGitHub}
-                  type="button"
-                >
-                  重新检查
-                </button>
-              )}
-            </div>
+          {hasProjectPath && github && github.status === "CONNECTED" ? (
+            <button
+              className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              disabled={refreshingGitHub}
+              onClick={onRefreshGitHub}
+              title="刷新同步状态只读取远程提交信息，不会修改本地代码。"
+              type="button"
+            >
+              <RefreshCw className={`h-3 w-3 ${refreshingGitHub ? "animate-spin" : ""}`} />
+              刷新同步状态
+            </button>
           ) : null}
         </div>
-        {github ? (
-          <p className="mt-1 text-slate-500">刷新同步状态只读取远程提交信息，不会修改本地代码（不会 pull、merge、rebase）。</p>
+        {github && github.status !== "CONNECTED" ? (
+          <p className="mt-1 text-slate-500">GitHub 接入与登录入口见上方「项目接入」区域。本地 Git 分析不依赖 GitHub。</p>
         ) : null}
       </div>
 
@@ -181,7 +148,7 @@ export function PendingChangesPanel({
             <article className="px-5 py-4" key={segment.id}>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge label={qualityStatusLabel(segment.qualityStatus)} tone={qualityBadgeTone(segment.qualityStatus, segment.status)} />
-                <Badge label={segment.generationMode === "MODEL" ? `模型归并 · ${segment.modelProvider}` : "本地规则兜底"} />
+                <Badge label={generationModeLabel(segment.generationMode, segment.modelProvider)} />
                 <span className="text-xs text-muted">{segment.includedCommitRefs.length} 提交 · {segment.affectedFiles.length} 文件 · {segment.includedAgentResultRefs.length} Agent result</span>
               </div>
               <h3 className="mt-2 text-sm font-semibold text-ink">{segment.title}</h3>
@@ -224,19 +191,22 @@ export function PendingChangesPanel({
                   <Diagnostic label="untracked files" value={scopeString(scope.untracked, "无")} />
                   <Diagnostic label="Agent result" value={scopeString(scope.agentResults, "读取 0 条")} />
                   <Diagnostic label="GitHub" value={scopeString(scope.github, "未参与")} />
-                  <Diagnostic label="GitHub 状态" value={scopeString(scope.githubStatus, "—")} />
-                  <Diagnostic label="模型" value={scopeString(scope.model, "未配置")} />
-                  <Diagnostic label="归并方式" value={scopeString(scope.mergeMode, "本地事实摘要")} />
+                  <Diagnostic label="GitHub 状态" value={scopeString(githubStatusLabel(String(scope.githubStatus ?? "")), "-")} />
+                  <Diagnostic label="模型" value={scopeString(modelStatusLabel(String(scope.modelStatus ?? "")), "未配置")} />
+                  <Diagnostic label="归并方式" value={scopeString(mergeModeLabel(String(scope.mergeMode ?? "")), "本地事实摘要")} />
                   <Diagnostic label="未提交内容" value={scope.hasUncommitted === true ? "存在" : "无"} />
                   <Diagnostic label="远程未同步" value={scope.hasRemoteUnsynced === true ? "存在" : "无"} />
                   <Diagnostic label="证据缺口" value={scope.evidenceGap === true ? "存在" : "无"} />
+                  {scope.evidenceGap === true && scope.evidenceGapReason ? (
+                    <Diagnostic label="缺口原因" value={String(scope.evidenceGapReason)} />
+                  ) : null}
                 </dl>
               </div>
             ) : null}
             <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              <Diagnostic label="归并方式" value={batch.segmentationMode === "MODEL" ? "模型归并" : "本地规则兜底"} />
-              <Diagnostic label="模型状态" value={`${batch.modelStatus}${batch.modelProvider ? ` · ${batch.modelProvider}` : ""}`} />
-              <Diagnostic label="GitHub / 远程" value={`${batch.githubStatus} · ${batch.remoteRelation}`} />
+              <Diagnostic label="归并方式" value={mergeModeLabel(batch.segmentationMode)} />
+              <Diagnostic label="模型状态" value={modelStatusLabel(batch.modelStatus, batch.modelProvider)} />
+              <Diagnostic label="GitHub / 远程" value={githubDiagnosticLabel(batch.githubStatus, batch.remoteRelation)} />
               <Diagnostic label="Agent result" value={`读取 ${batch.agentResultCount} 条`} />
               <Diagnostic label="工作区" value={batch.worktreeDirty ? "包含未提交变化" : "无未提交变化"} />
               <Diagnostic label="总耗时" value={`${batch.totalScanMs} ms`} />
@@ -257,33 +227,6 @@ export function PendingChangesPanel({
           <summary className="cursor-pointer font-medium text-slate-700">兼容证据记录</summary>
           <p className="mt-2 text-xs leading-5 text-muted">旧 WorkSession 与 EvidenceBundle 仍保留，可用于追溯历史数据，不再作为主流程。</p>
         </details>
-      ) : null}
-
-      {/* V3.3.3: GitHub 登录指引弹层。不读取、不展示、不保存 token。 */}
-      {loginGuide ? (
-        <div className="border-t border-line bg-surfaceAlt px-5 py-4 text-xs leading-5">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-slate-800">GitHub 登录指引</p>
-            <button className="text-slate-500 hover:text-slate-900" onClick={() => setLoginGuide(null)} type="button">关闭</button>
-          </div>
-          <ol className="mt-2 list-decimal space-y-1 pl-5 text-slate-700">
-            {loginGuide.instructions.map((line, idx) => <li key={idx}>{line}</li>)}
-          </ol>
-          {loginGuide.command ? (
-            <div className="mt-2">
-              <p className="text-slate-600">请在终端执行：</p>
-              <code className="mt-1 block break-all rounded-field bg-white px-2 py-1 font-mono text-slate-900">{loginGuide.command}</code>
-              <button
-                className="mt-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                onClick={() => { navigator.clipboard?.writeText(loginGuide.command); }}
-                type="button"
-              >
-                复制命令
-              </button>
-            </div>
-          ) : null}
-          {guideError ? <p className="mt-2 text-amber-800">{guideError}</p> : null}
-        </div>
       ) : null}
     </Card>
   );
@@ -307,18 +250,9 @@ function githubSummary(status: GitHubStatus) {
   return status.warnings[0] ?? "GitHub 当前不可用，本地 Git 分析仍可使用。";
 }
 
-// V3.3.3: 质量门槛标记器的中文状态标签。
+// V3.3.4: 质量状态标签复用共享映射，避免重复定义。
 function qualityStatusLabel(qualityStatus: string): string {
-  switch (qualityStatus) {
-    case "PASS": return "待确认";
-    case "NEEDS_REVIEW": return "需复核";
-    case "NEEDS_CHINESE_REWRITE": return "需中文修正";
-    case "NEEDS_EVIDENCE": return "需补证据";
-    case "PARTIAL_EVIDENCE": return "部分证据";
-    case "LOW_CONFIDENCE": return "低置信度";
-    case "NEEDS_MANUAL": return "需人工整理";
-    default: return "待确认";
-  }
+  return sharedQualityStatusLabel(qualityStatus);
 }
 
 function qualityBadgeTone(qualityStatus: string, status: string): "success" | "warning" | "slate" {

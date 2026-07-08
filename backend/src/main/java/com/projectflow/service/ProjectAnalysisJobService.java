@@ -111,6 +111,21 @@ public class ProjectAnalysisJobService {
         return toResponse(result.job());
     }
 
+    // V3.3.4: 能力分析异步任务。点击"分析项目能力"创建 job，后端异步执行；刷新/离开页面后可恢复。
+    public ProjectAnalysisJobResponse startCapabilityCardAnalysis(UUID userId, UUID projectId) {
+        StartJobResult result = transactionTemplate.execute(status -> {
+            findOwnedProject(userId, projectId);
+            java.util.Optional<ProjectAnalysisJob> active = activeJob(projectId, ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS, null);
+            return active
+                .map(job -> new StartJobResult(job, false))
+                .orElseGet(() -> new StartJobResult(jobRepository.save(new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS, null)), true));
+        });
+        if (result.created()) {
+            jobRunner.execute(result.job().getId());
+        }
+        return toResponse(result.job());
+    }
+
     @Transactional(readOnly = true)
     public ProjectAnalysisJobResponse getJob(UUID userId, UUID jobId) {
         return toResponse(findOwnedJob(userId, jobId));

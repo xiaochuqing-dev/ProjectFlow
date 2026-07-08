@@ -1,7 +1,9 @@
 import type { FormEvent } from "react";
 import Link from "next/link";
-import { ArrowRight, Clipboard, FileCode2, FolderTree, RefreshCw, Save, ScanLine, Upload } from "lucide-react";
+import { ArrowRight, Clipboard, ExternalLink, FileCode2, FolderTree, RefreshCw, Save, ScanLine, Terminal, Upload } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
+import type { GitHubLoginGuide, GitHubStatus } from "@/lib/api";
+import { githubStatusLabel, remoteRelationLabel } from "@/lib/status-labels";
 import type { DashboardStep } from "./types";
 
 export type ZipImportPanelProps = {
@@ -67,6 +69,18 @@ export type ProjectAccessCardProps = {
   syncingContext: boolean;
   onSyncContext: () => void;
   onCopyGlobalRule: () => void;
+  // V3.3.4: GitHub 接入状态与操作前移到项目接入区域。
+  hasProjectPath: boolean;
+  github: GitHubStatus | null;
+  refreshingGitHub: boolean;
+  openingTerminal: boolean;
+  loginGuide: GitHubLoginGuide | null;
+  onRefreshGitHub: () => void;
+  onShowGitHubLogin: () => void;
+  onOpenLoginTerminal: () => void;
+  onClearLoginGuide: () => void;
+  // V3.3.4: 模型状态（与 GitHub 一起作为项目接入状态展示）。
+  modelName: string | null;
 };
 
 export function ProjectAccessCard(props: ProjectAccessCardProps) {
@@ -114,6 +128,121 @@ export function ProjectAccessCard(props: ProjectAccessCardProps) {
             绑定本地项目
           </Button>
           <span className="self-center text-xs text-muted">分析新变化在下方主流程卡执行。</span>
+        </div>
+
+        {/* V3.3.4: 项目接入状态。本地路径 / 模型 / GitHub 都属于项目接入，不再把 GitHub 只藏在待整理变更里。 */}
+        <div className="mt-4 rounded-field border border-line bg-surfaceAlt p-3 text-xs leading-5">
+          <p className="mb-2 font-semibold text-slate-800">项目接入状态</p>
+          <dl className="grid gap-2 sm:grid-cols-3">
+            <div>
+              <dt className="text-slate-500">本地项目路径</dt>
+              <dd className="mt-0.5 font-medium text-slate-800">{props.hasProjectPath ? "已绑定" : "未绑定"}</dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">模型</dt>
+              <dd className="mt-0.5 font-medium text-slate-800">{props.modelName ? props.modelName : "未配置"}</dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">GitHub</dt>
+              <dd className="mt-0.5 font-medium text-slate-800">{githubAccessSummary(props.github, props.hasProjectPath)}</dd>
+            </div>
+          </dl>
+
+          {/* V3.3.4: GitHub 操作入口。未接入时提供登录/安装/重新检查；已接入时提供刷新同步状态。 */}
+          {props.hasProjectPath && props.github ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {props.github.status === "CONNECTED" ? (
+                <button
+                  className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  disabled={props.refreshingGitHub}
+                  onClick={props.onRefreshGitHub}
+                  title="刷新同步状态只读取远程提交信息，不会修改本地代码。"
+                  type="button"
+                >
+                  <RefreshCw className={`h-3 w-3 ${props.refreshingGitHub ? "animate-spin" : ""}`} />
+                  刷新同步状态
+                </button>
+              ) : props.github.status === "NOT_AUTHENTICATED" ? (
+                <>
+                  <button
+                    className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    disabled={props.openingTerminal}
+                    onClick={props.onOpenLoginTerminal}
+                    title="打开一个新终端执行 GitHub 登录命令（固定命令，不接受自定义）。"
+                    type="button"
+                  >
+                    {props.openingTerminal ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Terminal className="h-3 w-3" />}
+                    打开登录终端
+                  </button>
+                  <button
+                    className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    onClick={props.onShowGitHubLogin}
+                    title="复制登录命令到终端手动执行。"
+                    type="button"
+                  >
+                    <Clipboard className="h-3 w-3" />
+                    复制登录命令
+                  </button>
+                  <button
+                    className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    disabled={props.refreshingGitHub}
+                    onClick={props.onRefreshGitHub}
+                    type="button"
+                  >
+                    重新检查
+                  </button>
+                </>
+              ) : props.github.status === "NOT_INSTALLED" ? (
+                <>
+                  <a
+                    className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    href="https://cli.github.com/"
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    查看安装说明 <ExternalLink className="h-3 w-3" />
+                  </a>
+                  <button
+                    className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    disabled={props.refreshingGitHub}
+                    onClick={props.onRefreshGitHub}
+                    type="button"
+                  >
+                    重新检查
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  disabled={props.refreshingGitHub}
+                  onClick={props.onRefreshGitHub}
+                  type="button"
+                >
+                  <RefreshCw className={`h-3 w-3 ${props.refreshingGitHub ? "animate-spin" : ""}`} />
+                  重新检查
+                </button>
+              )}
+            </div>
+          ) : null}
+          <p className="mt-2 text-slate-500">GitHub 是可选接入；接入后可获得远程同步状态、commit 链接和仓库来源辅助，本地 Git 分析不依赖它。刷新同步状态只读取远程提交信息，不会修改本地代码。</p>
+
+          {/* V3.3.4: 登录命令展示（复制命令 fallback / 明确命令）。 */}
+          {props.loginGuide && props.loginGuide.command ? (
+            <div className="mt-2 rounded-field border border-line bg-white p-2">
+              <div className="flex items-center justify-between">
+                <p className="text-slate-600">登录命令（在终端手动执行）：</p>
+                <button className="text-slate-500 hover:text-slate-900" onClick={props.onClearLoginGuide} type="button">关闭</button>
+              </div>
+              <code className="mt-1 block break-all rounded-field bg-surfaceAlt px-2 py-1 font-mono text-slate-900">{props.loginGuide.command}</code>
+              <button
+                className="mt-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                onClick={() => { navigator.clipboard?.writeText(props.loginGuide?.command ?? ""); }}
+                type="button"
+              >
+                复制命令
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <details className="mt-4 rounded-field border border-line bg-surfaceAlt">
@@ -171,7 +300,7 @@ export function ProjectAccessCard(props: ProjectAccessCardProps) {
 function accessHint(step: DashboardStep, hasSelectedProject: boolean): { title: string; cta?: string; ctaHref?: string } {
   switch (step.kind) {
     case "no_project":
-      return { title: "还没有项目 —— 导入项目 zip 即可创建第一个项目。", cta: undefined };
+      return { title: "还没有项目 -- 导入项目 zip 即可创建第一个项目。", cta: undefined };
     case "no_material":
       return { title: "当前项目还没有可分析的材料，导入完整 zip 后生成画像。", cta: undefined };
     case "no_path":
@@ -183,4 +312,17 @@ function accessHint(step: DashboardStep, hasSelectedProject: boolean): { title: 
     default:
       return { title: hasSelectedProject ? "项目接入就绪。" : "导入项目 zip 开始。" };
   }
+}
+
+// V3.3.4: GitHub 接入状态摘要文案。
+function githubAccessSummary(github: GitHubStatus | null, hasProjectPath: boolean): string {
+  if (!github) return hasProjectPath ? "正在检查" : "绑定路径后可检查";
+  if (github.status === "CONNECTED") {
+    const relation = remoteRelationLabel(github.remoteRelation);
+    if (github.remoteRelation === "local_ahead") return `已接入 ${github.nameWithOwner}，本地领先 ${github.localAhead}`;
+    if (github.remoteRelation === "remote_ahead") return `已接入 ${github.nameWithOwner}，远程领先 ${github.remoteAhead}`;
+    if (github.remoteRelation === "diverged") return `已接入 ${github.nameWithOwner}，已分叉`;
+    return `已接入 ${github.nameWithOwner}，${relation}`;
+  }
+  return githubStatusLabel(github.status);
 }

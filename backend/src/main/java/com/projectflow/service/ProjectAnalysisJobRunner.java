@@ -32,6 +32,7 @@ public class ProjectAnalysisJobRunner {
     private final ProjectAnalysisRecordService projectAnalysisRecordService;
     private final ProjectMemoryService projectMemoryService;
     private final WorkSessionScanService workSessionScanService;
+    private final ProjectCapabilityService projectCapabilityService;
     private final ObjectMapper objectMapper;
 
     public ProjectAnalysisJobRunner(
@@ -41,6 +42,7 @@ public class ProjectAnalysisJobRunner {
         ProjectAnalysisRecordService projectAnalysisRecordService,
         ProjectMemoryService projectMemoryService,
         WorkSessionScanService workSessionScanService,
+        ProjectCapabilityService projectCapabilityService,
         ObjectMapper objectMapper
     ) {
         this.jobRepository = jobRepository;
@@ -49,6 +51,7 @@ public class ProjectAnalysisJobRunner {
         this.projectAnalysisRecordService = projectAnalysisRecordService;
         this.projectMemoryService = projectMemoryService;
         this.workSessionScanService = workSessionScanService;
+        this.projectCapabilityService = projectCapabilityService;
         this.objectMapper = objectMapper;
     }
 
@@ -82,6 +85,15 @@ public class ProjectAnalysisJobRunner {
             } else if (job.getJobType() == ProjectAnalysisJobType.WORK_SESSION_SCAN) {
                 WorkSessionScanResponse result = workSessionScanService.scan(job.getUserId(), job.getProjectId(), job.getId());
                 String resultJson = objectMapper.writeValueAsString(result);
+                markSucceeded(jobId, resultJson, null);
+            } else if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS) {
+                // V3.3.4: 能力分析异步化。卡片由 service 持久化，job 记录阶段与完成状态。
+                // resultJson 只存简要摘要，前端完成后重新拉取 capability-cards。
+                var cards = projectCapabilityService.analyze(job.getUserId(), job.getProjectId(), job.getId());
+                String resultJson = objectMapper.writeValueAsString(new java.util.LinkedHashMap<String, Object>() {{
+                    put("cardCount", cards.size());
+                    put("mode", cards.isEmpty() ? "LOCAL_RULE" : cards.get(0).generationMode());
+                }});
                 markSucceeded(jobId, resultJson, null);
             } else {
                 ProjectFileAnalysisResponse result = projectAnalysisService.analyzeProjectFile(
@@ -144,6 +156,7 @@ public class ProjectAnalysisJobRunner {
             case PROJECT -> "PROJECT_ANALYSIS";
             case CAPABILITY_INTERPRET -> "CAPABILITY_INTERPRET";
             case WORK_SESSION_SCAN -> "WORK_SESSION_SCAN";
+            case CAPABILITY_CARD_ANALYSIS -> "CAPABILITY_CARD_ANALYSIS";
             case FILE -> "FILE_ANALYSIS";
         };
         modelUsageRecordRepository.save(new ModelUsageRecord(

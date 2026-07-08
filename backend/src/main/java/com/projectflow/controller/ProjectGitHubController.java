@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.projectflow.dto.ApiResponse;
 import com.projectflow.dto.AuthDtos.AuthUser;
 import com.projectflow.dto.V33WorkflowDtos.GitHubLoginGuideResponse;
+import com.projectflow.dto.V33WorkflowDtos.GitHubOpenTerminalResponse;
 import com.projectflow.dto.V33WorkflowDtos.GitHubStatusResponse;
 import com.projectflow.entity.ProjectMemory;
 import com.projectflow.repository.ProjectMemoryRepository;
@@ -97,6 +98,22 @@ public class ProjectGitHubController {
             instructions,
             warnings
         ));
+    }
+
+    // V3.3.4: 打开登录终端。只执行固定白名单命令 gh auth login --web --clipboard，
+    // 不接受前端传入的任意命令，不读取/展示/保存 token。失败时前端回退到复制命令。
+    @PostMapping("/open-login-terminal")
+    ApiResponse<GitHubOpenTerminalResponse> openLoginTerminal(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        projectRepository.findByIdAndUserId(projectId, user.id())
+            .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
+        ProjectMemory memory = memoryRepository.findByProjectId(projectId)
+            .orElseThrow(() -> new AppException("PROJECT_PATH_REQUIRED", "Bind a local project path before checking GitHub", HttpStatus.BAD_REQUEST));
+        Path root = localProjectPathGuard.requireGitProjectDirectory(memory.getLocalProjectPath()).path();
+        return ApiResponse.ok(gitHubCliService.openLoginTerminal(root));
     }
 
     private GitHubStatusResponse inspect(String authorizationHeader, UUID projectId, boolean refreshRemote) {

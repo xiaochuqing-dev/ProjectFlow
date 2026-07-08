@@ -13,3 +13,9 @@
 - Do not surface English commit messages as user-visible titles/summaries/capability names; keep English only in evidence details.
 - Do not make GitHub a hard dependency or auto pull/merge/rebase; refresh is read-only.
 - Do not fabricate low-quality local-template results as if they were full model analysis when a model is not configured.
+- Do not show raw internal enums (CALL_FAILED / LOCAL_RULE / CONNECTED / local_ahead etc.) to users; always translate via status-labels.ts.
+- Do not mark evidenceGap true solely because GitHub did not participate; base it on real evidence conditions.
+- Do not let the capability analysis page lose its running task on refresh or navigation; it must be a recoverable async job.
+- Do not let "打开登录终端" execute anything other than the fixed whitelisted command; never accept arbitrary commands from the frontend.
+- Do not revive the "增强本地摘要" wording; use "本地事实摘要" and split failure reasons into plain Chinese.
+
