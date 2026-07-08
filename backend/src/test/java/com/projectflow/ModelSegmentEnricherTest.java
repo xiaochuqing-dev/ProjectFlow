@@ -13,9 +13,11 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -159,6 +161,45 @@ class ModelSegmentEnricherTest {
         assertThat(result.segments()).isEqualTo(fallback());
         assertThat(result.fallbackReason()).contains("网络连接失败");
         verify(modelGatewayService, times(1)).callJson(any(), anyString(), anyInt());
+    }
+
+    @Test
+    void largeAtomListDoesNotProduceUnboundedPrompt() throws Exception {
+        // V3.3.4 小阶段修复：验证 prompt 体积防护--大量 atom + 大量文件不应撑爆 prompt。
+        UUID userId = UUID.randomUUID();
+        when(providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)).thenReturn(List.of(provider(userId)));
+        // 50 个 atom，每个带 30 个文件路径 + commit:hash + 30 个 file: evidenceRefs。
+        List<ChangeAtom> bigAtoms = IntStream.range(0, 50).mapToObj(index -> {
+            String atomId = "commit" + index;
+            List<String> files = IntStream.range(0, 30).mapToObj(f -> "backend/src/pkg/file" + f + "_" + index + ".java").toList();
+            List<String> refs = new ArrayList<>();
+            refs.add("commit:" + atomId);
+            refs.addAll(files.stream().map(f -> "file:" + f).toList());
+            return new ChangeAtom(atomId, "feat: change " + index, Instant.parse("2026-07-06T08:00:00Z"),
+                List.of("backend"), files, refs);
+        }).toList();
+        when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenReturn(objectMapper.readTree("""
+            {"segments":[{
+              "segmentTitle":"批量变更归并","plainSummary":"整理一批后端开发变化。",
+              "includedAtomIds":["commit0"],"mainChanges":["新增功能","修复问题","优化性能"],
+              "userVisibleValue":"开发者可追溯批量变更。",
+              "evidenceRefs":["commit:commit0"],"affectedFiles":["backend/src/pkg/file0_0.java"],
+              "confidence":"HIGH","needsUserReview":true
+            }]}
+            """));
+        ModelSegmentEnricher enricher = new ModelSegmentEnricher(providerRepository, modelGatewayService, new SegmentEvidenceValidator());
+
+        enricher.enrichWithDiagnostics(userId, bigAtoms, fallback(), null);
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(modelGatewayService).callJson(any(), promptCaptor.capture(), anyInt());
+        String prompt = promptCaptor.getValue();
+        // prompt 不应超过 45000 字符预算 + 模板文本余量。
+        assertThat(prompt.length()).isLessThan(50_000);
+        // evidence 只发 commit: 前缀，不发逐个 file: 路径（已在 files= 里列过）。
+        assertThat(prompt).doesNotContain("file:backend");
+        // files= 每行最多 15 个路径 + +N more 标记（30 文件 - 15 显示 = 15 剩余）。
+        assertThat(prompt).contains("+15");
     }
 
     private AiProvider provider(UUID userId) {

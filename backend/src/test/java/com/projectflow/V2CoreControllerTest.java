@@ -683,7 +683,8 @@ class V2CoreControllerTest {
             org.assertj.core.api.Assertions.assertThat(completed.at("/fileResult/modelUsed").asBoolean()).isTrue();
             org.assertj.core.api.Assertions.assertThat(completed.at("/fileResult/summary").asText()).contains("Page");
             org.assertj.core.api.Assertions.assertThat(requests.get()).isEqualTo(2);
-            org.assertj.core.api.Assertions.assertThat(lastRequestBody.get()).contains("\"max_tokens\":100000");
+            // V3.3.4 小阶段修复：输出 token 预算从 100000 降到 4000，给输入留更多上下文空间。
+            org.assertj.core.api.Assertions.assertThat(lastRequestBody.get()).contains("\"max_tokens\":4000");
         } finally {
             modelServer.stop(0);
         }

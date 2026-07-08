@@ -836,6 +836,11 @@ public class WorkSessionScanService {
             List<String> refs = new ArrayList<>();
             refs.add("commit:" + commit.hash());
             files.forEach(file -> refs.add("file:" + file));
+            // V3.3.4 小阶段修复：diffHints 只保留文件摘要，不再重复 commit subject（atom.title() 已有）。
+            // 这能显著减小发给模型的 prompt 体积，从根源降低因 prompt 过大导致调用失败的概率。
+            List<String> hints = files.isEmpty()
+                ? List.of()
+                : List.of("files=" + String.join(",", files.stream().limit(8).toList()));
             return new ChangeAtom(
                 commit.hash(),
                 commit.subject(),
@@ -843,7 +848,7 @@ public class WorkSessionScanService {
                 List.copyOf(modules),
                 List.copyOf(files),
                 refs,
-                List.of("commit=" + commit.subject(), "files=" + String.join(",", files.stream().limit(8).toList())),
+                hints,
                 "WORKTREE".equals(commit.hash()) ? "WORKTREE" : "GIT_COMMIT"
             );
         }

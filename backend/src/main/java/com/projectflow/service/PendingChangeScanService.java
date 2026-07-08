@@ -27,6 +27,9 @@ import com.projectflow.service.DevelopmentSegmentationService.SegmentDraft;
 public class PendingChangeScanService {
     private static final int FIRST_SCAN_COMMIT_LIMIT = 30;
     private static final int FALLBACK_COMMIT_LIMIT = 200;
+    // V3.3.4 小阶段修复：range scan 安全阀。cursor 过期时 base..head 可能返回大量提交，
+    // 加 max-count 防止上游产出过多 atom 导致模型 prompt 过大而调用失败。
+    private static final int RANGE_SCAN_COMMIT_LIMIT = 120;
     private static final long COMMAND_TIMEOUT_SECONDS = 15;
 
     private final ProjectReviewCursorRepository cursorRepository;
@@ -70,7 +73,7 @@ public class PendingChangeScanService {
                 head,
                 branchName,
                 false,
-                List.of("log", base + ".." + head, "--numstat", "--pretty=format:__PF_COMMIT__%x09%H%x09%an%x09%aI%x09%s"),
+                List.of("log", base + ".." + head, "--max-count=" + RANGE_SCAN_COMMIT_LIMIT, "--numstat", "--pretty=format:__PF_COMMIT__%x09%H%x09%an%x09%aI%x09%s"),
                 warnings
             );
         }

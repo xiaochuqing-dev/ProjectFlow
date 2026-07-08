@@ -31,7 +31,13 @@ import com.projectflow.service.SegmentQualityGate.QualityResult;
 @Service
 public class ModelSegmentEnricher {
     private static final int MAX_PROMPT_ATOMS = 80;
-    private static final int MAX_OUTPUT_TOKENS = 8_000;
+    // V3.3.4 小阶段修复：从 8000 降到 4000。8 段 × ~500 tokens 输出足够，
+    // 给输入留更多上下文空间，从根源降低因 prompt+输出超限导致调用失败的概率。
+    private static final int MAX_OUTPUT_TOKENS = 4_000;
+    // V3.3.4 小阶段修复：prompt 体积防护。超过此字符数（约 15K tokens）时截断 atom 列表。
+    private static final int PROMPT_CHAR_BUDGET = 45_000;
+    // prompt 里每个 atom 最多展示的文件路径数，避免单个大 commit 撑爆 prompt。
+    private static final int PROMPT_FILES_PER_ATOM = 15;
 
     private final AiProviderRepository providerRepository;
     private final ModelGatewayService modelGatewayService;
@@ -221,13 +227,19 @@ public class ModelSegmentEnricher {
             }
             facts.append("\n\n");
         }
-        // 原子事实。
+        // 原子事实。V3.3.4 小阶段修复：每个 atom 行瘦身 + 体积防护。
         if (atoms.size() <= MAX_PROMPT_ATOMS) {
+            int included = 0;
             for (ChangeAtom atom : atoms) {
-                facts.append("ATOM ").append(atom.id()).append(" | ").append(atom.title()).append(" | files=")
-                    .append(String.join(",", atom.files())).append(" | evidence=")
-                    .append(String.join(",", atom.evidenceRefs())).append(" | source=").append(atom.sourceType())
-                    .append(" | diffHints=").append(String.join(";", atom.diffHints())).append('\n');
+                String atomLine = compactAtomLine(atom);
+                if (facts.length() + atomLine.length() > PROMPT_CHAR_BUDGET) {
+                    // 超出预算：停止追加，避免 prompt 过大导致模型调用失败。
+                    facts.append("(已截断，共 ").append(atoms.size()).append(" 条原子变化，前 ").append(included)
+                        .append(" 条已纳入分析)\n");
+                    break;
+                }
+                facts.append(atomLine);
+                included++;
             }
         } else {
             for (SegmentDraft segment : fallback) {
@@ -251,6 +263,29 @@ public class ModelSegmentEnricher {
 
             事实：
             """.formatted(retry ? "上一次输出未通过质量门槛，请改写为具体结果、简体中文人话，并避免重复标题。" : "") + facts;
+    }
+
+    // V3.3.4 小阶段修复：生成紧凑的 atom 行。
+    // files 截断到 PROMPT_FILES_PER_ATOM 个（完整列表仍在 atom 对象里供 validator 校验）；
+    // evidence 只发 commit:hash（逐个 file: 路径不进 prompt，validator 用完整 evidenceRefs 校验）；
+    // diffHints 已去掉冗余的 commit=subject。
+    private String compactAtomLine(ChangeAtom atom) {
+        List<String> allFiles = atom.files();
+        String fileList = allFiles.size() <= PROMPT_FILES_PER_ATOM
+            ? String.join(",", allFiles)
+            : String.join(",", allFiles.stream().limit(PROMPT_FILES_PER_ATOM).toList()) + " +" + (allFiles.size() - PROMPT_FILES_PER_ATOM);
+        // evidence 里只保留 commit: 前缀的引用，不发逐个 file: 路径（已在 files= 里列过）。
+        String evidence = atom.evidenceRefs().stream()
+            .filter(ref -> ref.startsWith("commit:") || ref.startsWith("agent-result:"))
+            .reduce((a, b) -> a + "," + b).orElse("");
+        StringBuilder line = new StringBuilder();
+        line.append("ATOM ").append(atom.id()).append(" | ").append(atom.title())
+            .append(" | files=").append(fileList)
+            .append(" | source=").append(atom.sourceType());
+        if (!evidence.isEmpty()) line.append(" | evidence=").append(evidence);
+        if (!atom.diffHints().isEmpty()) line.append(" | diffHints=").append(String.join(";", atom.diffHints()));
+        line.append('\n');
+        return line.toString();
     }
 
     private void appendGitFacts(StringBuilder sb, AnalysisInputSnapshot.GitFacts git) {

@@ -1,5 +1,10 @@
 # Update history
 
+## ProjectFlow V3.3.4 小阶段修复（第二轮）- 2026-07-08
+
+从根源减少模型调用失败：prompt 瘦身 + 输出预算调整 + 提交数上游收口。模型调用失败的主因不是超时太短，而是 prompt 过大（每个 atom 的文件路径无上限、evidenceRefs 重复文件路径、diffHints 重复 commit subject、无 prompt 大小防护）。修复：每个 atom 发给模型的文件路径截断到 15 个；evidence 只发 commit:hash 不发逐个 file: 路径（validator 仍用完整 evidenceRefs 校验）；diffHints 去掉冗余 commit=subject；新增 prompt 字符预算 45000 超出时截断 atom 列表；开发推进段归并输出 token 从 8000 降到 4000；能力分析 evidence 截断到 10 条、plainSummary 截断到 200 字符、输出 token 降到 4000；项目分析输出 token 从 100000 降到 4000；range scan 加 --max-count=120 安全阀防止 cursor 过期时返回过多提交。backend 136 tests 全部通过。
+
+
 ## ProjectFlow V3.3.4 小阶段修复 - 2026-07-08
 
 补充主视图可读性过滤与模型等待策略修正。模型请求超时从固定 35 秒改为可配置（默认 240 秒，可通过 PROJECTFLOW_MODEL_TIMEOUT_SECONDS 覆盖），复杂分析（开发推进段归并 / 能力分析）不再过早失败。模型失败原因细分为 REQUEST_TIMEOUT / HTTP_401_OR_403 / HTTP_429 / HTTP_5XX / NETWORK_ERROR / JSON_PARSE_FAILED / EVIDENCE_REJECTED / UNKNOWN_CALL_FAILED，前端翻译成具体人话（如"DeepSeek 请求超时""网络连接失败，可能与代理或 baseUrl 有关"）。新增 DisplayContentSanitizer 统一清洗所有进入主视图的内容（开发推进段 title/plainSummary/mainChanges、能力卡片 name/summary/README/简历/面试、本地事实摘要 fallback），去除 commit hash、长 URL、evidenceRefs、JSON 片段、内部枚举、长路径列表、长数字串；超出长度限制截断；无可读中文时用保守兜底。原始证据仍保留在折叠证据细节区。前端主卡片对 plainSummary、mainChanges、能力摘要等加 line-clamp / break-words 兜底，防止长内容撑爆布局。

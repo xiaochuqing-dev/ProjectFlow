@@ -174,9 +174,16 @@ public class ProjectCapabilityService {
         StringBuilder facts = new StringBuilder();
         for (DevelopmentSegment source : sources) {
             allowedEvidence.addAll(source.getEvidenceRefs());
+            // V3.3.4 小阶段修复：prompt 瘦身。plainSummary 截断到 200 字符、evidence 只发前 10 条。
+            // 完整 evidenceRefs 仍保留在 allowedEvidence 供校验，只是不全部铺进 prompt。
+            String summary = truncate(source.getPlainSummary(), 200);
+            String evidencePreview = source.getEvidenceRefs().stream().limit(10)
+                .reduce((a, b) -> a + "," + b).orElse("");
             facts.append("SEGMENT ").append(source.getId()).append(" | ").append(source.getTitle()).append(" | ")
-                .append(source.getPlainSummary()).append(" | entry=").append(entry(source.getAffectedFiles())).append(" | evidence=")
-                .append(String.join(",", source.getEvidenceRefs())).append('\n');
+                .append(summary).append(" | entry=").append(entry(source.getAffectedFiles())).append(" | evidence=")
+                .append(evidencePreview);
+            if (source.getEvidenceRefs().size() > 10) facts.append("(共").append(source.getEvidenceRefs().size()).append("条)");
+            facts.append('\n');
         }
         JsonNode json = modelGatewayService.callJson(provider, """
             基于全部确认开发推进段整体分析 ProjectFlow 项目能力。返回严格 JSON：
@@ -185,7 +192,7 @@ public class ProjectCapabilityService {
             能力名称必须贴合作品真实功能（如"扫描指纹复用稳定分析结果""待整理变更归并为开发推进段""GitHub 状态与本地 Git 多来源证据整合"），禁止泛化模板名（如"项目资产沉淀能力""技术理解能力"），禁止直接复读 commit message。
             所有用户可见字段（name、summary、problemSolved、featureEntry、readme、resume、interview）必须使用简体中文人话；技术名、文件路径、类名可保留原文但不能成为主标题。
             事实：
-            """ + facts, 8_000);
+            """ + facts, 4_000);
         JsonNode values = json.path("capabilities");
         if (!values.isArray() || values.size() < 3 || values.size() > 8) throw new IllegalArgumentException("capabilities must contain 3 to 8 cards");
         List<CardDraft> result = new ArrayList<>();
@@ -247,6 +254,7 @@ public class ProjectCapabilityService {
     }
 
     private String trim(String value, int max) { return value.length() <= max ? value : value.substring(0, max); }
+    private String truncate(String value, int max) { return value == null ? "" : (value.length() <= max ? value : value.substring(0, max) + "…"); }
 
     private record CardDraft(
         String name, String summary, String problemSolved, String featureEntry, List<String> sourceRefs, List<String> evidenceRefs,

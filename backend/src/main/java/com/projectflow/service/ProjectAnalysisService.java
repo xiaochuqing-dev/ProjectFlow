@@ -29,7 +29,9 @@ import com.projectflow.support.AppException;
 public class ProjectAnalysisService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProjectAnalysisService.class);
     private static final int MAX_FILE_SNIPPET_CHARS = 6_000;
-    private static final int MODEL_ANALYSIS_MAX_TOKENS = 100_000;
+    // V3.3.4 小阶段修复：从 100_000 降到 4_000。项目分析和文件分析的输出是结构化 JSON，
+    // 4K tokens 足够；100K 会挤占输入上下文导致大项目分析失败。
+    private static final int MODEL_ANALYSIS_MAX_TOKENS = 4_000;
 
     private final ProjectRepository projectRepository;
     private final ProjectMaterialRepository materialRepository;
