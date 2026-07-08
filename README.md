@@ -1,6 +1,17 @@
 # ProjectFlow
 
-ProjectFlow V3.3.3 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+ProjectFlow V3.3.4 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+
+## V3.3.4 GitHub Onboarding, Human-Readable Failure Notices, and Durable Capability Analysis
+
+- **Human-readable model failure notices**: the vague "模型归并失败，已使用增强本地摘要" is gone. Failure reasons are split into plain Chinese: model not configured / DeepSeek call failed / invalid response format / invalid evidence reference, and the result source is always stated as "本地事实摘要". The old "增强本地摘要" wording is removed everywhere.
+- **Local-fact summary is Chinese too**: local fallback titles and summaries no longer echo raw English commit messages. Common commit actions and keywords are rewritten to Chinese; unreliable English titles become "根据提交记录整理的变更" with the original text kept in evidence details only.
+- **GitHub access moved to the project-access area**: local path, model, and GitHub are shown together as "项目接入状态". GitHub is no longer buried only inside the pending-changes card.
+- **Small-developer-friendly GitHub login wizard**: when not logged in, the UI offers "打开登录终端" (opens a terminal running the fixed whitelisted command `gh auth login --web --clipboard`), "复制登录命令", and "重新检查". When not installed, it offers "查看安装说明" and "重新检查". The backend only ever runs the fixed command - never arbitrary input - and never reads, displays, or stores GitHub tokens.
+- **Clear GitHub refresh scope**: refresh sync status reads remote commit info only and never modifies local code (no pull/merge/rebase); the UI states this explicitly, and connection failures suggest a proxy.
+- **No raw internal enums in the analysis scope**: `CALL_FAILED` / `LOCAL_RULE` / `CONNECTED` / `local_ahead` and similar enums are translated to plain Chinese via a shared `status-labels.ts` mapping before reaching the user.
+- **Fixed evidence-gap judgment**: `evidenceGap` is no longer forced to `true` just because GitHub did not participate. It is based on real conditions (only Agent results without code / code changes without explanation / remote ahead unsynced / diverged / uncommitted-only without explanation) and now carries an `evidenceGapReason`.
+- **Durable async capability analysis**: "分析项目能力" is now a recoverable async job (`CAPABILITY_CARD_ANALYSIS`) with stages (LOAD_EVIDENCE / MODEL_CAPABILITY_ANALYSIS / PERSIST_CAPABILITY_CARDS / SUCCEEDED / FAILED), elapsed time, and input scale. Refreshing or leaving the page no longer loses the task; on return the running job resumes and completed cards reload. Re-analysis replaces only unconfirmed candidates; confirmed capabilities are preserved.
 
 ## V3.3.3 Analysis Progress, Evidence-Aware Modeling, and Chinese Quality
 
@@ -83,7 +94,7 @@ ProjectFlow/
 +-- .projectflow/             local agent protocol/context/runtime data
 +-- docker-compose.yml        PostgreSQL and Redis mode
 +-- .env.example              repo-safe environment template
-+-- start.bat                 simple V3.3.3 Windows entry
++-- start.bat                 simple V3.3.4 Windows entry
 +-- start-projectflow.bat     embedded Windows launcher
 +-- start-projectflow.ps1     Docker/team startup orchestration
 `-- README.md

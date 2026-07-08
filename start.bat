@@ -1,4 +1,4 @@
 @echo off
 cd /d "%~dp0"
-echo ProjectFlow V3.3.3 - local embedded mode
+echo ProjectFlow V3.3.4 - local embedded mode
 call "%~dp0start-projectflow-embedded.bat"

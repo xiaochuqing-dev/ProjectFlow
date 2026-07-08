@@ -5,7 +5,7 @@ param (
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "ProjectFlow V3.3.3 - local embedded mode"
+Write-Host "ProjectFlow V3.3.4 - local embedded mode"
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $backendDir = Join-Path $root "backend"
@@ -264,7 +264,7 @@ try {
     }
 
     Write-Host ""
-    Write-Host "ProjectFlow V3.3.3 embedded mode is running."
+    Write-Host "ProjectFlow V3.3.4 embedded mode is running."
     Write-Host "Frontend: $frontendUrl"
     Write-Host "Backend:  $backendHealthUrl"
     Write-Host "Data:     $dataDir"

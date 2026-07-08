@@ -1,3 +1,15 @@
+# Confirmed V3.3.4 decisions
+
+- Model failure notices are split into plain Chinese reasons (not configured / call failed / invalid response format / invalid evidence reference); the old "增强本地摘要" wording is removed and the result source is always stated as "本地事实摘要".
+- Local fallback titles and summaries must be Chinese; raw English commit messages are rewritten or labeled "根据提交记录整理的变更", with originals kept in evidence details only.
+- GitHub access lives in the "项目接入" area (local path / model / GitHub together), not only in the pending-changes card.
+- The GitHub login wizard offers "打开登录终端" which runs only the fixed whitelisted command `gh auth login --web --clipboard`; the backend never accepts arbitrary commands and never reads, displays, or stores GitHub tokens.
+- GitHub refresh reads remote commit info only and never modifies local code (no pull/merge/rebase); the UI states this explicitly.
+- Internal enums (CALL_FAILED / LOCAL_RULE / CONNECTED / local_ahead etc.) are never shown raw; a shared `frontend/src/lib/status-labels.ts` translates them to Chinese.
+- `evidenceGap` is based on real evidence conditions (not GitHub participation) and carries an `evidenceGapReason`; GitHub not participating with sufficient local evidence is not a gap.
+- "分析项目能力" is a recoverable async job (`CAPABILITY_CARD_ANALYSIS`) with stages and progress; refreshing or leaving the page does not lose the task; re-analysis replaces only unconfirmed candidates and preserves confirmed capabilities.
+
+# Confirmed V3.3.3 decisions
 # Confirmed V3.3.3 decisions
 
 - Daily UI uses “项目沉淀”; “资产” remains suitable only for broad product positioning.

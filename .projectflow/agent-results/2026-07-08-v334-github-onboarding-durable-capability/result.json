@@ -1,0 +1,57 @@
+{
+  "taskGoal": "完成 ProjectFlow V3.3.4 升级：GitHub 接入向导 + 模型失败提示人话化 + 本地事实摘要中文化 + evidenceGap 修正 + 能力分析异步化与刷新不丢。",
+  "actualChanges": [
+    "模型失败提示拆分成人话状态：删除所有用户可见的“增强本地摘要”说法，统一改为“本地事实摘要”；按原因拆分为未配置 / 调用失败 / 返回格式无效 / 证据引用无效，用户一眼看懂模型有没有参与、为什么没参与、当前结果来源（ModelSegmentEnricher）。",
+    "本地事实摘要中文化：DevelopmentSegmentationService 的本地 fallback 不再直接复读英文 commit message；常见 commit action 和关键词转写为中文，无法可靠转写的英文标题标为“根据提交记录整理的变更”，英文原文留在证据细节（concreteChange / translateCommonEnglish）。",
+    "GitHub 接入入口前移到“项目接入”区域：ProjectAccessCard 新增项目接入状态区（本地路径 / 模型 / GitHub 同属接入状态），不再只藏在待整理变更卡片里；PendingChangesPanel 的 GitHub 区简化为状态摘要 + 指向接入区的提示。",
+    "GitHub 小白接入向导：新增后端固定白名单接口 POST /api/projects/{projectId}/github/open-login-terminal，只执行固定命令 gh auth login --web --clipboard（平台适配打开终端），不接受前端任意命令，不读取/展示/保存 token；前端提供“打开登录终端 / 复制登录命令 / 重新检查 / 查看安装说明”按钮，失败回退到复制命令。",
+    "GitHub 刷新同步状态说明清晰：UI 明确说明只读取远程提交信息、不会 pull/merge/rebase、不修改本地代码，连接失败提示可能需要代理。",
+    "分析口径内部枚举翻译成人话：新增 frontend/src/lib/status-labels.ts 共享映射（modelStatus / mergeMode / generationMode / githubStatus / remoteRelation / qualityStatus），PendingChangesPanel 诊断信息不再直接暴露 CALL_FAILED / LOCAL_RULE / CONNECTED / local_ahead 等内部枚举。",
+    "修正 evidenceGap 判断：WorkSessionScanService 不再因为 GitHub 未参与就默认 evidenceGap=true；改为基于真实条件判断（只有 Agent result 无代码 / 代码变化无解释证据 / 远程领先未同步 / 本地远程分叉 / 只有未提交变化无解释），并新增 evidenceGapReason 字段记录原因，传入模型 prompt 和分析口径 JSON。",
+    "能力分析异步化：新增 ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS；ProjectCapabilityService.analyze 接收 jobId 并推进阶段（LOAD_EVIDENCE / MODEL_CAPABILITY_ANALYSIS / PERSIST_CAPABILITY_CARDS）；ProjectAnalysisJobRunner 异步执行；新增 POST /api/projects/{projectId}/capabilities/analyze/jobs 接口；前端能力页改为创建 job + 轮询，刷新/离开页面后回来能恢复任务状态，完成后自动重新拉取能力卡片，显示阶段/已等待时间/输入规模，并说明重新分析只替换未确认候选、已确认能力保留。",
+    "文档与上下文同步：README、AGENTS.md、PROJECT_CONTEXT.md、.projectflow/context（update-history / confirmed-decisions / known-risks / requirements）、start.bat、start-projectflow.ps1 已更新为 V3.3.4。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ModelSegmentEnricher.java",
+    "backend/src/main/java/com/projectflow/service/WorkSessionScanService.java",
+    "backend/src/main/java/com/projectflow/service/AnalysisInputSnapshot.java",
+    "backend/src/main/java/com/projectflow/service/DevelopmentSegmentationService.java",
+    "backend/src/main/java/com/projectflow/service/GitHubCliService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectCapabilityService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectAnalysisJobRunner.java",
+    "backend/src/main/java/com/projectflow/service/ProjectAnalysisJobService.java",
+    "backend/src/main/java/com/projectflow/controller/ProjectGitHubController.java",
+    "backend/src/main/java/com/projectflow/controller/ProjectCapabilityController.java",
+    "backend/src/main/java/com/projectflow/entity/ProjectAnalysisJobType.java",
+    "backend/src/main/java/com/projectflow/dto/V33WorkflowDtos.java",
+    "frontend/src/lib/status-labels.ts",
+    "frontend/src/lib/api.ts",
+    "frontend/src/hooks/useGitHubActions.ts",
+    "frontend/src/components/dashboard/ProjectAccessCard.tsx",
+    "frontend/src/components/dashboard/PendingChangesPanel.tsx",
+    "frontend/src/app/dashboard/page.tsx",
+    "frontend/src/app/project-intelligence/capabilities/page.tsx"
+  ],
+  "verification": {
+    "build": "frontend npm run build 通过（TypeScript 类型检查 + 生产构建成功）",
+    "tests": "backend mvn test 全部通过（Tests run: 107, Failures: 0, Errors: 0, Skipped: 0）；更新了 ModelSegmentEnricherTest 断言匹配新的“调用失败”文案",
+    "manualCheck": "not_run：未在本机连接真实 DeepSeek / GitHub CLI 做端到端运行；未实际点击“打开登录终端”验证终端拉起（平台相关，Windows cmd /k 已实现，mac/linux best-effort）"
+  },
+  "unfinished": [
+    "未做端到端真机验证：模型调用失败 / GitHub 未安装/未登录/已接入/刷新失败/成功 / 打开登录终端 / 复制命令 / 能力分析运行中刷新 / 完成后刷新 / 重新分析保留已确认等场景仅通过单测和构建验证，未在运行中的 ProjectFlow 实例上逐一手动确认。",
+    "GitHub 打开登录终端在 macOS/Linux 仅做 best-effort（osascript / x-terminal-emulator / gnome-terminal / konsole / xterm 探测），未在那些平台实测。",
+    "本地事实摘要中文化依赖常见词转写表，无法覆盖所有英文 commit message；未覆盖的会标为“根据提交记录整理的变更”，英文原文仍在证据细节。"
+  ],
+  "sedimentCandidates": [
+    {
+      "title": "GitHub 小白接入向导（打开登录终端 / 复制命令 / 重新检查）",
+      "summary": "GitHub 接入入口前移到项目接入区域，提供固定白名单命令的打开终端能力，失败回退复制命令，全程不读取/展示/保存 token。",
+      "evidence": ["backend/src/main/java/com/projectflow/service/GitHubCliService.java", "backend/src/main/java/com/projectflow/controller/ProjectGitHubController.java", "frontend/src/components/dashboard/ProjectAccessCard.tsx"]
+    },
+    {
+      "title": "能力分析异步化与刷新不丢",
+      "summary": "分析项目能力改为可恢复异步任务，阶段可见，刷新/离开页面后回来能恢复任务，完成后重新拉取卡片，重新分析只替换未确认候选。",
+      "evidence": ["backend/src/main/java/com/projectflow/entity/ProjectAnalysisJobType.java", "backend/src/main/java/com/projectflow/service/ProjectCapabilityService.java", "frontend/src/app/project-intelligence/capabilities/page.tsx"]
+    }
+  ]
+}

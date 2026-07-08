@@ -176,4 +176,13 @@ public final class V33WorkflowDtos {
         List<String> warnings
     ) {
     }
+
+    // V3.3.4: 打开登录终端结果。opened=false 时前端回退到复制命令。
+    public record GitHubOpenTerminalResponse(
+        boolean opened,
+        String command,
+        String platform,
+        List<String> warnings
+    ) {
+    }
 }

@@ -760,7 +760,7 @@ export type ProjectFileAnalysis = {
 };
 
 export type ProjectAnalysisJobStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED";
-export type ProjectAnalysisJobType = "PROJECT" | "FILE" | "CAPABILITY_INTERPRET" | "WORK_SESSION_SCAN";
+export type ProjectAnalysisJobType = "PROJECT" | "FILE" | "CAPABILITY_INTERPRET" | "WORK_SESSION_SCAN" | "CAPABILITY_CARD_ANALYSIS";
 
 export type ProjectAnalysisJob = {
   id: string;
@@ -1223,6 +1223,14 @@ export function analyzeProjectCapabilities(token: string, projectId: string): Pr
   });
 }
 
+// V3.3.4: 能力分析异步任务。刷新/离开页面不丢，完成后重新拉取 capability-cards。
+export function startCapabilityCardAnalysisJob(token: string, projectId: string): Promise<ProjectAnalysisJob> {
+  return requestJson<ProjectAnalysisJob>(`/projects/${projectId}/capabilities/analyze/jobs`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export function listProjectCapabilityCards(token: string, projectId: string): Promise<CapabilityCard[]> {
   return requestJson<CapabilityCard[]>(`/projects/${projectId}/capability-cards`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -1452,6 +1460,23 @@ export type GitHubLoginGuide = {
 // V3.3.3: GitHub 登录指引。不读取、不展示、不保存 token；只提供命令让用户在终端执行。
 export function getGitHubLoginGuide(token: string, projectId: string): Promise<GitHubLoginGuide> {
   return requestJson<GitHubLoginGuide>(`/projects/${projectId}/github/login-guide`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// V3.3.4: 打开登录终端结果。opened=false 时前端回退到复制命令。
+export type GitHubOpenTerminalResult = {
+  opened: boolean;
+  command: string;
+  platform: string;
+  warnings: string[];
+};
+
+// V3.3.4: 打开登录终端，执行固定白名单命令 gh auth login --web --clipboard。
+// 后端只执行固定命令，不接受前端传入的任意命令。
+export function openGitHubLoginTerminal(token: string, projectId: string): Promise<GitHubOpenTerminalResult> {
+  return requestJson<GitHubOpenTerminalResult>(`/projects/${projectId}/github/open-login-terminal`, {
+    method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });
 }

@@ -21,9 +21,12 @@ import com.projectflow.service.SegmentQualityGate.QualityResult;
  * V3.3.3: 模型结果保留优先。质量门槛改为"标记器"，不再把整批模型结果替换成本地摘要。
  *
  * 保留策略：
- * - 模型返回可解析的结构化结果 → 即使有质量问题也保留，按 segment 打状态（需复核/需中文修正/需补证据）。
+ * - 模型返回可解析的结构化结果 -> 即使有质量问题也保留，按 segment 打状态（需复核/需中文修正/需补证据）。
  * - 只有以下情况才回退本地规则：模型未配置、调用失败、完全未返回、返回内容不是可解析 JSON、
  *   引用的证据完全不可用导致无任何可用 segment。
+ *
+ * V3.3.4: 失败提示人话化。不再笼统说"模型归并失败，已使用增强本地摘要"。
+ * 按原因拆分：未配置 / 调用失败 / 返回格式无效 / 证据引用无效，统一表述为"本地事实摘要"。
  */
 @Service
 public class ModelSegmentEnricher {
@@ -91,7 +94,8 @@ public class ModelSegmentEnricher {
     public EnrichmentResult enrichWithDiagnostics(UUID userId, List<ChangeAtom> atoms, List<SegmentDraft> fallback, AnalysisInputSnapshot snapshot) {
         AiProvider provider = configuredProvider(userId);
         if (provider == null) {
-            return new EnrichmentResult(fallback, "LOCAL_RULE", "NOT_CONFIGURED", "", "未配置可用模型，已使用增强本地摘要。", List.of(), "");
+            // V3.3.4: 模型未配置 -> 明确告知用户原因，不再笼统说"增强本地摘要"。
+            return new EnrichmentResult(fallback, "LOCAL_RULE", "NOT_CONFIGURED", "", "当前未配置模型，本次仅读取本地 Git 与 Agent result 事实，展示本地事实摘要。", List.of(), "");
         }
         if (atoms.isEmpty()) {
             return new EnrichmentResult(fallback, "LOCAL_RULE", "NO_CHANGES", provider.getName(), "没有可供模型分析的新变化。", List.of(), "");
@@ -132,12 +136,13 @@ public class ModelSegmentEnricher {
             lastFailure = exception;
         }
         // V3.3.3: 只有模型完全不可用才回退本地规则。
+        // V3.3.4: 拆分失败原因，让用户看懂 DeepSeek 调用失败 / 返回格式无效 / 证据引用无效 的区别。
         String status = jsonParseFailed ? "JSON_PARSE_FAILED"
             : evidenceRejected ? "EVIDENCE_REJECTED"
             : modelFailureStatus(lastFailure);
-        String reason = jsonParseFailed ? "模型返回内容无法解析为结构化结果，已使用增强本地摘要。"
-            : evidenceRejected ? "模型引用的证据完全不可用，已使用增强本地摘要。"
-            : "模型归并失败，已使用增强本地摘要。";
+        String reason = jsonParseFailed ? "模型返回内容无法识别为结构化结果，本次先展示本地事实摘要，可稍后重新分析。"
+            : evidenceRejected ? "模型结果引用的证据不可用，本次先展示本地事实摘要，可稍后重新分析。"
+            : provider.getName() + " 调用失败，本次先展示本地事实摘要，可稍后重新分析。";
         return new EnrichmentResult(fallback, "LOCAL_RULE", status, provider.getName(), reason, List.of(), "");
     }
 
@@ -210,7 +215,11 @@ public class ModelSegmentEnricher {
                 facts.append(scope.includesUncommitted() ? "含未提交变化；" : "无未提交变化；");
                 facts.append(scope.githubParticipated() ? "GitHub 参与；" : "GitHub 未参与；");
                 facts.append(scope.modelParticipated() ? "模型参与。" : "模型未参与。");
-                if (scope.evidenceGap()) facts.append(" 存在证据缺口。");
+                if (scope.evidenceGap()) {
+                    facts.append(" 存在证据缺口");
+                    if (!scope.evidenceGapReason().isBlank()) facts.append("（").append(scope.evidenceGapReason()).append("）");
+                    facts.append("。");
+                }
             }
             facts.append("\n\n");
         }

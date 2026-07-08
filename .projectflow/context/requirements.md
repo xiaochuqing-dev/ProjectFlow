@@ -1,3 +1,15 @@
+# V3.3.4 requirements
+
+1. Split model failure notices into plain Chinese reasons (not configured / call failed / invalid response format / invalid evidence reference); remove "增强本地摘要" and always state the result source as "本地事实摘要".
+2. Rewrite local fallback titles and summaries into Chinese; do not echo raw English commit messages in user-visible main content; keep originals in evidence details.
+3. Surface GitHub access in the "项目接入" area (local path / model / GitHub together), not only in the pending-changes card.
+4. Provide a GitHub login wizard: "打开登录终端" (fixed whitelisted command only), "复制登录命令", "重新检查"; "查看安装说明" when not installed. Never read, display, or store GitHub tokens.
+5. State clearly that GitHub refresh reads remote commit info only and never modifies local code (no pull/merge/rebase).
+6. Never show raw internal enums (CALL_FAILED / LOCAL_RULE / CONNECTED / local_ahead etc.); translate via shared status-labels.ts.
+7. Base evidenceGap on real evidence conditions (not GitHub participation) and include an evidenceGapReason.
+8. Make "分析项目能力" a recoverable async job (CAPABILITY_CARD_ANALYSIS) with stages, elapsed time, and input scale; survive refresh/leave; re-analysis replaces only unconfirmed candidates and preserves confirmed capabilities.
+
+# V3.3.3 requirements
 # V3.3.3 requirements
 
 1. Scan from the last confirmed review cursor, not only today.

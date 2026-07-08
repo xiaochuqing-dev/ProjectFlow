@@ -282,12 +282,44 @@ public class WorkSessionScanService {
         boolean overlaps = agentFiles.stream().anyMatch(gitFileSet::contains);
         boolean onlyAgent = !evidence.hasChanges() && !agentAtoms.isEmpty();
         AgentResultFacts agentFacts = new AgentResultFacts(agentAtoms.size(), taskGoals, agentFiles, overlaps, onlyAgent);
-        boolean evidenceGap = onlyAgent || (evidence.hasChanges() && agentAtoms.isEmpty()) || (!githubParticipated && "CONNECTED".equals("") == false);
+        // V3.3.4: evidenceGap 只在真实证据不足时标记，不再因为 GitHub 未参与就默认缺口。
+        // GitHub 未登录/未安装/连接失败但本地证据充足 -> 不算缺口。
+        String evidenceGapReason = computeEvidenceGapReason(evidence, agentAtoms, onlyAgent, worktree, github);
+        boolean evidenceGap = evidenceGapReason != null;
         ScanScopeFacts scope = new ScanScopeFacts(
             evidence.commitCount(), evidence.changedFileCount(), agentAtoms.size(),
-            worktree.worktreeDirty(), githubParticipated, !"none".equals(modelKey), evidenceGap
+            worktree.worktreeDirty(), githubParticipated, !"none".equals(modelKey), evidenceGap,
+            evidenceGapReason == null ? "" : evidenceGapReason
         );
         return new AnalysisInputSnapshot(gitFacts, worktree, githubFacts, agentFacts, scope);
+    }
+
+    // V3.3.4: 证据缺口基于真实条件判断，不因 GitHub 未参与默认缺口。
+    // 返回缺口原因（无缺口返回 null），供口径展示和模型 prompt 使用。
+    private String computeEvidenceGapReason(GitEvidence evidence, List<ChangeAtom> agentAtoms, boolean onlyAgent, WorktreeFacts worktree, GitHubStatusResponse github) {
+        boolean hasCodeChanges = evidence.hasChanges() || worktree.worktreeDirty();
+        boolean hasAgentResults = !agentAtoms.isEmpty();
+        // 只有 Agent result，没有对应代码变化。
+        if (onlyAgent) {
+            return "只有 Agent result 但缺少对应代码变化";
+        }
+        // 代码有变化但缺少 Agent result / 解释证据。
+        if (hasCodeChanges && !hasAgentResults) {
+            return "代码有变化但缺少 Agent result 等解释证据";
+        }
+        // 只有未提交变化，且无提交/Agent result 解释。
+        if (!evidence.hasChanges() && worktree.worktreeDirty() && !hasAgentResults) {
+            return "只有未提交工作区变化，且无提交或 Agent result 解释";
+        }
+        // 远程领先但本地未同步。
+        if ("remote_ahead".equals(github.remoteRelation())) {
+            return "远程领先，本地未同步，分析可能不完整";
+        }
+        // 本地和远程分叉。
+        if ("diverged".equals(github.remoteRelation())) {
+            return "本地和远程已分叉，分析可能不完整";
+        }
+        return null;
     }
 
     // V3.3.3: 构建分析口径 JSON，记录本次用了哪些来源。
@@ -312,6 +344,7 @@ public class WorkSessionScanService {
             obj.put("hasUncommitted", worktreeDirty);
             obj.put("hasRemoteUnsynced", "remote_ahead".equals(github.remoteRelation()) || "diverged".equals(github.remoteRelation()));
             obj.put("evidenceGap", scope.evidenceGap());
+            obj.put("evidenceGapReason", scope.evidenceGapReason());
             obj.put("inputCommits", scope.inputCommitCount());
             obj.put("inputFiles", scope.inputFileCount());
             return objectMapper.writeValueAsString(obj);

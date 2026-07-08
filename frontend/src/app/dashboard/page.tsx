@@ -123,7 +123,16 @@ export default function DashboardPage() {
   const latestScanJob = jobs.find((job) => job.jobType === "WORK_SESSION_SCAN") ?? null;
   const scanningWorkSessions = latestScanJob?.status === "QUEUED" || latestScanJob?.status === "RUNNING";
   // V3.3.3: GitHub 状态与登录指引操作（刷新只读远程，登录不保存 token）。
-  const { refreshingGitHub, refreshGitHub: handleRefreshGitHub, showGitHubLogin: handleShowGitHubLogin } = useGitHubActions(selectedProjectId, setGithubStatus, setNotice, setError);
+  // V3.3.4: 新增打开登录终端、复制命令能力；loginGuide 供接入区展示命令。
+  const {
+    refreshingGitHub,
+    openingTerminal,
+    loginGuide,
+    refreshGitHub: handleRefreshGitHub,
+    showGitHubLogin: handleShowGitHubLogin,
+    openLoginTerminal: handleOpenLoginTerminal,
+    clearLoginGuide: handleClearLoginGuide,
+  } = useGitHubActions(selectedProjectId, setGithubStatus, setNotice, setError);
   const analyzing = latestProjectJob?.status === "QUEUED" || latestProjectJob?.status === "RUNNING";
   const rawAnalysis = latestProjectJob?.status === "SUCCEEDED" ? latestProjectJob.projectResult : null;
   const analysisRejectedByNoise = rawAnalysis ? projectAnalysisContainsNoise(rawAnalysis) : false;
@@ -659,6 +668,16 @@ export default function DashboardPage() {
               syncingContext={syncingContext}
               onSyncContext={handleSyncContext}
               onCopyGlobalRule={handleCopyGlobalRule}
+              hasProjectPath={hasProjectPath}
+              github={githubStatus}
+              refreshingGitHub={refreshingGitHub}
+              openingTerminal={openingTerminal}
+              loginGuide={loginGuide}
+              onRefreshGitHub={handleRefreshGitHub}
+              onShowGitHubLogin={handleShowGitHubLogin}
+              onOpenLoginTerminal={handleOpenLoginTerminal}
+              onClearLoginGuide={handleClearLoginGuide}
+              modelName={configuredProvider ? configuredProvider.name : null}
             />
 
             <PendingChangesPanel

@@ -6,7 +6,7 @@ Use this file as the first read for substantial ProjectFlow work. It is a compac
 
 ## Product Position
 
-ProjectFlow V3.3.3 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
+ProjectFlow V3.3.4 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
 
 Current direction:
 
@@ -16,7 +16,16 @@ Current direction:
 - AI/model calls are candidate generators only; user confirmation is required before treating output as official project facts.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
 
-V3.3.3 focus:
+V3.3.4 focus:
+
+- Model failure notices are split into plain Chinese reasons (not configured / call failed / invalid response format / invalid evidence reference); "增强本地摘要" is removed and the result source is always "本地事实摘要".
+- Local fallback titles and summaries are Chinese; raw English commit messages are rewritten or labeled "根据提交记录整理的变更".
+- GitHub access moved into the "项目接入" area (local path / model / GitHub together) with a login wizard ("打开登录终端" runs only the fixed whitelisted `gh auth login --web --clipboard`).
+- Internal enums (CALL_FAILED / LOCAL_RULE / CONNECTED / local_ahead etc.) are translated to Chinese via shared `status-labels.ts`.
+- evidenceGap is based on real evidence conditions (not GitHub participation) and carries an evidenceGapReason.
+- "分析项目能力" is a recoverable async job (CAPABILITY_CARD_ANALYSIS); refresh/leave does not lose the task; re-analysis replaces only unconfirmed candidates.
+
+V3.3.3 focus (still applies):
 
 - Analysis progress is visible (stage / elapsed time / input scale); long model runs no longer look like spinning.
 - Model results are retained by default and marked for review; the quality gate is a marker, not a batch rejector.

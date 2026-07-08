@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.projectflow.dto.V33WorkflowDtos.GitHubOpenTerminalResponse;
 import com.projectflow.dto.V33WorkflowDtos.GitHubStatusResponse;
 import com.projectflow.service.LocalCommandExecutor.CommandResult;
 
@@ -26,6 +27,78 @@ public class GitHubCliService {
     public GitHubCliService(LocalCommandExecutor commandExecutor, ObjectMapper objectMapper) {
         this.commandExecutor = commandExecutor;
         this.objectMapper = objectMapper;
+    }
+
+    // V3.3.4: 打开一个新终端窗口执行固定白名单命令 gh auth login --web --clipboard。
+    // 安全约束：
+    // - 只执行这个固定命令（平台适配为打开终端的 wrapper），不接受前端传入的任意命令。
+    // - 不读取、不展示、不保存 token；命令本身是交互式登录，token 由 gh 自己管理。
+    // - 打开失败时返回 opened=false，让前端回退到复制命令。
+    public GitHubOpenTerminalResponse openLoginTerminal(Path projectRoot) {
+        List<String> warnings = new ArrayList<>();
+        String command = "gh auth login --web --clipboard";
+        String platform = detectPlatform();
+        try {
+            ProcessBuilder builder = terminalBuilder(platform, projectRoot);
+            if (builder == null) {
+                warnings.add("当前平台无法自动打开终端，请复制命令在终端手动执行。");
+                return new GitHubOpenTerminalResponse(false, command, platform, warnings);
+            }
+            Process process = builder.start();
+            // 不等待登录完成（交互式），只确认终端窗口已拉起。start() 不抛异常即视为已打开。
+            warnings.add("已打开登录终端，完成浏览器授权后回到 ProjectFlow 点击「重新检查」。");
+            return new GitHubOpenTerminalResponse(true, command, platform, warnings);
+        } catch (Exception exception) {
+            warnings.add("自动打开终端失败：" + exception.getMessage() + "；请复制命令在终端手动执行。");
+            return new GitHubOpenTerminalResponse(false, command, platform, warnings);
+        }
+    }
+
+    private String detectPlatform() {
+        String os = System.getProperty("os.name", "").toLowerCase();
+        if (os.contains("win")) return "windows";
+        if (os.contains("mac")) return "mac";
+        return "linux";
+    }
+
+    // 构建打开终端的 ProcessBuilder。固定命令为 gh auth login --web --clipboard。
+    private ProcessBuilder terminalBuilder(String platform, Path projectRoot) {
+        String loginCommand = "gh auth login --web --clipboard";
+        switch (platform) {
+            case "windows" -> {
+                // cmd /c start 打开一个新的 cmd 窗口执行登录命令，窗口保持打开（/k）。
+                return new ProcessBuilder("cmd", "/c", "start", "GitHub 登录", "cmd", "/k", loginCommand)
+                    .directory(projectRoot.toFile());
+            }
+            case "mac" -> {
+                // osascript 在 Terminal.app 中运行命令。
+                String script = "tell application \"Terminal\" to do script \"" + loginCommand.replace("\"", "\\\"") + "\"";
+                return new ProcessBuilder("osascript", "-e", script).directory(projectRoot.toFile());
+            }
+            case "linux" -> {
+                // best-effort: 尝试常见的 x-terminal-emulator / gnome-terminal。
+                String[] terminals = {"x-terminal-emulator", "gnome-terminal", "konsole", "xterm"};
+                for (String terminal : terminals) {
+                    if (isCommandAvailable(terminal)) {
+                        return new ProcessBuilder(terminal, "-e", loginCommand).directory(projectRoot.toFile());
+                    }
+                }
+                return null;
+            }
+            default -> {
+                return null;
+            }
+        }
+    }
+
+    private boolean isCommandAvailable(String command) {
+        try {
+            Process process = new ProcessBuilder("which", command).redirectErrorStream(true).start();
+            boolean finished = process.waitFor(COMMAND_TIMEOUT.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS);
+            return finished && process.exitValue() == 0;
+        } catch (Exception exception) {
+            return false;
+        }
     }
 
     public GitHubStatusResponse inspect(Path projectRoot) {
