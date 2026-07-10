@@ -2,7 +2,7 @@
 
 ## 结论
 
-V3.3.5 已按提示词的合理方向完成实现。重点不是增加更多模型开关，而是让模型失败、截断、部分恢复、沉淀确认和能力分析都能被用户理解、追溯和安全恢复。前端生产构建通过，新增核心链路的定向后端测试此前通过；全量后端测试的最终重跑受到当前 Windows 沙箱的 Maven JAR 文件访问限制阻断，详见“验收结果与限制”。
+V3.3.5 已按提示词的合理方向完成实现。重点不是增加更多模型开关，而是让模型失败、截断、部分恢复、沉淀确认和能力分析都能被用户理解、追溯和安全恢复。前端生产构建通过，后端全量 161 项测试也已在权限恢复后通过。
 
 ## 本次方向校正
 
@@ -64,23 +64,22 @@ V3.3.5 已按提示词的合理方向完成实现。重点不是增加更多模�
 | --- | --- | --- |
 | 修改前后端基线测试 | 通过 | 修改前 `mvn.cmd -q test` 已通过。 |
 | 新增核心链路定向测试 | 通过 | 覆盖模型重试、截断恢复、Provider、沉淀、能力任务和兼容 DTO。 |
-| 全量 Maven 测试 | 未完成闭环 | 首次实际运行 161 项，发现两项旧断言：任务级模型未配置被错误断言到每个开发段，以及测试将 GitHub CLI 安装状态当作固定前提。两项断言已改为 V3.3.5 语义；重跑时 Windows 沙箱拒绝 Java 读取或关闭 Maven 依赖 JAR，报 `AccessDeniedException`。 |
+| 全量 Maven 测试 | 通过 | 权限恢复后执行 `mvn.cmd -q -Dmaven.repo.local=%USERPROFILE%\\.m2\\repository test`，161 项测试全部通过。两项旧断言已按 V3.3.5 语义修正。 |
 | 前端生产构建 | 通过 | `npm.cmd run build` 通过，TypeScript 与 20 个页面生成均通过。 |
 | 差异格式检查 | 通过 | `git diff --check` 通过。 |
 | 默认 Provider 静态审查 | 通过 | 四个模型入口均筛选 `defaultEnabled`、非 MOCK 和已配置 Key。 |
-| H2 兼容性 | 已覆盖但待最终重跑确认 | 首次全量测试运行使用 H2 并完成上下文启动；最终重跑受 Maven JAR 访问限制阻断。 |
+| H2 兼容性 | 通过 | 全量测试使用 H2，并完成实体建表、持久化和控制器测试。 |
 | PostgreSQL 配置兼容性 | 静态通过 | 实体字段与既有 PostgreSQL 配置兼容；Docker 配置校验受沙箱拒绝读取 Docker 用户配置影响，未启动实际容器。 |
 | 真实 DeepSeek 调用 | 未执行 | 执行环境未配置 `DEEPSEEK_API_KEY`，未发送外部或付费请求。 |
 
 ## 风险与后续验收
 
-1. 必须在 Maven 依赖 JAR 可访问的本机终端执行 `mvn.cmd test`，完成修正后 161 项测试的最终闭环。
-2. 在配置了可测试 DeepSeek Provider 的隔离项目中，执行一次真实调用，确认 finish reason、token、延迟和紧凑重试诊断落库与页面展示正确；不要在报告或日志中记录 Key。
-3. 使用真实 PostgreSQL 副本验证旧数据升级，重点检查历史多个默认 Provider、旧省略号内容、旧能力卡片和旧分析任务。
+1. 在配置了可测试 DeepSeek Provider 的隔离项目中，执行一次真实调用，确认 finish reason、token、延迟和紧凑重试诊断落库与页面展示正确；不要在报告或日志中记录 Key。
+2. 使用真实 PostgreSQL 副本验证旧数据升级，重点检查历史多个默认 Provider、旧省略号内容、旧能力卡片和旧分析任务。
 
 ## 提交与交付状态
 
 - 任务开始前的存档提交：`f35648f chore: archive before ProjectFlow v3.3.5 implementation`。
-- 本次实现尚未提交或推送。尝试暂存时，当前沙箱拒绝创建 `.git/index.lock`，因此无法安全执行 Git commit 或 push。
+- 本次实现已提交：`61173fe feat: implement ProjectFlow v3.3.5 reliability`。
+- 本报告会以单独的记录修订提交保存，并与实现提交一起推送到 `origin/master`。
 - 结构化 Agent 结果已写入 `.projectflow/agent-results/20260711-v335-reliability/result.json`。
-

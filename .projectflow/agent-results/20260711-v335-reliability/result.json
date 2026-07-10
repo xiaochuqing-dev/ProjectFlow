@@ -20,11 +20,10 @@
   ],
   "verification": {
     "build": "frontend npm run build passed; frontend TypeScript and production page generation passed.",
-    "tests": "新增模型、Provider、沉淀、能力任务定向测试此前已通过。全量 Maven 测试首次实际运行 161 项并发现两项旧断言后已修正；修正后的重跑被 Windows 沙箱拒绝读取/关闭 Maven 依赖 JAR 阻断，属于环境文件访问限制。",
+    "tests": "新增模型、Provider、沉淀、能力任务定向测试与后端全量 161 项 Maven 测试均已通过。",
     "manualCheck": "已执行 git diff --check、默认 Provider 选择静态审查、配置安全扫描和 Docker Compose 配置校验；未发现真实 Key，且未配置 DeepSeek 环境变量，因此没有进行真实模型调用。"
   },
   "unfinished": [
-    "需要在非沙箱或 Maven 依赖 JAR 可访问的环境中重新执行 backend 的 mvn test，以完成修正后 161 项全量测试的最终闭环。",
     "未配置可安全使用的 DeepSeek Key，真实 Provider 调用和网络延迟验证未执行。"
   ],
   "sedimentCandidates": [
