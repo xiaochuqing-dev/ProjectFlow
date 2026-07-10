@@ -1,0 +1,107 @@
+ProjectFlow 项目代码审查报告
+
+审查日期：2026 年 7 月 10 日
+审查范围：前端、后端、测试、启动配置、安全边界、GitHub 仓库状态
+
+一、基线确认
+
+执行 git fetch --prune 后，本地 master 与 origin/master 在审查开始时完全一致，提交均为 ae8bd1ed708c58ecba16edf11ee33de34a87400d，领先 0、落后 0，工作区无未提交文件。
+
+按项目规则，审查前创建了空存档提交 45b7811。该提交不含代码变化，因此当前本地比 GitHub 多 1 个提交，尚未推送。
+
+二、总体判断
+
+项目已经具备可运行的完整主链路，前端生产构建通过，后端 136 项测试全部通过。所有权校验、模型地址防护、GitHub 固定命令、敏感内容过滤等关键安全边界已有实现和测试。
+
+当前不建议直接作为稳定开源版本发布。主要原因不是功能数量不足，而是存在一个会破坏 V3.3.4 核心能力分析流程的确定性缺陷，前端质量门禁也处于失败状态。
+
+三、最高优先级问题
+
+1. 能力卡片分析完成后无法正常查询任务结果
+
+位置：backend/src/main/java/com/projectflow/service/ProjectAnalysisJobService.java 第 180 至 206 行；ProjectAnalysisJobRunner.java 的 CAPABILITY_CARD_ANALYSIS 分支。
+
+任务完成时保存的是包含 cardCount 和 mode 的简要 JSON，但查询响应时没有单独处理 CAPABILITY_CARD_ANALYSIS，而是进入文件分析分支，尝试反序列化为 ProjectFileAnalysisResponse，最终返回“分析结果无法读取”。这会导致能力页完成轮询失败，也会让项目任务列表在存在已完成能力任务时整体报错。
+
+建议：在任务响应转换中为 CAPABILITY_CARD_ANALYSIS 增加明确分支，不解析为文件分析结果；补充“完成后轮询成功、刷新后恢复、任务列表包含已完成能力任务”的回归测试。
+
+2. 前端测试门禁已经失败
+
+前端生产构建通过，但 17 项 mjs 测试为 16 通过、1 失败。dashboard/page.tsx 当前 852 行，超过项目测试规定的 800 行上限。
+
+两个 ts 测试也未通过：project-analysis-record-layout.test.ts 的静态结构断言已经与页面实现不一致；project-file-view-state.test.ts 使用无扩展名导入，Node 直接执行时无法解析。
+
+建议：先拆出工作台的数据加载和操作编排，再修正测试运行方式与断言，不要仅提高行数阈值。
+
+3. lint 命令已失效，且没有持续集成
+
+frontend/package.json 仍使用 next lint。当前 Next.js 16 会把 lint 误认为项目目录，因此命令直接失败。仓库也没有 GitHub Actions，失败的测试和 lint 无法在提交或合并前自动拦截。
+
+建议：显式引入并配置 ESLint，统一提供 build、lint、test 脚本；建立最小 CI，至少运行前端构建、前端测试、后端测试和依赖审计。
+
+4. 生产依赖审计发现 2 个中等级问题
+
+npm audit --omit=dev 报告 Next.js 内置的 PostCSS 版本低于 8.5.10，关联样式序列化 XSS 公告，共计 2 个中等级告警。npm 给出的自动修复建议会降级 Next.js，不能直接执行。
+
+建议：跟踪 Next.js 官方修复版本并升级验证，同时避免把外部不可信 CSS 直接交给相关序列化路径。
+
+四、结构与维护性优化
+
+1. 文件职责过度集中
+
+frontend/src/lib/api.ts 为 1595 行，混合全部 DTO、请求函数和错误处理。dashboard/page.tsx 为 852 行，包含大量状态、加载、缓存、异步任务和界面编排。
+
+后端 ProjectAgentBridgeService 为 911 行，WorkSessionScanService 为 862 行，ProjectIntelligenceService 和 ProjectAnalysisService 均超过 700 行。它们同时承担文件系统、Git、模型、持久化、映射和文案处理。
+
+建议按现有业务边界小步拆分，不新建空泛框架。优先拆 API 类型与领域请求、工作台加载编排、Git 证据读取、Agent result 解析和分析结果映射。
+
+2. 前后端存在重复的项目文件识别规则
+
+frontend/src/lib/project-insights.ts 与后端 ProjectAnalysisService、ProjectZipScanService 都维护文件类型、前后端路径、测试路径、噪声目录和风险级别判断。规则调整后容易出现同一项目在不同页面得到不同结论。
+
+建议以后端事实为准，前端只展示后端返回结果；确需前端离线预览时，至少用同一份可生成的规则清单和契约测试。
+
+3. 异步任务缺少数据库级防重复约束
+
+当前通过“先查询活动任务，再保存”的方式防重复。并发点击或重复请求仍可能同时创建两条任务，实体表上没有对应唯一约束。
+
+建议增加幂等键或数据库约束，并在前端和后端分别提供明确的重复操作提示。
+
+4. 数据库升级依赖 hibernate ddl-auto=update
+
+个人本地使用早期可接受，但公开发布后，实体改名、枚举变更、字段拆分和回滚都缺少可审查的迁移记录。
+
+建议在首个稳定版本前引入版本化数据库迁移，并为 H2 与 PostgreSQL 各跑一条升级测试路径。
+
+5. 错误返回和中文体验仍不统一
+
+部分后端错误仍是英文，前端会直接展示服务端 message。校验异常只返回统一的“Request validation failed”，用户无法知道哪个字段有问题；未捕获异常也没有统一业务错误结构。
+
+建议逐步统一中文用户提示、错误码和字段级校验信息，日志保留技术细节，界面只显示可操作说明。
+
+6. 本地模式和团队模式的安全边界需要分开
+
+当前令牌保存在 localStorage，CSP 仍允许 unsafe-inline；登录和高成本分析入口没有频率限制。只监听本机时风险有限，但 Docker 或反向代理对外开放后风险明显增加。
+
+建议明确“仅本机个人模式”和“联网团队模式”。团队模式使用更完整的 Spring Security、HttpOnly 会话或等价方案，并增加登录与模型任务限流。
+
+五、建议实施顺序
+
+第一步：修复能力分析任务反序列化缺陷并补回归测试。
+
+第二步：恢复前端 lint 和全部测试绿灯，建立 GitHub Actions。
+
+第三步：拆分 dashboard 和 api.ts，统一前后端项目文件识别口径。
+
+第四步：补数据库迁移、并发幂等和团队模式安全策略。
+
+六、验证记录
+
+GitHub 远程刷新：通过。
+前端生产构建：通过。
+前端 mjs 测试：16 通过，1 失败。
+前端 ts 测试：2 失败，其中 1 项为模块解析配置问题。
+前端 lint：失败，next lint 已不适用于当前 Next.js。
+后端测试：136 项全部通过。
+npm 生产依赖审计：0 个高危，0 个严重，2 个中等。
+真实 DeepSeek 网络与 API Key：本次未测试。
