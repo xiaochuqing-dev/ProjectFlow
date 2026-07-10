@@ -195,6 +195,8 @@ public class ProjectAnalysisJobService {
                     capabilityInterpretResult = objectMapper.readValue(job.getResultJson(), CapabilityInterpretResponse.class);
                 } else if (job.getJobType() == ProjectAnalysisJobType.WORK_SESSION_SCAN) {
                     workSessionScanResult = objectMapper.readValue(job.getResultJson(), WorkSessionScanResponse.class);
+                } else if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS) {
+                    // 能力卡片已单独持久化，resultJson 只是任务摘要，不按文件分析结构解析。
                 } else {
                     fileResult = objectMapper.readValue(job.getResultJson(), ProjectFileAnalysisResponse.class);
                     if (containsProjectNoise(fileResult)) {

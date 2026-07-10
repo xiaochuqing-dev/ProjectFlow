@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.entity.ProjectAnalysisJob;
 import com.projectflow.entity.ProjectAnalysisJobStatus;
 import com.projectflow.entity.ProjectAnalysisJobType;
+import com.projectflow.entity.ProjectSpace;
 import com.projectflow.repository.ProjectAnalysisJobRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.service.ProjectAnalysisJobRunner;
@@ -36,6 +38,35 @@ class ProjectAnalysisJobServiceTest {
     private PlatformTransactionManager transactionManager;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Test
+    void listsRunningJobsWhenCompletedCapabilitySummaryExists() {
+        UUID userId = UUID.randomUUID();
+        ProjectSpace project = new ProjectSpace(userId);
+        UUID projectId = project.getId();
+        ProjectAnalysisJob runningJob = new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.PROJECT, null);
+        runningJob.markRunning();
+        ProjectAnalysisJob completedCapabilityJob = new ProjectAnalysisJob(
+            projectId,
+            userId,
+            ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS,
+            null
+        );
+        completedCapabilityJob.markSucceeded("{\"cardCount\":2,\"mode\":\"MODEL\"}", null);
+        when(projectRepository.findByIdAndUserId(projectId, userId)).thenReturn(Optional.of(project));
+        when(jobRepository.findByProjectIdOrderByCreatedAtDesc(projectId))
+            .thenReturn(List.of(runningJob, completedCapabilityJob));
+
+        ProjectAnalysisJobService service = new ProjectAnalysisJobService(
+            jobRepository, projectRepository, jobRunner, objectMapper, transactionManager
+        );
+
+        var jobs = service.listProjectJobs(userId, projectId);
+
+        assertThat(jobs).hasSize(2);
+        assertThat(jobs.get(0).status()).isEqualTo(ProjectAnalysisJobStatus.RUNNING);
+        assertThat(jobs.get(1).jobType()).isEqualTo(ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS);
+    }
 
     @Test
     void markInterruptedJobsFailedMarksStaleJobsAndDoesNotReRunThem() {

@@ -1,0 +1,18 @@
+{
+  "taskGoal": "修复分析任务在刷新或离开页面后丢失运行状态、按钮提前恢复的问题。",
+  "actualChanges": [
+    "修正分析任务列表的结果解析：能力卡片分析完成后保存的任务摘要不再被错误地当成文件分析结果读取。刷新页面时，任务列表可以正常返回正在运行和历史任务。",
+    "新增回归测试，覆盖项目中同时存在已完成能力卡片分析和正在运行分析任务的场景，确保刷新后仍能恢复运行状态。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ProjectAnalysisJobService.java",
+    "backend/src/test/java/com/projectflow/ProjectAnalysisJobServiceTest.java"
+  ],
+  "verification": {
+    "build": "后端测试编译通过。前端未改动，因此未重复执行前端构建。",
+    "tests": "已执行 ProjectAnalysisJobServiceTest，通过。",
+    "manualCheck": "只读核对当前本地数据库：页面上消失的能力分析任务仍在后端运行，随后状态更新为 SUCCEEDED，证明任务未被页面刷新取消。"
+  },
+  "unfinished": [],
+  "sedimentCandidates": []
+}
