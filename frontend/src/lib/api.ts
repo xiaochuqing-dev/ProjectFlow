@@ -108,6 +108,10 @@ export function register(username: string, email: string, password: string): Pro
   return postJson<AuthResult>("/auth/register", { username, email, password });
 }
 
+export function resetPassword(email: string, newPassword: string, recoveryCode: string): Promise<void> {
+  return postJson<void>("/auth/reset-password", { email, newPassword, recoveryCode });
+}
+
 export type ProjectStatus = "PLANNING" | "BUILDING" | "PAUSED" | "COMPLETED" | "ARCHIVED";
 
 export type Project = {

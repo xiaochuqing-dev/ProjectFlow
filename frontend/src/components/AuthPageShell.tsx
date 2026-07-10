@@ -1,7 +1,7 @@
 import { AuthPanel } from "./AuthPanel";
 
 type AuthPageShellProps = {
-  mode: "login" | "register";
+  mode: "login" | "register" | "reset";
 };
 
 export function AuthPageShell({ mode }: AuthPageShellProps) {

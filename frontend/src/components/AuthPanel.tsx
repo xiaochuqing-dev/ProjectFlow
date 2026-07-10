@@ -4,12 +4,12 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
-import { login, register } from "@/lib/api";
+import { login, register, resetPassword } from "@/lib/api";
 import { saveSession } from "@/lib/auth";
 import { clearDashboardSnapshot } from "@/lib/dashboard-snapshot";
 
 type AuthPanelProps = {
-  mode: "login" | "register";
+  mode: "login" | "register" | "reset";
 };
 
 export function AuthPanel({ mode }: AuthPanelProps) {
@@ -17,17 +17,26 @@ export function AuthPanel({ mode }: AuthPanelProps) {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const isRegister = mode === "register";
+  const isReset = mode === "reset";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setSuccess("");
     setSubmitting(true);
 
     try {
+      if (isReset) {
+        await resetPassword(email, password, recoveryCode);
+        setSuccess("密码已重置，请使用新密码登录。");
+        return;
+      }
       const result = isRegister
         ? await register(username, email, password)
         : await login(email, password);
@@ -50,10 +59,12 @@ export function AuthPanel({ mode }: AuthPanelProps) {
           专业项目流程管理
         </div>
         <h1 className="text-3xl font-semibold tracking-normal md:text-[34px]">
-          {isRegister ? "创建 ProjectFlow 账号" : "登录 ProjectFlow"}
+          {isRegister ? "创建 ProjectFlow 账号" : isReset ? "重置登录密码" : "登录 ProjectFlow"}
         </h1>
         <p className="mt-4 max-w-[430px] text-base leading-7 text-blue-100/78">
-          管理项目空间、任务推进、开发日志和 AI 复盘输出，让真实开发过程沉淀成可展示的工程资产。
+          {isReset
+            ? "重置验证码只会显示在启动 ProjectFlow 的终端中。每次启动生成一个验证码，30 分钟内可使用一次。"
+            : "管理项目空间、任务推进、开发日志和 AI 复盘输出，让真实开发过程沉淀成可展示的工程资产。"}
         </p>
       </div>
 
@@ -91,7 +102,7 @@ export function AuthPanel({ mode }: AuthPanelProps) {
         </label>
 
         <label className="block">
-          <span className="mb-2.5 block text-sm text-blue-50/86">密码</span>
+          <span className="mb-2.5 block text-sm text-blue-50/86">{isReset ? "新密码" : "密码"}</span>
           <span className="flex items-center gap-3 rounded-2xl border border-blue-200/20 bg-white/9 px-4 py-4 text-base text-white shadow-inner shadow-blue-950/30">
             <LockKeyhole className="h-5 w-5 text-cyan-200" />
             <input
@@ -106,9 +117,33 @@ export function AuthPanel({ mode }: AuthPanelProps) {
           </span>
         </label>
 
+        {isReset ? (
+          <label className="block">
+            <span className="mb-2.5 block text-sm text-blue-50/86">终端重置验证码</span>
+            <span className="flex items-center gap-3 rounded-2xl border border-blue-200/20 bg-white/9 px-4 py-4 text-base text-white shadow-inner shadow-blue-950/30">
+              <ShieldCheck className="h-5 w-5 text-cyan-200" />
+              <input
+                autoComplete="one-time-code"
+                className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-blue-100/42"
+                onChange={(event) => setRecoveryCode(event.target.value)}
+                placeholder="从启动终端复制"
+                required
+                type="text"
+                value={recoveryCode}
+              />
+            </span>
+          </label>
+        ) : null}
+
         {error ? (
           <p className="rounded-xl border border-rose-300/20 bg-rose-500/12 px-4 py-3 text-sm text-rose-100">
             {error}
+          </p>
+        ) : null}
+
+        {success ? (
+          <p className="rounded-xl border border-emerald-300/20 bg-emerald-500/12 px-4 py-3 text-sm text-emerald-100">
+            {success}
           </p>
         ) : null}
 
@@ -117,16 +152,28 @@ export function AuthPanel({ mode }: AuthPanelProps) {
           disabled={submitting}
           type="submit"
         >
-          {submitting ? "处理中..." : isRegister ? "创建账号" : "进入工作台"}
+          {submitting ? "处理中..." : isRegister ? "创建账号" : isReset ? "确认重置密码" : "进入工作台"}
           <ArrowRight className="h-5 w-5 transition group-hover:translate-x-0.5" />
         </button>
       </form>
 
       <div className="mt-8 flex items-center justify-between border-t border-blue-200/12 pt-7 text-sm text-blue-100/70 2xl:mt-auto">
-        <span>{isRegister ? "已有账号？" : "还没有账号？"}</span>
-        <Link className="font-medium text-cyan-100 hover:text-white" href={isRegister ? "/login" : "/register"}>
-          {isRegister ? "去登录" : "创建账号"}
-        </Link>
+        {isReset ? (
+          <>
+            <span>想起密码了？</span>
+            <Link className="font-medium text-cyan-100 hover:text-white" href="/login">去登录</Link>
+          </>
+        ) : (
+          <>
+            <span>{isRegister ? "已有账号？" : "还没有账号？"}</span>
+            <span className="flex items-center gap-4">
+              {!isRegister ? <Link className="font-medium text-cyan-100 hover:text-white" href="/reset-password">忘记密码</Link> : null}
+              <Link className="font-medium text-cyan-100 hover:text-white" href={isRegister ? "/login" : "/register"}>
+                {isRegister ? "去登录" : "创建账号"}
+              </Link>
+            </span>
+          </>
+        )}
       </div>
     </div>
   );

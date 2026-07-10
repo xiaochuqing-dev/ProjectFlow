@@ -1,0 +1,26 @@
+{
+  "taskGoal": "排查已注册邮箱无法登录、注册又提示邮箱已注册的原因。",
+  "actualChanges": [
+    "新增登录页的忘记密码入口和重置密码页面。用户填写邮箱、新密码及启动终端中的验证码后，可以恢复已有本地账号的登录能力。",
+    "后端为每次启动生成一次性密码重置验证码，验证码默认 30 分钟有效，成功重置后立即失效；验证码错误、过期、账号不存在时返回同一提示，避免泄露账号是否存在。",
+    "同一邮箱 1 分钟内最多提交 5 次重置尝试，超过后提示稍后再试。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/AuthService.java",
+    "backend/src/main/java/com/projectflow/controller/AuthController.java",
+    "backend/src/main/java/com/projectflow/dto/AuthDtos.java",
+    "frontend/src/components/AuthPanel.tsx",
+    "frontend/src/app/reset-password/page.tsx",
+    "backend/src/test/java/com/projectflow/AuthControllerTest.java",
+    "start-projectflow-embedded.ps1"
+  ],
+  "verification": {
+    "build": "已执行 frontend npm.cmd run build，通过。",
+    "tests": "已执行 AuthControllerTest，通过。覆盖错误验证码、重置成功、旧密码失效、新密码登录和频率限制。",
+    "manualCheck": "只读检查当前嵌入式账号表：邮箱 1732747308@qq.com 存在，密码哈希为 60 位 BCrypt 格式。"
+  },
+  "unfinished": [
+    "重置验证码仅显示在后端启动终端。用户需要保持该终端可见，或重启服务以获得新的验证码。"
+  ],
+  "sedimentCandidates": []
+}

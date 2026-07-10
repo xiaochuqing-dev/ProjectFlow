@@ -27,6 +27,10 @@ spring:
         enabled: false
 
 projectflow:
+  auth:
+    password-reset-code: ${PROJECTFLOW_PASSWORD_RESET_CODE:}
+    # 重置码有效期，单位：分钟。
+    password-reset-code-valid-minutes: ${PROJECTFLOW_PASSWORD_RESET_CODE_VALID_MINUTES:30}
   upload:
     max-zip-file-bytes: ${PROJECTFLOW_MAX_ZIP_FILE_BYTES:536870912}
     max-zip-read-bytes: ${PROJECTFLOW_MAX_ZIP_READ_BYTES:67108864}

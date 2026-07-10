@@ -23,6 +23,13 @@ public final class AuthDtos {
     ) {
     }
 
+    public record ResetPasswordRequest(
+        @NotBlank @Email @Size(max = 255) String email,
+        @NotBlank @Size(min = 8, max = 120) String newPassword,
+        @NotBlank @Size(min = 6, max = 128) String recoveryCode
+    ) {
+    }
+
     public record AuthUser(UUID id, String username, String email) {
     }
 

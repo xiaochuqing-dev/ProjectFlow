@@ -15,6 +15,9 @@ spring:
         enabled: false
 
 projectflow:
+  auth:
+    password-reset-code: test-recovery-code
+    password-reset-code-valid-minutes: 30
   upload:
     max-zip-file-bytes: 67108864
     max-zip-read-bytes: 1048576

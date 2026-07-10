@@ -12,6 +12,7 @@ import com.projectflow.dto.AuthDtos.AuthResponse;
 import com.projectflow.dto.AuthDtos.AuthUser;
 import com.projectflow.dto.AuthDtos.LoginRequest;
 import com.projectflow.dto.AuthDtos.RegisterRequest;
+import com.projectflow.dto.AuthDtos.ResetPasswordRequest;
 import com.projectflow.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -33,6 +34,12 @@ public class AuthController {
     @PostMapping("/login")
     ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.ok(authService.login(request));
+    }
+
+    @PostMapping("/reset-password")
+    ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ApiResponse.ok(null);
     }
 
     @GetMapping("/me")

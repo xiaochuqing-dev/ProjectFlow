@@ -89,6 +89,87 @@ class AuthControllerTest {
     }
 
     @Test
+    void resetsPasswordWithStartupRecoveryCode() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "username": "reset-user",
+                      "email": "reset@example.com",
+                      "password": "old-password-123"
+                    }
+                    """))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "email": "reset@example.com",
+                      "newPassword": "new-password-123",
+                      "recoveryCode": "wrong-code"
+                    }
+                    """))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error.code").value("INVALID_RECOVERY_CODE"));
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "email": "reset@example.com",
+                      "newPassword": "new-password-123",
+                      "recoveryCode": "test-recovery-code"
+                    }
+                    """))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "email": "reset@example.com",
+                      "password": "old-password-123"
+                    }
+                    """))
+            .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "email": "reset@example.com",
+                      "password": "new-password-123"
+                    }
+                    """))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void limitsFrequentPasswordResetAttempts() throws Exception {
+        String request = """
+            {
+              "email": "rate-limit@example.com",
+              "newPassword": "new-password-123",
+              "recoveryCode": "wrong-code"
+            }
+            """;
+
+        for (int attempt = 0; attempt < 5; attempt++) {
+            mockMvc.perform(post("/api/auth/reset-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(request))
+                .andExpect(status().isUnauthorized());
+        }
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+            .andExpect(status().isTooManyRequests())
+            .andExpect(jsonPath("$.error.code").value("PASSWORD_RESET_RATE_LIMITED"));
+    }
+
+    @Test
     void returnsCurrentUserForBearerToken() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
