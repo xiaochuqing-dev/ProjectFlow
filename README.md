@@ -1,6 +1,16 @@
 # ProjectFlow
 
-ProjectFlow V3.3.4 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+ProjectFlow V3.3.5 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+
+## V3.3.5 Reliable Model Results, Clear Confirmation, and Provider Management
+
+- Model calls now retain finish reason, real token usage, effective Max Tokens and Temperature, timeout, latency, Provider/model, JSON repair, truncation, and compact-retry diagnostics without exposing API keys or raw responses.
+- Length-limited output is handled separately from malformed JSON. ProjectFlow performs one compact retry and can retain complete items recovered from a truncated root array instead of discarding the entire batch.
+- Provider configuration, task-policy limits, and the final effective request values are shown as separate values. Structured tasks cap Temperature at 0.3, use a 240-second default timeout, and report the actual request values in diagnostics.
+- Normalized title, summary, main-change, user-value, and capability text is stored in full. List cards use CSS previews; detail pages show the complete stored content. Legacy ellipsis-ended records are marked and offer re-analysis because lost text cannot be reconstructed.
+- Sediment confirmation starts from a recommended action and reason, shows the target summary and expected field/evidence/file changes before confirmation, and returns the exact write result plus a direct sediment link afterward.
+- Capability cards retain their analysis job ID. The capability page separates the current successful batch, the latest failed attempt, and history; a failed re-analysis never replaces the previous successful candidates or confirmed cards.
+- Provider settings support create, test, edit without re-showing the key, explicit key clearing, unique default selection, protected deletion, and user-confirmed cleanup of historical duplicates. Only the explicitly selected default Provider is used by new model tasks.
 
 ## V3.3.4 GitHub Onboarding, Human-Readable Failure Notices, and Durable Capability Analysis
 
@@ -94,7 +104,7 @@ ProjectFlow/
 +-- .projectflow/             local agent protocol/context/runtime data
 +-- docker-compose.yml        PostgreSQL and Redis mode
 +-- .env.example              repo-safe environment template
-+-- start.bat                 simple V3.3.4 Windows entry
++-- start.bat                 simple V3.3.5 Windows entry
 +-- start-projectflow.bat     embedded Windows launcher
 +-- start-projectflow.ps1     Docker/team startup orchestration
 `-- README.md

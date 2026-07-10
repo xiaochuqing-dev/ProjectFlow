@@ -66,15 +66,35 @@ class ProjectSedimentControllerTest {
         String third = changes.get(2).path("id").asText();
         String fourth = changes.get(3).path("id").asText();
 
+        mockMvc.perform(post("/api/project-changes/" + first + "/confirmation-preview")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"action\":\"NEW_SEDIMENT\",\"targetSedimentId\":null}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.actionLabel").isNotEmpty())
+            .andExpect(jsonPath("$.data.evidenceToAdd").isNumber())
+            .andExpect(jsonPath("$.data.filesToAdd").isNumber())
+            .andExpect(jsonPath("$.data.affectsConfirmedCapabilities").value(false))
+            .andExpect(jsonPath("$.data.usedByNextCapabilityAnalysis").value(true));
+
         MvcResult created = confirm(token, first, "NEW_SEDIMENT", null)
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.sediment.title").isNotEmpty())
+            .andExpect(jsonPath("$.data.resultMessage").isNotEmpty())
+            .andExpect(jsonPath("$.data.sedimentPath").isNotEmpty())
             .andReturn();
         String sedimentId = body(created).at("/data/sediment/id").asText();
         assertThat(cursorRepository.findByProjectId(UUID.fromString(projectId))).isEmpty();
 
         confirm(token, second, "MERGE_EXISTING", UUID.randomUUID().toString())
             .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/project-changes/" + second + "/confirmation-preview")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"action\":\"MERGE_EXISTING\",\"targetSedimentId\":\"" + sedimentId + "\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.targetTitle").isNotEmpty())
+            .andExpect(jsonPath("$.data.updatedFields", hasSize(3)));
         confirm(token, second, "MERGE_EXISTING", sedimentId)
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.sediment.id").value(sedimentId));

@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.projectflow.dto.AiProviderDtos.AiProviderRequest;
 import com.projectflow.dto.AiProviderDtos.AiProviderResponse;
+import com.projectflow.dto.AiProviderDtos.DuplicateCleanupRequest;
+import com.projectflow.dto.AiProviderDtos.DuplicateCleanupResponse;
+import com.projectflow.dto.AiProviderDtos.DuplicateProviderGroupResponse;
 import com.projectflow.dto.AiProviderDtos.ProviderTestResponse;
 import com.projectflow.dto.ApiResponse;
 import com.projectflow.dto.AuthDtos.AuthUser;
@@ -38,6 +41,23 @@ public class AiProviderController {
     ApiResponse<List<AiProviderResponse>> list(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         AuthUser user = authService.currentUser(authorizationHeader);
         return ApiResponse.ok(aiProviderService.list(user.id()));
+    }
+
+    @GetMapping("/duplicates")
+    ApiResponse<List<DuplicateProviderGroupResponse>> duplicates(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(aiProviderService.duplicateGroups(user.id()));
+    }
+
+    @PostMapping("/duplicates/cleanup")
+    ApiResponse<DuplicateCleanupResponse> cleanupDuplicates(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @Valid @RequestBody DuplicateCleanupRequest request
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(aiProviderService.cleanupDuplicates(user.id(), request));
     }
 
     @PostMapping

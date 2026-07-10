@@ -6,7 +6,13 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -15,6 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.projectflow.dto.AiProviderDtos.AiProviderRequest;
 import com.projectflow.dto.AiProviderDtos.AiProviderResponse;
+import com.projectflow.dto.AiProviderDtos.DuplicateCleanupRequest;
+import com.projectflow.dto.AiProviderDtos.DuplicateCleanupResponse;
+import com.projectflow.dto.AiProviderDtos.DuplicateProviderGroupResponse;
 import com.projectflow.dto.AiProviderDtos.ProviderTestResponse;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
@@ -35,9 +44,11 @@ public class AiProviderService {
             .build();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<AiProviderResponse> list(UUID userId) {
-        List<AiProviderResponse> saved = aiProviderRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)
+        List<AiProvider> providers = aiProviderRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId);
+        normalizeHistoricalDefaults(providers);
+        List<AiProviderResponse> saved = providers
             .stream()
             .map(this::toResponse)
             .toList();
@@ -55,6 +66,7 @@ public class AiProviderService {
             .findByUserIdAndTypeAndBaseUrlAndModelName(userId, request.type(), baseUrl, modelName)
             .orElseGet(() -> new AiProvider(userId));
         String apiKey = blankToNull(request.apiKey());
+        if (request.defaultEnabled()) ensureSingleDefault(userId, provider.getId());
         provider.update(
             request.name().trim(),
             baseUrl,
@@ -72,10 +84,13 @@ public class AiProviderService {
     @Transactional
     public AiProviderResponse update(UUID userId, UUID providerId, AiProviderRequest request) {
         AiProvider provider = findOwned(userId, providerId);
+        String submittedKey = blankToNull(request.apiKey());
+        String effectiveKey = request.clearApiKey() ? null : submittedKey == null ? provider.getApiKey() : submittedKey;
+        if (request.defaultEnabled()) ensureSingleDefault(userId, provider.getId());
         provider.update(
             request.name().trim(),
             aiProviderUrlGuard.validateBaseUrl(normalizeBaseUrl(request.baseUrl())),
-            blankToNull(request.apiKey()),
+            effectiveKey,
             request.modelName().trim(),
             request.type(),
             request.temperature(),
@@ -88,16 +103,70 @@ public class AiProviderService {
 
     @Transactional
     public void delete(UUID userId, UUID providerId) {
-        aiProviderRepository.delete(findOwned(userId, providerId));
+        AiProvider provider = findOwned(userId, providerId);
+        long otherProviders = aiProviderRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId).stream()
+            .filter(item -> !item.getId().equals(providerId))
+            .count();
+        if (provider.isDefaultEnabled() && otherProviders > 0) {
+            throw new AppException(
+                "DEFAULT_PROVIDER_REPLACEMENT_REQUIRED",
+                "这是当前默认模型，请先把其他 Provider 设为默认后再删除。",
+                HttpStatus.CONFLICT
+            );
+        }
+        aiProviderRepository.delete(provider);
+    }
+
+    @Transactional
+    public List<DuplicateProviderGroupResponse> duplicateGroups(UUID userId) {
+        List<AiProvider> providers = aiProviderRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId);
+        normalizeHistoricalDefaults(providers);
+        Map<String, List<AiProvider>> groups = groupDuplicates(providers);
+        List<DuplicateProviderGroupResponse> result = new ArrayList<>();
+        groups.forEach((key, values) -> {
+            if (values.size() < 2) return;
+            List<AiProvider> sorted = values.stream().sorted(keeperComparator()).toList();
+            result.add(new DuplicateProviderGroupResponse(
+                key, toResponse(sorted.get(0)), sorted.stream().skip(1).map(this::toResponse).toList()
+            ));
+        });
+        return result;
+    }
+
+    @Transactional
+    public DuplicateCleanupResponse cleanupDuplicates(UUID userId, DuplicateCleanupRequest request) {
+        List<AiProvider> all = aiProviderRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId);
+        Map<UUID, AiProvider> owned = all.stream().collect(java.util.stream.Collectors.toMap(AiProvider::getId, value -> value));
+        Set<UUID> requestedIds = Set.copyOf(request.providerIds());
+        if (requestedIds.size() != request.providerIds().size()) {
+            throw new AppException("DUPLICATE_PROVIDER_SELECTION_INVALID", "重复清理列表中包含重复项。", HttpStatus.BAD_REQUEST);
+        }
+        Map<String, List<AiProvider>> groups = groupDuplicates(all);
+        for (UUID providerId : requestedIds) {
+            AiProvider provider = owned.get(providerId);
+            if (provider == null) throw new AppException("AI_PROVIDER_NOT_FOUND", "模型配置不存在。", HttpStatus.NOT_FOUND);
+            List<AiProvider> group = groups.getOrDefault(duplicateKey(provider), List.of());
+            long selectedInGroup = group.stream().filter(item -> requestedIds.contains(item.getId())).count();
+            if (group.size() < 2 || selectedInGroup >= group.size()) {
+                throw new AppException("DUPLICATE_PROVIDER_SELECTION_INVALID", "每组重复配置必须至少保留一项。", HttpStatus.BAD_REQUEST);
+            }
+            if (provider.isDefaultEnabled()) {
+                throw new AppException("DEFAULT_PROVIDER_DELETE_FORBIDDEN", "默认 Provider 不会被重复清理删除。", HttpStatus.CONFLICT);
+            }
+        }
+        aiProviderRepository.deleteAll(requestedIds.stream().map(owned::get).toList());
+        List<AiProviderResponse> remaining = aiProviderRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)
+            .stream().map(this::toResponse).toList();
+        return new DuplicateCleanupResponse(requestedIds.size(), remaining);
     }
 
     public ProviderTestResponse test(UUID userId, UUID providerId) {
         AiProvider provider = findOwned(userId, providerId);
         if (provider.getType() == AiProviderType.MOCK) {
-            return new ProviderTestResponse(true, provider.getName(), "Mock provider is ready.");
+            return new ProviderTestResponse(true, provider.getName(), "本地模拟 Provider 可用。");
         }
         if (provider.getApiKey() == null || provider.getApiKey().isBlank()) {
-            return new ProviderTestResponse(false, provider.getName(), "API key is required before testing this provider.");
+            return new ProviderTestResponse(false, provider.getName(), "请先配置 API Key，再测试连接。");
         }
 
         try {
@@ -122,16 +191,51 @@ public class AiProviderService {
             return new ProviderTestResponse(
                 ok,
                 provider.getName(),
-                ok ? "Provider responded successfully." : "Provider test failed with HTTP " + response.statusCode() + "."
+                ok ? "连接测试成功。该结果只代表 Key、地址和模型名基本可用，不代表长文本结构化分析一定成功。"
+                    : "连接测试失败，模型服务返回 HTTP " + response.statusCode() + "。"
             );
         } catch (Exception exception) {
-            return new ProviderTestResponse(false, provider.getName(), "Provider test failed. Please check base URL, model name, and API key.");
+            return new ProviderTestResponse(false, provider.getName(), "连接测试失败，请检查 Base URL、模型名、API Key 和网络。" );
         }
     }
 
     private AiProvider findOwned(UUID userId, UUID providerId) {
         return aiProviderRepository.findByIdAndUserId(providerId, userId)
             .orElseThrow(() -> new AppException("AI_PROVIDER_NOT_FOUND", "AI provider was not found", HttpStatus.NOT_FOUND));
+    }
+
+    private void ensureSingleDefault(UUID userId, UUID selectedProviderId) {
+        aiProviderRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId).stream()
+            .filter(AiProvider::isDefaultEnabled)
+            .filter(provider -> selectedProviderId == null || !provider.getId().equals(selectedProviderId))
+            .forEach(provider -> provider.setDefaultEnabled(false));
+    }
+
+    private void normalizeHistoricalDefaults(List<AiProvider> providers) {
+        List<AiProvider> defaults = providers.stream().filter(AiProvider::isDefaultEnabled).toList();
+        if (defaults.size() <= 1) return;
+        AiProvider keeper = defaults.stream().sorted(keeperComparator()).findFirst().orElseThrow();
+        defaults.stream().filter(provider -> !provider.getId().equals(keeper.getId()))
+            .forEach(provider -> provider.setDefaultEnabled(false));
+    }
+
+    private Map<String, List<AiProvider>> groupDuplicates(List<AiProvider> providers) {
+        Map<String, List<AiProvider>> groups = new LinkedHashMap<>();
+        for (AiProvider provider : providers) {
+            groups.computeIfAbsent(duplicateKey(provider), ignored -> new ArrayList<>()).add(provider);
+        }
+        return groups;
+    }
+
+    private String duplicateKey(AiProvider provider) {
+        return provider.getType().name() + "|" + normalizeBaseUrl(provider.getBaseUrl()).toLowerCase(Locale.ROOT)
+            + "|" + provider.getModelName().trim().toLowerCase(Locale.ROOT);
+    }
+
+    private Comparator<AiProvider> keeperComparator() {
+        return Comparator.<AiProvider>comparingInt(provider ->
+            (provider.isDefaultEnabled() ? 2 : 0) + (provider.getApiKey() == null || provider.getApiKey().isBlank() ? 0 : 1)
+        ).reversed().thenComparing(AiProvider::getUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder()));
     }
 
     private AiProviderResponse toResponse(AiProvider provider) {

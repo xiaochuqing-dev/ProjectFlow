@@ -154,4 +154,8 @@ public class AiProvider {
         this.defaultEnabled = defaultEnabled;
         this.purposeTags = purposeTags == null ? new ArrayList<>() : new ArrayList<>(purposeTags);
     }
+
+    public void setDefaultEnabled(boolean enabled) {
+        this.defaultEnabled = enabled;
+    }
 }

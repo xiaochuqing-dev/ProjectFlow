@@ -149,24 +149,11 @@ function SedimentActionControls({
 
   return (
     <div className="space-y-2">
-      <label className="block text-xs font-medium text-slate-700">
-        处理方式
-        <select className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm" onChange={(event) => setAction(event.target.value as SedimentAction)} value={action}>
-          <option value="NEW_SEDIMENT">新建沉淀</option>
-          <option value="MERGE_EXISTING">合并已有沉淀</option>
-          <option value="EVIDENCE_ONLY">只补充证据</option>
-          <option value="IGNORE">忽略</option>
-        </select>
-      </label>
-      {needsTarget ? (
-        <label className="block text-xs font-medium text-slate-700">
-          目标沉淀
-          <select className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm" onChange={(event) => setTargetId(event.target.value)} value={targetId}>
-            <option value="">选择已有沉淀</option>
-            {sediments.map((sediment) => <option key={sediment.id} value={sediment.id}>{sediment.title}</option>)}
-          </select>
-        </label>
-      ) : null}
+      <div className="rounded-md bg-blue-50 p-3 text-xs leading-5 text-blue-950">
+        <p className="font-semibold">系统推荐：{recommendationLabel(change.suggestedAction ?? "NEW_SEDIMENT", sediments.find((item) => item.id === change.targetSedimentId)?.title)}</p>
+        <p className="mt-1">{change.suggestionReason || "系统根据主题、来源和证据重合度给出推荐，你可以在下方调整。"}</p>
+      </div>
+      {needsTarget ? <TargetSummary sediment={sediments.find((item) => item.id === targetId)} /> : null}
       <button
         className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-md bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
         disabled={disabled}
@@ -174,8 +161,56 @@ function SedimentActionControls({
         type="button"
       >
         {applying || ignoring ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-        {action === "IGNORE" ? "忽略建议" : "确认沉淀"}
+        {actionButtonLabel(action)}
       </button>
+      <details className="rounded-md border border-line bg-white p-2 text-xs">
+        <summary className="cursor-pointer font-semibold text-slate-700">调整处理方式</summary>
+        <label className="mt-2 block font-medium text-slate-700">
+          选择后会发生什么
+          <select className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm" onChange={(event) => setAction(event.target.value as SedimentAction)} value={action}>
+            <option value="NEW_SEDIMENT">新建一条独立项目沉淀</option>
+            <option value="MERGE_EXISTING">更新已有沉淀的摘要和证据</option>
+            <option value="EVIDENCE_ONLY">只追加来源和证据</option>
+            <option value="IGNORE">暂不写入项目沉淀</option>
+          </select>
+        </label>
+        {needsTarget ? (
+          <div className="mt-2 space-y-2">
+            <p className="font-medium text-slate-700">选择目标项目沉淀</p>
+            {sediments.map((sediment) => (
+              <label className={`block cursor-pointer rounded-md border p-2 ${targetId === sediment.id ? "border-blue-400 bg-blue-50" : "border-line"}`} key={sediment.id}>
+                <span className="flex items-center gap-2"><input checked={targetId === sediment.id} name={`target-${change.id}`} onChange={() => setTargetId(sediment.id)} type="radio" /><span className="font-semibold text-slate-900">{sediment.title}</span></span>
+                <span className="mt-1 block line-clamp-2 text-slate-600">{sediment.summary || "暂无摘要"}</span>
+                <span className="mt-1 block text-slate-500">{sediment.id === change.targetSedimentId ? "系统判断主题相近" : "手动选择"} · 最近更新 {new Date(sediment.updatedAt).toLocaleDateString("zh-CN")} · 当前 {sediment.evidenceRefs.length} 条证据</span>
+              </label>
+            ))}
+          </div>
+        ) : null}
+      </details>
     </div>
   );
+}
+
+function TargetSummary({ sediment }: { sediment?: ProjectSediment }) {
+  if (!sediment) return <p className="text-xs text-amber-700">请先选择要更新的项目沉淀。</p>;
+  return (
+    <div className="rounded-md border border-line p-2 text-xs leading-5 text-slate-600">
+      <p className="font-semibold text-slate-900">目标：《{sediment.title}》</p>
+      <p className="line-clamp-2">{sediment.summary || "暂无摘要"}</p>
+    </div>
+  );
+}
+
+function recommendationLabel(action: SedimentAction, targetTitle?: string) {
+  if (action === "MERGE_EXISTING") return `更新已有项目沉淀${targetTitle ? `《${targetTitle}》` : ""}`;
+  if (action === "EVIDENCE_ONLY") return `仅补充${targetTitle ? `《${targetTitle}》` : "已有沉淀"}的证据`;
+  if (action === "IGNORE") return "暂不沉淀";
+  return "新建一条项目沉淀";
+}
+
+function actionButtonLabel(action: SedimentAction) {
+  if (action === "MERGE_EXISTING") return "合并并确认";
+  if (action === "EVIDENCE_ONLY") return "补充证据并确认";
+  if (action === "IGNORE") return "暂不沉淀";
+  return "新建并确认";
 }

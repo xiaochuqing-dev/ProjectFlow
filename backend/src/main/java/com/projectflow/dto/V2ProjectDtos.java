@@ -143,7 +143,10 @@ public final class V2ProjectDtos {
         String stage,
         String stageMessage,
         Instant currentStepStartedAt,
-        String inputSummary
+        String inputSummary,
+        String diagnosticsJson,
+        boolean modelReturned,
+        boolean failureAcknowledged
     ) {
     }
 
@@ -154,7 +157,25 @@ public final class V2ProjectDtos {
         boolean repaired,
         int recognizedItems,
         int discardedItems,
-        int invalidSourceIndexes
+        int invalidSourceIndexes,
+        String providerName,
+        String modelName,
+        String finishReason,
+        int promptTokens,
+        int completionTokens,
+        int totalTokens,
+        int providerMaxTokens,
+        int taskPolicyMaxTokens,
+        int effectiveMaxTokens,
+        double providerTemperature,
+        double effectiveTemperature,
+        long timeoutSeconds,
+        long requestLatencyMs,
+        boolean outputTruncated,
+        boolean compactRetryAttempted,
+        boolean compactRetrySucceeded,
+        boolean partialResult,
+        int recoveredItems
     ) {
     }
 
@@ -462,9 +483,11 @@ public final class V2ProjectDtos {
         String suggestedAction,
         UUID targetSedimentId,
         String problemSolved,
+        String suggestionReason,
         List<String> evidenceRefs,
         String confidence,
-        boolean needsUserReview
+        boolean needsUserReview,
+        boolean legacyTruncated
     ) {
     }
 

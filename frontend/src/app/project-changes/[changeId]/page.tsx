@@ -11,10 +11,13 @@ import {
   confirmProjectChange,
   getProjectChange,
   listProjectSediments,
+  previewProjectChangeConfirmation,
   updateProjectChange,
   type ProjectChange,
   type ProjectChangePayload,
   type ProjectSediment,
+  type SedimentConfirmation,
+  type SedimentImpactPreview,
   type SedimentAction,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
@@ -55,6 +58,8 @@ export default function ProjectChangeDetailPage() {
   const [sediments, setSediments] = useState<ProjectSediment[]>([]);
   const [action, setAction] = useState<SedimentAction>("NEW_SEDIMENT");
   const [targetSedimentId, setTargetSedimentId] = useState("");
+  const [impactPreview, setImpactPreview] = useState<SedimentImpactPreview | null>(null);
+  const [confirmation, setConfirmation] = useState<SedimentConfirmation | null>(null);
 
   useEffect(() => {
     const session = readSession();
@@ -77,6 +82,20 @@ export default function ProjectChangeDetailPage() {
       .catch((exception) => setError(exception instanceof Error ? exception.message : "建议沉淀加载失败"))
       .finally(() => setLoading(false));
   }, [params.changeId]);
+
+  useEffect(() => {
+    const session = readSession();
+    if (!session || !change?.developmentSegmentId) return;
+    if ((action === "MERGE_EXISTING" || action === "EVIDENCE_ONLY") && !targetSedimentId) {
+      setImpactPreview(null);
+      return;
+    }
+    let cancelled = false;
+    previewProjectChangeConfirmation(session.accessToken, change.id, action, targetSedimentId || null)
+      .then((preview) => { if (!cancelled) setImpactPreview(preview); })
+      .catch((exception) => { if (!cancelled) setError(exception instanceof Error ? exception.message : "操作后果预览失败"); });
+    return () => { cancelled = true; };
+  }, [action, change?.developmentSegmentId, change?.id, targetSedimentId]);
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -106,11 +125,12 @@ export default function ProjectChangeDetailPage() {
     setError("");
     setNotice("");
     try {
-      await confirmProjectChange(session.accessToken, params.changeId, action, action === "MERGE_EXISTING" || action === "EVIDENCE_ONLY" ? targetSedimentId : null);
+      const result = await confirmProjectChange(session.accessToken, params.changeId, action, action === "MERGE_EXISTING" || action === "EVIDENCE_ONLY" ? targetSedimentId : null);
       const updated = await getProjectChange(session.accessToken, params.changeId);
       setChange(updated);
       setDraft(toPayload(updated));
-      setNotice(action === "IGNORE" ? "已忽略，原始证据仍保留。" : "已按所选方式写入项目沉淀。");
+      setConfirmation(result);
+      setNotice(result.resultMessage);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "确认建议沉淀失败");
     } finally {
@@ -139,29 +159,28 @@ export default function ProjectChangeDetailPage() {
             ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
-            {change?.developmentSegmentId ? (
-              <select className="rounded-md border border-line bg-white px-3 py-2 text-sm" onChange={(event) => setAction(event.target.value as SedimentAction)} value={action}>
-                <option value="NEW_SEDIMENT">新建沉淀</option>
-                <option value="MERGE_EXISTING">合并已有沉淀</option>
-                <option value="EVIDENCE_ONLY">只补充证据</option>
-                <option value="IGNORE">忽略</option>
-              </select>
-            ) : null}
-            {action === "MERGE_EXISTING" || action === "EVIDENCE_ONLY" ? (
-              <select className="max-w-64 rounded-md border border-line bg-white px-3 py-2 text-sm" onChange={(event) => setTargetSedimentId(event.target.value)} value={targetSedimentId}>
-                <option value="">选择目标沉淀</option>
-                {sediments.map((sediment) => <option key={sediment.id} value={sediment.id}>{sediment.title}</option>)}
-              </select>
-            ) : null}
             <Button disabled={!change || acting !== "" || ["ACCEPTED", "IGNORED", "MERGED"].includes(change.status) || ((action === "MERGE_EXISTING" || action === "EVIDENCE_ONLY") && !targetSedimentId)} loading={acting === "confirm"} onClick={handleConfirm} variant={action === "IGNORE" ? "danger" : "primary"}>
               {acting === "confirm" ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              {action === "IGNORE" ? "忽略建议" : "确认处理"}
+              {actionButtonLabel(action)}
             </Button>
           </div>
         </section>
 
         {error ? <div className="mb-5 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div> : null}
         {notice ? <div className="mb-5 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">{notice}</div> : null}
+        {change?.legacyTruncated ? (
+          <div className="mb-5 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+            这条旧版变化可能保存过截断文本，原文无法无损恢复。建议回到工作台重新分析对应变化，再确认新的完整内容。
+            <Link className="ml-2 font-semibold text-brand" href={`/dashboard?projectId=${change.projectId}`}>重新分析</Link>
+          </div>
+        ) : null}
+        {confirmation?.sediment ? (
+          <div className="mb-5 rounded-md border border-emerald-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-panel">
+            <p className="font-semibold text-emerald-800">{confirmation.resultMessage}</p>
+            <p className="mt-1">摘要{confirmation.summaryUpdated ? "已更新" : "未改动"}；已确认能力不会被直接改写；下次能力分析会读取本次项目沉淀更新。</p>
+            <Link className="mt-2 inline-flex items-center gap-1 font-semibold text-brand" href={confirmation.sedimentPath}>查看项目沉淀 <ArrowRight className="h-3.5 w-3.5" /></Link>
+          </div>
+        ) : null}
         {loading ? <div className="h-1 bg-slate-950" /> : null}
 
         {draft && change ? (
@@ -180,6 +199,46 @@ export default function ProjectChangeDetailPage() {
                   <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{changeOutcomeSummary({ ...change, ...draft })}</p>
                   <p className="mt-3 text-sm font-semibold text-slate-600">{archiveTargetsLabel({ ...change, ...draft })}</p>
                 </div>
+                {change.developmentSegmentId ? (
+                  <div className="border-b border-line p-5">
+                    <div className="rounded-md bg-blue-50 p-4 text-sm leading-6 text-blue-950">
+                      <p className="font-semibold">系统推荐：{recommendationLabel(change.suggestedAction ?? "NEW_SEDIMENT", sediments.find((item) => item.id === change.targetSedimentId)?.title)}</p>
+                      <p className="mt-1">{change.suggestionReason || "系统根据主题、来源和证据重合度给出推荐。"}</p>
+                    </div>
+                    {impactPreview ? (
+                      <div className="mt-3 rounded-md border border-line bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                        <p className="font-semibold text-slate-950">确认后的实际影响</p>
+                        <p className="mt-1">{impactPreview.consequence}</p>
+                        <p className="mt-1">预计新增 {impactPreview.evidenceToAdd} 条证据、{impactPreview.filesToAdd} 个涉及文件；{impactPreview.summaryWillUpdate ? "会更新摘要" : "不会修改摘要"}。</p>
+                        <p className="mt-1">更新内容：{impactPreview.updatedFields.length ? impactPreview.updatedFields.join("、") : "无项目沉淀字段"}。</p>
+                      </div>
+                    ) : null}
+                    <details className="mt-3 rounded-md border border-line p-3 text-sm">
+                      <summary className="cursor-pointer font-semibold text-slate-800">调整处理方式</summary>
+                      <label className="mt-3 block text-xs font-medium text-slate-700">
+                        处理后果
+                        <select className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm" onChange={(event) => setAction(event.target.value as SedimentAction)} value={action}>
+                          <option value="NEW_SEDIMENT">新建一条独立项目沉淀</option>
+                          <option value="MERGE_EXISTING">更新已有沉淀的摘要和证据</option>
+                          <option value="EVIDENCE_ONLY">只追加来源和证据</option>
+                          <option value="IGNORE">暂不写入项目沉淀</option>
+                        </select>
+                      </label>
+                      {action === "MERGE_EXISTING" || action === "EVIDENCE_ONLY" ? (
+                        <div className="mt-3 space-y-2">
+                          <p className="text-xs font-semibold text-slate-700">目标项目沉淀</p>
+                          {sediments.map((sediment) => (
+                            <label className={`block cursor-pointer rounded-md border p-3 ${targetSedimentId === sediment.id ? "border-blue-400 bg-blue-50" : "border-line bg-white"}`} key={sediment.id}>
+                              <span className="flex items-center gap-2"><input checked={targetSedimentId === sediment.id} name="targetSediment" onChange={() => setTargetSedimentId(sediment.id)} type="radio" /><span className="font-semibold text-slate-950">{sediment.title}</span></span>
+                              <span className="mt-1 block whitespace-pre-wrap text-xs leading-5 text-slate-600">{sediment.summary || "暂无摘要"}</span>
+                              <span className="mt-1 block text-xs text-slate-500">{sediment.id === change.targetSedimentId ? "系统判断主题相近" : "用户手动选择"} · 最近更新 {new Date(sediment.updatedAt).toLocaleString("zh-CN")} · 当前 {sediment.evidenceRefs.length} 条证据</span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : null}
+                    </details>
+                  </div>
+                ) : null}
                 <div className="grid gap-3 p-5 md:grid-cols-4">
                   <MiniEvidence title="涉及文件" value={fileCount(draft.affectedFiles)} />
                   <MiniEvidence title="测试证据" value={draft.testEvidence ? "已记录" : "未采集"} />
@@ -446,4 +505,18 @@ function statusLabel(value: string) {
   if (value === "IGNORED") return "已忽略";
   if (value === "MERGED") return "已合并";
   return value;
+}
+
+function recommendationLabel(action: SedimentAction, targetTitle?: string) {
+  if (action === "MERGE_EXISTING") return `更新已有项目沉淀${targetTitle ? `《${targetTitle}》` : ""}`;
+  if (action === "EVIDENCE_ONLY") return `仅补充${targetTitle ? `《${targetTitle}》` : "已有沉淀"}的证据`;
+  if (action === "IGNORE") return "暂不沉淀";
+  return "新建一条项目沉淀";
+}
+
+function actionButtonLabel(action: SedimentAction) {
+  if (action === "MERGE_EXISTING") return "合并并确认";
+  if (action === "EVIDENCE_ONLY") return "补充证据并确认";
+  if (action === "IGNORE") return "暂不沉淀";
+  return "新建并确认";
 }

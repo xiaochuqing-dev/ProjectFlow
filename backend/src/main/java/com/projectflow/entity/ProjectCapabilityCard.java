@@ -53,6 +53,8 @@ public class ProjectCapabilityCard {
     private String modelProvider = "";
     @Column(name = "fallback_reason", columnDefinition = "text")
     private String fallbackReason = "";
+    @Column(name = "analysis_job_id")
+    private UUID analysisJobId;
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
     @Column(name = "updated_at", nullable = false)
@@ -73,7 +75,7 @@ public class ProjectCapabilityCard {
 
     public void update(
         String cardName, String cardSummary, String problem, String entry, List<String> sources, List<String> evidence,
-        String readme, String resume, String interview, String mode, String provider, String fallback
+        String readme, String resume, String interview, String mode, String provider, String fallback, UUID sourceJobId
     ) {
         name = safe(cardName);
         summary = safe(cardSummary);
@@ -87,6 +89,7 @@ public class ProjectCapabilityCard {
         generationMode = safe(mode);
         modelProvider = safe(provider);
         fallbackReason = safe(fallback);
+        analysisJobId = sourceJobId;
         status = evidenceRefs.isEmpty() ? CapabilityCardStatus.NEEDS_EVIDENCE : CapabilityCardStatus.CANDIDATE;
     }
 
@@ -108,6 +111,7 @@ public class ProjectCapabilityCard {
     public String getGenerationMode() { return generationMode; }
     public String getModelProvider() { return modelProvider; }
     public String getFallbackReason() { return fallbackReason; }
+    public UUID getAnalysisJobId() { return analysisJobId; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     private static String safe(String value) { return value == null ? "" : value.trim(); }

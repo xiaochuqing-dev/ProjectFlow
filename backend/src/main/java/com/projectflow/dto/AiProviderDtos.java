@@ -23,9 +23,10 @@ public final class AiProviderDtos {
         @NotBlank @Size(max = 160) String modelName,
         @NotNull AiProviderType type,
         @NotNull @Min(0) @Max(2) Double temperature,
-        @NotNull @Min(1) @Max(1000000000) Integer maxTokens,
+        @NotNull @Min(256) @Max(200000) Integer maxTokens,
         boolean defaultEnabled,
-        List<@Size(max = 60) String> purposeTags
+        List<@Size(max = 60) String> purposeTags,
+        boolean clearApiKey
     ) {
     }
 
@@ -49,6 +50,24 @@ public final class AiProviderDtos {
         boolean ok,
         String provider,
         String message
+    ) {
+    }
+
+    public record DuplicateProviderGroupResponse(
+        String groupKey,
+        AiProviderResponse recommendedKeeper,
+        List<AiProviderResponse> duplicates
+    ) {
+    }
+
+    public record DuplicateCleanupRequest(
+        @NotNull @Size(min = 1, max = 50) List<@NotNull UUID> providerIds
+    ) {
+    }
+
+    public record DuplicateCleanupResponse(
+        int deletedCount,
+        List<AiProviderResponse> remainingProviders
     ) {
     }
 }

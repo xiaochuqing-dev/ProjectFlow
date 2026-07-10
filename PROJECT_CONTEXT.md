@@ -6,7 +6,7 @@ Use this file as the first read for substantial ProjectFlow work. It is a compac
 
 ## Product Position
 
-ProjectFlow V3.3.4 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
+ProjectFlow V3.3.5 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
 
 Current direction:
 
@@ -16,7 +16,16 @@ Current direction:
 - AI/model calls are candidate generators only; user confirmation is required before treating output as official project facts.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
 
-V3.3.4 focus:
+V3.3.5 focus:
+
+- Model responses carry finish reason, token usage, effective parameters, timeout, Provider/model, truncation, JSON repair, compact-retry, and partial-recovery diagnostics.
+- Truncated structured output receives one compact retry; complete items in a truncated root array may be retained with warnings.
+- Display sanitization no longer truncates persisted text. Lists clamp previews; detail pages show full normalized content; legacy ellipsis-ended records are marked for re-analysis.
+- Sediment review uses recommendation, consequence preview, concrete confirmation feedback, and direct sediment navigation.
+- Capability cards reference their analysis job; the page separates the current successful batch, latest failure, and history while preserving old successful and confirmed cards.
+- Provider management supports editing, unique default selection, protected deletion, and explicit duplicate cleanup. Blank edit keys preserve existing secrets; only explicit clearing removes them.
+
+V3.3.4 focus (still applies):
 
 - Model failure notices are split into plain Chinese reasons (not configured / call failed / invalid response format / invalid evidence reference); "增强本地摘要" is removed and the result source is always "本地事实摘要".
 - Local fallback titles and summaries are Chinese; raw English commit messages are rewritten or labeled "根据提交记录整理的变更".

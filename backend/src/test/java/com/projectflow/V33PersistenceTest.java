@@ -123,6 +123,7 @@ class V33PersistenceTest {
             SedimentAction.MERGE_EXISTING,
             sediment.getId(),
             "Avoid missing development evidence.",
+            "与已有沉淀主题相近。",
             List.of("segment:" + segment.getId(), "commit:abc123"),
             EvidenceConfidence.HIGH,
             true

@@ -92,6 +92,7 @@ public final class V33WorkflowDtos {
         List<String> sourceSegmentIds,
         List<String> evidenceRefs,
         String developerNotes,
+        boolean legacyTruncated,
         Instant createdAt,
         Instant updatedAt
     ) {
@@ -101,7 +102,34 @@ public final class V33WorkflowDtos {
         UUID changeId,
         String changeStatus,
         ProjectSedimentResponse sediment,
-        String batchStatus
+        String batchStatus,
+        String actionLabel,
+        String resultMessage,
+        int evidenceAdded,
+        int filesAdded,
+        boolean summaryUpdated,
+        boolean affectsConfirmedCapabilities,
+        boolean usedByNextCapabilityAnalysis,
+        String sedimentPath
+    ) {
+    }
+
+    public record SedimentImpactPreviewResponse(
+        UUID changeId,
+        SedimentAction action,
+        String actionLabel,
+        String recommendationReason,
+        UUID targetSedimentId,
+        String targetTitle,
+        String targetSummary,
+        Instant targetUpdatedAt,
+        int evidenceToAdd,
+        int filesToAdd,
+        boolean summaryWillUpdate,
+        boolean affectsConfirmedCapabilities,
+        boolean usedByNextCapabilityAnalysis,
+        List<String> updatedFields,
+        String consequence
     ) {
     }
 
@@ -121,6 +149,9 @@ public final class V33WorkflowDtos {
         String generationMode,
         String modelProvider,
         String fallbackReason,
+        UUID analysisJobId,
+        boolean legacyResult,
+        boolean legacyTruncated,
         Instant createdAt,
         Instant updatedAt
     ) {

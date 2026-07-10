@@ -15,6 +15,7 @@ import com.projectflow.dto.V33WorkflowDtos.DevelopmentSegmentResponse;
 import com.projectflow.dto.V33WorkflowDtos.ProjectSedimentPatchRequest;
 import com.projectflow.dto.V33WorkflowDtos.ProjectSedimentResponse;
 import com.projectflow.dto.V33WorkflowDtos.SedimentConfirmationResponse;
+import com.projectflow.dto.V33WorkflowDtos.SedimentImpactPreviewResponse;
 import com.projectflow.entity.ChangeBatch;
 import com.projectflow.entity.DevelopmentSegment;
 import com.projectflow.entity.DevelopmentSegmentStatus;
@@ -99,7 +100,7 @@ public class ProjectSedimentService {
             );
             var suggestion = suggestionPolicy.suggest(segment.title(), segment.userVisibleValue(), segment.affectedFiles(), evidenceRefs, existing);
             change.updateSedimentSuggestion(
-                segment.id(), suggestion.action(), suggestion.targetSedimentId(), suggestion.reason(),
+                segment.id(), suggestion.action(), suggestion.targetSedimentId(), segment.userVisibleValue(), suggestion.reason(),
                 evidenceRefs, com.projectflow.entity.EvidenceConfidence.valueOf(segment.confidence()), true
             );
             changeRepository.save(change);
@@ -120,10 +121,16 @@ public class ProjectSedimentService {
             .orElseThrow(() -> new AppException("DEVELOPMENT_SEGMENT_NOT_FOUND", "Development segment was not found", HttpStatus.NOT_FOUND));
         validateEvidence(change, segment);
 
+        ProjectSediment existingTarget = action == SedimentAction.MERGE_EXISTING || action == SedimentAction.EVIDENCE_ONLY
+            ? requireTarget(change.getProjectId(), targetSedimentId) : null;
+        int previousEvidenceCount = existingTarget == null ? 0 : existingTarget.getEvidenceRefs().size();
+        boolean summaryUpdated = action == SedimentAction.NEW_SEDIMENT
+            || (action == SedimentAction.MERGE_EXISTING && !existingTarget.getSummary().contains(change.getSummary().trim()));
+
         ProjectSediment sediment = switch (action) {
             case NEW_SEDIMENT -> createSediment(change, segment);
-            case MERGE_EXISTING -> mergeSediment(change, segment, requireTarget(change.getProjectId(), targetSedimentId), false);
-            case EVIDENCE_ONLY -> mergeSediment(change, segment, requireTarget(change.getProjectId(), targetSedimentId), true);
+            case MERGE_EXISTING -> mergeSediment(change, segment, existingTarget, false);
+            case EVIDENCE_ONLY -> mergeSediment(change, segment, existingTarget, true);
             case IGNORE -> null;
         };
         if (action == SedimentAction.IGNORE) {
@@ -136,9 +143,55 @@ public class ProjectSedimentService {
             change.markAccepted();
             segment.markConfirmed();
         }
-        change.updateSedimentSuggestion(segment.getId(), action, sediment == null ? null : sediment.getId(), change.getProblemSolved(), change.getEvidenceRefs(), change.getEvidenceConfidence(), false);
+        change.updateSedimentSuggestion(
+            segment.getId(), action, sediment == null ? null : sediment.getId(), change.getProblemSolved(), change.getSuggestionReason(),
+            change.getEvidenceRefs(), change.getEvidenceConfidence(), false
+        );
         String batchStatus = updateBatchAndCursor(segment.getBatchId());
-        return new SedimentConfirmationResponse(change.getId(), change.getStatus().name(), sediment == null ? null : response(sediment), batchStatus);
+        int evidenceAdded = sediment == null ? 0 : Math.max(0, sediment.getEvidenceRefs().size() - previousEvidenceCount);
+        int filesAdded = action == SedimentAction.IGNORE ? 0 : affectedFiles(change).size();
+        String actionLabel = actionLabel(action);
+        String resultMessage = action == SedimentAction.IGNORE
+            ? "已暂不沉淀，原始证据仍保留。"
+            : completedActionLabel(action) + "《" + sediment.getTitle() + "》，新增 " + evidenceAdded + " 条证据、" + filesAdded + " 个涉及文件。";
+        return new SedimentConfirmationResponse(
+            change.getId(), change.getStatus().name(), sediment == null ? null : response(sediment), batchStatus,
+            actionLabel, resultMessage, evidenceAdded, filesAdded, summaryUpdated, false, action != SedimentAction.IGNORE,
+            sediment == null ? "" : "/project-sediments/" + sediment.getId()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public SedimentImpactPreviewResponse preview(
+        UUID userId,
+        UUID changeId,
+        SedimentAction action,
+        UUID targetSedimentId
+    ) {
+        ProjectChange change = ownedChange(userId, changeId);
+        ProjectSediment target = action == SedimentAction.MERGE_EXISTING || action == SedimentAction.EVIDENCE_ONLY
+            ? requireTarget(change.getProjectId(), targetSedimentId) : null;
+        int evidenceToAdd = target == null
+            ? new HashSet<>(change.getEvidenceRefs()).size()
+            : (int) change.getEvidenceRefs().stream().filter(ref -> !target.getEvidenceRefs().contains(ref)).distinct().count();
+        boolean summaryWillUpdate = action == SedimentAction.NEW_SEDIMENT
+            || (action == SedimentAction.MERGE_EXISTING && target != null && !target.getSummary().contains(change.getSummary().trim()));
+        List<String> updatedFields = switch (action) {
+            case NEW_SEDIMENT -> List.of("标题", "摘要", "解决的问题", "证据引用");
+            case MERGE_EXISTING -> List.of("摘要", "证据引用", "来源开发推进段");
+            case EVIDENCE_ONLY -> List.of("证据引用", "来源开发推进段");
+            case IGNORE -> List.of();
+        };
+        String targetTitle = target == null ? change.getTitle() : target.getTitle();
+        String consequence = action == SedimentAction.IGNORE
+            ? "不会新建或修改项目沉淀，原始证据仍保留。"
+            : actionLabel(action) + "《" + targetTitle + "》；下次能力分析会读取这次更新，已确认能力不会被直接改写。";
+        return new SedimentImpactPreviewResponse(
+            change.getId(), action, actionLabel(action), change.getSuggestionReason(),
+            target == null ? null : target.getId(), targetTitle, target == null ? change.getSummary() : target.getSummary(),
+            target == null ? null : target.getUpdatedAt(), evidenceToAdd, action == SedimentAction.IGNORE ? 0 : affectedFiles(change).size(),
+            summaryWillUpdate, false, action != SedimentAction.IGNORE, updatedFields, consequence
+        );
     }
 
     @Transactional(readOnly = true)
@@ -236,8 +289,39 @@ public class ProjectSedimentService {
         return new ProjectSedimentResponse(
             sediment.getId(), sediment.getProjectId(), sediment.getTitle(), sediment.getSummary(), sediment.getProblemSolved(),
             sediment.getSedimentType(), sediment.getStatus(), sediment.getSourceSegmentIds(), sediment.getEvidenceRefs(),
-            sediment.getDeveloperNotes(), sediment.getCreatedAt(), sediment.getUpdatedAt()
+            sediment.getDeveloperNotes(),
+            DisplayContentSanitizer.isLikelyLegacyTruncated(sediment.getTitle())
+                || DisplayContentSanitizer.isLikelyLegacyTruncated(sediment.getSummary())
+                || DisplayContentSanitizer.isLikelyLegacyTruncated(sediment.getProblemSolved()),
+            sediment.getCreatedAt(), sediment.getUpdatedAt()
         );
+    }
+
+    private String actionLabel(SedimentAction action) {
+        return switch (action) {
+            case NEW_SEDIMENT -> "新建并确认";
+            case MERGE_EXISTING -> "合并并确认";
+            case EVIDENCE_ONLY -> "补充证据并确认";
+            case IGNORE -> "暂不沉淀";
+        };
+    }
+
+    private String completedActionLabel(SedimentAction action) {
+        return switch (action) {
+            case NEW_SEDIMENT -> "已新建项目沉淀";
+            case MERGE_EXISTING -> "已合并到项目沉淀";
+            case EVIDENCE_ONLY -> "已补充项目沉淀证据";
+            case IGNORE -> "已暂不沉淀";
+        };
+    }
+
+    private Set<String> affectedFiles(ProjectChange change) {
+        Set<String> files = new HashSet<>();
+        if (change.getAffectedFiles() != null) {
+            change.getAffectedFiles().lines().map(String::trim).filter(value -> !value.isBlank()).forEach(files::add);
+        }
+        change.getEvidenceRefs().stream().filter(ref -> ref.startsWith("file:")).map(ref -> ref.substring(5)).forEach(files::add);
+        return files;
     }
 
     private ProjectChangeKind inferKind(List<String> files) {

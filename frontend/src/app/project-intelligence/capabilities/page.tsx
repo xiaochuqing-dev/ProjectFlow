@@ -8,6 +8,7 @@ import { AppShell } from "@/components/AppShell";
 import { Badge, Button, ProjectContextBar, Toast } from "@/components/ui";
 import { useProjectSelection } from "@/hooks/useProjectSelection";
 import {
+  acknowledgeAnalysisFailure,
   getProjectAnalysisJob,
   getProjectMemory,
   listProjectAnalysisJobs,
@@ -29,6 +30,8 @@ const CAPABILITY_STAGE_LABELS: Record<string, string> = {
   MODEL_REQUEST: "正在请求模型",
   MODEL_RESPONSE_RECEIVED: "模型已返回，正在解析",
   MODEL_RESPONSE_PARSE: "模型已返回，但解析失败",
+  MODEL_OUTPUT_TRUNCATED: "模型输出达到长度上限",
+  MODEL_EMPTY_CONTENT: "模型已响应但内容为空",
   MODEL_OUTPUT_NORMALIZE: "正在归一化模型字段",
   ITEM_VALIDATION: "正在逐项校验能力卡片",
   EVIDENCE_BINDING: "正在绑定来源证据",
@@ -62,6 +65,7 @@ function CompletedCapabilitiesContent() {
   const [notice, setNotice] = useState("");
   // V3.3.4: 能力分析异步任务。刷新/离开页面后回来能恢复正在运行的 job。
   const [capabilityJob, setCapabilityJob] = useState<ProjectAnalysisJob | null>(null);
+  const [capabilityJobs, setCapabilityJobs] = useState<ProjectAnalysisJob[]>([]);
   const [startingJob, setStartingJob] = useState(false);
   const pollRef = useRef<number | null>(null);
   const pollFailureCount = useRef(0);
@@ -72,6 +76,7 @@ function CompletedCapabilitiesContent() {
       setCards([]);
       setMemory(null);
       setCapabilityJob(null);
+      setCapabilityJobs([]);
       return;
     }
     setLoading(true);
@@ -85,10 +90,12 @@ function CompletedCapabilitiesContent() {
       .then(([items, record, jobs]) => {
         setCards(items);
         setMemory(record);
-        const active = (jobs as ProjectAnalysisJob[])
-          .filter((job) => job.jobType === "CAPABILITY_CARD_ANALYSIS" && (job.status === "QUEUED" || job.status === "RUNNING"))
-          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-        setCapabilityJob(active ?? null);
+        const history = (jobs as ProjectAnalysisJob[])
+          .filter((job) => job.jobType === "CAPABILITY_CARD_ANALYSIS")
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        const active = history.find((job) => job.status === "QUEUED" || job.status === "RUNNING");
+        setCapabilityJobs(history);
+        setCapabilityJob(active ?? history[0] ?? null);
       })
       .catch((exception) => setError(exception instanceof Error ? exception.message : "能力与成果加载失败"))
       .finally(() => setLoading(false));
@@ -113,6 +120,7 @@ function CompletedCapabilitiesContent() {
       try {
         const updated = await getProjectAnalysisJob(accessToken, jobId);
         setCapabilityJob(updated);
+        setCapabilityJobs((current) => [updated, ...current.filter((job) => job.id !== updated.id)].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
         pollFailureCount.current = 0;
         setError("");
         if (updated.status === "SUCCEEDED" || updated.status === "SUCCEEDED_WITH_WARNINGS") {
@@ -171,12 +179,26 @@ function CompletedCapabilitiesContent() {
     try {
       const job = await startCapabilityCardAnalysisJob(session.accessToken, selectedProjectId);
       setCapabilityJob(job);
+      setCapabilityJobs((current) => [job, ...current.filter((item) => item.id !== job.id)]);
       setNotice("能力分析已启动，页面可以离开，任务会继续运行。");
     } catch (exception) {
       const message = exception instanceof Error ? exception.message : "项目能力分析启动失败";
       setError(message);
     } finally {
       setStartingJob(false);
+    }
+  }
+
+  async function dismissFailure(job: ProjectAnalysisJob) {
+    const session = readSession();
+    if (!session) return;
+    try {
+      const updated = await acknowledgeAnalysisFailure(session.accessToken, job.id);
+      setCapabilityJobs((current) => current.map((item) => item.id === updated.id ? updated : item));
+      if (capabilityJob?.id === updated.id) setCapabilityJob(updated);
+      setError("");
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "失败提示关闭失败");
     }
   }
 
@@ -213,6 +235,13 @@ function CompletedCapabilitiesContent() {
   const showProgress = analyzing && stage && stage !== "SUCCEEDED" && stage !== "SUCCEEDED_WITH_WARNINGS" && stage !== "FAILED";
   const elapsedMs = computeElapsedMs(capabilityJob);
   const inputSummary = parseInputSummary(capabilityJob?.inputSummary);
+  const currentBatchId = visibleCards.find((card) => card.analysisJobId)?.analysisJobId ?? null;
+  const currentSuccessJob = capabilityJobs.find((job) => job.id === currentBatchId)
+    ?? capabilityJobs.find((job) => job.status === "SUCCEEDED" || job.status === "SUCCEEDED_WITH_WARNINGS")
+    ?? null;
+  const latestFailure = capabilityJobs.find((job) => job.status === "FAILED" && !job.failureAcknowledged) ?? null;
+  const currentBatchCards = currentBatchId ? visibleCards.filter((card) => card.analysisJobId === currentBatchId) : [];
+  const currentNeedsEvidence = currentBatchCards.filter((card) => card.status === "NEEDS_EVIDENCE").length;
 
   return (
     <AppShell eyebrow="项目理解" title={selectedProject ? `${selectedProject.name} · 能力与成果` : "能力与成果"}>
@@ -240,6 +269,23 @@ function CompletedCapabilitiesContent() {
               <span className="text-xs text-slate-500">确认后可生成能力解读</span>
             </div>
           </header>
+
+          {currentSuccessJob ? (
+            <div className="border-b border-line bg-emerald-50 px-5 py-4 text-sm leading-6 text-emerald-950">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-semibold">当前生效结果</p>
+                <Badge label={currentSuccessJob.capabilityCardResult?.providerName || "模型"} tone="success" />
+                <Badge label={currentSuccessJob.capabilityCardResult?.modelName || "模型名未记录"} />
+              </div>
+              <p className="mt-1">
+                来自 {new Date(currentSuccessJob.completedAt ?? currentSuccessJob.createdAt).toLocaleString("zh-CN")} 的成功分析；
+                当前批次 {currentBatchCards.length || currentSuccessJob.capabilityCardResult?.cardCount || 0} 张卡片，{currentNeedsEvidence || currentSuccessJob.capabilityCardResult?.needsEvidenceCount || 0} 张需要补证据。
+              </p>
+              <p className="text-xs text-emerald-800">生成方式：模型分析。每张新卡片均记录本次任务编号；旧版无批次卡片会单独标注。</p>
+            </div>
+          ) : visibleCards.length ? (
+            <div className="border-b border-line bg-amber-50 px-5 py-3 text-sm text-amber-900">当前卡片来自旧版结果，来源时间或分析批次未知；不会把它们错误归入本次分析。</div>
+          ) : null}
 
           {/* V3.3.4: 能力分析进度可视化。用户能看到当前阶段、已等待时间、输入规模。 */}
           {showProgress ? (
@@ -293,11 +339,20 @@ function CompletedCapabilitiesContent() {
         ) : null}
 
         {/* V3.3.4: 任务失败时显示错误原因。 */}
-        {capabilityJob?.status === "FAILED" && error && !error.includes("未配置模型") ? (
+        {latestFailure && !latestFailure.errorMessage?.includes("未配置模型") ? (
           <div className="mt-4 rounded-md border border-danger/30 bg-danger-soft p-4 text-sm leading-6 text-danger-fg">
-            <p className="font-semibold">能力分析失败</p>
-            <p className="mt-1">{error}</p>
-            {capabilityJob.failureStage ? <p className="mt-1 text-xs">失败阶段：{CAPABILITY_STAGE_LABELS[capabilityJob.failureStage] ?? "后端处理"}</p> : null}
+            <p className="font-semibold">最近一次能力分析失败，当前仍展示上一次成功结果</p>
+            <p className="mt-1">{latestFailure.errorMessage || "能力分析失败，请稍后重试。"}</p>
+            <p className="mt-1 text-xs">分析时间：{new Date(latestFailure.completedAt ?? latestFailure.createdAt).toLocaleString("zh-CN")} · 失败阶段：{CAPABILITY_STAGE_LABELS[latestFailure.failureStage ?? ""] ?? "后端处理"} · 模型{latestFailure.modelReturned ? "已经返回" : "尚未返回"}</p>
+            <p className="mt-1 text-xs">旧能力卡片没有被替换。</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button disabled={analyzing} onClick={analyzeCapabilities} size="sm" variant="secondary">重试</Button>
+              <Button onClick={() => dismissFailure(latestFailure)} size="sm" variant="secondary">关闭提示</Button>
+              <details className="rounded-md border border-rose-200 bg-white px-3 py-1 text-xs">
+                <summary className="cursor-pointer font-semibold">查看分析详情</summary>
+                <pre className="mt-2 max-w-2xl whitespace-pre-wrap break-words text-slate-700">{formatDiagnostics(latestFailure.diagnosticsJson)}</pre>
+              </details>
+            </div>
           </div>
         ) : null}
 
@@ -312,9 +367,31 @@ function CompletedCapabilitiesContent() {
                 <p>JSON 自动修复：{capabilityJob.capabilityCardResult?.repaired ? "是" : "否"}</p>
                 <p>识别 {capabilityJob.capabilityCardResult?.recognizedItems ?? 0} 项，丢弃 {capabilityJob.capabilityCardResult?.discardedItems ?? 0} 项。</p>
                 <p>无效来源编号：{capabilityJob.capabilityCardResult?.invalidSourceIndexes ?? 0} 个。</p>
+                <p>Provider / 模型：{capabilityJob.capabilityCardResult?.providerName || "未记录"} / {capabilityJob.capabilityCardResult?.modelName || "未记录"}</p>
+                <p>finish reason：{capabilityJob.capabilityCardResult?.finishReason || "未返回"}</p>
+                <p>Token：输入 {capabilityJob.capabilityCardResult?.promptTokens ?? 0} / 输出 {capabilityJob.capabilityCardResult?.completionTokens ?? 0} / 总计 {capabilityJob.capabilityCardResult?.totalTokens ?? 0}</p>
+                <p>Max Tokens：Provider 上限 {capabilityJob.capabilityCardResult?.providerMaxTokens ?? 0} / 任务上限 {capabilityJob.capabilityCardResult?.taskPolicyMaxTokens ?? 0} / 实际生效 {capabilityJob.capabilityCardResult?.effectiveMaxTokens ?? 0}</p>
+                <p>Temperature：配置 {capabilityJob.capabilityCardResult?.providerTemperature ?? 0} / 实际生效 {capabilityJob.capabilityCardResult?.effectiveTemperature ?? 0}</p>
+                <p>请求超时：{capabilityJob.capabilityCardResult?.timeoutSeconds ?? 0} 秒 · 模型请求耗时 {capabilityJob.capabilityCardResult?.requestLatencyMs ?? 0} ms</p>
+                <p>截断：{capabilityJob.capabilityCardResult?.outputTruncated ? "检测到" : "未检测到"} · 紧凑重试：{capabilityJob.capabilityCardResult?.compactRetryAttempted ? capabilityJob.capabilityCardResult.compactRetrySucceeded ? "已成功" : "已执行但仍为部分结果" : "未执行"}</p>
               </div>
             </details>
           </div>
+        ) : null}
+
+        {capabilityJobs.length ? (
+          <details className="mt-4 rounded-md border border-line bg-white p-4 text-sm shadow-panel">
+            <summary className="cursor-pointer font-semibold text-slate-800">查看历史能力分析（{capabilityJobs.length} 次）</summary>
+            <div className="mt-3 divide-y divide-line">
+              {capabilityJobs.map((job) => (
+                <div className="grid gap-1 py-3 text-xs text-slate-600 md:grid-cols-[180px_130px_1fr]" key={job.id}>
+                  <span>{new Date(job.createdAt).toLocaleString("zh-CN")}</span>
+                  <span>{job.status === "FAILED" ? "失败" : job.status === "RUNNING" ? "运行中" : job.status === "QUEUED" ? "等待中" : "成功"}</span>
+                  <span>{job.id === currentSuccessJob?.id ? "当前生效批次" : job.errorMessage || `${job.capabilityCardResult?.cardCount ?? 0} 张卡片 · ${job.capabilityCardResult?.providerName || "Provider 未记录"}`}</span>
+                </div>
+              ))}
+            </div>
+          </details>
         ) : null}
 
         <Toast error={(capabilityJob?.status === "FAILED" || error.includes("未配置模型")) ? projectError : error || projectError} notice={notice} />
@@ -345,6 +422,7 @@ function CapabilityCardRow({
               <h3 className="font-semibold text-slate-950 break-words">{card.name}</h3>
               <Badge label={statusLabel(card.status)} tone={card.status === "CONFIRMED" ? "success" : card.status === "NEEDS_EVIDENCE" ? "warning" : "slate"} />
               <Badge label={card.generationMode === "MODEL" ? `模型 · ${card.modelProvider}` : "本地事实摘要"} />
+              <Badge label={card.analysisJobId ? `批次 ${card.analysisJobId.slice(0, 8)}` : "旧版结果 · 来源时间未知"} tone={card.analysisJobId ? "slate" : "warning"} />
               <span className="text-xs text-slate-400 group-open:hidden">查看详情</span>
             </div>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600 break-words line-clamp-3">{card.summary}</p>
@@ -368,6 +446,7 @@ function CapabilityCardRow({
             <p className="font-semibold text-slate-800">来源证据</p>
             <p className="mt-2">{card.sourceRefs.length} 个来源，{card.evidenceRefs.length} 条证据。</p>
             {card.fallbackReason ? <p className="mt-2 text-amber-800">{card.fallbackReason}</p> : null}
+            {card.legacyTruncated ? <p className="mt-2 text-amber-800">旧版内容可能已被永久截断，建议重新分析生成完整内容。</p> : null}
             {card.status !== "CONFIRMED" ? (
               <div className="mt-4 flex gap-2">
                 <Button disabled={acting || card.status === "NEEDS_EVIDENCE"} onClick={() => onUpdate(card, "CONFIRM")} size="sm" variant="primary"><Check className="h-3.5 w-3.5" />确认此项</Button>
@@ -427,5 +506,23 @@ function parseInputSummary(raw: string | undefined | null): { confirmedSegments:
     return null;
   } catch {
     return null;
+  }
+}
+
+function formatDiagnostics(raw: string | null) {
+  if (!raw) return "本次失败没有可用的模型响应诊断；请查看失败阶段和用户提示。";
+  try {
+    const value = JSON.parse(raw) as Record<string, unknown>;
+    return [
+      `Provider / 模型：${value.providerName || "未记录"} / ${value.modelName || "未记录"}`,
+      `finish reason：${value.finishReason || "未返回"}`,
+      `模型是否返回内容：${value.contentPresent ? "是" : "否"}`,
+      `Token：输入 ${value.promptTokens || 0} / 输出 ${value.completionTokens || 0} / 总计 ${value.totalTokens || 0}`,
+      `Max Tokens：Provider ${value.providerMaxTokens || 0} / 任务 ${value.taskPolicyMaxTokens || 0} / 实际 ${value.effectiveMaxTokens || 0}`,
+      `Temperature：配置 ${value.providerTemperature ?? 0} / 实际 ${value.effectiveTemperature ?? 0}`,
+      `输出截断：${value.truncated ? "是" : "否"}；紧凑重试：${value.compactRetryAttempted ? value.compactRetrySucceeded ? "成功" : "未恢复完整结果" : "未执行"}`,
+    ].join("\n");
+  } catch {
+    return "诊断记录无法读取，但旧能力卡片仍保持不变。";
   }
 }

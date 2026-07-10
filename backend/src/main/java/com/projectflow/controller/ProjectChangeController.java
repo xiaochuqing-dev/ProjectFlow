@@ -21,6 +21,7 @@ import com.projectflow.service.AuthService;
 import com.projectflow.service.ProjectChangeReviewService;
 import com.projectflow.dto.V33WorkflowDtos.SedimentConfirmRequest;
 import com.projectflow.dto.V33WorkflowDtos.SedimentConfirmationResponse;
+import com.projectflow.dto.V33WorkflowDtos.SedimentImpactPreviewResponse;
 import com.projectflow.service.ProjectSedimentService;
 import com.projectflow.support.AppException;
 
@@ -62,9 +63,25 @@ public class ProjectChangeController {
                     HttpStatus.BAD_REQUEST
                 );
             };
-            return ApiResponse.ok(new SedimentConfirmationResponse(change.id(), change.status().name(), null, "LEGACY_CHANGE"));
+            return ApiResponse.ok(new SedimentConfirmationResponse(
+                change.id(), change.status().name(), null, "LEGACY_CHANGE", "兼容确认", "旧版建议已确认。",
+                0, 0, false, false, false, ""
+            ));
         }
         return ApiResponse.ok(projectSedimentService.confirm(user.id(), changeId, request.action(), request.targetSedimentId()));
+    }
+
+    @PostMapping("/project-changes/{changeId}/confirmation-preview")
+    ApiResponse<SedimentImpactPreviewResponse> previewConfirmation(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID changeId,
+        @Valid @RequestBody SedimentConfirmRequest request
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        if (!projectSedimentService.isV33Change(user.id(), changeId)) {
+            throw new AppException("V33_CHANGE_REQUIRED", "旧版建议不支持项目沉淀后果预览。", HttpStatus.BAD_REQUEST);
+        }
+        return ApiResponse.ok(projectSedimentService.preview(user.id(), changeId, request.action(), request.targetSedimentId()));
     }
 
     @GetMapping("/projects/{projectId}/changes")

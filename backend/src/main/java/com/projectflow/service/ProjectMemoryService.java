@@ -140,6 +140,7 @@ public class ProjectMemoryService {
         return aiProviderRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)
             .stream()
             .filter(provider -> provider.getType() != AiProviderType.MOCK)
+            .filter(AiProvider::isDefaultEnabled)
             .filter(provider -> provider.getApiKey() != null && !provider.getApiKey().isBlank())
             .findFirst()
             .orElse(null);

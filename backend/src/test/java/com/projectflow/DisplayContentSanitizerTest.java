@@ -56,25 +56,31 @@ class DisplayContentSanitizerTest {
     }
 
     @Test
-    void truncatesOverlongTitle() {
+    void preservesCompleteNormalizedTitle() {
         String longTitle = "新增".repeat(50);
         String result = DisplayContentSanitizer.sanitizeTitle(longTitle);
-        assertThat(result.length()).isLessThanOrEqualTo(61); // 60 + 省略号
-        assertThat(result).endsWith("…");
+        assertThat(result).isEqualTo(longTitle);
     }
 
     @Test
-    void truncatesOverlongSummary() {
+    void preservesCompleteNormalizedSummary() {
         String longSummary = "这是一段很长的摘要内容".repeat(50);
         String result = DisplayContentSanitizer.sanitizeSummary(longSummary);
-        assertThat(result.length()).isLessThanOrEqualTo(181);
+        assertThat(result).isEqualTo(longSummary);
     }
 
     @Test
-    void truncatesOverlongChangeItem() {
+    void preservesCompleteNormalizedChangeItem() {
         String longChange = "修改了".repeat(60);
         String result = DisplayContentSanitizer.sanitizeChange(longChange);
-        assertThat(result.length()).isLessThanOrEqualTo(121);
+        assertThat(result).isEqualTo(longChange);
+    }
+
+    @Test
+    void identifiesLegacyTruncatedContentWithoutPretendingToRestoreIt() {
+        assertThat(DisplayContentSanitizer.isLikelyLegacyTruncated("旧版摘要…")).isTrue();
+        assertThat(DisplayContentSanitizer.isLikelyLegacyTruncated("旧版摘要...")).isTrue();
+        assertThat(DisplayContentSanitizer.isLikelyLegacyTruncated("完整摘要。")).isFalse();
     }
 
     @Test

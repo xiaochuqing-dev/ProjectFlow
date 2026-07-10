@@ -97,6 +97,9 @@ public class ProjectChange {
     @Column(name = "problem_solved", columnDefinition = "text")
     private String problemSolved;
 
+    @Column(name = "suggestion_reason", columnDefinition = "text")
+    private String suggestionReason;
+
     @Convert(converter = StringListConverter.class)
     @Column(name = "evidence_refs", columnDefinition = "text")
     private List<String> evidenceRefs = new ArrayList<>();
@@ -223,6 +226,7 @@ public class ProjectChange {
     public SedimentAction getSuggestedAction() { return suggestedAction; }
     public UUID getTargetSedimentId() { return targetSedimentId; }
     public String getProblemSolved() { return problemSolved; }
+    public String getSuggestionReason() { return suggestionReason; }
     public List<String> getEvidenceRefs() { return List.copyOf(evidenceRefs); }
     public EvidenceConfidence getEvidenceConfidence() { return evidenceConfidence; }
     public boolean isNeedsUserReview() { return Boolean.TRUE.equals(needsUserReview); }
@@ -299,6 +303,7 @@ public class ProjectChange {
         SedimentAction suggestedAction,
         UUID targetSedimentId,
         String problemSolved,
+        String recommendationReason,
         List<String> evidenceRefs,
         EvidenceConfidence evidenceConfidence,
         boolean needsUserReview
@@ -307,6 +312,7 @@ public class ProjectChange {
         this.suggestedAction = suggestedAction;
         this.targetSedimentId = targetSedimentId;
         this.problemSolved = problemSolved == null ? "" : problemSolved.trim();
+        this.suggestionReason = recommendationReason == null ? "" : recommendationReason.trim();
         this.evidenceRefs = evidenceRefs == null ? new ArrayList<>() : new ArrayList<>(evidenceRefs);
         this.evidenceConfidence = evidenceConfidence == null ? EvidenceConfidence.LOW : evidenceConfidence;
         this.needsUserReview = needsUserReview;

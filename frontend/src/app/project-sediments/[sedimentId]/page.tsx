@@ -65,6 +65,7 @@ export default function ProjectSedimentDetailPage() {
                   <span className="text-xs text-muted">{sediment.sedimentType}</span>
                 </div>
                 <p className="mt-4 max-w-3xl text-base leading-7 text-slate-700 break-words">{sediment.summary}</p>
+                {sediment.legacyTruncated ? <p className="mt-3 rounded-md bg-amber-50 p-3 text-sm leading-6 text-amber-900">这条旧版项目沉淀可能保存过截断文本，原文无法无损恢复。请从对应变化重新分析并确认，以生成完整内容。</p> : null}
                 <section className="mt-6 border-t border-line pt-5">
                   <h2 className="font-semibold text-slate-950">它解决的问题</h2>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 break-words">{sediment.problemSolved || "当前沉淀尚未补充问题说明。"}</p>

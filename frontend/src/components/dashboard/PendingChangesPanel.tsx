@@ -202,6 +202,12 @@ export function PendingChangesPanel({
                   {scope.evidenceGap === true && scope.evidenceGapReason ? (
                     <Diagnostic label="缺口原因" value={String(scope.evidenceGapReason)} />
                   ) : null}
+                  {scope.providerName ? <Diagnostic label="Provider / 模型" value={`${scopeString(scope.providerName, "-")} / ${scopeString(scope.modelName, "-")}`} /> : null}
+                  {scope.finishReason !== undefined ? <Diagnostic label="finish reason" value={scopeString(scope.finishReason, "未返回")} /> : null}
+                  {scope.effectiveMaxTokens !== undefined ? <Diagnostic label="Max Tokens（配置 / 任务 / 实际）" value={`${scopeString(scope.providerMaxTokens, "0")} / ${scopeString(scope.taskPolicyMaxTokens, "0")} / ${scopeString(scope.effectiveMaxTokens, "0")}`} /> : null}
+                  {scope.effectiveTemperature !== undefined ? <Diagnostic label="Temperature（配置 / 实际）" value={`${scopeString(scope.providerTemperature, "0")} / ${scopeString(scope.effectiveTemperature, "0")}`} /> : null}
+                  {scope.totalTokens !== undefined ? <Diagnostic label="Token（输入 / 输出 / 总计）" value={`${scopeString(scope.promptTokens, "0")} / ${scopeString(scope.completionTokens, "0")} / ${scopeString(scope.totalTokens, "0")}`} /> : null}
+                  {scope.outputTruncated !== undefined ? <Diagnostic label="截断 / 紧凑重试" value={`${scope.outputTruncated === true ? "检测到截断" : "未检测到截断"} / ${scope.compactRetryAttempted === true ? scope.compactRetrySucceeded === true ? "重试成功" : "重试后仍为部分结果" : "未重试"}`} /> : null}
                 </dl>
               </div>
             ) : null}

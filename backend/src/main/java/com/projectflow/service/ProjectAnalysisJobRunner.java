@@ -96,7 +96,13 @@ public class ProjectAnalysisJobRunner {
                 var diagnostics = outcome.diagnostics();
                 String resultJson = objectMapper.writeValueAsString(new CapabilityAnalysisJobResult(
                     outcome.cards().size(), outcome.needsEvidenceCount(), diagnostics.rawResponsePresent(), diagnostics.repaired(),
-                    diagnostics.recognizedItems(), diagnostics.discardedItems(), diagnostics.invalidSourceIndexes()
+                    diagnostics.recognizedItems(), diagnostics.discardedItems(), diagnostics.invalidSourceIndexes(),
+                    diagnostics.providerName(), diagnostics.modelName(), diagnostics.finishReason(), diagnostics.promptTokens(),
+                    diagnostics.completionTokens(), diagnostics.totalTokens(), diagnostics.providerMaxTokens(),
+                    diagnostics.taskPolicyMaxTokens(), diagnostics.effectiveMaxTokens(), diagnostics.providerTemperature(),
+                    diagnostics.effectiveTemperature(), diagnostics.timeoutSeconds(), diagnostics.requestLatencyMs(),
+                    diagnostics.outputTruncated(), diagnostics.compactRetryAttempted(), diagnostics.compactRetrySucceeded(),
+                    diagnostics.partialResult(), diagnostics.recoveredItems()
                 ));
                 if (outcome.hasWarnings()) {
                     java.util.List<String> warningParts = new java.util.ArrayList<>();
@@ -104,12 +110,15 @@ public class ProjectAnalysisJobRunner {
                     if (diagnostics.repaired()) warningParts.add("模型返回格式已自动修复");
                     if (diagnostics.discardedItems() > 0) warningParts.add(diagnostics.discardedItems() + " 个无效或重复项已过滤");
                     if (diagnostics.invalidSourceIndexes() > 0) warningParts.add(diagnostics.invalidSourceIndexes() + " 个无效来源编号已忽略");
+                    if (diagnostics.outputTruncated()) warningParts.add("模型输出达到长度上限，已保留完整条目");
+                    if (diagnostics.compactRetryAttempted()) warningParts.add(diagnostics.compactRetrySucceeded() ? "紧凑重试成功" : "紧凑重试后仍为部分结果");
                     if (outcome.cards().size() < 3) warningParts.add("本次生成的有效能力较少");
                     String warning = "能力分析已完成，" + String.join("；", warningParts) + "。";
                     markSucceededWithWarnings(jobId, resultJson, warning);
                 } else {
                     markSucceeded(jobId, resultJson, null);
                 }
+                recordCapabilityUsage(job, diagnostics, startedAt, outcome.hasWarnings());
             } else {
                 ProjectFileAnalysisResponse result = projectAnalysisService.analyzeProjectFile(
                     job.getUserId(),
@@ -123,27 +132,39 @@ public class ProjectAnalysisJobRunner {
             }
         } catch (Exception exception) {
             LOGGER.warn("Project analysis job failed: jobId={}", jobId, exception);
-            String failureStage = exception instanceof ProjectCapabilityService.CapabilityAnalysisException capabilityException
-                ? capabilityException.stage() : null;
-            markFailed(jobId, safeErrorMessage(exception), failureStage);
+            ProjectCapabilityService.CapabilityAnalysisException capabilityException =
+                exception instanceof ProjectCapabilityService.CapabilityAnalysisException value ? value : null;
+            String failureStage = capabilityException == null ? null : capabilityException.stage();
+            String diagnosticsJson = capabilityException == null || capabilityException.diagnostics() == null
+                ? null : safeJson(capabilityException.diagnostics());
+            markFailed(
+                jobId, safeErrorMessage(exception), failureStage, diagnosticsJson,
+                capabilityException != null && capabilityException.modelReturned()
+            );
             recordFailedUsage(job, exception, startedAt);
         }
     }
 
     private void markSucceeded(UUID jobId, String resultJson, UUID recordId) {
         jobRepository.findById(jobId).ifPresent(job -> {
+            if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS) job.recordDiagnostics(resultJson, true);
             job.markSucceeded(resultJson, recordId);
             jobRepository.save(job);
         });
     }
 
     private void markFailed(UUID jobId, String message) {
-        markFailed(jobId, message, null);
+        markFailed(jobId, message, null, null, false);
     }
 
     private void markFailed(UUID jobId, String message, String failureStage) {
+        markFailed(jobId, message, failureStage, null, false);
+    }
+
+    private void markFailed(UUID jobId, String message, String failureStage, String diagnosticsJson, boolean modelReturned) {
         jobRepository.findById(jobId).ifPresent(job -> {
             if (failureStage != null && !failureStage.isBlank()) job.advanceStage(failureStage, message);
+            if (diagnosticsJson != null || modelReturned) job.recordDiagnostics(diagnosticsJson, modelReturned);
             job.markFailed(message);
             jobRepository.save(job);
         });
@@ -151,9 +172,26 @@ public class ProjectAnalysisJobRunner {
 
     private void markSucceededWithWarnings(UUID jobId, String resultJson, String warning) {
         jobRepository.findById(jobId).ifPresent(job -> {
+            if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS) job.recordDiagnostics(resultJson, true);
             job.markSucceededWithWarnings(resultJson, null, warning);
             jobRepository.save(job);
         });
+    }
+
+    private void recordCapabilityUsage(
+        ProjectAnalysisJob job,
+        ProjectCapabilityService.CapabilityDiagnostics diagnostics,
+        long startedAt,
+        boolean hasWarnings
+    ) {
+        modelUsageRecordRepository.save(new ModelUsageRecord(
+            job.getProjectId(), "CAPABILITY_CARD_ANALYSIS", safeProviderName(diagnostics.providerName()),
+            diagnostics.modelName().isBlank() ? "unknown" : diagnostics.modelName(), diagnostics.promptTokens(),
+            diagnostics.completionTokens(), false,
+            diagnostics.requestLatencyMs() > 0 ? diagnostics.requestLatencyMs() : latencyMs(startedAt),
+            hasWarnings ? "SUCCEEDED_WITH_WARNINGS" : "SUCCEEDED", null, null,
+            hasWarnings ? "能力分析包含需复核或部分恢复结果" : null
+        ));
     }
 
     private void recordUsage(
@@ -188,20 +226,30 @@ public class ProjectAnalysisJobRunner {
             case CAPABILITY_CARD_ANALYSIS -> "CAPABILITY_CARD_ANALYSIS";
             case FILE -> "FILE_ANALYSIS";
         };
+        ModelGatewayService.ModelCallDiagnostics diagnostics = exception instanceof ProjectCapabilityService.CapabilityAnalysisException capability
+            ? capability.diagnostics() : null;
         modelUsageRecordRepository.save(new ModelUsageRecord(
             job.getProjectId(),
             operation,
-            "unknown",
-            "unknown",
-            0,
-            0,
-            true,
-            latencyMs(startedAt),
+            diagnostics == null ? "unknown" : safeProviderName(diagnostics.providerName()),
+            diagnostics == null || diagnostics.modelName().isBlank() ? "unknown" : diagnostics.modelName(),
+            diagnostics == null ? 0 : diagnostics.promptTokens(),
+            diagnostics == null ? 0 : diagnostics.completionTokens(),
+            diagnostics == null,
+            diagnostics == null || diagnostics.latencyMs() == 0 ? latencyMs(startedAt) : diagnostics.latencyMs(),
             "FAILED",
             exception.getClass().getSimpleName(),
             safeErrorMessage(exception),
             null
         ));
+    }
+
+    private String safeJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException exception) {
+            return null;
+        }
     }
 
     private String safeProviderName(String providerName) {

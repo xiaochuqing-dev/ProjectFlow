@@ -140,7 +140,7 @@ export default function DashboardPage() {
   const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === "PENDING");
   const pendingChanges = changes.filter((change) => change.status === "PENDING" || change.status === "EDITED");
   const pendingReviewCount = pendingSuggestions.length + pendingChanges.length;
-  const configuredProvider = providers.find((provider) => provider.id && provider.apiKeyConfigured);
+  const configuredProvider = providers.find((provider) => provider.id && provider.apiKeyConfigured && provider.defaultEnabled);
   const paths = useMemo(() => projectZipPaths(materials), [materials]);
   const architecture = useMemo(() => buildProjectArchitecture(paths), [paths]);
   const hasMaterials = materials.length > 0;
@@ -543,7 +543,7 @@ export default function DashboardPage() {
           </Button>
         </Link>
       }
-      eyebrow="ProjectFlow V3.3"
+      eyebrow="ProjectFlow V3.3.5"
       title="工作台"
     >
       <PageContainer>

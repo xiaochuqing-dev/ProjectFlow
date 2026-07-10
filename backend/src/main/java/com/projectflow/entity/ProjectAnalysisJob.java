@@ -76,6 +76,15 @@ public class ProjectAnalysisJob {
     @Column(name = "input_summary", columnDefinition = "text")
     private String inputSummary;
 
+    @Column(name = "diagnostics_json", columnDefinition = "text")
+    private String diagnosticsJson;
+
+    @Column(name = "model_returned")
+    private Boolean modelReturned = false;
+
+    @Column(name = "failure_acknowledged")
+    private Boolean failureAcknowledged = false;
+
     protected ProjectAnalysisJob() {
     }
 
@@ -123,6 +132,15 @@ public class ProjectAnalysisJob {
 
     public void recordInputSummary(String summary) {
         this.inputSummary = summary;
+    }
+
+    public void recordDiagnostics(String diagnostics, boolean returned) {
+        this.diagnosticsJson = diagnostics;
+        this.modelReturned = returned;
+    }
+
+    public void acknowledgeFailure() {
+        this.failureAcknowledged = true;
     }
 
     public void markSucceeded(String resultJson, UUID recordId) {
@@ -232,4 +250,10 @@ public class ProjectAnalysisJob {
     public String getInputSummary() {
         return inputSummary;
     }
+
+    public String getDiagnosticsJson() { return diagnosticsJson; }
+
+    public boolean isModelReturned() { return Boolean.TRUE.equals(modelReturned); }
+
+    public boolean isFailureAcknowledged() { return Boolean.TRUE.equals(failureAcknowledged); }
 }

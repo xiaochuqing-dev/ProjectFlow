@@ -188,7 +188,8 @@ public class WorkSessionScanService {
         );
         List<DevelopmentSegmentResponse> segments = pendingChangeScanService.persistSegments(
             project.getId(), batch.id(), drafts,
-            new SegmentDiagnostics(enrichment.mode(), enrichment.providerName(), enrichment.fallbackReason(), github.status(), github.commitUrlTemplate())
+            // 任务级模型问题只在 batch 展示一次，不复制到每个本地事实摘要卡片。
+            new SegmentDiagnostics(enrichment.mode(), enrichment.providerName(), "", github.status(), github.commitUrlTemplate())
         );
         projectSedimentService.createSuggestions(project.getId(), segments);
         batch = pendingChangeScanService.finish(batch.id(), segments.size(), elapsedMs(scanStarted));
@@ -347,6 +348,29 @@ public class WorkSessionScanService {
             obj.put("evidenceGapReason", scope.evidenceGapReason());
             obj.put("inputCommits", scope.inputCommitCount());
             obj.put("inputFiles", scope.inputFileCount());
+            var diagnostics = enrichment.modelDiagnostics();
+            if (diagnostics != null) {
+                obj.put("providerName", diagnostics.providerName());
+                obj.put("modelName", diagnostics.modelName());
+                obj.put("finishReason", diagnostics.finishReason());
+                obj.put("promptTokens", diagnostics.promptTokens());
+                obj.put("completionTokens", diagnostics.completionTokens());
+                obj.put("totalTokens", diagnostics.totalTokens());
+                obj.put("providerMaxTokens", diagnostics.providerMaxTokens());
+                obj.put("taskPolicyMaxTokens", diagnostics.taskPolicyMaxTokens());
+                obj.put("effectiveMaxTokens", diagnostics.effectiveMaxTokens());
+                obj.put("providerTemperature", diagnostics.providerTemperature());
+                obj.put("effectiveTemperature", diagnostics.effectiveTemperature());
+                obj.put("timeoutSeconds", diagnostics.timeoutSeconds());
+                obj.put("requestLatencyMs", diagnostics.latencyMs());
+                obj.put("modelContentPresent", diagnostics.contentPresent());
+                obj.put("outputTruncated", diagnostics.truncated());
+                obj.put("compactRetryAttempted", diagnostics.compactRetryAttempted());
+                obj.put("compactRetrySucceeded", diagnostics.compactRetrySucceeded());
+                obj.put("jsonRepaired", diagnostics.jsonRepaired());
+                obj.put("partialResult", diagnostics.partialResult());
+                obj.put("recoveredItems", diagnostics.recoveredItems());
+            }
             return objectMapper.writeValueAsString(obj);
         } catch (Exception exception) {
             return "";

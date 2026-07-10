@@ -1,5 +1,11 @@
 # Known risks
 
+- 不要重新在 DisplayContentSanitizer 中加入持久化前长度截断；预览长度必须留在前端展示层。
+- 不要把 finish reason 缺失直接视为正常结束；completion tokens 接近实际上限或 JSON 根结构未闭合时仍应识别为疑似截断。
+- 紧凑重试最多一次，且必须缩小返回结构；不能原样无限重试或让轮询临时失败污染正式任务状态。
+- 不要让失败的能力分析删除或替换上次成功候选；能力卡片无 analysisJobId 时只能标为旧版来源未知。
+- Provider 编辑时空 Key 不能覆盖旧 Key；删除默认 Provider 前必须先选择替代项，重复清理不得自动删除。
+- 新增字段保持 nullable/包装类型以兼容 H2 和 PostgreSQL 的既有行；不得要求用户重建数据库。
 - 不要重新要求模型复制 UUID、提交哈希或内部 evidenceRefs；新增结构化入口应复用 S 编号映射和 ModelOutputAdapter。
 - 不要在外部模型调用期间持有数据库事务，也不要在新候选生成成功前删除旧候选。
 - 模型原始返回只用于后端诊断；主界面不得展示原始 JSON、异常栈或内部阶段枚举。

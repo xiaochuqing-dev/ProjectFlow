@@ -18,7 +18,10 @@ public final class ModelFailureClassifier {
     public static final String HTTP_429 = "HTTP_429";
     public static final String HTTP_5XX = "HTTP_5XX";
     public static final String NETWORK_ERROR = "NETWORK_ERROR";
+    public static final String EMPTY_CONTENT = "EMPTY_CONTENT";
+    public static final String OUTPUT_TRUNCATED = "OUTPUT_TRUNCATED";
     public static final String JSON_PARSE_FAILED = "JSON_PARSE_FAILED";
+    public static final String SCHEMA_UNRECOGNIZED = "SCHEMA_UNRECOGNIZED";
     public static final String EVIDENCE_REJECTED = "EVIDENCE_REJECTED";
     public static final String UNKNOWN_CALL_FAILED = "UNKNOWN_CALL_FAILED";
 
@@ -45,6 +48,9 @@ public final class ModelFailureClassifier {
         if (failure instanceof ModelGatewayService.ModelHttpException) {
             return classifyHttpStatus(((ModelGatewayService.ModelHttpException) failure).statusCode());
         }
+        if (failure instanceof ModelGatewayService.ModelOutputTruncatedException) return OUTPUT_TRUNCATED;
+        if (failure instanceof ModelGatewayService.ModelEmptyContentException) return EMPTY_CONTENT;
+        if (failure instanceof ModelGatewayService.ModelResponseFormatException) return JSON_PARSE_FAILED;
         String message = failure.getMessage() == null ? "" : failure.getMessage().toLowerCase();
         // JSON 解析失败：网关 parseModelJson / extractJsonObject 抛出的 IOException。
         if (message.contains("json") || message.contains("not json") || message.contains("empty model content")) {
@@ -65,7 +71,10 @@ public final class ModelFailureClassifier {
             case HTTP_429 -> provider + " 返回 429，可能是限流，请稍后重试。";
             case HTTP_5XX -> provider + " 服务异常（5xx），本次先展示本地事实摘要，可稍后重新分析。";
             case NETWORK_ERROR -> "网络连接失败，可能与代理或 baseUrl 有关，本次先展示本地事实摘要。";
-            case JSON_PARSE_FAILED -> "模型返回内容不是可解析结构，本次先展示本地事实摘要。";
+            case EMPTY_CONTENT -> "模型服务已响应，但没有返回可分析内容，本次先展示本地事实摘要。";
+            case OUTPUT_TRUNCATED -> "模型输出达到长度上限，紧凑重试后仍未得到完整结构，本次展示已恢复结果或本地事实摘要。";
+            case JSON_PARSE_FAILED -> "模型已返回内容，但 JSON 语法无法解析，本次先展示本地事实摘要。";
+            case SCHEMA_UNRECOGNIZED -> "模型返回内容可以读取，但没有识别到目标结果结构，本次先展示本地事实摘要。";
             case EVIDENCE_REJECTED -> "模型结果引用的证据不可用，本次先展示本地事实摘要。";
             default -> provider + " 调用失败，本次先展示本地事实摘要。";
         };

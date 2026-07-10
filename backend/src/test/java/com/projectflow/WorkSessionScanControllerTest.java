@@ -73,7 +73,7 @@ class WorkSessionScanControllerTest {
             .andExpect(jsonPath("$.data.batch.totalScanMs").value(greaterThanOrEqualTo(0)))
             .andExpect(jsonPath("$.data.segments[0].generationMode").value("LOCAL_RULE"))
             .andExpect(jsonPath("$.data.segments[0].qualityStatus").value("PASS"))
-            .andExpect(jsonPath("$.data.segments[0].fallbackReason").value(containsString("未配置")))
+            .andExpect(jsonPath("$.data.batch.fallbackReason").value(containsString("未配置")))
             .andExpect(jsonPath("$.data.segments[0].includedAgentResultRefs[0]").value(containsString("agent-result:")))
             // V3.3.3: 分析口径 JSON 必须记录本次用了哪些来源。
             .andExpect(jsonPath("$.data.batch.analysisScope").value(containsString("localGit")))
@@ -289,12 +289,20 @@ class WorkSessionScanControllerTest {
         Path projectPath = createGitProject("github-login-project");
         writeProtocol(token, projectId, projectPath);
 
-        mockMvc.perform(get("/api/projects/" + projectId + "/github/login-guide")
+        MvcResult guideResult = mockMvc.perform(get("/api/projects/" + projectId + "/github/login-guide")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.command").value(containsString("gh auth login")))
-            .andExpect(jsonPath("$.data.instructions[0]").value(containsString("不读取")))
-            .andExpect(jsonPath("$.data.instructions[*]").value(org.hamcrest.Matchers.hasItem(containsString("show-token"))));
+            .andExpect(jsonPath("$.data.ghInstalled").isBoolean())
+            .andReturn();
+
+        JsonNode guide = objectMapper.readTree(guideResult.getResponse().getContentAsString()).path("data");
+        if (guide.path("ghInstalled").asBoolean()) {
+            org.assertj.core.api.Assertions.assertThat(guide.path("command").asText()).contains("gh auth login");
+            org.assertj.core.api.Assertions.assertThat(guide.path("instructions").toString()).contains("show-token");
+        } else {
+            org.assertj.core.api.Assertions.assertThat(guide.path("command").asText()).isBlank();
+            org.assertj.core.api.Assertions.assertThat(guide.path("instructions").toString()).contains("GitHub CLI");
+        }
     }
 
     @Test

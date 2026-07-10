@@ -31,17 +31,66 @@ public class ModelOutputAdapter {
             throw new IOException("模型没有返回内容");
         }
         String withoutFence = CODE_FENCE.matcher(rawContent).replaceAll("").trim();
-        String extracted = extractJson(withoutFence);
+        String extracted;
+        try {
+            extracted = extractJson(withoutFence);
+        } catch (IOException exception) {
+            ArrayNode recovered = recoverCompleteArrayItems(withoutFence);
+            if (!recovered.isEmpty()) {
+                return new ParsedOutput(recovered, true, rawContent.length(), true, recovered.size());
+            }
+            throw exception;
+        }
         boolean repaired = !withoutFence.equals(extracted);
         try {
-            return new ParsedOutput(objectMapper.readTree(extracted), repaired, rawContent.length());
+            return new ParsedOutput(objectMapper.readTree(extracted), repaired, rawContent.length(), false, 0);
         } catch (IOException firstFailure) {
             String normalized = TRAILING_COMMA.matcher(extracted).replaceAll("$1");
-            if (normalized.equals(extracted)) {
-                throw firstFailure;
+            if (!normalized.equals(extracted)) {
+                try {
+                    return new ParsedOutput(objectMapper.readTree(normalized), true, rawContent.length(), false, 0);
+                } catch (IOException ignored) {
+                    // 继续尝试保留截断根结构中已经完整的条目。
+                }
             }
-            return new ParsedOutput(objectMapper.readTree(normalized), true, rawContent.length());
+            ArrayNode recovered = recoverCompleteArrayItems(withoutFence);
+            if (!recovered.isEmpty()) {
+                return new ParsedOutput(recovered, true, rawContent.length(), true, recovered.size());
+            }
+            throw firstFailure;
         }
+    }
+
+    /** 结合 JSON 根结构闭合情况识别疑似截断，解释文字不会被误判。 */
+    public boolean likelyTruncated(String rawContent) {
+        if (rawContent == null || rawContent.isBlank()) return false;
+        String content = CODE_FENCE.matcher(rawContent).replaceAll("").trim();
+        int objectStart = content.indexOf('{');
+        int arrayStart = content.indexOf('[');
+        int start = arrayStart >= 0 && (objectStart < 0 || arrayStart < objectStart) ? arrayStart : objectStart;
+        if (start < 0) return false;
+        char opening = content.charAt(start);
+        char closing = opening == '{' ? '}' : ']';
+        int depth = 0;
+        boolean inString = false;
+        boolean escaped = false;
+        for (int index = start; index < content.length(); index++) {
+            char current = content.charAt(index);
+            if (inString) {
+                if (escaped) escaped = false;
+                else if (current == '\\') escaped = true;
+                else if (current == '"') inString = false;
+                continue;
+            }
+            if (current == '"') {
+                inString = true;
+            } else if (current == opening) {
+                depth++;
+            } else if (current == closing && --depth == 0) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public List<JsonNode> items(JsonNode root, String... aliases) {
@@ -118,6 +167,48 @@ public class ModelOutputAdapter {
         return content.substring(start, end + 1).trim();
     }
 
-    public record ParsedOutput(JsonNode root, boolean repaired, int rawLength) {
+    /** 从未闭合的根数组中保留已经闭合且可解析的对象，不猜测残缺条目。 */
+    private ArrayNode recoverCompleteArrayItems(String content) {
+        ArrayNode recovered = objectMapper.createArrayNode();
+        int arrayStart = content.indexOf('[');
+        if (arrayStart < 0) return recovered;
+        boolean inString = false;
+        boolean escaped = false;
+        int objectDepth = 0;
+        int objectStart = -1;
+        for (int index = arrayStart + 1; index < content.length(); index++) {
+            char current = content.charAt(index);
+            if (inString) {
+                if (escaped) escaped = false;
+                else if (current == '\\') escaped = true;
+                else if (current == '"') inString = false;
+                continue;
+            }
+            if (current == '"') {
+                inString = true;
+            } else if (current == '{') {
+                if (objectDepth == 0) objectStart = index;
+                objectDepth++;
+            } else if (current == '}' && objectDepth > 0) {
+                objectDepth--;
+                if (objectDepth == 0 && objectStart >= 0) {
+                    String candidate = content.substring(objectStart, index + 1);
+                    try {
+                        JsonNode item = objectMapper.readTree(TRAILING_COMMA.matcher(candidate).replaceAll("$1"));
+                        if (item.isObject()) recovered.add(item);
+                    } catch (IOException ignored) {
+                        // 只保留完整可解析条目。
+                    }
+                    objectStart = -1;
+                }
+            }
+        }
+        return recovered;
+    }
+
+    public record ParsedOutput(JsonNode root, boolean repaired, int rawLength, boolean partial, int recoveredItems) {
+        public ParsedOutput(JsonNode root, boolean repaired, int rawLength) {
+            this(root, repaired, rawLength, false, 0);
+        }
     }
 }

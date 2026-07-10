@@ -33,7 +33,7 @@ export default function ProjectFilesPage() {
   const [error, setError] = useState("");
   const { jobs, jobError, enqueueFileAnalysis } = useProjectAnalysisJobs(params.projectId);
 
-  const configuredProvider = providers.find((provider) => provider.id && provider.apiKeyConfigured);
+  const configuredProvider = providers.find((provider) => provider.id && provider.apiKeyConfigured && provider.defaultEnabled);
   const paths = useMemo(() => projectZipPaths(materials), [materials]);
   const files = useMemo(() => buildFileInsights(paths), [paths]);
   const modules = useMemo(() => buildModuleGroups(paths), [paths]);

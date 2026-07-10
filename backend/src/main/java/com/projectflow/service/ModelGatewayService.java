@@ -22,6 +22,7 @@ public class ModelGatewayService {
     // 不再固定 35 秒上限。改为可配置，默认 240 秒，覆盖 DeepSeek 多 commit 分析场景。
     private static final int MAX_MODEL_ATTEMPTS = 2;
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(8);
+    private static final double MAX_STRUCTURED_TEMPERATURE = 0.3;
     private final Duration modelRequestTimeout;
 
     private final ObjectMapper objectMapper;
@@ -49,6 +50,49 @@ public class ModelGatewayService {
     }
 
     public StructuredModelResponse callStructured(AiProvider provider, String prompt, int outputTokenLimit) throws IOException, InterruptedException {
+        int effectiveMaxTokens = Math.min(provider.getMaxTokens(), outputTokenLimit);
+        double effectiveTemperature = Math.min(provider.getTemperature(), MAX_STRUCTURED_TEMPERATURE);
+        StructuredModelResponse firstResponse;
+        try {
+            firstResponse = sendStructuredRequest(
+                provider, prompt, outputTokenLimit, effectiveMaxTokens, effectiveTemperature, false
+            );
+        } catch (ModelOutputTruncatedException firstFailure) {
+            try {
+                StructuredModelResponse compact = sendStructuredRequest(
+                    provider, compactPrompt(prompt), outputTokenLimit, effectiveMaxTokens, effectiveTemperature, true
+                );
+                return compact.withCompactRetry(true, !compact.diagnostics().truncated());
+            } catch (IOException compactFailure) {
+                throw new ModelOutputTruncatedException(
+                    "模型输出达到长度上限，紧凑重试后仍未得到可用结构",
+                    compactFailure,
+                    firstFailure.diagnostics().withCompactRetry(true, false)
+                );
+            }
+        }
+        if (!firstResponse.diagnostics().truncated() && !firstResponse.parsed().partial()) {
+            return firstResponse;
+        }
+        try {
+            StructuredModelResponse compact = sendStructuredRequest(
+                provider, compactPrompt(prompt), outputTokenLimit, effectiveMaxTokens, effectiveTemperature, true
+            );
+            return compact.withCompactRetry(true, !compact.diagnostics().truncated());
+        } catch (IOException compactFailure) {
+            // 第一次响应已有完整条目时，紧凑重试失败也保留可用部分，并明确附带警告诊断。
+            return firstResponse.withCompactRetry(true, false);
+        }
+    }
+
+    private StructuredModelResponse sendStructuredRequest(
+        AiProvider provider,
+        String prompt,
+        int taskPolicyMaxTokens,
+        int effectiveMaxTokens,
+        double effectiveTemperature,
+        boolean compactRetry
+    ) throws IOException, InterruptedException {
         Map<String, Object> body = Map.of(
             "model", provider.getModelName(),
             "messages", List.of(
@@ -60,8 +104,8 @@ public class ModelGatewayService {
                 ),
                 Map.of("role", "user", "content", prompt)
             ),
-            "temperature", Math.min(provider.getTemperature(), 0.3),
-            "max_tokens", Math.min(provider.getMaxTokens(), outputTokenLimit)
+            "temperature", effectiveTemperature,
+            "max_tokens", effectiveMaxTokens
         );
         HttpRequest request = HttpRequest.newBuilder()
             .uri(aiProviderUrlGuard.chatCompletionsUri(provider.getBaseUrl()))
@@ -71,10 +115,14 @@ public class ModelGatewayService {
             .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
             .build();
         for (int attempt = 1; attempt <= MAX_MODEL_ATTEMPTS; attempt++) {
+            long startedAt = System.nanoTime();
             try {
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                    return parseModelResponse(response.body());
+                    return parseModelResponse(
+                        response.body(), provider, taskPolicyMaxTokens, effectiveMaxTokens, effectiveTemperature,
+                        elapsedMs(startedAt), attempt - 1, compactRetry
+                    );
                 }
                 if (attempt < MAX_MODEL_ATTEMPTS && isTransientModelStatus(response.statusCode())) {
                     pauseBeforeRetry(attempt);
@@ -118,16 +166,47 @@ public class ModelGatewayService {
         }
     }
 
-    private StructuredModelResponse parseModelResponse(String responseBody) throws IOException {
-        JsonNode root = objectMapper.readTree(responseBody);
+    StructuredModelResponse parseModelResponse(
+        String responseBody,
+        AiProvider provider,
+        int taskPolicyMaxTokens,
+        int effectiveMaxTokens,
+        double effectiveTemperature,
+        long latencyMs,
+        int transportRetryCount,
+        boolean compactRetry
+    ) throws IOException {
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(responseBody);
+        } catch (IOException exception) {
+            throw new ModelResponseFormatException("模型服务返回体无法读取", exception, null);
+        }
         String content = root.at("/choices/0/message/content").asText("");
+        String finishReason = root.at("/choices/0/finish_reason").asText("");
+        int promptTokens = root.at("/usage/prompt_tokens").asInt(0);
+        int completionTokens = root.at("/usage/completion_tokens").asInt(0);
+        int totalTokens = root.at("/usage/total_tokens").asInt(promptTokens + completionTokens);
+        boolean nearLimit = completionTokens > 0 && completionTokens >= Math.ceil(effectiveMaxTokens * 0.92);
+        boolean truncated = "length".equalsIgnoreCase(finishReason) || nearLimit || outputAdapter.likelyTruncated(content);
+        ModelCallDiagnostics diagnostics = new ModelCallDiagnostics(
+            provider.getName(), provider.getModelName(), finishReason, promptTokens, completionTokens, totalTokens,
+            provider.getMaxTokens(), taskPolicyMaxTokens, effectiveMaxTokens, provider.getTemperature(), effectiveTemperature,
+            modelRequestTimeout.toSeconds(), latencyMs, true, !content.isBlank(), truncated, compactRetry, false,
+            transportRetryCount, false, false, 0
+        );
         if (content.isBlank()) {
-            throw new IOException("empty model content");
+            throw new ModelEmptyContentException("模型服务已响应，但没有返回内容", diagnostics);
         }
         try {
-            return new StructuredModelResponse(content, outputAdapter.parse(content));
+            ModelOutputAdapter.ParsedOutput parsed = outputAdapter.parse(content);
+            ModelCallDiagnostics completed = diagnostics.withParsed(parsed.repaired(), parsed.partial(), parsed.recoveredItems());
+            return new StructuredModelResponse(content, parsed, completed);
         } catch (IOException exception) {
-            throw new ModelResponseFormatException(exception.getMessage(), exception);
+            if (truncated) {
+                throw new ModelOutputTruncatedException("模型输出达到长度上限且结构不完整", exception, diagnostics);
+            }
+            throw new ModelResponseFormatException("模型已返回内容，但 JSON 语法无法解析", exception, diagnostics);
         }
     }
 
@@ -139,12 +218,108 @@ public class ModelGatewayService {
         Thread.sleep(400L * attempt);
     }
 
-    public record StructuredModelResponse(String rawContent, ModelOutputAdapter.ParsedOutput parsed) {
+    private String compactPrompt(String prompt) {
+        return prompt + """
+
+            【紧凑重试】上次输出疑似达到长度上限。只返回必要 JSON，最多 4 项；每个自然语言字段不超过 80 个汉字；
+            数组最多 4 个值；不要返回解释、内部 ID、文件清单或可由来源编号恢复的证据字段。
+            """;
     }
 
-    public static final class ModelResponseFormatException extends IOException {
+    private long elapsedMs(long startedAt) {
+        return Math.max(0, (System.nanoTime() - startedAt) / 1_000_000);
+    }
+
+    public record StructuredModelResponse(
+        String rawContent,
+        ModelOutputAdapter.ParsedOutput parsed,
+        ModelCallDiagnostics diagnostics
+    ) {
+        public StructuredModelResponse(String rawContent, ModelOutputAdapter.ParsedOutput parsed) {
+            this(rawContent, parsed, ModelCallDiagnostics.unknown(parsed));
+        }
+
+        StructuredModelResponse withCompactRetry(boolean attempted, boolean succeeded) {
+            return new StructuredModelResponse(rawContent, parsed, diagnostics.withCompactRetry(attempted, succeeded));
+        }
+    }
+
+    public record ModelCallDiagnostics(
+        String providerName,
+        String modelName,
+        String finishReason,
+        int promptTokens,
+        int completionTokens,
+        int totalTokens,
+        int providerMaxTokens,
+        int taskPolicyMaxTokens,
+        int effectiveMaxTokens,
+        double providerTemperature,
+        double effectiveTemperature,
+        long timeoutSeconds,
+        long latencyMs,
+        boolean requestSucceeded,
+        boolean contentPresent,
+        boolean truncated,
+        boolean compactRetryAttempted,
+        boolean compactRetrySucceeded,
+        int transportRetryCount,
+        boolean jsonRepaired,
+        boolean partialResult,
+        int recoveredItems
+    ) {
+        static ModelCallDiagnostics unknown(ModelOutputAdapter.ParsedOutput parsed) {
+            return new ModelCallDiagnostics(
+                "", "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                true, true, parsed.partial(), false, false, 0, parsed.repaired(), parsed.partial(), parsed.recoveredItems()
+            );
+        }
+
+        ModelCallDiagnostics withParsed(boolean repaired, boolean partial, int recovered) {
+            return new ModelCallDiagnostics(
+                providerName, modelName, finishReason, promptTokens, completionTokens, totalTokens,
+                providerMaxTokens, taskPolicyMaxTokens, effectiveMaxTokens, providerTemperature, effectiveTemperature,
+                timeoutSeconds, latencyMs, requestSucceeded, contentPresent, truncated || partial,
+                compactRetryAttempted, compactRetrySucceeded, transportRetryCount, repaired, partial, recovered
+            );
+        }
+
+        ModelCallDiagnostics withCompactRetry(boolean attempted, boolean succeeded) {
+            return new ModelCallDiagnostics(
+                providerName, modelName, finishReason, promptTokens, completionTokens, totalTokens,
+                providerMaxTokens, taskPolicyMaxTokens, effectiveMaxTokens, providerTemperature, effectiveTemperature,
+                timeoutSeconds, latencyMs, requestSucceeded, contentPresent, truncated || attempted,
+                attempted, succeeded, transportRetryCount, jsonRepaired, partialResult, recoveredItems
+            );
+        }
+    }
+
+    public static class ModelResponseFormatException extends IOException {
+        private final ModelCallDiagnostics diagnostics;
+
         public ModelResponseFormatException(String message, Throwable cause) {
+            this(message, cause, null);
+        }
+
+        public ModelResponseFormatException(String message, Throwable cause, ModelCallDiagnostics diagnostics) {
             super(message, cause);
+            this.diagnostics = diagnostics;
+        }
+
+        public ModelCallDiagnostics diagnostics() {
+            return diagnostics;
+        }
+    }
+
+    public static final class ModelOutputTruncatedException extends ModelResponseFormatException {
+        public ModelOutputTruncatedException(String message, Throwable cause, ModelCallDiagnostics diagnostics) {
+            super(message, cause, diagnostics);
+        }
+    }
+
+    public static final class ModelEmptyContentException extends ModelResponseFormatException {
+        public ModelEmptyContentException(String message, ModelCallDiagnostics diagnostics) {
+            super(message, null, diagnostics);
         }
     }
 }

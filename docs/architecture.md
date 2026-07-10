@@ -2,7 +2,15 @@
 
 ## System Overview
 
-ProjectFlow uses a separated frontend and backend architecture. The current V3.2 product spine is a developer workbench that turns real project activity into confirmed project assets.
+ProjectFlow uses a separated frontend and backend architecture. The current V3.3.5 product spine is a developer workbench that turns real project activity into confirmed project sediment.
+
+## V3.3.5 Reliability Flow
+
+Structured model calls pass through one gateway that records transport success, content presence, finish reason, usage, effective parameters, timeout, latency, truncation, JSON repair, and compact retry. Suspected truncation receives one smaller retry; if a truncated root array contains complete objects, only those complete objects may continue with a warning. Development-segment evidence and capability evidence are restored by the backend from S-number sources.
+
+Display sanitization removes unsafe/noisy evidence markers but does not shorten persisted content. List pages use CSS preview clamps, while change, sediment, capability, and evidence details render the complete normalized text. Legacy ellipsis-ended content is treated as unrecoverable source loss and is marked for re-analysis.
+
+Capability analysis uses the existing durable job as its batch record. Cards store `analysis_job_id`; failed jobs keep diagnostics and an acknowledgement flag, while successful replacement remains atomic and never deletes confirmed cards. Provider selection is explicit: only the unique default Provider is eligible for new model tasks.
 
 ```mermaid
 flowchart LR

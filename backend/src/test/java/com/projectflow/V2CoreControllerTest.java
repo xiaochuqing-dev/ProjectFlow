@@ -102,7 +102,7 @@ class V2CoreControllerTest {
     }
 
     @Test
-    void acceptsLargeProviderMaxTokenConfiguration() throws Exception {
+    void rejectsProviderMaxTokenConfigurationOutsideSupportedRange() throws Exception {
         String token = register("large-token-owner", "large-token-owner@example.com");
 
         mockMvc.perform(post("/api/ai-providers")
@@ -121,8 +121,7 @@ class V2CoreControllerTest {
                       "purposeTags": ["项目分析"]
                     }
                     """))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.maxTokens").value(100000000));
+            .andExpect(status().isBadRequest());
     }
 
     @Test

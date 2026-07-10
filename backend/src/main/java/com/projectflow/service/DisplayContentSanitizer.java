@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
  * 1. 去除原始证据标记：commit:hash、file:path、agent-result:path、evidence 编号、raw hash。
  * 2. 去除脏结构：JSON 片段、数组括号、map / DTO 字段堆叠、内部枚举大写串。
  * 3. 去除长路径 / 长 URL 堆叠：单个长路径或 URL 不应成为主内容。
- * 4. 长度限制：title ≤ 60、summary ≤ 180、单条 change ≤ 120，超出截断。
+ * 4. 保留完整规范化正文，展示层按页面密度生成预览。
  * 5. 可读性兜底：若清洗后无可读中文人话，用保守兜底"根据提交记录整理的变更"。
  *
  * 原始证据不会被删除，只是不进入主视图；它仍保留在 evidenceDetails / affectedFiles / 证据细节折叠区。
@@ -41,39 +41,35 @@ public final class DisplayContentSanitizer {
     // 纯数字串（长度 ≥8）
     private static final Pattern LONG_NUMBER = Pattern.compile("\\b\\d{8,}\\b");
 
-    private static final int TITLE_MAX = 60;
-    private static final int SUMMARY_MAX = 180;
-    private static final int CHANGE_MAX = 120;
-
     private DisplayContentSanitizer() {
     }
 
     /**
-     * 清洗主标题。去除脏内容后截断到 60 字符；若结果无可读中文则用兜底。
+     * 清洗主标题。只去除脏内容，不在持久化前截断。
      */
     public static String sanitizeTitle(String raw) {
-        return sanitizeField(raw, TITLE_MAX, "根据提交记录整理的变更");
+        return sanitizeField(raw, "根据提交记录整理的变更");
     }
 
     /**
-     * 清洗摘要 / plainSummary。去除脏内容后截断到 180 字符；若结果无可读中文则用兜底。
+     * 清洗摘要 / plainSummary。保留完整规范化内容。
      */
     public static String sanitizeSummary(String raw) {
-        return sanitizeField(raw, SUMMARY_MAX, "整理了一组可追溯的开发变化。");
+        return sanitizeField(raw, "整理了一组可追溯的开发变化。");
     }
 
     /**
-     * 清洗单条主要变化。去除脏内容后截断到 120 字符；若结果无可读中文则用兜底。
+     * 清洗单条主要变化。保留完整规范化内容。
      */
     public static String sanitizeChange(String raw) {
-        return sanitizeField(raw, CHANGE_MAX, "包含可追溯的开发变化");
+        return sanitizeField(raw, "包含可追溯的开发变化");
     }
 
     /**
-     * 清洗用户可感知价值描述。去除脏内容后截断到 180 字符；若结果无可读中文则用兜底。
+     * 清洗用户可感知价值描述。保留完整规范化内容。
      */
     public static String sanitizeUserVisibleValue(String raw) {
-        return sanitizeField(raw, SUMMARY_MAX, "带来可追溯的行为变化，可从证据细节查看来源。");
+        return sanitizeField(raw, "带来可追溯的行为变化，可从证据细节查看来源。");
     }
 
     /**
@@ -94,20 +90,20 @@ public final class DisplayContentSanitizer {
      * 清洗能力卡片名称。与标题同规格。
      */
     public static String sanitizeCapabilityName(String raw) {
-        return sanitizeField(raw, TITLE_MAX, "根据项目证据整理的能力");
+        return sanitizeField(raw, "根据项目证据整理的能力");
     }
 
     /**
      * 清洗能力卡片摘要 / README / 简历 / 面试表达。与摘要同规格。
      */
     public static String sanitizeCapabilitySummary(String raw) {
-        return sanitizeField(raw, SUMMARY_MAX, "基于可追溯证据整理的能力说明。");
+        return sanitizeField(raw, "基于可追溯证据整理的能力说明。");
     }
 
     /**
-     * 核心清洗逻辑：去除脏内容 -> 折叠多余空白 -> 截断 -> 可读性兜底。
+     * 核心清洗逻辑：去除脏内容 -> 折叠多余空白 -> 可读性兜底。
      */
-    private static String sanitizeField(String raw, int maxLength, String fallback) {
+    private static String sanitizeField(String raw, String fallback) {
         if (raw == null || raw.isBlank()) return fallback;
         String cleaned = raw.trim();
         // 1. 去除证据前缀标记（commit:abc / file:src/... 等）
@@ -126,9 +122,7 @@ public final class DisplayContentSanitizer {
         cleaned = PATH_LIST.matcher(cleaned).replaceAll("相关文件");
         // 8. 折叠多余空白和残留标点
         cleaned = collapseWhitespace(cleaned);
-        // 9. 截断到最大长度
-        cleaned = truncate(cleaned, maxLength);
-        // 10. 可读性兜底：清洗后无可读中文则用兜底
+        // 9. 可读性兜底：清洗后无可读中文则用兜底
         if (!hasReadableContent(cleaned)) {
             return fallback;
         }
@@ -145,10 +139,11 @@ public final class DisplayContentSanitizer {
             .trim();
     }
 
-    private static String truncate(String value, int maxLength) {
-        if (value.length() <= maxLength) return value;
-        // 按字符截断，避免截断半个中文字符（Java String 按 UTF-16 char，汉字基本在 BMP 内）。
-        return value.substring(0, maxLength) + "…";
+    /** 旧版曾把正文永久截断并以省略号结尾，只能提示重新分析，不能假装恢复原文。 */
+    public static boolean isLikelyLegacyTruncated(String value) {
+        if (value == null || value.isBlank()) return false;
+        String trimmed = value.trim();
+        return trimmed.endsWith("…") || trimmed.endsWith("...");
     }
 
     /**

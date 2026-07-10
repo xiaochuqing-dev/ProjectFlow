@@ -132,6 +132,16 @@ public class ProjectAnalysisJobService {
         return toResponse(findOwnedJob(userId, jobId));
     }
 
+    @Transactional
+    public ProjectAnalysisJobResponse acknowledgeFailure(UUID userId, UUID jobId) {
+        ProjectAnalysisJob job = findOwnedJob(userId, jobId);
+        if (job.getStatus() == ProjectAnalysisJobStatus.FAILED) {
+            job.acknowledgeFailure();
+            jobRepository.save(job);
+        }
+        return toResponse(job);
+    }
+
     @Transactional(readOnly = true)
     public List<ProjectAnalysisJobResponse> listProjectJobs(UUID userId, UUID projectId) {
         ProjectSpace project = findOwnedProject(userId, projectId);
@@ -203,7 +213,16 @@ public class ProjectAnalysisJobService {
                         summary.path("cardCount").asInt(0), summary.path("needsEvidenceCount").asInt(0),
                         summary.path("rawResponsePresent").asBoolean(false), summary.path("repaired").asBoolean(false),
                         summary.path("recognizedItems").asInt(0), summary.path("discardedItems").asInt(0),
-                        summary.path("invalidSourceIndexes").asInt(0)
+                        summary.path("invalidSourceIndexes").asInt(0), summary.path("providerName").asText(""),
+                        summary.path("modelName").asText(""), summary.path("finishReason").asText(""),
+                        summary.path("promptTokens").asInt(0), summary.path("completionTokens").asInt(0),
+                        summary.path("totalTokens").asInt(0), summary.path("providerMaxTokens").asInt(0),
+                        summary.path("taskPolicyMaxTokens").asInt(0), summary.path("effectiveMaxTokens").asInt(0),
+                        summary.path("providerTemperature").asDouble(0), summary.path("effectiveTemperature").asDouble(0),
+                        summary.path("timeoutSeconds").asLong(0), summary.path("requestLatencyMs").asLong(0),
+                        summary.path("outputTruncated").asBoolean(false), summary.path("compactRetryAttempted").asBoolean(false),
+                        summary.path("compactRetrySucceeded").asBoolean(false), summary.path("partialResult").asBoolean(false),
+                        summary.path("recoveredItems").asInt(0)
                     );
                 } else {
                     fileResult = objectMapper.readValue(job.getResultJson(), ProjectFileAnalysisResponse.class);
@@ -238,7 +257,10 @@ public class ProjectAnalysisJobService {
             job.getStage(),
             job.getStageMessage(),
             job.getCurrentStepStartedAt(),
-            job.getInputSummary()
+            job.getInputSummary(),
+            job.getDiagnosticsJson(),
+            job.isModelReturned(),
+            job.isFailureAcknowledged()
         );
     }
 

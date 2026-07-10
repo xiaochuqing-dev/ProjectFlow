@@ -1,3 +1,14 @@
+# V3.3.5 requirements
+
+1. Distinguish model request, response, truncation, JSON syntax, target schema, evidence binding, and persistence failures.
+2. Record finish reason, token usage, effective Max Tokens/Temperature, timeout, latency, Provider/model, repair, retry, and partial recovery diagnostics without exposing secrets or raw responses.
+3. Perform one compact retry for suspected truncation and retain only complete recoverable items.
+4. Store complete normalized content; clamp only list previews and mark legacy ellipsis-ended data for re-analysis.
+5. Show a recommended sediment action, target context, consequence preview, concrete confirmation result, and direct sediment link.
+6. Associate capability cards with analysis jobs and separate the current successful batch, latest failure, and history while preserving old results.
+7. Support Provider testing, editing, explicit key clearing, unique default selection, protected deletion, and user-confirmed duplicate cleanup.
+8. Keep existing H2 and PostgreSQL data compatible; never require database deletion.
+
 # V3.3.4 requirements
 
 1. Split model failure notices into plain Chinese reasons (not configured / call failed / invalid response format / invalid evidence reference); remove "增强本地摘要" and always state the result source as "本地事实摘要".

@@ -1,0 +1,48 @@
+{
+  "taskGoal": "按 V3.3.5 方向完成模型可靠性、沉淀确认、能力批次和 Provider 管理改造，并以严格验收避免隐性数据与兼容性问题。",
+  "actualChanges": [
+    "模型调用现在记录 Provider、模型、finish reason、token 用量、实际参数、超时、延迟、紧凑重试和部分恢复状态；疑似截断会执行一次紧凑重试，并只保留已完整解析的条目。",
+    "模型输出不再在保存前按长度截断；旧的省略号结尾内容会被标记为历史截断数据并引导重新分析。",
+    "待确认变更提供系统推荐、目标后果预览和明确确认结果；确认后可看到写入目标、证据数、文件数、摘要变化及直接查看入口。",
+    "能力卡片关联分析任务，能力页分开显示当前成功批次、最近失败和历史记录，已确认卡片不会因重分析丢失。",
+    "模型 Provider 支持编辑、唯一默认项、受保护删除、显式清除 Key 与用户确认后的重复清理；新模型任务只会使用明确默认项。",
+    "前后端版本和页面显示统一为 V3.3.5，并补齐模型、沉淀、能力与 Provider 的回归测试。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ModelGatewayService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectCapabilityService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectSedimentService.java",
+    "backend/src/main/java/com/projectflow/service/AiProviderService.java",
+    "frontend/src/app/project-intelligence/capabilities/page.tsx",
+    "frontend/src/app/project-changes/[changeId]/page.tsx",
+    "frontend/src/app/settings/page.tsx",
+    "docs/projectflow-v3.3.5-implementation-report.md"
+  ],
+  "verification": {
+    "build": "frontend npm run build passed; frontend TypeScript and production page generation passed.",
+    "tests": "新增模型、Provider、沉淀、能力任务定向测试此前已通过。全量 Maven 测试首次实际运行 161 项并发现两项旧断言后已修正；修正后的重跑被 Windows 沙箱拒绝读取/关闭 Maven 依赖 JAR 阻断，属于环境文件访问限制。",
+    "manualCheck": "已执行 git diff --check、默认 Provider 选择静态审查、配置安全扫描和 Docker Compose 配置校验；未发现真实 Key，且未配置 DeepSeek 环境变量，因此没有进行真实模型调用。"
+  },
+  "unfinished": [
+    "需要在非沙箱或 Maven 依赖 JAR 可访问的环境中重新执行 backend 的 mvn test，以完成修正后 161 项全量测试的最终闭环。",
+    "未配置可安全使用的 DeepSeek Key，真实 Provider 调用和网络延迟验证未执行。"
+  ],
+  "sedimentCandidates": [
+    {
+      "title": "模型分析链路可诊断且可恢复",
+      "summary": "模型请求、截断、JSON 修复和部分恢复现在有可追溯诊断，并避免把可用的完整条目误判为整体失败。",
+      "evidence": [
+        "ModelGatewayService 的紧凑重试与诊断实现",
+        "ModelGatewayServiceTest、ModelOutputAdapterTest、ModelFailureClassifierTest"
+      ]
+    },
+    {
+      "title": "沉淀与能力结果可追溯到明确任务和用户确认",
+      "summary": "沉淀确认给出执行后果与实际结果，能力卡片保留分析任务来源和历史批次，降低重新分析覆盖历史成果的风险。",
+      "evidence": [
+        "ProjectSedimentService、ProjectCapabilityService、ProjectAnalysisJobRunner",
+        "ProjectSedimentControllerTest、ProjectAnalysisJobServiceTest、ProjectCapabilityServiceTest"
+      ]
+    }
+  ]
+}

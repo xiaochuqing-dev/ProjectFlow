@@ -30,6 +30,7 @@ import com.projectflow.service.DevelopmentSegmentationService.ChangeAtom;
 import com.projectflow.service.DevelopmentSegmentationService.SegmentDraft;
 import com.projectflow.service.ModelGatewayService;
 import com.projectflow.service.ModelSegmentEnricher;
+import com.projectflow.service.ModelOutputAdapter;
 import com.projectflow.service.SegmentEvidenceValidator;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,7 +48,7 @@ class ModelSegmentEnricherTest {
         UUID userId = UUID.randomUUID();
         AiProvider provider = provider(userId);
         when(providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)).thenReturn(List.of(provider));
-        when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenReturn(objectMapper.readTree("""
+        when(modelGatewayService.callStructured(any(), anyString(), anyInt())).thenReturn(structured("""
             {
               "segments": [{
                 "segmentTitle": "新增扫描游标并从确认点读取变化",
@@ -79,7 +80,7 @@ class ModelSegmentEnricherTest {
     void malformedModelOutputFallsBackToRulesWithWarning() throws Exception {
         UUID userId = UUID.randomUUID();
         when(providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)).thenReturn(List.of(provider(userId)));
-        when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenThrow(new IOException("invalid response"));
+        when(modelGatewayService.callStructured(any(), anyString(), anyInt())).thenThrow(new IOException("invalid response"));
         ModelSegmentEnricher enricher = new ModelSegmentEnricher(providerRepository, modelGatewayService, new SegmentEvidenceValidator());
         List<String> warnings = new ArrayList<>();
 
@@ -93,7 +94,7 @@ class ModelSegmentEnricherTest {
     void singleReviewFlagErrorDoesNotDiscardUsableSegment() throws Exception {
         UUID userId = UUID.randomUUID();
         when(providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)).thenReturn(List.of(provider(userId)));
-        when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenReturn(objectMapper.readTree("""
+        when(modelGatewayService.callStructured(any(), anyString(), anyInt())).thenReturn(structured("""
             {
               "segments": [{
                 "segmentTitle": "扫描游标",
@@ -113,7 +114,7 @@ class ModelSegmentEnricherTest {
 
         assertThat(enricher.enrich(userId, atoms(), fallback(), warnings)).singleElement()
             .satisfies(segment -> assertThat(segment.title()).isEqualTo("扫描游标"));
-        assertThat(warnings).singleElement().asString().contains("需人工复核");
+        assertThat(warnings).singleElement().asString().contains("需要注意");
     }
 
     @Test
@@ -121,7 +122,7 @@ class ModelSegmentEnricherTest {
         // V3.3.3: 模型返回可解析结构就保留，质量门槛改为标记器，不再整批丢弃模型结果。
         UUID userId = UUID.randomUUID();
         when(providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)).thenReturn(List.of(provider(userId)));
-        when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenReturn(objectMapper.readTree("""
+        when(modelGatewayService.callStructured(any(), anyString(), anyInt())).thenReturn(structured("""
             {"segments":[{
               "segmentTitle":"backend 开发推进","plainSummary":"这一组变化围绕 backend 展开，共包含 1 条原子变化。",
               "includedAtomIds":["real"],"mainChanges":["修改后端"],"userVisibleValue":"相关能力已归并",
@@ -136,7 +137,7 @@ class ModelSegmentEnricherTest {
 
         // 模型结果被保留（不是 fallback），模式为 MODEL。
         assertThat(result.mode()).isEqualTo("MODEL");
-        assertThat(result.modelStatus()).isEqualTo("SUCCESS");
+        assertThat(result.modelStatus()).isEqualTo("SUCCESS_WITH_WARNINGS");
         assertThat(result.segments()).singleElement().satisfies(segment -> {
             assertThat(segment.title()).isEqualTo("backend 开发推进");
             assertThat(segment.confidence()).isEqualTo(EvidenceConfidence.LOW);
@@ -144,14 +145,14 @@ class ModelSegmentEnricherTest {
         // 质量问题转为标记，不再回退本地规则。
         assertThat(result.fallbackReason()).contains("需人工复核");
         // 不应重试两次——保留优先，一次就保留。
-        verify(modelGatewayService, times(1)).callJson(any(), anyString(), anyInt());
+        verify(modelGatewayService, times(1)).callStructured(any(), anyString(), anyInt());
     }
 
     @Test
     void sourceIndexesRestoreEvidenceAndInvalidItemDoesNotBreakBatch() throws Exception {
         UUID userId = UUID.randomUUID();
         when(providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)).thenReturn(List.of(provider(userId)));
-        when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenReturn(objectMapper.readTree("""
+        when(modelGatewayService.callStructured(any(), anyString(), anyInt())).thenReturn(structured("""
             {"developmentSegments":[
               {"title":"扫描游标恢复分析范围","summary":"从确认点恢复待整理变化。","sourceIndexes":["S1","S99"],
                "changes":["恢复扫描范围"],"value":"减少重复扫描。","confidence":"HIGH"},
@@ -174,7 +175,7 @@ class ModelSegmentEnricherTest {
         // 模型调用失败时不外层重试，单次失败即回退本地规则，避免 MODEL_ENRICH 阶段长时间卡住。
         UUID userId = UUID.randomUUID();
         when(providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)).thenReturn(List.of(provider(userId)));
-        when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenThrow(new IOException("model timeout"));
+        when(modelGatewayService.callStructured(any(), anyString(), anyInt())).thenThrow(new IOException("model timeout"));
         ModelSegmentEnricher enricher = new ModelSegmentEnricher(providerRepository, modelGatewayService, new SegmentEvidenceValidator());
         List<String> warnings = new ArrayList<>();
 
@@ -183,7 +184,7 @@ class ModelSegmentEnricherTest {
         assertThat(result.mode()).isEqualTo("LOCAL_RULE");
         assertThat(result.segments()).isEqualTo(fallback());
         assertThat(result.fallbackReason()).contains("网络连接失败");
-        verify(modelGatewayService, times(1)).callJson(any(), anyString(), anyInt());
+        verify(modelGatewayService, times(1)).callStructured(any(), anyString(), anyInt());
     }
 
     @Test
@@ -201,7 +202,7 @@ class ModelSegmentEnricherTest {
             return new ChangeAtom(atomId, "feat: change " + index, Instant.parse("2026-07-06T08:00:00Z"),
                 List.of("backend"), files, refs);
         }).toList();
-        when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenReturn(objectMapper.readTree("""
+        when(modelGatewayService.callStructured(any(), anyString(), anyInt())).thenReturn(structured("""
             {"segments":[{
               "segmentTitle":"批量变更归并","plainSummary":"整理一批后端开发变化。",
               "includedAtomIds":["commit0"],"mainChanges":["新增功能","修复问题","优化性能"],
@@ -215,7 +216,7 @@ class ModelSegmentEnricherTest {
         enricher.enrichWithDiagnostics(userId, bigAtoms, fallback(), null);
 
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
-        verify(modelGatewayService).callJson(any(), promptCaptor.capture(), anyInt());
+        verify(modelGatewayService).callStructured(any(), promptCaptor.capture(), anyInt());
         String prompt = promptCaptor.getValue();
         // prompt 不应超过 45000 字符预算 + 模板文本余量。
         assertThat(prompt.length()).isLessThan(50_000);
@@ -229,6 +230,10 @@ class ModelSegmentEnricherTest {
         AiProvider provider = new AiProvider(userId);
         provider.update("DeepSeek", "https://api.example.com", "test-key", "model", AiProviderType.DEEPSEEK, 0.2, 4_000, true, List.of("analysis"));
         return provider;
+    }
+
+    private ModelGatewayService.StructuredModelResponse structured(String content) throws IOException {
+        return new ModelGatewayService.StructuredModelResponse(content, new ModelOutputAdapter(objectMapper).parse(content));
     }
 
     private List<ChangeAtom> atoms() {

@@ -1,6 +1,7 @@
 package com.projectflow;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -80,11 +81,16 @@ class ProjectCapabilityServiceTest {
         when(cardRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
         ProjectCapabilityService service = service();
 
-        service.analyzeWithOutcome(userId, projectId, null);
+        UUID jobId = UUID.randomUUID();
+        var outcome = service.analyzeWithOutcome(userId, projectId, jobId);
 
         verify(cardRepository).deleteByProjectIdAndStatus(projectId, CapabilityCardStatus.CANDIDATE);
         verify(cardRepository).deleteByProjectIdAndStatus(projectId, CapabilityCardStatus.NEEDS_EVIDENCE);
         verify(cardRepository, never()).deleteByProjectIdAndStatus(projectId, CapabilityCardStatus.CONFIRMED);
+        assertThat(outcome.cards()).allSatisfy(card -> {
+            assertThat(card.analysisJobId()).isEqualTo(jobId);
+            assertThat(card.legacyResult()).isFalse();
+        });
     }
 
     private UUID prepareInput(UUID userId) {

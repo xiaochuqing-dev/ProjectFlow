@@ -423,12 +423,19 @@ export type AiProviderPayload = {
   maxTokens: number;
   defaultEnabled: boolean;
   purposeTags: string[];
+  clearApiKey?: boolean;
 };
 
 export type ProviderTestResult = {
   ok: boolean;
   provider: string;
   message: string;
+};
+
+export type DuplicateProviderGroup = {
+  groupKey: string;
+  recommendedKeeper: AiProvider;
+  duplicates: AiProvider[];
 };
 
 export function listAiProviders(token: string): Promise<AiProvider[]> {
@@ -447,6 +454,35 @@ export function createAiProvider(token: string, payload: AiProviderPayload): Pro
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
+  });
+}
+
+export function updateAiProvider(token: string, providerId: string, payload: AiProviderPayload): Promise<AiProvider> {
+  return requestJson<AiProvider>(`/ai-providers/${providerId}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteAiProvider(token: string, providerId: string): Promise<void> {
+  return requestJson<void>(`/ai-providers/${providerId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function listDuplicateAiProviders(token: string): Promise<DuplicateProviderGroup[]> {
+  return requestJson<DuplicateProviderGroup[]>("/ai-providers/duplicates", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function cleanupDuplicateAiProviders(token: string, providerIds: string[]): Promise<{ deletedCount: number; remainingProviders: AiProvider[] }> {
+  return requestJson<{ deletedCount: number; remainingProviders: AiProvider[] }>("/ai-providers/duplicates/cleanup", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ providerIds }),
   });
 }
 
@@ -670,9 +706,11 @@ export type ProjectChange = {
   suggestedAction: SedimentAction | null;
   targetSedimentId: string | null;
   problemSolved: string;
+  suggestionReason: string;
   evidenceRefs: string[];
   confidence: "HIGH" | "MEDIUM" | "LOW" | null;
   needsUserReview: boolean;
+  legacyTruncated: boolean;
 };
 
 export type ProjectSediment = {
@@ -686,6 +724,7 @@ export type ProjectSediment = {
   sourceSegmentIds: string[];
   evidenceRefs: string[];
   developerNotes: string;
+  legacyTruncated: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -695,6 +734,32 @@ export type SedimentConfirmation = {
   changeStatus: ProjectChangeStatus;
   sediment: ProjectSediment | null;
   batchStatus: string;
+  actionLabel: string;
+  resultMessage: string;
+  evidenceAdded: number;
+  filesAdded: number;
+  summaryUpdated: boolean;
+  affectsConfirmedCapabilities: boolean;
+  usedByNextCapabilityAnalysis: boolean;
+  sedimentPath: string;
+};
+
+export type SedimentImpactPreview = {
+  changeId: string;
+  action: SedimentAction;
+  actionLabel: string;
+  recommendationReason: string;
+  targetSedimentId: string | null;
+  targetTitle: string;
+  targetSummary: string;
+  targetUpdatedAt: string | null;
+  evidenceToAdd: number;
+  filesToAdd: number;
+  summaryWillUpdate: boolean;
+  affectsConfirmedCapabilities: boolean;
+  usedByNextCapabilityAnalysis: boolean;
+  updatedFields: string[];
+  consequence: string;
 };
 
 export type ProjectChangePayload = {
@@ -787,6 +852,24 @@ export type ProjectAnalysisJob = {
     recognizedItems: number;
     discardedItems: number;
     invalidSourceIndexes: number;
+    providerName: string;
+    modelName: string;
+    finishReason: string;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    providerMaxTokens: number;
+    taskPolicyMaxTokens: number;
+    effectiveMaxTokens: number;
+    providerTemperature: number;
+    effectiveTemperature: number;
+    timeoutSeconds: number;
+    requestLatencyMs: number;
+    outputTruncated: boolean;
+    compactRetryAttempted: boolean;
+    compactRetrySucceeded: boolean;
+    partialResult: boolean;
+    recoveredItems: number;
   } | null;
   recordId: string | null;
   createdAt: string;
@@ -798,6 +881,9 @@ export type ProjectAnalysisJob = {
   stageMessage: string;
   currentStepStartedAt: string | null;
   inputSummary: string | null;
+  diagnosticsJson: string | null;
+  modelReturned: boolean;
+  failureAcknowledged: boolean;
 };
 
 export type ProjectAnalysisRecordType = "PROJECT" | "FILE";
@@ -982,6 +1068,9 @@ export type CapabilityCard = {
   generationMode: "MODEL" | "LOCAL_RULE";
   modelProvider: string;
   fallbackReason: string;
+  analysisJobId: string | null;
+  legacyResult: boolean;
+  legacyTruncated: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -1222,6 +1311,26 @@ export function confirmProjectChange(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ action, targetSedimentId }),
+  });
+}
+
+export function previewProjectChangeConfirmation(
+  token: string,
+  changeId: string,
+  action: SedimentAction,
+  targetSedimentId: string | null,
+): Promise<SedimentImpactPreview> {
+  return requestJson<SedimentImpactPreview>(`/project-changes/${changeId}/confirmation-preview`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ action, targetSedimentId }),
+  });
+}
+
+export function acknowledgeAnalysisFailure(token: string, jobId: string): Promise<ProjectAnalysisJob> {
+  return requestJson<ProjectAnalysisJob>(`/analysis-jobs/${jobId}/acknowledge`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
   });
 }
 

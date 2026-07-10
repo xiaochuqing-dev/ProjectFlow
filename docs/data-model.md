@@ -2,6 +2,16 @@
 
 Primary IDs use UUIDs. Timestamps use UTC at the database layer and are displayed in the user's local timezone in the frontend.
 
+## V3.3.5 compatibility fields
+
+`project_analysis_jobs` adds nullable `diagnostics_json`, `model_returned`, and `failure_acknowledged`. Existing rows remain valid and are shown as historical jobs when diagnostics are absent.
+
+`project_capability_cards` adds nullable `analysis_job_id`. A null value means a legacy result with unknown batch provenance; it is never inferred to belong to the newest job.
+
+`project_changes` adds nullable `suggestion_reason`, separating the recommendation explanation from the actual problem solved. Existing confirmed changes and sediments are not rewritten.
+
+These additions are nullable or use wrapper defaults so Hibernate update mode can add them for both embedded H2 and Docker PostgreSQL without deleting existing rows. Old ellipsis-ended content is detected at response time and marked for re-analysis; migration does not fabricate missing text.
+
 ## Entity Overview
 
 ```mermaid

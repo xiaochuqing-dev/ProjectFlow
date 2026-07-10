@@ -111,11 +111,15 @@ public class ModelSegmentEnricher {
             return new EnrichmentResult(fallback, "LOCAL_RULE", "NO_CHANGES", provider.getName(), "没有可供模型分析的新变化。", List.of(), "");
         }
         Exception lastFailure = null;
-        boolean jsonParseFailed = false;
+        boolean schemaUnrecognized = false;
         boolean evidenceRejected = false;
+        ModelGatewayService.ModelCallDiagnostics modelDiagnostics = null;
         try {
-            JsonNode json = modelGatewayService.callJson(provider, prompt(atoms, fallback, false, snapshot), MAX_OUTPUT_TOKENS);
-            List<SegmentDraft> validated = parse(json, atoms);
+            ModelGatewayService.StructuredModelResponse response = modelGatewayService.callStructured(
+                provider, prompt(atoms, fallback, false, snapshot), MAX_OUTPUT_TOKENS
+            );
+            modelDiagnostics = response.diagnostics();
+            List<SegmentDraft> validated = parse(response.parsed().root(), atoms);
             // V3.3.3: 质量门槛改为标记器。不再因质量问题丢弃整批模型结果。
             // 每个 segment 单独评估，保留可用内容，标记状态。
             List<SegmentDraft> retained = new ArrayList<>();
@@ -134,24 +138,36 @@ public class ModelSegmentEnricher {
                 throw new IllegalArgumentException("no model segments survived evidence validation");
             }
             String summary = buildModelSummary(snapshot, retained.size());
-            String reason = qualityWarnings.isEmpty() ? "" : "模型已返回结果，其中 " + qualityWarnings.size() + " 条需人工复核。";
-            return new EnrichmentResult(retained, "MODEL", "SUCCESS", provider.getName(), reason, qualityWarnings, summary);
+            List<String> resultWarnings = new ArrayList<>(qualityWarnings);
+            if (response.parsed().partial()) resultWarnings.add("模型输出被截断，已保留 " + response.parsed().recoveredItems() + " 个完整条目。");
+            if (response.diagnostics().compactRetryAttempted()) {
+                resultWarnings.add(response.diagnostics().compactRetrySucceeded()
+                    ? "模型输出疑似截断，紧凑重试已成功。"
+                    : "紧凑重试未得到完整结构，当前结果来自已恢复的完整条目。");
+            }
+            String reason = resultWarnings.isEmpty() ? ""
+                : "模型已返回结果，其中 " + resultWarnings.size() + " 项需要注意：" + String.join("；", resultWarnings);
+            String modelStatus = resultWarnings.isEmpty() ? "SUCCESS" : "SUCCESS_WITH_WARNINGS";
+            return new EnrichmentResult(retained, "MODEL", modelStatus, provider.getName(), reason, resultWarnings, summary, modelDiagnostics);
         } catch (IllegalArgumentException exception) {
             lastFailure = exception;
             String message = exception.getMessage() == null ? "" : exception.getMessage().toLowerCase();
             if (message.contains("segments must be an array") || message.contains("is required") || message.contains("must be an array")) {
-                jsonParseFailed = true;
+                schemaUnrecognized = true;
             }
         } catch (Exception exception) {
             lastFailure = exception;
+            if (exception instanceof ModelGatewayService.ModelResponseFormatException responseFailure) {
+                modelDiagnostics = responseFailure.diagnostics();
+            }
         }
         // V3.3.3: 只有模型完全不可用才回退本地规则。
         // V3.3.4: 拆分失败原因，让用户看懂 DeepSeek 调用失败 / 返回格式无效 / 证据引用无效 的区别。
-        String status = jsonParseFailed ? "JSON_PARSE_FAILED"
+        String status = schemaUnrecognized ? ModelFailureClassifier.SCHEMA_UNRECOGNIZED
             : evidenceRejected ? "EVIDENCE_REJECTED"
             : modelFailureStatus(lastFailure);
         String reason = ModelFailureClassifier.humanReason(status, provider.getName());
-        return new EnrichmentResult(fallback, "LOCAL_RULE", status, provider.getName(), reason, List.of(), "");
+        return new EnrichmentResult(fallback, "LOCAL_RULE", status, provider.getName(), reason, List.of(), "", modelDiagnostics);
     }
 
     private String buildModelSummary(AnalysisInputSnapshot snapshot, int segmentCount) {
@@ -205,6 +221,7 @@ public class ModelSegmentEnricher {
     private AiProvider configuredProvider(UUID userId) {
         return providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId).stream()
             .filter(provider -> provider.getType() != AiProviderType.MOCK)
+            .filter(AiProvider::isDefaultEnabled)
             .filter(provider -> provider.getApiKey() != null && !provider.getApiKey().isBlank())
             .findFirst()
             .orElse(null);
@@ -405,11 +422,19 @@ public class ModelSegmentEnricher {
         String providerName,
         String fallbackReason,
         List<String> qualityWarnings,
-        String modelSummary
+        String modelSummary,
+        ModelGatewayService.ModelCallDiagnostics modelDiagnostics
     ) {
+        public EnrichmentResult(
+            List<SegmentDraft> segments, String mode, String modelStatus, String providerName, String fallbackReason,
+            List<String> qualityWarnings, String modelSummary
+        ) {
+            this(segments, mode, modelStatus, providerName, fallbackReason, qualityWarnings, modelSummary, null);
+        }
+
         // 兼容旧构造：无 qualityWarnings/modelSummary。
         public EnrichmentResult(List<SegmentDraft> segments, String mode, String modelStatus, String providerName, String fallbackReason) {
-            this(segments, mode, modelStatus, providerName, fallbackReason, List.of(), "");
+            this(segments, mode, modelStatus, providerName, fallbackReason, List.of(), "", null);
         }
     }
 }

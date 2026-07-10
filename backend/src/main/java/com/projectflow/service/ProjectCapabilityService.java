@@ -91,27 +91,48 @@ public class ProjectCapabilityService {
         ModelDraftResult modelResult;
         try {
             modelResult = modelDrafts(input.provider(), input.sources(), jobId);
+        } catch (ModelGatewayService.ModelOutputTruncatedException exception) {
+            throw new CapabilityAnalysisException(
+                "MODEL_OUTPUT_TRUNCATED", "模型输出达到长度上限，紧凑重试后仍未得到可用能力结构，旧候选已保留。",
+                true, exception.diagnostics(), exception
+            );
+        } catch (ModelGatewayService.ModelEmptyContentException exception) {
+            throw new CapabilityAnalysisException(
+                "MODEL_EMPTY_CONTENT", "模型服务已响应，但没有返回能力内容，旧候选已保留。",
+                true, exception.diagnostics(), exception
+            );
         } catch (ModelGatewayService.ModelResponseFormatException exception) {
-            throw new CapabilityAnalysisException("MODEL_RESPONSE_PARSE", "模型已经返回，但结果无法解析，请重新分析。", exception);
+            throw new CapabilityAnalysisException(
+                "MODEL_RESPONSE_PARSE", "模型已经返回，但 JSON 语法无法解析，旧候选已保留。",
+                true, exception.diagnostics(), exception
+            );
         } catch (Exception exception) {
             throw new CapabilityAnalysisException("MODEL_REQUEST", "模型请求没有成功，请检查模型配置、网络或服务状态。", exception);
         }
         if (modelResult.drafts().isEmpty()) {
-            throw new CapabilityAnalysisException("ITEM_VALIDATION", "模型结果中没有可用的能力卡片，旧候选已保留。", null);
+            throw new CapabilityAnalysisException(
+                "ITEM_VALIDATION", "模型返回内容可以读取，但没有识别到有效能力卡片，旧候选已保留。",
+                true, modelResult.gatewayDiagnostics(), null
+            );
         }
 
         advanceStage(jobId, "DATABASE_PERSIST", "正在原子替换未确认候选并保存能力卡片");
         List<CapabilityCardResponse> responses;
         try {
-            responses = transactionTemplate.execute(status -> persistCandidates(projectId, input.provider(), modelResult.drafts()));
+            responses = transactionTemplate.execute(status -> persistCandidates(projectId, input.provider(), modelResult.drafts(), jobId));
         } catch (Exception exception) {
-            throw new CapabilityAnalysisException("DATABASE_PERSIST", "模型结果已生成，保存能力卡片时出现异常，旧候选已保留。", exception);
+            throw new CapabilityAnalysisException(
+                "DATABASE_PERSIST", "模型结果已生成，保存能力卡片时出现异常，旧候选已保留。",
+                true, modelResult.gatewayDiagnostics(), exception
+            );
         }
         List<CapabilityCardResponse> safeResponses = responses == null ? List.of() : responses;
         long needsEvidence = safeResponses.stream().filter(card -> "NEEDS_EVIDENCE".equals(card.status())).count();
         boolean warnings = modelResult.diagnostics().repaired()
             || modelResult.diagnostics().discardedItems() > 0
             || modelResult.diagnostics().invalidSourceIndexes() > 0
+            || modelResult.diagnostics().outputTruncated()
+            || (modelResult.diagnostics().compactRetryAttempted() && !modelResult.diagnostics().compactRetrySucceeded())
             || needsEvidence > 0
             || safeResponses.size() < 3;
         return new CapabilityAnalysisOutcome(safeResponses, warnings, (int) needsEvidence, modelResult.diagnostics());
@@ -128,7 +149,7 @@ public class ProjectCapabilityService {
         return new CapabilityInput(configuredProvider(userId), sources);
     }
 
-    private List<CapabilityCardResponse> persistCandidates(UUID projectId, AiProvider provider, List<CardDraft> drafts) {
+    private List<CapabilityCardResponse> persistCandidates(UUID projectId, AiProvider provider, List<CardDraft> drafts, UUID jobId) {
         cardRepository.deleteByProjectIdAndStatus(projectId, CapabilityCardStatus.CANDIDATE);
         cardRepository.deleteByProjectIdAndStatus(projectId, CapabilityCardStatus.NEEDS_EVIDENCE);
         List<ProjectCapabilityCard> cards = new ArrayList<>();
@@ -136,7 +157,7 @@ public class ProjectCapabilityService {
             ProjectCapabilityCard card = new ProjectCapabilityCard(projectId);
             card.update(
                 draft.name(), draft.summary(), draft.problemSolved(), draft.featureEntry(), draft.sourceRefs(), draft.evidenceRefs(),
-                draft.readme(), draft.resume(), draft.interview(), "MODEL", provider.getName(), draft.warning()
+                draft.readme(), draft.resume(), draft.interview(), "MODEL", provider.getName(), draft.warning(), jobId
             );
             cards.add(card);
         }
@@ -264,15 +285,23 @@ public class ProjectCapabilityService {
         }
         advanceStage(jobId, "EVIDENCE_BINDING", "已根据来源编号恢复真实证据引用");
         advanceStage(jobId, "CONTENT_SANITIZE", "正在清洗用户可见内容并整理警告");
+        ModelGatewayService.ModelCallDiagnostics gatewayDiagnostics = response.diagnostics();
         return new ModelDraftResult(result, new CapabilityDiagnostics(
             true, response.parsed().repaired(), values.size(), discarded + Math.max(0, values.size() - result.size() - discarded),
-            invalidIndexes, (int) result.stream().filter(draft -> draft.evidenceRefs().isEmpty()).count(), ""
-        ));
+            invalidIndexes, (int) result.stream().filter(draft -> draft.evidenceRefs().isEmpty()).count(), "",
+            gatewayDiagnostics.providerName(), gatewayDiagnostics.modelName(), gatewayDiagnostics.finishReason(),
+            gatewayDiagnostics.promptTokens(), gatewayDiagnostics.completionTokens(), gatewayDiagnostics.totalTokens(),
+            gatewayDiagnostics.providerMaxTokens(), gatewayDiagnostics.taskPolicyMaxTokens(), gatewayDiagnostics.effectiveMaxTokens(),
+            gatewayDiagnostics.providerTemperature(), gatewayDiagnostics.effectiveTemperature(), gatewayDiagnostics.timeoutSeconds(),
+            gatewayDiagnostics.latencyMs(), gatewayDiagnostics.truncated(), gatewayDiagnostics.compactRetryAttempted(),
+            gatewayDiagnostics.compactRetrySucceeded(), gatewayDiagnostics.partialResult(), gatewayDiagnostics.recoveredItems()
+        ), gatewayDiagnostics);
     }
 
     private AiProvider configuredProvider(UUID userId) {
         return providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId).stream()
             .filter(provider -> provider.getType() != AiProviderType.MOCK)
+            .filter(AiProvider::isDefaultEnabled)
             .filter(provider -> provider.getApiKey() != null && !provider.getApiKey().isBlank()).findFirst().orElse(null);
     }
 
@@ -305,7 +334,14 @@ public class ProjectCapabilityService {
         return new CapabilityCardResponse(
             card.getId(), card.getProjectId(), card.getName(), card.getSummary(), card.getProblemSolved(), card.getFeatureEntry(),
             card.getSourceRefs(), card.getEvidenceRefs(), card.getReadmeExpression(), card.getResumeExpression(), card.getInterviewExpression(),
-            card.getStatus().name(), card.getGenerationMode(), card.getModelProvider(), card.getFallbackReason(), card.getCreatedAt(), card.getUpdatedAt()
+            card.getStatus().name(), card.getGenerationMode(), card.getModelProvider(), card.getFallbackReason(), card.getAnalysisJobId(),
+            card.getAnalysisJobId() == null,
+            DisplayContentSanitizer.isLikelyLegacyTruncated(card.getName())
+                || DisplayContentSanitizer.isLikelyLegacyTruncated(card.getSummary())
+                || DisplayContentSanitizer.isLikelyLegacyTruncated(card.getReadmeExpression())
+                || DisplayContentSanitizer.isLikelyLegacyTruncated(card.getResumeExpression())
+                || DisplayContentSanitizer.isLikelyLegacyTruncated(card.getInterviewExpression()),
+            card.getCreatedAt(), card.getUpdatedAt()
         );
     }
 
@@ -326,7 +362,11 @@ public class ProjectCapabilityService {
     ) {
     }
 
-    private record ModelDraftResult(List<CardDraft> drafts, CapabilityDiagnostics diagnostics) {
+    private record ModelDraftResult(
+        List<CardDraft> drafts,
+        CapabilityDiagnostics diagnostics,
+        ModelGatewayService.ModelCallDiagnostics gatewayDiagnostics
+    ) {
     }
 
     public record CapabilityDiagnostics(
@@ -336,7 +376,25 @@ public class ProjectCapabilityService {
         int discardedItems,
         int invalidSourceIndexes,
         int needsEvidenceItems,
-        String failureStage
+        String failureStage,
+        String providerName,
+        String modelName,
+        String finishReason,
+        int promptTokens,
+        int completionTokens,
+        int totalTokens,
+        int providerMaxTokens,
+        int taskPolicyMaxTokens,
+        int effectiveMaxTokens,
+        double providerTemperature,
+        double effectiveTemperature,
+        long timeoutSeconds,
+        long requestLatencyMs,
+        boolean outputTruncated,
+        boolean compactRetryAttempted,
+        boolean compactRetrySucceeded,
+        boolean partialResult,
+        int recoveredItems
     ) {
     }
 
@@ -350,14 +408,32 @@ public class ProjectCapabilityService {
 
     public static final class CapabilityAnalysisException extends RuntimeException {
         private final String stage;
+        private final boolean modelReturned;
+        private final ModelGatewayService.ModelCallDiagnostics diagnostics;
 
         public CapabilityAnalysisException(String stage, String message, Throwable cause) {
+            this(stage, message, false, null, cause);
+        }
+
+        public CapabilityAnalysisException(
+            String stage,
+            String message,
+            boolean modelReturned,
+            ModelGatewayService.ModelCallDiagnostics diagnostics,
+            Throwable cause
+        ) {
             super(message, cause);
             this.stage = stage;
+            this.modelReturned = modelReturned;
+            this.diagnostics = diagnostics;
         }
 
         public String stage() {
             return stage;
         }
+
+        public boolean modelReturned() { return modelReturned; }
+
+        public ModelGatewayService.ModelCallDiagnostics diagnostics() { return diagnostics; }
     }
 }

@@ -45,4 +45,19 @@ class ModelOutputAdapterTest {
         assertThat(adapter.text(item, "", "name", "title")).isEqualTo("能力分析");
         assertThat(adapter.strings(item, "sourceIndexes", "sources")).containsExactly("S1", "S3");
     }
+
+    @Test
+    void recoversCompleteItemsFromTruncatedRootArray() throws Exception {
+        var result = adapter.parse("{\"capabilities\":[{\"name\":\"能力一\"},{\"name\":\"能力二\"},{\"name\":\"未完成");
+
+        assertThat(result.partial()).isTrue();
+        assertThat(result.recoveredItems()).isEqualTo(2);
+        assertThat(adapter.items(result.root(), "capabilities")).hasSize(2);
+    }
+
+    @Test
+    void distinguishesClosedJsonWithExplanationFromTruncatedJson() {
+        assertThat(adapter.likelyTruncated("说明 {\"items\":[]} 后续解释")).isFalse();
+        assertThat(adapter.likelyTruncated("{\"items\":[{\"name\":\"未完成\"}")).isTrue();
+    }
 }

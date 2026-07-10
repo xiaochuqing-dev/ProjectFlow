@@ -97,4 +97,25 @@ class ProjectAnalysisJobServiceTest {
         // 关键：不再自动重跑任何任务——用户没点击就不应触发分析。
         verify(jobRunner, never()).execute(any(UUID.class));
     }
+
+    @Test
+    void acknowledgesFailedCapabilityJobWithoutChangingItsResultHistory() {
+        UUID userId = UUID.randomUUID();
+        UUID projectId = UUID.randomUUID();
+        ProjectAnalysisJob failed = new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS, null);
+        failed.recordDiagnostics("{\"finishReason\":\"length\"}", true);
+        failed.markFailed("模型输出达到长度上限");
+        when(jobRepository.findById(failed.getId())).thenReturn(Optional.of(failed));
+        when(jobRepository.save(failed)).thenReturn(failed);
+        ProjectAnalysisJobService service = new ProjectAnalysisJobService(
+            jobRepository, projectRepository, jobRunner, objectMapper, transactionManager
+        );
+
+        var response = service.acknowledgeFailure(userId, failed.getId());
+
+        assertThat(response.failureAcknowledged()).isTrue();
+        assertThat(response.modelReturned()).isTrue();
+        assertThat(response.diagnosticsJson()).contains("length");
+        assertThat(failed.getStatus()).isEqualTo(ProjectAnalysisJobStatus.FAILED);
+    }
 }

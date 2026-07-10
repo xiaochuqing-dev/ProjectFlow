@@ -268,9 +268,13 @@ public class EvidenceDraftChangeService {
             change.getSuggestedAction() == null ? null : change.getSuggestedAction().name(),
             change.getTargetSedimentId(),
             change.getProblemSolved(),
+            change.getSuggestionReason(),
             change.getEvidenceRefs(),
             change.getEvidenceConfidence() == null ? null : change.getEvidenceConfidence().name(),
-            change.isNeedsUserReview()
+            change.isNeedsUserReview(),
+            DisplayContentSanitizer.isLikelyLegacyTruncated(change.getTitle())
+                || DisplayContentSanitizer.isLikelyLegacyTruncated(change.getSummary())
+                || DisplayContentSanitizer.isLikelyLegacyTruncated(change.getDetails())
         );
     }
 }

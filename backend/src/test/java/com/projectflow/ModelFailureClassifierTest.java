@@ -67,13 +67,23 @@ class ModelFailureClassifierTest {
         Exception jsonError = new IOException("model content is not JSON");
         assertThat(ModelFailureClassifier.classifyException(jsonError)).isEqualTo(ModelFailureClassifier.JSON_PARSE_FAILED);
         assertThat(ModelFailureClassifier.humanReason(ModelFailureClassifier.JSON_PARSE_FAILED, "DeepSeek"))
-            .contains("可解析结构");
+            .contains("JSON 语法");
     }
 
     @Test
     void classifiesEmptyModelContentAsJsonParseFailed() {
         Exception emptyContent = new IOException("empty model content");
         assertThat(ModelFailureClassifier.classifyException(emptyContent)).isEqualTo(ModelFailureClassifier.JSON_PARSE_FAILED);
+    }
+
+    @Test
+    void distinguishesTypedEmptyContentAndTruncationFailures() {
+        Exception empty = new ModelGatewayService.ModelEmptyContentException("empty", null);
+        Exception truncated = new ModelGatewayService.ModelOutputTruncatedException("truncated", null, null);
+
+        assertThat(ModelFailureClassifier.classifyException(empty)).isEqualTo(ModelFailureClassifier.EMPTY_CONTENT);
+        assertThat(ModelFailureClassifier.classifyException(truncated)).isEqualTo(ModelFailureClassifier.OUTPUT_TRUNCATED);
+        assertThat(ModelFailureClassifier.humanReason(ModelFailureClassifier.OUTPUT_TRUNCATED, "DeepSeek")).contains("长度上限");
     }
 
     @Test
