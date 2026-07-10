@@ -89,7 +89,7 @@ export function useProjectAnalysisJobs(projectId: string) {
   async function enqueueProjectAnalysis() {
     const session = readSession();
     if (!session || !projectId) {
-      throw new Error("登录状态或项目无效");
+      throw new Error("项目无效");
     }
     const job = await runProjectAnalysis(session.accessToken, projectId);
     setJobs((current) => mergeJobs(current, [job]));
@@ -99,7 +99,7 @@ export function useProjectAnalysisJobs(projectId: string) {
   async function enqueueFileAnalysis(path: string) {
     const session = readSession();
     if (!session || !projectId) {
-      throw new Error("登录状态或项目无效");
+      throw new Error("项目无效");
     }
     const job = await analyzeProjectFile(session.accessToken, projectId, path);
     setJobs((current) => mergeJobs(current, [job]));
@@ -109,7 +109,7 @@ export function useProjectAnalysisJobs(projectId: string) {
   async function enqueueCapabilityInterpret(capabilityFact: string) {
     const session = readSession();
     if (!session || !projectId) {
-      throw new Error("登录状态或项目无效");
+      throw new Error("项目无效");
     }
     const job = await interpretCapability(session.accessToken, projectId, capabilityFact);
     setJobs((current) => mergeJobs(current, [job]));
@@ -119,7 +119,7 @@ export function useProjectAnalysisJobs(projectId: string) {
   async function enqueueWorkSessionScan() {
     const session = readSession();
     if (!session || !projectId) {
-      throw new Error("登录状态或项目无效");
+      throw new Error("项目无效");
     }
     const job = await startProjectWorkSessionScan(session.accessToken, projectId);
     setJobs((current) => mergeJobs(current, [job]));

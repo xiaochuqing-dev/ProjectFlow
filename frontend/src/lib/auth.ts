@@ -9,55 +9,23 @@ export type AuthResult = {
   user: AuthUser;
 };
 
-const TOKEN_KEY = "projectflow_access_token";
-const USER_KEY = "projectflow_user";
+const LOCAL_SESSION: AuthResult = {
+  accessToken: "local-user",
+  user: {
+    id: "local-user",
+    username: "本地用户",
+    email: "",
+  },
+};
 
-export function saveSession(auth: AuthResult) {
-  window.localStorage.setItem(TOKEN_KEY, auth.accessToken);
-  window.localStorage.setItem(USER_KEY, JSON.stringify(auth.user));
+export function saveSession(_: AuthResult) {
+  // 本地单用户模式不保存登录会话。
 }
 
-export function readSession(): AuthResult | null {
-  const accessToken = window.localStorage.getItem(TOKEN_KEY);
-  const userJson = window.localStorage.getItem(USER_KEY);
-  if (!accessToken || !userJson) {
-    return null;
-  }
-
-  try {
-    if (isJwtExpired(accessToken)) {
-      clearSession();
-      return null;
-    }
-    return {
-      accessToken,
-      user: JSON.parse(userJson) as AuthUser,
-    };
-  } catch {
-    clearSession();
-    return null;
-  }
+export function readSession(): AuthResult {
+  return LOCAL_SESSION;
 }
 
 export function clearSession() {
-  window.localStorage.removeItem(TOKEN_KEY);
-  window.localStorage.removeItem(USER_KEY);
-}
-
-function isJwtExpired(token: string) {
-  const [, payloadSegment] = token.split(".");
-  if (!payloadSegment) {
-    return true;
-  }
-  try {
-    const normalized = payloadSegment.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    const payload = JSON.parse(window.atob(padded)) as { exp?: number };
-    if (!payload.exp) {
-      return true;
-    }
-    return payload.exp * 1000 <= Date.now();
-  } catch {
-    return true;
-  }
+  // 本地单用户模式没有可清理的登录会话。
 }

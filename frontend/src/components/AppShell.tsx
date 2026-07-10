@@ -1,11 +1,9 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { BookOpenText, ClipboardCheck, DatabaseZap, LayoutDashboard, LogOut, Settings, Sparkles } from "lucide-react";
-import { clearSession, readSession, type AuthUser } from "@/lib/auth";
-import { clearDashboardSnapshot } from "@/lib/dashboard-snapshot";
+import { usePathname } from "next/navigation";
+import { BookOpenText, ClipboardCheck, DatabaseZap, LayoutDashboard, Settings, Sparkles } from "lucide-react";
 
 type AppShellProps = {
   title: string;
@@ -24,29 +22,7 @@ const navItems = [
 ];
 
 export function AppShell({ title, eyebrow, actions, children }: AppShellProps) {
-  const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<AuthUser | null>(null);
-
-  useEffect(() => {
-    const session = readSession();
-    if (!session) {
-      router.replace("/login");
-      return;
-    }
-    setUser(session.user);
-  }, [router]);
-
-  function handleLogout() {
-    clearSession();
-    // 退出登录后清掉工作台快照，避免下次登录残留上一个用户的数据。
-    clearDashboardSnapshot();
-    router.replace("/login");
-  }
-
-  if (!user) {
-    return null;
-  }
 
   return (
     <main className="flex min-h-screen bg-surface text-ink">
@@ -88,19 +64,11 @@ export function AppShell({ title, eyebrow, actions, children }: AppShellProps) {
       <section className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 items-center justify-between border-b border-line bg-elevated px-8">
           <div className="min-w-0">
-            <p className="truncate text-xs text-muted">{eyebrow ?? `${user.username} 的工作区`}</p>
+            <p className="truncate text-xs text-muted">{eyebrow ?? "本地工作区"}</p>
             <h1 className="text-lg font-semibold text-ink">{title}</h1>
           </div>
           <div className="flex items-center gap-3">
             {actions}
-            <button
-              className="flex items-center gap-2 rounded-field px-3 py-2 text-sm text-muted transition-colors hover:bg-surfaceAlt hover:text-ink"
-              onClick={handleLogout}
-              type="button"
-            >
-              <LogOut className="h-4 w-4" />
-              退出登录
-            </button>
           </div>
         </header>
         {children}

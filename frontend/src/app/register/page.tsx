@@ -1,5 +1,5 @@
-import { AuthPageShell } from "@/components/AuthPageShell";
+import { redirect } from "next/navigation";
 
 export default function RegisterPage() {
-  return <AuthPageShell mode="register" />;
+  redirect("/");
 }

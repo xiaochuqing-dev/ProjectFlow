@@ -1,0 +1,24 @@
+{
+  "taskGoal": "将 ProjectFlow 改为本地单用户免登录模式，并从欢迎页直接进入工作台。",
+  "actualChanges": [
+    "新增欢迎页入口，用户点击“进入工作台”即可进入首页，不再出现账号注册或登录表单。",
+    "登录、注册和密码重置地址会统一返回欢迎页，已登录布局移除退出登录按钮。",
+    "本地运行时不再校验浏览器令牌。后端会复用最早创建的本地用户；首次使用时自动创建本地用户，因此已有项目数据继续可见。"
+  ],
+  "keyFiles": [
+    "frontend/src/app/page.tsx",
+    "frontend/src/components/AppShell.tsx",
+    "frontend/src/lib/auth.ts",
+    "backend/src/main/java/com/projectflow/service/AuthService.java",
+    "backend/src/main/java/com/projectflow/repository/UserRepository.java"
+  ],
+  "verification": {
+    "build": "已执行 frontend npm.cmd run build，通过。",
+    "tests": "已执行 AuthControllerTest 和 EmbeddedProfileConfigurationTest，通过。嵌入式模式已验证无 Bearer 令牌时能稳定取得同一位本地用户。",
+    "manualCheck": "未启动完整桌面流程进行浏览器点击验收。"
+  },
+  "unfinished": [
+    "旧认证接口为兼容已有测试和本地数据而保留，但默认本地启动模式不会使用它们进行访问控制。"
+  ],
+  "sedimentCandidates": []
+}

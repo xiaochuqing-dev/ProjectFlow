@@ -16,6 +16,7 @@ spring:
 
 projectflow:
   auth:
+    required: true
     password-reset-code: test-recovery-code
     password-reset-code-valid-minutes: 30
   upload:

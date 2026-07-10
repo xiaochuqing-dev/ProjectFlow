@@ -38,6 +38,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final boolean authenticationRequired;
     private final String passwordResetCode;
     private final Instant passwordResetCodeExpiresAt;
     private final Map<String, Deque<Instant>> passwordResetAttempts = new ConcurrentHashMap<>();
@@ -46,16 +47,20 @@ public class AuthService {
     public AuthService(
         UserRepository userRepository,
         JwtService jwtService,
+        @Value("${projectflow.auth.required:false}") boolean authenticationRequired,
         @Value("${projectflow.auth.password-reset-code:}") String configuredPasswordResetCode,
         @Value("${projectflow.auth.password-reset-code-valid-minutes:30}") int passwordResetCodeValidMinutes
     ) {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
+        this.authenticationRequired = authenticationRequired;
         this.passwordResetCode = configuredPasswordResetCode.isBlank()
             ? UUID.randomUUID().toString()
             : configuredPasswordResetCode.trim();
         this.passwordResetCodeExpiresAt = Instant.now().plus(Duration.ofMinutes(passwordResetCodeValidMinutes));
-        logger.warn("本次启动的密码重置验证码：{}。验证码仅可使用一次，{} 分钟后失效。", passwordResetCode, passwordResetCodeValidMinutes);
+        if (authenticationRequired) {
+            logger.warn("本次启动的密码重置验证码：{}。验证码仅可使用一次，{} 分钟后失效。", passwordResetCode, passwordResetCodeValidMinutes);
+        }
     }
 
     @Transactional
@@ -105,8 +110,17 @@ public class AuthService {
         passwordResetAttempts.remove(email);
     }
 
-    @Transactional(readOnly = true)
-    public AuthUser currentUser(String authorizationHeader) {
+    @Transactional
+    public synchronized AuthUser currentUser(String authorizationHeader) {
+        if (!authenticationRequired) {
+            User user = userRepository.findFirstByOrderByCreatedAtAsc()
+                .orElseGet(() -> userRepository.save(new User(
+                    "本地用户",
+                    "local@projectflow.local",
+                    passwordEncoder.encode(UUID.randomUUID().toString())
+                )));
+            return new AuthUser(user.getId(), user.getUsername(), user.getEmail());
+        }
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
             throw new AppException("UNAUTHORIZED", "Missing bearer token", HttpStatus.UNAUTHORIZED);
         }

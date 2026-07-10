@@ -28,6 +28,7 @@ spring:
 
 projectflow:
   auth:
+    required: ${PROJECTFLOW_AUTH_REQUIRED:false}
     password-reset-code: ${PROJECTFLOW_PASSWORD_RESET_CODE:}
     # 重置码有效期，单位：分钟。
     password-reset-code-valid-minutes: ${PROJECTFLOW_PASSWORD_RESET_CODE_VALID_MINUTES:30}
