@@ -25,14 +25,14 @@ public class ProjectAnalysisJob {
     private UUID userId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "job_type", nullable = false, length = 20)
+    @Column(name = "job_type", nullable = false, length = 40)
     private ProjectAnalysisJobType jobType;
 
     @Column(name = "file_path", length = 1000)
     private String filePath;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     private ProjectAnalysisJobStatus status;
 
     @Column(name = "result_json", columnDefinition = "text")
@@ -40,6 +40,12 @@ public class ProjectAnalysisJob {
 
     @Column(name = "error_message", columnDefinition = "text")
     private String errorMessage;
+
+    @Column(name = "warning_message", columnDefinition = "text")
+    private String warningMessage;
+
+    @Column(name = "failure_stage", length = 40)
+    private String failureStage;
 
     @Column(name = "record_id")
     private UUID recordId;
@@ -103,6 +109,8 @@ public class ProjectAnalysisJob {
         this.status = ProjectAnalysisJobStatus.RUNNING;
         this.startedAt = Instant.now();
         this.errorMessage = null;
+        this.warningMessage = null;
+        this.failureStage = null;
         this.currentStepStartedAt = Instant.now();
     }
 
@@ -122,13 +130,29 @@ public class ProjectAnalysisJob {
         this.resultJson = resultJson;
         this.recordId = recordId;
         this.errorMessage = null;
+        this.warningMessage = null;
+        this.failureStage = null;
         this.completedAt = Instant.now();
         this.stage = "SUCCEEDED";
         this.stageMessage = "分析完成";
         this.currentStepStartedAt = this.completedAt;
     }
 
+    public void markSucceededWithWarnings(String resultJson, UUID recordId, String warningMessage) {
+        this.status = ProjectAnalysisJobStatus.SUCCEEDED_WITH_WARNINGS;
+        this.resultJson = resultJson;
+        this.recordId = recordId;
+        this.errorMessage = null;
+        this.warningMessage = warningMessage == null ? "分析已完成，但部分结果需要复核。" : warningMessage.trim();
+        this.failureStage = null;
+        this.completedAt = Instant.now();
+        this.stage = "SUCCEEDED_WITH_WARNINGS";
+        this.stageMessage = this.warningMessage;
+        this.currentStepStartedAt = this.completedAt;
+    }
+
     public void markFailed(String errorMessage) {
+        this.failureStage = this.stage;
         this.status = ProjectAnalysisJobStatus.FAILED;
         this.errorMessage = errorMessage;
         this.completedAt = Instant.now();
@@ -168,6 +192,10 @@ public class ProjectAnalysisJob {
     public String getErrorMessage() {
         return errorMessage;
     }
+
+    public String getWarningMessage() { return warningMessage; }
+
+    public String getFailureStage() { return failureStage; }
 
     public UUID getRecordId() {
         return recordId;

@@ -26,15 +26,18 @@ public class ModelGatewayService {
 
     private final ObjectMapper objectMapper;
     private final AiProviderUrlGuard aiProviderUrlGuard;
+    private final ModelOutputAdapter outputAdapter;
     private final HttpClient httpClient;
 
     public ModelGatewayService(
         ObjectMapper objectMapper,
         AiProviderUrlGuard aiProviderUrlGuard,
+        ModelOutputAdapter outputAdapter,
         @Value("${projectflow.model.request-timeout-seconds:240}") int requestTimeoutSeconds
     ) {
         this.objectMapper = objectMapper;
         this.aiProviderUrlGuard = aiProviderUrlGuard;
+        this.outputAdapter = outputAdapter;
         this.modelRequestTimeout = Duration.ofSeconds(Math.max(30, requestTimeoutSeconds));
         this.httpClient = HttpClient.newBuilder()
             .connectTimeout(CONNECT_TIMEOUT)
@@ -42,6 +45,10 @@ public class ModelGatewayService {
     }
 
     public JsonNode callJson(AiProvider provider, String prompt, int outputTokenLimit) throws IOException, InterruptedException {
+        return callStructured(provider, prompt, outputTokenLimit).parsed().root();
+    }
+
+    public StructuredModelResponse callStructured(AiProvider provider, String prompt, int outputTokenLimit) throws IOException, InterruptedException {
         Map<String, Object> body = Map.of(
             "model", provider.getModelName(),
             "messages", List.of(
@@ -67,7 +74,7 @@ public class ModelGatewayService {
             try {
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                    return parseModelJson(response.body());
+                    return parseModelResponse(response.body());
                 }
                 if (attempt < MAX_MODEL_ATTEMPTS && isTransientModelStatus(response.statusCode())) {
                     pauseBeforeRetry(attempt);
@@ -80,7 +87,7 @@ public class ModelGatewayService {
                 }
                 pauseBeforeRetry(attempt);
             } catch (IOException exception) {
-                if (exception instanceof ModelHttpException || attempt >= MAX_MODEL_ATTEMPTS) {
+                if (exception instanceof ModelHttpException || exception instanceof ModelResponseFormatException || attempt >= MAX_MODEL_ATTEMPTS) {
                     throw exception;
                 }
                 pauseBeforeRetry(attempt);
@@ -111,13 +118,17 @@ public class ModelGatewayService {
         }
     }
 
-    private JsonNode parseModelJson(String responseBody) throws IOException {
+    private StructuredModelResponse parseModelResponse(String responseBody) throws IOException {
         JsonNode root = objectMapper.readTree(responseBody);
         String content = root.at("/choices/0/message/content").asText("");
         if (content.isBlank()) {
             throw new IOException("empty model content");
         }
-        return objectMapper.readTree(extractJsonObject(content));
+        try {
+            return new StructuredModelResponse(content, outputAdapter.parse(content));
+        } catch (IOException exception) {
+            throw new ModelResponseFormatException(exception.getMessage(), exception);
+        }
     }
 
     private boolean isTransientModelStatus(int statusCode) {
@@ -128,12 +139,12 @@ public class ModelGatewayService {
         Thread.sleep(400L * attempt);
     }
 
-    private String extractJsonObject(String content) throws IOException {
-        int start = content.indexOf('{');
-        int end = content.lastIndexOf('}');
-        if (start < 0 || end <= start) {
-            throw new IOException("model content is not JSON");
+    public record StructuredModelResponse(String rawContent, ModelOutputAdapter.ParsedOutput parsed) {
+    }
+
+    public static final class ModelResponseFormatException extends IOException {
+        public ModelResponseFormatException(String message, Throwable cause) {
+            super(message, cause);
         }
-        return content.substring(start, end + 1);
     }
 }

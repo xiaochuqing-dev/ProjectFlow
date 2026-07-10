@@ -30,6 +30,10 @@ public class SegmentEvidenceValidator {
 
         List<String> files = candidate.affectedFiles().stream().filter(allowedFiles::contains).distinct().toList();
         LinkedHashSet<String> evidence = new LinkedHashSet<>(candidate.evidenceRefs().stream().filter(allowedEvidence::contains).toList());
+        if (evidence.isEmpty()) {
+            // 模型只负责选择 S 编号，真实证据由后端从对应原子变化恢复。
+            evidence.addAll(allowedEvidence);
+        }
         for (String file : files) {
             String ref = "file:" + file;
             if (allowedEvidence.contains(ref)) {

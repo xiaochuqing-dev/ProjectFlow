@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   analyzeProjectFile,
   getProjectAnalysisJob,
@@ -18,6 +18,7 @@ export function useProjectAnalysisJobs(projectId: string) {
   const [jobs, setJobs] = useState<ProjectAnalysisJob[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [jobError, setJobError] = useState("");
+  const refreshFailureCount = useRef(0);
   const activeJobKey = jobs
     .filter((job) => ACTIVE_STATUSES.has(job.status))
     .map((job) => job.id)
@@ -70,10 +71,14 @@ export function useProjectAnalysisJobs(projectId: string) {
         if (!cancelled) {
           setJobs((current) => mergeJobs(current, updates));
           setJobError("");
+          refreshFailureCount.current = 0;
         }
       } catch (exception) {
         if (!cancelled) {
-          setJobError(exception instanceof Error ? exception.message : "分析任务状态刷新失败");
+          refreshFailureCount.current += 1;
+          setJobError(refreshFailureCount.current < 3
+            ? "状态刷新暂时失败，正在自动重试。后台任务可能仍在运行。"
+            : "状态连续刷新失败，请检查本地服务连接。后台任务可能仍在运行。");
         }
       }
     }

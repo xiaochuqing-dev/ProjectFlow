@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.3.4 模型输出适配与任务容错修复 - 2026-07-10
+
+新增统一 ModelOutputAdapter，模型网关可处理 Markdown 代码块、JSON 前后解释、对象或数组、常见外层字段别名、单对象代替数组和尾逗号。能力分析与开发推进段统一使用 S1/S2 来源编号，由后端恢复真实证据，不再要求模型复制内部 evidenceRefs。能力卡片改为逐项校验、去重、保守补全和最多 8 项截断；局部无效来源或缺证据转为警告，不再整批失败。能力分析拆成短事务读取、无事务模型调用、短事务原子替换候选，生成失败时保留旧候选和全部已确认能力。任务新增 SUCCEEDED_WITH_WARNINGS、失败阶段和结构化诊断摘要；能力页集中显示完整结果与折叠诊断，轮询临时失败自动重试。
+
 ## ProjectFlow V3.3.4 小阶段修复（第二轮）- 2026-07-08
 
 从根源减少模型调用失败：prompt 瘦身 + 输出预算调整 + 提交数上游收口。模型调用失败的主因不是超时太短，而是 prompt 过大（每个 atom 的文件路径无上限、evidenceRefs 重复文件路径、diffHints 重复 commit subject、无 prompt 大小防护）。修复：每个 atom 发给模型的文件路径截断到 15 个；evidence 只发 commit:hash 不发逐个 file: 路径（validator 仍用完整 evidenceRefs 校验）；diffHints 去掉冗余 commit=subject；新增 prompt 字符预算 45000 超出时截断 atom 列表；开发推进段归并输出 token 从 8000 降到 4000；能力分析 evidence 截断到 10 条、plainSummary 截断到 200 字符、输出 token 降到 4000；项目分析输出 token 从 100000 降到 4000；range scan 加 --max-count=120 安全阀防止 cursor 过期时返回过多提交。backend 136 tests 全部通过。

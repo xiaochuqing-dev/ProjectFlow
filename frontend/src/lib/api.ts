@@ -763,7 +763,7 @@ export type ProjectFileAnalysis = {
   message: string;
 };
 
-export type ProjectAnalysisJobStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED";
+export type ProjectAnalysisJobStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "SUCCEEDED_WITH_WARNINGS" | "FAILED";
 export type ProjectAnalysisJobType = "PROJECT" | "FILE" | "CAPABILITY_INTERPRET" | "WORK_SESSION_SCAN" | "CAPABILITY_CARD_ANALYSIS";
 
 export type ProjectAnalysisJob = {
@@ -777,6 +777,17 @@ export type ProjectAnalysisJob = {
   capabilityInterpretResult: CapabilityInterpretResponse | null;
   workSessionScanResult: WorkSessionScanResult | null;
   errorMessage: string | null;
+  warningMessage: string | null;
+  failureStage: string | null;
+  capabilityCardResult: {
+    cardCount: number;
+    needsEvidenceCount: number;
+    rawResponsePresent: boolean;
+    repaired: boolean;
+    recognizedItems: number;
+    discardedItems: number;
+    invalidSourceIndexes: number;
+  } | null;
   recordId: string | null;
   createdAt: string;
   updatedAt: string;

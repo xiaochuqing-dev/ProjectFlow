@@ -1,5 +1,9 @@
 # Confirmed V3.3.4 decisions
 
+- 结构化模型输出统一经过 ModelOutputAdapter；模型负责内容理解和 S 编号选择，后端负责 JSON 适配、字段归一化、逐项校验和真实证据恢复。
+- 能力分析允许部分成功并使用 SUCCEEDED_WITH_WARNINGS；单卡片缺字段、重复、英文表达、无效来源编号或证据不足不再自动导致整批失败。
+- 能力分析采用“短事务读取、无事务模型调用、短事务原子保存”；新结果可保存前不删除旧候选，已确认能力始终保留。
+- 能力分析完整警告只在能力页显示；工作台只保留简短任务状态，轮询临时失败先自动重试。
 - Model failure notices are split into plain Chinese reasons (not configured / call failed / invalid response format / invalid evidence reference); the old "增强本地摘要" wording is removed and the result source is always stated as "本地事实摘要".
 - Local fallback titles and summaries must be Chinese; raw English commit messages are rewritten or labeled "根据提交记录整理的变更", with originals kept in evidence details only.
 - GitHub access lives in the "项目接入" area (local path / model / GitHub together), not only in the pending-changes card.

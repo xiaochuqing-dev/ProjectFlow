@@ -2,6 +2,7 @@ package com.projectflow.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -44,6 +45,7 @@ public class ModelSegmentEnricher {
     private final SegmentEvidenceValidator evidenceValidator;
     private final SegmentQualityGate qualityGate;
     private final ObjectMapper objectMapper;
+    private final ModelOutputAdapter outputAdapter;
 
     @Autowired
     public ModelSegmentEnricher(
@@ -51,13 +53,15 @@ public class ModelSegmentEnricher {
         ModelGatewayService modelGatewayService,
         SegmentEvidenceValidator evidenceValidator,
         SegmentQualityGate qualityGate,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        ModelOutputAdapter outputAdapter
     ) {
         this.providerRepository = providerRepository;
         this.modelGatewayService = modelGatewayService;
         this.evidenceValidator = evidenceValidator;
         this.qualityGate = qualityGate;
         this.objectMapper = objectMapper;
+        this.outputAdapter = outputAdapter;
     }
 
     // 兼容旧测试构造器：不传 ObjectMapper 时仍可工作（quality gate 标记器模式）。
@@ -66,7 +70,7 @@ public class ModelSegmentEnricher {
         ModelGatewayService modelGatewayService,
         SegmentEvidenceValidator evidenceValidator
     ) {
-        this(providerRepository, modelGatewayService, evidenceValidator, new SegmentQualityGate(), new ObjectMapper());
+        this(providerRepository, modelGatewayService, evidenceValidator, new SegmentQualityGate(), new ObjectMapper(), new ModelOutputAdapter(new ObjectMapper()));
     }
 
     // 兼容旧测试构造器。
@@ -76,7 +80,7 @@ public class ModelSegmentEnricher {
         SegmentEvidenceValidator evidenceValidator,
         SegmentQualityGate qualityGate
     ) {
-        this(providerRepository, modelGatewayService, evidenceValidator, qualityGate, new ObjectMapper());
+        this(providerRepository, modelGatewayService, evidenceValidator, qualityGate, new ObjectMapper(), new ModelOutputAdapter(new ObjectMapper()));
     }
 
     public List<SegmentDraft> enrich(
@@ -165,31 +169,37 @@ public class ModelSegmentEnricher {
     }
 
     private List<SegmentDraft> parse(JsonNode json, List<ChangeAtom> atoms) {
-            JsonNode segments = json.path("segments");
-            if (!segments.isArray()) {
-                throw new IllegalArgumentException("segments must be an array");
-            }
+            List<JsonNode> segments = outputAdapter.items(json, "segments", "developmentSegments", "cards", "items", "results");
+            if (segments.isEmpty()) throw new IllegalArgumentException("segments must be an array");
+            Map<String, ChangeAtom> sourceMap = new java.util.LinkedHashMap<>();
+            for (int index = 0; index < atoms.size(); index++) sourceMap.put("S" + (index + 1), atoms.get(index));
             List<SegmentDraft> validated = new ArrayList<>();
             for (JsonNode item : segments) {
-                if (!item.path("needsUserReview").asBoolean(false)) {
-                    throw new IllegalArgumentException("model segments must require user review");
+                if (!item.isObject()) continue;
+                List<String> atomIds = outputAdapter.strings(item, "includedAtomIds", "atomIds");
+                List<String> sourceIndexes = outputAdapter.strings(item, "sourceIndexes", "sources");
+                if (atomIds.isEmpty() && !sourceIndexes.isEmpty()) {
+                    atomIds = sourceIndexes.stream().map(sourceMap::get).filter(java.util.Objects::nonNull).map(ChangeAtom::id).distinct().toList();
                 }
+                String rawTitle = outputAdapter.text(item, "", "segmentTitle", "title", "name");
+                String rawSummary = outputAdapter.text(item, "", "plainSummary", "summary", "description");
+                if ((rawTitle.isBlank() && rawSummary.isBlank()) || atomIds.isEmpty()) continue;
                 SegmentDraft candidate = new SegmentDraft(
-                    DisplayContentSanitizer.sanitizeTitle(requiredText(item, "segmentTitle")),
-                    DisplayContentSanitizer.sanitizeSummary(requiredText(item, "plainSummary")),
-                    textArray(item, "includedAtomIds"),
-                    DisplayContentSanitizer.sanitizeChanges(textArray(item, "mainChanges")),
-                    DisplayContentSanitizer.sanitizeUserVisibleValue(requiredText(item, "userVisibleValue")),
-                    textArray(item, "evidenceRefs"),
-                    textArray(item, "affectedFiles"),
-                    confidence(item.path("confidence").asText())
+                    DisplayContentSanitizer.sanitizeTitle(rawTitle.isBlank() ? rawSummary : rawTitle),
+                    DisplayContentSanitizer.sanitizeSummary(rawSummary.isBlank() ? rawTitle : rawSummary),
+                    atomIds,
+                    DisplayContentSanitizer.sanitizeChanges(outputAdapter.strings(item, "mainChanges", "changes")),
+                    DisplayContentSanitizer.sanitizeUserVisibleValue(outputAdapter.text(item, rawSummary, "userVisibleValue", "value")),
+                    outputAdapter.strings(item, "evidenceRefs"),
+                    outputAdapter.strings(item, "affectedFiles", "files"),
+                    confidence(outputAdapter.text(item, "LOW", "confidence"))
                 );
                 evidenceValidator.validate(candidate, atoms).ifPresent(validated::add);
             }
-            if (validated.isEmpty() || validated.size() > 8) {
+            if (validated.isEmpty()) {
                 throw new IllegalArgumentException("model segments did not pass evidence validation");
             }
-            return validated;
+            return validated.stream().limit(8).toList();
     }
 
     private AiProvider configuredProvider(UUID userId) {
@@ -230,8 +240,9 @@ public class ModelSegmentEnricher {
         // 原子事实。V3.3.4 小阶段修复：每个 atom 行瘦身 + 体积防护。
         if (atoms.size() <= MAX_PROMPT_ATOMS) {
             int included = 0;
-            for (ChangeAtom atom : atoms) {
-                String atomLine = compactAtomLine(atom);
+            for (int index = 0; index < atoms.size(); index++) {
+                ChangeAtom atom = atoms.get(index);
+                String atomLine = compactAtomLine(atom, "S" + (index + 1));
                 if (facts.length() + atomLine.length() > PROMPT_CHAR_BUDGET) {
                     // 超出预算：停止追加，避免 prompt 过大导致模型调用失败。
                     facts.append("(已截断，共 ").append(atoms.size()).append(" 条原子变化，前 ").append(included)
@@ -242,17 +253,16 @@ public class ModelSegmentEnricher {
                 included++;
             }
         } else {
-            for (SegmentDraft segment : fallback) {
-                facts.append("RULE_GROUP ").append(segment.title()).append(" | atoms=")
-                    .append(String.join(",", segment.includedAtomIds())).append(" | evidence=")
-                    .append(String.join(",", segment.evidenceRefs())).append('\n');
+            for (int index = 0; index < Math.min(atoms.size(), MAX_PROMPT_ATOMS); index++) {
+                facts.append(compactAtomLine(atoms.get(index), "S" + (index + 1)));
             }
+            facts.append("(输入较多，仅列出前 ").append(MAX_PROMPT_ATOMS).append(" 个来源)\n");
         }
         return """
             你是 ProjectFlow V3.3.3 的开发推进段归并器。你不是在 GitHub 和本地 Git 之间二选一，而是在基于多来源证据判断当前真实开发状态。
-            只依据给定事实返回严格 JSON：
-            {"segments":[{"segmentTitle":"","plainSummary":"","includedAtomIds":[],"mainChanges":[],"userVisibleValue":"","evidenceRefs":[],"affectedFiles":[],"confidence":"HIGH|MEDIUM|LOW","needsUserReview":true}]}
-            不能发明 atom、commit 或文件；文档和测试若服务于同一功能，应与功能归为一段；最多返回 8 段。
+            只依据给定事实返回 JSON：
+            {"segments":[{"segmentTitle":"","plainSummary":"","sourceIndexes":["S1"],"mainChanges":[],"userVisibleValue":"","affectedFiles":[],"confidence":"HIGH|MEDIUM|LOW","needsUserReview":true}]}
+            来源只填写给定的 S 编号，不要复制内部 atom ID、提交哈希或 evidenceRefs。不能发明来源或文件；文档和测试若服务于同一功能，应与功能归为一段；最多返回 8 段。
             标题和摘要必须描述实际开发结果，禁止目录名加"开发推进"或仅报告数量。mainChanges 必须为 3 到 6 条具体变化。
             needsUserReview 必须为 true，模型不能替用户确认项目事实。
             用户可见主内容（segmentTitle、plainSummary、mainChanges、userVisibleValue）必须使用简体中文人话；英文 commit message、文件路径、类名、接口名只能出现在证据细节里，不能成为主标题或摘要。
@@ -269,7 +279,7 @@ public class ModelSegmentEnricher {
     // files 截断到 PROMPT_FILES_PER_ATOM 个（完整列表仍在 atom 对象里供 validator 校验）；
     // evidence 只发 commit:hash（逐个 file: 路径不进 prompt，validator 用完整 evidenceRefs 校验）；
     // diffHints 已去掉冗余的 commit=subject。
-    private String compactAtomLine(ChangeAtom atom) {
+    private String compactAtomLine(ChangeAtom atom, String sourceIndex) {
         List<String> allFiles = atom.files();
         String fileList = allFiles.size() <= PROMPT_FILES_PER_ATOM
             ? String.join(",", allFiles)
@@ -279,7 +289,7 @@ public class ModelSegmentEnricher {
             .filter(ref -> ref.startsWith("commit:") || ref.startsWith("agent-result:"))
             .reduce((a, b) -> a + "," + b).orElse("");
         StringBuilder line = new StringBuilder();
-        line.append("ATOM ").append(atom.id()).append(" | ").append(atom.title())
+        line.append(sourceIndex).append(" | ").append(atom.title())
             .append(" | files=").append(fileList)
             .append(" | source=").append(atom.sourceType());
         if (!evidence.isEmpty()) line.append(" | evidence=").append(evidence);

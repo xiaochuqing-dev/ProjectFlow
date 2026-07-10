@@ -14,6 +14,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretResponse;
+import com.projectflow.dto.V2ProjectDtos.CapabilityAnalysisJobResult;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisJobResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisResponse;
@@ -182,6 +183,7 @@ public class ProjectAnalysisJobService {
         ProjectFileAnalysisResponse fileResult = null;
         CapabilityInterpretResponse capabilityInterpretResult = null;
         WorkSessionScanResponse workSessionScanResult = null;
+        CapabilityAnalysisJobResult capabilityCardResult = null;
         String errorMessage = job.getErrorMessage();
         if (job.getResultJson() != null && !job.getResultJson().isBlank()) {
             try {
@@ -196,7 +198,13 @@ public class ProjectAnalysisJobService {
                 } else if (job.getJobType() == ProjectAnalysisJobType.WORK_SESSION_SCAN) {
                     workSessionScanResult = objectMapper.readValue(job.getResultJson(), WorkSessionScanResponse.class);
                 } else if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS) {
-                    // 能力卡片已单独持久化，resultJson 只是任务摘要，不按文件分析结构解析。
+                    var summary = objectMapper.readTree(job.getResultJson());
+                    capabilityCardResult = new CapabilityAnalysisJobResult(
+                        summary.path("cardCount").asInt(0), summary.path("needsEvidenceCount").asInt(0),
+                        summary.path("rawResponsePresent").asBoolean(false), summary.path("repaired").asBoolean(false),
+                        summary.path("recognizedItems").asInt(0), summary.path("discardedItems").asInt(0),
+                        summary.path("invalidSourceIndexes").asInt(0)
+                    );
                 } else {
                     fileResult = objectMapper.readValue(job.getResultJson(), ProjectFileAnalysisResponse.class);
                     if (containsProjectNoise(fileResult)) {
@@ -219,6 +227,9 @@ public class ProjectAnalysisJobService {
             capabilityInterpretResult,
             workSessionScanResult,
             errorMessage,
+            job.getWarningMessage(),
+            job.getFailureStage(),
+            capabilityCardResult,
             job.getRecordId(),
             job.getCreatedAt(),
             job.getUpdatedAt(),

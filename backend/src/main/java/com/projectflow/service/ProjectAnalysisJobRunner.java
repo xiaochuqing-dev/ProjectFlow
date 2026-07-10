@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretRequest;
 import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretResponse;
+import com.projectflow.dto.V2ProjectDtos.CapabilityAnalysisJobResult;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisResponse;
@@ -58,7 +59,9 @@ public class ProjectAnalysisJobRunner {
     @Async
     public void execute(UUID jobId) {
         ProjectAnalysisJob job = jobRepository.findById(jobId).orElse(null);
-        if (job == null || job.getStatus() == ProjectAnalysisJobStatus.SUCCEEDED || job.getStatus() == ProjectAnalysisJobStatus.FAILED) {
+        if (job == null || job.getStatus() == ProjectAnalysisJobStatus.SUCCEEDED
+            || job.getStatus() == ProjectAnalysisJobStatus.SUCCEEDED_WITH_WARNINGS
+            || job.getStatus() == ProjectAnalysisJobStatus.FAILED) {
             return;
         }
 
@@ -89,12 +92,24 @@ public class ProjectAnalysisJobRunner {
             } else if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS) {
                 // V3.3.4: 能力分析异步化。卡片由 service 持久化，job 记录阶段与完成状态。
                 // resultJson 只存简要摘要，前端完成后重新拉取 capability-cards。
-                var cards = projectCapabilityService.analyze(job.getUserId(), job.getProjectId(), job.getId());
-                String resultJson = objectMapper.writeValueAsString(new java.util.LinkedHashMap<String, Object>() {{
-                    put("cardCount", cards.size());
-                    put("mode", cards.isEmpty() ? "LOCAL_RULE" : cards.get(0).generationMode());
-                }});
-                markSucceeded(jobId, resultJson, null);
+                var outcome = projectCapabilityService.analyzeWithOutcome(job.getUserId(), job.getProjectId(), job.getId());
+                var diagnostics = outcome.diagnostics();
+                String resultJson = objectMapper.writeValueAsString(new CapabilityAnalysisJobResult(
+                    outcome.cards().size(), outcome.needsEvidenceCount(), diagnostics.rawResponsePresent(), diagnostics.repaired(),
+                    diagnostics.recognizedItems(), diagnostics.discardedItems(), diagnostics.invalidSourceIndexes()
+                ));
+                if (outcome.hasWarnings()) {
+                    java.util.List<String> warningParts = new java.util.ArrayList<>();
+                    if (outcome.needsEvidenceCount() > 0) warningParts.add(outcome.needsEvidenceCount() + " 张卡片需要补充证据");
+                    if (diagnostics.repaired()) warningParts.add("模型返回格式已自动修复");
+                    if (diagnostics.discardedItems() > 0) warningParts.add(diagnostics.discardedItems() + " 个无效或重复项已过滤");
+                    if (diagnostics.invalidSourceIndexes() > 0) warningParts.add(diagnostics.invalidSourceIndexes() + " 个无效来源编号已忽略");
+                    if (outcome.cards().size() < 3) warningParts.add("本次生成的有效能力较少");
+                    String warning = "能力分析已完成，" + String.join("；", warningParts) + "。";
+                    markSucceededWithWarnings(jobId, resultJson, warning);
+                } else {
+                    markSucceeded(jobId, resultJson, null);
+                }
             } else {
                 ProjectFileAnalysisResponse result = projectAnalysisService.analyzeProjectFile(
                     job.getUserId(),
@@ -108,7 +123,9 @@ public class ProjectAnalysisJobRunner {
             }
         } catch (Exception exception) {
             LOGGER.warn("Project analysis job failed: jobId={}", jobId, exception);
-            markFailed(jobId, safeErrorMessage(exception));
+            String failureStage = exception instanceof ProjectCapabilityService.CapabilityAnalysisException capabilityException
+                ? capabilityException.stage() : null;
+            markFailed(jobId, safeErrorMessage(exception), failureStage);
             recordFailedUsage(job, exception, startedAt);
         }
     }
@@ -121,8 +138,20 @@ public class ProjectAnalysisJobRunner {
     }
 
     private void markFailed(UUID jobId, String message) {
+        markFailed(jobId, message, null);
+    }
+
+    private void markFailed(UUID jobId, String message, String failureStage) {
         jobRepository.findById(jobId).ifPresent(job -> {
+            if (failureStage != null && !failureStage.isBlank()) job.advanceStage(failureStage, message);
             job.markFailed(message);
+            jobRepository.save(job);
+        });
+    }
+
+    private void markSucceededWithWarnings(UUID jobId, String resultJson, String warning) {
+        jobRepository.findById(jobId).ifPresent(job -> {
+            job.markSucceededWithWarnings(resultJson, null, warning);
             jobRepository.save(job);
         });
     }

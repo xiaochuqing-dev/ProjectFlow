@@ -131,6 +131,9 @@ public final class V2ProjectDtos {
         CapabilityInterpretResponse capabilityInterpretResult,
         WorkSessionScanResponse workSessionScanResult,
         String errorMessage,
+        String warningMessage,
+        String failureStage,
+        CapabilityAnalysisJobResult capabilityCardResult,
         UUID recordId,
         Instant createdAt,
         Instant updatedAt,
@@ -141,6 +144,17 @@ public final class V2ProjectDtos {
         String stageMessage,
         Instant currentStepStartedAt,
         String inputSummary
+    ) {
+    }
+
+    public record CapabilityAnalysisJobResult(
+        int cardCount,
+        int needsEvidenceCount,
+        boolean rawResponsePresent,
+        boolean repaired,
+        int recognizedItems,
+        int discardedItems,
+        int invalidSourceIndexes
     ) {
     }
 

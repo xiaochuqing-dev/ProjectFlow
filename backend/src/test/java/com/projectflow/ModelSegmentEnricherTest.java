@@ -90,7 +90,7 @@ class ModelSegmentEnricherTest {
     }
 
     @Test
-    void modelCannotMarkASegmentAsNotNeedingUserReview() throws Exception {
+    void singleReviewFlagErrorDoesNotDiscardUsableSegment() throws Exception {
         UUID userId = UUID.randomUUID();
         when(providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)).thenReturn(List.of(provider(userId)));
         when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenReturn(objectMapper.readTree("""
@@ -111,8 +111,9 @@ class ModelSegmentEnricherTest {
         ModelSegmentEnricher enricher = new ModelSegmentEnricher(providerRepository, modelGatewayService, new SegmentEvidenceValidator());
         List<String> warnings = new ArrayList<>();
 
-        assertThat(enricher.enrich(userId, atoms(), fallback(), warnings)).isEqualTo(fallback());
-        assertThat(warnings).singleElement().asString().contains("调用失败");
+        assertThat(enricher.enrich(userId, atoms(), fallback(), warnings)).singleElement()
+            .satisfies(segment -> assertThat(segment.title()).isEqualTo("扫描游标"));
+        assertThat(warnings).singleElement().asString().contains("需人工复核");
     }
 
     @Test
@@ -144,6 +145,28 @@ class ModelSegmentEnricherTest {
         assertThat(result.fallbackReason()).contains("需人工复核");
         // 不应重试两次——保留优先，一次就保留。
         verify(modelGatewayService, times(1)).callJson(any(), anyString(), anyInt());
+    }
+
+    @Test
+    void sourceIndexesRestoreEvidenceAndInvalidItemDoesNotBreakBatch() throws Exception {
+        UUID userId = UUID.randomUUID();
+        when(providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)).thenReturn(List.of(provider(userId)));
+        when(modelGatewayService.callJson(any(), anyString(), anyInt())).thenReturn(objectMapper.readTree("""
+            {"developmentSegments":[
+              {"title":"扫描游标恢复分析范围","summary":"从确认点恢复待整理变化。","sourceIndexes":["S1","S99"],
+               "changes":["恢复扫描范围"],"value":"减少重复扫描。","confidence":"HIGH"},
+              "无法识别的单项"
+            ]}
+            """));
+        ModelSegmentEnricher enricher = new ModelSegmentEnricher(providerRepository, modelGatewayService, new SegmentEvidenceValidator());
+
+        var result = enricher.enrichWithDiagnostics(userId, atoms(), fallback());
+
+        assertThat(result.mode()).isEqualTo("MODEL");
+        assertThat(result.segments()).singleElement().satisfies(segment -> {
+            assertThat(segment.includedAtomIds()).containsExactly("real");
+            assertThat(segment.evidenceRefs()).containsExactly("commit:real", "file:backend/Scan.java");
+        });
     }
 
     @Test

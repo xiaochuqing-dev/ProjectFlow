@@ -1,0 +1,28 @@
+{
+  "taskGoal": "统一适配结构化模型输出，提升能力分析与开发推进段的局部容错，拆分能力分析长事务，并减少重复任务提示。",
+  "actualChanges": [
+    "模型网关新增统一输出适配，可从代码块和解释文字中提取对象或数组 JSON，修复尾逗号并识别常见外层与字段别名。",
+    "能力分析和开发推进段改用 S 编号选择来源，由后端恢复真实证据；单项异常、重复项、无效来源和证据不足不再默认导致整批失败。",
+    "能力分析改为短事务读取、无事务等待模型、短事务原子保存；生成失败保留旧候选，已确认能力始终保留。",
+    "异步任务支持成功但有警告、失败阶段和结构化诊断摘要；能力页集中展示结果，轮询临时失败自动重试。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ModelOutputAdapter.java",
+    "backend/src/main/java/com/projectflow/service/ProjectCapabilityService.java",
+    "backend/src/main/java/com/projectflow/service/ModelSegmentEnricher.java",
+    "backend/src/main/java/com/projectflow/service/ProjectAnalysisJobRunner.java",
+    "frontend/src/app/project-intelligence/capabilities/page.tsx",
+    "frontend/src/lib/use-project-analysis-jobs.ts",
+    "docs/projectflow-model-output-adapter-fix-report-2026-07-10.md"
+  ],
+  "verification": {
+    "build": "前端 npm.cmd run build 通过；后端编译通过。",
+    "tests": "后端完整测试通过，共 147 项；模型适配、推进段来源映射、候选保留和任务结果兼容均有定向测试。",
+    "manualCheck": "未使用真实模型 API Key 做网络联调。"
+  },
+  "unfinished": [],
+  "sedimentCandidates": [
+    "ProjectFlow 已形成统一结构化模型输出适配能力，可处理常见非严格 JSON 并保留部分有效结果。",
+    "能力分析已具备无长事务等待、候选原子替换、成功但有警告和可读失败阶段。"
+  ]
+}

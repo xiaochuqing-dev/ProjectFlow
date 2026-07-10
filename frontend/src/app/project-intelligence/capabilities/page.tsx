@@ -26,7 +26,18 @@ const CAPABILITY_STAGE_LABELS: Record<string, string> = {
   LOAD_EVIDENCE: "正在读取已确认沉淀和开发推进段",
   MODEL_CAPABILITY_ANALYSIS: "正在调用模型分析项目能力",
   PERSIST_CAPABILITY_CARDS: "正在保存能力卡片",
+  MODEL_REQUEST: "正在请求模型",
+  MODEL_RESPONSE_RECEIVED: "模型已返回，正在解析",
+  MODEL_RESPONSE_PARSE: "模型已返回，但解析失败",
+  MODEL_OUTPUT_NORMALIZE: "正在归一化模型字段",
+  ITEM_VALIDATION: "正在逐项校验能力卡片",
+  EVIDENCE_BINDING: "正在绑定来源证据",
+  CONTENT_SANITIZE: "正在清洗用户可见内容",
+  DATABASE_PERSIST: "正在保存能力卡片",
+  JOB_RESULT_SERIALIZE: "正在整理任务结果",
+  FRONTEND_REFRESH: "正在刷新页面状态",
   SUCCEEDED: "能力分析完成",
+  SUCCEEDED_WITH_WARNINGS: "能力分析已完成，部分结果需复核",
   FAILED: "能力分析失败",
 };
 
@@ -53,6 +64,7 @@ function CompletedCapabilitiesContent() {
   const [capabilityJob, setCapabilityJob] = useState<ProjectAnalysisJob | null>(null);
   const [startingJob, setStartingJob] = useState(false);
   const pollRef = useRef<number | null>(null);
+  const pollFailureCount = useRef(0);
 
   useEffect(() => {
     const session = readSession();
@@ -101,11 +113,16 @@ function CompletedCapabilitiesContent() {
       try {
         const updated = await getProjectAnalysisJob(accessToken, jobId);
         setCapabilityJob(updated);
-        if (updated.status === "SUCCEEDED") {
+        pollFailureCount.current = 0;
+        setError("");
+        if (updated.status === "SUCCEEDED" || updated.status === "SUCCEEDED_WITH_WARNINGS") {
           // 完成后重新拉取能力卡片（已确认保留，候选被替换）。
           const items = await listProjectCapabilityCards(accessToken, updated.projectId);
           setCards(items);
-          setNotice("能力分析完成，已重新加载能力卡片。");
+          const result = updated.capabilityCardResult;
+          setNotice(updated.status === "SUCCEEDED_WITH_WARNINGS"
+            ? updated.warningMessage || `能力分析已完成，保存 ${result?.cardCount ?? items.length} 张卡片，其中 ${result?.needsEvidenceCount ?? 0} 张需要补充证据。`
+            : `能力分析完成，已保存 ${result?.cardCount ?? items.length} 张能力卡片。`);
           stopped = true;
           if (pollRef.current) {
             window.clearInterval(pollRef.current);
@@ -121,7 +138,10 @@ function CompletedCapabilitiesContent() {
         }
       } catch (exception) {
         if (!stopped) {
-          setError(exception instanceof Error ? exception.message : "能力分析状态刷新失败");
+          pollFailureCount.current += 1;
+          setError(pollFailureCount.current < 3
+            ? "状态刷新暂时失败，正在自动重试。后台任务可能仍在运行。"
+            : "状态连续刷新失败，请检查本地服务连接。后台任务可能仍在运行。");
         }
       }
     }
@@ -190,7 +210,7 @@ function CompletedCapabilitiesContent() {
   const analyzing = startingJob || (capabilityJob?.status === "QUEUED" || capabilityJob?.status === "RUNNING") === true;
   const stage = capabilityJob?.stage ?? "";
   const stageMessage = capabilityJob?.stageMessage ?? "";
-  const showProgress = analyzing && stage && stage !== "SUCCEEDED" && stage !== "FAILED";
+  const showProgress = analyzing && stage && stage !== "SUCCEEDED" && stage !== "SUCCEEDED_WITH_WARNINGS" && stage !== "FAILED";
   const elapsedMs = computeElapsedMs(capabilityJob);
   const inputSummary = parseInputSummary(capabilityJob?.inputSummary);
 
@@ -273,14 +293,31 @@ function CompletedCapabilitiesContent() {
         ) : null}
 
         {/* V3.3.4: 任务失败时显示错误原因。 */}
-        {capabilityJob?.status === "FAILED" && error ? (
+        {capabilityJob?.status === "FAILED" && error && !error.includes("未配置模型") ? (
           <div className="mt-4 rounded-md border border-danger/30 bg-danger-soft p-4 text-sm leading-6 text-danger-fg">
             <p className="font-semibold">能力分析失败</p>
             <p className="mt-1">{error}</p>
+            {capabilityJob.failureStage ? <p className="mt-1 text-xs">失败阶段：{CAPABILITY_STAGE_LABELS[capabilityJob.failureStage] ?? "后端处理"}</p> : null}
           </div>
         ) : null}
 
-        <Toast error={error || projectError} notice={notice} />
+        {capabilityJob?.status === "SUCCEEDED_WITH_WARNINGS" ? (
+          <div className="mt-4 rounded-md border border-warning/30 bg-warning-soft p-4 text-sm leading-6 text-warning-fg">
+            <p className="font-semibold">{capabilityJob.warningMessage || "能力分析已完成，部分结果需要复核。"}</p>
+            <p className="mt-1">已保存 {capabilityJob.capabilityCardResult?.cardCount ?? visibleCards.length} 张有效卡片，{capabilityJob.capabilityCardResult?.needsEvidenceCount ?? 0} 张需要补充证据。</p>
+            <details className="mt-2">
+              <summary className="cursor-pointer font-semibold">分析详情</summary>
+              <div className="mt-2 space-y-1 text-xs">
+                <p>模型原始返回：{capabilityJob.capabilityCardResult?.rawResponsePresent ? "已收到" : "未收到"}</p>
+                <p>JSON 自动修复：{capabilityJob.capabilityCardResult?.repaired ? "是" : "否"}</p>
+                <p>识别 {capabilityJob.capabilityCardResult?.recognizedItems ?? 0} 项，丢弃 {capabilityJob.capabilityCardResult?.discardedItems ?? 0} 项。</p>
+                <p>无效来源编号：{capabilityJob.capabilityCardResult?.invalidSourceIndexes ?? 0} 个。</p>
+              </div>
+            </details>
+          </div>
+        ) : null}
+
+        <Toast error={(capabilityJob?.status === "FAILED" || error.includes("未配置模型")) ? projectError : error || projectError} notice={notice} />
         {loadingProjects ? <div className="fixed inset-x-0 bottom-0 h-1 bg-slate-950" /> : null}
       </div>
     </AppShell>

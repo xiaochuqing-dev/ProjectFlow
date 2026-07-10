@@ -5,6 +5,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Locale;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -36,8 +38,9 @@ public class ProjectCapabilityService {
     private final ProjectCapabilityCardRepository cardRepository;
     private final AiProviderRepository providerRepository;
     private final ModelGatewayService modelGatewayService;
+    private final ModelOutputAdapter outputAdapter;
     private final ProjectAnalysisJobRepository jobRepository;
-    // V3.3.4: 阶段推进用独立事务提交，前端轮询可看到 stage 推进。
+    private final TransactionTemplate transactionTemplate;
     private final TransactionTemplate stageTransactionTemplate;
 
     public ProjectCapabilityService(
@@ -46,6 +49,7 @@ public class ProjectCapabilityService {
         ProjectCapabilityCardRepository cardRepository,
         AiProviderRepository providerRepository,
         ModelGatewayService modelGatewayService,
+        ModelOutputAdapter outputAdapter,
         ProjectAnalysisJobRepository jobRepository,
         PlatformTransactionManager transactionManager
     ) {
@@ -54,60 +58,85 @@ public class ProjectCapabilityService {
         this.cardRepository = cardRepository;
         this.providerRepository = providerRepository;
         this.modelGatewayService = modelGatewayService;
+        this.outputAdapter = outputAdapter;
         this.jobRepository = jobRepository;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.stageTransactionTemplate = new TransactionTemplate(transactionManager);
         this.stageTransactionTemplate.setPropagationBehavior(
             org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW
         );
     }
 
-    @Transactional
     public List<CapabilityCardResponse> analyze(UUID userId, UUID projectId) {
-        return analyze(userId, projectId, null);
+        return analyzeWithOutcome(userId, projectId, null).cards();
     }
 
-    // V3.3.4: 接收 jobId 以推进异步任务阶段。jobId 为 null 时退化为同步调用。
-    @Transactional
     public List<CapabilityCardResponse> analyze(UUID userId, UUID projectId, UUID jobId) {
-        ownedProject(userId, projectId);
+        return analyzeWithOutcome(userId, projectId, jobId).cards();
+    }
+
+    /** 模型等待期间不持有数据库事务；旧候选只在新结果可保存时原子替换。 */
+    public CapabilityAnalysisOutcome analyzeWithOutcome(UUID userId, UUID projectId, UUID jobId) {
         advanceStage(jobId, "LOAD_EVIDENCE", "正在读取已确认沉淀和开发推进段");
-        List<DevelopmentSegment> sources = segmentRepository.findByProjectIdOrderByCreatedAtDesc(projectId).stream()
-            .filter(segment -> segment.getStatus() == DevelopmentSegmentStatus.CONFIRMED)
-            .limit(24).toList();
-        if (sources.isEmpty()) {
+        CapabilityInput input = transactionTemplate.execute(status -> loadInput(userId, projectId));
+        if (input == null || input.sources().isEmpty()) {
             throw new AppException("CAPABILITY_EVIDENCE_REQUIRED", "请先确认至少一条项目沉淀，再分析项目能力", HttpStatus.BAD_REQUEST);
         }
-        AiProvider provider = configuredProvider(userId);
-        // V3.3.3: 模型配置前置检查。未配置模型时不生成完整能力卡片，提示去配置模型。
-        if (provider == null) {
-            throw new AppException(
-                "MODEL_NOT_CONFIGURED",
-                "当前未配置模型，无法进行完整人话能力分析。请先在设置页配置模型，ProjectFlow 不会用低质量本地模板伪装成完整模型分析。",
-                HttpStatus.BAD_REQUEST
-            );
+        if (input.provider() == null) {
+            throw new AppException("MODEL_NOT_CONFIGURED", "当前未配置模型，无法进行完整人话能力分析。请先在设置页配置模型。", HttpStatus.BAD_REQUEST);
         }
-        recordInputSummary(jobId, sources.size());
+        recordInputSummary(jobId, input.sources().size());
+
+        advanceStage(jobId, "MODEL_REQUEST", "正在调用模型分析项目能力（可能需要几分钟，任务会继续运行）");
+        ModelDraftResult modelResult;
+        try {
+            modelResult = modelDrafts(input.provider(), input.sources(), jobId);
+        } catch (ModelGatewayService.ModelResponseFormatException exception) {
+            throw new CapabilityAnalysisException("MODEL_RESPONSE_PARSE", "模型已经返回，但结果无法解析，请重新分析。", exception);
+        } catch (Exception exception) {
+            throw new CapabilityAnalysisException("MODEL_REQUEST", "模型请求没有成功，请检查模型配置、网络或服务状态。", exception);
+        }
+        if (modelResult.drafts().isEmpty()) {
+            throw new CapabilityAnalysisException("ITEM_VALIDATION", "模型结果中没有可用的能力卡片，旧候选已保留。", null);
+        }
+
+        advanceStage(jobId, "DATABASE_PERSIST", "正在原子替换未确认候选并保存能力卡片");
+        List<CapabilityCardResponse> responses;
+        try {
+            responses = transactionTemplate.execute(status -> persistCandidates(projectId, input.provider(), modelResult.drafts()));
+        } catch (Exception exception) {
+            throw new CapabilityAnalysisException("DATABASE_PERSIST", "模型结果已生成，保存能力卡片时出现异常，旧候选已保留。", exception);
+        }
+        List<CapabilityCardResponse> safeResponses = responses == null ? List.of() : responses;
+        long needsEvidence = safeResponses.stream().filter(card -> "NEEDS_EVIDENCE".equals(card.status())).count();
+        boolean warnings = modelResult.diagnostics().repaired()
+            || modelResult.diagnostics().discardedItems() > 0
+            || modelResult.diagnostics().invalidSourceIndexes() > 0
+            || needsEvidence > 0
+            || safeResponses.size() < 3;
+        return new CapabilityAnalysisOutcome(safeResponses, warnings, (int) needsEvidence, modelResult.diagnostics());
+    }
+
+    private CapabilityInput loadInput(UUID userId, UUID projectId) {
+        ownedProject(userId, projectId);
+        List<CapabilitySource> sources = segmentRepository.findByProjectIdOrderByCreatedAtDesc(projectId).stream()
+            .filter(segment -> segment.getStatus() == DevelopmentSegmentStatus.CONFIRMED)
+            .limit(24)
+            .map(segment -> new CapabilitySource(
+                segment.getId(), segment.getTitle(), segment.getPlainSummary(), segment.getAffectedFiles(), segment.getEvidenceRefs()
+            )).toList();
+        return new CapabilityInput(configuredProvider(userId), sources);
+    }
+
+    private List<CapabilityCardResponse> persistCandidates(UUID projectId, AiProvider provider, List<CardDraft> drafts) {
         cardRepository.deleteByProjectIdAndStatus(projectId, CapabilityCardStatus.CANDIDATE);
         cardRepository.deleteByProjectIdAndStatus(projectId, CapabilityCardStatus.NEEDS_EVIDENCE);
-
-        advanceStage(jobId, "MODEL_CAPABILITY_ANALYSIS", "正在调用模型分析项目能力（可能需要几分钟，任务会继续运行）");
-        String mode = "MODEL";
-        String fallback = "";
-        List<CardDraft> drafts;
-        try {
-            drafts = modelDrafts(provider, sources);
-        } catch (Exception exception) {
-            mode = "LOCAL_RULE";
-            fallback = "模型能力分析失败，已基于确认沉淀与开发推进段生成候选能力，建议配置或检查模型后重新分析。";
-            drafts = localDrafts(sources);
-        }
-        advanceStage(jobId, "PERSIST_CAPABILITY_CARDS", "正在保存能力卡片");
         List<ProjectCapabilityCard> cards = new ArrayList<>();
         for (CardDraft draft : drafts.stream().limit(8).toList()) {
             ProjectCapabilityCard card = new ProjectCapabilityCard(projectId);
             card.update(
                 draft.name(), draft.summary(), draft.problemSolved(), draft.featureEntry(), draft.sourceRefs(), draft.evidenceRefs(),
-                draft.readme(), draft.resume(), draft.interview(), mode, provider.getName(), fallback
+                draft.readme(), draft.resume(), draft.interview(), "MODEL", provider.getName(), draft.warning()
             );
             cards.add(card);
         }
@@ -155,63 +184,90 @@ public class ProjectCapabilityService {
         return response(cardRepository.save(card));
     }
 
-    private List<CardDraft> localDrafts(List<DevelopmentSegment> sources) {
-        // V3.3.4 小阶段修复：本地 fallback 也经过 DisplayContentSanitizer 清洗，避免原始路径 / 英文 commit 污染主视图。
+    private List<CardDraft> localDrafts(List<CapabilitySource> sources) {
         return sources.stream().limit(8).map(segment -> new CardDraft(
-            DisplayContentSanitizer.sanitizeCapabilityName(segment.getTitle()),
-            DisplayContentSanitizer.sanitizeCapabilitySummary(segment.getPlainSummary()),
-            DisplayContentSanitizer.sanitizeUserVisibleValue(segment.getUserVisibleValue()),
-            entry(segment.getAffectedFiles()),
-            List.of("segment:" + segment.getId()), segment.getEvidenceRefs(),
-            DisplayContentSanitizer.sanitizeCapabilitySummary(segment.getTitle() + "：" + segment.getPlainSummary()),
-            DisplayContentSanitizer.sanitizeCapabilitySummary("基于可追溯证据完成" + segment.getTitle()),
-            DisplayContentSanitizer.sanitizeCapabilitySummary("可说明如何通过" + entry(segment.getAffectedFiles()) + "完成该能力，并展示提交与文件证据。")
+            DisplayContentSanitizer.sanitizeCapabilityName(segment.title()),
+            DisplayContentSanitizer.sanitizeCapabilitySummary(segment.summary()),
+            DisplayContentSanitizer.sanitizeCapabilitySummary(segment.summary()),
+            entry(segment.affectedFiles()),
+            List.of("segment:" + segment.id()), segment.evidenceRefs(),
+            DisplayContentSanitizer.sanitizeCapabilitySummary(segment.title() + "：" + segment.summary()),
+            DisplayContentSanitizer.sanitizeCapabilitySummary("基于可追溯证据完成" + segment.title()),
+            DisplayContentSanitizer.sanitizeCapabilitySummary("可说明如何通过" + entry(segment.affectedFiles()) + "完成该能力，并展示提交与文件证据。"),
+            "使用本地事实补全，请人工复核。"
         )).toList();
     }
 
-    private List<CardDraft> modelDrafts(AiProvider provider, List<DevelopmentSegment> sources) throws Exception {
-        Set<String> allowedEvidence = new LinkedHashSet<>();
+    private ModelDraftResult modelDrafts(AiProvider provider, List<CapabilitySource> sources, UUID jobId) throws Exception {
+        Map<String, CapabilitySource> sourceMap = new java.util.LinkedHashMap<>();
         StringBuilder facts = new StringBuilder();
-        for (DevelopmentSegment source : sources) {
-            allowedEvidence.addAll(source.getEvidenceRefs());
-            // V3.3.4 小阶段修复：prompt 瘦身。plainSummary 截断到 200 字符、evidence 只发前 10 条。
-            // 完整 evidenceRefs 仍保留在 allowedEvidence 供校验，只是不全部铺进 prompt。
-            String summary = truncate(source.getPlainSummary(), 200);
-            String evidencePreview = source.getEvidenceRefs().stream().limit(10)
-                .reduce((a, b) -> a + "," + b).orElse("");
-            facts.append("SEGMENT ").append(source.getId()).append(" | ").append(source.getTitle()).append(" | ")
-                .append(summary).append(" | entry=").append(entry(source.getAffectedFiles())).append(" | evidence=")
-                .append(evidencePreview);
-            if (source.getEvidenceRefs().size() > 10) facts.append("(共").append(source.getEvidenceRefs().size()).append("条)");
-            facts.append('\n');
+        for (int index = 0; index < sources.size(); index++) {
+            CapabilitySource source = sources.get(index);
+            String sourceIndex = "S" + (index + 1);
+            sourceMap.put(sourceIndex, source);
+            facts.append(sourceIndex).append(" | ").append(source.title()).append(" | ")
+                .append(truncate(source.summary(), 200)).append(" | entry=").append(entry(source.affectedFiles())).append('\n');
         }
-        JsonNode json = modelGatewayService.callJson(provider, """
-            基于全部确认开发推进段整体分析 ProjectFlow 项目能力。返回严格 JSON：
-            {"capabilities":[{"name":"","summary":"","problemSolved":"","featureEntry":"","sourceRefs":[],"evidenceRefs":[],"readme":"","resume":"","interview":""}]}
-            生成 3 到 8 张具体且不重复的卡片，不得发明来源或证据。
+        ModelGatewayService.StructuredModelResponse response = modelGatewayService.callStructured(provider, """
+            基于全部确认开发推进段整体分析 ProjectFlow 项目能力。返回 JSON：
+            {"capabilities":[{"name":"","summary":"","problemSolved":"","featureEntry":"","sourceIndexes":["S1"],"readme":"","resume":"","interview":""}]}
+            生成具体且不重复的卡片，最多 8 张。来源只填写给定的 S 编号，不要复制内部 ID、提交哈希或 evidenceRefs。
             能力名称必须贴合作品真实功能（如"扫描指纹复用稳定分析结果""待整理变更归并为开发推进段""GitHub 状态与本地 Git 多来源证据整合"），禁止泛化模板名（如"项目资产沉淀能力""技术理解能力"），禁止直接复读 commit message。
             所有用户可见字段（name、summary、problemSolved、featureEntry、readme、resume、interview）必须使用简体中文人话；技术名、文件路径、类名可保留原文但不能成为主标题。
             事实：
             """ + facts, 4_000);
-        JsonNode values = json.path("capabilities");
-        if (!values.isArray() || values.size() < 3 || values.size() > 8) throw new IllegalArgumentException("capabilities must contain 3 to 8 cards");
+        advanceStage(jobId, "MODEL_RESPONSE_RECEIVED", "模型已返回结果，正在解析与归一化");
+        List<JsonNode> values = outputAdapter.items(response.parsed().root(), "capabilities", "capabilityCards", "cards", "items", "results");
+        advanceStage(jobId, "MODEL_OUTPUT_NORMALIZE", "正在逐项修复字段并绑定来源证据");
+        advanceStage(jobId, "ITEM_VALIDATION", "正在逐项校验能力卡片，局部异常不会影响其他有效项");
         List<CardDraft> result = new ArrayList<>();
+        Set<String> names = new LinkedHashSet<>();
+        int discarded = 0;
+        int invalidIndexes = 0;
         for (JsonNode value : values) {
-            List<String> evidence = strings(value.path("evidenceRefs")).stream().filter(allowedEvidence::contains).toList();
-            if (evidence.isEmpty()) throw new IllegalArgumentException("capability evidence is invalid");
-            // V3.3.4 小阶段修复：模型输出也必须经过 DisplayContentSanitizer 清洗，不能直接信任。
+            if (!value.isObject()) {
+                discarded++;
+                continue;
+            }
+            String rawName = outputAdapter.text(value, "", "name", "title", "capabilityName");
+            String rawSummary = outputAdapter.text(value, "", "summary", "description", "plainSummary");
+            if (rawName.isBlank() && rawSummary.isBlank()) {
+                discarded++;
+                continue;
+            }
+            String name = DisplayContentSanitizer.sanitizeCapabilityName(rawName.isBlank() ? rawSummary : rawName);
+            String dedupeKey = name.toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
+            if (!names.add(dedupeKey)) {
+                discarded++;
+                continue;
+            }
+            List<String> requestedIndexes = outputAdapter.strings(value, "sourceIndexes", "sourceIds", "sources");
+            List<CapabilitySource> boundSources = requestedIndexes.stream().map(sourceMap::get).filter(java.util.Objects::nonNull).distinct().toList();
+            invalidIndexes += Math.max(0, requestedIndexes.size() - boundSources.size());
+            List<String> sourceRefs = boundSources.stream().map(source -> "segment:" + source.id()).toList();
+            List<String> evidence = boundSources.stream().flatMap(source -> source.evidenceRefs().stream()).distinct().toList();
+            String warning = evidence.isEmpty() ? "这张卡片缺少可绑定证据，需要补充证据。"
+                : requestedIndexes.size() > boundSources.size() ? "部分来源编号无效，已保留可绑定证据，请人工复核。" : "";
+            String summary = DisplayContentSanitizer.sanitizeCapabilitySummary(rawSummary.isBlank() ? rawName : rawSummary);
             result.add(new CardDraft(
-                DisplayContentSanitizer.sanitizeCapabilityName(required(value, "name")),
-                DisplayContentSanitizer.sanitizeCapabilitySummary(required(value, "summary")),
-                DisplayContentSanitizer.sanitizeCapabilitySummary(required(value, "problemSolved")),
-                DisplayContentSanitizer.sanitizeCapabilitySummary(required(value, "featureEntry")),
-                strings(value.path("sourceRefs")), evidence,
-                DisplayContentSanitizer.sanitizeCapabilitySummary(required(value, "readme")),
-                DisplayContentSanitizer.sanitizeCapabilitySummary(required(value, "resume")),
-                DisplayContentSanitizer.sanitizeCapabilitySummary(required(value, "interview"))
+                name,
+                summary,
+                DisplayContentSanitizer.sanitizeCapabilitySummary(outputAdapter.text(value, summary, "problemSolved", "problem", "value")),
+                DisplayContentSanitizer.sanitizeCapabilitySummary(outputAdapter.text(value, "项目核心流程", "featureEntry", "entry", "entryPoint")),
+                sourceRefs, evidence,
+                DisplayContentSanitizer.sanitizeCapabilitySummary(outputAdapter.text(value, summary, "readme", "readmeExpression")),
+                DisplayContentSanitizer.sanitizeCapabilitySummary(outputAdapter.text(value, summary, "resume", "resumeExpression")),
+                DisplayContentSanitizer.sanitizeCapabilitySummary(outputAdapter.text(value, summary, "interview", "interviewExpression")),
+                warning
             ));
+            if (result.size() == 8) break;
         }
-        return result;
+        advanceStage(jobId, "EVIDENCE_BINDING", "已根据来源编号恢复真实证据引用");
+        advanceStage(jobId, "CONTENT_SANITIZE", "正在清洗用户可见内容并整理警告");
+        return new ModelDraftResult(result, new CapabilityDiagnostics(
+            true, response.parsed().repaired(), values.size(), discarded + Math.max(0, values.size() - result.size() - discarded),
+            invalidIndexes, (int) result.stream().filter(draft -> draft.evidenceRefs().isEmpty()).count(), ""
+        ));
     }
 
     private AiProvider configuredProvider(UUID userId) {
@@ -258,7 +314,50 @@ public class ProjectCapabilityService {
 
     private record CardDraft(
         String name, String summary, String problemSolved, String featureEntry, List<String> sourceRefs, List<String> evidenceRefs,
-        String readme, String resume, String interview
+        String readme, String resume, String interview, String warning
     ) {
+    }
+
+    private record CapabilityInput(AiProvider provider, List<CapabilitySource> sources) {
+    }
+
+    private record CapabilitySource(
+        UUID id, String title, String summary, List<String> affectedFiles, List<String> evidenceRefs
+    ) {
+    }
+
+    private record ModelDraftResult(List<CardDraft> drafts, CapabilityDiagnostics diagnostics) {
+    }
+
+    public record CapabilityDiagnostics(
+        boolean rawResponsePresent,
+        boolean repaired,
+        int recognizedItems,
+        int discardedItems,
+        int invalidSourceIndexes,
+        int needsEvidenceItems,
+        String failureStage
+    ) {
+    }
+
+    public record CapabilityAnalysisOutcome(
+        List<CapabilityCardResponse> cards,
+        boolean hasWarnings,
+        int needsEvidenceCount,
+        CapabilityDiagnostics diagnostics
+    ) {
+    }
+
+    public static final class CapabilityAnalysisException extends RuntimeException {
+        private final String stage;
+
+        public CapabilityAnalysisException(String stage, String message, Throwable cause) {
+            super(message, cause);
+            this.stage = stage;
+        }
+
+        public String stage() {
+            return stage;
+        }
     }
 }

@@ -1,5 +1,8 @@
 # Known risks
 
+- 不要重新要求模型复制 UUID、提交哈希或内部 evidenceRefs；新增结构化入口应复用 S 编号映射和 ModelOutputAdapter。
+- 不要在外部模型调用期间持有数据库事务，也不要在新候选生成成功前删除旧候选。
+- 模型原始返回只用于后端诊断；主界面不得展示原始 JSON、异常栈或内部阶段枚举。
 - Do not remove project creation, zip import, or local-path binding.
 - Do not make GitHub PR/CI or GitHub CLI the primary workflow.
 - Do not let GitHub CLI failures block local change analysis.
