@@ -81,5 +81,6 @@ V3.3.5 已按提示词的合理方向完成实现。重点不是增加更多模�
 
 - 任务开始前的存档提交：`f35648f chore: archive before ProjectFlow v3.3.5 implementation`。
 - 本次实现已提交：`61173fe feat: implement ProjectFlow v3.3.5 reliability`。
-- 本报告会以单独的记录修订提交保存，并与实现提交一起推送到 `origin/master`。
+- 验收记录提交：`505f335 docs: finalize V3.3.5 acceptance record`。
+- 实现和验收记录已推送到 `origin/master`。
 - 结构化 Agent 结果已写入 `.projectflow/agent-results/20260711-v335-reliability/result.json`。
