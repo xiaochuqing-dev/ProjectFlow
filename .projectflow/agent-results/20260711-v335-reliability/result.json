@@ -7,6 +7,7 @@
     "能力卡片关联分析任务，能力页分开显示当前成功批次、最近失败和历史记录，已确认卡片不会因重分析丢失。",
     "模型 Provider 支持编辑、唯一默认项、受保护删除、显式清除 Key 与用户确认后的重复清理；新模型任务只会使用明确默认项。",
     "前后端版本和页面显示统一为 V3.3.5，并补齐模型、沉淀、能力与 Provider 的回归测试。"
+    ,"桌面启动器继续从当前仓库源码构建，已修正所有根目录启动入口的 V3.3.4 旧文案为 V3.3.5；实际启动验证中前端 3000 和后端 8080 均就绪。"
   ],
   "keyFiles": [
     "backend/src/main/java/com/projectflow/service/ModelGatewayService.java",
@@ -21,7 +22,7 @@
   "verification": {
     "build": "frontend npm run build passed; frontend TypeScript and production page generation passed.",
     "tests": "新增模型、Provider、沉淀、能力任务定向测试与后端全量 161 项 Maven 测试均已通过。",
-    "manualCheck": "已执行 git diff --check、默认 Provider 选择静态审查、配置安全扫描和 Docker Compose 配置校验；未发现真实 Key，且未配置 DeepSeek 环境变量，因此没有进行真实模型调用。"
+    "manualCheck": "已执行 git diff --check、默认 Provider 选择静态审查、配置安全扫描、Docker Compose 配置校验和桌面启动器完整启动验证；未发现真实 Key，且未配置 DeepSeek 环境变量，因此没有进行真实模型调用。"
   },
   "unfinished": [
     "未配置可安全使用的 DeepSeek Key，真实 Provider 调用和网络延迟验证未执行。"
