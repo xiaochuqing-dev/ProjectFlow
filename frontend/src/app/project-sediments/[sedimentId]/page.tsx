@@ -62,6 +62,7 @@ export default function ProjectSedimentDetailPage() {
               <Card shadow="card">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge label="已确认" tone="success" />
+                  <Badge label={sediment.capabilityStatus === "PENDING_ANALYSIS" ? "待能力分析" : sediment.capabilityStatus === "CAPABILITY_FORMED" ? "已形成能力卡片" : "已参与能力分析"} tone={sediment.capabilityStatus === "PENDING_ANALYSIS" ? "warning" : "brand"} />
                   <span className="text-xs text-muted">{sediment.sedimentType}</span>
                 </div>
                 <p className="mt-4 max-w-3xl text-base leading-7 text-slate-700 break-words">{sediment.summary}</p>
@@ -80,8 +81,11 @@ export default function ProjectSedimentDetailPage() {
                 <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-700">
                   <span className="rounded-md bg-slate-100 px-3 py-2">{sediment.sourceSegmentIds.length} 个开发推进段</span>
                   <span className="rounded-md bg-slate-100 px-3 py-2">{sediment.evidenceRefs.length} 条证据引用</span>
+                  <span className="rounded-md bg-slate-100 px-3 py-2">{sediment.sourceBatchIds.length} 个分析批次</span>
+                  <span className="rounded-md bg-slate-100 px-3 py-2">涉及 {sediment.affectedFiles.length} 个文件</span>
                   <span className="rounded-md bg-slate-100 px-3 py-2">最近更新 {new Date(sediment.updatedAt).toLocaleString()}</span>
                 </div>
+                <p className="mt-3 text-xs text-muted">来源：{sediment.contentSource} · 质量：{sediment.qualityStatus}{sediment.lastCapabilityAnalyzedAt ? ` · 最后能力分析 ${new Date(sediment.lastCapabilityAnalyzedAt).toLocaleString("zh-CN")}` : ""}</p>
                 <details className="mt-4 rounded-md border border-line">
                   <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">查看证据细节</summary>
                   <ul className="max-h-72 space-y-2 overflow-auto border-t border-line p-4 font-mono text-xs text-muted">

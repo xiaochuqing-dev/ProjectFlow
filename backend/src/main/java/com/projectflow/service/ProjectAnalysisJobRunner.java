@@ -15,6 +15,7 @@ import com.projectflow.dto.V2ProjectDtos.CapabilityAnalysisJobResult;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisResponse;
+import com.projectflow.dto.V2ProjectDtos.ModelCallDiagnosticsResponse;
 import com.projectflow.dto.V2ProjectDtos.WorkSessionScanResponse;
 import com.projectflow.entity.ModelUsageRecord;
 import com.projectflow.entity.ProjectAnalysisJob;
@@ -75,7 +76,7 @@ public class ProjectAnalysisJobRunner {
                 UUID recordId = projectAnalysisRecordService.createProjectAnalysisRecord(job.getUserId(), job.getProjectId(), result);
                 String resultJson = objectMapper.writeValueAsString(result);
                 markSucceeded(jobId, resultJson, recordId);
-                recordUsage(job, "PROJECT_ANALYSIS", result.providerName(), result.modelUsed(), resultJson, startedAt);
+                recordUsage(job, "PROJECT_ANALYSIS", result.providerName(), result.modelUsed(), result.diagnostics(), resultJson, startedAt);
             } else if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_INTERPRET) {
                 CapabilityInterpretResponse result = projectMemoryService.interpretCapability(
                     job.getUserId(),
@@ -84,7 +85,7 @@ public class ProjectAnalysisJobRunner {
                 );
                 String resultJson = objectMapper.writeValueAsString(result);
                 markSucceeded(jobId, resultJson, null);
-                recordUsage(job, "CAPABILITY_INTERPRET", result.source(), !result.degraded(), resultJson, startedAt);
+                recordUsage(job, "CAPABILITY_INTERPRET", result.source(), !result.degraded(), result.diagnostics(), resultJson, startedAt);
             } else if (job.getJobType() == ProjectAnalysisJobType.WORK_SESSION_SCAN) {
                 WorkSessionScanResponse result = workSessionScanService.scan(job.getUserId(), job.getProjectId(), job.getId());
                 String resultJson = objectMapper.writeValueAsString(result);
@@ -128,7 +129,7 @@ public class ProjectAnalysisJobRunner {
                 UUID recordId = projectAnalysisRecordService.createFileAnalysisRecord(job.getUserId(), job.getProjectId(), result);
                 String resultJson = objectMapper.writeValueAsString(result);
                 markSucceeded(jobId, resultJson, recordId);
-                recordUsage(job, "FILE_ANALYSIS", result.providerName(), result.modelUsed(), resultJson, startedAt);
+                recordUsage(job, "FILE_ANALYSIS", result.providerName(), result.modelUsed(), result.diagnostics(), resultJson, startedAt);
             }
         } catch (Exception exception) {
             LOGGER.warn("Project analysis job failed: jobId={}", jobId, exception);
@@ -199,18 +200,19 @@ public class ProjectAnalysisJobRunner {
         String operation,
         String providerName,
         boolean modelUsed,
+        ModelCallDiagnosticsResponse diagnostics,
         String resultJson,
         long startedAt
     ) {
         modelUsageRecordRepository.save(new ModelUsageRecord(
             job.getProjectId(),
             operation,
-            safeProviderName(providerName),
-            modelUsed ? "configured-model" : "local-rule",
-            0,
-            estimateTokens(resultJson),
-            true,
-            latencyMs(startedAt),
+            diagnostics == null ? safeProviderName(providerName) : safeProviderName(diagnostics.providerName()),
+            diagnostics == null || diagnostics.modelName().isBlank() ? modelUsed ? "configured-model" : "local-rule" : diagnostics.modelName(),
+            diagnostics == null ? 0 : diagnostics.promptTokens(),
+            diagnostics == null ? estimateTokens(resultJson) : diagnostics.completionTokens(),
+            diagnostics == null || !"ACTUAL".equals(diagnostics.usageSource()),
+            diagnostics == null || diagnostics.latencyMs() == 0 ? latencyMs(startedAt) : diagnostics.latencyMs(),
             "SUCCEEDED",
             null,
             null,

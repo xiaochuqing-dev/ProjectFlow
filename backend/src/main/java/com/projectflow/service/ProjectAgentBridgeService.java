@@ -149,7 +149,6 @@ public class ProjectAgentBridgeService {
         }
     }
 
-    @Transactional
     public AgentResultScanResponse scanAgentResults(UUID userId, UUID projectId, AgentBridgeRequest request) {
         ProjectSpace project = findOwnedProject(userId, projectId);
         Path projectRoot = resolveProjectRoot(request.projectPath());

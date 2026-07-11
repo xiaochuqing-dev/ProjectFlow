@@ -14,7 +14,7 @@ type AppShellProps = {
 
 const navItems = [
   { label: "工作台", href: "/dashboard", icon: LayoutDashboard },
-  { label: "沉淀确认", href: "/tasks", icon: ClipboardCheck },
+  { label: "沉淀处理", href: "/sediment-review", icon: ClipboardCheck },
   { label: "项目沉淀", href: "/project-intelligence", icon: DatabaseZap },
   { label: "每日回顾", href: "/dev-logs", icon: BookOpenText },
   { label: "成果输出", href: "/ai-review", icon: Sparkles },
@@ -32,7 +32,7 @@ export function AppShell({ title, eyebrow, actions, children }: AppShellProps) {
             PF
           </div>
           <div>
-            <p className="text-base font-semibold text-ink">ProjectFlow <span className="text-xs font-medium text-muted">V3.3.5</span></p>
+            <p className="text-base font-semibold text-ink">ProjectFlow <span className="text-xs font-medium text-muted">V3.3.6</span></p>
             <p className="text-xs text-muted">开发变化与项目沉淀</p>
           </div>
         </div>

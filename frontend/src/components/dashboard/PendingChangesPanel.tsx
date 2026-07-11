@@ -27,7 +27,7 @@ const STAGE_LABELS: Record<string, string> = {
   GIT_SCAN: "正在读取本地 Git 提交与工作区变化",
   GITHUB_INSPECT: "正在检查 GitHub 状态",
   MODEL_ENRICH: "正在调用模型分析开发推进段",
-  PERSIST: "正在保存分析结果并生成建议沉淀",
+  PERSIST: "正在分类保存模型结果或本地事实草稿",
   SUCCEEDED: "分析完成",
   FAILED: "分析失败",
 };
@@ -143,8 +143,17 @@ export function PendingChangesPanel({
       ) : null}
 
       {safeSegments.length > 0 ? (
-        <div className="divide-y divide-line">
-          {safeSegments.map((segment) => (
+        <div>
+          <div className="border-b border-line px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div><p className="font-semibold text-ink">最新分析批次</p><p className="mt-1 text-sm text-muted">{batch?.modelStatus?.startsWith("SUCCESS") ? `${safeSegments.length} 条模型分析结果等待处理` : `${safeSegments.length} 条本地事实草稿，建议重新模型分析或人工整理`}</p></div>
+              <Link className="inline-flex items-center gap-1 rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white" href={`/sediment-review${scan?.projectId ? `?projectId=${scan.projectId}` : ""}`}>进入沉淀处理中心 <ArrowRight className="h-4 w-4" /></Link>
+            </div>
+          </div>
+          <details className="border-b border-line">
+            <summary className="cursor-pointer px-5 py-3 text-sm font-semibold text-slate-700">查看开发推进段详情（{safeSegments.length}）</summary>
+            <div className="divide-y divide-line border-t border-line">
+            {safeSegments.map((segment) => (
             <article className="px-5 py-4" key={segment.id}>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge label={qualityStatusLabel(segment.qualityStatus)} tone={qualityBadgeTone(segment.qualityStatus, segment.status)} />
@@ -174,10 +183,12 @@ export function PendingChangesPanel({
                 </div>
               </details>
             </article>
-          ))}
+            ))}
+            </div>
+          </details>
           <div className="flex justify-end px-5 py-4">
-            <Link className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-hover" href="/tasks">
-              进入沉淀确认 <ArrowRight className="h-4 w-4" />
+            <Link className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-hover" href={`/sediment-review${scan?.projectId ? `?projectId=${scan.projectId}` : ""}`}>
+              进入沉淀处理中心 <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
           {/* V3.3.3: 分析口径展示 + 诊断信息。让用户知道本次用了什么来源。 */}

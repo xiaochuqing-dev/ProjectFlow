@@ -19,4 +19,6 @@ public interface ProjectChangeRepository extends JpaRepository<ProjectChange, UU
     Optional<ProjectChange> findBySourceTypeAndSourceRef(ProjectChangeSourceType sourceType, String sourceRef);
 
     Optional<ProjectChange> findByDevelopmentSegmentId(UUID developmentSegmentId);
+
+    List<ProjectChange> findBySourceBatchIdOrderByCreatedAtAsc(UUID sourceBatchId);
 }

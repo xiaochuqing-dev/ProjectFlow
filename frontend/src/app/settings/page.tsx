@@ -316,7 +316,7 @@ function SettingsPageContent() {
               </label>
             </div>
             <p className="text-xs leading-5 text-muted">
-              分析参数默认使用自动策略。这里保存的是 Provider 上限；开发推进段和能力分析还有各自任务上限，诊断区会显示本次真实生效值。结构化任务 Temperature 最高按 0.3 生效，请求超时为 240 秒，并允许一次紧凑重试。
+              分析参数默认使用自动策略。这里保存的是 Provider 上限；开发推进段和能力分析还有各自任务上限，诊断区会显示本次真实生效值。结构化任务 Temperature 最高按 0.3 生效，请求超时为 240 秒；单任务最多 3 次请求，截断时只执行一次不超过 2000 tokens 的紧凑重试。
             </p>
             <button className="flex w-full items-center justify-center gap-2 rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-60" disabled={saving} type="submit">
               {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Settings2 className="h-4 w-4" />}

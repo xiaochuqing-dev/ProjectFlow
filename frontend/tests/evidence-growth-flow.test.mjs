@@ -19,7 +19,7 @@ assert.match(api, /draftProjectChangeFromEvidenceBundle/, "frontend API should c
 assert.match(dashboard, /PendingChangesPanel/, "dashboard should render the V3.3 pending-change flow");
 assert.match(pendingChangesPanel, /分析新变化/, "dashboard should expose the cursor-based scan action");
 assert.match(pendingChangesPanel, /开发推进段/, "dashboard should group raw changes into reviewable segments");
-assert.match(pendingChangesPanel, /进入沉淀确认/, "dashboard should route segments to explicit user confirmation");
+assert.match(pendingChangesPanel, /进入沉淀处理中心/, "dashboard should route batches to the sediment processing center");
 assert.match(api, /batch: ChangeBatch \| null/, "scan responses should expose a stable change batch");
 assert.match(api, /segments: DevelopmentSegment\[\]/, "scan responses should expose deterministic segments");
 

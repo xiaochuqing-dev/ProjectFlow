@@ -1,0 +1,33 @@
+{
+  "taskGoal": "完成 ProjectFlow V3.3.5.1 模型稳定性修复与 V3.3.6 沉淀处理闭环，并完成兼容验证、文档、提交和推送。",
+  "actualChanges": [
+    "修复空正文伴随截断、token 耗尽或 reasoning 输出时的错误分类，并使用更低预算的单次紧凑重试。",
+    "统一项目分析、文件分析、能力解释和能力卡片的模型诊断，拆除外部调用期间的方法级长事务。",
+    "将本地规则和 Agent result 限定为本地事实草稿，只有有证据的模型结果可生成正式建议沉淀。",
+    "新增按时间分组的沉淀处理中心，支持批次摘要、正式建议逐条处理、进度保留和本地草稿分区。",
+    "让已确认沉淀保存来源批次、涉及文件和能力状态，能力分析只消费已确认沉淀并在成功后回写结果。",
+    "升级版本与说明到 V3.3.6，补充模型、沉淀、能力、Provider 和迁移兼容文档。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ModelGatewayService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectSedimentService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectCapabilityService.java",
+    "frontend/src/app/sediment-review/page.tsx",
+    "frontend/src/app/sediment-review/[batchId]/page.tsx",
+    "docs/projectflow-v3.3.6-implementation-report.md"
+  ],
+  "verification": {
+    "build": "前端 Next.js 16.2.7 生产构建通过；后端 Maven test 构建成功。",
+    "tests": "后端 165 项测试全部通过；前端 18 项静态契约检查全部通过。",
+    "manualCheck": "确认 Docker 服务未运行且环境无可用模型 Key；PostgreSQL 和真实 DeepSeek 未执行，结果已明确记录。"
+  },
+  "unfinished": [
+    "真实 PostgreSQL 运行验证需 Docker 或外部数据库可用后补做。",
+    "真实 DeepSeek 三类分析需提供安全测试 Key 后补做。"
+  ],
+  "sedimentCandidates": [
+    "模型网关现在能把空正文伴随预算耗尽正确归类为截断，并通过受限紧凑重试恢复结构化结果。",
+    "正式建议与本地事实草稿形成硬边界，模型失败不再让低质量草稿进入正式沉淀确认。",
+    "沉淀处理中心按批次和时间组织决策，确认后的沉淀可追溯并进入能力分析闭环。"
+  ]
+}

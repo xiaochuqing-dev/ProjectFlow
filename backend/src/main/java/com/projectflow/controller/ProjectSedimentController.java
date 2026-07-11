@@ -15,6 +15,8 @@ import com.projectflow.dto.ApiResponse;
 import com.projectflow.dto.AuthDtos.AuthUser;
 import com.projectflow.dto.V33WorkflowDtos.ProjectSedimentPatchRequest;
 import com.projectflow.dto.V33WorkflowDtos.ProjectSedimentResponse;
+import com.projectflow.dto.V33WorkflowDtos.SedimentReviewBatchDetailResponse;
+import com.projectflow.dto.V33WorkflowDtos.SedimentReviewBatchResponse;
 import com.projectflow.service.AuthService;
 import com.projectflow.service.ProjectSedimentService;
 
@@ -38,6 +40,24 @@ public class ProjectSedimentController {
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
         return ApiResponse.ok(sedimentService.list(user.id(), projectId));
+    }
+
+    @GetMapping("/projects/{projectId}/sediment-review-batches")
+    ApiResponse<List<SedimentReviewBatchResponse>> listReviewBatches(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(sedimentService.listReviewBatches(user.id(), projectId));
+    }
+
+    @GetMapping("/sediment-review-batches/{batchId}")
+    ApiResponse<SedimentReviewBatchDetailResponse> getReviewBatch(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID batchId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(sedimentService.getReviewBatch(user.id(), batchId));
     }
 
     @GetMapping("/project-sediments/{sedimentId}")

@@ -91,7 +91,8 @@ public final class V2ProjectDtos {
         String providerName,
         String analysisSource,
         String confidence,
-        String message
+        String message,
+        ModelCallDiagnosticsResponse diagnostics
     ) {
     }
 
@@ -116,7 +117,8 @@ public final class V2ProjectDtos {
         String providerName,
         String analysisSource,
         String confidence,
-        String message
+        String message,
+        ModelCallDiagnosticsResponse diagnostics
     ) {
     }
 
@@ -275,7 +277,36 @@ public final class V2ProjectDtos {
         boolean degraded,
         String source,
         String message,
-        CapabilityCandidate candidate
+        CapabilityCandidate candidate,
+        ModelCallDiagnosticsResponse diagnostics
+    ) {
+    }
+
+    public record ModelCallDiagnosticsResponse(
+        String providerName,
+        String modelName,
+        String finishReason,
+        int promptTokens,
+        int completionTokens,
+        int totalTokens,
+        String usageSource,
+        int providerMaxTokens,
+        int taskPolicyMaxTokens,
+        int effectiveMaxTokens,
+        double providerTemperature,
+        double effectiveTemperature,
+        long timeoutSeconds,
+        long latencyMs,
+        boolean contentPresent,
+        boolean reasoningPresent,
+        int reasoningLength,
+        boolean outputTruncated,
+        boolean compactRetryAttempted,
+        boolean compactRetrySucceeded,
+        int requestCount,
+        boolean jsonRepaired,
+        boolean partialResult,
+        int recoveredItems
     ) {
     }
 
@@ -487,6 +518,10 @@ public final class V2ProjectDtos {
         List<String> evidenceRefs,
         String confidence,
         boolean needsUserReview,
+        UUID sourceBatchId,
+        String contentSource,
+        String qualityStatus,
+        String recommendationStrength,
         boolean legacyTruncated
     ) {
     }

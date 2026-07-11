@@ -361,28 +361,56 @@ function SedimentOverview({ sediments, projectId }: { sediments: ProjectSediment
       <div className="p-8 text-center">
         <p className="font-semibold text-slate-950">还没有已确认沉淀</p>
         <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted">先在工作台分析新变化，再到沉淀确认选择新建、合并、补证据或忽略。</p>
-        <Link className="mt-4 inline-flex rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800" href={`/tasks?projectId=${projectId}`}>进入沉淀确认</Link>
+        <Link className="mt-4 inline-flex rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800" href={`/sediment-review?projectId=${projectId}`}>进入沉淀处理中心</Link>
       </div>
     );
   }
-  return (
-    <div className="divide-y divide-line">
-      {sediments.map((sediment) => (
-        <Link className="block px-5 py-4 hover:bg-slate-50" href={`/project-sediments/${sediment.id}`} key={sediment.id}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="font-semibold text-slate-950 break-words">{sediment.title}</h3>
-            <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">已确认</span>
-          </div>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 break-words line-clamp-3">{sediment.summary}</p>
-          <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted">
-            <span>{sediment.sourceSegmentIds.length} 个开发推进段</span>
-            <span>{sediment.evidenceRefs.length} 条证据</span>
-            <span>更新于 {new Date(sediment.updatedAt).toLocaleString()}</span>
-          </div>
-        </Link>
-      ))}
-    </div>
-  );
+  const statusOrder = ["PENDING_ANALYSIS", "CAPABILITY_FORMED", "ANALYZED_NO_CAPABILITY", "LEGACY"];
+  const groups = statusOrder.map((status) => ({
+    status,
+    items: sediments.filter((item) => status === "LEGACY" ? !item.capabilityStatus : item.capabilityStatus === status),
+  })).filter((group) => group.items.length > 0);
+  return <div className="divide-y divide-line">{groups.map((group) => (
+    <details className="group" key={group.status} open={group.status === "PENDING_ANALYSIS"}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 hover:bg-slate-50">
+        <div><p className="font-semibold text-slate-950">{sedimentCapabilityStatusLabel(group.status)}</p><p className="mt-1 text-xs text-muted">{group.items.length} 条 · 最近更新 {new Date(group.items[0].updatedAt).toLocaleString("zh-CN")}</p></div>
+        <span className="text-xs font-semibold text-slate-600 group-open:hidden">展开时间档案</span>
+      </summary>
+      <div className="border-t border-line bg-slate-50 p-4">{sedimentTimeGroups(group.items).map((timeGroup) => (
+        <details className="mb-3 rounded-md border border-line bg-white last:mb-0" key={timeGroup.label}>
+          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">{timeGroup.label} · {timeGroup.items.length} 条</summary>
+          <div className="divide-y divide-line">{timeGroup.items.map((sediment) => (
+            <Link className="block px-4 py-4 hover:bg-slate-50" href={`/project-sediments/${sediment.id}`} key={sediment.id}>
+              <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-semibold text-slate-950 break-words">{sediment.title}</h3><span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">{sedimentCapabilityStatusLabel(sediment.capabilityStatus)}</span></div>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 break-words line-clamp-2">{sediment.summary}</p>
+              <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted"><span>{sediment.sourceSegmentIds.length} 个推进段</span><span>{sediment.evidenceRefs.length} 条证据</span><span>涉及 {sediment.affectedFiles.length} 个文件</span><span>{new Date(sediment.updatedAt).toLocaleString("zh-CN")}</span></div>
+            </Link>
+          ))}</div>
+        </details>
+      ))}</div>
+    </details>
+  ))}</div>;
+}
+
+function sedimentCapabilityStatusLabel(status: string) {
+  if (status === "PENDING_ANALYSIS") return "待能力分析";
+  if (status === "CAPABILITY_FORMED") return "已形成能力卡片";
+  if (status === "ANALYZED_NO_CAPABILITY") return "已分析，未形成能力卡片";
+  return "旧版来源未知";
+}
+
+function sedimentTimeGroups(items: ProjectSediment[]) {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfWeek = startOfToday - 6 * 24 * 60 * 60 * 1000;
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const definitions = [
+    { label: "今天", match: (time: number) => time >= startOfToday },
+    { label: "本周", match: (time: number) => time >= startOfWeek && time < startOfToday },
+    { label: "本月", match: (time: number) => time >= startOfMonth && time < startOfWeek },
+    { label: "更早", match: (time: number) => time < startOfMonth },
+  ];
+  return definitions.map((definition) => ({ label: definition.label, items: items.filter((item) => definition.match(new Date(item.updatedAt).getTime())) })).filter((group) => group.items.length > 0);
 }
 
 function emptyPayload(): ProjectMemoryPayload {

@@ -39,6 +39,22 @@ public class ProjectSediment {
     @Convert(converter = StringListConverter.class)
     @Column(name = "evidence_refs", columnDefinition = "text")
     private List<String> evidenceRefs = new ArrayList<>();
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "affected_files", columnDefinition = "text")
+    private List<String> affectedFiles = new ArrayList<>();
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "source_batch_ids", columnDefinition = "text")
+    private List<String> sourceBatchIds = new ArrayList<>();
+    @Column(name = "content_source", length = 40)
+    private String contentSource = "LEGACY_UNKNOWN";
+    @Column(name = "quality_status", length = 40)
+    private String qualityStatus = "NEEDS_REVIEW";
+    @Column(name = "capability_status", length = 40)
+    private String capabilityStatus = "PENDING_ANALYSIS";
+    @Column(name = "last_capability_analysis_job_id")
+    private UUID lastCapabilityAnalysisJobId;
+    @Column(name = "last_capability_analyzed_at")
+    private Instant lastCapabilityAnalyzedAt;
     @Column(name = "developer_notes", columnDefinition = "text")
     private String developerNotes = "";
     @Column(name = "created_at", nullable = false)
@@ -92,6 +108,24 @@ public class ProjectSediment {
         addSourceAndEvidence(segmentId, newEvidenceRefs);
     }
 
+    public void recordConfirmation(UUID batchId, List<String> files, String source, String quality) {
+        LinkedHashSet<String> batches = new LinkedHashSet<>(sourceBatchIds == null ? List.of() : sourceBatchIds);
+        if (batchId != null) batches.add(batchId.toString());
+        sourceBatchIds = new ArrayList<>(batches);
+        LinkedHashSet<String> mergedFiles = new LinkedHashSet<>(affectedFiles == null ? List.of() : affectedFiles);
+        if (files != null) mergedFiles.addAll(files);
+        affectedFiles = new ArrayList<>(mergedFiles);
+        contentSource = safe(source, "LEGACY_UNKNOWN");
+        qualityStatus = safe(quality, "NEEDS_REVIEW");
+        capabilityStatus = "PENDING_ANALYSIS";
+    }
+
+    public void markCapabilityAnalyzed(UUID jobId, boolean formedCapability) {
+        lastCapabilityAnalysisJobId = jobId;
+        lastCapabilityAnalyzedAt = Instant.now();
+        capabilityStatus = formedCapability ? "CAPABILITY_FORMED" : "ANALYZED_NO_CAPABILITY";
+    }
+
     private void addSourceAndEvidence(String segmentId, List<String> newEvidenceRefs) {
         LinkedHashSet<String> segments = new LinkedHashSet<>(sourceSegmentIds);
         if (segmentId != null && !segmentId.isBlank()) {
@@ -114,7 +148,15 @@ public class ProjectSediment {
     public String getStatus() { return status; }
     public List<String> getSourceSegmentIds() { return List.copyOf(sourceSegmentIds); }
     public List<String> getEvidenceRefs() { return List.copyOf(evidenceRefs); }
+    public List<String> getAffectedFiles() { return affectedFiles == null ? List.of() : List.copyOf(affectedFiles); }
+    public List<String> getSourceBatchIds() { return sourceBatchIds == null ? List.of() : List.copyOf(sourceBatchIds); }
+    public String getContentSource() { return safe(contentSource, "LEGACY_UNKNOWN"); }
+    public String getQualityStatus() { return safe(qualityStatus, "NEEDS_REVIEW"); }
+    public String getCapabilityStatus() { return safe(capabilityStatus, "PENDING_ANALYSIS"); }
+    public UUID getLastCapabilityAnalysisJobId() { return lastCapabilityAnalysisJobId; }
+    public Instant getLastCapabilityAnalyzedAt() { return lastCapabilityAnalyzedAt; }
     public String getDeveloperNotes() { return developerNotes; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+    private String safe(String value, String fallback) { return value == null || value.isBlank() ? fallback : value.trim(); }
 }

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 import java.io.IOException;
 import java.util.List;
@@ -24,15 +25,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
 import com.projectflow.entity.CapabilityCardStatus;
-import com.projectflow.entity.DevelopmentSegment;
-import com.projectflow.entity.DevelopmentSegmentStatus;
-import com.projectflow.entity.EvidenceConfidence;
+import com.projectflow.entity.ProjectSediment;
 import com.projectflow.entity.ProjectSpace;
 import com.projectflow.repository.AiProviderRepository;
-import com.projectflow.repository.DevelopmentSegmentRepository;
 import com.projectflow.repository.ProjectAnalysisJobRepository;
 import com.projectflow.repository.ProjectCapabilityCardRepository;
 import com.projectflow.repository.ProjectRepository;
+import com.projectflow.repository.ProjectSedimentRepository;
 import com.projectflow.service.ModelGatewayService;
 import com.projectflow.service.ModelOutputAdapter;
 import com.projectflow.service.ProjectCapabilityService;
@@ -40,7 +39,7 @@ import com.projectflow.service.ProjectCapabilityService;
 @ExtendWith(MockitoExtension.class)
 class ProjectCapabilityServiceTest {
     @Mock private ProjectRepository projectRepository;
-    @Mock private DevelopmentSegmentRepository segmentRepository;
+    @Mock private ProjectSedimentRepository sedimentRepository;
     @Mock private ProjectCapabilityCardRepository cardRepository;
     @Mock private AiProviderRepository providerRepository;
     @Mock private ModelGatewayService modelGatewayService;
@@ -96,23 +95,24 @@ class ProjectCapabilityServiceTest {
     private UUID prepareInput(UUID userId) {
         ProjectSpace project = new ProjectSpace(userId);
         UUID projectId = project.getId();
-        DevelopmentSegment segment = new DevelopmentSegment(projectId, UUID.randomUUID());
-        segment.updateContent(
-            "扫描范围恢复", "从确认点读取变化。", List.of("恢复扫描范围"), "减少重复扫描。",
-            List.of("abc"), List.of(), List.of("backend/Scan.java"),
-            List.of("commit:abc", "file:backend/Scan.java"), EvidenceConfidence.HIGH, DevelopmentSegmentStatus.CONFIRMED
+        ProjectSediment sediment = new ProjectSediment(projectId);
+        sediment.updateCore(
+            "扫描范围恢复", "从确认点读取变化。", "减少重复扫描。", "CAPABILITY",
+            List.of(UUID.randomUUID().toString()), List.of("commit:abc", "file:backend/Scan.java")
         );
+        sediment.recordConfirmation(UUID.randomUUID(), List.of("backend/Scan.java"), "MODEL_RESULT", "PASS");
         AiProvider provider = new AiProvider(userId);
         provider.update("DeepSeek", "https://api.example.com", "test-key", "model", AiProviderType.DEEPSEEK, 0.2, 4000, true, List.of("analysis"));
         when(projectRepository.findByIdAndUserId(projectId, userId)).thenReturn(Optional.of(project));
-        when(segmentRepository.findByProjectIdOrderByCreatedAtDesc(projectId)).thenReturn(List.of(segment));
+        when(sedimentRepository.findByProjectIdOrderByUpdatedAtDesc(projectId)).thenReturn(List.of(sediment));
+        lenient().when(sedimentRepository.findAllById(any())).thenReturn(List.of(sediment));
         when(providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)).thenReturn(List.of(provider));
         return projectId;
     }
 
     private ProjectCapabilityService service() {
         return new ProjectCapabilityService(
-            projectRepository, segmentRepository, cardRepository, providerRepository, modelGatewayService,
+            projectRepository, sedimentRepository, cardRepository, providerRepository, modelGatewayService,
             outputAdapter, jobRepository, transactionManager
         );
     }

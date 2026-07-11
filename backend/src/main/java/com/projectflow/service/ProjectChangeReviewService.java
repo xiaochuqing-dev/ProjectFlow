@@ -143,6 +143,10 @@ public class ProjectChangeReviewService {
             change.getEvidenceRefs(),
             change.getEvidenceConfidence() == null ? null : change.getEvidenceConfidence().name(),
             change.isNeedsUserReview(),
+            change.getSourceBatchId(),
+            change.getContentSource(),
+            change.getQualityStatus(),
+            change.getRecommendationStrength(),
             DisplayContentSanitizer.isLikelyLegacyTruncated(change.getTitle())
                 || DisplayContentSanitizer.isLikelyLegacyTruncated(change.getSummary())
                 || DisplayContentSanitizer.isLikelyLegacyTruncated(change.getDetails())

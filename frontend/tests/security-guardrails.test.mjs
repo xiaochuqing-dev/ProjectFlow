@@ -7,9 +7,9 @@ const auth = readFileSync(join(root, "src/lib/auth.ts"), "utf8");
 const api = readFileSync(join(root, "src/lib/api.ts"), "utf8");
 const nextConfig = readFileSync(join(root, "next.config.ts"), "utf8");
 
-assert.match(auth, /isJwtExpired/, "auth session reader should check JWT expiration");
-assert.match(auth, /clearSession\(\)/, "expired or invalid session data should clear localStorage");
-assert.match(auth, /payload\.exp/, "JWT exp claim should drive frontend session expiry");
+assert.match(auth, /LOCAL_SESSION/, "local single-user mode should use a fixed non-secret session marker");
+assert.match(auth, /本地单用户模式/, "auth helper should explain the local-only session boundary");
+assert.doesNotMatch(auth, /localStorage/, "local single-user mode should not persist credentials in localStorage");
 
 assert.match(nextConfig, /async headers\(\)/, "Next config should define security headers");
 assert.match(nextConfig, /Content-Security-Policy/, "Next config should send a CSP header");

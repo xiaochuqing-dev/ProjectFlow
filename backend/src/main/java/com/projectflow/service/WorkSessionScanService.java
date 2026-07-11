@@ -105,12 +105,10 @@ public class WorkSessionScanService {
         );
     }
 
-    @Transactional
     public WorkSessionScanResponse scan(UUID userId, UUID projectId) {
         return scan(userId, projectId, null);
     }
 
-    @Transactional
     public WorkSessionScanResponse scan(UUID userId, UUID projectId, UUID jobId) {
         long scanStarted = System.nanoTime();
         ProjectSpace project = projectRepository.findByIdAndUserId(projectId, userId)
@@ -176,7 +174,7 @@ public class WorkSessionScanService {
         if (!enrichment.fallbackReason().isBlank()) warnings.add(enrichment.fallbackReason());
         for (String qw : enrichment.qualityWarnings()) warnings.add(qw);
 
-        advanceStage(jobId, "PERSIST", "正在保存分析结果并生成建议沉淀");
+        advanceStage(jobId, "PERSIST", "正在分类保存模型结果或本地事实草稿");
         long totalScanMs = elapsedMs(scanStarted);
         String analysisScopeJson = buildAnalysisScopeJson(snapshot, enrichment, worktreeDirty, github);
         ChangeBatchResponse batch = pendingChangeScanService.persist(

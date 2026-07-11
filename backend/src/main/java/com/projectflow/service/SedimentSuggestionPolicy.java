@@ -20,7 +20,7 @@ public class SedimentSuggestionPolicy {
         List<ExistingSediment> existing
     ) {
         if (evidenceRefs == null || evidenceRefs.isEmpty()) {
-            return new Suggestion(SedimentAction.IGNORE, null, "缺少可验证证据，建议先人工复核。");
+            return new Suggestion(SedimentAction.IGNORE, null, "缺少可验证证据，建议先人工复核。", "NOT_RECOMMENDED");
         }
         ExistingSediment best = null;
         double bestScore = 0;
@@ -33,11 +33,28 @@ public class SedimentSuggestionPolicy {
         }
         if (best != null && bestScore >= 0.35) {
             if (isEvidenceOnly(files)) {
-                return new Suggestion(SedimentAction.EVIDENCE_ONLY, best.id(), "变化主要补充测试或文档，建议只补充到已有沉淀的证据链。");
+                return new Suggestion(
+                    SedimentAction.EVIDENCE_ONLY, best.id(),
+                    "变化主要补充测试或文档，并与已有沉淀主题相近，建议只补充证据链。",
+                    recommendationStrength(bestScore, evidenceRefs)
+                );
             }
-            return new Suggestion(SedimentAction.MERGE_EXISTING, best.id(), "与已有沉淀解决的问题相近，建议合并以避免重复卡片。");
+            return new Suggestion(
+                SedimentAction.MERGE_EXISTING, best.id(),
+                "与已有沉淀解决的问题相近，建议合并以避免重复卡片。",
+                recommendationStrength(bestScore, evidenceRefs)
+            );
         }
-        return new Suggestion(SedimentAction.NEW_SEDIMENT, null, "变化形成独立开发结果，建议新建沉淀。");
+        return new Suggestion(
+            SedimentAction.NEW_SEDIMENT, null,
+            "当前没有识别到足够相近的已有沉淀，可新建独立记录。",
+            evidenceRefs.size() >= 2 ? "MEDIUM" : "REFERENCE_ONLY"
+        );
+    }
+
+    private String recommendationStrength(double similarityScore, List<String> evidenceRefs) {
+        if (similarityScore >= 0.65 && evidenceRefs != null && evidenceRefs.size() >= 2) return "HIGH";
+        return similarityScore >= 0.35 ? "MEDIUM" : "REFERENCE_ONLY";
     }
 
     private boolean isEvidenceOnly(List<String> files) {
@@ -72,6 +89,6 @@ public class SedimentSuggestionPolicy {
     public record ExistingSediment(UUID id, String title, String problemSolved) {
     }
 
-    public record Suggestion(SedimentAction action, UUID targetSedimentId, String reason) {
+    public record Suggestion(SedimentAction action, UUID targetSedimentId, String reason, String strength) {
     }
 }

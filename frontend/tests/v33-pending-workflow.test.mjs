@@ -21,7 +21,7 @@ assert.match(pendingPanel, /开发推进段/, "pending panel should explain segm
 assert.match(pendingPanel, /<details/, "raw evidence must be collapsed by default");
 assert.doesNotMatch(pendingPanel, /刷新今日开发|开发成果审查|项目资产入库台/, "old workflow language must leave the primary panel");
 
-assert.match(shell, /沉淀确认/, "navigation should use sediment confirmation language");
+assert.match(shell, /沉淀处理/, "navigation should use sediment processing language");
 assert.match(shell, /项目沉淀/, "navigation should use project sediment language");
 assert.match(tasks, /title="沉淀确认"/, "tasks route should keep its URL but use the V3.3 title");
 assert.match(reviewList, /NEW_SEDIMENT/, "review must support creating a sediment");

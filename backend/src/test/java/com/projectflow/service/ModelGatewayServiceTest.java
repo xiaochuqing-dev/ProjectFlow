@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
@@ -61,6 +62,38 @@ class ModelGatewayServiceTest {
             "{\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"content\":\"\"}}]}",
             provider(), 4_000, 4_000, 0.3, 10, 0, false
         )).isInstanceOf(ModelGatewayService.ModelEmptyContentException.class);
+    }
+
+    @Test
+    void classifiesEmptyLengthWithReasoningAsExhaustedOutput() {
+        assertThatThrownBy(() -> gateway.parseModelResponse(
+            "{\"choices\":[{\"finish_reason\":\"length\",\"message\":{\"content\":\"\",\"reasoning_content\":\"内部推理不得暴露\"}}],\"usage\":{\"completion_tokens\":4000}}",
+            provider(), 4_000, 4_000, 0.3, 10, 0, false
+        )).isInstanceOf(ModelGatewayService.ModelOutputTruncatedException.class)
+            .satisfies(exception -> {
+                var diagnostics = ((ModelGatewayService.ModelOutputTruncatedException) exception).diagnostics();
+                assertThat(diagnostics.reasoningPresent()).isTrue();
+                assertThat(diagnostics.reasoningLength()).isPositive();
+                assertThat(diagnostics.usageSource()).isEqualTo("ACTUAL");
+            });
+    }
+
+    @Test
+    void emptyTruncatedContentTriggersLowerBudgetCompactRetry() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        AtomicInteger compactMaxTokens = new AtomicInteger();
+        HttpServer server = startEmptyTruncatedServer(calls, compactMaxTokens);
+        try {
+            AiProvider provider = provider("http://127.0.0.1:" + server.getAddress().getPort());
+            var response = gateway.callStructured(provider, "返回结构化结果", 4_000);
+
+            assertThat(calls.get()).isEqualTo(2);
+            assertThat(compactMaxTokens.get()).isEqualTo(2_000);
+            assertThat(response.diagnostics().compactRetryAttempted()).isTrue();
+            assertThat(response.diagnostics().compactRetrySucceeded()).isTrue();
+        } finally {
+            server.stop(0);
+        }
     }
 
     @Test
@@ -122,6 +155,25 @@ class ModelGatewayServiceTest {
                 "choices", List.of(Map.of("finish_reason", finishReason, "message", Map.of("content", content))),
                 "usage", Map.of("prompt_tokens", 100, "completion_tokens", completionTokens, "total_tokens", 100 + completionTokens)
             ));
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        server.start();
+        return server;
+    }
+
+    private HttpServer startEmptyTruncatedServer(AtomicInteger calls, AtomicInteger compactMaxTokens) throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/chat/completions", exchange -> {
+            int call = calls.incrementAndGet();
+            JsonNode request = objectMapper.readTree(exchange.getRequestBody());
+            if (call == 2) compactMaxTokens.set(request.path("max_tokens").asInt());
+            String body = call == 1
+                ? "{\"choices\":[{\"finish_reason\":\"length\",\"message\":{\"content\":\"\",\"reasoning_content\":\"已消耗预算\"}}],\"usage\":{\"completion_tokens\":4000}}"
+                : "{\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"content\":\"{\\\"items\\\":[{\\\"name\\\":\\\"恢复成功\\\"}]}\"}}],\"usage\":{\"completion_tokens\":200}}";
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, bytes.length);

@@ -615,11 +615,39 @@ export type CapabilityCandidate = {
   interview: string;
 };
 
+export type ModelCallDiagnostics = {
+  providerName: string;
+  modelName: string;
+  finishReason: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  usageSource: "ACTUAL" | "ESTIMATED" | "UNAVAILABLE";
+  providerMaxTokens: number;
+  taskPolicyMaxTokens: number;
+  effectiveMaxTokens: number;
+  providerTemperature: number;
+  effectiveTemperature: number;
+  timeoutSeconds: number;
+  latencyMs: number;
+  contentPresent: boolean;
+  reasoningPresent: boolean;
+  reasoningLength: number;
+  outputTruncated: boolean;
+  compactRetryAttempted: boolean;
+  compactRetrySucceeded: boolean;
+  requestCount: number;
+  jsonRepaired: boolean;
+  partialResult: boolean;
+  recoveredItems: number;
+};
+
 export type CapabilityInterpretResponse = {
   degraded: boolean;
   source: "MODEL" | "LOCAL_RULE";
   message: string;
   candidate: CapabilityCandidate;
+  diagnostics: ModelCallDiagnostics | null;
 };
 
 export type ProjectSnapshot = {
@@ -710,6 +738,10 @@ export type ProjectChange = {
   evidenceRefs: string[];
   confidence: "HIGH" | "MEDIUM" | "LOW" | null;
   needsUserReview: boolean;
+  sourceBatchId: string | null;
+  contentSource: "MODEL_RESULT" | "MODEL_PARTIAL_RESULT" | "LOCAL_FACT_DRAFT" | "AGENT_RESULT_DRAFT" | "MANUAL_DRAFT" | "LEGACY_UNKNOWN";
+  qualityStatus: string;
+  recommendationStrength: "HIGH" | "MEDIUM" | "REFERENCE_ONLY" | "NOT_RECOMMENDED";
   legacyTruncated: boolean;
 };
 
@@ -723,6 +755,13 @@ export type ProjectSediment = {
   status: string;
   sourceSegmentIds: string[];
   evidenceRefs: string[];
+  affectedFiles: string[];
+  sourceBatchIds: string[];
+  contentSource: string;
+  qualityStatus: string;
+  capabilityStatus: "PENDING_ANALYSIS" | "CAPABILITY_FORMED" | "ANALYZED_NO_CAPABILITY" | string;
+  lastCapabilityAnalysisJobId: string | null;
+  lastCapabilityAnalyzedAt: string | null;
   developerNotes: string;
   legacyTruncated: boolean;
   createdAt: string;
@@ -742,6 +781,57 @@ export type SedimentConfirmation = {
   affectsConfirmedCapabilities: boolean;
   usedByNextCapabilityAnalysis: boolean;
   sedimentPath: string;
+};
+
+export type SedimentReviewBatch = {
+  batchId: string;
+  scanStartedAt: string;
+  scanFinishedAt: string | null;
+  branchName: string;
+  batchStatus: string;
+  commitCount: number;
+  changedFileCount: number;
+  agentResultCount: number;
+  modelStatus: string;
+  modelProvider: string;
+  resultSource: string;
+  formalSuggestionCount: number;
+  localDraftCount: number;
+  processedCount: number;
+  pendingCount: number;
+  ignoredCount: number;
+  needsReanalysis: boolean;
+  timeGroup: "TODAY" | "YESTERDAY" | "THIS_WEEK" | "EARLIER";
+};
+
+export type SedimentReviewItem = {
+  changeId: string;
+  segmentId: string;
+  title: string;
+  summary: string;
+  status: ProjectChangeStatus;
+  contentSource: string;
+  qualityStatus: string;
+  recommendationStrength: string;
+  suggestedAction: SedimentAction | "";
+  targetSedimentId: string | null;
+  evidenceCount: number;
+  affectedFileCount: number;
+  createdAt: string;
+};
+
+export type SedimentReviewBatchDetail = {
+  batch: SedimentReviewBatch;
+  formalSuggestions: SedimentReviewItem[];
+  localDrafts: DevelopmentSegment[];
+};
+
+export type CapabilityAnalysisOverview = {
+  lastSuccessfulAt: string | null;
+  lastInputSedimentCount: number;
+  newSedimentCount: number;
+  updatedSedimentCount: number;
+  pendingSedimentCount: number;
 };
 
 export type SedimentImpactPreview = {
@@ -807,6 +897,7 @@ export type ProjectAnalysis = {
   analysisSource: "LOCAL_RULE" | "MODEL_ANALYSIS" | string;
   confidence: string;
   message: string;
+  diagnostics: ModelCallDiagnostics | null;
 };
 
 export type ProjectFileAnalysis = {
@@ -826,6 +917,7 @@ export type ProjectFileAnalysis = {
   analysisSource: "LOCAL_RULE" | "MODEL_ANALYSIS" | string;
   confidence: string;
   message: string;
+  diagnostics: ModelCallDiagnostics | null;
 };
 
 export type ProjectAnalysisJobStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "SUCCEEDED_WITH_WARNINGS" | "FAILED";
@@ -1336,6 +1428,24 @@ export function acknowledgeAnalysisFailure(token: string, jobId: string): Promis
 
 export function listProjectSediments(token: string, projectId: string): Promise<ProjectSediment[]> {
   return requestJson<ProjectSediment[]>(`/projects/${projectId}/sediments`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function listSedimentReviewBatches(token: string, projectId: string): Promise<SedimentReviewBatch[]> {
+  return requestJson<SedimentReviewBatch[]>(`/projects/${projectId}/sediment-review-batches`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getSedimentReviewBatch(token: string, batchId: string): Promise<SedimentReviewBatchDetail> {
+  return requestJson<SedimentReviewBatchDetail>(`/sediment-review-batches/${batchId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getCapabilityAnalysisOverview(token: string, projectId: string): Promise<CapabilityAnalysisOverview> {
+  return requestJson<CapabilityAnalysisOverview>(`/projects/${projectId}/capabilities/overview`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }

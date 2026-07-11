@@ -543,7 +543,7 @@ export default function DashboardPage() {
           </Button>
         </Link>
       }
-      eyebrow="ProjectFlow V3.3.5"
+      eyebrow="ProjectFlow V3.3.6"
       title="工作台"
     >
       <PageContainer>

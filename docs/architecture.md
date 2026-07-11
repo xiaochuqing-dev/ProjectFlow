@@ -2,7 +2,15 @@
 
 ## System Overview
 
-ProjectFlow uses a separated frontend and backend architecture. The current V3.3.5 product spine is a developer workbench that turns real project activity into confirmed project sediment.
+ProjectFlow uses a separated frontend and backend architecture. The current V3.3.6 product spine is a developer workbench that turns real project activity into confirmed project sediment and then into traceable capability analysis.
+
+## V3.3.6 Batch Review and Transaction Boundaries
+
+`ChangeBatch` is the sediment-processing batch. The batch list aggregates formal suggestions, local drafts, processed items, pending items, model status, and time group without expanding every item. The batch detail loads one formal suggestion at a time; local fact drafts remain a separate read-only queue until a new model analysis or explicit manual organization.
+
+Confirmed `ProjectSediment` records source batch IDs, affected files, source/quality labels, and capability-analysis state. Capability analysis snapshots sediment IDs, performs the model call outside a transaction, atomically replaces only unconfirmed cards, and marks sediments analyzed only after successful persistence.
+
+Git commands, GitHub inspection, Agent-result file scans, project/file model analysis, capability interpretation, and capability-card model calls run outside method-level database transactions. Repository reads and writes remain short transactions; progress stages use independent transactions.
 
 ## V3.3.5 Reliability Flow
 
@@ -50,6 +58,8 @@ frontend/src/app/
 +-- projects/[projectId]/files/
 +-- project-analysis-records/[recordId]/
 +-- project-changes/[changeId]/
++-- sediment-review/
++-- sediment-review/[batchId]/
 +-- project-intelligence/
 +-- project-intelligence/[section]/
 +-- project-intelligence/[section]/[itemId]/

@@ -25,6 +25,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.projectflow.entity.ProjectSediment;
+import com.projectflow.repository.ProjectSedimentRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -38,6 +40,9 @@ class WorkSessionScanControllerTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private ProjectSedimentRepository sedimentRepository;
 
     @Test
     void scansBoundGitProjectIntoTodayWorkSessionCandidate() throws Exception {
@@ -316,16 +321,9 @@ class WorkSessionScanControllerTest {
         mockMvc.perform(post("/api/projects/" + projectId + "/scan").header("Authorization", "Bearer " + token))
             .andExpect(status().isOk());
 
-        String changeId = objectMapper.readTree(mockMvc.perform(get("/api/projects/" + projectId + "/changes")
-                .header("Authorization", "Bearer " + token))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString())
-            .at("/data/0/id").asText();
-
-        mockMvc.perform(post("/api/project-changes/" + changeId + "/confirm")
-                .header("Authorization", "Bearer " + token)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"action\":\"NEW_SEDIMENT\",\"targetSedimentId\":null}"))
-            .andExpect(status().isOk());
+        ProjectSediment sediment = new ProjectSediment(UUID.fromString(projectId));
+        sediment.updateCore("扫描能力", "已确认项目沉淀", "验证模型前置检查", "CAPABILITY", java.util.List.of(), java.util.List.of("commit:test"));
+        sedimentRepository.save(sediment);
 
         mockMvc.perform(post("/api/projects/" + projectId + "/capabilities/analyze")
                 .header("Authorization", "Bearer " + token))

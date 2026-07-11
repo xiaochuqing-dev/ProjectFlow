@@ -9,7 +9,7 @@ const settings = readFileSync(join(root, "src/app/settings/page.tsx"), "utf8");
 const api = readFileSync(join(root, "src/lib/api.ts"), "utf8");
 
 assert.match(intelligence, /title="项目沉淀"/, "project intelligence route should adopt sediment title");
-assert.match(intelligence, /sediments\.map/, "overview should render confirmed sediment objects");
+assert.match(intelligence, /timeGroup\.items\.map/, "overview should render confirmed sediment objects inside status and time groups");
 assert.match(intelligence, /sediments\.length === 0/, "overview should teach the empty state");
 assert.doesNotMatch(intelligence, /\{fieldConfig\.map\([\s\S]*暂无已确认内容/, "default overview must not render every empty subjective field");
 assert.match(intelligence, /兼容档案字段/, "legacy memory fields should remain available but secondary");

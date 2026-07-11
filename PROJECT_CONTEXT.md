@@ -1,12 +1,12 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-07-07
+Last updated: 2026-07-11
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.3.5 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
+ProjectFlow V3.3.6 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
 
 Current direction:
 
@@ -16,7 +16,15 @@ Current direction:
 - AI/model calls are candidate generators only; user confirmation is required before treating output as official project facts.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
 
-V3.3.5 focus:
+V3.3.6 focus:
+
+- Sediment processing is organized by analysis batch and time; the workbench shows a summary and the processing center handles one formal suggestion at a time.
+- Local fact and Agent-result drafts remain visible but never automatically enter the formal suggestion flow.
+- Confirmed sediments persist source batches and affected files, enter pending capability analysis, and are the direct input to capability analysis.
+- Capability analysis records input sediment IDs and updates their analysis state only after successful card persistence.
+- Empty truncated model output triggers a lower-budget compact retry, reasoning text is not retained, and external waits do not hold method-level database transactions.
+
+V3.3.5 focus (still applies):
 
 - Model responses carry finish reason, token usage, effective parameters, timeout, Provider/model, truncation, JSON repair, compact-retry, and partial-recovery diagnostics.
 - Truncated structured output receives one compact retry; complete items in a truncated root array may be retained with warnings.

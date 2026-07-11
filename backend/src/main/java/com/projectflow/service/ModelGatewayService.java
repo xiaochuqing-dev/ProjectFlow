@@ -21,6 +21,7 @@ public class ModelGatewayService {
     // V3.3.4 小阶段修复：复杂模型分析（开发推进段归并 / 能力分析）需要数分钟，
     // 不再固定 35 秒上限。改为可配置，默认 240 秒，覆盖 DeepSeek 多 commit 分析场景。
     private static final int MAX_MODEL_ATTEMPTS = 2;
+    private static final int COMPACT_OUTPUT_MAX_TOKENS = 2_000;
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(8);
     private static final double MAX_STRUCTURED_TEMPERATURE = 0.3;
     private final Duration modelRequestTimeout;
@@ -59,8 +60,9 @@ public class ModelGatewayService {
             );
         } catch (ModelOutputTruncatedException firstFailure) {
             try {
+                int compactMaxTokens = Math.min(effectiveMaxTokens, COMPACT_OUTPUT_MAX_TOKENS);
                 StructuredModelResponse compact = sendStructuredRequest(
-                    provider, compactPrompt(prompt), outputTokenLimit, effectiveMaxTokens, effectiveTemperature, true
+                    provider, compactPrompt(prompt), COMPACT_OUTPUT_MAX_TOKENS, compactMaxTokens, effectiveTemperature, true
                 );
                 return compact.withCompactRetry(true, !compact.diagnostics().truncated());
             } catch (IOException compactFailure) {
@@ -75,8 +77,9 @@ public class ModelGatewayService {
             return firstResponse;
         }
         try {
+            int compactMaxTokens = Math.min(effectiveMaxTokens, COMPACT_OUTPUT_MAX_TOKENS);
             StructuredModelResponse compact = sendStructuredRequest(
-                provider, compactPrompt(prompt), outputTokenLimit, effectiveMaxTokens, effectiveTemperature, true
+                provider, compactPrompt(prompt), COMPACT_OUTPUT_MAX_TOKENS, compactMaxTokens, effectiveTemperature, true
             );
             return compact.withCompactRetry(true, !compact.diagnostics().truncated());
         } catch (IOException compactFailure) {
@@ -114,7 +117,9 @@ public class ModelGatewayService {
             .header("Authorization", "Bearer " + provider.getApiKey())
             .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
             .build();
-        for (int attempt = 1; attempt <= MAX_MODEL_ATTEMPTS; attempt++) {
+        // 紧凑重试不再叠加网络重试，单个结构化任务最多发送 3 次请求。
+        int allowedAttempts = compactRetry ? 1 : MAX_MODEL_ATTEMPTS;
+        for (int attempt = 1; attempt <= allowedAttempts; attempt++) {
             long startedAt = System.nanoTime();
             try {
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -124,18 +129,18 @@ public class ModelGatewayService {
                         elapsedMs(startedAt), attempt - 1, compactRetry
                     );
                 }
-                if (attempt < MAX_MODEL_ATTEMPTS && isTransientModelStatus(response.statusCode())) {
+                if (attempt < allowedAttempts && isTransientModelStatus(response.statusCode())) {
                     pauseBeforeRetry(attempt);
                     continue;
                 }
                 throw new ModelHttpException(response.statusCode());
             } catch (HttpTimeoutException exception) {
-                if (attempt >= MAX_MODEL_ATTEMPTS) {
+                if (attempt >= allowedAttempts) {
                     throw exception;
                 }
                 pauseBeforeRetry(attempt);
             } catch (IOException exception) {
-                if (exception instanceof ModelHttpException || exception instanceof ModelResponseFormatException || attempt >= MAX_MODEL_ATTEMPTS) {
+                if (exception instanceof ModelHttpException || exception instanceof ModelResponseFormatException || attempt >= allowedAttempts) {
                     throw exception;
                 }
                 pauseBeforeRetry(attempt);
@@ -182,20 +187,28 @@ public class ModelGatewayService {
         } catch (IOException exception) {
             throw new ModelResponseFormatException("模型服务返回体无法读取", exception, null);
         }
-        String content = root.at("/choices/0/message/content").asText("");
+        JsonNode message = root.at("/choices/0/message");
+        String content = message.path("content").asText("");
         String finishReason = root.at("/choices/0/finish_reason").asText("");
-        int promptTokens = root.at("/usage/prompt_tokens").asInt(0);
-        int completionTokens = root.at("/usage/completion_tokens").asInt(0);
-        int totalTokens = root.at("/usage/total_tokens").asInt(promptTokens + completionTokens);
+        JsonNode usage = root.path("usage");
+        boolean actualUsage = usage.has("prompt_tokens") || usage.has("completion_tokens") || usage.has("total_tokens");
+        int promptTokens = usage.path("prompt_tokens").asInt(0);
+        int completionTokens = actualUsage ? usage.path("completion_tokens").asInt(0) : estimateTokens(content);
+        int totalTokens = actualUsage ? usage.path("total_tokens").asInt(promptTokens + completionTokens) : completionTokens;
+        String usageSource = actualUsage ? "ACTUAL" : content.isBlank() ? "UNAVAILABLE" : "ESTIMATED";
+        int reasoningLength = reasoningLength(message);
         boolean nearLimit = completionTokens > 0 && completionTokens >= Math.ceil(effectiveMaxTokens * 0.92);
         boolean truncated = "length".equalsIgnoreCase(finishReason) || nearLimit || outputAdapter.likelyTruncated(content);
         ModelCallDiagnostics diagnostics = new ModelCallDiagnostics(
             provider.getName(), provider.getModelName(), finishReason, promptTokens, completionTokens, totalTokens,
             provider.getMaxTokens(), taskPolicyMaxTokens, effectiveMaxTokens, provider.getTemperature(), effectiveTemperature,
             modelRequestTimeout.toSeconds(), latencyMs, true, !content.isBlank(), truncated, compactRetry, false,
-            transportRetryCount, false, false, 0
+            transportRetryCount, false, false, 0, usageSource, reasoningLength > 0, reasoningLength, 1 + transportRetryCount
         );
         if (content.isBlank()) {
+            if (truncated || reasoningLength > 0) {
+                throw new ModelOutputTruncatedException("模型输出预算已耗尽，尚未生成可见内容", null, diagnostics);
+            }
             throw new ModelEmptyContentException("模型服务已响应，但没有返回内容", diagnostics);
         }
         try {
@@ -224,6 +237,22 @@ public class ModelGatewayService {
             【紧凑重试】上次输出疑似达到长度上限。只返回必要 JSON，最多 4 项；每个自然语言字段不超过 80 个汉字；
             数组最多 4 个值；不要返回解释、内部 ID、文件清单或可由来源编号恢复的证据字段。
             """;
+    }
+
+    private int reasoningLength(JsonNode message) {
+        if (message == null || !message.isObject()) return 0;
+        int length = 0;
+        for (String field : List.of("reasoning_content", "reasoning", "analysis")) {
+            JsonNode value = message.path(field);
+            if (!value.isMissingNode() && !value.isNull()) {
+                length += value.isTextual() ? value.asText("").length() : value.toString().length();
+            }
+        }
+        return length;
+    }
+
+    private int estimateTokens(String content) {
+        return content == null || content.isBlank() ? 0 : Math.max(1, (int) Math.ceil(content.length() / 4.0));
     }
 
     private long elapsedMs(long startedAt) {
@@ -266,12 +295,17 @@ public class ModelGatewayService {
         int transportRetryCount,
         boolean jsonRepaired,
         boolean partialResult,
-        int recoveredItems
+        int recoveredItems,
+        String usageSource,
+        boolean reasoningPresent,
+        int reasoningLength,
+        int requestCount
     ) {
         static ModelCallDiagnostics unknown(ModelOutputAdapter.ParsedOutput parsed) {
             return new ModelCallDiagnostics(
                 "", "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                true, true, parsed.partial(), false, false, 0, parsed.repaired(), parsed.partial(), parsed.recoveredItems()
+                true, true, parsed.partial(), false, false, 0, parsed.repaired(), parsed.partial(), parsed.recoveredItems(),
+                "UNAVAILABLE", false, 0, 0
             );
         }
 
@@ -280,7 +314,8 @@ public class ModelGatewayService {
                 providerName, modelName, finishReason, promptTokens, completionTokens, totalTokens,
                 providerMaxTokens, taskPolicyMaxTokens, effectiveMaxTokens, providerTemperature, effectiveTemperature,
                 timeoutSeconds, latencyMs, requestSucceeded, contentPresent, truncated || partial,
-                compactRetryAttempted, compactRetrySucceeded, transportRetryCount, repaired, partial, recovered
+                compactRetryAttempted, compactRetrySucceeded, transportRetryCount, repaired, partial, recovered,
+                usageSource, reasoningPresent, reasoningLength, requestCount
             );
         }
 
@@ -289,7 +324,8 @@ public class ModelGatewayService {
                 providerName, modelName, finishReason, promptTokens, completionTokens, totalTokens,
                 providerMaxTokens, taskPolicyMaxTokens, effectiveMaxTokens, providerTemperature, effectiveTemperature,
                 timeoutSeconds, latencyMs, requestSucceeded, contentPresent, truncated || attempted,
-                attempted, succeeded, transportRetryCount, jsonRepaired, partialResult, recoveredItems
+                attempted, succeeded, transportRetryCount, jsonRepaired, partialResult, recoveredItems,
+                usageSource, reasoningPresent, reasoningLength, requestCount + (attempted ? 1 : 0)
             );
         }
     }

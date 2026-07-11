@@ -13,7 +13,7 @@ const outputOptionsCard = read("src/components/dashboard/OutputOptionsCard.tsx")
 const intelligence = read("src/app/project-intelligence/page.tsx");
 const outputs = read("src/app/ai-review/page.tsx");
 
-assert.match(appShell, /沉淀确认/, "navigation should expose the V3.3 confirmation workflow");
+assert.match(appShell, /沉淀处理/, "navigation should expose the V3.3.6 sediment processing workflow");
 assert.match(appShell, /项目沉淀/, "navigation should expose confirmed project sediments");
 assert.doesNotMatch(appShell, /变更审查|项目画像/, "main navigation should avoid legacy internal-facing labels");
 

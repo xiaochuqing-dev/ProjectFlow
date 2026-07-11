@@ -1,3 +1,3 @@
 # Project profile
 
-ProjectFlow V3.3.3 is a local development-change understanding and project-sedimentation tool for AI-assisted solo developers. It adds full analysis-progress visibility, evidence-aware multi-source modeling (local Git / worktree diff / GitHub / Agent result snapshot), a marker-based quality gate that retains model results by default, forced Simplified-Chinese user-visible content, GitHub status with login guidance and read-only sync refresh on the home screen, and a model-configuration precondition for analysis entries — while preserving user confirmation as the boundary for official facts.
+ProjectFlow V3.3.6 是面向 AI 辅助独立开发者的本地开发变化理解与项目沉淀工具。核心链路为：待整理变更、开发推进段、建议沉淀、项目沉淀、能力分析。V3.3.6 新增按分析批次处理的沉淀中心，严格区分模型正式建议与本地草稿，并让能力分析只消费已确认沉淀。

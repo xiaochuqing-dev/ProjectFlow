@@ -30,6 +30,9 @@ import com.projectflow.entity.ProjectChangeKind;
 import com.projectflow.entity.ProjectChangeSourceType;
 import com.projectflow.repository.ProjectReviewCursorRepository;
 import com.projectflow.repository.ProjectChangeRepository;
+import com.projectflow.repository.DevelopmentSegmentRepository;
+import com.projectflow.service.PendingChangeScanService;
+import com.projectflow.service.ProjectSedimentService;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -43,6 +46,12 @@ class ProjectSedimentControllerTest {
     private ProjectReviewCursorRepository cursorRepository;
     @Autowired
     private ProjectChangeRepository changeRepository;
+    @Autowired
+    private DevelopmentSegmentRepository segmentRepository;
+    @Autowired
+    private PendingChangeScanService pendingChangeScanService;
+    @Autowired
+    private ProjectSedimentService sedimentService;
 
     @Test
     void confirmsFourActionsAndAdvancesCursorOnlyAfterTheBatchIsResolved() throws Exception {
@@ -51,9 +60,12 @@ class ProjectSedimentControllerTest {
         Path root = createGitProject();
         bindProject(token, projectId, root);
 
-        mockMvc.perform(post("/api/projects/" + projectId + "/scan").header("Authorization", "Bearer " + token))
+        MvcResult scanResult = mockMvc.perform(post("/api/projects/" + projectId + "/scan").header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.segments", hasSize(4)));
+            .andExpect(jsonPath("$.data.segments", hasSize(4)))
+            .andReturn();
+        String batchId = body(scanResult).at("/data/batch/id").asText();
+        promoteBatchToModelResult(projectId, batchId);
 
         JsonNode changes = body(mockMvc.perform(get("/api/projects/" + projectId + "/changes")
                 .header("Authorization", "Bearer " + token))
@@ -80,6 +92,8 @@ class ProjectSedimentControllerTest {
         MvcResult created = confirm(token, first, "NEW_SEDIMENT", null)
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.sediment.title").isNotEmpty())
+            .andExpect(jsonPath("$.data.sediment.capabilityStatus").value("PENDING_ANALYSIS"))
+            .andExpect(jsonPath("$.data.sediment.sourceBatchIds[0]").value(batchId))
             .andExpect(jsonPath("$.data.resultMessage").isNotEmpty())
             .andExpect(jsonPath("$.data.sedimentPath").isNotEmpty())
             .andReturn();
@@ -118,6 +132,10 @@ class ProjectSedimentControllerTest {
             .andExpect(jsonPath("$.data", hasSize(1)));
         assertThat(cursorRepository.findByProjectId(UUID.fromString(projectId))).get()
             .extracting(cursor -> cursor.getLastReviewedCommitSha()).isEqualTo(run(root, "git", "rev-parse", "HEAD").trim());
+        mockMvc.perform(get("/api/sediment-review-batches/" + batchId).header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.batch.pendingCount").value(0))
+            .andExpect(jsonPath("$.data.batch.processedCount").value(4));
 
         // V3.3.3: 未配置模型时，"分析项目能力"不生成完整卡片，而是明确提示去配置模型。
         mockMvc.perform(post("/api/projects/" + projectId + "/capabilities/analyze")
@@ -132,8 +150,9 @@ class ProjectSedimentControllerTest {
         String projectId = createProject(token);
         Path root = createSingleChangeGitProject();
         bindProject(token, projectId, root);
-        mockMvc.perform(post("/api/projects/" + projectId + "/scan").header("Authorization", "Bearer " + token))
-            .andExpect(status().isOk());
+        MvcResult scanResult = mockMvc.perform(post("/api/projects/" + projectId + "/scan").header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk()).andReturn();
+        promoteBatchToModelResult(projectId, body(scanResult).at("/data/batch/id").asText());
         String changeId = body(mockMvc.perform(get("/api/projects/" + projectId + "/changes")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk()).andReturn()).at("/data/0/id").asText();
@@ -243,6 +262,36 @@ class ProjectSedimentControllerTest {
 
     private JsonNode body(MvcResult result) throws Exception {
         return objectMapper.readTree(result.getResponse().getContentAsString());
+    }
+
+    @Test
+    void localFactDraftsStayOutOfFormalSuggestionsAndRemainVisibleByBatch() throws Exception {
+        String token = register();
+        String projectId = createProject(token);
+        Path root = createSingleChangeGitProject();
+        bindProject(token, projectId, root);
+        MvcResult scan = mockMvc.perform(post("/api/projects/" + projectId + "/scan")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk()).andReturn();
+        String batchId = body(scan).at("/data/batch/id").asText();
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/changes").header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data", hasSize(0)));
+        mockMvc.perform(get("/api/sediment-review-batches/" + batchId).header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.batch.formalSuggestionCount").value(0))
+            .andExpect(jsonPath("$.data.batch.localDraftCount").value(1))
+            .andExpect(jsonPath("$.data.batch.needsReanalysis").value(true))
+            .andExpect(jsonPath("$.data.localDrafts", hasSize(1)));
+    }
+
+    private void promoteBatchToModelResult(String projectId, String batchId) {
+        UUID parsedBatchId = UUID.fromString(batchId);
+        var segments = segmentRepository.findByBatchIdOrderByCreatedAtAsc(parsedBatchId);
+        segments.forEach(segment -> segment.updateAnalysis("MODEL", "Test Model", "", "PASS", "", java.util.List.of(), java.util.List.of()));
+        segmentRepository.saveAll(segments);
+        sedimentService.createSuggestions(UUID.fromString(projectId), pendingChangeScanService.listSegments(parsedBatchId));
     }
 
     private String run(Path root, String... command) throws Exception {

@@ -16,6 +16,7 @@ import com.projectflow.dto.ApiResponse;
 import com.projectflow.dto.AuthDtos.AuthUser;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisJobResponse;
 import com.projectflow.dto.V33WorkflowDtos.CapabilityCardPatchRequest;
+import com.projectflow.dto.V33WorkflowDtos.CapabilityAnalysisOverviewResponse;
 import com.projectflow.dto.V33WorkflowDtos.CapabilityCardResponse;
 import com.projectflow.service.AuthService;
 import com.projectflow.service.ProjectAnalysisJobService;
@@ -62,6 +63,15 @@ public class ProjectCapabilityController {
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
         return ApiResponse.ok(capabilityService.list(user.id(), projectId));
+    }
+
+    @GetMapping("/projects/{projectId}/capabilities/overview")
+    ApiResponse<CapabilityAnalysisOverviewResponse> overview(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(capabilityService.overview(user.id(), projectId));
     }
 
     @PatchMapping("/capability-cards/{cardId}")

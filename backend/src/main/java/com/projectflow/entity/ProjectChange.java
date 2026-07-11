@@ -111,6 +111,18 @@ public class ProjectChange {
     @Column(name = "needs_user_review")
     private Boolean needsUserReview;
 
+    @Column(name = "source_batch_id")
+    private UUID sourceBatchId;
+
+    @Column(name = "content_source", length = 40)
+    private String contentSource = "LEGACY_UNKNOWN";
+
+    @Column(name = "quality_status", length = 40)
+    private String qualityStatus = "NEEDS_REVIEW";
+
+    @Column(name = "recommendation_strength", length = 30)
+    private String recommendationStrength = "REFERENCE_ONLY";
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -230,6 +242,10 @@ public class ProjectChange {
     public List<String> getEvidenceRefs() { return List.copyOf(evidenceRefs); }
     public EvidenceConfidence getEvidenceConfidence() { return evidenceConfidence; }
     public boolean isNeedsUserReview() { return Boolean.TRUE.equals(needsUserReview); }
+    public UUID getSourceBatchId() { return sourceBatchId; }
+    public String getContentSource() { return contentSource == null ? "LEGACY_UNKNOWN" : contentSource; }
+    public String getQualityStatus() { return qualityStatus == null ? "NEEDS_REVIEW" : qualityStatus; }
+    public String getRecommendationStrength() { return recommendationStrength == null ? "REFERENCE_ONLY" : recommendationStrength; }
 
     public Instant getCreatedAt() {
         return createdAt;
@@ -316,5 +332,16 @@ public class ProjectChange {
         this.evidenceRefs = evidenceRefs == null ? new ArrayList<>() : new ArrayList<>(evidenceRefs);
         this.evidenceConfidence = evidenceConfidence == null ? EvidenceConfidence.LOW : evidenceConfidence;
         this.needsUserReview = needsUserReview;
+    }
+
+    public void recordReviewMetadata(UUID batchId, String source, String quality, String strength) {
+        this.sourceBatchId = batchId;
+        this.contentSource = safe(source, "LEGACY_UNKNOWN");
+        this.qualityStatus = safe(quality, "NEEDS_REVIEW");
+        this.recommendationStrength = safe(strength, "REFERENCE_ONLY");
+    }
+
+    private String safe(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
     }
 }

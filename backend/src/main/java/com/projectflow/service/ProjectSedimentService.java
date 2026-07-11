@@ -1,6 +1,8 @@
 package com.projectflow.service;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -16,6 +18,9 @@ import com.projectflow.dto.V33WorkflowDtos.ProjectSedimentPatchRequest;
 import com.projectflow.dto.V33WorkflowDtos.ProjectSedimentResponse;
 import com.projectflow.dto.V33WorkflowDtos.SedimentConfirmationResponse;
 import com.projectflow.dto.V33WorkflowDtos.SedimentImpactPreviewResponse;
+import com.projectflow.dto.V33WorkflowDtos.SedimentReviewBatchDetailResponse;
+import com.projectflow.dto.V33WorkflowDtos.SedimentReviewBatchResponse;
+import com.projectflow.dto.V33WorkflowDtos.SedimentReviewItemResponse;
 import com.projectflow.entity.ChangeBatch;
 import com.projectflow.entity.DevelopmentSegment;
 import com.projectflow.entity.DevelopmentSegmentStatus;
@@ -46,6 +51,7 @@ public class ProjectSedimentService {
     private final ProjectReviewCursorRepository cursorRepository;
     private final ProjectChangeSchemaRepairService schemaRepairService;
     private final SedimentSuggestionPolicy suggestionPolicy;
+    private final PendingChangeScanService pendingChangeScanService;
 
     public ProjectSedimentService(
         ProjectRepository projectRepository,
@@ -55,7 +61,8 @@ public class ProjectSedimentService {
         ProjectSedimentRepository sedimentRepository,
         ProjectReviewCursorRepository cursorRepository,
         ProjectChangeSchemaRepairService schemaRepairService,
-        SedimentSuggestionPolicy suggestionPolicy
+        SedimentSuggestionPolicy suggestionPolicy,
+        PendingChangeScanService pendingChangeScanService
     ) {
         this.projectRepository = projectRepository;
         this.changeRepository = changeRepository;
@@ -65,6 +72,7 @@ public class ProjectSedimentService {
         this.cursorRepository = cursorRepository;
         this.schemaRepairService = schemaRepairService;
         this.suggestionPolicy = suggestionPolicy;
+        this.pendingChangeScanService = pendingChangeScanService;
     }
 
     @Transactional
@@ -74,6 +82,10 @@ public class ProjectSedimentService {
             .map(item -> new SedimentSuggestionPolicy.ExistingSediment(item.getId(), item.getTitle(), item.getProblemSolved()))
             .toList();
         for (DevelopmentSegmentResponse segment : segments) {
+            // 本地规则和 Agent result 只保留为待整理事实，不自动包装成正式沉淀建议。
+            if (!"MODEL".equals(segment.generationMode()) || segment.evidenceRefs().isEmpty()) {
+                continue;
+            }
             if (changeRepository.findByDevelopmentSegmentId(segment.id()).isPresent()) {
                 continue;
             }
@@ -102,6 +114,9 @@ public class ProjectSedimentService {
             change.updateSedimentSuggestion(
                 segment.id(), suggestion.action(), suggestion.targetSedimentId(), segment.userVisibleValue(), suggestion.reason(),
                 evidenceRefs, com.projectflow.entity.EvidenceConfidence.valueOf(segment.confidence()), true
+            );
+            change.recordReviewMetadata(
+                segment.batchId(), contentSource(segment), segment.qualityStatus(), suggestion.strength()
             );
             changeRepository.save(change);
         }
@@ -133,6 +148,12 @@ public class ProjectSedimentService {
             case EVIDENCE_ONLY -> mergeSediment(change, segment, existingTarget, true);
             case IGNORE -> null;
         };
+        if (sediment != null) {
+            sediment.recordConfirmation(
+                segment.getBatchId(), new ArrayList<>(affectedFiles(change)), contentSource(segment), segment.getQualityStatus()
+            );
+            sediment = sedimentRepository.save(sediment);
+        }
         if (action == SedimentAction.IGNORE) {
             change.markIgnored();
             segment.markIgnored();
@@ -153,7 +174,7 @@ public class ProjectSedimentService {
         String actionLabel = actionLabel(action);
         String resultMessage = action == SedimentAction.IGNORE
             ? "已暂不沉淀，原始证据仍保留。"
-            : completedActionLabel(action) + "《" + sediment.getTitle() + "》，新增 " + evidenceAdded + " 条证据、" + filesAdded + " 个涉及文件。";
+            : completedActionLabel(action) + "《" + sediment.getTitle() + "》，新增 " + evidenceAdded + " 条证据；本次变化涉及 " + filesAdded + " 个文件，已进入待能力分析。";
         return new SedimentConfirmationResponse(
             change.getId(), change.getStatus().name(), sediment == null ? null : response(sediment), batchStatus,
             actionLabel, resultMessage, evidenceAdded, filesAdded, summaryUpdated, false, action != SedimentAction.IGNORE,
@@ -220,6 +241,27 @@ public class ProjectSedimentService {
         ownedProject(userId, sediment.getProjectId());
         sediment.updateDeveloperNotes(request.developerNotes());
         return response(sediment);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SedimentReviewBatchResponse> listReviewBatches(UUID userId, UUID projectId) {
+        ownedProject(userId, projectId);
+        return batchRepository.findByProjectIdOrderByScanStartedAtDesc(projectId).stream()
+            .map(this::reviewBatchResponse)
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public SedimentReviewBatchDetailResponse getReviewBatch(UUID userId, UUID batchId) {
+        ChangeBatch batch = batchRepository.findById(batchId)
+            .orElseThrow(() -> new AppException("CHANGE_BATCH_NOT_FOUND", "分析批次不存在", HttpStatus.NOT_FOUND));
+        ownedProject(userId, batch.getProjectId());
+        List<ProjectChange> changes = changeRepository.findBySourceBatchIdOrderByCreatedAtAsc(batchId);
+        List<DevelopmentSegmentResponse> localDrafts = pendingChangeScanService.listSegments(batchId).stream()
+            .filter(segment -> !"MODEL".equals(segment.generationMode()))
+            .toList();
+        List<SedimentReviewItemResponse> items = changes.stream().map(this::reviewItemResponse).toList();
+        return new SedimentReviewBatchDetailResponse(reviewBatchResponse(batch), items, localDrafts);
     }
 
     private ProjectSediment createSediment(ProjectChange change, DevelopmentSegment segment) {
@@ -289,6 +331,8 @@ public class ProjectSedimentService {
         return new ProjectSedimentResponse(
             sediment.getId(), sediment.getProjectId(), sediment.getTitle(), sediment.getSummary(), sediment.getProblemSolved(),
             sediment.getSedimentType(), sediment.getStatus(), sediment.getSourceSegmentIds(), sediment.getEvidenceRefs(),
+            sediment.getAffectedFiles(), sediment.getSourceBatchIds(), sediment.getContentSource(), sediment.getQualityStatus(),
+            sediment.getCapabilityStatus(), sediment.getLastCapabilityAnalysisJobId(), sediment.getLastCapabilityAnalyzedAt(),
             sediment.getDeveloperNotes(),
             DisplayContentSanitizer.isLikelyLegacyTruncated(sediment.getTitle())
                 || DisplayContentSanitizer.isLikelyLegacyTruncated(sediment.getSummary())
@@ -324,6 +368,44 @@ public class ProjectSedimentService {
         return files;
     }
 
+    private SedimentReviewBatchResponse reviewBatchResponse(ChangeBatch batch) {
+        List<ProjectChange> changes = changeRepository.findBySourceBatchIdOrderByCreatedAtAsc(batch.getId());
+        List<DevelopmentSegmentResponse> segments = pendingChangeScanService.listSegments(batch.getId());
+        int localDrafts = (int) segments.stream().filter(segment -> !"MODEL".equals(segment.generationMode())).count();
+        int pending = (int) changes.stream().filter(change ->
+            change.getStatus() == ProjectChangeStatus.PENDING || change.getStatus() == ProjectChangeStatus.EDITED
+        ).count();
+        int ignored = (int) changes.stream().filter(change -> change.getStatus() == ProjectChangeStatus.IGNORED).count();
+        int processed = changes.size() - pending;
+        String resultSource = batch.getModelStatus().startsWith("SUCCESS")
+            ? "SUCCESS_WITH_WARNINGS".equals(batch.getModelStatus()) ? "MODEL_PARTIAL_RESULT" : "MODEL_RESULT"
+            : localDrafts > 0 ? "LOCAL_FACT_DRAFT" : "NEEDS_REANALYSIS";
+        return new SedimentReviewBatchResponse(
+            batch.getId(), batch.getScanStartedAt(), batch.getScanFinishedAt(), batch.getBranchName(), batch.getStatus().name(),
+            batch.getNewCommitCount(), batch.getChangedFileCount(), batch.getAgentResultCount(), batch.getModelStatus(),
+            batch.getModelProvider(), resultSource, changes.size(), localDrafts, processed, pending, ignored,
+            !batch.getModelStatus().startsWith("SUCCESS") || localDrafts > 0, timeGroup(batch.getScanStartedAt())
+        );
+    }
+
+    private SedimentReviewItemResponse reviewItemResponse(ProjectChange change) {
+        return new SedimentReviewItemResponse(
+            change.getId(), change.getDevelopmentSegmentId(), change.getTitle(), change.getSummary(), change.getStatus().name(),
+            change.getContentSource(), change.getQualityStatus(), change.getRecommendationStrength(),
+            change.getSuggestedAction() == null ? "" : change.getSuggestedAction().name(), change.getTargetSedimentId(),
+            change.getEvidenceRefs().size(), affectedFiles(change).size(), change.getCreatedAt()
+        );
+    }
+
+    private String timeGroup(Instant value) {
+        LocalDate date = value.atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
+        if (date.equals(today)) return "TODAY";
+        if (date.equals(today.minusDays(1))) return "YESTERDAY";
+        if (!date.isBefore(today.minusDays(6))) return "THIS_WEEK";
+        return "EARLIER";
+    }
+
     private ProjectChangeKind inferKind(List<String> files) {
         if (!files.isEmpty() && files.stream().allMatch(file -> file.toLowerCase().endsWith(".md"))) return ProjectChangeKind.DOCS;
         if (!files.isEmpty() && files.stream().allMatch(file -> file.toLowerCase().contains("test"))) return ProjectChangeKind.TEST;
@@ -337,5 +419,25 @@ public class ProjectSedimentService {
     private String trim(String value, int max) {
         if (value == null) return "";
         return value.length() <= max ? value : value.substring(0, max);
+    }
+
+    private String contentSource(DevelopmentSegmentResponse segment) {
+        if (!"MODEL".equals(segment.generationMode())) {
+            return segment.includedAgentResultRefs().isEmpty() ? "LOCAL_FACT_DRAFT" : "AGENT_RESULT_DRAFT";
+        }
+        return isPartialModelResult(segment.fallbackReason())
+            ? "MODEL_PARTIAL_RESULT" : "MODEL_RESULT";
+    }
+
+    private String contentSource(DevelopmentSegment segment) {
+        if (!"MODEL".equals(segment.getGenerationMode())) {
+            return segment.getIncludedAgentResultRefs().isEmpty() ? "LOCAL_FACT_DRAFT" : "AGENT_RESULT_DRAFT";
+        }
+        return isPartialModelResult(segment.getFallbackReason())
+            ? "MODEL_PARTIAL_RESULT" : "MODEL_RESULT";
+    }
+
+    private boolean isPartialModelResult(String reason) {
+        return reason != null && (reason.contains("部分") || reason.contains("截断") || reason.contains("恢复"));
     }
 }

@@ -91,6 +91,13 @@ public final class V33WorkflowDtos {
         String status,
         List<String> sourceSegmentIds,
         List<String> evidenceRefs,
+        List<String> affectedFiles,
+        List<String> sourceBatchIds,
+        String contentSource,
+        String qualityStatus,
+        String capabilityStatus,
+        UUID lastCapabilityAnalysisJobId,
+        Instant lastCapabilityAnalyzedAt,
         String developerNotes,
         boolean legacyTruncated,
         Instant createdAt,
@@ -133,6 +140,52 @@ public final class V33WorkflowDtos {
     ) {
     }
 
+    public record SedimentReviewBatchResponse(
+        UUID batchId,
+        Instant scanStartedAt,
+        Instant scanFinishedAt,
+        String branchName,
+        String batchStatus,
+        int commitCount,
+        int changedFileCount,
+        int agentResultCount,
+        String modelStatus,
+        String modelProvider,
+        String resultSource,
+        int formalSuggestionCount,
+        int localDraftCount,
+        int processedCount,
+        int pendingCount,
+        int ignoredCount,
+        boolean needsReanalysis,
+        String timeGroup
+    ) {
+    }
+
+    public record SedimentReviewItemResponse(
+        UUID changeId,
+        UUID segmentId,
+        String title,
+        String summary,
+        String status,
+        String contentSource,
+        String qualityStatus,
+        String recommendationStrength,
+        String suggestedAction,
+        UUID targetSedimentId,
+        int evidenceCount,
+        int affectedFileCount,
+        Instant createdAt
+    ) {
+    }
+
+    public record SedimentReviewBatchDetailResponse(
+        SedimentReviewBatchResponse batch,
+        List<SedimentReviewItemResponse> formalSuggestions,
+        List<DevelopmentSegmentResponse> localDrafts
+    ) {
+    }
+
     public record CapabilityCardResponse(
         UUID id,
         UUID projectId,
@@ -154,6 +207,15 @@ public final class V33WorkflowDtos {
         boolean legacyTruncated,
         Instant createdAt,
         Instant updatedAt
+    ) {
+    }
+
+    public record CapabilityAnalysisOverviewResponse(
+        Instant lastSuccessfulAt,
+        int lastInputSedimentCount,
+        int newSedimentCount,
+        int updatedSedimentCount,
+        int pendingSedimentCount
     ) {
     }
 

@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.projectflow.dto.V2ProjectDtos.CapabilityCandidate;
 import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretRequest;
 import com.projectflow.dto.V2ProjectDtos.CapabilityInterpretResponse;
+import com.projectflow.dto.V2ProjectDtos.ModelCallDiagnosticsResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFactSourceResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectLocalPathRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectMemoryResponse;
@@ -117,23 +118,39 @@ public class ProjectMemoryService {
         return toMemoryResponse(memoryRepository.save(memory));
     }
 
-    @Transactional(readOnly = true)
     public CapabilityInterpretResponse interpretCapability(UUID userId, UUID projectId, CapabilityInterpretRequest request) {
         ProjectSpace project = findOwnedProject(userId, projectId);
         ProjectMemory memory = memoryRepository.findByProjectId(project.getId()).orElseGet(() -> initialMemory(project));
         AiProvider provider = configuredProvider(userId);
         if (provider == null) {
-            return new CapabilityInterpretResponse(true, "LOCAL_RULE", "未配置可用模型，已用本地规则生成候选解读。", localCandidate(request.capabilityFact(), memory));
+            return new CapabilityInterpretResponse(true, "LOCAL_RULE", "未配置可用模型，已用本地规则生成候选解读。", localCandidate(request.capabilityFact(), memory), null);
         }
         try {
             String prompt = capabilityInterpretPrompt(project.getName(), memory, request.capabilityFact());
-            JsonNode json = modelGatewayService.callJson(provider, prompt, CAPABILITY_INTERPRET_MAX_TOKENS);
-            return new CapabilityInterpretResponse(false, "MODEL", "模型已生成候选解读，采纳后才进入正式项目资产。", modelCandidate(json));
+            ModelGatewayService.StructuredModelResponse response = modelGatewayService.callStructured(provider, prompt, CAPABILITY_INTERPRET_MAX_TOKENS);
+            JsonNode json = response.parsed().root();
+            return new CapabilityInterpretResponse(false, "MODEL", "模型已生成候选解读，采纳后才进入正式项目资产。", modelCandidate(json), diagnostics(response.diagnostics()));
         } catch (Exception exception) {
             log.warn("Capability interpretation fell back to local rules: projectId={}, provider={}, error={}",
                 projectId, provider.getName(), exception.getMessage());
-            return new CapabilityInterpretResponse(true, "LOCAL_RULE", "模型不可用，已用本地规则生成候选解读。" + modelGatewayService.failureMessage(exception), localCandidate(request.capabilityFact(), memory));
+            return new CapabilityInterpretResponse(true, "LOCAL_RULE", "模型不可用，已用本地规则生成候选解读。" + modelGatewayService.failureMessage(exception), localCandidate(request.capabilityFact(), memory), diagnostics(exception));
         }
+    }
+
+    private ModelCallDiagnosticsResponse diagnostics(Exception exception) {
+        if (exception instanceof ModelGatewayService.ModelResponseFormatException failure) return diagnostics(failure.diagnostics());
+        return null;
+    }
+
+    private ModelCallDiagnosticsResponse diagnostics(ModelGatewayService.ModelCallDiagnostics value) {
+        if (value == null) return null;
+        return new ModelCallDiagnosticsResponse(
+            value.providerName(), value.modelName(), value.finishReason(), value.promptTokens(), value.completionTokens(),
+            value.totalTokens(), value.usageSource(), value.providerMaxTokens(), value.taskPolicyMaxTokens(), value.effectiveMaxTokens(),
+            value.providerTemperature(), value.effectiveTemperature(), value.timeoutSeconds(), value.latencyMs(), value.contentPresent(),
+            value.reasoningPresent(), value.reasoningLength(), value.truncated(), value.compactRetryAttempted(),
+            value.compactRetrySucceeded(), value.requestCount(), value.jsonRepaired(), value.partialResult(), value.recoveredItems()
+        );
     }
 
     private AiProvider configuredProvider(UUID userId) {

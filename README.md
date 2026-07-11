@@ -1,6 +1,16 @@
 # ProjectFlow
 
-ProjectFlow V3.3.5 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+ProjectFlow V3.3.6 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+
+## V3.3.6 Batch Sediment Review and Capability Closure
+
+- The workbench now shows the latest analysis batch summary instead of expanding every suggestion. The sediment processing center groups batches by time and opens one formal suggestion at a time with progress, previous/next, skip, defer, and confirmation feedback.
+- Model results, partially recovered model items, local fact drafts, Agent-result drafts, and legacy records have explicit source and quality labels. Local fact drafts never automatically become formal sediment suggestions.
+- Recommendations have high, medium, reference-only, or not-recommended strength. Strong visual recommendations require model output, sufficient evidence, and more than title similarity.
+- Confirmed sediments persist affected files and source batch IDs, immediately enter `PENDING_ANALYSIS`, and show their last capability-analysis job. The capability analysis input is now confirmed project sediment rather than raw development segments.
+- Capability analysis records the input sediment snapshot, marks sediments only after successful persistence, preserves the previous successful cards on failure, and shows new, updated, and pending sediment counts.
+- Empty content combined with `finish_reason=length`, exhausted completion tokens, or a reasoning field is classified as exhausted output and triggers one lower-budget compact retry. Reasoning text is never stored or returned; only presence and length are diagnosed.
+- Git, file, Agent-result, project-analysis, file-analysis, capability-interpretation, and capability-card model waits no longer run inside method-level database transactions.
 
 ## V3.3.5 Reliable Model Results, Clear Confirmation, and Provider Management
 
@@ -36,16 +46,16 @@ ProjectFlow V3.3.5 is a local-first tool for AI-assisted solo developers to unde
 
 It is built for developers who use agents such as Codex, Claude Code, or other coding assistants to modify real projects and then need a clear way to understand what changed, review the evidence, maintain a project profile, and generate reusable output such as daily reviews, README material, reports, and resume-ready summaries.
 
-## V3.3.3 Workflow
+## V3.3.6 Workflow
 
 ProjectFlow is not a Kanban board, daily-report generator, or hosted PR/CI system. Its primary workflow is:
 
 1. Add a project through zip import and bind its real local folder.
 2. Analyze **待整理变更** from the last confirmed review cursor to the current Git HEAD.
 3. Group objective Git and Agent-result evidence into human-readable **开发推进段**.
-4. Produce evidence-backed **建议沉淀**.
-5. Let the user confirm new, merge, evidence-only, or ignore.
-6. Preserve confirmed content as traceable **项目沉淀** for README, resume, interview, review, and Agent context reuse.
+4. Separate formal model 建议沉淀 from local fact drafts and organize them by analysis batch and time.
+5. Process formal suggestions one at a time: create, merge, evidence-only, ignore, skip, or defer.
+6. Preserve confirmed content as traceable **项目沉淀**, mark it pending capability analysis, and analyze it into capability cards when requested.
 
 The governing rule is: rules collect facts, models interpret, rules validate, and users confirm. ProjectFlow no longer uses “今日开发” as the primary boundary; a persistent review cursor covers changes accumulated across days.
 
@@ -104,7 +114,7 @@ ProjectFlow/
 +-- .projectflow/             local agent protocol/context/runtime data
 +-- docker-compose.yml        PostgreSQL and Redis mode
 +-- .env.example              repo-safe environment template
-+-- start.bat                 simple V3.3.5 Windows entry
++-- start.bat                 simple V3.3.6 Windows entry
 +-- start-projectflow.bat     embedded Windows launcher
 +-- start-projectflow.ps1     Docker/team startup orchestration
 `-- README.md

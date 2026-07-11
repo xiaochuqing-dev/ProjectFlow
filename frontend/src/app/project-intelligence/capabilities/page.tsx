@@ -9,6 +9,7 @@ import { Badge, Button, ProjectContextBar, Toast } from "@/components/ui";
 import { useProjectSelection } from "@/hooks/useProjectSelection";
 import {
   acknowledgeAnalysisFailure,
+  getCapabilityAnalysisOverview,
   getProjectAnalysisJob,
   getProjectMemory,
   listProjectAnalysisJobs,
@@ -16,6 +17,7 @@ import {
   startCapabilityCardAnalysisJob,
   updateCapabilityCard,
   type CapabilityCard,
+  type CapabilityAnalysisOverview,
   type ProjectAnalysisJob,
   type ProjectMemory,
 } from "@/lib/api";
@@ -59,6 +61,7 @@ function CompletedCapabilitiesContent() {
   const { projects, selectedProject, selectedProjectId, selectProject, loadingProjects, projectError } = useProjectSelection({ queryProjectId });
   const [cards, setCards] = useState<CapabilityCard[]>([]);
   const [memory, setMemory] = useState<ProjectMemory | null>(null);
+  const [overview, setOverview] = useState<CapabilityAnalysisOverview | null>(null);
   const [loading, setLoading] = useState(false);
   const [actingId, setActingId] = useState("");
   const [error, setError] = useState("");
@@ -75,6 +78,7 @@ function CompletedCapabilitiesContent() {
     if (!session || !selectedProjectId) {
       setCards([]);
       setMemory(null);
+      setOverview(null);
       setCapabilityJob(null);
       setCapabilityJobs([]);
       return;
@@ -86,10 +90,12 @@ function CompletedCapabilitiesContent() {
       getProjectMemory(session.accessToken, selectedProjectId),
       // V3.3.4: 进入页面时恢复正在运行的能力分析任务。
       listProjectAnalysisJobs(session.accessToken, selectedProjectId).catch(() => []),
+      getCapabilityAnalysisOverview(session.accessToken, selectedProjectId),
     ])
-      .then(([items, record, jobs]) => {
+      .then(([items, record, jobs, overviewRecord]) => {
         setCards(items);
         setMemory(record);
+        setOverview(overviewRecord);
         const history = (jobs as ProjectAnalysisJob[])
           .filter((job) => job.jobType === "CAPABILITY_CARD_ANALYSIS")
           .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -126,7 +132,9 @@ function CompletedCapabilitiesContent() {
         if (updated.status === "SUCCEEDED" || updated.status === "SUCCEEDED_WITH_WARNINGS") {
           // 完成后重新拉取能力卡片（已确认保留，候选被替换）。
           const items = await listProjectCapabilityCards(accessToken, updated.projectId);
+          const overviewRecord = await getCapabilityAnalysisOverview(accessToken, updated.projectId);
           setCards(items);
+          setOverview(overviewRecord);
           const result = updated.capabilityCardResult;
           setNotice(updated.status === "SUCCEEDED_WITH_WARNINGS"
             ? updated.warningMessage || `能力分析已完成，保存 ${result?.cardCount ?? items.length} 张卡片，其中 ${result?.needsEvidenceCount ?? 0} 张需要补充证据。`
@@ -258,17 +266,27 @@ function CompletedCapabilitiesContent() {
           <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line p-5">
             <div className="max-w-2xl">
               <h2 className="text-xl font-semibold text-slate-950">整体项目能力分析</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-600">基于已确认项目沉淀、开发推进段和证据引用，一次生成可逐条确认的结构化能力卡片。</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">基于已确认项目沉淀及其证据引用，一次生成可逐条确认的结构化能力卡片。</p>
               <p className="mt-1 text-xs leading-5 text-slate-500">重新分析会替换未确认候选能力，已确认能力会保留。</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button disabled={!selectedProjectId || analyzing} loading={analyzing} onClick={analyzeCapabilities} variant="primary">
                 {analyzing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                分析项目能力
+                {overview?.pendingSedimentCount ? `分析 ${overview.pendingSedimentCount} 条新增沉淀` : "分析项目能力"}
               </Button>
               <span className="text-xs text-slate-500">确认后可生成能力解读</span>
             </div>
           </header>
+
+          {overview ? (
+            <div className="grid gap-3 border-b border-line bg-slate-50 p-5 sm:grid-cols-2 xl:grid-cols-5">
+              <OverviewMetric label="上次成功" value={overview.lastSuccessfulAt ? new Date(overview.lastSuccessfulAt).toLocaleString("zh-CN") : "尚未分析"} />
+              <OverviewMetric label="上次输入沉淀" value={`${overview.lastInputSedimentCount} 条`} />
+              <OverviewMetric label="此后新增" value={`${overview.newSedimentCount} 条`} />
+              <OverviewMetric label="此后更新" value={`${overview.updatedSedimentCount} 条`} />
+              <OverviewMetric label="待能力分析" value={`${overview.pendingSedimentCount} 条`} />
+            </div>
+          ) : null}
 
           {currentSuccessJob ? (
             <div className="border-b border-line bg-emerald-50 px-5 py-4 text-sm leading-6 text-emerald-950">
@@ -298,7 +316,7 @@ function CompletedCapabilitiesContent() {
               {stageMessage ? <p className="mt-1 text-slate-600">{stageMessage}</p> : null}
               {inputSummary ? (
                 <p className="mt-1 text-slate-500">
-                  基于 {inputSummary.confirmedSegments} 条已确认沉淀{inputSummary.confirmedSegments > 0 ? "" : ""}。
+                  基于 {inputSummary.sedimentCount} 条已确认项目沉淀，其中 {inputSummary.pendingSedimentCount} 条此前待能力分析。
                 </p>
               ) : null}
               <p className="mt-1 text-slate-500">页面可以离开，任务会继续运行，完成后能力卡片会自动刷新。</p>
@@ -472,6 +490,10 @@ function Info({ label, value, copy }: { label: string; value: string; copy?: () 
   );
 }
 
+function OverviewMetric({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-md border border-line bg-white p-3"><p className="text-xs text-muted">{label}</p><p className="mt-1 text-sm font-semibold text-slate-950">{value}</p></div>;
+}
+
 function statusLabel(status: CapabilityCard["status"]) {
   if (status === "CONFIRMED") return "已确认";
   if (status === "NEEDS_EVIDENCE") return "需补证据";
@@ -496,12 +518,15 @@ function formatElapsed(ms: number): string {
   return `${minutes} 分 ${rem} 秒`;
 }
 
-function parseInputSummary(raw: string | undefined | null): { confirmedSegments: number } | null {
+function parseInputSummary(raw: string | undefined | null): { sedimentCount: number; pendingSedimentCount: number } | null {
   if (!raw || !raw.trim()) return null;
   try {
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object" && typeof parsed.confirmedSegments === "number") {
-      return { confirmedSegments: parsed.confirmedSegments };
+    if (parsed && typeof parsed === "object" && typeof parsed.sedimentCount === "number") {
+      return {
+        sedimentCount: parsed.sedimentCount,
+        pendingSedimentCount: typeof parsed.pendingSedimentCount === "number" ? parsed.pendingSedimentCount : 0,
+      };
     }
     return null;
   } catch {

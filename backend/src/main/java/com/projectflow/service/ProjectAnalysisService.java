@@ -9,12 +9,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisRequest;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisResponse;
+import com.projectflow.dto.V2ProjectDtos.ModelCallDiagnosticsResponse;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
 import com.projectflow.entity.MaterialSourceType;
@@ -50,7 +50,6 @@ public class ProjectAnalysisService {
         this.modelGatewayService = modelGatewayService;
     }
 
-    @Transactional(readOnly = true)
     public ProjectAnalysisResponse runProjectAnalysis(UUID userId, UUID projectId) {
         ProjectSpace project = findOwnedProject(userId, projectId);
         ProjectMaterial zipMaterial = latestZipMaterial(project.getId());
@@ -80,7 +79,8 @@ public class ProjectAnalysisService {
                 项目材料：
                 %s
                 """.formatted(project.getName(), project.getDescription(), truncate(analysisMaterial, 20_000));
-            JsonNode json = modelGatewayService.callJson(provider, prompt, MODEL_ANALYSIS_MAX_TOKENS);
+            ModelGatewayService.StructuredModelResponse modelResponse = modelGatewayService.callStructured(provider, prompt, MODEL_ANALYSIS_MAX_TOKENS);
+            JsonNode json = modelResponse.parsed().root();
             return new ProjectAnalysisResponse(
                 chineseTextOr(json, "summary", fallback.summary()),
                 chineseTextOr(json, "architecture", fallback.architecture()),
@@ -94,7 +94,8 @@ public class ProjectAnalysisService {
                 provider.getName(),
                 "MODEL_ANALYSIS",
                 normalizeConfidence(json),
-                "模型已完成项目分析；结论已附带文件证据和分析局限。"
+                "模型已完成项目分析；结论已附带文件证据和分析局限。",
+                diagnostics(modelResponse.diagnostics())
             );
         } catch (Exception exception) {
             LOGGER.warn(
@@ -116,12 +117,12 @@ public class ProjectAnalysisService {
                 provider.getName(),
                 "LOCAL_RULE",
                 fallback.confidence(),
-                "模型分析失败，已保留本地规则结果。" + modelGatewayService.failureMessage(exception)
+                "模型分析失败，已保留本地规则结果。" + modelGatewayService.failureMessage(exception),
+                diagnostics(exception)
             );
         }
     }
 
-    @Transactional(readOnly = true)
     public ProjectFileAnalysisResponse analyzeProjectFile(UUID userId, UUID projectId, ProjectFileAnalysisRequest request) {
         ProjectSpace project = findOwnedProject(userId, projectId);
         ProjectMaterial zipMaterial = latestZipMaterial(project.getId());
@@ -140,13 +141,14 @@ public class ProjectAnalysisService {
             provider != null,
             provider == null ? null : provider.getName(),
             "LOCAL_RULE",
-            "已使用本地规则生成基础解释。"
+            "已使用本地规则生成基础解释。",
+            null
         );
         if (provider == null) {
             return fallback;
         }
         if (isSensitivePath(requestedPath)) {
-            return localFileAnalysis(requestedPath, "", true, provider.getName(), "LOCAL_RULE", "敏感文件不会发送给模型，已使用本地规则解释。");
+            return localFileAnalysis(requestedPath, "", true, provider.getName(), "LOCAL_RULE", "敏感文件不会发送给模型，已使用本地规则解释。", null);
         }
         try {
             String prompt = """
@@ -177,7 +179,8 @@ public class ProjectAnalysisService {
                     fileContent.isBlank() ? "[未索引到文件内容，只能依据路径分析]" : truncate(fileContent, MAX_FILE_SNIPPET_CHARS),
                     fileStructureContext(analysisMaterial, requestedPath)
                 );
-            JsonNode json = modelGatewayService.callJson(provider, prompt, MODEL_ANALYSIS_MAX_TOKENS);
+            ModelGatewayService.StructuredModelResponse modelResponse = modelGatewayService.callStructured(provider, prompt, MODEL_ANALYSIS_MAX_TOKENS);
+            JsonNode json = modelResponse.parsed().root();
             return new ProjectFileAnalysisResponse(
                 requestedPath,
                 textOr(json, "fileType", fallback.fileType()),
@@ -194,7 +197,8 @@ public class ProjectAnalysisService {
                 provider.getName(),
                 "MODEL_ANALYSIS",
                 normalizeConfidence(json),
-                "模型已根据已索引的文件内容生成中文解释。"
+                "模型已根据已索引的文件内容生成中文解释。",
+                diagnostics(modelResponse.diagnostics())
             );
         } catch (Exception exception) {
             LOGGER.warn(
@@ -210,7 +214,8 @@ public class ProjectAnalysisService {
                 true,
                 provider.getName(),
                 "LOCAL_RULE",
-                "模型分析失败，已使用本地规则解释。" + modelGatewayService.failureMessage(exception)
+                "模型分析失败，已使用本地规则解释。" + modelGatewayService.failureMessage(exception),
+                diagnostics(exception)
             );
         }
     }
@@ -264,7 +269,8 @@ public class ProjectAnalysisService {
             null,
             "LOCAL_RULE",
             "medium",
-            "未配置可用模型，已使用本地规则生成基础项目画像。"
+            "未配置可用模型，已使用本地规则生成基础项目画像。",
+            null
         );
     }
 
@@ -274,7 +280,8 @@ public class ProjectAnalysisService {
         boolean providerConfigured,
         String providerName,
         String analysisSource,
-        String message
+        String message,
+        ModelCallDiagnosticsResponse diagnostics
     ) {
         String fileType = inferFileType(path);
         String role = inferFileRole(path, fileType);
@@ -312,7 +319,8 @@ public class ProjectAnalysisService {
             providerName,
             analysisSource,
             "medium",
-            message
+            message,
+            diagnostics
         );
     }
 
@@ -322,6 +330,25 @@ public class ProjectAnalysisService {
             .filter(material -> material.getSourceType() == MaterialSourceType.PROJECT_ZIP)
             .findFirst()
             .orElseThrow(() -> new AppException("PROJECT_ZIP_NOT_FOUND", "Import a project zip before running project analysis", HttpStatus.BAD_REQUEST));
+    }
+
+    private ModelCallDiagnosticsResponse diagnostics(Exception exception) {
+        if (exception instanceof ModelGatewayService.ModelResponseFormatException failure) {
+            return diagnostics(failure.diagnostics());
+        }
+        return null;
+    }
+
+    private ModelCallDiagnosticsResponse diagnostics(ModelGatewayService.ModelCallDiagnostics value) {
+        if (value == null) return null;
+        return new ModelCallDiagnosticsResponse(
+            value.providerName(), value.modelName(), value.finishReason(), value.promptTokens(), value.completionTokens(),
+            value.totalTokens(), value.usageSource(), value.providerMaxTokens(), value.taskPolicyMaxTokens(), value.effectiveMaxTokens(),
+            value.providerTemperature(), value.effectiveTemperature(), value.timeoutSeconds(), value.latencyMs(),
+            value.contentPresent(), value.reasoningPresent(), value.reasoningLength(), value.truncated(),
+            value.compactRetryAttempted(), value.compactRetrySucceeded(), value.requestCount(), value.jsonRepaired(),
+            value.partialResult(), value.recoveredItems()
+        );
     }
 
     private AiProvider configuredProvider(UUID userId) {

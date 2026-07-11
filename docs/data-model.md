@@ -2,6 +2,16 @@
 
 Primary IDs use UUIDs. Timestamps use UTC at the database layer and are displayed in the user's local timezone in the frontend.
 
+## V3.3.6 compatibility fields
+
+`project_changes` adds nullable `source_batch_id`, `content_source`, `quality_status`, and `recommendation_strength`. Old rows return legacy-safe labels and are not assigned to a new batch.
+
+`project_sediments` adds `affected_files`, `source_batch_ids`, `content_source`, `quality_status`, `capability_status`, `last_capability_analysis_job_id`, and `last_capability_analyzed_at`. Old confirmed sediments remain intact and are treated as pending capability analysis until a successful analysis records their job.
+
+Capability cards continue to store `analysis_job_id`; their `source_refs` now use `sediment:<uuid>` for new V3.3.6 runs. Existing `segment:<uuid>` and source-unknown cards remain readable.
+
+All new columns are nullable or have application-level fallback values. Hibernate update mode can add them to H2 and PostgreSQL without clearing existing tables. Capability status is updated only after candidate-card persistence succeeds, so failed analysis leaves pending sediments untouched.
+
 ## V3.3.5 compatibility fields
 
 `project_analysis_jobs` adds nullable `diagnostics_json`, `model_returned`, and `failure_acknowledged`. Existing rows remain valid and are shown as historical jobs when diagnostics are absent.
