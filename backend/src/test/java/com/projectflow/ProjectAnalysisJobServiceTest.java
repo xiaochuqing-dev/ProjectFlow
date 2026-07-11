@@ -1,7 +1,6 @@
 package com.projectflow;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,7 +68,7 @@ class ProjectAnalysisJobServiceTest {
     }
 
     @Test
-    void markInterruptedJobsFailedMarksStaleJobsAndDoesNotReRunThem() {
+    void recoverInterruptedJobsRequeuesQueuedAndMarksSafeRunningJobRetryable() {
         UUID projectId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         ProjectAnalysisJob queuedJob = new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.WORK_SESSION_SCAN, null);
@@ -80,22 +79,20 @@ class ProjectAnalysisJobServiceTest {
         // markRunning 把 stage 设为 RUNNING，markSucceeded 把 status 设为 SUCCEEDED 并设 stage=SUCCEEDED。
         // queuedJob 仍是 QUEUED/stage=QUEUED，runningJob 是 RUNNING/stage=RUNNING。
         when(jobRepository.findAll()).thenReturn(List.of(queuedJob, runningJob, succeededJob));
+        when(jobRepository.findById(queuedJob.getId())).thenReturn(Optional.of(queuedJob));
 
         ProjectAnalysisJobService service = new ProjectAnalysisJobService(
             jobRepository, projectRepository, jobRunner, objectMapper, transactionManager
         );
 
-        service.markInterruptedJobsFailed();
+        service.recoverInterruptedJobs();
 
-        // 残留的 QUEUED/RUNNING 任务被标记为 FAILED。
-        assertThat(queuedJob.getStatus()).isEqualTo(ProjectAnalysisJobStatus.FAILED);
-        assertThat(queuedJob.getErrorMessage()).contains("服务重启");
-        assertThat(runningJob.getStatus()).isEqualTo(ProjectAnalysisJobStatus.FAILED);
+        assertThat(queuedJob.getStatus()).isEqualTo(ProjectAnalysisJobStatus.QUEUED);
+        verify(jobRunner).execute(queuedJob.getId());
+        assertThat(runningJob.getStatus()).isEqualTo(ProjectAnalysisJobStatus.RETRYABLE);
         assertThat(runningJob.getErrorMessage()).contains("服务重启");
-        // 已完成的任务不受影响。
         assertThat(succeededJob.getStatus()).isEqualTo(ProjectAnalysisJobStatus.SUCCEEDED);
-        // 关键：不再自动重跑任何任务——用户没点击就不应触发分析。
-        verify(jobRunner, never()).execute(any(UUID.class));
+        verify(jobRunner, never()).execute(runningJob.getId());
     }
 
     @Test

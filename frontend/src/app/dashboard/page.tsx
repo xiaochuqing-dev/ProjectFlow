@@ -118,10 +118,10 @@ export default function DashboardPage() {
     () => projects.find((project) => project.id === selectedProjectId),
     [projects, selectedProjectId],
   );
-  const { jobs, jobError, enqueueProjectAnalysis, enqueueWorkSessionScan } = useProjectAnalysisJobs(selectedProjectId);
+  const { jobs, jobError, enqueueProjectAnalysis, enqueueWorkSessionScan, cancelJob, retryJob } = useProjectAnalysisJobs(selectedProjectId);
   const latestProjectJob = jobs.find((job) => job.jobType === "PROJECT") ?? null;
   const latestScanJob = jobs.find((job) => job.jobType === "WORK_SESSION_SCAN") ?? null;
-  const scanningWorkSessions = latestScanJob?.status === "QUEUED" || latestScanJob?.status === "RUNNING";
+  const scanningWorkSessions = latestScanJob?.status === "QUEUED" || latestScanJob?.status === "RUNNING" || latestScanJob?.status === "CANCEL_REQUESTED";
   // V3.3.3: GitHub 状态与登录指引操作（刷新只读远程，登录不保存 token）。
   // V3.3.4: 新增打开登录终端、复制命令能力；loginGuide 供接入区展示命令。
   const {
@@ -543,7 +543,7 @@ export default function DashboardPage() {
           </Button>
         </Link>
       }
-      eyebrow="ProjectFlow V3.3.6"
+      eyebrow="ProjectFlow V3.3.7"
       title="工作台"
     >
       <PageContainer>
@@ -692,6 +692,8 @@ export default function DashboardPage() {
               refreshingGitHub={refreshingGitHub}
               onShowGitHubLogin={handleShowGitHubLogin}
               activeJob={latestScanJob}
+              onCancelJob={() => latestScanJob && void cancelJob(latestScanJob.id).catch((exception) => setError(exception instanceof Error ? exception.message : "取消分析失败"))}
+              onRetryJob={() => latestScanJob && void retryJob(latestScanJob.id).catch((exception) => setError(exception instanceof Error ? exception.message : "重新运行失败"))}
             />
 
             {/* 项目理解速览（极简，不再重复完整理解） */}

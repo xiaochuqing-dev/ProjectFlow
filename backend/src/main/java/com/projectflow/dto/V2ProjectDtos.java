@@ -148,7 +148,26 @@ public final class V2ProjectDtos {
         String inputSummary,
         String diagnosticsJson,
         boolean modelReturned,
-        boolean failureAcknowledged
+        boolean failureAcknowledged,
+        Instant queuedAt,
+        Instant heartbeatAt,
+        Instant cancellationRequestedAt,
+        Instant cancelledAt,
+        int attemptCount,
+        int maxAttempts,
+        int requestCount,
+        int maxRequestCount,
+        int promptTokens,
+        int completionTokens,
+        int totalTokens,
+        int maxTotalTokens,
+        long elapsedMs,
+        long maxDurationMs,
+        String idempotencyKey,
+        String inputFingerprint,
+        String failureCode,
+        String restartRecoveryState,
+        int queuePosition
     ) {
     }
 

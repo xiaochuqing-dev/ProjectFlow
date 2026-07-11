@@ -1,8 +1,13 @@
 package com.projectflow.service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
@@ -31,7 +36,8 @@ import com.projectflow.support.AppException;
 public class ProjectAnalysisJobService {
     private static final List<ProjectAnalysisJobStatus> ACTIVE_STATUSES = List.of(
         ProjectAnalysisJobStatus.QUEUED,
-        ProjectAnalysisJobStatus.RUNNING
+        ProjectAnalysisJobStatus.RUNNING,
+        ProjectAnalysisJobStatus.CANCEL_REQUESTED
     );
 
     private final ProjectAnalysisJobRepository jobRepository;
@@ -39,6 +45,9 @@ public class ProjectAnalysisJobService {
     private final ProjectAnalysisJobRunner jobRunner;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
+
+    @Value("${projectflow.jobs.global-active-limit:20}")
+    private int globalActiveLimit = 20;
 
     public ProjectAnalysisJobService(
         ProjectAnalysisJobRepository jobRepository,
@@ -55,76 +64,91 @@ public class ProjectAnalysisJobService {
     }
 
     public ProjectAnalysisJobResponse startProjectAnalysis(UUID userId, UUID projectId) {
-        StartJobResult result = transactionTemplate.execute(status -> {
-            findOwnedProject(userId, projectId);
-            java.util.Optional<ProjectAnalysisJob> active = activeJob(projectId, ProjectAnalysisJobType.PROJECT, null);
-            return active
-                .map(job -> new StartJobResult(job, false))
-                .orElseGet(() -> new StartJobResult(jobRepository.save(new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.PROJECT, null)), true));
-        });
-        if (result.created()) {
-            jobRunner.execute(result.job().getId());
-        }
-        return toResponse(result.job());
+        return startJob(userId, projectId, ProjectAnalysisJobType.PROJECT, null, false);
     }
 
     public ProjectAnalysisJobResponse startFileAnalysis(UUID userId, UUID projectId, String path) {
         String normalizedPath = path.trim();
-        StartJobResult result = transactionTemplate.execute(status -> {
-            findOwnedProject(userId, projectId);
-            java.util.Optional<ProjectAnalysisJob> active = activeJob(projectId, ProjectAnalysisJobType.FILE, normalizedPath);
-            return active
-                .map(job -> new StartJobResult(job, false))
-                .orElseGet(() -> new StartJobResult(jobRepository.save(new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.FILE, normalizedPath)), true));
-        });
-        if (result.created()) {
-            jobRunner.execute(result.job().getId());
-        }
-        return toResponse(result.job());
+        return startJob(userId, projectId, ProjectAnalysisJobType.FILE, normalizedPath, false);
     }
 
     public ProjectAnalysisJobResponse startCapabilityInterpret(UUID userId, UUID projectId, String capabilityFact) {
         String fact = capabilityFact == null ? "" : capabilityFact.trim();
-        StartJobResult result = transactionTemplate.execute(status -> {
-            findOwnedProject(userId, projectId);
-            java.util.Optional<ProjectAnalysisJob> active = activeJob(projectId, ProjectAnalysisJobType.CAPABILITY_INTERPRET, fact);
-            return active
-                .map(job -> new StartJobResult(job, false))
-                .orElseGet(() -> new StartJobResult(jobRepository.save(new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.CAPABILITY_INTERPRET, fact)), true));
-        });
-        if (result.created()) {
-            jobRunner.execute(result.job().getId());
-        }
-        return toResponse(result.job());
+        return startJob(userId, projectId, ProjectAnalysisJobType.CAPABILITY_INTERPRET, fact, false);
     }
 
     public ProjectAnalysisJobResponse startWorkSessionScan(UUID userId, UUID projectId) {
-        StartJobResult result = transactionTemplate.execute(status -> {
-            findOwnedProject(userId, projectId);
-            java.util.Optional<ProjectAnalysisJob> active = activeJob(projectId, ProjectAnalysisJobType.WORK_SESSION_SCAN, null);
-            return active
-                .map(job -> new StartJobResult(job, false))
-                .orElseGet(() -> new StartJobResult(jobRepository.save(new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.WORK_SESSION_SCAN, null)), true));
-        });
-        if (result.created()) {
-            jobRunner.execute(result.job().getId());
-        }
-        return toResponse(result.job());
+        return startJob(userId, projectId, ProjectAnalysisJobType.WORK_SESSION_SCAN, null, false);
     }
 
     // V3.3.4: 能力分析异步任务。点击"分析项目能力"创建 job，后端异步执行；刷新/离开页面后可恢复。
     public ProjectAnalysisJobResponse startCapabilityCardAnalysis(UUID userId, UUID projectId) {
-        StartJobResult result = transactionTemplate.execute(status -> {
-            findOwnedProject(userId, projectId);
-            java.util.Optional<ProjectAnalysisJob> active = activeJob(projectId, ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS, null);
-            return active
-                .map(job -> new StartJobResult(job, false))
-                .orElseGet(() -> new StartJobResult(jobRepository.save(new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS, null)), true));
+        return startJob(userId, projectId, ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS, null, false);
+    }
+
+    public ProjectAnalysisJobResponse cancel(UUID userId, UUID jobId) {
+        ProjectAnalysisJob job = transactionTemplate.execute(status -> {
+            ProjectAnalysisJob current = findOwnedJob(userId, jobId);
+            if (current.getStatus() == ProjectAnalysisJobStatus.QUEUED) current.markCancelled();
+            else if (current.getStatus() == ProjectAnalysisJobStatus.RUNNING) current.requestCancellation();
+            return jobRepository.save(current);
         });
-        if (result.created()) {
-            jobRunner.execute(result.job().getId());
+        return toResponse(job);
+    }
+
+    public ProjectAnalysisJobResponse retry(UUID userId, UUID jobId) {
+        ProjectAnalysisJob previous = findOwnedJob(userId, jobId);
+        if (ACTIVE_STATUSES.contains(previous.getStatus())) return toResponse(previous);
+        if (previous.getStatus() == ProjectAnalysisJobStatus.SUCCEEDED
+            || previous.getStatus() == ProjectAnalysisJobStatus.SUCCEEDED_WITH_WARNINGS) {
+            throw new AppException("ANALYSIS_JOB_ALREADY_SUCCEEDED", "任务已成功，无需重试", HttpStatus.CONFLICT);
         }
-        return toResponse(result.job());
+        return startJob(userId, previous.getProjectId(), previous.getJobType(), previous.getFilePath(), true);
+    }
+
+    private ProjectAnalysisJobResponse startJob(
+        UUID userId,
+        UUID projectId,
+        ProjectAnalysisJobType type,
+        String input,
+        boolean force
+    ) {
+        String fingerprint = fingerprint(type, input);
+        StartJobResult result = transactionTemplate.execute(status -> {
+            findOwnedProjectForUpdate(userId, projectId);
+            if (!force) {
+                java.util.Optional<ProjectAnalysisJob> active = jobRepository
+                    .findFirstByProjectIdAndJobTypeAndInputFingerprintAndStatusInOrderByCreatedAtDesc(
+                        projectId, type, fingerprint, ACTIVE_STATUSES
+                    );
+                if (active.isPresent()) return new StartJobResult(active.get(), false);
+                // 兼容 V3.3.6 尚无指纹的活动任务。
+                active = activeJob(projectId, type, input);
+                if (active.isPresent()) return new StartJobResult(active.get(), false);
+            }
+            long activeCount = jobRepository.countByStatusIn(ACTIVE_STATUSES);
+            ProjectAnalysisJob job = new ProjectAnalysisJob(projectId, userId, type, input);
+            job.configureExecution(fingerprint, projectId + ":" + type + ":" + fingerprint, (int) activeCount);
+            if (activeCount >= globalActiveLimit) {
+                job.markRejected("当前分析任务过多，请稍后重试。未发起模型请求。");
+            }
+            return new StartJobResult(jobRepository.save(job), activeCount < globalActiveLimit);
+        });
+        if (result.created()) enqueue(result.job());
+        return toResponse(jobRepository.findById(result.job().getId()).orElse(result.job()));
+    }
+
+    private void enqueue(ProjectAnalysisJob job) {
+        try {
+            jobRunner.execute(job.getId());
+        } catch (RuntimeException exception) {
+            transactionTemplate.executeWithoutResult(status -> jobRepository.findById(job.getId()).ifPresent(current -> {
+                if (!current.isTerminal()) {
+                    current.markRejected("执行队列已满，请稍后重试。未发起模型请求。");
+                    jobRepository.save(current);
+                }
+            }));
+        }
     }
 
     @Transactional(readOnly = true)
@@ -151,18 +175,30 @@ public class ProjectAnalysisJobService {
             .toList();
     }
 
-    // 服务重启后，残留的 QUEUED/RUNNING 任务已无法继续执行（异步线程已消失）。
-    // 不自动重跑——用户没有点击就不应触发分析。把它们标记为 FAILED，前端展示中断状态，
-    // 用户可自行重新点击分析按钮。
     @EventListener(ApplicationReadyEvent.class)
-    @Transactional
-    public void markInterruptedJobsFailed() {
-        jobRepository.findAll().stream()
+    public void recoverInterruptedJobs() {
+        List<UUID> queued = transactionTemplate.execute(status -> jobRepository.findAll().stream()
             .filter(job -> ACTIVE_STATUSES.contains(job.getStatus()))
-            .forEach(job -> {
-                job.markFailed("服务重启，分析任务已中断，请重新点击分析。");
+            .peek(job -> {
+                if (job.getStatus() == ProjectAnalysisJobStatus.QUEUED) return;
+                if (job.getStatus() == ProjectAnalysisJobStatus.CANCEL_REQUESTED) {
+                    job.markCancelled();
+                } else if (modelMayHaveBeenCalled(job.getStage())) {
+                    job.markInterrupted(false, "服务重启时模型请求状态未知，未自动重发以避免重复计费。请确认后重新运行。");
+                } else {
+                    job.markInterrupted(true, "服务重启中断了任务，尚未产生模型费用，可以安全重新运行。");
+                }
                 jobRepository.save(job);
-            });
+            })
+            .filter(job -> job.getStatus() == ProjectAnalysisJobStatus.QUEUED)
+            .map(ProjectAnalysisJob::getId)
+            .toList());
+        if (queued != null) queued.forEach(id -> jobRepository.findById(id).ifPresent(this::enqueue));
+    }
+
+    private boolean modelMayHaveBeenCalled(String stage) {
+        if (stage == null) return false;
+        return stage.contains("MODEL") || stage.contains("PERSIST") || stage.contains("DATABASE");
     }
 
     private java.util.Optional<ProjectAnalysisJob> activeJob(UUID projectId, ProjectAnalysisJobType type, String path) {
@@ -186,6 +222,21 @@ public class ProjectAnalysisJobService {
     private ProjectSpace findOwnedProject(UUID userId, UUID projectId) {
         return projectRepository.findByIdAndUserId(projectId, userId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "项目不存在", HttpStatus.NOT_FOUND));
+    }
+
+    private ProjectSpace findOwnedProjectForUpdate(UUID userId, UUID projectId) {
+        return projectRepository.findLockedByIdAndUserId(projectId, userId)
+            .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "项目不存在", HttpStatus.NOT_FOUND));
+    }
+
+    private String fingerprint(ProjectAnalysisJobType type, String input) {
+        String normalized = type + "\n" + (input == null ? "" : input.trim());
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(normalized.getBytes(StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("当前 Java 环境不支持 SHA-256", exception);
+        }
     }
 
     private ProjectAnalysisJobResponse toResponse(ProjectAnalysisJob job) {
@@ -260,7 +311,26 @@ public class ProjectAnalysisJobService {
             job.getInputSummary(),
             job.getDiagnosticsJson(),
             job.isModelReturned(),
-            job.isFailureAcknowledged()
+            job.isFailureAcknowledged(),
+            job.getQueuedAt(),
+            job.getHeartbeatAt(),
+            job.getCancellationRequestedAt(),
+            job.getCancelledAt(),
+            job.getAttemptCount(),
+            job.getMaxAttempts(),
+            job.getRequestCount(),
+            job.getMaxRequestCount(),
+            job.getPromptTokens(),
+            job.getCompletionTokens(),
+            job.getTotalTokens(),
+            job.getMaxTotalTokens(),
+            job.getElapsedMs(),
+            job.getMaxDurationMs(),
+            job.getIdempotencyKey(),
+            job.getInputFingerprint(),
+            job.getFailureCode(),
+            job.getRestartRecoveryState(),
+            job.getQueuePosition()
         );
     }
 

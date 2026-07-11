@@ -1,6 +1,14 @@
 # ProjectFlow
 
-ProjectFlow V3.3.6 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+ProjectFlow V3.3.7 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+
+## V3.3.7 Real Acceptance and Reliable Jobs
+
+- Analysis jobs now persist queue, heartbeat, cancellation, retry, interruption, budget, token, idempotency, fingerprint, failure-code, and restart-recovery state. Duplicate active requests return the same job ID.
+- Users can cancel queued or running change and capability analysis. Safe checkpoints stop later model calls and formal writes; old successful results and confirmed content remain unchanged.
+- A bounded executor, bounded model-request semaphore, global active limit, queue rejection state, three-request task budget, 10-minute duration budget, and 60,000-token budget prevent uncontrolled resource use.
+- Service restart requeues untouched queued jobs, marks pre-model interruptions retryable, and never automatically replays a model request whose billing state is unknown.
+- CI blocks regressions through backend/H2 tests, PostgreSQL Testcontainers, TypeScript and production build, Playwright browser E2E, and a basic committed-secret scan. Real DeepSeek validation is optional and reports `SKIPPED` without a safe key.
 
 ## V3.3.6 Batch Sediment Review and Capability Closure
 
@@ -46,7 +54,7 @@ ProjectFlow V3.3.6 is a local-first tool for AI-assisted solo developers to unde
 
 It is built for developers who use agents such as Codex, Claude Code, or other coding assistants to modify real projects and then need a clear way to understand what changed, review the evidence, maintain a project profile, and generate reusable output such as daily reviews, README material, reports, and resume-ready summaries.
 
-## V3.3.6 Workflow
+## V3.3.7 Workflow
 
 ProjectFlow is not a Kanban board, daily-report generator, or hosted PR/CI system. Its primary workflow is:
 
@@ -114,7 +122,7 @@ ProjectFlow/
 +-- .projectflow/             local agent protocol/context/runtime data
 +-- docker-compose.yml        PostgreSQL and Redis mode
 +-- .env.example              repo-safe environment template
-+-- start.bat                 simple V3.3.6 Windows entry
++-- start.bat                 simple V3.3.7 Windows entry
 +-- start-projectflow.bat     embedded Windows launcher
 +-- start-projectflow.ps1     Docker/team startup orchestration
 `-- README.md
@@ -154,6 +162,25 @@ npm.cmd run build
 
 cd ..\backend
 C:\Users\Administrator\Desktop\apache-maven-3.9.9\bin\mvn.cmd -q test
+
+# PostgreSQL Testcontainers（需要 Docker；CI 中为阻断门禁）
+cd backend
+mvn.cmd -Ppostgres-it verify
+
+# 浏览器端真实前后端流程
+cd ..\frontend
+npm.cmd run test:e2e
+
+# 前端契约、类型和生产构建
+npm.cmd run test:contracts
+npm.cmd run lint
+npm.cmd run build
+
+# 可选真实 DeepSeek，小输入且最多 3 次请求
+cd ..\backend
+$env:PROJECTFLOW_RUN_REAL_MODEL='true'
+$env:DEEPSEEK_API_KEY='<安全测试 Key>'
+mvn.cmd -Ppostgres-it -Dit.test=RealDeepSeekIT verify
 ```
 
 Embedded local data can be exported with:

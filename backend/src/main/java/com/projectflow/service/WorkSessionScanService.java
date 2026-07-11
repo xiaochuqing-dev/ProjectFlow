@@ -111,6 +111,7 @@ public class WorkSessionScanService {
 
     public WorkSessionScanResponse scan(UUID userId, UUID projectId, UUID jobId) {
         long scanStarted = System.nanoTime();
+        ensureJobActive(jobId);
         ProjectSpace project = projectRepository.findByIdAndUserId(projectId, userId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
         ProjectMemory memory = memoryRepository.findByProjectId(project.getId())
@@ -119,6 +120,7 @@ public class WorkSessionScanService {
 
         List<String> warnings = new ArrayList<>();
         advanceStage(jobId, "GIT_SCAN", "正在读取本地 Git 提交与工作区变化");
+        ensureJobActive(jobId);
         long gitStarted = System.nanoTime();
         String branchName = runGit(projectRoot, warnings, "branch", "--show-current").trim();
         ScanPlan scanPlan = pendingChangeScanService.prepare(projectRoot, project.getId(), branchName);
@@ -129,12 +131,14 @@ public class WorkSessionScanService {
         List<ChangeAtom> agentResultAtoms = readAgentResultAtoms(projectRoot, warnings);
         WorkSessionCandidateResponse uncommitted = uncommittedEvidence.hasChanges() ? uncommittedEvidence.toResponse() : null;
         long gitScanMs = elapsedMs(gitStarted);
+        ensureJobActive(jobId);
 
         advanceStage(jobId, "GITHUB_INSPECT", "正在检查 GitHub 状态");
         long githubStarted = System.nanoTime();
         GitHubStatusResponse github = gitHubCliService.inspect(projectRoot);
         long githubInspectMs = elapsedMs(githubStarted);
         warnings.addAll(github.warnings());
+        ensureJobActive(jobId);
         List<WorkSessionCandidateResponse> sessions = new ArrayList<>();
         if (uncommitted != null) {
             sessions.add(uncommitted);
@@ -167,14 +171,17 @@ public class WorkSessionScanService {
 
         List<SegmentDraft> drafts = developmentSegmentationService.group(atoms);
         advanceStage(jobId, "MODEL_ENRICH", "正在调用模型分析开发推进段（可能需要几分钟，任务会继续运行）");
+        ensureJobActive(jobId);
         long modelStarted = System.nanoTime();
         var enrichment = modelSegmentEnricher.enrichWithDiagnostics(userId, atoms, drafts, snapshot);
         long modelSegmentMs = elapsedMs(modelStarted);
         drafts = enrichment.segments();
         if (!enrichment.fallbackReason().isBlank()) warnings.add(enrichment.fallbackReason());
         for (String qw : enrichment.qualityWarnings()) warnings.add(qw);
+        ensureJobActive(jobId);
 
         advanceStage(jobId, "PERSIST", "正在分类保存模型结果或本地事实草稿");
+        ensureJobActive(jobId);
         long totalScanMs = elapsedMs(scanStarted);
         String analysisScopeJson = buildAnalysisScopeJson(snapshot, enrichment, worktreeDirty, github);
         ChangeBatchResponse batch = pendingChangeScanService.persist(
@@ -189,6 +196,7 @@ public class WorkSessionScanService {
             // 任务级模型问题只在 batch 展示一次，不复制到每个本地事实摘要卡片。
             new SegmentDiagnostics(enrichment.mode(), enrichment.providerName(), "", github.status(), github.commitUrlTemplate())
         );
+        ensureJobActive(jobId);
         projectSedimentService.createSuggestions(project.getId(), segments);
         batch = pendingChangeScanService.finish(batch.id(), segments.size(), elapsedMs(scanStarted));
         advanceStage(jobId, "SUCCEEDED", "分析完成");
@@ -203,6 +211,14 @@ public class WorkSessionScanService {
             segments,
             scanPlan.firstScan()
         );
+    }
+
+    private void ensureJobActive(UUID jobId) {
+        if (jobId == null) return;
+        ProjectAnalysisJob job = jobRepository.findById(jobId).orElse(null);
+        if (job != null && (job.isCancellationRequested() || job.isTerminal())) {
+            throw new java.util.concurrent.CancellationException("分析任务已停止");
+        }
     }
 
     // V3.3.3: 推进 job 阶段，让前端轮询时看到"现在在做什么"。

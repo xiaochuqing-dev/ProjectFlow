@@ -8,6 +8,7 @@ import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,8 @@ public class ModelGatewayService {
     private static final int COMPACT_OUTPUT_MAX_TOKENS = 2_000;
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(8);
     private static final double MAX_STRUCTURED_TEMPERATURE = 0.3;
+    // 单机最多并发 4 个模型 HTTP 请求，避免连接和 Provider 配额被耗尽。
+    private static final Semaphore MODEL_REQUEST_SLOTS = new Semaphore(4, true);
     private final Duration modelRequestTimeout;
 
     private final ObjectMapper objectMapper;
@@ -122,7 +125,13 @@ public class ModelGatewayService {
         for (int attempt = 1; attempt <= allowedAttempts; attempt++) {
             long startedAt = System.nanoTime();
             try {
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                MODEL_REQUEST_SLOTS.acquire();
+                HttpResponse<String> response;
+                try {
+                    response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                } finally {
+                    MODEL_REQUEST_SLOTS.release();
+                }
                 if (response.statusCode() >= 200 && response.statusCode() < 300) {
                     return parseModelResponse(
                         response.body(), provider, taskPolicyMaxTokens, effectiveMaxTokens, effectiveTemperature,

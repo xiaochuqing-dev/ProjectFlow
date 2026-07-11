@@ -8,9 +8,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.PostLoad;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "project_analysis_jobs")
@@ -62,6 +64,64 @@ public class ProjectAnalysisJob {
     @Column(name = "completed_at")
     private Instant completedAt;
 
+    @Column(name = "queued_at")
+    private Instant queuedAt;
+
+    @Column(name = "heartbeat_at")
+    private Instant heartbeatAt;
+
+    @Column(name = "cancellation_requested_at")
+    private Instant cancellationRequestedAt;
+
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
+
+    @Column(name = "attempt_count")
+    private Integer attemptCount = 0;
+
+    @Column(name = "max_attempts")
+    private Integer maxAttempts = 2;
+
+    @Column(name = "request_count")
+    private Integer requestCount = 0;
+
+    @Column(name = "max_request_count")
+    private Integer maxRequestCount = 3;
+
+    @Column(name = "prompt_tokens")
+    private Integer promptTokens = 0;
+
+    @Column(name = "completion_tokens")
+    private Integer completionTokens = 0;
+
+    @Column(name = "total_tokens")
+    private Integer totalTokens = 0;
+
+    @Column(name = "max_total_tokens")
+    private Integer maxTotalTokens = 60000;
+
+    // 单个任务总耗时上限，单位：毫秒，默认 10 分钟。
+    @Column(name = "max_duration_ms")
+    private Long maxDurationMs = 600000L;
+
+    @Column(name = "idempotency_key", length = 128)
+    private String idempotencyKey;
+
+    @Column(name = "input_fingerprint", length = 128)
+    private String inputFingerprint;
+
+    @Column(name = "failure_code", length = 80)
+    private String failureCode;
+
+    @Column(name = "restart_recovery_state", length = 40)
+    private String restartRecoveryState = "NONE";
+
+    @Column(name = "queue_position")
+    private Integer queuePosition = 0;
+
+    @Version
+    private Long version;
+
     // V3.3.3: 分析进度可视化。stage 是当前阶段枚举字符串，stageMessage 是面向用户的中文说明。
     @Column(name = "stage", length = 40)
     private String stage = "";
@@ -103,6 +163,7 @@ public class ProjectAnalysisJob {
     void prePersist() {
         Instant now = Instant.now();
         this.createdAt = now;
+        this.queuedAt = now;
         this.updatedAt = now;
         if (this.currentStepStartedAt == null) {
             this.currentStepStartedAt = now;
@@ -114,9 +175,28 @@ public class ProjectAnalysisJob {
         this.updatedAt = Instant.now();
     }
 
+    @PostLoad
+    void applyLegacyDefaults() {
+        if (attemptCount == null) attemptCount = 0;
+        if (maxAttempts == null || maxAttempts < 1) maxAttempts = 2;
+        if (requestCount == null) requestCount = 0;
+        if (maxRequestCount == null || maxRequestCount < 1) maxRequestCount = 3;
+        if (promptTokens == null) promptTokens = 0;
+        if (completionTokens == null) completionTokens = 0;
+        if (totalTokens == null) totalTokens = 0;
+        if (maxTotalTokens == null || maxTotalTokens < 1) maxTotalTokens = 60000;
+        if (maxDurationMs == null || maxDurationMs < 1) maxDurationMs = 600000L;
+        if (restartRecoveryState == null) restartRecoveryState = "LEGACY";
+        if (queuePosition == null) queuePosition = 0;
+        if (queuedAt == null) queuedAt = createdAt;
+    }
+
     public void markRunning() {
         this.status = ProjectAnalysisJobStatus.RUNNING;
-        this.startedAt = Instant.now();
+        Instant now = Instant.now();
+        if (this.startedAt == null) this.startedAt = now;
+        this.heartbeatAt = now;
+        this.attemptCount = getAttemptCount() + 1;
         this.errorMessage = null;
         this.warningMessage = null;
         this.failureStage = null;
@@ -128,6 +208,91 @@ public class ProjectAnalysisJob {
         this.stage = stage == null ? "" : stage.trim();
         this.stageMessage = message == null ? "" : message.trim();
         this.currentStepStartedAt = Instant.now();
+        this.heartbeatAt = this.currentStepStartedAt;
+    }
+
+    public void configureExecution(String fingerprint, String idempotencyKey, int queuePosition) {
+        this.inputFingerprint = fingerprint;
+        this.idempotencyKey = idempotencyKey;
+        this.queuePosition = Math.max(0, queuePosition);
+    }
+
+    public void requestCancellation() {
+        if (isTerminal()) return;
+        Instant now = Instant.now();
+        this.status = ProjectAnalysisJobStatus.CANCEL_REQUESTED;
+        if (this.cancellationRequestedAt == null) this.cancellationRequestedAt = now;
+        this.stage = "CANCEL_REQUESTED";
+        this.stageMessage = "正在安全停止分析";
+        this.currentStepStartedAt = now;
+        this.heartbeatAt = now;
+    }
+
+    public void markCancelled() {
+        Instant now = Instant.now();
+        this.status = ProjectAnalysisJobStatus.CANCELLED;
+        this.cancelledAt = now;
+        this.completedAt = now;
+        this.stage = "CANCELLED";
+        this.stageMessage = "分析已取消，旧结果不受影响";
+        this.currentStepStartedAt = now;
+        this.heartbeatAt = now;
+    }
+
+    public void markInterrupted(boolean retryable, String message) {
+        Instant now = Instant.now();
+        this.status = retryable ? ProjectAnalysisJobStatus.RETRYABLE : ProjectAnalysisJobStatus.INTERRUPTED;
+        this.failureCode = retryable ? "SAFE_TO_RETRY" : "MODEL_REQUEST_STATE_UNKNOWN";
+        this.restartRecoveryState = retryable ? "USER_RETRY_ALLOWED" : "USER_CONFIRMATION_REQUIRED";
+        this.errorMessage = message;
+        this.completedAt = now;
+        this.stage = this.status.name();
+        this.stageMessage = message;
+        this.currentStepStartedAt = now;
+    }
+
+    public void markRejected(String message) {
+        markTerminalFailure(ProjectAnalysisJobStatus.REJECTED, "QUEUE_FULL", message, "任务未进入执行队列，未产生模型费用");
+    }
+
+    public void markExpired(String code, String message) {
+        markTerminalFailure(ProjectAnalysisJobStatus.EXPIRED, code, message, message);
+    }
+
+    private void markTerminalFailure(ProjectAnalysisJobStatus target, String code, String message, String stageMessage) {
+        Instant now = Instant.now();
+        this.status = target;
+        this.failureCode = code;
+        this.errorMessage = message;
+        this.completedAt = now;
+        this.stage = target.name();
+        this.stageMessage = stageMessage;
+        this.currentStepStartedAt = now;
+    }
+
+    public void recordModelRequest(int prompt, int completion, int total) {
+        this.requestCount = getRequestCount() + 1;
+        this.promptTokens = getPromptTokens() + Math.max(0, prompt);
+        this.completionTokens = getCompletionTokens() + Math.max(0, completion);
+        this.totalTokens = getTotalTokens() + Math.max(0, total);
+        this.heartbeatAt = Instant.now();
+    }
+
+    public boolean hasDurationBudget(Instant now) {
+        Instant base = startedAt == null ? (createdAt == null ? now : createdAt) : startedAt;
+        return java.time.Duration.between(base, now).toMillis() <= getMaxDurationMs();
+    }
+
+    public boolean hasRequestBudget() { return getRequestCount() < getMaxRequestCount(); }
+
+    public boolean hasTokenBudget() { return getTotalTokens() < getMaxTotalTokens(); }
+
+    public boolean isCancellationRequested() { return status == ProjectAnalysisJobStatus.CANCEL_REQUESTED; }
+
+    public boolean isTerminal() {
+        return status != ProjectAnalysisJobStatus.QUEUED
+            && status != ProjectAnalysisJobStatus.RUNNING
+            && status != ProjectAnalysisJobStatus.CANCEL_REQUESTED;
     }
 
     public void recordInputSummary(String summary) {
@@ -173,6 +338,7 @@ public class ProjectAnalysisJob {
         this.failureStage = this.stage;
         this.status = ProjectAnalysisJobStatus.FAILED;
         this.errorMessage = errorMessage;
+        this.failureCode = "EXECUTION_FAILED";
         this.completedAt = Instant.now();
         this.stage = "FAILED";
         this.stageMessage = "分析失败";
@@ -234,6 +400,50 @@ public class ProjectAnalysisJob {
     public Instant getCompletedAt() {
         return completedAt;
     }
+
+    public Instant getQueuedAt() { return queuedAt; }
+
+    public Instant getHeartbeatAt() { return heartbeatAt; }
+
+    public Instant getCancellationRequestedAt() { return cancellationRequestedAt; }
+
+    public Instant getCancelledAt() { return cancelledAt; }
+
+    public int getAttemptCount() { return attemptCount == null ? 0 : attemptCount; }
+
+    public int getMaxAttempts() { return maxAttempts == null ? 2 : maxAttempts; }
+
+    public int getRequestCount() { return requestCount == null ? 0 : requestCount; }
+
+    public int getMaxRequestCount() { return maxRequestCount == null ? 3 : maxRequestCount; }
+
+    public int getPromptTokens() { return promptTokens == null ? 0 : promptTokens; }
+
+    public int getCompletionTokens() { return completionTokens == null ? 0 : completionTokens; }
+
+    public int getTotalTokens() { return totalTokens == null ? 0 : totalTokens; }
+
+    public int getMaxTotalTokens() { return maxTotalTokens == null ? 60000 : maxTotalTokens; }
+
+    public long getMaxDurationMs() { return maxDurationMs == null ? 600000L : maxDurationMs; }
+
+    public long getElapsedMs() {
+        if (createdAt == null) return 0;
+        Instant end = completedAt == null ? Instant.now() : completedAt;
+        return Math.max(0, java.time.Duration.between(createdAt, end).toMillis());
+    }
+
+    public String getIdempotencyKey() { return idempotencyKey; }
+
+    public String getInputFingerprint() { return inputFingerprint; }
+
+    public String getFailureCode() { return failureCode; }
+
+    public String getRestartRecoveryState() { return restartRecoveryState; }
+
+    public int getQueuePosition() { return queuePosition == null ? 0 : queuePosition; }
+
+    public Long getVersion() { return version; }
 
     public String getStage() {
         return stage;

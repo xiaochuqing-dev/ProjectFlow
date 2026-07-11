@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  allowedDevOrigins: ["127.0.0.1"],
   async headers() {
     return [
       {
@@ -15,7 +16,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' http://127.0.0.1:8080 http://localhost:8080",
+              `connect-src 'self' http://127.0.0.1:${process.env.NEXT_PUBLIC_API_PORT ?? "8080"} http://localhost:${process.env.NEXT_PUBLIC_API_PORT ?? "8080"}`,
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

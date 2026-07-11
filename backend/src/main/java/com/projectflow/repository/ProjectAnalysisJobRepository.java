@@ -21,4 +21,13 @@ public interface ProjectAnalysisJobRepository extends JpaRepository<ProjectAnaly
         String filePath,
         List<ProjectAnalysisJobStatus> statuses
     );
+
+    Optional<ProjectAnalysisJob> findFirstByProjectIdAndJobTypeAndInputFingerprintAndStatusInOrderByCreatedAtDesc(
+        UUID projectId,
+        ProjectAnalysisJobType jobType,
+        String inputFingerprint,
+        List<ProjectAnalysisJobStatus> statuses
+    );
+
+    long countByStatusIn(List<ProjectAnalysisJobStatus> statuses);
 }

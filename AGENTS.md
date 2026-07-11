@@ -1,9 +1,19 @@
-<!-- PROJECTFLOW V3.3.6 CONTEXT START -->
-ProjectFlow 当前版本为 V3.3.6。后续 Agent 必须按“待整理变更 -> 开发推进段 -> 批次化沉淀处理 -> 项目沉淀 -> 能力分析”理解产品，不要回到旧的“今日开发 / 项目资产字段”主线。
+<!-- PROJECTFLOW V3.3.7 CONTEXT START -->
+ProjectFlow 当前版本为 V3.3.7。后续 Agent 必须按“待整理变更 -> 开发推进段 -> 批次化沉淀处理 -> 项目沉淀 -> 能力分析”理解产品，不要回到旧的“今日开发 / 项目资产字段”主线。
 
 开始任务前请阅读 `.projectflow/AGENT_PROTOCOL.md`。完成开发任务后，按协议把结果写入 `.projectflow/agent-results/`。不要删除添加项目、zip 导入、本地项目绑定、模型配置、登录等核心入口。
 
 开发推进段必须描述真实开发结果、用户或开发者可感知变化、验证情况和不确定项。禁止用 backend/frontend/docs/config 等目录名、提交数量或“开发推进”空话替代具体摘要。能力与成果页以结构化 Capability Card 为主，旧 `completedCapabilities` 仅作兼容档案。
+
+V3.3.7 关键决策（后续 Agent 必须遵守）：
+- 长分析只能通过持久化 Job 执行；重复输入复用活动 job，不得重复调用模型或重复正式写入。
+- 取消必须在外部调用、紧凑重试和持久化前检查；取消后不得新增正式结果，已确认沉淀、能力卡片和旧成功结果必须保留。
+- QUEUED、RUNNING、CANCEL_REQUESTED、CANCELLED、INTERRUPTED/RETRYABLE、EXPIRED、REJECTED、FAILED 必须保持不同语义和人话提示。
+- 线程池、队列、模型 HTTP 并发、请求次数、总耗时和 token 都必须有上限；401/403、取消、配置错误和保存失败不得盲目重试。
+- 服务重启只自动恢复尚未外部调用的排队任务；模型请求状态未知时禁止自动重发，避免重复计费。
+- 不得把 Mock、固定响应或静态契约描述为真实 PostgreSQL、真实浏览器或真实 DeepSeek 联调。无安全 Key 时真实模型测试必须标记 SKIPPED。
+- 任务 API 必须同时校验 userId 与 projectId 归属，不返回 Key、Authorization、reasoning 原文、请求体、原始响应或未脱敏绝对路径。
+- 开发完成至少运行后端测试、H2 兼容、前端生产构建和 Playwright；PostgreSQL Testcontainers 在 Docker/CI 环境运行并作为阻断门禁。
 
 V3.3.6 关键决策（后续 Agent 必须遵守）：
 - 工作台只显示分析批次摘要；沉淀处理中心按时间和批次组织，并默认逐条处理正式建议。
@@ -36,7 +46,7 @@ V3.3.3 仍有效的关键决策：
 - 多来源证据（本地 Git / 工作区 diff / GitHub / Agent result / 扫描范围）要整理成分析输入快照交给模型，模型基于证据灵活判断真实开发状态，不写死优先级。
 - 需要模型理解的入口（分析新变化、分析项目能力）必须有模型配置前置检查；未配置模型时不生成低质量本地模板结果，明确提示去配置模型。
 - 规则负责证据事实，模型负责灵活理解，用户负责最终确认。
-<!-- PROJECTFLOW V3.3.6 CONTEXT END -->
+<!-- PROJECTFLOW V3.3.7 CONTEXT END -->
 
 # ProjectFlow Local Rules
 

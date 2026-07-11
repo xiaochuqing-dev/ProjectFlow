@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, RefreshCw, ScanLine } from "lucide-react";
+import { ArrowRight, RefreshCw, RotateCcw, ScanLine, XCircle } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
 import type { EvidenceBundle, GitHubStatus, ProjectAnalysisJob, WorkSessionCandidate, WorkSessionScanResult } from "@/lib/api";
 import { compactProjectPath } from "@/lib/project-insights";
@@ -19,6 +19,8 @@ type PendingChangesPanelProps = {
   onShowGitHubLogin?: () => void;
   // V3.3.3: 当前活跃分析任务（用于显示阶段进度）。
   activeJob?: ProjectAnalysisJob | null;
+  onCancelJob?: () => void;
+  onRetryJob?: () => void;
 };
 
 // V3.3.3: 分析阶段中文映射。用户必须能看懂"现在在做什么"。
@@ -43,6 +45,8 @@ export function PendingChangesPanel({
   onRefreshGitHub,
   refreshingGitHub,
   activeJob,
+  onCancelJob,
+  onRetryJob,
 }: PendingChangesPanelProps) {
   const segments = scan?.segments ?? [];
   const batch = scan?.batch;
@@ -62,7 +66,7 @@ export function PendingChangesPanel({
 
   const stage = activeJob?.stage ?? "";
   const stageMessage = activeJob?.stageMessage ?? "";
-  const showProgress = scanning && stage && stage !== "SUCCEEDED" && stage !== "FAILED";
+  const showProgress = scanning && stage && !["SUCCEEDED", "SUCCEEDED_WITH_WARNINGS", "FAILED", "CANCELLED", "EXPIRED", "REJECTED", "INTERRUPTED", "RETRYABLE"].includes(stage);
   const elapsedMs = computeElapsedMs(activeJob);
   const isModelStage = stage === "MODEL_ENRICH";
 
@@ -79,16 +83,24 @@ export function PendingChangesPanel({
           </div>
           <p className="mt-1 text-xs leading-5 text-muted">从上次确认点读取本地 Git 与 Agent result，再归并为可确认的开发推进段。</p>
         </div>
-        <Button
-          variant="primary"
-          size="sm"
-          disabled={!hasProjectPath || scanning}
-          onClick={onScan}
-          title={hasProjectPath ? "分析从上次整理点到当前 HEAD 的新变化" : "先绑定本地项目路径"}
-        >
-          {scanning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
-          分析新变化
-        </Button>
+        <div className="flex items-center gap-2">
+          {activeJob && (activeJob.status === "QUEUED" || activeJob.status === "RUNNING") ? (
+            <Button variant="secondary" size="sm" onClick={onCancelJob}><XCircle className="h-3.5 w-3.5" />取消分析</Button>
+          ) : null}
+          {activeJob && ["CANCELLED", "FAILED", "INTERRUPTED", "RETRYABLE", "EXPIRED", "REJECTED"].includes(activeJob.status) ? (
+            <Button variant="secondary" size="sm" onClick={onRetryJob}><RotateCcw className="h-3.5 w-3.5" />重新运行</Button>
+          ) : null}
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={!hasProjectPath || scanning}
+            onClick={onScan}
+            title={hasProjectPath ? "分析从上次整理点到当前 HEAD 的新变化" : "先绑定本地项目路径"}
+          >
+            {scanning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
+            分析新变化
+          </Button>
+        </div>
       </div>
 
       {/* V3.3.4: GitHub 简要状态。接入与登录入口已前移到「项目接入」区域，这里只保留状态摘要。 */}
@@ -125,11 +137,20 @@ export function PendingChangesPanel({
             {elapsedMs > 0 ? <span className="text-muted">已等待 {formatElapsed(elapsedMs)}</span> : null}
           </div>
           {stageMessage ? <p className="mt-1 text-slate-600">{stageMessage}</p> : null}
+          {activeJob?.status === "QUEUED" ? <p className="mt-1 text-slate-500">前方约 {activeJob.queuePosition} 个任务；尚未发起模型请求，不会产生模型费用。</p> : null}
+          {activeJob ? <p className="mt-1 text-slate-500">模型请求 {activeJob.requestCount}/{activeJob.maxRequestCount} 次 · Token {activeJob.totalTokens}/{activeJob.maxTotalTokens}</p> : null}
           {isModelStage ? (
             <p className="mt-1 text-slate-500">
               模型正在分析提交、文件、diff 和 Agent result；这一步可能需要几分钟。页面可以离开，任务会继续运行，ProjectFlow 会等待完整结果。
             </p>
           ) : null}
+        </div>
+      ) : null}
+
+      {activeJob && ["CANCELLED", "INTERRUPTED", "RETRYABLE", "EXPIRED", "REJECTED"].includes(activeJob.status) ? (
+        <div className="border-b border-line bg-amber-50 px-5 py-3 text-xs leading-5 text-amber-900">
+          <p className="font-semibold">{jobStatusLabel(activeJob.status)}</p>
+          <p>{activeJob.stageMessage || activeJob.errorMessage || "任务已停止，旧成功结果仍然保留。"}</p>
         </div>
       ) : null}
 
@@ -249,6 +270,17 @@ export function PendingChangesPanel({
       ) : null}
     </Card>
   );
+}
+
+function jobStatusLabel(status: ProjectAnalysisJob["status"]): string {
+  const labels: Partial<Record<ProjectAnalysisJob["status"], string>> = {
+    CANCELLED: "分析已取消",
+    INTERRUPTED: "服务重启导致任务中断",
+    RETRYABLE: "任务中断，可安全重新运行",
+    EXPIRED: "任务已超过总预算",
+    REJECTED: "当前队列已满，任务未执行",
+  };
+  return labels[status] ?? "任务已停止";
 }
 
 function Diagnostic({ label, value }: { label: string; value: string }) {

@@ -2,7 +2,13 @@
 
 ## System Overview
 
-ProjectFlow uses a separated frontend and backend architecture. The current V3.3.6 product spine is a developer workbench that turns real project activity into confirmed project sediment and then into traceable capability analysis.
+ProjectFlow uses a separated frontend and backend architecture. The current V3.3.7 product spine is a developer workbench that turns real project activity into confirmed project sediment and then into traceable capability analysis.
+
+## V3.3.7 Job Execution Boundary
+
+HTTP creation requests only validate ownership, lock the project row, reuse or persist a job, and submit its ID to the bounded executor. External Git, GitHub and model waits run without method-level database transactions. Each stage reloads cancellation and budget state; formal results are persisted only after a final checkpoint. Queue saturation becomes REJECTED rather than a model failure.
+
+The restart listener requeues untouched QUEUED jobs. RUNNING work before model dispatch becomes RETRYABLE; work at or beyond a model stage becomes INTERRUPTED because automatic replay could duplicate billing. Completed and confirmed records are never deleted by cancellation or recovery.
 
 ## V3.3.6 Batch Review and Transaction Boundaries
 

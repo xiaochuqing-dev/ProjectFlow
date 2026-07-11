@@ -920,7 +920,18 @@ export type ProjectFileAnalysis = {
   diagnostics: ModelCallDiagnostics | null;
 };
 
-export type ProjectAnalysisJobStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "SUCCEEDED_WITH_WARNINGS" | "FAILED";
+export type ProjectAnalysisJobStatus =
+  | "QUEUED"
+  | "RUNNING"
+  | "CANCEL_REQUESTED"
+  | "CANCELLED"
+  | "SUCCEEDED"
+  | "SUCCEEDED_WITH_WARNINGS"
+  | "FAILED"
+  | "INTERRUPTED"
+  | "RETRYABLE"
+  | "EXPIRED"
+  | "REJECTED";
 export type ProjectAnalysisJobType = "PROJECT" | "FILE" | "CAPABILITY_INTERPRET" | "WORK_SESSION_SCAN" | "CAPABILITY_CARD_ANALYSIS";
 
 export type ProjectAnalysisJob = {
@@ -976,6 +987,25 @@ export type ProjectAnalysisJob = {
   diagnosticsJson: string | null;
   modelReturned: boolean;
   failureAcknowledged: boolean;
+  queuedAt: string | null;
+  heartbeatAt: string | null;
+  cancellationRequestedAt: string | null;
+  cancelledAt: string | null;
+  attemptCount: number;
+  maxAttempts: number;
+  requestCount: number;
+  maxRequestCount: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  maxTotalTokens: number;
+  elapsedMs: number;
+  maxDurationMs: number;
+  idempotencyKey: string | null;
+  inputFingerprint: string | null;
+  failureCode: string | null;
+  restartRecoveryState: string | null;
+  queuePosition: number;
 };
 
 export type ProjectAnalysisRecordType = "PROJECT" | "FILE";
@@ -1421,6 +1451,20 @@ export function previewProjectChangeConfirmation(
 
 export function acknowledgeAnalysisFailure(token: string, jobId: string): Promise<ProjectAnalysisJob> {
   return requestJson<ProjectAnalysisJob>(`/analysis-jobs/${jobId}/acknowledge`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function cancelProjectAnalysisJob(token: string, jobId: string): Promise<ProjectAnalysisJob> {
+  return requestJson<ProjectAnalysisJob>(`/analysis-jobs/${jobId}/cancel`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function retryProjectAnalysisJob(token: string, jobId: string): Promise<ProjectAnalysisJob> {
+  return requestJson<ProjectAnalysisJob>(`/analysis-jobs/${jobId}/retry`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });
