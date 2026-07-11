@@ -6,7 +6,7 @@ Use this file as the first read for substantial ProjectFlow work. It is a compac
 
 ## Product Position
 
-ProjectFlow V3.3.6 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
+ProjectFlow V3.3.7 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
 
 Current direction:
 
@@ -15,6 +15,13 @@ Current direction:
 - Rules collect and validate facts, models interpret them, and users make the final confirmation.
 - AI/model calls are candidate generators only; user confirmation is required before treating output as official project facts.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
+
+V3.3.7 focus:
+
+- Real acceptance is layered into H2/unit tests, PostgreSQL Testcontainers, production frontend build, Playwright with real backend/frontend processes, and optional explicitly enabled DeepSeek validation.
+- Analysis jobs persist cancellation, heartbeat, queue position, idempotency fingerprint, request/time/token budgets, interruption and restart-recovery meaning.
+- Duplicate active input returns the existing job; bounded executors and explicit rejection prevent unlimited work; cancellation checkpoints stop later model calls and formal persistence.
+- Restart recovery requeues untouched queued work only. A potentially sent model request is never replayed automatically because its billing state is unknown.
 
 V3.3.6 focus:
 

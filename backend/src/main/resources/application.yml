@@ -42,6 +42,13 @@ projectflow:
     # V3.3.4 小阶段修复：复杂模型分析（开发推进段归并 / 能力分析）需要数分钟。
     # 默认 240 秒，覆盖 DeepSeek 多 commit 分析场景；可通过环境变量覆盖。
     request-timeout-seconds: ${PROJECTFLOW_MODEL_TIMEOUT_SECONDS:240}
+  jobs:
+    core-pool-size: ${PROJECTFLOW_JOB_CORE_THREADS:2}
+    max-pool-size: ${PROJECTFLOW_JOB_MAX_THREADS:4}
+    queue-capacity: ${PROJECTFLOW_JOB_QUEUE_CAPACITY:16}
+    global-active-limit: ${PROJECTFLOW_JOB_GLOBAL_ACTIVE_LIMIT:20}
+    # 服务关闭等待时间，单位：秒。
+    shutdown-wait-seconds: ${PROJECTFLOW_JOB_SHUTDOWN_WAIT_SECONDS:30}
 
 management:
   endpoints:

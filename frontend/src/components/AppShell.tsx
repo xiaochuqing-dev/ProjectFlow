@@ -32,7 +32,7 @@ export function AppShell({ title, eyebrow, actions, children }: AppShellProps) {
             PF
           </div>
           <div>
-            <p className="text-base font-semibold text-ink">ProjectFlow <span className="text-xs font-medium text-muted">V3.3.6</span></p>
+            <p className="text-base font-semibold text-ink">ProjectFlow <span className="text-xs font-medium text-muted">V3.3.7</span></p>
             <p className="text-xs text-muted">开发变化与项目沉淀</p>
           </div>
         </div>

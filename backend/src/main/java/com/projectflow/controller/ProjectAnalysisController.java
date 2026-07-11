@@ -93,6 +93,24 @@ public class ProjectAnalysisController {
         return ApiResponse.ok(projectAnalysisJobService.acknowledgeFailure(user.id(), jobId));
     }
 
+    @PostMapping("/analysis-jobs/{jobId}/cancel")
+    ApiResponse<ProjectAnalysisJobResponse> cancelAnalysisJob(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID jobId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectAnalysisJobService.cancel(user.id(), jobId));
+    }
+
+    @PostMapping("/analysis-jobs/{jobId}/retry")
+    ApiResponse<ProjectAnalysisJobResponse> retryAnalysisJob(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID jobId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(projectAnalysisJobService.retry(user.id(), jobId));
+    }
+
     @GetMapping("/projects/{projectId}/analysis-jobs")
     ApiResponse<List<ProjectAnalysisJobResponse>> listAnalysisJobs(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,

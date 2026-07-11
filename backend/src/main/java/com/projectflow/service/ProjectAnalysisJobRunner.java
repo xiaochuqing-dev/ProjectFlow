@@ -60,41 +60,52 @@ public class ProjectAnalysisJobRunner {
     @Async
     public void execute(UUID jobId) {
         ProjectAnalysisJob job = jobRepository.findById(jobId).orElse(null);
-        if (job == null || job.getStatus() == ProjectAnalysisJobStatus.SUCCEEDED
-            || job.getStatus() == ProjectAnalysisJobStatus.SUCCEEDED_WITH_WARNINGS
-            || job.getStatus() == ProjectAnalysisJobStatus.FAILED) {
+        if (job == null || job.isTerminal()) {
             return;
         }
 
         long startedAt = System.nanoTime();
         try {
+            if (!checkpoint(jobId, false)) return;
             job.markRunning();
             jobRepository.save(job);
 
             if (job.getJobType() == ProjectAnalysisJobType.PROJECT) {
+                if (!checkpoint(jobId, true)) return;
                 ProjectAnalysisResponse result = projectAnalysisService.runProjectAnalysis(job.getUserId(), job.getProjectId());
+                recordJobUsage(jobId, result.diagnostics());
+                if (!checkpoint(jobId, false)) return;
                 UUID recordId = projectAnalysisRecordService.createProjectAnalysisRecord(job.getUserId(), job.getProjectId(), result);
                 String resultJson = objectMapper.writeValueAsString(result);
                 markSucceeded(jobId, resultJson, recordId);
                 recordUsage(job, "PROJECT_ANALYSIS", result.providerName(), result.modelUsed(), result.diagnostics(), resultJson, startedAt);
             } else if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_INTERPRET) {
+                if (!checkpoint(jobId, true)) return;
                 CapabilityInterpretResponse result = projectMemoryService.interpretCapability(
                     job.getUserId(),
                     job.getProjectId(),
                     new CapabilityInterpretRequest(job.getFilePath() == null ? "" : job.getFilePath())
                 );
+                recordJobUsage(jobId, result.diagnostics());
+                if (!checkpoint(jobId, false)) return;
                 String resultJson = objectMapper.writeValueAsString(result);
                 markSucceeded(jobId, resultJson, null);
                 recordUsage(job, "CAPABILITY_INTERPRET", result.source(), !result.degraded(), result.diagnostics(), resultJson, startedAt);
             } else if (job.getJobType() == ProjectAnalysisJobType.WORK_SESSION_SCAN) {
+                if (!checkpoint(jobId, true)) return;
                 WorkSessionScanResponse result = workSessionScanService.scan(job.getUserId(), job.getProjectId(), job.getId());
+                recordScanUsage(jobId, result);
+                if (!checkpoint(jobId, false)) return;
                 String resultJson = objectMapper.writeValueAsString(result);
                 markSucceeded(jobId, resultJson, null);
             } else if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS) {
                 // V3.3.4: 能力分析异步化。卡片由 service 持久化，job 记录阶段与完成状态。
                 // resultJson 只存简要摘要，前端完成后重新拉取 capability-cards。
+                if (!checkpoint(jobId, true)) return;
                 var outcome = projectCapabilityService.analyzeWithOutcome(job.getUserId(), job.getProjectId(), job.getId());
                 var diagnostics = outcome.diagnostics();
+                recordJobUsage(jobId, diagnostics);
+                if (!checkpoint(jobId, false)) return;
                 String resultJson = objectMapper.writeValueAsString(new CapabilityAnalysisJobResult(
                     outcome.cards().size(), outcome.needsEvidenceCount(), diagnostics.rawResponsePresent(), diagnostics.repaired(),
                     diagnostics.recognizedItems(), diagnostics.discardedItems(), diagnostics.invalidSourceIndexes(),
@@ -121,17 +132,28 @@ public class ProjectAnalysisJobRunner {
                 }
                 recordCapabilityUsage(job, diagnostics, startedAt, outcome.hasWarnings());
             } else {
+                if (!checkpoint(jobId, true)) return;
                 ProjectFileAnalysisResponse result = projectAnalysisService.analyzeProjectFile(
                     job.getUserId(),
                     job.getProjectId(),
                     new ProjectFileAnalysisRequest(job.getFilePath())
                 );
+                recordJobUsage(jobId, result.diagnostics());
+                if (!checkpoint(jobId, false)) return;
                 UUID recordId = projectAnalysisRecordService.createFileAnalysisRecord(job.getUserId(), job.getProjectId(), result);
                 String resultJson = objectMapper.writeValueAsString(result);
                 markSucceeded(jobId, resultJson, recordId);
                 recordUsage(job, "FILE_ANALYSIS", result.providerName(), result.modelUsed(), result.diagnostics(), resultJson, startedAt);
             }
         } catch (Exception exception) {
+            ProjectAnalysisJob current = jobRepository.findById(jobId).orElse(null);
+            if (current == null || current.getStatus() == ProjectAnalysisJobStatus.CANCELLED
+                || current.getStatus() == ProjectAnalysisJobStatus.EXPIRED) return;
+            if (current.isCancellationRequested() || exception instanceof java.util.concurrent.CancellationException) {
+                current.markCancelled();
+                jobRepository.save(current);
+                return;
+            }
             LOGGER.warn("Project analysis job failed: jobId={}", jobId, exception);
             ProjectCapabilityService.CapabilityAnalysisException capabilityException =
                 exception instanceof ProjectCapabilityService.CapabilityAnalysisException value ? value : null;
@@ -148,6 +170,12 @@ public class ProjectAnalysisJobRunner {
 
     private void markSucceeded(UUID jobId, String resultJson, UUID recordId) {
         jobRepository.findById(jobId).ifPresent(job -> {
+            if (job.isCancellationRequested()) {
+                job.markCancelled();
+                jobRepository.save(job);
+                return;
+            }
+            if (job.isTerminal()) return;
             if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS) job.recordDiagnostics(resultJson, true);
             job.markSucceeded(resultJson, recordId);
             jobRepository.save(job);
@@ -173,10 +201,90 @@ public class ProjectAnalysisJobRunner {
 
     private void markSucceededWithWarnings(UUID jobId, String resultJson, String warning) {
         jobRepository.findById(jobId).ifPresent(job -> {
+            if (job.isCancellationRequested()) {
+                job.markCancelled();
+                jobRepository.save(job);
+                return;
+            }
+            if (job.isTerminal()) return;
             if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS) job.recordDiagnostics(resultJson, true);
             job.markSucceededWithWarnings(resultJson, null, warning);
             jobRepository.save(job);
         });
+    }
+
+    private boolean checkpoint(UUID jobId, boolean beforeModelRequest) {
+        ProjectAnalysisJob job = jobRepository.findById(jobId).orElse(null);
+        if (job == null || job.isTerminal()) return false;
+        if (job.isCancellationRequested()) {
+            job.markCancelled();
+            jobRepository.save(job);
+            return false;
+        }
+        if (!job.hasDurationBudget(java.time.Instant.now())) {
+            job.markExpired("DURATION_BUDGET_EXCEEDED", "任务超过 10 分钟总耗时预算，已停止后续请求。");
+            jobRepository.save(job);
+            return false;
+        }
+        if (beforeModelRequest && (!job.hasRequestBudget() || !job.hasTokenBudget())) {
+            job.markExpired("MODEL_BUDGET_EXCEEDED", "任务已达到模型请求或 token 总预算，未继续调用模型。");
+            jobRepository.save(job);
+            return false;
+        }
+        return true;
+    }
+
+    private void recordJobUsage(UUID jobId, ModelCallDiagnosticsResponse diagnostics) {
+        if (diagnostics == null) return;
+        jobRepository.findById(jobId).ifPresent(job -> {
+            int requests = Math.max(1, diagnostics.requestCount());
+            for (int index = 0; index < requests; index++) {
+                job.recordModelRequest(
+                    index == 0 ? diagnostics.promptTokens() : 0,
+                    index == 0 ? diagnostics.completionTokens() : 0,
+                    index == 0 ? diagnostics.totalTokens() : 0
+                );
+            }
+            job.recordDiagnostics(safeJson(diagnostics), diagnostics.contentPresent());
+            jobRepository.save(job);
+        });
+    }
+
+    private void recordJobUsage(UUID jobId, ProjectCapabilityService.CapabilityDiagnostics diagnostics) {
+        if (diagnostics == null) return;
+        jobRepository.findById(jobId).ifPresent(job -> {
+            int requests = diagnostics.compactRetryAttempted() ? 2 : 1;
+            for (int index = 0; index < requests; index++) {
+                job.recordModelRequest(
+                    index == 0 ? diagnostics.promptTokens() : 0,
+                    index == 0 ? diagnostics.completionTokens() : 0,
+                    index == 0 ? diagnostics.totalTokens() : 0
+                );
+            }
+            job.recordDiagnostics(safeJson(diagnostics), diagnostics.rawResponsePresent());
+            jobRepository.save(job);
+        });
+    }
+
+    private void recordScanUsage(UUID jobId, WorkSessionScanResponse result) {
+        if (result == null || result.batch() == null || result.batch().analysisScope() == null) return;
+        try {
+            var diagnostics = objectMapper.readTree(result.batch().analysisScope());
+            int requests = Math.max(0, diagnostics.path("requestCount").asInt(0));
+            jobRepository.findById(jobId).ifPresent(job -> {
+                for (int index = 0; index < requests; index++) {
+                    job.recordModelRequest(
+                        index == 0 ? diagnostics.path("promptTokens").asInt(0) : 0,
+                        index == 0 ? diagnostics.path("completionTokens").asInt(0) : 0,
+                        index == 0 ? diagnostics.path("totalTokens").asInt(0) : 0
+                    );
+                }
+                job.recordDiagnostics(result.batch().analysisScope(), diagnostics.path("contentPresent").asBoolean(requests > 0));
+                jobRepository.save(job);
+            });
+        } catch (JsonProcessingException ignored) {
+            // 扫描结果本身仍可使用，诊断 JSON 异常不应覆盖正式结果。
+        }
     }
 
     private void recordCapabilityUsage(

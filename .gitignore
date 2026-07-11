@@ -21,6 +21,9 @@ frontend/.npm-cache/
 out/
 dist/
 coverage/
+frontend/playwright-report/
+frontend/test-results/
+frontend/.e2e-data/
 *.tsbuildinfo
 
 # Java / Maven

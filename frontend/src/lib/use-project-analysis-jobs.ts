@@ -3,16 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import {
   analyzeProjectFile,
+  cancelProjectAnalysisJob,
   getProjectAnalysisJob,
   interpretCapability,
   listProjectAnalysisJobs,
   runProjectAnalysis,
+  retryProjectAnalysisJob,
   startProjectWorkSessionScan,
   type ProjectAnalysisJob,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
 
-const ACTIVE_STATUSES = new Set(["QUEUED", "RUNNING"]);
+const ACTIVE_STATUSES = new Set(["QUEUED", "RUNNING", "CANCEL_REQUESTED"]);
 
 export function useProjectAnalysisJobs(projectId: string) {
   const [jobs, setJobs] = useState<ProjectAnalysisJob[]>([]);
@@ -83,11 +85,26 @@ export function useProjectAnalysisJobs(projectId: string) {
       }
     }
 
+    let timer: number | undefined;
+    function scheduleRefresh() {
+      if (cancelled) return;
+      const failureDelay = Math.min(12_000, 1_200 * 2 ** refreshFailureCount.current);
+      const delay = document.hidden ? Math.max(5_000, failureDelay) : failureDelay;
+      timer = window.setTimeout(async () => {
+        await refreshActiveJobs();
+        scheduleRefresh();
+      }, delay);
+    }
+    function refreshWhenVisible() {
+      if (!document.hidden) void refreshActiveJobs();
+    }
     void refreshActiveJobs();
-    const interval = window.setInterval(refreshActiveJobs, 1200);
+    scheduleRefresh();
+    document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
+      if (timer) window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [activeJobKey]);
 
@@ -131,6 +148,22 @@ export function useProjectAnalysisJobs(projectId: string) {
     return job;
   }
 
+  async function cancelJob(jobId: string) {
+    const session = readSession();
+    if (!session) throw new Error("登录状态已失效");
+    const job = await cancelProjectAnalysisJob(session.accessToken, jobId);
+    setJobs((current) => mergeJobs(current, [job]));
+    return job;
+  }
+
+  async function retryJob(jobId: string) {
+    const session = readSession();
+    if (!session) throw new Error("登录状态已失效");
+    const job = await retryProjectAnalysisJob(session.accessToken, jobId);
+    setJobs((current) => mergeJobs(current, [job]));
+    return job;
+  }
+
   return {
     jobs,
     loadingJobs,
@@ -139,6 +172,8 @@ export function useProjectAnalysisJobs(projectId: string) {
     enqueueFileAnalysis,
     enqueueCapabilityInterpret,
     enqueueWorkSessionScan,
+    cancelJob,
+    retryJob,
   };
 }
 

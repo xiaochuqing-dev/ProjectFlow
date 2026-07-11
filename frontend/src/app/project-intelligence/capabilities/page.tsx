@@ -3,17 +3,19 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, ChevronDown, Clipboard, RefreshCw, Sparkles, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Clipboard, RefreshCw, RotateCcw, Sparkles, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Badge, Button, ProjectContextBar, Toast } from "@/components/ui";
 import { useProjectSelection } from "@/hooks/useProjectSelection";
 import {
   acknowledgeAnalysisFailure,
+  cancelProjectAnalysisJob,
   getCapabilityAnalysisOverview,
   getProjectAnalysisJob,
   getProjectMemory,
   listProjectAnalysisJobs,
   listProjectCapabilityCards,
+  retryProjectAnalysisJob,
   startCapabilityCardAnalysisJob,
   updateCapabilityCard,
   type CapabilityCard,
@@ -99,7 +101,7 @@ function CompletedCapabilitiesContent() {
         const history = (jobs as ProjectAnalysisJob[])
           .filter((job) => job.jobType === "CAPABILITY_CARD_ANALYSIS")
           .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-        const active = history.find((job) => job.status === "QUEUED" || job.status === "RUNNING");
+        const active = history.find((job) => job.status === "QUEUED" || job.status === "RUNNING" || job.status === "CANCEL_REQUESTED");
         setCapabilityJobs(history);
         setCapabilityJob(active ?? history[0] ?? null);
       })
@@ -109,7 +111,7 @@ function CompletedCapabilitiesContent() {
 
   // V3.3.4: 轮询正在运行的能力分析任务，完成后重新拉取能力卡片。
   useEffect(() => {
-    if (!capabilityJob || (capabilityJob.status !== "QUEUED" && capabilityJob.status !== "RUNNING")) {
+    if (!capabilityJob || !["QUEUED", "RUNNING", "CANCEL_REQUESTED"].includes(capabilityJob.status)) {
       if (pollRef.current) {
         window.clearInterval(pollRef.current);
         pollRef.current = null;
@@ -210,6 +212,30 @@ function CompletedCapabilitiesContent() {
     }
   }
 
+  async function cancelCapabilityJob() {
+    const session = readSession();
+    if (!session || !capabilityJob) return;
+    try {
+      const updated = await cancelProjectAnalysisJob(session.accessToken, capabilityJob.id);
+      setCapabilityJob(updated);
+      setCapabilityJobs((current) => [updated, ...current.filter((item) => item.id !== updated.id)]);
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "取消能力分析失败");
+    }
+  }
+
+  async function retryCapabilityJob() {
+    const session = readSession();
+    if (!session || !capabilityJob) return;
+    try {
+      const updated = await retryProjectAnalysisJob(session.accessToken, capabilityJob.id);
+      setCapabilityJob(updated);
+      setCapabilityJobs((current) => [updated, ...current.filter((item) => item.id !== updated.id)]);
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "重新运行能力分析失败");
+    }
+  }
+
   async function updateCard(card: CapabilityCard, action: "CONFIRM" | "IGNORE") {
     const session = readSession();
     if (!session) return;
@@ -237,7 +263,7 @@ function CompletedCapabilitiesContent() {
 
   const visibleCards = cards.filter((item) => item.status !== "IGNORED");
   const confirmedCount = visibleCards.filter((item) => item.status === "CONFIRMED").length;
-  const analyzing = startingJob || (capabilityJob?.status === "QUEUED" || capabilityJob?.status === "RUNNING") === true;
+  const analyzing = startingJob || (capabilityJob ? ["QUEUED", "RUNNING", "CANCEL_REQUESTED"].includes(capabilityJob.status) : false);
   const stage = capabilityJob?.stage ?? "";
   const stageMessage = capabilityJob?.stageMessage ?? "";
   const showProgress = analyzing && stage && stage !== "SUCCEEDED" && stage !== "SUCCEEDED_WITH_WARNINGS" && stage !== "FAILED";
@@ -270,6 +296,12 @@ function CompletedCapabilitiesContent() {
               <p className="mt-1 text-xs leading-5 text-slate-500">重新分析会替换未确认候选能力，已确认能力会保留。</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {capabilityJob && (capabilityJob.status === "QUEUED" || capabilityJob.status === "RUNNING") ? (
+                <Button onClick={cancelCapabilityJob} variant="secondary"><X className="h-4 w-4" />取消分析</Button>
+              ) : null}
+              {capabilityJob && ["CANCELLED", "FAILED", "INTERRUPTED", "RETRYABLE", "EXPIRED", "REJECTED"].includes(capabilityJob.status) ? (
+                <Button onClick={retryCapabilityJob} variant="secondary"><RotateCcw className="h-4 w-4" />重新运行</Button>
+              ) : null}
               <Button disabled={!selectedProjectId || analyzing} loading={analyzing} onClick={analyzeCapabilities} variant="primary">
                 {analyzing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                 {overview?.pendingSedimentCount ? `分析 ${overview.pendingSedimentCount} 条新增沉淀` : "分析项目能力"}
@@ -314,6 +346,8 @@ function CompletedCapabilitiesContent() {
                 {elapsedMs > 0 ? <span className="text-slate-500">已等待 {formatElapsed(elapsedMs)}</span> : null}
               </div>
               {stageMessage ? <p className="mt-1 text-slate-600">{stageMessage}</p> : null}
+              {capabilityJob?.status === "QUEUED" ? <p className="mt-1 text-slate-500">前方约 {capabilityJob.queuePosition} 个任务；尚未产生模型费用。</p> : null}
+              {capabilityJob ? <p className="mt-1 text-slate-500">模型请求 {capabilityJob.requestCount}/{capabilityJob.maxRequestCount} 次 · Token {capabilityJob.totalTokens}/{capabilityJob.maxTotalTokens}</p> : null}
               {inputSummary ? (
                 <p className="mt-1 text-slate-500">
                   基于 {inputSummary.sedimentCount} 条已确认项目沉淀，其中 {inputSummary.pendingSedimentCount} 条此前待能力分析。

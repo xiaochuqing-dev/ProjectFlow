@@ -79,6 +79,7 @@ public class ProjectCapabilityService {
 
     /** 模型等待期间不持有数据库事务；旧候选只在新结果可保存时原子替换。 */
     public CapabilityAnalysisOutcome analyzeWithOutcome(UUID userId, UUID projectId, UUID jobId) {
+        ensureJobActive(jobId);
         advanceStage(jobId, "LOAD_EVIDENCE", "正在读取已确认项目沉淀");
         CapabilityInput input = transactionTemplate.execute(status -> loadInput(userId, projectId));
         if (input == null || input.sources().isEmpty()) {
@@ -90,6 +91,7 @@ public class ProjectCapabilityService {
         recordInputSummary(jobId, input.sources());
 
         advanceStage(jobId, "MODEL_REQUEST", "正在调用模型分析项目能力（可能需要几分钟，任务会继续运行）");
+        ensureJobActive(jobId);
         ModelDraftResult modelResult;
         try {
             modelResult = modelDrafts(input.provider(), input.sources(), jobId);
@@ -117,6 +119,7 @@ public class ProjectCapabilityService {
                 true, modelResult.gatewayDiagnostics(), null
             );
         }
+        ensureJobActive(jobId);
 
         advanceStage(jobId, "DATABASE_PERSIST", "正在原子替换未确认候选并保存能力卡片");
         List<CapabilityCardResponse> responses;
@@ -140,6 +143,14 @@ public class ProjectCapabilityService {
             || needsEvidence > 0
             || safeResponses.size() < 3;
         return new CapabilityAnalysisOutcome(safeResponses, warnings, (int) needsEvidence, modelResult.diagnostics());
+    }
+
+    private void ensureJobActive(UUID jobId) {
+        if (jobId == null) return;
+        ProjectAnalysisJob job = jobRepository.findById(jobId).orElse(null);
+        if (job != null && (job.isCancellationRequested() || job.isTerminal())) {
+            throw new java.util.concurrent.CancellationException("能力分析任务已停止，旧候选已保留");
+        }
     }
 
     private CapabilityInput loadInput(UUID userId, UUID projectId) {
