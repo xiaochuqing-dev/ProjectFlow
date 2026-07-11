@@ -235,6 +235,62 @@ class V33PersistenceTest {
         assertThat(remaining).isZero();
     }
 
+    @Test
+    void repairsMissingHistoricalChangeBatchTimingColumnsBeforeBackfill() {
+        org.h2.jdbcx.JdbcDataSource legacyDataSource = new org.h2.jdbcx.JdbcDataSource();
+        legacyDataSource.setURL("jdbc:h2:mem:legacy-timing-" + UUID.randomUUID() + ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE");
+        legacyDataSource.setUser("sa");
+        JdbcTemplate legacyJdbc = new JdbcTemplate(legacyDataSource);
+        legacyJdbc.execute("CREATE TABLE change_batches (id UUID PRIMARY KEY)");
+
+        ProjectChangeSchemaRepairService repair = new ProjectChangeSchemaRepairService(legacyJdbc, legacyDataSource);
+        repair.ensureChangeBatchTimingColumns();
+        repair.backfillChangeBatchTimingNulls();
+
+        Integer count = legacyJdbc.queryForObject(
+            """
+                SELECT COUNT(*)
+                FROM information_schema.columns
+                WHERE LOWER(table_name) = 'change_batches'
+                  AND LOWER(column_name) IN ('git_scan_ms','model_segment_ms','github_inspect_ms','total_scan_ms')
+                """,
+            Integer.class
+        );
+        assertThat(count).isEqualTo(4);
+    }
+
+    @Test
+    void expandsHistoricalAnalysisJobStatusEnum() {
+        org.h2.jdbcx.JdbcDataSource legacyDataSource = new org.h2.jdbcx.JdbcDataSource();
+        legacyDataSource.setURL("jdbc:h2:mem:legacy-job-status-" + UUID.randomUUID() + ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE");
+        legacyDataSource.setUser("sa");
+        JdbcTemplate legacyJdbc = new JdbcTemplate(legacyDataSource);
+        legacyJdbc.execute("CREATE TABLE project_analysis_jobs (id UUID PRIMARY KEY, status ENUM('FAILED','QUEUED','RUNNING','SUCCEEDED'))");
+
+        ProjectChangeSchemaRepairService repair = new ProjectChangeSchemaRepairService(legacyJdbc, legacyDataSource);
+        repair.ensureAnalysisJobStatusAllowed();
+        legacyJdbc.update("INSERT INTO project_analysis_jobs (id, status) VALUES (?, 'CANCEL_REQUESTED')", UUID.randomUUID());
+
+        String status = legacyJdbc.queryForObject("SELECT status FROM project_analysis_jobs", String.class);
+        assertThat(status).isEqualTo("CANCEL_REQUESTED");
+    }
+
+    @Test
+    void backfillsHistoricalNullableWorktreeFlag() {
+        org.h2.jdbcx.JdbcDataSource legacyDataSource = new org.h2.jdbcx.JdbcDataSource();
+        legacyDataSource.setURL("jdbc:h2:mem:legacy-worktree-" + UUID.randomUUID() + ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE");
+        legacyDataSource.setUser("sa");
+        JdbcTemplate legacyJdbc = new JdbcTemplate(legacyDataSource);
+        legacyJdbc.execute("CREATE TABLE change_batches (id UUID PRIMARY KEY, worktree_dirty BOOLEAN)");
+        UUID id = UUID.randomUUID();
+        legacyJdbc.update("INSERT INTO change_batches (id, worktree_dirty) VALUES (?, NULL)", id);
+
+        new ProjectChangeSchemaRepairService(legacyJdbc, legacyDataSource).backfillChangeBatchBooleanNulls();
+
+        Boolean value = legacyJdbc.queryForObject("SELECT worktree_dirty FROM change_batches WHERE id = ?", Boolean.class, id);
+        assertThat(value).isFalse();
+    }
+
     private void setTimingColumnsNullable() {
         // 模拟生产 ddl-auto:update 下老行可空的状态：test 环境 create-drop 建表为 NOT NULL，需先放宽。
         jdbcTemplate.execute("ALTER TABLE change_batches ALTER COLUMN git_scan_ms SET NULL");

@@ -32,9 +32,6 @@ import com.projectflow.service.SegmentQualityGate.QualityResult;
 @Service
 public class ModelSegmentEnricher {
     private static final int MAX_PROMPT_ATOMS = 80;
-    // V3.3.4 小阶段修复：从 8000 降到 4000。8 段 × ~500 tokens 输出足够，
-    // 给输入留更多上下文空间，从根源降低因 prompt+输出超限导致调用失败的概率。
-    private static final int MAX_OUTPUT_TOKENS = 4_000;
     // V3.3.4 小阶段修复：prompt 体积防护。超过此字符数（约 15K tokens）时截断 atom 列表。
     private static final int PROMPT_CHAR_BUDGET = 45_000;
     // prompt 里每个 atom 最多展示的文件路径数，避免单个大 commit 撑爆 prompt。
@@ -116,7 +113,7 @@ public class ModelSegmentEnricher {
         ModelGatewayService.ModelCallDiagnostics modelDiagnostics = null;
         try {
             ModelGatewayService.StructuredModelResponse response = modelGatewayService.callStructured(
-                provider, prompt(atoms, fallback, false, snapshot), MAX_OUTPUT_TOKENS
+                provider, prompt(atoms, fallback, false, snapshot), ModelTaskType.DEVELOPMENT_SEGMENT_MERGE
             );
             modelDiagnostics = response.diagnostics();
             List<SegmentDraft> validated = parse(response.parsed().root(), atoms);
@@ -193,12 +190,12 @@ public class ModelSegmentEnricher {
             for (JsonNode item : segments) {
                 if (!item.isObject()) continue;
                 List<String> atomIds = outputAdapter.strings(item, "includedAtomIds", "atomIds");
-                List<String> sourceIndexes = outputAdapter.strings(item, "sourceIndexes", "sources");
+                List<String> sourceIndexes = outputAdapter.strings(item, "sourceIndexes", "source_indexes", "sources");
                 if (atomIds.isEmpty() && !sourceIndexes.isEmpty()) {
                     atomIds = sourceIndexes.stream().map(sourceMap::get).filter(java.util.Objects::nonNull).map(ChangeAtom::id).distinct().toList();
                 }
-                String rawTitle = outputAdapter.text(item, "", "segmentTitle", "title", "name");
-                String rawSummary = outputAdapter.text(item, "", "plainSummary", "summary", "description");
+                String rawTitle = outputAdapter.text(item, "", "segmentTitle", "segment_title", "title", "name");
+                String rawSummary = outputAdapter.text(item, "", "plainSummary", "plain_summary", "summary", "description");
                 if ((rawTitle.isBlank() && rawSummary.isBlank()) || atomIds.isEmpty()) continue;
                 SegmentDraft candidate = new SegmentDraft(
                     DisplayContentSanitizer.sanitizeTitle(rawTitle.isBlank() ? rawSummary : rawTitle),

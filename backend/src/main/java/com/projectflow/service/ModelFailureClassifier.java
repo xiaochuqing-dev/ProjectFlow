@@ -14,16 +14,24 @@ import java.net.http.HttpTimeoutException;
 public final class ModelFailureClassifier {
 
     public static final String REQUEST_TIMEOUT = "REQUEST_TIMEOUT";
-    public static final String HTTP_401_OR_403 = "HTTP_401_OR_403";
-    public static final String HTTP_429 = "HTTP_429";
-    public static final String HTTP_5XX = "HTTP_5XX";
+    public static final String PROVIDER_AUTH_FAILED = "PROVIDER_AUTH_FAILED";
+    public static final String PROVIDER_RATE_LIMITED = "PROVIDER_RATE_LIMITED";
+    public static final String PROVIDER_5XX = "PROVIDER_5XX";
     public static final String NETWORK_ERROR = "NETWORK_ERROR";
     public static final String EMPTY_CONTENT = "EMPTY_CONTENT";
-    public static final String OUTPUT_TRUNCATED = "OUTPUT_TRUNCATED";
+    public static final String OUTPUT_BUDGET_EXHAUSTED = "OUTPUT_BUDGET_EXHAUSTED";
+    public static final String REASONING_EXHAUSTED_OUTPUT = "REASONING_EXHAUSTED_OUTPUT";
     public static final String JSON_PARSE_FAILED = "JSON_PARSE_FAILED";
-    public static final String SCHEMA_UNRECOGNIZED = "SCHEMA_UNRECOGNIZED";
+    public static final String SCHEMA_MISMATCH = "SCHEMA_MISMATCH";
+    public static final String SCHEMA_REPAIR_FAILED = "SCHEMA_REPAIR_FAILED";
+    public static final String SCHEMA_UNRECOGNIZED = SCHEMA_MISMATCH;
     public static final String EVIDENCE_REJECTED = "EVIDENCE_REJECTED";
     public static final String UNKNOWN_CALL_FAILED = "UNKNOWN_CALL_FAILED";
+    // 兼容旧诊断读取；新写入统一使用上方 V3.3.8 语义。
+    public static final String HTTP_401_OR_403 = PROVIDER_AUTH_FAILED;
+    public static final String HTTP_429 = PROVIDER_RATE_LIMITED;
+    public static final String HTTP_5XX = PROVIDER_5XX;
+    public static final String OUTPUT_TRUNCATED = OUTPUT_BUDGET_EXHAUSTED;
 
     private ModelFailureClassifier() {
     }
@@ -32,9 +40,9 @@ public final class ModelFailureClassifier {
      * 根据 HTTP 状态码分类失败原因。仅用于非 2xx 响应。
      */
     public static String classifyHttpStatus(int statusCode) {
-        if (statusCode == 401 || statusCode == 403) return HTTP_401_OR_403;
-        if (statusCode == 429) return HTTP_429;
-        if (statusCode >= 500 && statusCode < 600) return HTTP_5XX;
+        if (statusCode == 401 || statusCode == 403) return PROVIDER_AUTH_FAILED;
+        if (statusCode == 429) return PROVIDER_RATE_LIMITED;
+        if (statusCode >= 500 && statusCode < 600) return PROVIDER_5XX;
         return UNKNOWN_CALL_FAILED;
     }
 
@@ -48,7 +56,12 @@ public final class ModelFailureClassifier {
         if (failure instanceof ModelGatewayService.ModelHttpException) {
             return classifyHttpStatus(((ModelGatewayService.ModelHttpException) failure).statusCode());
         }
-        if (failure instanceof ModelGatewayService.ModelOutputTruncatedException) return OUTPUT_TRUNCATED;
+        if (failure instanceof ModelGatewayService.ModelSchemaRepairException) return SCHEMA_REPAIR_FAILED;
+        if (failure instanceof ModelGatewayService.ModelSchemaMismatchException) return SCHEMA_MISMATCH;
+        if (failure instanceof ModelGatewayService.ModelOutputTruncatedException truncated) {
+            return truncated.diagnostics() != null && truncated.diagnostics().reasoningBudgetExhausted()
+                ? REASONING_EXHAUSTED_OUTPUT : OUTPUT_BUDGET_EXHAUSTED;
+        }
         if (failure instanceof ModelGatewayService.ModelEmptyContentException) return EMPTY_CONTENT;
         if (failure instanceof ModelGatewayService.ModelResponseFormatException) return JSON_PARSE_FAILED;
         String message = failure.getMessage() == null ? "" : failure.getMessage().toLowerCase();
@@ -67,14 +80,16 @@ public final class ModelFailureClassifier {
         String provider = providerName == null || providerName.isBlank() ? "模型" : providerName;
         return switch (code) {
             case REQUEST_TIMEOUT -> provider + " 请求超时，模型在设定时间内没有返回，本次先展示本地事实摘要。";
-            case HTTP_401_OR_403 -> provider + " 返回鉴权失败（401/403），可能是 API key 错误或权限不足。";
-            case HTTP_429 -> provider + " 返回 429，可能是限流，请稍后重试。";
-            case HTTP_5XX -> provider + " 服务异常（5xx），本次先展示本地事实摘要，可稍后重新分析。";
+            case PROVIDER_AUTH_FAILED -> provider + " 返回鉴权失败（401/403），请检查 API Key 和模型权限；不会自动重试。";
+            case PROVIDER_RATE_LIMITED -> provider + " 返回限流（429），已停止本次分析，可稍后重试。";
+            case PROVIDER_5XX -> provider + " 服务异常（5xx），已停止本次分析并保留旧结果。";
             case NETWORK_ERROR -> "网络连接失败，可能与代理或 baseUrl 有关，本次先展示本地事实摘要。";
             case EMPTY_CONTENT -> "模型服务已响应，但没有返回可分析内容，本次先展示本地事实摘要。";
-            case OUTPUT_TRUNCATED -> "模型输出达到长度上限，紧凑重试后仍未得到完整结构，本次展示已恢复结果或本地事实摘要。";
+            case OUTPUT_BUDGET_EXHAUSTED -> "模型输出预算耗尽；系统已提高预算执行一次截断恢复，仍失败时保留可恢复条目或旧结果。";
+            case REASONING_EXHAUSTED_OUTPUT -> "模型 reasoning 疑似占满共享预算；系统已提高可见输出预算重试，仍失败时保留旧结果。";
             case JSON_PARSE_FAILED -> "模型已返回内容，但 JSON 语法无法解析，本次先展示本地事实摘要。";
-            case SCHEMA_UNRECOGNIZED -> "模型返回内容可以读取，但没有识别到目标结果结构，本次先展示本地事实摘要。";
+            case SCHEMA_MISMATCH -> "模型返回 JSON 可以读取，但结构不符合目标；系统会执行一次定向 Schema 修复。";
+            case SCHEMA_REPAIR_FAILED -> "模型结果结构偏离目标，定向 Schema 修复仍未成功；已保留旧结果。";
             case EVIDENCE_REJECTED -> "模型结果引用的证据不可用，本次先展示本地事实摘要。";
             default -> provider + " 调用失败，本次先展示本地事实摘要。";
         };

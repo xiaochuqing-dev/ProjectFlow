@@ -298,7 +298,7 @@ function SettingsPageContent() {
             </label>
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">Model Name</span>
-              <input className="w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-brand" defaultValue={editingProvider?.modelName ?? "deepseek-v4-pro"} name="modelName" placeholder="deepseek-v4-pro" required />
+              <input className="w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-brand" defaultValue={editingProvider?.modelName ?? "deepseek-chat"} name="modelName" placeholder="deepseek-chat" required />
             </label>
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">API Key</span>
@@ -316,7 +316,7 @@ function SettingsPageContent() {
               </label>
             </div>
             <p className="text-xs leading-5 text-muted">
-              分析参数默认使用自动策略。这里保存的是 Provider 上限；开发推进段和能力分析还有各自任务上限，诊断区会显示本次真实生效值。结构化任务 Temperature 最高按 0.3 生效，请求超时为 240 秒；单任务最多 3 次请求，截断时只执行一次不超过 2000 tokens 的紧凑重试。
+              Max Tokens 表示 Provider 或用户配置的输出能力上限，不是每次分析的固定值。ProjectFlow 会按入口、输入规模、输出结构和模型能力动态申请预算；Temperature 会使用配置值、任务建议值或在模型不支持时省略，实际参数与原因可在诊断中查看。
             </p>
             <button className="flex w-full items-center justify-center gap-2 rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-60" disabled={saving} type="submit">
               {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Settings2 className="h-4 w-4" />}
@@ -373,7 +373,7 @@ function SettingsPageContent() {
                     </div>
                     <p className="mt-1 text-muted">{provider.type} · {provider.modelName}</p>
                     <p className="mt-1 truncate text-xs text-muted">{provider.baseUrl}</p>
-                    <p className="mt-1 text-xs text-muted">Provider 上限：{provider.maxTokens} tokens · Temperature {provider.temperature}</p>
+                    <p className="mt-1 text-xs text-muted">Provider 能力上限：{provider.maxTokens} tokens · 配置 Temperature {provider.temperature}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className={`h-4 w-4 ${provider.apiKeyConfigured ? "text-emerald-600" : "text-slate-400"}`} />

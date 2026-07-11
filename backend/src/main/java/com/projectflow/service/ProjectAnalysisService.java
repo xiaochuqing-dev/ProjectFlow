@@ -29,9 +29,6 @@ import com.projectflow.support.AppException;
 public class ProjectAnalysisService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProjectAnalysisService.class);
     private static final int MAX_FILE_SNIPPET_CHARS = 6_000;
-    // V3.3.4 小阶段修复：从 100_000 降到 4_000。项目分析和文件分析的输出是结构化 JSON，
-    // 4K tokens 足够；100K 会挤占输入上下文导致大项目分析失败。
-    private static final int MODEL_ANALYSIS_MAX_TOKENS = 4_000;
 
     private final ProjectRepository projectRepository;
     private final ProjectMaterialRepository materialRepository;
@@ -79,7 +76,9 @@ public class ProjectAnalysisService {
                 项目材料：
                 %s
                 """.formatted(project.getName(), project.getDescription(), truncate(analysisMaterial, 20_000));
-            ModelGatewayService.StructuredModelResponse modelResponse = modelGatewayService.callStructured(provider, prompt, MODEL_ANALYSIS_MAX_TOKENS);
+            ModelGatewayService.StructuredModelResponse modelResponse = modelGatewayService.callStructured(
+                provider, prompt, ModelTaskType.PROJECT_ANALYSIS
+            );
             JsonNode json = modelResponse.parsed().root();
             return new ProjectAnalysisResponse(
                 chineseTextOr(json, "summary", fallback.summary()),
@@ -179,7 +178,9 @@ public class ProjectAnalysisService {
                     fileContent.isBlank() ? "[未索引到文件内容，只能依据路径分析]" : truncate(fileContent, MAX_FILE_SNIPPET_CHARS),
                     fileStructureContext(analysisMaterial, requestedPath)
                 );
-            ModelGatewayService.StructuredModelResponse modelResponse = modelGatewayService.callStructured(provider, prompt, MODEL_ANALYSIS_MAX_TOKENS);
+            ModelGatewayService.StructuredModelResponse modelResponse = modelGatewayService.callStructured(
+                provider, prompt, ModelTaskType.FILE_ANALYSIS
+            );
             JsonNode json = modelResponse.parsed().root();
             return new ProjectFileAnalysisResponse(
                 requestedPath,
@@ -347,7 +348,10 @@ public class ProjectAnalysisService {
             value.providerTemperature(), value.effectiveTemperature(), value.timeoutSeconds(), value.latencyMs(),
             value.contentPresent(), value.reasoningPresent(), value.reasoningLength(), value.truncated(),
             value.compactRetryAttempted(), value.compactRetrySucceeded(), value.requestCount(), value.jsonRepaired(),
-            value.partialResult(), value.recoveredItems()
+            value.partialResult(), value.recoveredItems(), value.entryPoint(), value.taskType(), value.capabilityProfile(),
+            value.inputSize(), value.promptSize(), value.recommendedTemperature(), value.temperatureSent(),
+            value.temperatureDecision(), value.maxTokenDecision(), value.retryType(), value.reasoningBudgetExhausted(),
+            value.schemaMatched(), value.failureStage(), value.failureCode()
         );
     }
 

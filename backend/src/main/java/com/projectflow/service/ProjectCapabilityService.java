@@ -291,7 +291,7 @@ public class ProjectCapabilityService {
             能力名称必须贴合作品真实功能（如"扫描指纹复用稳定分析结果""待整理变更归并为开发推进段""GitHub 状态与本地 Git 多来源证据整合"），禁止泛化模板名（如"项目资产沉淀能力""技术理解能力"），禁止直接复读 commit message。
             所有用户可见字段（name、summary、problemSolved、featureEntry、readme、resume、interview）必须使用简体中文人话；技术名、文件路径、类名可保留原文但不能成为主标题。
             事实：
-            """ + facts, 4_000);
+            """ + facts, ModelTaskType.PROJECT_CAPABILITY_ANALYSIS);
         advanceStage(jobId, "MODEL_RESPONSE_RECEIVED", "模型已返回结果，正在解析与归一化");
         List<JsonNode> values = outputAdapter.items(response.parsed().root(), "capabilities", "capabilityCards", "cards", "items", "results");
         advanceStage(jobId, "MODEL_OUTPUT_NORMALIZE", "正在逐项修复字段并绑定来源证据");
@@ -305,8 +305,8 @@ public class ProjectCapabilityService {
                 discarded++;
                 continue;
             }
-            String rawName = outputAdapter.text(value, "", "name", "title", "capabilityName");
-            String rawSummary = outputAdapter.text(value, "", "summary", "description", "plainSummary");
+            String rawName = outputAdapter.text(value, "", "name", "title", "capabilityName", "capability_name");
+            String rawSummary = outputAdapter.text(value, "", "summary", "description", "plainSummary", "plain_summary");
             if (rawName.isBlank() && rawSummary.isBlank()) {
                 discarded++;
                 continue;
@@ -317,7 +317,7 @@ public class ProjectCapabilityService {
                 discarded++;
                 continue;
             }
-            List<String> requestedIndexes = outputAdapter.strings(value, "sourceIndexes", "sourceIds", "sources");
+            List<String> requestedIndexes = outputAdapter.strings(value, "sourceIndexes", "source_indexes", "sourceIds", "source_ids", "sources");
             List<CapabilitySource> boundSources = requestedIndexes.stream().map(sourceMap::get).filter(java.util.Objects::nonNull).distinct().toList();
             invalidIndexes += Math.max(0, requestedIndexes.size() - boundSources.size());
             List<String> sourceRefs = boundSources.stream().map(source -> "sediment:" + source.id()).toList();
@@ -349,7 +349,11 @@ public class ProjectCapabilityService {
             gatewayDiagnostics.providerMaxTokens(), gatewayDiagnostics.taskPolicyMaxTokens(), gatewayDiagnostics.effectiveMaxTokens(),
             gatewayDiagnostics.providerTemperature(), gatewayDiagnostics.effectiveTemperature(), gatewayDiagnostics.timeoutSeconds(),
             gatewayDiagnostics.latencyMs(), gatewayDiagnostics.truncated(), gatewayDiagnostics.compactRetryAttempted(),
-            gatewayDiagnostics.compactRetrySucceeded(), gatewayDiagnostics.partialResult(), gatewayDiagnostics.recoveredItems()
+            gatewayDiagnostics.compactRetrySucceeded(), gatewayDiagnostics.partialResult(), gatewayDiagnostics.recoveredItems(),
+            gatewayDiagnostics.capabilityProfile(), gatewayDiagnostics.recommendedTemperature(), gatewayDiagnostics.temperatureSent(),
+            gatewayDiagnostics.temperatureDecision(), gatewayDiagnostics.maxTokenDecision(), gatewayDiagnostics.retryType(),
+            gatewayDiagnostics.reasoningBudgetExhausted(), gatewayDiagnostics.schemaMatched(), gatewayDiagnostics.failureCode(),
+            gatewayDiagnostics.requestCount()
         ), gatewayDiagnostics);
     }
 
@@ -449,7 +453,17 @@ public class ProjectCapabilityService {
         boolean compactRetryAttempted,
         boolean compactRetrySucceeded,
         boolean partialResult,
-        int recoveredItems
+        int recoveredItems,
+        String capabilityProfile,
+        double recommendedTemperature,
+        boolean temperatureSent,
+        String temperatureDecision,
+        String maxTokenDecision,
+        String retryType,
+        boolean reasoningBudgetExhausted,
+        boolean schemaMatched,
+        String failureCode,
+        int requestCount
     ) {
     }
 

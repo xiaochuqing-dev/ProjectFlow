@@ -1,9 +1,17 @@
-<!-- PROJECTFLOW V3.3.7 CONTEXT START -->
-ProjectFlow 当前版本为 V3.3.7。后续 Agent 必须按“待整理变更 -> 开发推进段 -> 批次化沉淀处理 -> 项目沉淀 -> 能力分析”理解产品，不要回到旧的“今日开发 / 项目资产字段”主线。
+<!-- PROJECTFLOW V3.3.8 CONTEXT START -->
+ProjectFlow 当前版本为 V3.3.8。后续 Agent 必须按“待整理变更 -> 开发推进段 -> 批次化沉淀处理 -> 项目沉淀 -> 能力分析”理解产品，不要回到旧的“今日开发 / 项目资产字段”主线。
 
 开始任务前请阅读 `.projectflow/AGENT_PROTOCOL.md`。完成开发任务后，按协议把结果写入 `.projectflow/agent-results/`。不要删除添加项目、zip 导入、本地项目绑定、模型配置、登录等核心入口。
 
 开发推进段必须描述真实开发结果、用户或开发者可感知变化、验证情况和不确定项。禁止用 backend/frontend/docs/config 等目录名、提交数量或“开发推进”空话替代具体摘要。能力与成果页以结构化 Capability Card 为主，旧 `completedCapabilities` 仅作兼容档案。
+
+V3.3.8 关键决策（后续 Agent 必须遵守）：
+- 所有真实模型入口必须登记为 `ModelTaskType` 并通过统一 `ModelGatewayService`；禁止业务 Service 私自发模型 HTTP 请求。
+- 禁止为模型入口硬编码统一 temperature 上限、固定 4000 输出预算或固定 2000 恢复预算。参数必须由 Provider/model capability、任务类型、输入规模和输出结构共同决定并可诊断。
+- 不支持 temperature、JSON mode 或私有 reasoning 参数的模型不得收到对应字段。reasoning 原文、Key、Authorization、完整 prompt 和原始响应不得持久化、记录或返回。
+- JSON 语法错误、截断、Schema mismatch、证据拒绝必须保持不同语义。Schema mismatch 只允许一次定向重编码；截断与 reasoning 耗尽使用各自恢复类型并受任务请求预算约束。
+- Mock/固定模型只证明自动化契约，不能描述为真实 DeepSeek。真实验收必须先小输入，再中等输入，再大输入，并记录入口、规模、有效参数、usage、finish reason、恢复类型和人工质量结论。
+- V3.3.8 收尾报告必须更新 `docs/projectflow-v3.3.8-model-reliability-report.md`，明确区分固定模型自动化、真实 DeepSeek 和人工质量抽样，并记录全套门禁、CI Run、提交 SHA 与未解决 Provider 风险。
 
 V3.3.7 关键决策（后续 Agent 必须遵守）：
 - 长分析只能通过持久化 Job 执行；重复输入复用活动 job，不得重复调用模型或重复正式写入。
@@ -49,7 +57,7 @@ V3.3.3 仍有效的关键决策：
 - 多来源证据（本地 Git / 工作区 diff / GitHub / Agent result / 扫描范围）要整理成分析输入快照交给模型，模型基于证据灵活判断真实开发状态，不写死优先级。
 - 需要模型理解的入口（分析新变化、分析项目能力）必须有模型配置前置检查；未配置模型时不生成低质量本地模板结果，明确提示去配置模型。
 - 规则负责证据事实，模型负责灵活理解，用户负责最终确认。
-<!-- PROJECTFLOW V3.3.7 CONTEXT END -->
+<!-- PROJECTFLOW V3.3.8 CONTEXT END -->
 
 # ProjectFlow Local Rules
 

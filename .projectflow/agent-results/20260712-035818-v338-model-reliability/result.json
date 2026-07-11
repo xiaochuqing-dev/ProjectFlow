@@ -1,0 +1,58 @@
+{
+  "taskGoal": "完成 ProjectFlow V3.3.8 全模型入口可靠性、动态参数策略、结构化输出恢复、真实 DeepSeek 压力验收和发布收尾。",
+  "actualChanges": [
+    "统一登记并接入 6 个真实模型入口；Provider 测试、开发推进段、整体项目、文件、能力解读和项目能力都通过同一网关、能力档案和任务策略。",
+    "取消结构化 Temperature 全局 0.3、复杂任务固定 4000 和恢复固定 2000；实际参数按 Provider/model capability、任务、输入和 Schema 动态计算，并记录来源与原因。",
+    "结构化输出支持 balanced 多候选、目标集合递归定位、snake_case/外层包装、Schema repair、截断与 reasoning 分型恢复；恢复前再次检查持久化 Job 取消状态。",
+    "真实 DeepSeek 通过隔离应用副本完成 6 入口验收；ProjectFlow 套娃覆盖 30 提交、148 文件、15 份 Agent result、8 条沉淀，并产出 8 条模型推进段和 7 张能力卡片。",
+    "旧 H2 启动补齐 job status enum、change batch 计时列和 nullable worktree flag；设置页、诊断、README、AGENTS、docs 和项目上下文已更新到 V3.3.8。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ModelTaskType.java",
+    "backend/src/main/java/com/projectflow/service/ModelCapabilityRegistry.java",
+    "backend/src/main/java/com/projectflow/service/ModelRequestPolicy.java",
+    "backend/src/main/java/com/projectflow/service/ModelGatewayService.java",
+    "backend/src/main/java/com/projectflow/service/ModelOutputAdapter.java",
+    "backend/src/main/java/com/projectflow/service/ModelCancellationContext.java",
+    "backend/src/main/java/com/projectflow/service/ProjectChangeSchemaRepairService.java",
+    "frontend/src/app/settings/page.tsx",
+    "frontend/src/components/dashboard/PendingChangesPanel.tsx",
+    "docs/projectflow-v3.3.8-model-reliability-report.md"
+  ],
+  "verification": {
+    "build": "前端 TypeScript lint 和 Next.js 生产构建通过。",
+    "tests": "后端/H2 194 项通过；PostgreSQL 16 Testcontainers 2 项通过；前端契约 18 项通过；Chromium Playwright 4 项通过；敏感信息扫描通过。",
+    "manualCheck": "真实 DeepSeek 6 入口实际 API 验收通过；大输入首次 Schema 包装偏离被复现，目标集合适配后复验产出 8 条推进段；8 条沉淀生成 7 张能力卡片。未读取或输出 Key、原始响应和 reasoning 原文。"
+  },
+  "unfinished": [
+    "远程 GitHub Actions 需在推送后确认。"
+  ],
+  "sedimentCandidates": [
+    {
+      "title": "统一真实模型入口与动态参数策略",
+      "summary": "6 个模型入口共享 Provider/model capability、任务与输入感知预算、可解释 diagnostics 和取消边界，消除固定 Temperature/Max Tokens 制造的可避免失败。",
+      "evidence": [
+        "backend/src/main/java/com/projectflow/service/ModelTaskType.java",
+        "backend/src/main/java/com/projectflow/service/ModelRequestPolicy.java",
+        "backend/src/test/java/com/projectflow/service/ModelRequestPolicyTest.java"
+      ]
+    },
+    {
+      "title": "目标感知的结构化输出恢复",
+      "summary": "balanced 多候选、任意外层目标集合定位、Schema repair、截断与 reasoning 分型恢复经过固定模型和真实 DeepSeek 大输入验证。",
+      "evidence": [
+        "backend/src/main/java/com/projectflow/service/ModelOutputAdapter.java",
+        "backend/src/main/java/com/projectflow/service/ModelGatewayService.java",
+        "backend/src/test/java/com/projectflow/service/ModelGatewayServiceTest.java"
+      ]
+    },
+    {
+      "title": "真实 DeepSeek 全入口与 ProjectFlow 套娃验收",
+      "summary": "实际应用 API 在隔离数据副本中完成 6 入口调用，30 提交、148 文件和 15 份 Agent result 的压力输入使用 10148 输出预算成功生成 8 条模型推进段。",
+      "evidence": [
+        "backend/src/test/java/com/projectflow/RealDeepSeekIT.java",
+        "docs/projectflow-v3.3.8-model-reliability-report.md"
+      ]
+    }
+  ]
+}

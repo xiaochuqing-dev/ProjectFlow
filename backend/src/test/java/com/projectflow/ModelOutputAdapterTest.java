@@ -60,4 +60,39 @@ class ModelOutputAdapterTest {
         assertThat(adapter.likelyTruncated("说明 {\"items\":[]} 后续解释")).isFalse();
         assertThat(adapter.likelyTruncated("{\"items\":[{\"name\":\"未完成\"}")).isTrue();
     }
+
+    @Test
+    void selectsTargetSchemaFromMultipleJsonCandidates() throws Exception {
+        var result = adapter.parse(
+            "示例：[1,2,3]\n正式结果：{\"capabilities\":[{\"name\":\"证据归并\",\"summary\":\"按来源整理\"}]}",
+            com.projectflow.service.ModelTaskType.PROJECT_CAPABILITY_ANALYSIS
+        );
+
+        assertThat(adapter.items(result.root(), "capabilities")).singleElement()
+            .satisfies(item -> assertThat(item.path("name").asText()).isEqualTo("证据归并"));
+    }
+
+    @Test
+    void partialRecoveryIgnoresEarlierUnrelatedArray() throws Exception {
+        var result = adapter.parse(
+            "示例：[{\"foo\":\"bar\"}]\n正式：{\"segments\":[{\"title\":\"第一段\",\"summary\":\"已完成\"},{\"title\":\"第二段",
+            com.projectflow.service.ModelTaskType.DEVELOPMENT_SEGMENT_MERGE
+        );
+
+        assertThat(result.partial()).isTrue();
+        assertThat(adapter.items(result.root(), "segments")).singleElement()
+            .satisfies(item -> assertThat(item.path("title").asText()).isEqualTo("第一段"));
+    }
+
+    @Test
+    void locatesTargetCollectionInsideUnknownNestedWrapperAndSnakeCaseAliases() throws Exception {
+        var result = adapter.parse(
+            "{\"analysis\":{\"payload\":{\"development_segments\":[{\"segment_title\":\"真实结果\",\"plain_summary\":\"已归并\",\"source_indexes\":[\"S1\"]}]}}}",
+            com.projectflow.service.ModelTaskType.DEVELOPMENT_SEGMENT_MERGE
+        );
+
+        assertThat(result.root().isArray()).isTrue();
+        assertThat(result.root()).singleElement()
+            .satisfies(item -> assertThat(item.path("segment_title").asText()).isEqualTo("真实结果"));
+    }
 }

@@ -38,8 +38,6 @@ import com.projectflow.support.AppException;
 @Service
 public class ProjectMemoryService {
     private static final Logger log = LoggerFactory.getLogger(ProjectMemoryService.class);
-    private static final int CAPABILITY_INTERPRET_MAX_TOKENS = 1200;
-
     private final ProjectRepository projectRepository;
     private final ProjectMemoryRepository memoryRepository;
     private final ProjectFactSourceRepository factSourceRepository;
@@ -127,7 +125,9 @@ public class ProjectMemoryService {
         }
         try {
             String prompt = capabilityInterpretPrompt(project.getName(), memory, request.capabilityFact());
-            ModelGatewayService.StructuredModelResponse response = modelGatewayService.callStructured(provider, prompt, CAPABILITY_INTERPRET_MAX_TOKENS);
+            ModelGatewayService.StructuredModelResponse response = modelGatewayService.callStructured(
+                provider, prompt, ModelTaskType.CAPABILITY_INTERPRETATION
+            );
             JsonNode json = response.parsed().root();
             return new CapabilityInterpretResponse(false, "MODEL", "模型已生成候选解读，采纳后才进入正式项目资产。", modelCandidate(json), diagnostics(response.diagnostics()));
         } catch (Exception exception) {
@@ -149,7 +149,10 @@ public class ProjectMemoryService {
             value.totalTokens(), value.usageSource(), value.providerMaxTokens(), value.taskPolicyMaxTokens(), value.effectiveMaxTokens(),
             value.providerTemperature(), value.effectiveTemperature(), value.timeoutSeconds(), value.latencyMs(), value.contentPresent(),
             value.reasoningPresent(), value.reasoningLength(), value.truncated(), value.compactRetryAttempted(),
-            value.compactRetrySucceeded(), value.requestCount(), value.jsonRepaired(), value.partialResult(), value.recoveredItems()
+            value.compactRetrySucceeded(), value.requestCount(), value.jsonRepaired(), value.partialResult(), value.recoveredItems(),
+            value.entryPoint(), value.taskType(), value.capabilityProfile(), value.inputSize(), value.promptSize(),
+            value.recommendedTemperature(), value.temperatureSent(), value.temperatureDecision(), value.maxTokenDecision(),
+            value.retryType(), value.reasoningBudgetExhausted(), value.schemaMatched(), value.failureStage(), value.failureCode()
         );
     }
 

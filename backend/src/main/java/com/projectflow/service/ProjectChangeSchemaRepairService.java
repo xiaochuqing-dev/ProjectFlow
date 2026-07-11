@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import com.projectflow.entity.ProjectAnalysisJobType;
+import com.projectflow.entity.ProjectAnalysisJobStatus;
 import com.projectflow.entity.ProjectChangeSourceType;
 
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -29,12 +30,21 @@ public class ProjectChangeSchemaRepairService {
     public void repairOnStartup() {
         ensureEvidenceBundleSourceTypeAllowed();
         ensureAnalysisJobTypeAllowed();
+        ensureAnalysisJobStatusAllowed();
+        ensureChangeBatchTimingColumns();
         // ChangeBatch 的 4 个耗时字段在 v3.3.2 才加入，ddl-auto:update 只加列不补 NOT NULL，
         // 老行这 4 列为 NULL。实体已改成 Long 可容忍，这里再把存量 NULL 补 0，让数据恢复正常。
         backfillChangeBatchTimingNulls();
+        backfillChangeBatchBooleanNulls();
     }
 
     public void backfillChangeBatchTimingNulls() {
+        if (!hasColumn("change_batches", "git_scan_ms")
+            || !hasColumn("change_batches", "model_segment_ms")
+            || !hasColumn("change_batches", "github_inspect_ms")
+            || !hasColumn("change_batches", "total_scan_ms")) {
+            return;
+        }
         jdbcTemplate.update(
             """
                 UPDATE change_batches
@@ -48,6 +58,19 @@ public class ProjectChangeSchemaRepairService {
                    OR total_scan_ms IS NULL
                 """
         );
+    }
+
+    public void ensureChangeBatchTimingColumns() {
+        if (!isH2Database()) return;
+        jdbcTemplate.execute("ALTER TABLE change_batches ADD COLUMN IF NOT EXISTS git_scan_ms BIGINT DEFAULT 0");
+        jdbcTemplate.execute("ALTER TABLE change_batches ADD COLUMN IF NOT EXISTS model_segment_ms BIGINT DEFAULT 0");
+        jdbcTemplate.execute("ALTER TABLE change_batches ADD COLUMN IF NOT EXISTS github_inspect_ms BIGINT DEFAULT 0");
+        jdbcTemplate.execute("ALTER TABLE change_batches ADD COLUMN IF NOT EXISTS total_scan_ms BIGINT DEFAULT 0");
+    }
+
+    public void backfillChangeBatchBooleanNulls() {
+        if (!hasColumn("change_batches", "worktree_dirty")) return;
+        jdbcTemplate.update("UPDATE change_batches SET worktree_dirty = FALSE WHERE worktree_dirty IS NULL");
     }
 
     public void ensureEvidenceBundleSourceTypeAllowed() {
@@ -92,12 +115,42 @@ public class ProjectChangeSchemaRepairService {
         jdbcTemplate.execute("ALTER TABLE project_analysis_jobs ALTER COLUMN job_type " + h2JobTypeEnumDefinition());
     }
 
+    public void ensureAnalysisJobStatusAllowed() {
+        if (!isH2Database()) return;
+        String statusType = jdbcTemplate.query(
+            """
+                SELECT data_type
+                FROM information_schema.columns
+                WHERE table_name = 'project_analysis_jobs'
+                  AND column_name = 'status'
+                """,
+            resultSet -> resultSet.next() ? resultSet.getString("data_type") : ""
+        );
+        if (!"enum".equalsIgnoreCase(statusType)) return;
+        jdbcTemplate.execute("ALTER TABLE project_analysis_jobs ALTER COLUMN status " + h2JobStatusEnumDefinition());
+    }
+
     private boolean isH2Database() {
         try (Connection connection = dataSource.getConnection()) {
             return connection.getMetaData().getDatabaseProductName().toLowerCase().contains("h2");
         } catch (SQLException exception) {
             return false;
         }
+    }
+
+    private boolean hasColumn(String tableName, String columnName) {
+        Integer count = jdbcTemplate.queryForObject(
+            """
+                SELECT COUNT(*)
+                FROM information_schema.columns
+                WHERE LOWER(table_name) = LOWER(?)
+                  AND LOWER(column_name) = LOWER(?)
+                """,
+            Integer.class,
+            tableName,
+            columnName
+        );
+        return count != null && count > 0;
     }
 
     private String h2EnumDefinition() {
@@ -109,6 +162,13 @@ public class ProjectChangeSchemaRepairService {
 
     private String h2JobTypeEnumDefinition() {
         return Arrays.stream(ProjectAnalysisJobType.values())
+            .map(Enum::name)
+            .map(value -> "'" + value + "'")
+            .collect(Collectors.joining(",", "ENUM(", ")"));
+    }
+
+    private String h2JobStatusEnumDefinition() {
+        return Arrays.stream(ProjectAnalysisJobStatus.values())
             .map(Enum::name)
             .map(value -> "'" + value + "'")
             .collect(Collectors.joining(",", "ENUM(", ")"));

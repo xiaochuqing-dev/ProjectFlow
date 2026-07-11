@@ -366,6 +366,9 @@ public class WorkSessionScanService {
             if (diagnostics != null) {
                 obj.put("providerName", diagnostics.providerName());
                 obj.put("modelName", diagnostics.modelName());
+                obj.put("entryPoint", diagnostics.entryPoint());
+                obj.put("taskType", diagnostics.taskType());
+                obj.put("capabilityProfile", diagnostics.capabilityProfile());
                 obj.put("finishReason", diagnostics.finishReason());
                 obj.put("promptTokens", diagnostics.promptTokens());
                 obj.put("completionTokens", diagnostics.completionTokens());
@@ -374,14 +377,23 @@ public class WorkSessionScanService {
                 obj.put("taskPolicyMaxTokens", diagnostics.taskPolicyMaxTokens());
                 obj.put("effectiveMaxTokens", diagnostics.effectiveMaxTokens());
                 obj.put("providerTemperature", diagnostics.providerTemperature());
+                obj.put("recommendedTemperature", diagnostics.recommendedTemperature());
                 obj.put("effectiveTemperature", diagnostics.effectiveTemperature());
+                obj.put("temperatureSent", diagnostics.temperatureSent());
+                obj.put("temperatureDecision", diagnostics.temperatureDecision());
+                obj.put("maxTokenDecision", diagnostics.maxTokenDecision());
                 obj.put("timeoutSeconds", diagnostics.timeoutSeconds());
                 obj.put("requestLatencyMs", diagnostics.latencyMs());
                 obj.put("modelContentPresent", diagnostics.contentPresent());
                 obj.put("outputTruncated", diagnostics.truncated());
                 obj.put("compactRetryAttempted", diagnostics.compactRetryAttempted());
                 obj.put("compactRetrySucceeded", diagnostics.compactRetrySucceeded());
+                obj.put("requestCount", diagnostics.requestCount());
+                obj.put("transportRetryCount", diagnostics.transportRetryCount());
+                obj.put("retryType", diagnostics.retryType());
+                obj.put("reasoningBudgetExhausted", diagnostics.reasoningBudgetExhausted());
                 obj.put("jsonRepaired", diagnostics.jsonRepaired());
+                obj.put("schemaMatched", diagnostics.schemaMatched());
                 obj.put("partialResult", diagnostics.partialResult());
                 obj.put("recoveredItems", diagnostics.recoveredItems());
             }

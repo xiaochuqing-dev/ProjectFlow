@@ -1,9 +1,11 @@
 # Provider Settings
 
-The Provider Max Tokens value is a configuration ceiling, not the value sent by every task. Each structured task has its own policy limit, and diagnostics show the Provider ceiling, task limit, and final effective request value separately.
+Provider Max Tokens is a capability/user ceiling, not a value sent by every task. ProjectFlow calculates a task request from entrypoint, input size, expected structure and reasoning behavior, then applies the Provider ceiling. Diagnostics show all three values and the decision reason.
 
-Structured tasks cap Temperature at 0.3. The default request timeout is 240 seconds. A normal request may receive one transport retry; an exhausted structured output receives one compact retry without another transport retry, keeping the total at three requests or fewer.
+Configured Temperature is not globally capped. Diagnostics also show the task recommendation and final value. Reasoning or other capability profiles that do not support Temperature omit the field completely. JSON mode is sent only when the Provider/model capability profile declares support.
 
-A connection test verifies basic URL, model, and Key availability only. It does not prove that a long structured analysis will fit its output budget or schema.
+The current built-in profiles cover DeepSeek chat, DeepSeek reasoning, standard OpenAI-compatible, and conservative custom compatibility. Unknown Providers do not receive private parameters.
 
-Keys remain encrypted in Provider storage, blank edits retain the existing key, and explicit clearing is required. Diagnostics never include keys, request headers, raw responses, or reasoning text.
+A connection test uses the same gateway and capability policy as business analysis, but only proves basic URL, model and Key availability. It does not prove long-input quality or Schema compliance.
+
+Keys are never returned to the frontend. Blank edits retain the existing key and explicit clearing is required. Diagnostics never include keys, Authorization, full prompts, raw responses, or reasoning text.

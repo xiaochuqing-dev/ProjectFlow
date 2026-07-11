@@ -15,3 +15,7 @@ A job remains CANCEL_REQUESTED: the current synchronous Git, GitHub or model HTT
 Retry returns an existing job ID: this is expected when an equivalent `QUEUED`, `RUNNING`, or `CANCEL_REQUESTED` job exists. Retry never creates a parallel equivalent task.
 
 An old H2 database fails on a null optimistic-lock version: V3.3.7 finalization adds the job version column with database default `0`. Run the current application once with its normal `ddl-auto=update`; do not delete the database.
+
+If an old H2 database rejects `CANCEL_REQUESTED` or another current job state, V3.3.8 expands the historical job-status enum on startup. It also adds missing change-batch timing columns and backfills nullable timing/worktree flags before normal reads. Do not delete the database to work around these upgrade errors.
+
+If diagnostics report `SCHEMA_MISMATCH`, ProjectFlow performs one targeted Schema repair. `SCHEMA_REPAIR_FAILED` means the second JSON was still not compatible; old successful results remain. `OUTPUT_BUDGET_EXHAUSTED` and `REASONING_EXHAUSTED_OUTPUT` use different recovery budgets and should not be treated as network failures.

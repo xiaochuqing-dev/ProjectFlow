@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.3.8 真实模型可靠性 - 2026-07-12
+
+统一 6 个真实模型入口，新增 Provider/model capability 与任务级动态参数策略，取消 temperature 0.3、复杂任务 4000 和恢复 2000 的固定限制。结构化输出改用 balanced 多候选扫描、目标集合定位、snake_case/外层包装适配、Schema repair、截断与 reasoning 分型恢复。真实 DeepSeek 通过隔离应用副本完成所有入口调用，ProjectFlow 套娃覆盖 30 提交、148 文件、15 份 Agent result；首次真实 Schema 偏离被复现并修复。旧 H2 启动同时补齐 job status enum、计时列与 nullable worktree flag。
+
 ## ProjectFlow V3.3.7 正式收尾 - 2026-07-11
 
 修复 retry 的 force 路径绕过活动任务唯一性问题，普通创建、retry、重新分析和恢复统一先复用等价活动 job；新 retry 记录来源任务。新增 10 路并发 retry、活动状态复用、成功冲突和隔离测试。Playwright 扩展为 4 条真实前后端核心流程，并使用明确标识的固定兼容模型服务。PostgreSQL 16 Testcontainers 现在覆盖扫描、正式建议、沉淀确认、能力分析、失败保留、并发 retry 和取消。H2 文件库升级测试发现并修复旧行 optimistic version 为空导致首次 flush 失败的问题，验证旧项目、Provider、任务、沉淀和能力卡片无需清库即可升级。

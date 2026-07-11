@@ -37,27 +37,27 @@ class ModelFailureClassifierTest {
 
     @Test
     void classifiesHttpStatus401AsAuthFailure() {
-        assertThat(ModelFailureClassifier.classifyHttpStatus(401)).isEqualTo(ModelFailureClassifier.HTTP_401_OR_403);
-        assertThat(ModelFailureClassifier.classifyHttpStatus(403)).isEqualTo(ModelFailureClassifier.HTTP_401_OR_403);
-        assertThat(ModelFailureClassifier.humanReason(ModelFailureClassifier.HTTP_401_OR_403, "DeepSeek"))
+        assertThat(ModelFailureClassifier.classifyHttpStatus(401)).isEqualTo(ModelFailureClassifier.PROVIDER_AUTH_FAILED);
+        assertThat(ModelFailureClassifier.classifyHttpStatus(403)).isEqualTo(ModelFailureClassifier.PROVIDER_AUTH_FAILED);
+        assertThat(ModelFailureClassifier.humanReason(ModelFailureClassifier.PROVIDER_AUTH_FAILED, "DeepSeek"))
             .contains("鉴权失败")
             .contains("401/403");
     }
 
     @Test
     void classifiesHttpStatus429AsRateLimit() {
-        assertThat(ModelFailureClassifier.classifyHttpStatus(429)).isEqualTo(ModelFailureClassifier.HTTP_429);
-        assertThat(ModelFailureClassifier.humanReason(ModelFailureClassifier.HTTP_429, "DeepSeek"))
+        assertThat(ModelFailureClassifier.classifyHttpStatus(429)).isEqualTo(ModelFailureClassifier.PROVIDER_RATE_LIMITED);
+        assertThat(ModelFailureClassifier.humanReason(ModelFailureClassifier.PROVIDER_RATE_LIMITED, "DeepSeek"))
             .contains("429")
             .contains("限流");
     }
 
     @Test
     void classifiesHttpStatus5xxAsServerError() {
-        assertThat(ModelFailureClassifier.classifyHttpStatus(500)).isEqualTo(ModelFailureClassifier.HTTP_5XX);
-        assertThat(ModelFailureClassifier.classifyHttpStatus(502)).isEqualTo(ModelFailureClassifier.HTTP_5XX);
-        assertThat(ModelFailureClassifier.classifyHttpStatus(503)).isEqualTo(ModelFailureClassifier.HTTP_5XX);
-        assertThat(ModelFailureClassifier.humanReason(ModelFailureClassifier.HTTP_5XX, "DeepSeek"))
+        assertThat(ModelFailureClassifier.classifyHttpStatus(500)).isEqualTo(ModelFailureClassifier.PROVIDER_5XX);
+        assertThat(ModelFailureClassifier.classifyHttpStatus(502)).isEqualTo(ModelFailureClassifier.PROVIDER_5XX);
+        assertThat(ModelFailureClassifier.classifyHttpStatus(503)).isEqualTo(ModelFailureClassifier.PROVIDER_5XX);
+        assertThat(ModelFailureClassifier.humanReason(ModelFailureClassifier.PROVIDER_5XX, "DeepSeek"))
             .contains("5xx")
             .contains("服务异常");
     }
@@ -82,16 +82,16 @@ class ModelFailureClassifierTest {
         Exception truncated = new ModelGatewayService.ModelOutputTruncatedException("truncated", null, null);
 
         assertThat(ModelFailureClassifier.classifyException(empty)).isEqualTo(ModelFailureClassifier.EMPTY_CONTENT);
-        assertThat(ModelFailureClassifier.classifyException(truncated)).isEqualTo(ModelFailureClassifier.OUTPUT_TRUNCATED);
-        assertThat(ModelFailureClassifier.humanReason(ModelFailureClassifier.OUTPUT_TRUNCATED, "DeepSeek")).contains("长度上限");
+        assertThat(ModelFailureClassifier.classifyException(truncated)).isEqualTo(ModelFailureClassifier.OUTPUT_BUDGET_EXHAUSTED);
+        assertThat(ModelFailureClassifier.humanReason(ModelFailureClassifier.OUTPUT_BUDGET_EXHAUSTED, "DeepSeek")).contains("预算");
     }
 
     @Test
     void classifiesModelHttpExceptionByStatus() {
         ModelGatewayService.ModelHttpException http401 = new ModelGatewayService.ModelHttpException(401);
         ModelGatewayService.ModelHttpException http500 = new ModelGatewayService.ModelHttpException(500);
-        assertThat(ModelFailureClassifier.classifyException(http401)).isEqualTo(ModelFailureClassifier.HTTP_401_OR_403);
-        assertThat(ModelFailureClassifier.classifyException(http500)).isEqualTo(ModelFailureClassifier.HTTP_5XX);
+        assertThat(ModelFailureClassifier.classifyException(http401)).isEqualTo(ModelFailureClassifier.PROVIDER_AUTH_FAILED);
+        assertThat(ModelFailureClassifier.classifyException(http500)).isEqualTo(ModelFailureClassifier.PROVIDER_5XX);
     }
 
     @Test

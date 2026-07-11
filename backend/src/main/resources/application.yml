@@ -39,8 +39,7 @@ projectflow:
     secret: ${JWT_SECRET:replace-with-at-least-32-random-bytes}
     access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:60}
   model:
-    # V3.3.4 小阶段修复：复杂模型分析（开发推进段归并 / 能力分析）需要数分钟。
-    # 默认 240 秒，覆盖 DeepSeek 多 commit 分析场景；可通过环境变量覆盖。
+    # V3.3.8: Provider capability 可提高 reasoning 模型建议超时；这里是普通请求的可配置基线。
     request-timeout-seconds: ${PROJECTFLOW_MODEL_TIMEOUT_SECONDS:240}
   jobs:
     core-pool-size: ${PROJECTFLOW_JOB_CORE_THREADS:2}

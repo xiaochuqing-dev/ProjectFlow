@@ -1,5 +1,9 @@
 # Data Model
 
+## V3.3.8 model diagnostics
+
+No new model-response table is introduced. Persisted job/result diagnostics add safe parameter provenance, capability profile, retry type, Schema match, reasoning-budget signal and failure stage/code. They intentionally exclude API keys, Authorization, full prompts, raw responses and reasoning text.
+
 ## V3.3.7 analysis job reliability fields
 
 `project_analysis_jobs` now records queued/heartbeat/cancellation timestamps, attempt and model-request counts, prompt/completion/total tokens, task request/time/token limits, input fingerprint, idempotency key, queue position, failure code, restart recovery state, retry lineage (`retried_from_job_id`, `retry_reason`), and optimistic version. Reliability fields remain nullable where safe; entity load applies conservative defaults for legacy rows. The version column uses database default `0` so a populated old table can be upgraded and flushed safely.

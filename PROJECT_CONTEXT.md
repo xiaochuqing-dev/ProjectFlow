@@ -6,7 +6,7 @@ Use this file as the first read for substantial ProjectFlow work. It is a compac
 
 ## Product Position
 
-ProjectFlow V3.3.7 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
+ProjectFlow V3.3.8 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
 
 Current direction:
 
@@ -15,6 +15,14 @@ Current direction:
 - Rules collect and validate facts, models interpret them, and users make the final confirmation.
 - AI/model calls are candidate generators only; user confirmation is required before treating output as official project facts.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
+
+V3.3.8 focus:
+
+- Six model entrypoints share one task registry, Provider capability layer, dynamic request policy, output adapter, failure classifier and diagnostics vocabulary.
+- Temperature is configured/recommended/effective/sent separately. Unsupported parameters are omitted; there is no global 0.3 ceiling.
+- Output budget is task- and input-aware. The former fixed 4000 complex-task and fixed 2000 compact-retry rules are retired.
+- Balanced multi-candidate JSON extraction, target-aware nested collection discovery, Schema repair, truncation recovery and reasoning-exhaustion recovery are bounded and separately diagnosed.
+- Real DeepSeek acceptance uses actual application APIs and ProjectFlow self-analysis; Mock/fixed-model tests remain separate CI evidence.
 
 V3.3.7 focus:
 

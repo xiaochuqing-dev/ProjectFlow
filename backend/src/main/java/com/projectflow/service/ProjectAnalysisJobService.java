@@ -280,7 +280,12 @@ public class ProjectAnalysisJobService {
                         summary.path("timeoutSeconds").asLong(0), summary.path("requestLatencyMs").asLong(0),
                         summary.path("outputTruncated").asBoolean(false), summary.path("compactRetryAttempted").asBoolean(false),
                         summary.path("compactRetrySucceeded").asBoolean(false), summary.path("partialResult").asBoolean(false),
-                        summary.path("recoveredItems").asInt(0)
+                        summary.path("recoveredItems").asInt(0), summary.path("capabilityProfile").asText(""),
+                        summary.path("recommendedTemperature").asDouble(0), summary.path("temperatureSent").asBoolean(false),
+                        summary.path("temperatureDecision").asText(""), summary.path("maxTokenDecision").asText(""),
+                        summary.path("retryType").asText("NONE"), summary.path("reasoningBudgetExhausted").asBoolean(false),
+                        summary.path("schemaMatched").asBoolean(false), summary.path("failureCode").asText(""),
+                        summary.path("requestCount").asInt(0)
                     );
                 } else {
                     fileResult = objectMapper.readValue(job.getResultJson(), ProjectFileAnalysisResponse.class);

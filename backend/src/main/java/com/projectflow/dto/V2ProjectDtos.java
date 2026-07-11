@@ -198,7 +198,17 @@ public final class V2ProjectDtos {
         boolean compactRetryAttempted,
         boolean compactRetrySucceeded,
         boolean partialResult,
-        int recoveredItems
+        int recoveredItems,
+        String capabilityProfile,
+        double recommendedTemperature,
+        boolean temperatureSent,
+        String temperatureDecision,
+        String maxTokenDecision,
+        String retryType,
+        boolean reasoningBudgetExhausted,
+        boolean schemaMatched,
+        String failureCode,
+        int requestCount
     ) {
     }
 
@@ -327,7 +337,21 @@ public final class V2ProjectDtos {
         int requestCount,
         boolean jsonRepaired,
         boolean partialResult,
-        int recoveredItems
+        int recoveredItems,
+        String entryPoint,
+        String taskType,
+        String capabilityProfile,
+        int inputSize,
+        int promptSize,
+        double recommendedTemperature,
+        boolean temperatureSent,
+        String temperatureDecision,
+        String maxTokenDecision,
+        String retryType,
+        boolean reasoningBudgetExhausted,
+        boolean schemaMatched,
+        String failureStage,
+        String failureCode
     ) {
     }
 

@@ -65,7 +65,9 @@ public class ProjectAnalysisJobRunner {
         }
 
         long startedAt = System.nanoTime();
-        try {
+        try (ModelCancellationContext.Scope ignored = ModelCancellationContext.bind(() ->
+            jobRepository.findById(jobId).map(ProjectAnalysisJob::isCancellationRequested).orElse(true)
+        )) {
             if (!checkpoint(jobId, false)) return;
             job.markRunning();
             jobRepository.save(job);
@@ -114,7 +116,10 @@ public class ProjectAnalysisJobRunner {
                     diagnostics.taskPolicyMaxTokens(), diagnostics.effectiveMaxTokens(), diagnostics.providerTemperature(),
                     diagnostics.effectiveTemperature(), diagnostics.timeoutSeconds(), diagnostics.requestLatencyMs(),
                     diagnostics.outputTruncated(), diagnostics.compactRetryAttempted(), diagnostics.compactRetrySucceeded(),
-                    diagnostics.partialResult(), diagnostics.recoveredItems()
+                    diagnostics.partialResult(), diagnostics.recoveredItems(), diagnostics.capabilityProfile(),
+                    diagnostics.recommendedTemperature(), diagnostics.temperatureSent(), diagnostics.temperatureDecision(),
+                    diagnostics.maxTokenDecision(), diagnostics.retryType(), diagnostics.reasoningBudgetExhausted(),
+                    diagnostics.schemaMatched(), diagnostics.failureCode(), diagnostics.requestCount()
                 ));
                 if (outcome.hasWarnings()) {
                     java.util.List<String> warningParts = new java.util.ArrayList<>();
@@ -123,7 +128,9 @@ public class ProjectAnalysisJobRunner {
                     if (diagnostics.discardedItems() > 0) warningParts.add(diagnostics.discardedItems() + " 个无效或重复项已过滤");
                     if (diagnostics.invalidSourceIndexes() > 0) warningParts.add(diagnostics.invalidSourceIndexes() + " 个无效来源编号已忽略");
                     if (diagnostics.outputTruncated()) warningParts.add("模型输出达到长度上限，已保留完整条目");
-                    if (diagnostics.compactRetryAttempted()) warningParts.add(diagnostics.compactRetrySucceeded() ? "紧凑重试成功" : "紧凑重试后仍为部分结果");
+                    if (!"NONE".equals(diagnostics.retryType())) warningParts.add(
+                        diagnostics.retryType() + (diagnostics.compactRetrySucceeded() || diagnostics.schemaMatched() ? " 恢复成功" : " 未完整恢复")
+                    );
                     if (outcome.cards().size() < 3) warningParts.add("本次生成的有效能力较少");
                     String warning = "能力分析已完成，" + String.join("；", warningParts) + "。";
                     markSucceededWithWarnings(jobId, resultJson, warning);
@@ -253,7 +260,7 @@ public class ProjectAnalysisJobRunner {
     private void recordJobUsage(UUID jobId, ProjectCapabilityService.CapabilityDiagnostics diagnostics) {
         if (diagnostics == null) return;
         jobRepository.findById(jobId).ifPresent(job -> {
-            int requests = diagnostics.compactRetryAttempted() ? 2 : 1;
+            int requests = Math.max(1, diagnostics.requestCount());
             for (int index = 0; index < requests; index++) {
                 job.recordModelRequest(
                     index == 0 ? diagnostics.promptTokens() : 0,

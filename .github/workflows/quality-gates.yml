@@ -1,4 +1,4 @@
-name: ProjectFlow V3.3.7 Quality Gates
+name: ProjectFlow V3.3.8 Quality Gates
 
 on:
   push:
@@ -126,7 +126,7 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: maven
-      - name: 真实 DeepSeek 小预算验收
+      - name: 真实 DeepSeek 全入口小输入验收
         working-directory: backend
         env:
           PROJECTFLOW_RUN_REAL_MODEL: "true"

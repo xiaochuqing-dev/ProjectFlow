@@ -422,10 +422,10 @@ function CompletedCapabilitiesContent() {
                 <p>Provider / 模型：{capabilityJob.capabilityCardResult?.providerName || "未记录"} / {capabilityJob.capabilityCardResult?.modelName || "未记录"}</p>
                 <p>finish reason：{capabilityJob.capabilityCardResult?.finishReason || "未返回"}</p>
                 <p>Token：输入 {capabilityJob.capabilityCardResult?.promptTokens ?? 0} / 输出 {capabilityJob.capabilityCardResult?.completionTokens ?? 0} / 总计 {capabilityJob.capabilityCardResult?.totalTokens ?? 0}</p>
-                <p>Max Tokens：Provider 上限 {capabilityJob.capabilityCardResult?.providerMaxTokens ?? 0} / 任务上限 {capabilityJob.capabilityCardResult?.taskPolicyMaxTokens ?? 0} / 实际生效 {capabilityJob.capabilityCardResult?.effectiveMaxTokens ?? 0}</p>
-                <p>Temperature：配置 {capabilityJob.capabilityCardResult?.providerTemperature ?? 0} / 实际生效 {capabilityJob.capabilityCardResult?.effectiveTemperature ?? 0}</p>
+                <p>Max Tokens：Provider 上限 {capabilityJob.capabilityCardResult?.providerMaxTokens ?? 0} / 任务动态申请 {capabilityJob.capabilityCardResult?.taskPolicyMaxTokens ?? 0} / 实际生效 {capabilityJob.capabilityCardResult?.effectiveMaxTokens ?? 0}</p>
+                <p>Temperature：配置 {capabilityJob.capabilityCardResult?.providerTemperature ?? 0} / 任务建议 {capabilityJob.capabilityCardResult?.recommendedTemperature ?? 0} / {capabilityJob.capabilityCardResult?.temperatureSent ? `实际 ${capabilityJob.capabilityCardResult.effectiveTemperature ?? 0}` : "未发送"}</p>
                 <p>请求超时：{capabilityJob.capabilityCardResult?.timeoutSeconds ?? 0} 秒 · 模型请求耗时 {capabilityJob.capabilityCardResult?.requestLatencyMs ?? 0} ms</p>
-                <p>截断：{capabilityJob.capabilityCardResult?.outputTruncated ? "检测到" : "未检测到"} · 紧凑重试：{capabilityJob.capabilityCardResult?.compactRetryAttempted ? capabilityJob.capabilityCardResult.compactRetrySucceeded ? "已成功" : "已执行但仍为部分结果" : "未执行"}</p>
+                <p>截断：{capabilityJob.capabilityCardResult?.outputTruncated ? "检测到" : "未检测到"} · 恢复：{capabilityJob.capabilityCardResult?.retryType && capabilityJob.capabilityCardResult.retryType !== "NONE" ? `${capabilityJob.capabilityCardResult.retryType} · ${capabilityJob.capabilityCardResult.compactRetrySucceeded || capabilityJob.capabilityCardResult.schemaMatched ? "成功" : "未完整恢复"}` : "未执行"}</p>
               </div>
             </details>
           </div>
@@ -579,9 +579,9 @@ function formatDiagnostics(raw: string | null) {
       `finish reason：${value.finishReason || "未返回"}`,
       `模型是否返回内容：${value.contentPresent ? "是" : "否"}`,
       `Token：输入 ${value.promptTokens || 0} / 输出 ${value.completionTokens || 0} / 总计 ${value.totalTokens || 0}`,
-      `Max Tokens：Provider ${value.providerMaxTokens || 0} / 任务 ${value.taskPolicyMaxTokens || 0} / 实际 ${value.effectiveMaxTokens || 0}`,
-      `Temperature：配置 ${value.providerTemperature ?? 0} / 实际 ${value.effectiveTemperature ?? 0}`,
-      `输出截断：${value.truncated ? "是" : "否"}；紧凑重试：${value.compactRetryAttempted ? value.compactRetrySucceeded ? "成功" : "未恢复完整结果" : "未执行"}`,
+      `Max Tokens：Provider ${value.providerMaxTokens || 0} / 任务动态申请 ${value.taskPolicyMaxTokens || 0} / 实际 ${value.effectiveMaxTokens || 0}`,
+      `Temperature：配置 ${value.providerTemperature ?? 0} / 建议 ${value.recommendedTemperature ?? 0} / ${value.temperatureSent === false ? "未发送" : value.effectiveTemperature ?? 0}`,
+      `输出截断：${value.truncated ? "是" : "否"}；恢复类型：${value.retryType && value.retryType !== "NONE" ? value.retryType : "未执行"}`,
     ].join("\n");
   } catch {
     return "诊断记录无法读取，但旧能力卡片仍保持不变。";

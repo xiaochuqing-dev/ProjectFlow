@@ -1,10 +1,5 @@
 package com.projectflow.service;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -34,14 +29,16 @@ import com.projectflow.support.AppException;
 public class AiProviderService {
     private final AiProviderRepository aiProviderRepository;
     private final AiProviderUrlGuard aiProviderUrlGuard;
-    private final HttpClient httpClient;
+    private final ModelGatewayService modelGatewayService;
 
-    public AiProviderService(AiProviderRepository aiProviderRepository, AiProviderUrlGuard aiProviderUrlGuard) {
+    public AiProviderService(
+        AiProviderRepository aiProviderRepository,
+        AiProviderUrlGuard aiProviderUrlGuard,
+        ModelGatewayService modelGatewayService
+    ) {
         this.aiProviderRepository = aiProviderRepository;
         this.aiProviderUrlGuard = aiProviderUrlGuard;
-        this.httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+        this.modelGatewayService = modelGatewayService;
     }
 
     @Transactional
@@ -163,39 +160,36 @@ public class AiProviderService {
     public ProviderTestResponse test(UUID userId, UUID providerId) {
         AiProvider provider = findOwned(userId, providerId);
         if (provider.getType() == AiProviderType.MOCK) {
-            return new ProviderTestResponse(true, provider.getName(), "本地模拟 Provider 可用。");
+            return new ProviderTestResponse(true, provider.getName(), "本地模拟 Provider 可用，但这不是真实模型验收。");
         }
         if (provider.getApiKey() == null || provider.getApiKey().isBlank()) {
             return new ProviderTestResponse(false, provider.getName(), "请先配置 API Key，再测试连接。");
         }
 
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(aiProviderUrlGuard.chatCompletionsUri(provider.getBaseUrl()))
-                .timeout(Duration.ofSeconds(12))
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + provider.getApiKey())
-                .POST(HttpRequest.BodyPublishers.ofString("""
-                    {
-                      "model": "%s",
-                      "messages": [
-                        {"role": "user", "content": "Reply with OK."}
-                      ],
-                      "temperature": 0,
-                      "max_tokens": 8
-                    }
-                    """.formatted(escapeJson(provider.getModelName()))))
-                .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            boolean ok = response.statusCode() >= 200 && response.statusCode() < 300;
+            ModelGatewayService.StructuredModelResponse response = modelGatewayService.callStructured(
+                provider,
+                "只返回这个 JSON：{\"ok\":true}",
+                ModelTaskType.PROVIDER_CONNECTION_TEST
+            );
+            boolean ok = response.parsed().root().path("ok").asBoolean(false);
+            ModelGatewayService.ModelCallDiagnostics diagnostics = response.diagnostics();
             return new ProviderTestResponse(
                 ok,
                 provider.getName(),
-                ok ? "连接测试成功。该结果只代表 Key、地址和模型名基本可用，不代表长文本结构化分析一定成功。"
-                    : "连接测试失败，模型服务返回 HTTP " + response.statusCode() + "。"
+                ok
+                    ? "连接测试成功。能力档案：" + diagnostics.capabilityProfile()
+                        + "；实际 max_tokens=" + diagnostics.effectiveMaxTokens()
+                        + "；temperature " + (diagnostics.temperatureSent() ? "已发送" : "未发送")
+                        + "。该结果不代表长文本结构化分析一定成功。"
+                    : "连接测试返回了可读取内容，但未得到约定的 ok=true。"
             );
         } catch (Exception exception) {
-            return new ProviderTestResponse(false, provider.getName(), "连接测试失败，请检查 Base URL、模型名、API Key 和网络。" );
+            return new ProviderTestResponse(
+                false,
+                provider.getName(),
+                "连接测试失败。" + modelGatewayService.failureMessage(exception)
+            );
         }
     }
 
@@ -291,7 +285,4 @@ public class AiProviderService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    private String escapeJson(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
-    }
 }

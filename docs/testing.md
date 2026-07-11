@@ -28,4 +28,8 @@ The final V3.3.7 browser suite has four isolated tests: model-backed analysis ba
 
 `ProjectFlowPostgresIT` starts PostgreSQL 16 and runs service/repository/transaction workflows for scan, formal suggestion, sediment confirmation, capability candidate/confirmation, failure preservation, concurrent retry and cancellation. `ProjectFlowH2UpgradeIntegrationTest` removes the V3.3.7 job columns from a populated file database, restarts the current app with `ddl-auto=update`, and verifies old data plus new retry/cancel behavior.
 
+V3.3.8 adds focused tests for Provider/model capability selection, task/input-aware output budgets, unsupported Temperature omission, multiple JSON candidates, unrelated leading arrays, unknown nested wrappers, snake_case aliases, Schema repair success/failure, reasoning-exhausted empty content, truncation recovery and safe H2 enum/column backfill.
+
+`RealDeepSeekIT` is optional and runs only with `PROJECTFLOW_RUN_REAL_MODEL=true` plus a secure `DEEPSEEK_API_KEY`. It validates all six registered small-input entrypoints. Local release acceptance additionally drives actual application APIs against an isolated copy of the configured embedded Provider and records medium/large ProjectFlow self-analysis separately from fixed-model automation.
+
 Real DeepSeek is disabled unless PROJECTFLOW_RUN_REAL_MODEL=true and DEEPSEEK_API_KEY is present. The fixed input caps output at 128 tokens, task requests at 3 and total asserted usage below 1,000 tokens. Without a key the workflow prints SKIPPED.

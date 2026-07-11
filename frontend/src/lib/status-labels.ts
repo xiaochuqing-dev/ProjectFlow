@@ -11,15 +11,22 @@ export function modelStatusLabel(status: string | undefined | null, providerName
     case "NOT_CONFIGURED": return "未配置模型";
     case "REQUEST_TIMEOUT": return `${provider} 请求超时`;
     case "HTTP_401_OR_403": return `${provider} 鉴权失败`;
+    case "PROVIDER_AUTH_FAILED": return `${provider} 鉴权失败`;
     case "HTTP_429": return `${provider} 限流`;
+    case "PROVIDER_RATE_LIMITED": return `${provider} 限流`;
     case "HTTP_5XX": return `${provider} 服务异常`;
+    case "PROVIDER_5XX": return `${provider} 服务异常`;
     case "NETWORK_ERROR": return "网络连接失败";
     case "CALL_FAILED": return `${provider} 调用失败`;
     case "UNKNOWN_CALL_FAILED": return `${provider} 调用失败`;
     case "EMPTY_CONTENT": return "模型已响应但内容为空";
     case "OUTPUT_TRUNCATED": return "模型输出达到长度上限";
+    case "OUTPUT_BUDGET_EXHAUSTED": return "模型输出预算耗尽";
+    case "REASONING_EXHAUSTED_OUTPUT": return "reasoning 占满输出预算";
     case "JSON_PARSE_FAILED": return "模型返回的 JSON 无法解析";
     case "SCHEMA_UNRECOGNIZED": return "未识别到目标结果结构";
+    case "SCHEMA_MISMATCH": return "模型结果结构偏离目标";
+    case "SCHEMA_REPAIR_FAILED": return "模型结果结构修复失败";
     case "EVIDENCE_REJECTED": return "模型证据引用无效";
     case "NO_CHANGES": return "无新变化";
     default: return status && status.trim() ? status : "未配置模型";
@@ -32,13 +39,20 @@ export function modelFailureDetail(status: string | undefined | null, providerNa
   switch (status) {
     case "REQUEST_TIMEOUT": return `${provider} 请求超时，模型在设定时间内没有返回，本次先展示本地事实摘要。`;
     case "HTTP_401_OR_403": return `${provider} 返回鉴权失败（401/403），可能是 API key 错误或权限不足。`;
+    case "PROVIDER_AUTH_FAILED": return `${provider} 返回鉴权失败（401/403），请检查 API Key 和模型权限；不会自动重试。`;
     case "HTTP_429": return `${provider} 返回 429，可能是限流，请稍后重试。`;
+    case "PROVIDER_RATE_LIMITED": return `${provider} 返回限流（429），已停止本次分析，可稍后重试。`;
     case "HTTP_5XX": return `${provider} 服务异常（5xx），本次先展示本地事实摘要，可稍后重新分析。`;
+    case "PROVIDER_5XX": return `${provider} 服务异常（5xx），已停止本次分析并保留旧结果。`;
     case "NETWORK_ERROR": return "网络连接失败，可能与代理或 baseUrl 有关，本次先展示本地事实摘要。";
     case "EMPTY_CONTENT": return "模型服务已响应，但没有返回可分析内容，本次先展示本地事实摘要。";
     case "OUTPUT_TRUNCATED": return "模型输出达到长度上限，紧凑重试后仍未得到完整结构，本次展示已恢复结果或本地事实摘要。";
+    case "OUTPUT_BUDGET_EXHAUSTED": return "模型输出预算耗尽；系统已提高预算执行一次截断恢复，仍失败时保留可恢复条目或旧结果。";
+    case "REASONING_EXHAUSTED_OUTPUT": return "模型 reasoning 疑似占满共享预算；系统已提高可见输出预算重试，仍失败时保留旧结果。";
     case "JSON_PARSE_FAILED": return "模型已返回内容，但 JSON 语法无法解析，本次先展示本地事实摘要。";
     case "SCHEMA_UNRECOGNIZED": return "模型返回内容可以读取，但没有识别到目标结果结构，本次先展示本地事实摘要。";
+    case "SCHEMA_MISMATCH": return "模型返回 JSON 可以读取，但结构不符合目标；系统会执行一次定向 Schema 修复。";
+    case "SCHEMA_REPAIR_FAILED": return "模型结果结构偏离目标，定向 Schema 修复仍未成功；已保留旧结果。";
     case "EVIDENCE_REJECTED": return "模型结果引用的证据不可用，本次先展示本地事实摘要。";
     case "CALL_FAILED":
     case "UNKNOWN_CALL_FAILED": return `${provider} 调用失败，本次先展示本地事实摘要。`;

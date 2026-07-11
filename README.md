@@ -1,6 +1,18 @@
 # ProjectFlow
 
-ProjectFlow V3.3.7 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+ProjectFlow V3.3.8 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+
+## V3.3.8 Real Model Reliability
+
+- Six real model entrypoints are registered explicitly: Provider connection test, development-segment merge, whole-project analysis, file analysis, capability interpretation, and project-capability analysis. Business services use the same gateway and task definition.
+- Provider/model capability profiles decide whether Temperature and JSON mode are sent, identify reasoning models, expose safe reasoning-field metadata, and keep unknown OpenAI-compatible services on a conservative standard profile.
+- Temperature no longer has a global 0.3 ceiling. Diagnostics separate configured, task-recommended, effective, sent/omitted, and decision reason.
+- Max Tokens is calculated from task type, input size, expected structure, reasoning behavior, and Provider capability. Complex tasks no longer share a fixed 4000 budget, and recovery no longer falls back to a fixed 2000 budget.
+- Balanced multi-candidate JSON scanning, target-aware collection discovery, common wrapper/snake_case aliases, trailing-comma repair, and partial-array recovery reduce avoidable format loss.
+- Legal JSON with the wrong business shape receives one targeted Schema repair retry. Truncation and reasoning-exhausted empty content use separate recovery types and budgets. Transport retry remains bounded.
+- Diagnostics include entrypoint, capability profile, parameter decisions, retry type, Schema match, reasoning-budget signal, usage, latency, and failure stage without storing keys, Authorization, prompts, raw responses, or reasoning text.
+- The Settings page now describes Provider Max Tokens as a capability ceiling and explains that unsupported parameters are omitted.
+- Local real DeepSeek acceptance used the configured Provider through actual application APIs. ProjectFlow self-analysis covered 30 commits, 148 files, 15 Agent results, and a 10,148-token dynamic output budget; eight model segments were retained.
 
 ## V3.3.7 Real Acceptance and Reliable Jobs
 
@@ -26,7 +38,7 @@ ProjectFlow V3.3.7 is a local-first tool for AI-assisted solo developers to unde
 
 - Model calls now retain finish reason, real token usage, effective Max Tokens and Temperature, timeout, latency, Provider/model, JSON repair, truncation, and compact-retry diagnostics without exposing API keys or raw responses.
 - Length-limited output is handled separately from malformed JSON. ProjectFlow performs one compact retry and can retain complete items recovered from a truncated root array instead of discarding the entire batch.
-- Provider configuration, task-policy limits, and the final effective request values are shown as separate values. Structured tasks cap Temperature at 0.3, use a 240-second default timeout, and report the actual request values in diagnostics.
+- Provider configuration, task recommendations, capability limits, and final effective request values are shown separately. V3.3.8 supersedes the former global Temperature 0.3 and fixed recovery-budget rules.
 - Normalized title, summary, main-change, user-value, and capability text is stored in full. List cards use CSS previews; detail pages show the complete stored content. Legacy ellipsis-ended records are marked and offer re-analysis because lost text cannot be reconstructed.
 - Sediment confirmation starts from a recommended action and reason, shows the target summary and expected field/evidence/file changes before confirmation, and returns the exact write result plus a direct sediment link afterward.
 - Capability cards retain their analysis job ID. The capability page separates the current successful batch, the latest failed attempt, and history; a failed re-analysis never replaces the previous successful candidates or confirmed cards.
@@ -56,7 +68,7 @@ ProjectFlow V3.3.7 is a local-first tool for AI-assisted solo developers to unde
 
 It is built for developers who use agents such as Codex, Claude Code, or other coding assistants to modify real projects and then need a clear way to understand what changed, review the evidence, maintain a project profile, and generate reusable output such as daily reviews, README material, reports, and resume-ready summaries.
 
-## V3.3.7 Workflow
+## V3.3.8 Workflow
 
 ProjectFlow is not a Kanban board, daily-report generator, or hosted PR/CI system. Its primary workflow is:
 
@@ -124,7 +136,7 @@ ProjectFlow/
 +-- .projectflow/             local agent protocol/context/runtime data
 +-- docker-compose.yml        PostgreSQL and Redis mode
 +-- .env.example              repo-safe environment template
-+-- start.bat                 simple V3.3.7 Windows entry
++-- start.bat                 simple V3.3.8 Windows entry
 +-- start-projectflow.bat     embedded Windows launcher
 +-- start-projectflow.ps1     Docker/team startup orchestration
 `-- README.md

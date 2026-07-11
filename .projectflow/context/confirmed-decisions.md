@@ -1,4 +1,10 @@
-# Confirmed V3.3.7 decisions
+# Confirmed V3.3.8 decisions
+
+- 6 个真实模型入口统一登记并通过网关，Provider 测试不再自行发送 HTTP。
+- Temperature 配置值不再被全局 0.3 封顶；不支持时省略。任务建议值只用于策略与诊断，不冒充用户配置。
+- Max Tokens 按任务、输入规模、输出结构、reasoning 行为和 Provider ceiling 动态计算；取消固定 4000/2000。
+- Schema mismatch 进入一次定向重编码；截断和 reasoning 耗尽分别提高预算恢复。所有恢复共享任务请求/token/耗时上限。
+- diagnostics 不保存 Key、Authorization、reasoning 原文、完整 prompt 或原始响应。
 
 - 同用户、项目、任务类型和输入指纹只允许一个活动任务，后端通过项目行锁保证并发幂等。
 - retry 只能忽略已完成历史，不能绕过活动任务唯一性；新 retry 持久化来源任务和原因。
@@ -8,7 +14,7 @@
 - PostgreSQL Testcontainers、H2 兼容、生产构建和 Playwright 是独立质量层；真实 DeepSeek 只在显式开关与安全 Key 同时存在时运行。
 
 - 空 content 不等于普通空响应；若 finish reason 为 length、用量接近上限或存在 reasoning 内容，则按疑似截断处理。
-- 紧凑重试最多一次，输出预算 2000 tokens，完整调用总次数最多 3 次。
+- 输出恢复最多一次；V3.3.8 已用分型动态预算取代固定 2000 tokens。
 - 正式建议只来自有证据绑定的 MODEL 开发推进段；LOCAL_RULE 和 AGENT_RESULT 仅保留为本地草稿。
 - 沉淀处理以分析批次为入口，批次列表展示摘要，详情页逐条处理正式建议。
 - 推荐强度分为强、中、仅供参考、不推荐；强推荐必须同时满足证据和目标相似度条件。

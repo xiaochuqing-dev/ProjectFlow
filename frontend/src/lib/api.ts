@@ -640,6 +640,20 @@ export type ModelCallDiagnostics = {
   jsonRepaired: boolean;
   partialResult: boolean;
   recoveredItems: number;
+  entryPoint: string;
+  taskType: string;
+  capabilityProfile: string;
+  inputSize: number;
+  promptSize: number;
+  recommendedTemperature: number;
+  temperatureSent: boolean;
+  temperatureDecision: string;
+  maxTokenDecision: string;
+  retryType: string;
+  reasoningBudgetExhausted: boolean;
+  schemaMatched: boolean;
+  failureStage: string;
+  failureCode: string;
 };
 
 export type CapabilityInterpretResponse = {
@@ -973,6 +987,16 @@ export type ProjectAnalysisJob = {
     compactRetrySucceeded: boolean;
     partialResult: boolean;
     recoveredItems: number;
+    capabilityProfile: string;
+    recommendedTemperature: number;
+    temperatureSent: boolean;
+    temperatureDecision: string;
+    maxTokenDecision: string;
+    retryType: string;
+    reasoningBudgetExhausted: boolean;
+    schemaMatched: boolean;
+    failureCode: string;
+    requestCount: number;
   } | null;
   recordId: string | null;
   createdAt: string;

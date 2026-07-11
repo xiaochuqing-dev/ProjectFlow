@@ -79,7 +79,7 @@ class ModelGatewayServiceTest {
     }
 
     @Test
-    void emptyTruncatedContentTriggersLowerBudgetCompactRetry() throws Exception {
+    void emptyTruncatedContentRaisesBudgetForReasoningRecovery() throws Exception {
         AtomicInteger calls = new AtomicInteger();
         AtomicInteger compactMaxTokens = new AtomicInteger();
         HttpServer server = startEmptyTruncatedServer(calls, compactMaxTokens);
@@ -88,9 +88,10 @@ class ModelGatewayServiceTest {
             var response = gateway.callStructured(provider, "返回结构化结果", 4_000);
 
             assertThat(calls.get()).isEqualTo(2);
-            assertThat(compactMaxTokens.get()).isEqualTo(2_000);
+            assertThat(compactMaxTokens.get()).isEqualTo(8_000);
             assertThat(response.diagnostics().compactRetryAttempted()).isTrue();
             assertThat(response.diagnostics().compactRetrySucceeded()).isTrue();
+            assertThat(response.diagnostics().retryType()).isEqualTo("EMPTY_AFTER_REASONING_RETRY");
         } finally {
             server.stop(0);
         }
@@ -124,6 +125,98 @@ class ModelGatewayServiceTest {
                 .satisfies(exception -> assertThat(((ModelGatewayService.ModelOutputTruncatedException) exception)
                     .diagnostics().compactRetryAttempted()).isTrue());
             assertThat(calls.get()).isEqualTo(2);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void cancellationStopsRecoveryRequestAfterFirstResponse() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        java.util.concurrent.atomic.AtomicBoolean cancelled = new java.util.concurrent.atomic.AtomicBoolean();
+        HttpServer server = startCancellingServer(calls, cancelled);
+        try (ModelCancellationContext.Scope ignored = ModelCancellationContext.bind(cancelled::get)) {
+            AiProvider provider = provider("http://127.0.0.1:" + server.getAddress().getPort());
+            assertThatThrownBy(() -> gateway.callStructured(provider, "返回结构化结果", ModelTaskType.PROJECT_ANALYSIS))
+                .isInstanceOf(java.util.concurrent.CancellationException.class);
+            assertThat(calls.get()).isEqualTo(1);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void diagnosticsNamesTransportRetry() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        HttpServer server = startTransportRetryServer(calls);
+        try {
+            AiProvider provider = provider("http://127.0.0.1:" + server.getAddress().getPort());
+            var response = gateway.callStructured(provider, "只返回 {\"ok\":true}", ModelTaskType.PROVIDER_CONNECTION_TEST);
+
+            assertThat(calls.get()).isEqualTo(2);
+            assertThat(response.diagnostics().transportRetryCount()).isEqualTo(1);
+            assertThat(response.diagnostics().retryType()).isEqualTo("TRANSPORT_RETRY");
+            assertThat(response.diagnostics().requestCount()).isEqualTo(2);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void legalJsonWithWrongSchemaUsesTargetedRepairRetry() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        HttpServer server = startSchemaServer(calls, false);
+        try {
+            AiProvider provider = provider("http://127.0.0.1:" + server.getAddress().getPort());
+            var response = gateway.callStructured(provider, "分析项目", ModelTaskType.PROJECT_ANALYSIS);
+
+            assertThat(calls.get()).isEqualTo(2);
+            assertThat(response.diagnostics().retryType()).isEqualTo("SCHEMA_REPAIR_RETRY");
+            assertThat(response.diagnostics().schemaMatched()).isTrue();
+            assertThat(response.diagnostics().requestCount()).isEqualTo(2);
+            assertThat(response.parsed().root().path("summary").asText()).isEqualTo("已修复");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void schemaRepairFailureIsClassifiedSeparately() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        HttpServer server = startSchemaServer(calls, true);
+        try {
+            AiProvider provider = provider("http://127.0.0.1:" + server.getAddress().getPort());
+            assertThatThrownBy(() -> gateway.callStructured(provider, "分析项目", ModelTaskType.PROJECT_ANALYSIS))
+                .isInstanceOf(ModelGatewayService.ModelSchemaRepairException.class)
+                .satisfies(exception -> {
+                    var failure = (ModelGatewayService.ModelSchemaRepairException) exception;
+                    assertThat(failure.diagnostics().retryType()).isEqualTo("SCHEMA_REPAIR_RETRY");
+                    assertThat(ModelFailureClassifier.classifyException(failure)).isEqualTo(ModelFailureClassifier.SCHEMA_REPAIR_FAILED);
+                });
+            assertThat(calls.get()).isEqualTo(2);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void reasoningCapabilityOmitsUnsupportedRequestParameters() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        java.util.concurrent.atomic.AtomicReference<JsonNode> captured = new java.util.concurrent.atomic.AtomicReference<>();
+        HttpServer server = startCaptureServer(calls, captured);
+        try {
+            AiProvider provider = provider("http://127.0.0.1:" + server.getAddress().getPort());
+            provider.update(
+                "DeepSeek", provider.getBaseUrl(), "test-key", "deepseek-reasoner", AiProviderType.DEEPSEEK,
+                0.8, 32_000, true, List.of("项目分析")
+            );
+            var response = gateway.callStructured(provider, "x".repeat(12_000), ModelTaskType.PROJECT_CAPABILITY_ANALYSIS);
+
+            assertThat(captured.get().has("temperature")).isFalse();
+            assertThat(captured.get().has("response_format")).isFalse();
+            assertThat(captured.get().path("max_tokens").asInt()).isGreaterThan(7_000);
+            assertThat(response.diagnostics().temperatureSent()).isFalse();
+            assertThat(response.diagnostics().capabilityProfile()).isEqualTo("DEEPSEEK_REASONING");
         } finally {
             server.stop(0);
         }
@@ -176,6 +269,94 @@ class ModelGatewayServiceTest {
                 : "{\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"content\":\"{\\\"items\\\":[{\\\"name\\\":\\\"恢复成功\\\"}]}\"}}],\"usage\":{\"completion_tokens\":200}}";
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        server.start();
+        return server;
+    }
+
+    private HttpServer startSchemaServer(AtomicInteger calls, boolean alwaysWrong) throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/chat/completions", exchange -> {
+            int call = calls.incrementAndGet();
+            String content = alwaysWrong || call == 1
+                ? "{\"unexpected\":[{\"text\":\"有语义但结构错误\"}]}"
+                : "{\"summary\":\"已修复\",\"architecture\":\"前后端分层\",\"modules\":[],\"risks\":[],\"importantFiles\":[],\"evidence\":[],\"limitations\":[],\"confidence\":\"HIGH\"}";
+            String body = objectMapper.writeValueAsString(Map.of(
+                "choices", List.of(Map.of("finish_reason", "stop", "message", Map.of("content", content))),
+                "usage", Map.of("prompt_tokens", 100, "completion_tokens", 200, "total_tokens", 300)
+            ));
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        server.start();
+        return server;
+    }
+
+    private HttpServer startCaptureServer(
+        AtomicInteger calls,
+        java.util.concurrent.atomic.AtomicReference<JsonNode> captured
+    ) throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/chat/completions", exchange -> {
+            calls.incrementAndGet();
+            captured.set(objectMapper.readTree(exchange.getRequestBody()));
+            String content = "{\"capabilities\":[{\"name\":\"可靠模型链路\",\"summary\":\"按能力与任务计算参数\"}]}";
+            String body = objectMapper.writeValueAsString(Map.of(
+                "choices", List.of(Map.of("finish_reason", "stop", "message", Map.of("content", content))),
+                "usage", Map.of("prompt_tokens", 3000, "completion_tokens", 500, "total_tokens", 3500)
+            ));
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        server.start();
+        return server;
+    }
+
+    private HttpServer startCancellingServer(
+        AtomicInteger calls,
+        java.util.concurrent.atomic.AtomicBoolean cancelled
+    ) throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/chat/completions", exchange -> {
+            calls.incrementAndGet();
+            String content = "{\"summary\":\"未完成";
+            String body = objectMapper.writeValueAsString(Map.of(
+                "choices", List.of(Map.of("finish_reason", "length", "message", Map.of("content", content))),
+                "usage", Map.of("prompt_tokens", 100, "completion_tokens", 5000, "total_tokens", 5100)
+            ));
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+            cancelled.set(true);
+        });
+        server.start();
+        return server;
+    }
+
+    private HttpServer startTransportRetryServer(AtomicInteger calls) throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/chat/completions", exchange -> {
+            int call = calls.incrementAndGet();
+            if (call == 1) {
+                exchange.sendResponseHeaders(503, -1);
+                exchange.close();
+                return;
+            }
+            String body = objectMapper.writeValueAsString(Map.of(
+                "choices", List.of(Map.of("finish_reason", "stop", "message", Map.of("content", "{\"ok\":true}"))),
+                "usage", Map.of("prompt_tokens", 20, "completion_tokens", 10, "total_tokens", 30)
+            ));
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
             exchange.sendResponseHeaders(200, bytes.length);
             exchange.getResponseBody().write(bytes);
             exchange.close();

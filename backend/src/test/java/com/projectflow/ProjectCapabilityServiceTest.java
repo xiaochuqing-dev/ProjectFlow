@@ -60,7 +60,7 @@ class ProjectCapabilityServiceTest {
     void modelFailureKeepsExistingCandidates() throws Exception {
         UUID userId = UUID.randomUUID();
         UUID projectId = prepareInput(userId);
-        when(modelGatewayService.callStructured(any(), any(), any(Integer.class))).thenThrow(new IOException("bad json"));
+        when(modelGatewayService.callStructured(any(), any(), any(com.projectflow.service.ModelTaskType.class))).thenThrow(new IOException("bad json"));
         ProjectCapabilityService service = service();
 
         assertThatThrownBy(() -> service.analyzeWithOutcome(userId, projectId, null))
@@ -74,7 +74,7 @@ class ProjectCapabilityServiceTest {
         UUID userId = UUID.randomUUID();
         UUID projectId = prepareInput(userId);
         String content = "{\"cards\":[{\"title\":\"扫描范围恢复\",\"summary\":\"从确认点恢复待整理变化。\",\"sources\":[\"S1\"]}]}";
-        when(modelGatewayService.callStructured(any(), any(), any(Integer.class))).thenReturn(
+        when(modelGatewayService.callStructured(any(), any(), any(com.projectflow.service.ModelTaskType.class))).thenReturn(
             new ModelGatewayService.StructuredModelResponse(content, outputAdapter.parse(content))
         );
         when(cardRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));

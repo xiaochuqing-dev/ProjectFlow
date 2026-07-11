@@ -1,11 +1,17 @@
 # Model Analysis
 
-ProjectFlow V3.3.6 separates transport success, visible content, finish reason, usage, reasoning-field metadata, truncation, JSON parsing, target-structure recognition, evidence binding, and persistence.
+ProjectFlow V3.3.8 registers six real model entrypoints: Provider connection test, development-segment merge, whole-project analysis, file analysis, capability interpretation, and project-capability analysis. Production business services call `ModelGatewayService` with a `ModelTaskType`; direct model HTTP calls outside the gateway are not allowed.
 
-V3.3.7 adds task-level request, elapsed-time and token budgets above provider and transport behavior. Initial calls, transport retries and compact retries contribute to one persisted request total. Cancellation is checked before a new model call, after its response and before formal persistence. A restart at an unknown model-call state never automatically replays the request.
+The request policy combines Provider type, model name, capability profile, task type, input size, expected output shape, reasoning behavior, Provider output ceiling, and configured Temperature. Diagnostics retain configured, recommended, effective, sent/omitted, and decision reason separately. Unsupported Temperature or JSON mode fields are omitted.
 
-Empty content is classified as exhausted output when `finish_reason=length`, completion tokens approach the effective limit, or a Provider reasoning field exists. It enters one compact retry with an output limit of 2000 tokens. The compact retry does not add another transport retry, so one structured task sends at most three requests.
+Complex tasks no longer share a fixed 4000-token output limit. Recovery no longer uses a fixed 2000-token compact limit. Initial and recovery budgets are computed separately and remain bounded by Provider capability and the persisted task request/token/duration budgets.
 
-Reasoning text is never stored, logged, or returned. Diagnostics retain only whether a reasoning field exists and its character length. Usage is labelled `ACTUAL`, `ESTIMATED`, or `UNAVAILABLE`.
+The structured-output pipeline is:
 
-Project analysis, file analysis, development-segment analysis, capability interpretation, and capability-card analysis use the same gateway diagnostics. A model failure may produce a local fact result where the product permits it, but that result is never presented as a successful model analysis.
+Provider response -> content/reasoning/finish reason/usage extraction -> truncation classification -> balanced JSON candidate scan -> light syntax repair -> target-aware candidate and nested collection selection -> alias normalization -> Schema match -> bounded targeted recovery -> business validation -> persistence.
+
+Retry types are `TRANSPORT_RETRY`, `TRUNCATION_RETRY`, `EMPTY_AFTER_REASONING_RETRY`, and `SCHEMA_REPAIR_RETRY`. Authentication/configuration errors are not retried. A recovery request does not receive another transport retry.
+
+Reasoning text is never stored, logged, or returned. Diagnostics retain only presence, length, and whether reasoning likely exhausted the shared output budget. API keys, Authorization, full prompts and raw Provider responses are also excluded.
+
+Legal JSON with the wrong business shape is not classified as a syntax failure. It receives one Schema repair request that re-encodes existing semantics into the minimal target Schema without re-running the analysis. Complete entries from a truncated array may be retained as a partial result.

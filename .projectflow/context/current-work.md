@@ -1,3 +1,3 @@
 # Current work
 
-ProjectFlow V3.3.7 正式收尾已完成：retry 不再绕过活动任务唯一性并记录来源；4 条 Playwright 覆盖分析批次、沉淀闭环、能力分析和取消/retry；PostgreSQL 16 运行真实 service workflow；H2 文件库从缺少 V3.3.7 字段的旧结构重启升级成功。本地门禁为后端/H2 174 项、PostgreSQL 2 项、前端契约 18 项、Playwright 4 项、生产构建通过；GitHub Actions Run 29154153436 全部核心 job 通过。真实 DeepSeek 因无安全测试 Key 标记 SKIPPED。
+ProjectFlow V3.3.8 模型可靠性已完成实现与本地验收：6 个模型入口统一经过任务注册、Provider capability、动态参数策略、结构化输出适配和分型恢复；全局 temperature 0.3、复杂任务固定 4000、恢复固定 2000 已取消。真实 DeepSeek 通过应用现有 Provider 在隔离数据库副本中完成 6 入口调用，ProjectFlow 套娃输入覆盖 30 提交、148 文件、15 份 Agent result，并产出 8 条模型推进段和 7 张能力卡片。后端/H2 194 项、PostgreSQL 16 Testcontainers 2 项、前端契约 18 项、Playwright 4 项、生产构建和敏感信息扫描通过；待记录远程 CI 和提交 SHA。

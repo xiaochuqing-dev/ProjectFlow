@@ -2,7 +2,13 @@
 
 ## System Overview
 
-ProjectFlow uses a separated frontend and backend architecture. The current V3.3.7 product spine is a developer workbench that turns real project activity into confirmed project sediment and then into traceable capability analysis.
+ProjectFlow uses a separated frontend and backend architecture. The current V3.3.8 product spine is a developer workbench that turns real project activity into confirmed project sediment and then into traceable capability analysis.
+
+## V3.3.8 model reliability boundary
+
+`ModelTaskType` is the model-entry registry. `ModelCapabilityRegistry` describes Provider/model features, `ModelRequestPolicy` calculates task-aware parameters, `ModelGatewayService` owns HTTP/retry/diagnostics, and `ModelOutputAdapter` owns balanced candidate extraction and target-aware normalization. Business services own prompts and evidence validation only.
+
+Provider testing also uses the gateway. This prevents Settings, project analysis, file analysis, change scanning and capability flows from drifting into different parameter or retry rules.
 
 ## V3.3.7 Job Execution Boundary
 

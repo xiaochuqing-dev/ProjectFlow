@@ -1,7 +1,7 @@
-# ProjectFlow V3.3.7 context
+# ProjectFlow V3.3.8 context
 
-主流程保持“待整理变更、开发推进段、批次化沉淀处理、项目沉淀、能力分析”。V3.3.7 不扩展推荐和能力算法，重点是可重复的真实验收与后台任务可靠性。
+主流程保持“待整理变更、开发推进段、批次化沉淀处理、项目沉淀、能力分析”。V3.3.8 只强化真实模型链路，不扩展推荐算法或业务入口。
 
-分析任务由有界线程池执行并持久化状态。创建和 retry 按用户、项目、类型和输入指纹统一幂等；retry 不能通过 force 绕过活动任务，并记录来源 job。取消、预算和正式保存前检查都以数据库状态为准。重启只安全恢复未发起外部调用的排队任务，模型请求状态未知时等待用户明确重跑。
+所有模型入口必须使用 `ModelTaskType` 和统一网关。参数由 Provider/model capability、任务类型、输入规模和输出结构共同决定；不支持的字段不发送。JSON 语法、截断、Schema mismatch、reasoning 耗尽、证据拒绝和 Provider 故障保持不同语义与恢复路径。
 
-质量门禁分为后端/H2 旧库升级、PostgreSQL 16 workflow Testcontainers、前端类型/契约/生产构建、4 条 Playwright 真实进程核心 E2E、可选真实 DeepSeek。固定模型服务只用于可重复业务 E2E；无安全 Key 时真实 DeepSeek 必须标记 SKIPPED。
+真实 DeepSeek、固定模型自动化和人工质量抽样必须分开记录。任何诊断都不得保存 Key、Authorization、reasoning 原文、完整 prompt、原始响应或未脱敏源码。
