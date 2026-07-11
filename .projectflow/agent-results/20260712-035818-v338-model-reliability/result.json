@@ -24,9 +24,7 @@
     "tests": "后端/H2 194 项通过；PostgreSQL 16 Testcontainers 2 项通过；前端契约 18 项通过；Chromium Playwright 4 项通过；敏感信息扫描通过。",
     "manualCheck": "真实 DeepSeek 6 入口实际 API 验收通过；大输入首次 Schema 包装偏离被复现，目标集合适配后复验产出 8 条推进段；8 条沉淀生成 7 张能力卡片。未读取或输出 Key、原始响应和 reasoning 原文。"
   },
-  "unfinished": [
-    "远程 GitHub Actions 需在推送后确认。"
-  ],
+  "unfinished": [],
   "sedimentCandidates": [
     {
       "title": "统一真实模型入口与动态参数策略",

@@ -117,7 +117,7 @@ TypeScript lint 通过，18 项前端契约通过，Next.js 生产构建通过�
 
 ## 25. CI Run
 
-本地 CI 等价命令全部通过；远程 GitHub Actions 待推送后更新。
+远程 GitHub Actions `ProjectFlow V3.3.8 Quality Gates` 已通过：Run 29166589151，敏感信息、后端/H2、PostgreSQL 16、前端质量和 Playwright 均成功；可选真实 DeepSeek 因未配置安全环境变量按设计跳过。链接：https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/29166589151
 
 ## 26. 关键文件
 
@@ -125,7 +125,7 @@ ModelTaskType、ModelCapabilityRegistry、ModelRequestPolicy、ModelGatewayServi
 
 ## 27. 最终 Commit SHA
 
-待提交后更新。
+V3.3.8 实现提交：3962d6989d8ef9fb595a470595f8d0bb6ecca88d。
 
 ## 28. 报告链接
 
