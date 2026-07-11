@@ -1169,7 +1169,7 @@ class V2CoreControllerTest {
     void bridgeRejectsDangerousSystemLevelProjectPath() throws Exception {
         String token = register("path-owner", "path-owner@example.com");
         String projectId = createProject(token, "Path Safety Project");
-        Path driveRoot = Path.of("C:\\");
+        Path driveRoot = Path.of(System.getProperty("user.dir")).toAbsolutePath().getRoot();
 
         mockMvc.perform(post("/api/projects/" + projectId + "/agent-bridge/protocol")
                 .header("Authorization", "Bearer " + token)
