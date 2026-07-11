@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.3.7 正式收尾 - 2026-07-11
+
+修复 retry 的 force 路径绕过活动任务唯一性问题，普通创建、retry、重新分析和恢复统一先复用等价活动 job；新 retry 记录来源任务。新增 10 路并发 retry、活动状态复用、成功冲突和隔离测试。Playwright 扩展为 4 条真实前后端核心流程，并使用明确标识的固定兼容模型服务。PostgreSQL 16 Testcontainers 现在覆盖扫描、正式建议、沉淀确认、能力分析、失败保留、并发 retry 和取消。H2 文件库升级测试发现并修复旧行 optimistic version 为空导致首次 flush 失败的问题，验证旧项目、Provider、任务、沉淀和能力卡片无需清库即可升级。
+
 ## ProjectFlow V3.3.7 真实验收与任务可靠性 - 2026-07-11
 
 分析任务新增持久化取消、队列位置、心跳、输入指纹、请求/时间/token 预算、失败代码和重启恢复状态。重复活动输入返回同一 job，排队与模型并发均有上限，取消检查覆盖 Git、GitHub、模型及正式保存边界。服务重启会重新排队未开始任务，并把模型调用状态未知的任务标为需用户确认的中断。新增 PostgreSQL Testcontainers、H2 旧行兼容、Playwright 真实前后端流程、GitHub Actions 阻断门禁与显式启用的低预算 DeepSeek 测试。

@@ -487,10 +487,12 @@ function CapabilityCardRow({
             <Info label="为什么重要" value={card.featureEntry} />
             <div>
               <dt className="text-xs font-semibold text-slate-700">可复用表达</dt>
-              <dd className="mt-1 space-y-2">
-                <Info label="README 表达" value={card.readmeExpression} copy={() => onCopy(card.readmeExpression)} />
-                <Info label="简历表达" value={card.resumeExpression} copy={() => onCopy(card.resumeExpression)} />
-                <Info label="面试表达" value={card.interviewExpression} />
+              <dd className="mt-1">
+                <dl className="space-y-2">
+                  <Info label="README 表达" value={card.readmeExpression} copy={() => onCopy(card.readmeExpression)} />
+                  <Info label="简历表达" value={card.resumeExpression} copy={() => onCopy(card.resumeExpression)} />
+                  <Info label="面试表达" value={card.interviewExpression} />
+                </dl>
               </dd>
             </div>
           </dl>

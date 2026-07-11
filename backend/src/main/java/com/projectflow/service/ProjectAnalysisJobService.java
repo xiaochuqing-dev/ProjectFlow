@@ -64,26 +64,26 @@ public class ProjectAnalysisJobService {
     }
 
     public ProjectAnalysisJobResponse startProjectAnalysis(UUID userId, UUID projectId) {
-        return startJob(userId, projectId, ProjectAnalysisJobType.PROJECT, null, false);
+        return startJob(userId, projectId, ProjectAnalysisJobType.PROJECT, null, null, null);
     }
 
     public ProjectAnalysisJobResponse startFileAnalysis(UUID userId, UUID projectId, String path) {
         String normalizedPath = path.trim();
-        return startJob(userId, projectId, ProjectAnalysisJobType.FILE, normalizedPath, false);
+        return startJob(userId, projectId, ProjectAnalysisJobType.FILE, normalizedPath, null, null);
     }
 
     public ProjectAnalysisJobResponse startCapabilityInterpret(UUID userId, UUID projectId, String capabilityFact) {
         String fact = capabilityFact == null ? "" : capabilityFact.trim();
-        return startJob(userId, projectId, ProjectAnalysisJobType.CAPABILITY_INTERPRET, fact, false);
+        return startJob(userId, projectId, ProjectAnalysisJobType.CAPABILITY_INTERPRET, fact, null, null);
     }
 
     public ProjectAnalysisJobResponse startWorkSessionScan(UUID userId, UUID projectId) {
-        return startJob(userId, projectId, ProjectAnalysisJobType.WORK_SESSION_SCAN, null, false);
+        return startJob(userId, projectId, ProjectAnalysisJobType.WORK_SESSION_SCAN, null, null, null);
     }
 
     // V3.3.4: 能力分析异步任务。点击"分析项目能力"创建 job，后端异步执行；刷新/离开页面后可恢复。
     public ProjectAnalysisJobResponse startCapabilityCardAnalysis(UUID userId, UUID projectId) {
-        return startJob(userId, projectId, ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS, null, false);
+        return startJob(userId, projectId, ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS, null, null, null);
     }
 
     public ProjectAnalysisJobResponse cancel(UUID userId, UUID jobId) {
@@ -103,7 +103,14 @@ public class ProjectAnalysisJobService {
             || previous.getStatus() == ProjectAnalysisJobStatus.SUCCEEDED_WITH_WARNINGS) {
             throw new AppException("ANALYSIS_JOB_ALREADY_SUCCEEDED", "任务已成功，无需重试", HttpStatus.CONFLICT);
         }
-        return startJob(userId, previous.getProjectId(), previous.getJobType(), previous.getFilePath(), true);
+        return startJob(
+            userId,
+            previous.getProjectId(),
+            previous.getJobType(),
+            previous.getFilePath(),
+            previous.getId(),
+            "USER_RETRY"
+        );
     }
 
     private ProjectAnalysisJobResponse startJob(
@@ -111,24 +118,24 @@ public class ProjectAnalysisJobService {
         UUID projectId,
         ProjectAnalysisJobType type,
         String input,
-        boolean force
+        UUID retriedFromJobId,
+        String retryReason
     ) {
         String fingerprint = fingerprint(type, input);
         StartJobResult result = transactionTemplate.execute(status -> {
             findOwnedProjectForUpdate(userId, projectId);
-            if (!force) {
-                java.util.Optional<ProjectAnalysisJob> active = jobRepository
-                    .findFirstByProjectIdAndJobTypeAndInputFingerprintAndStatusInOrderByCreatedAtDesc(
-                        projectId, type, fingerprint, ACTIVE_STATUSES
-                    );
-                if (active.isPresent()) return new StartJobResult(active.get(), false);
-                // 兼容 V3.3.6 尚无指纹的活动任务。
-                active = activeJob(projectId, type, input);
-                if (active.isPresent()) return new StartJobResult(active.get(), false);
-            }
+            java.util.Optional<ProjectAnalysisJob> active = jobRepository
+                .findFirstByProjectIdAndJobTypeAndInputFingerprintAndStatusInOrderByCreatedAtDesc(
+                    projectId, type, fingerprint, ACTIVE_STATUSES
+                );
+            if (active.isPresent()) return new StartJobResult(active.get(), false);
+            // 兼容 V3.3.6 尚无指纹的活动任务。retry、重新分析和普通创建都不能绕过该检查。
+            active = activeJob(projectId, type, input);
+            if (active.isPresent()) return new StartJobResult(active.get(), false);
             long activeCount = jobRepository.countByStatusIn(ACTIVE_STATUSES);
             ProjectAnalysisJob job = new ProjectAnalysisJob(projectId, userId, type, input);
             job.configureExecution(fingerprint, projectId + ":" + type + ":" + fingerprint, (int) activeCount);
+            if (retriedFromJobId != null) job.configureRetry(retriedFromJobId, retryReason);
             if (activeCount >= globalActiveLimit) {
                 job.markRejected("当前分析任务过多，请稍后重试。未发起模型请求。");
             }
@@ -330,7 +337,9 @@ public class ProjectAnalysisJobService {
             job.getInputFingerprint(),
             job.getFailureCode(),
             job.getRestartRecoveryState(),
-            job.getQueuePosition()
+            job.getQueuePosition(),
+            job.getRetriedFromJobId(),
+            job.getRetryReason()
         );
     }
 

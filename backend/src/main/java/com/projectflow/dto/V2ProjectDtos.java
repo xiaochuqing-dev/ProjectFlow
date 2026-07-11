@@ -167,7 +167,9 @@ public final class V2ProjectDtos {
         String inputFingerprint,
         String failureCode,
         String restartRecoveryState,
-        int queuePosition
+        int queuePosition,
+        UUID retriedFromJobId,
+        String retryReason
     ) {
     }
 

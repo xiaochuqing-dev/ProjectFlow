@@ -2,8 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 import path from "node:path";
 
 const isWindows = process.platform === "win32";
+const windowsMaven = process.env.MAVEN_CMD ?? "C:\\Users\\Administrator\\Desktop\\apache-maven-3.9.9\\bin\\mvn.cmd";
 const backendCommand = isWindows
-  ? "mvn.cmd -q spring-boot:run -Dspring-boot.run.profiles=embedded -Dspring-boot.run.arguments=--server.port=18080"
+  ? `"${windowsMaven}" -q spring-boot:run -Dspring-boot.run.profiles=embedded -Dspring-boot.run.arguments=--server.port=18080`
   : "mvn -q spring-boot:run -Dspring-boot.run.profiles=embedded -Dspring-boot.run.arguments=--server.port=18080";
 
 export default defineConfig({
@@ -22,6 +23,13 @@ export default defineConfig({
     use: { ...devices["Desktop Chrome"], ...(process.env.CI ? {} : { channel: "msedge" as const }) },
   }],
   webServer: [
+    {
+      command: "node e2e/fixed-model-server.mjs",
+      cwd: __dirname,
+      url: "http://127.0.0.1:19037/health",
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
     {
       command: backendCommand.replaceAll("18080", "18037"),
       cwd: path.resolve(__dirname, "../backend"),

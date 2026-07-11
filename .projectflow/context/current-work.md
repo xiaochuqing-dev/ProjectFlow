@@ -1,3 +1,3 @@
 # Current work
 
-ProjectFlow V3.3.7 已完成可取消和幂等的持久化分析任务、有界执行器、预算与重启恢复语义、PostgreSQL Testcontainers、H2 旧行兼容、Playwright 真实前后端流程和 GitHub Actions 质量门禁。远程 CI 已在 Docker 环境真实启动 PostgreSQL 16 并全部通过；真实 DeepSeek 因无安全测试 Key 未执行。
+ProjectFlow V3.3.7 正式收尾实现已完成：retry 不再绕过活动任务唯一性并记录来源；4 条 Playwright 覆盖分析批次、沉淀闭环、能力分析和取消/retry；PostgreSQL 16 运行真实 service workflow；H2 文件库从缺少 V3.3.7 字段的旧结构重启升级成功。当前本地门禁为后端/H2 174 项、PostgreSQL 2 项、前端契约 18 项、Playwright 4 项、生产构建通过。真实 DeepSeek 因无安全测试 Key 标记 SKIPPED；等待最终远程 CI 证据回填。

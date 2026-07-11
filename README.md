@@ -5,10 +5,12 @@ ProjectFlow V3.3.7 is a local-first tool for AI-assisted solo developers to unde
 ## V3.3.7 Real Acceptance and Reliable Jobs
 
 - Analysis jobs now persist queue, heartbeat, cancellation, retry, interruption, budget, token, idempotency, fingerprint, failure-code, and restart-recovery state. Duplicate active requests return the same job ID.
+- Retry no longer has a force path that bypasses active-job uniqueness. A retry may ignore completed history, but it always reuses an equivalent `QUEUED`, `RUNNING`, or `CANCEL_REQUESTED` job and records `retriedFromJobId` / `retryReason` when a new retry job is created.
 - Users can cancel queued or running change and capability analysis. Safe checkpoints stop later model calls and formal writes; old successful results and confirmed content remain unchanged.
 - A bounded executor, bounded model-request semaphore, global active limit, queue rejection state, three-request task budget, 10-minute duration budget, and 60,000-token budget prevent uncontrolled resource use.
 - Service restart requeues untouched queued jobs, marks pre-model interruptions retryable, and never automatically replays a model request whose billing state is unknown.
 - CI blocks regressions through backend/H2 tests, PostgreSQL Testcontainers, TypeScript and production build, Playwright browser E2E, and a basic committed-secret scan. Real DeepSeek validation is optional and reports `SKIPPED` without a safe key.
+- Finalization acceptance includes 174 backend/H2 tests, 2 PostgreSQL 16 workflow tests, 18 frontend contract tests, and 4 Playwright flows covering analysis batches, sediment confirmation, capability analysis failure preservation, cancellation, refresh, navigation, and retry idempotency.
 
 ## V3.3.6 Batch Sediment Review and Capability Closure
 

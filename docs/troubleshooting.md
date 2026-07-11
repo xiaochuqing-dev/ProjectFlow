@@ -11,3 +11,7 @@ A job is INTERRUPTED: the service restarted after a model request may have been 
 A job is RETRYABLE: the service restarted before model dispatch. It is safe to run again.
 
 A job remains CANCEL_REQUESTED: the current synchronous Git, GitHub or model HTTP call must return or reach its single-request timeout. No later retry or formal write will start.
+
+Retry returns an existing job ID: this is expected when an equivalent `QUEUED`, `RUNNING`, or `CANCEL_REQUESTED` job exists. Retry never creates a parallel equivalent task.
+
+An old H2 database fails on a null optimistic-lock version: V3.3.7 finalization adds the job version column with database default `0`. Run the current application once with its normal `ddl-auto=update`; do not delete the database.

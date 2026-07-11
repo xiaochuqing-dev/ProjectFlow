@@ -7,13 +7,16 @@ ProjectFlow 当前版本为 V3.3.7。后续 Agent 必须按“待整理变更 ->
 
 V3.3.7 关键决策（后续 Agent 必须遵守）：
 - 长分析只能通过持久化 Job 执行；重复输入复用活动 job，不得重复调用模型或重复正式写入。
+- retry、重新分析、页面重试和恢复入口都不得绕过活动任务唯一性；retry 只允许忽略已完成历史，不能强制创建第二个等价活动 job，并须保留来源 job 关系。
 - 取消必须在外部调用、紧凑重试和持久化前检查；取消后不得新增正式结果，已确认沉淀、能力卡片和旧成功结果必须保留。
 - QUEUED、RUNNING、CANCEL_REQUESTED、CANCELLED、INTERRUPTED/RETRYABLE、EXPIRED、REJECTED、FAILED 必须保持不同语义和人话提示。
 - 线程池、队列、模型 HTTP 并发、请求次数、总耗时和 token 都必须有上限；401/403、取消、配置错误和保存失败不得盲目重试。
 - 服务重启只自动恢复尚未外部调用的排队任务；模型请求状态未知时禁止自动重发，避免重复计费。
 - 不得把 Mock、固定响应或静态契约描述为真实 PostgreSQL、真实浏览器或真实 DeepSeek 联调。无安全 Key 时真实模型测试必须标记 SKIPPED。
+- 测试分层必须分别说明 H2/单元、PostgreSQL 16 Testcontainers、真实前后端 Playwright、固定兼容模型服务和可选真实 DeepSeek 的证据边界。
 - 任务 API 必须同时校验 userId 与 projectId 归属，不返回 Key、Authorization、reasoning 原文、请求体、原始响应或未脱敏绝对路径。
 - 开发完成至少运行后端测试、H2 兼容、前端生产构建和 Playwright；PostgreSQL Testcontainers 在 Docker/CI 环境运行并作为阻断门禁。
+- V3.3.7 收尾报告必须记录测试数量、核心 E2E 范围、PostgreSQL workflow、H2 旧库升级、CI Run、真实 DeepSeek 状态、关键文件和提交 SHA。
 
 V3.3.6 关键决策（后续 Agent 必须遵守）：
 - 工作台只显示分析批次摘要；沉淀处理中心按时间和批次组织，并默认逐条处理正式建议。

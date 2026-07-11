@@ -1006,6 +1006,8 @@ export type ProjectAnalysisJob = {
   failureCode: string | null;
   restartRecoveryState: string | null;
   queuePosition: number;
+  retriedFromJobId: string | null;
+  retryReason: string | null;
 };
 
 export type ProjectAnalysisRecordType = "PROJECT" | "FILE";

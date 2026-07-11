@@ -119,7 +119,14 @@ public class ProjectAnalysisJob {
     @Column(name = "queue_position")
     private Integer queuePosition = 0;
 
+    @Column(name = "retried_from_job_id")
+    private UUID retriedFromJobId;
+
+    @Column(name = "retry_reason", length = 80)
+    private String retryReason;
+
     @Version
+    @Column(columnDefinition = "bigint default 0")
     private Long version;
 
     // V3.3.3: 分析进度可视化。stage 是当前阶段枚举字符串，stageMessage 是面向用户的中文说明。
@@ -215,6 +222,11 @@ public class ProjectAnalysisJob {
         this.inputFingerprint = fingerprint;
         this.idempotencyKey = idempotencyKey;
         this.queuePosition = Math.max(0, queuePosition);
+    }
+
+    public void configureRetry(UUID previousJobId, String reason) {
+        this.retriedFromJobId = previousJobId;
+        this.retryReason = reason == null ? "USER_RETRY" : reason.trim();
     }
 
     public void requestCancellation() {
@@ -442,6 +454,10 @@ public class ProjectAnalysisJob {
     public String getRestartRecoveryState() { return restartRecoveryState; }
 
     public int getQueuePosition() { return queuePosition == null ? 0 : queuePosition; }
+
+    public UUID getRetriedFromJobId() { return retriedFromJobId; }
+
+    public String getRetryReason() { return retryReason; }
 
     public Long getVersion() { return version; }
 

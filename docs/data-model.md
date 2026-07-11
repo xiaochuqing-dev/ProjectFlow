@@ -2,7 +2,7 @@
 
 ## V3.3.7 analysis job reliability fields
 
-`project_analysis_jobs` now records queued/heartbeat/cancellation timestamps, attempt and model-request counts, prompt/completion/total tokens, task request/time/token limits, input fingerprint, idempotency key, queue position, failure code, restart recovery state, and optimistic version. New numeric fields remain nullable at schema level so Hibernate update can add them to a populated H2 database; entity load applies conservative defaults for legacy rows.
+`project_analysis_jobs` now records queued/heartbeat/cancellation timestamps, attempt and model-request counts, prompt/completion/total tokens, task request/time/token limits, input fingerprint, idempotency key, queue position, failure code, restart recovery state, retry lineage (`retried_from_job_id`, `retry_reason`), and optimistic version. Reliability fields remain nullable where safe; entity load applies conservative defaults for legacy rows. The version column uses database default `0` so a populated old table can be upgraded and flushed safely.
 
 Statuses distinguish QUEUED, RUNNING, CANCEL_REQUESTED, CANCELLED, SUCCEEDED, SUCCEEDED_WITH_WARNINGS, FAILED, INTERRUPTED, RETRYABLE, EXPIRED and REJECTED. A status is user-visible lifecycle evidence, not only a spinner flag.
 

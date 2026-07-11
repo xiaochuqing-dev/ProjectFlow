@@ -1,0 +1,83 @@
+import http from "node:http";
+
+let failNext = 0;
+let delayNext = 0;
+let delayMs = 0;
+
+function json(response, status, value) {
+  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
+  response.end(JSON.stringify(value));
+}
+
+async function body(request) {
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+const server = http.createServer(async (request, response) => {
+  if (request.method === "GET" && request.url === "/health") {
+    return json(response, 200, { status: "UP", service: "fixed-e2e-model" });
+  }
+  if (request.method === "POST" && request.url === "/control/reset") {
+    failNext = 0;
+    delayNext = 0;
+    delayMs = 0;
+    return json(response, 200, { ok: true });
+  }
+  if (request.method === "POST" && request.url === "/control/fail-next") {
+    const payload = JSON.parse((await body(request)) || "{}");
+    failNext = Math.max(0, Number(payload.count) || 1);
+    return json(response, 200, { failNext });
+  }
+  if (request.method === "POST" && request.url === "/control/delay-next") {
+    const payload = JSON.parse((await body(request)) || "{}");
+    delayNext = Math.max(0, Number(payload.count) || 1);
+    delayMs = Math.max(0, Number(payload.ms) || 1500);
+    return json(response, 200, { delayNext, delayMs });
+  }
+  if (request.method !== "POST" || request.url !== "/v1/chat/completions") {
+    return json(response, 404, { error: "not found" });
+  }
+
+  const payload = JSON.parse((await body(request)) || "{}");
+  if (delayNext > 0) {
+    delayNext -= 1;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  if (failNext > 0) {
+    failNext -= 1;
+    return json(response, 503, { error: { message: "controlled E2E failure" } });
+  }
+
+  const prompt = Array.isArray(payload.messages)
+    ? payload.messages.map((message) => String(message.content || "")).join("\n")
+    : "";
+  const content = prompt.includes("capabilities") || prompt.includes("项目能力")
+    ? JSON.stringify({ capabilities: [{
+        name: "后台任务可靠性",
+        summary: "基于已确认项目沉淀形成可取消、可恢复且可追溯的分析能力。",
+        problemSolved: "避免重复调用和结果覆盖。",
+        featureEntry: "能力与成果 / 分析项目能力",
+        sourceIndexes: ["S1"],
+        readme: "支持持久化任务、取消与恢复。",
+        resume: "完成后台分析任务可靠性与项目沉淀闭环。",
+        interview: "可说明幂等、取消检查点与持久化状态设计。"
+      }] })
+    : JSON.stringify({ segments: [{
+        segmentTitle: "完成可追溯的项目变化分析",
+        plainSummary: "将固定测试仓库中的提交和未提交变化整理为开发推进段。",
+        sourceIndexes: ["S1"],
+        mainChanges: ["读取本地 Git 变化", "生成分析批次", "形成待确认的正式建议"],
+        userVisibleValue: "用户可以按批次检查真实开发结果并决定是否沉淀。",
+        affectedFiles: [],
+        confidence: "HIGH",
+        needsUserReview: true
+      }] });
+  return json(response, 200, {
+    choices: [{ message: { content }, finish_reason: "stop" }],
+    usage: { prompt_tokens: 120, completion_tokens: 80, total_tokens: 200 }
+  });
+});
+
+server.listen(19037, "127.0.0.1");
