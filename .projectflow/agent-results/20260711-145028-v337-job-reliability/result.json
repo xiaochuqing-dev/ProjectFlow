@@ -16,11 +16,10 @@
   ],
   "verification": {
     "build": "前端 Next.js 生产构建和 TypeScript 通过；后端 Maven test 构建通过。",
-    "tests": "后端 168 项通过；前端契约 18 项通过；Playwright 1 项真实流程通过。PostgreSQL Testcontainers 本机因 Docker Desktop 未运行而明确失败，等待 CI Docker 环境验证。",
+    "tests": "后端 168 项通过；前端契约 18 项通过；Playwright 1 项真实流程通过；GitHub CI 在 Docker 环境真实启动 PostgreSQL 16 Testcontainers 并通过。",
     "manualCheck": "确认 10 个并发相同扫描请求返回同一 jobId，取消后 requestCount 不再增长，刷新后仍显示已取消；检查未提交 API Key、Authorization 或 reasoning 原文。"
   },
   "unfinished": [
-    "本机未完成 PostgreSQL 容器通过验证，因为 Docker Desktop 未运行；CI 中该测试为强制门禁。",
     "未完成真实 DeepSeek 联调，原因是执行环境没有安全可用的测试 Key。",
     "多实例 worker lease 未实现，当前恢复和心跳语义面向本地单机。"
   ],

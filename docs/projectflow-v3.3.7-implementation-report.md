@@ -67,7 +67,7 @@ Next.js 16.2.7 生产构建和 TypeScript 通过，生成 21 个静态页面。
 Maven test 通过，Spring Boot 3.5.14，版本 3.3.7。
 
 ## 23. PostgreSQL 真实测试结果
-本机已真实执行 Testcontainers 命令，但 Docker Desktop 未启动，测试明确失败为“Could not find a valid Docker environment”，未使用 H2 冒充。远程 CI Docker 结果见本报告后续 CI 信息。
+本机已真实执行 Testcontainers 命令，但 Docker Desktop 未启动，明确报出“Could not find a valid Docker environment”，未使用 H2 冒充。远程 CI 在 GitHub Runner Docker 环境真实启动 PostgreSQL 16，`postgres-integration` 已通过。
 
 ## 24. H2 升级结果
 旧行安全默认值测试与完整 H2 套件通过；已确认数据逻辑未改变。项目仍使用 ddl-auto update，缺少 Flyway 是已知风险。
@@ -79,7 +79,7 @@ Maven test 通过，Spring Boot 3.5.14，版本 3.3.7。
 未完成真实 DeepSeek 联调，原因是执行环境没有安全可用的测试 Key。Mock 和固定响应未描述为真实联调。
 
 ## 27. CI 信息
-工作流文件：`.github/workflows/quality-gates.yml`。推送后的远程运行链接在最终交付或后续报告提交中记录。
+工作流文件：`.github/workflows/quality-gates.yml`。成功运行：https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/29143591677 。后端/H2、PostgreSQL、前端、Playwright、敏感内容全部通过；可选真实 DeepSeek 因未手动启用而标记 skipped。
 
 ## 28. 已知风险
 ddl-auto 缺少版本化审计；同步 HTTP 当前请求只能等待返回或超时；本地 Edge 与 CI Chromium 二进制不同；多实例 worker lease 尚未实现。
@@ -91,7 +91,7 @@ ddl-auto 缺少版本化审计；同步 HTTP 当前请求只能等待返回或�
 ProjectAnalysisJob.java、ProjectAnalysisJobService.java、ProjectAnalysisJobRunner.java、AsyncTaskConfig.java、quality-gates.yml、ProjectFlowPostgresIT.java、core-workflow.spec.ts、playwright.config.ts。
 
 ## 31. Commit SHA
-核心实现提交：`6fbba3f`。
+核心实现提交：`6fbba3f`；跨平台 CI 修复：`b64a2b6`。
 
 ## 32. 报告链接
 仓库路径：`docs/projectflow-v3.3.7-implementation-report.md`。

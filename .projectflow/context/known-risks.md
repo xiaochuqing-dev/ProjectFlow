@@ -1,6 +1,6 @@
 # Known risks
 
-- 本地 Docker Desktop 当前未启动，PostgreSQL Testcontainers 在本机明确失败；必须以远程 CI 的 Docker 运行结果作为最终 PostgreSQL 验收证据。
+- 本地 Docker Desktop 当前未启动，PostgreSQL Testcontainers 在本机明确失败；远程 CI 已在 Docker 环境真实启动 PostgreSQL 16 并通过。
 - 项目仍依赖 Hibernate ddl-auto update，没有版本化迁移工具；V3.3.7 新字段保持可空并在加载时补安全默认值，但生产级迁移审计仍有限。
 - Java HttpClient 不暴露底层连接池容量配置，当前通过最多 4 个模型请求的公平信号量和最多 4 个任务线程形成实际并发上限。
 - 正在进行的单次同步 HTTP 请求不能可靠强制中断；取消会阻止之后的重试、阶段和正式写入，当前请求会等待返回或单次超时。
