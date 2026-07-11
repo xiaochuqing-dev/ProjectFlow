@@ -1,0 +1,47 @@
+{
+  "taskGoal": "实施 ProjectFlow V3.3.7，建立真实端到端验收和 CI 质量门禁，并让后台分析任务支持取消、幂等、受限并发、预算与安全恢复。",
+  "actualChanges": [
+    "分析任务现在持久化取消、排队、心跳、请求与 token 用量、总耗时、输入指纹、失败原因和重启恢复状态；相同活动输入的并发请求复用同一个任务。",
+    "工作台和能力页支持取消与重新运行，并区分排队、取消中、已取消、服务中断、可重试、超预算和队列拒绝；刷新和切页后仍能读取状态。",
+    "新增 PostgreSQL Testcontainers、H2 旧行兼容、Playwright 真实前后端流程和 GitHub Actions 阻断门禁；真实 DeepSeek 仅在显式开关和安全 Key 同时存在时运行。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/entity/ProjectAnalysisJob.java",
+    "backend/src/main/java/com/projectflow/service/ProjectAnalysisJobService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectAnalysisJobRunner.java",
+    "backend/src/test/java/com/projectflow/ProjectFlowPostgresIT.java",
+    "frontend/e2e/core-workflow.spec.ts",
+    ".github/workflows/quality-gates.yml",
+    "docs/projectflow-v3.3.7-implementation-report.md"
+  ],
+  "verification": {
+    "build": "前端 Next.js 生产构建和 TypeScript 通过；后端 Maven test 构建通过。",
+    "tests": "后端 168 项通过；前端契约 18 项通过；Playwright 1 项真实流程通过。PostgreSQL Testcontainers 本机因 Docker Desktop 未运行而明确失败，等待 CI Docker 环境验证。",
+    "manualCheck": "确认 10 个并发相同扫描请求返回同一 jobId，取消后 requestCount 不再增长，刷新后仍显示已取消；检查未提交 API Key、Authorization 或 reasoning 原文。"
+  },
+  "unfinished": [
+    "本机未完成 PostgreSQL 容器通过验证，因为 Docker Desktop 未运行；CI 中该测试为强制门禁。",
+    "未完成真实 DeepSeek 联调，原因是执行环境没有安全可用的测试 Key。",
+    "多实例 worker lease 未实现，当前恢复和心跳语义面向本地单机。"
+  ],
+  "sedimentCandidates": [
+    {
+      "title": "可取消且幂等的持久化分析任务",
+      "summary": "重复触发复用活动任务，用户取消会阻止后续模型请求和正式写入，服务重启后按是否可能调用模型决定安全恢复或等待确认。",
+      "evidence": [
+        "backend/src/main/java/com/projectflow/service/ProjectAnalysisJobService.java",
+        "backend/src/main/java/com/projectflow/service/ProjectAnalysisJobRunner.java",
+        "frontend/e2e/core-workflow.spec.ts"
+      ]
+    },
+    {
+      "title": "V3.3.7 真实验收和 CI 门禁",
+      "summary": "后端/H2、PostgreSQL Testcontainers、前端生产构建、Playwright 和可选真实 DeepSeek 被拆为独立验证层，核心失败会阻断 CI。",
+      "evidence": [
+        ".github/workflows/quality-gates.yml",
+        "backend/src/test/java/com/projectflow/ProjectFlowPostgresIT.java",
+        "docs/projectflow-v3.3.7-implementation-report.md"
+      ]
+    }
+  ]
+}
