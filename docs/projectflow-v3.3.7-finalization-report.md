@@ -62,7 +62,7 @@ TypeScript、18 项契约测试、production build 全部通过。
 1 条文件库升级集成测试及既有兼容测试通过。
 
 ## 20. CI Run
-最终远程 CI Run 在推送后回填。
+GitHub Actions Run [29154153436](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/29154153436) 全部核心 job 通过：backend/H2、PostgreSQL 16、frontend、browser E2E 和 sensitive-content 均为 success；optional-real-deepseek 为 skipped。
 
 ## 21. 真实 DeepSeek
 SKIPPED：无安全测试 Key。未影响任务幂等、数据库、浏览器业务闭环和结构化结果持久化结论；真实限流、长响应、网络和 Provider 私有字段仍需后续低预算验收。
@@ -84,7 +84,7 @@ SKIPPED：无安全测试 Key。未影响任务幂等、数据库、浏览器业
 - `.github/workflows/quality-gates.yml`
 
 ## 25. 最终 Commit SHA
-首次正式推送后回填。
+正式实现提交：`29f83b052ff68235e714a8051d01a798e102d54d`。本报告证据回填提交见该提交之后的 `master` HEAD。
 
 ## 26. 报告链接
 - [原 V3.3.7 实施报告](projectflow-v3.3.7-implementation-report.md)

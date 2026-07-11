@@ -79,7 +79,7 @@ Maven 完整测试通过，Spring Boot 3.5.14，版本 3.3.7。
 SKIPPED：执行环境没有安全测试 Key，未发起付费调用。固定响应仅证明业务和结构化契约，不证明真实 Provider 的限流、长输出和私有字段。
 
 ## 27. CI 信息
-最终远程 CI Run 在推送后回填；工作流为 `.github/workflows/quality-gates.yml`。
+GitHub Actions Run [29154153436](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/29154153436) 全部核心 job 通过：backend/H2、PostgreSQL、frontend、browser E2E、sensitive-content 均为 success；optional-real-deepseek 未手动启用，状态为 skipped。
 
 ## 28. 已知风险
 仍使用 Hibernate `ddl-auto=update`，不是正式版本化迁移系统；单次同步 HTTP 调用只能等待返回或超时；本地 Edge 与 CI Chromium 二进制不同；多实例 worker lease 不在本版本范围。
@@ -91,7 +91,7 @@ SKIPPED：执行环境没有安全测试 Key，未发起付费调用。固定响
 `ProjectAnalysisJob.java`、`ProjectAnalysisJobService.java`、`ProjectAnalysisJobRetryIdempotencyTest.java`、`ProjectFlowPostgresIT.java`、`ProjectFlowH2UpgradeIntegrationTest.java`、`core-workflow.spec.ts`、`fixed-model-server.mjs`、`quality-gates.yml`。
 
 ## 31. Commit SHA
-正式实现提交 SHA 在首次推送后回填。
+正式实现提交：`29f83b052ff68235e714a8051d01a798e102d54d`。
 
 ## 32. 报告链接
 仓库路径：[projectflow-v3.3.7-implementation-report.md](projectflow-v3.3.7-implementation-report.md)。

@@ -1,9 +1,9 @@
 # PRD: ProjectFlow V3.3.7 正式收尾
 
 ## Document Status
-- Status: In Progress
+- Status: Complete
 - File Mode: Split
-- Current Phase: Phase 5
+- Current Phase: Complete
 - Active Phase File: [Phase 5](./prd-v3-3-7-finalization/phase-05-release-evidence.md)
 - Context File: [context.md](./prd-v3-3-7-finalization/context.md)
 - Last Updated: 2026-07-11
@@ -57,15 +57,16 @@ V3.3.7 已具备持久化任务和分层测试基础，但 retry 可绕过等价
 | 2. 核心 E2E | Complete | 覆盖三条业务闭环及任务可靠性 | Playwright | [phase-02](./prd-v3-3-7-finalization/phase-02-core-e2e.md) |
 | 3. 数据库升级 | Complete | 强化 PostgreSQL workflow 与 H2 旧库升级 | Testcontainers/H2 | [phase-03](./prd-v3-3-7-finalization/phase-03-database-verification.md) |
 | 4. 质量门禁 | Complete | 完整本地验证并修复失败 | 全量命令 | [phase-04](./prd-v3-3-7-finalization/phase-04-quality-gates.md) |
-| 5. 发布证据 | In Progress | 同步文档、报告、Git 与 CI | 文档/远程 CI | [phase-05](./prd-v3-3-7-finalization/phase-05-release-evidence.md) |
+| 5. 发布证据 | Complete | 同步文档、报告、Git 与 CI | 文档/远程 CI | [phase-05](./prd-v3-3-7-finalization/phase-05-release-evidence.md) |
 
 ## Final Multi-Pass Review After All Phases
-- [ ] Requirements and acceptance criteria covered.
-- [ ] Cross-phase workflow and state transitions verified.
-- [ ] Simplicity, duplication, security, privacy and performance reviewed.
-- [ ] Temporary files and sensitive content removed.
-- [ ] Documentation, reports, commit SHA and CI evidence updated.
-- [ ] PRD closed as Complete.
+- [x] Requirements and acceptance criteria covered.
+- [x] Cross-phase workflow and state transitions verified.
+- [x] Simplicity, duplication, security, privacy and performance reviewed.
+- [x] Temporary files and sensitive content removed.
+- [x] Documentation, reports, commit SHA and CI evidence updated.
+- [x] PRD closed as Complete.
 
 ## Change Log
 - 2026-07-11: 基于正式收尾提示和当前 master 建立执行 PRD。
+- 2026-07-11: 实现、本地门禁、master 推送和远程 CI 全部完成。
