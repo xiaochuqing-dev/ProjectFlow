@@ -4,15 +4,15 @@ import { useRef } from "react";
 import type { ProjectAnalysis, WorkSessionCandidate, WorkSessionScanResult } from "@/lib/api";
 
 export function useDashboardWorkspace() {
-  const requestRef = useRef(0);
+  const requestRef = useRef<Record<string, number>>({});
 
-  function beginContextRequest() {
-    requestRef.current += 1;
-    return requestRef.current;
+  function beginContextRequest(scope = "secondary") {
+    requestRef.current[scope] = (requestRef.current[scope] ?? 0) + 1;
+    return requestRef.current[scope];
   }
 
-  function isLatestContextRequest(requestId: number) {
-    return requestId === requestRef.current;
+  function isLatestContextRequest(requestId: number, scope = "secondary") {
+    return requestId === requestRef.current[scope];
   }
 
   return { beginContextRequest, isLatestContextRequest };

@@ -1,4 +1,10 @@
-# V3.3.7 migration compatibility
+# Migration compatibility
+
+## V3.3.8.1 nullable analysis history
+
+Historical ChangeBatch, ProjectChange, and DevelopmentSegment rows may lack fields added by later releases. Read-time defaults keep list and detail APIs usable without destructive migration: blank diagnostics remain blank, missing status/quality values use conservative review states, missing collections become empty, missing counters become zero, and missing timestamps fall back to related persisted times or the epoch. The service labels a batch with absent model status as historical incomplete. V3.3.8.1 performs no data backfill, so existing correct values and historical evidence are not overwritten.
+
+The former single dashboard snapshot key is migrated lazily to a schema-versioned project key. Invalid cache JSON is ignored; database bootstrap remains the recovery path.
 
 The project still uses Hibernate ddl-auto update and does not yet have Flyway. This is an explicit risk.
 

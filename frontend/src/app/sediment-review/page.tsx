@@ -87,7 +87,11 @@ function SedimentReviewContent() {
           </div>
         </section>
 
-        {error || projectError ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error || projectError}</p> : null}
+        {error || projectError ? (
+          <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            {error || projectError}{error && batches.length > 0 ? " 已保留当前可用批次。" : ""}
+          </p>
+        ) : null}
 
         {grouped.map(({ group, items }) => (
           <section className="space-y-3" key={group}>
@@ -98,7 +102,7 @@ function SedimentReviewContent() {
           </section>
         ))}
 
-        {!loading && selectedProjectId && batches.length === 0 ? (
+        {!loading && !error && selectedProjectId && batches.length === 0 ? (
           <section className="rounded-md border border-dashed border-line bg-white p-10 text-center">
             <p className="font-semibold">暂无分析批次</p>
             <p className="mt-2 text-sm text-muted">先回到工作台执行“分析新变化”，结果会按批次出现在这里。</p>
@@ -111,7 +115,7 @@ function SedimentReviewContent() {
 }
 
 function BatchCard({ batch, projectId }: { batch: SedimentReviewBatch; projectId: string }) {
-  const sourceLabel = batch.resultSource === "MODEL_RESULT" ? "完整模型分析" : batch.resultSource === "MODEL_PARTIAL_RESULT" ? "部分模型结果" : batch.resultSource === "LOCAL_FACT_DRAFT" ? "本地事实草稿" : "需要重新分析";
+  const sourceLabel = batch.resultSource === "MODEL_RESULT" ? "完整模型分析" : batch.resultSource === "MODEL_PARTIAL_RESULT" ? "部分模型结果" : batch.resultSource === "LOCAL_FACT_DRAFT" ? "本地事实草稿" : batch.resultSource === "LEGACY_INCOMPLETE" ? "历史数据不完整" : "需要重新分析";
   return (
     <article className="rounded-md border border-line bg-white p-5 shadow-panel">
       <div className="flex flex-wrap items-center gap-2">

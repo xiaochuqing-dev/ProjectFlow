@@ -1,5 +1,6 @@
 package com.projectflow.repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,5 +30,19 @@ public interface ProjectAnalysisJobRepository extends JpaRepository<ProjectAnaly
         List<ProjectAnalysisJobStatus> statuses
     );
 
+    Optional<DashboardJobView> findFirstByProjectIdAndJobTypeAndStatusInOrderByCreatedAtDesc(
+        UUID projectId,
+        ProjectAnalysisJobType jobType,
+        List<ProjectAnalysisJobStatus> statuses
+    );
+
     long countByStatusIn(List<ProjectAnalysisJobStatus> statuses);
+
+    interface DashboardJobView {
+        UUID getId();
+        ProjectAnalysisJobStatus getStatus();
+        Instant getCreatedAt();
+        Instant getUpdatedAt();
+        Instant getCompletedAt();
+    }
 }

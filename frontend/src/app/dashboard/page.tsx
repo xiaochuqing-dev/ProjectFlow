@@ -2,22 +2,13 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  FileCode2,
-  History,
-  RefreshCw,
-  ScanLine,
-  Settings,
-  ShieldAlert,
-  Upload,
-} from "lucide-react";
+import { ArrowRight, FileCode2, History, RefreshCw, ScanLine, Settings, ShieldAlert, Upload } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { ArchitectureQuickEntry } from "@/components/dashboard/ArchitectureQuickEntry";
 import { PendingChangesPanel } from "@/components/dashboard/PendingChangesPanel";
 import { FlowGuideDialog } from "@/components/dashboard/FlowGuideDialog";
-import { InteractiveStat, MiniFact, StatsFocusPanel } from "@/components/dashboard/DashboardStats";
+import { DashboardOverviewStats, MiniFact } from "@/components/dashboard/DashboardStats";
 import { ProjectAccessCard, ZipImportPanel } from "@/components/dashboard/ProjectAccessCard";
 import { OutputOptionsCard } from "@/components/dashboard/OutputOptionsCard";
 import type { DashboardStep } from "@/components/dashboard/types";
@@ -34,6 +25,7 @@ import {
 } from "@/components/ui";
 import {
   deleteProject,
+  getDashboardBootstrap,
   getProjectMemory,
   getProjectGitHubStatus,
   importProjectZip,
@@ -71,38 +63,42 @@ import { buildProjectArchitecture, compactProjectPath, projectZipPaths } from "@
 import { resolveProjectFlowState } from "@/lib/project-flow-state";
 import { rememberSelectedProjectId, resolveSelectedProjectId } from "@/lib/project-selection";
 import { readSession } from "@/lib/auth";
-import { clearDashboardSnapshot, patchDashboardSnapshot, readDashboardSnapshot } from "@/lib/dashboard-snapshot";
+import { clearDashboardSnapshot, mergeWorkSessionScanResult, patchDashboardSnapshot, readDashboardSnapshot, type DashboardSnapshot } from "@/lib/dashboard-snapshot";
 import { projectAnalysisContainsNoise, useDashboardWorkspace, workSessionListResult } from "@/hooks/useDashboardWorkspace";
 import { useGitHubActions } from "@/hooks/useGitHubActions";
 import { useProjectAnalysisJobs } from "@/lib/use-project-analysis-jobs";
-
 export default function DashboardPage() {
   // 回到工作台时优先恢复 sessionStorage 快照，避免出现空白页与 ~10s 等待；
   // 快照随后由后台静默刷新覆盖。首次进入或退出登录后无快照。
-  const initialSnapshot = typeof window !== "undefined" ? readDashboardSnapshot() : null;
-  const [projects, setProjects] = useState<Project[]>(initialSnapshot?.projects ?? []);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [providers, setProviders] = useState<AiProvider[]>([]);
-  const [materials, setMaterials] = useState<ProjectMaterial[]>(initialSnapshot?.materials ?? []);
-  const [suggestions, setSuggestions] = useState<AiSuggestion[]>(initialSnapshot?.suggestions ?? []);
-  const [evolutionRecords, setEvolutionRecords] = useState<ProjectEvolutionRecord[]>(initialSnapshot?.evolutionRecords ?? []);
-  const [evidenceBundles, setEvidenceBundles] = useState<EvidenceBundle[]>(initialSnapshot?.evidenceBundles ?? []);
-  const [changeConflicts, setChangeConflicts] = useState<ChangeConflict[]>(initialSnapshot?.changeConflicts ?? []);
-  const [changes, setChanges] = useState<ProjectChange[]>(initialSnapshot?.changes ?? []);
-  const [outputs, setOutputs] = useState<AiOutput[]>(initialSnapshot?.outputs ?? []);
-  const [tasks, setTasks] = useState<TaskItem[]>(initialSnapshot?.tasks ?? []);
-  const [memory, setMemory] = useState<ProjectMemory | null>(initialSnapshot?.memory ?? null);
-  const [selectedProjectId, setSelectedProjectId] = useState(initialSnapshot?.selectedProjectId ?? "");
+  const [materials, setMaterials] = useState<ProjectMaterial[]>([]);
+  const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);
+  const [evolutionRecords, setEvolutionRecords] = useState<ProjectEvolutionRecord[]>([]);
+  const [evidenceBundles, setEvidenceBundles] = useState<EvidenceBundle[]>([]);
+  const [changeConflicts, setChangeConflicts] = useState<ChangeConflict[]>([]);
+  const [changes, setChanges] = useState<ProjectChange[]>([]);
+  const [outputs, setOutputs] = useState<AiOutput[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [memory, setMemory] = useState<ProjectMemory | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [showZipImport, setShowZipImport] = useState(false);
   const [showFlowGuide, setShowFlowGuide] = useState(false);
   const [statsFocus, setStatsFocus] = useState<"materials" | "changes" | "sessions" | "tasks" | "">("");
-  const [projectPath, setProjectPath] = useState(initialSnapshot?.memory?.localProjectPath ?? "");
+  const [projectPath, setProjectPath] = useState("");
   const [globalRule, setGlobalRule] = useState("");
-  const [workSessionScan, setWorkSessionScan] = useState<WorkSessionScanResult | null>(initialSnapshot?.workSessionScan ?? null);
-  const [githubStatus, setGithubStatus] = useState<GitHubStatus | null>(initialSnapshot?.githubStatus ?? null);
+  const [workSessionScan, setWorkSessionScan] = useState<WorkSessionScanResult | null>(null);
+  const [githubStatus, setGithubStatus] = useState<GitHubStatus | null>(null);
   const [scanWarnings, setScanWarnings] = useState<string[]>([]);
+  const [bootstrapPendingReviewCount, setBootstrapPendingReviewCount] = useState(0);
+  const [bootstrapCurrentStage, setBootstrapCurrentStage] = useState("");
+  const [bootstrapProviderName, setBootstrapProviderName] = useState("");
+  const [bootstrapProviderConfigured, setBootstrapProviderConfigured] = useState(false);
+  const [secondaryLoadedProjectId, setSecondaryLoadedProjectId] = useState("");
+  const [secondaryError, setSecondaryError] = useState("");
   // 有快照时先用旧数据渲染、不显示加载条；后台静默刷新。
-  const [loading, setLoading] = useState(!initialSnapshot);
+  const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
   const [savingProjectPath, setSavingProjectPath] = useState(false);
@@ -113,11 +109,7 @@ export default function DashboardPage() {
   const [notice, setNotice] = useState("");
   const { beginContextRequest, isLatestContextRequest } = useDashboardWorkspace();
   const handledScanJobs = useRef(new Set<string>());
-
-  const selectedProject = useMemo(
-    () => projects.find((project) => project.id === selectedProjectId),
-    [projects, selectedProjectId],
-  );
+  const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId), [projects, selectedProjectId]);
   const { jobs, jobError, enqueueProjectAnalysis, enqueueWorkSessionScan, cancelJob, retryJob } = useProjectAnalysisJobs(selectedProjectId);
   const latestProjectJob = jobs.find((job) => job.jobType === "PROJECT") ?? null;
   const latestScanJob = jobs.find((job) => job.jobType === "WORK_SESSION_SCAN") ?? null;
@@ -139,8 +131,12 @@ export default function DashboardPage() {
   const analysis = analysisRejectedByNoise ? null : rawAnalysis;
   const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === "PENDING");
   const pendingChanges = changes.filter((change) => change.status === "PENDING" || change.status === "EDITED");
-  const pendingReviewCount = pendingSuggestions.length + pendingChanges.length;
+  const pendingReviewCount = secondaryLoadedProjectId === selectedProjectId
+    ? pendingSuggestions.length + pendingChanges.length
+    : bootstrapPendingReviewCount;
   const configuredProvider = providers.find((provider) => provider.id && provider.apiKeyConfigured && provider.defaultEnabled);
+  const activeProviderName = configuredProvider?.name || (bootstrapProviderConfigured ? bootstrapProviderName : "");
+  const providerConfigured = Boolean(configuredProvider || bootstrapProviderConfigured);
   const paths = useMemo(() => projectZipPaths(materials), [materials]);
   const architecture = useMemo(() => buildProjectArchitecture(paths), [paths]);
   const hasMaterials = materials.length > 0;
@@ -163,7 +159,6 @@ export default function DashboardPage() {
     pendingChanges,
     outputs,
   });
-
   // 当前下一步 —— 把原来的平铺改成单一焦点
   const currentStep: DashboardStep = useMemo(() => {
     if (!selectedProject) return { kind: "no_project" };
@@ -190,8 +185,14 @@ export default function DashboardPage() {
     if (!session) {
       return;
     }
-
-    const hasSnapshot = Boolean(readDashboardSnapshot());
+    const snapshot = readDashboardSnapshot();
+    if (snapshot) {
+      setProjects(snapshot.projects);
+      setSelectedProjectId(snapshot.selectedProjectId);
+      hydrateDashboardSnapshot(snapshot);
+      setLoading(false);
+    }
+    const hasSnapshot = Boolean(snapshot);
     // 有快照时后台静默刷新，不切回 loading 状态，避免短暂空白。
     if (!hasSnapshot) {
       setLoading(true);
@@ -201,9 +202,9 @@ export default function DashboardPage() {
         setProjects(projectItems);
         setProviders(providerItems);
         // 优先沿用快照里已恢复的选中项目，避免回到工作台时项目被重置为列表第一项。
-        setSelectedProjectId(resolveSelectedProjectId(projectItems, selectedProjectId));
+        setSelectedProjectId(resolveSelectedProjectId(projectItems, snapshot?.selectedProjectId || selectedProjectId));
         // 项目列表刷新后补写快照中的 projects，保证后续快照含最新项目集合。
-        patchDashboardSnapshot({ projects: projectItems, selectedProjectId: resolveSelectedProjectId(projectItems, selectedProjectId) });
+        patchDashboardSnapshot({ projects: projectItems, selectedProjectId: resolveSelectedProjectId(projectItems, snapshot?.selectedProjectId || selectedProjectId) });
       })
       .catch((exception) => setError(exception instanceof Error ? exception.message : "工作台数据加载失败"))
       .finally(() => {
@@ -215,7 +216,20 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    refreshProjectContext(selectedProjectId);
+    if (!selectedProjectId) {
+      clearProjectContextViewState();
+      return;
+    }
+    const projectSnapshot = readDashboardSnapshot(selectedProjectId);
+    if (projectSnapshot) {
+      hydrateDashboardSnapshot(projectSnapshot);
+      setLoading(false);
+    } else {
+      clearProjectContextViewState();
+      setLoading(true);
+    }
+    void refreshDashboardBootstrap(selectedProjectId);
+    void refreshProjectContext(selectedProjectId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProjectId]);
 
@@ -229,97 +243,150 @@ export default function DashboardPage() {
       return;
     }
     const result = latestScanJob.workSessionScanResult;
-    if (!result) {
+    if (!result || result.projectId !== selectedProjectId) {
       return;
     }
-    let cancelled = false;
-    void refreshProjectContext(selectedProjectId).then(() => {
-      if (cancelled) {
-        return;
-      }
-      setWorkSessionScan(result);
-      setScanWarnings(result.warnings);
-      setNotice(result.segments.length ? `已归并为 ${result.segments.length} 个开发推进段。` : "当前没有待整理变更。");
+    setWorkSessionScan(result);
+    setScanWarnings(result.warnings);
+    patchDashboardSnapshot({
+      selectedProjectId,
+      latestScanJobId: latestScanJob.id,
+      latestBatchId: result.batch?.id ?? null,
+      latestBatchUpdatedAt: result.batch?.scanFinishedAt ?? result.batch?.scanStartedAt ?? latestScanJob.completedAt,
+      pendingSedimentReviewCount: result.segments.length,
+      workSessionScan: result,
     });
-    return () => {
-      cancelled = true;
-    };
+    setBootstrapPendingReviewCount(result.segments.length);
+    setNotice(result.segments.length ? `已归并为 ${result.segments.length} 个开发推进段。` : "当前没有待整理变更。");
+    void refreshProjectContext(selectedProjectId);
     // refreshProjectContext uses the dashboard request guard; the terminal job id/status is the trigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [latestScanJob?.id, latestScanJob?.status, scanningWorkSessions, selectedProjectId]);
 
   async function refreshProjectContext(projectId: string) {
     const session = readSession();
-    const requestId = beginContextRequest();
-    // 不在请求开始时清空已有视图：后台刷新进行中应保留快照/旧数据，
-    // 避免回到工作台或切换项目时出现短暂空白。仅在请求失败时清空。
+    const requestId = beginContextRequest("secondary");
 
     if (!session || !projectId) {
-      if (isLatestContextRequest(requestId)) {
-        clearProjectContextViewState();
-      }
+      return;
+    }
+    setSecondaryError("");
+    const failures: string[] = [];
+    const failed = (label: string) => {
+      failures.push(label);
+      return undefined;
+    };
+    const [materialItems, suggestionItems, evolutionItems, taskItems, memoryRecord, workSessions, bundles, conflicts, changeItems, outputItems, github] = await Promise.all([
+      listProjectMaterials(session.accessToken, projectId).catch(() => failed("项目资料")),
+      listAiSuggestions(session.accessToken, projectId).catch(() => failed("建议")),
+      listProjectEvolutionRecords(session.accessToken, projectId).catch(() => failed("演进记录")),
+      listTasks(session.accessToken, projectId).catch(() => failed("任务")),
+      getProjectMemory(session.accessToken, projectId).catch(() => failed("项目沉淀")),
+      listProjectWorkSessions(session.accessToken, projectId).catch(() => failed("工作会话")),
+      listProjectEvidenceBundles(session.accessToken, projectId).catch(() => failed("证据包")),
+      listProjectChangeConflicts(session.accessToken, projectId).catch(() => failed("冲突")),
+      listProjectChanges(session.accessToken, projectId).catch(() => failed("变更")),
+      listAiOutputs(session.accessToken, projectId).catch(() => failed("成果输出")),
+      getProjectGitHubStatus(session.accessToken, projectId).catch(() => failed("GitHub 状态")),
+    ]);
+    if (!isLatestContextRequest(requestId, "secondary")) {
       return;
     }
 
-    const hasSnapshot = Boolean(readDashboardSnapshot());
+    const snapshotPatch: Partial<DashboardSnapshot> = { selectedProjectId: projectId };
+    if (materialItems !== undefined) { setMaterials(materialItems); snapshotPatch.materials = materialItems; }
+    if (suggestionItems !== undefined) { setSuggestions(suggestionItems); snapshotPatch.suggestions = suggestionItems; }
+    if (evolutionItems !== undefined) { setEvolutionRecords(evolutionItems); snapshotPatch.evolutionRecords = evolutionItems; }
+    if (taskItems !== undefined) { setTasks(taskItems); snapshotPatch.tasks = taskItems; }
+    if (memoryRecord !== undefined) {
+      setMemory(memoryRecord);
+      setProjectPath(memoryRecord.localProjectPath ?? "");
+      setBootstrapCurrentStage(memoryRecord.currentStage ?? "");
+      snapshotPatch.memory = memoryRecord;
+    }
+    if (workSessions !== undefined) {
+      const weakResult = workSessionListResult(projectId, memoryRecord?.localProjectPath ?? projectPath, workSessions);
+      const cachedScan = readDashboardSnapshot(projectId)?.workSessionScan ?? workSessionScan;
+      const mergedResult = mergeWorkSessionScanResult(cachedScan, weakResult);
+      setWorkSessionScan(mergedResult);
+      snapshotPatch.workSessionScan = mergedResult;
+    }
+    if (bundles !== undefined) { setEvidenceBundles(bundles); snapshotPatch.evidenceBundles = bundles; }
+    if (conflicts !== undefined) { setChangeConflicts(conflicts); snapshotPatch.changeConflicts = conflicts; }
+    if (changeItems !== undefined) { setChanges(changeItems); snapshotPatch.changes = changeItems; }
+    if (outputItems !== undefined) { setOutputs(outputItems); snapshotPatch.outputs = outputItems; }
+    if (github !== undefined) { setGithubStatus(github); snapshotPatch.githubStatus = github; }
+    if (suggestionItems !== undefined && changeItems !== undefined) {
+      setSecondaryLoadedProjectId(projectId);
+    }
+    patchDashboardSnapshot(snapshotPatch);
+    if (failures.length > 0) {
+      setSecondaryError(`${failures.join("、")}刷新失败，核心分析结果已保留。`);
+    }
+  }
+
+  async function refreshDashboardBootstrap(projectId: string) {
+    const session = readSession();
+    const requestId = beginContextRequest("bootstrap");
+    if (!session || !projectId) {
+      return;
+    }
+    const hasSnapshot = Boolean(readDashboardSnapshot(projectId));
     if (!hasSnapshot) {
       setLoading(true);
     }
     try {
-      const [materialItems, suggestionItems, evolutionItems, taskItems, memoryRecord, workSessions, bundles, conflicts, changeItems, outputItems, github] = await Promise.all([
-        listProjectMaterials(session.accessToken, projectId),
-        listAiSuggestions(session.accessToken, projectId),
-        listProjectEvolutionRecords(session.accessToken, projectId),
-        listTasks(session.accessToken, projectId),
-        getProjectMemory(session.accessToken, projectId),
-        listProjectWorkSessions(session.accessToken, projectId),
-        listProjectEvidenceBundles(session.accessToken, projectId),
-        listProjectChangeConflicts(session.accessToken, projectId),
-        listProjectChanges(session.accessToken, projectId),
-        listAiOutputs(session.accessToken, projectId),
-        getProjectGitHubStatus(session.accessToken, projectId).catch(() => null),
-      ]);
-      if (!isLatestContextRequest(requestId)) {
+      const result = await getDashboardBootstrap(session.accessToken, projectId);
+      if (!isLatestContextRequest(requestId, "bootstrap") || result.project.id !== projectId) {
         return;
       }
-      const workSessionResult = workSessions.length ? workSessionListResult(projectId, memoryRecord.localProjectPath ?? "", workSessions) : null;
-      setMaterials(materialItems);
-      setSuggestions(suggestionItems);
-      setEvolutionRecords(evolutionItems);
-      setEvidenceBundles(bundles);
-      setChangeConflicts(conflicts);
-      setChanges(changeItems);
-      setOutputs(outputItems);
-      setTasks(taskItems);
-      setMemory(memoryRecord);
-      setGithubStatus(github);
-      setProjectPath(memoryRecord.localProjectPath ?? "");
-      setWorkSessionScan(workSessionResult);
+      setProjects((current) => current.some((project) => project.id === projectId)
+        ? current.map((project) => project.id === projectId ? result.project : project)
+        : [result.project, ...current]);
+      setProjectPath(result.memory.localProjectPath ?? "");
+      setBootstrapCurrentStage(result.memory.currentStage ?? "");
+      setBootstrapPendingReviewCount(result.pendingSedimentReviewCount);
+      setBootstrapProviderConfigured(result.providerAvailability.configured);
+      setBootstrapProviderName(result.providerAvailability.providerName);
+      setWorkSessionScan(result.workSessionScan);
+      setScanWarnings(result.workSessionScan.warnings);
       patchDashboardSnapshot({
         selectedProjectId: projectId,
-        materials: materialItems,
-        suggestions: suggestionItems,
-        evolutionRecords: evolutionItems,
-        evidenceBundles: bundles,
-        changeConflicts: conflicts,
-        changes: changeItems,
-        outputs: outputItems,
-        tasks: taskItems,
-        memory: memoryRecord,
-        workSessionScan: workSessionResult,
-        githubStatus: github,
+        latestScanJobId: result.latestScanJob?.id ?? null,
+        latestBatchId: result.workSessionScan.batch?.id ?? null,
+        latestBatchUpdatedAt: result.workSessionScan.batch?.scanFinishedAt ?? result.workSessionScan.batch?.scanStartedAt ?? null,
+        pendingSedimentReviewCount: result.pendingSedimentReviewCount,
+        workSessionScan: result.workSessionScan,
       });
-    } catch (exception) {
-      if (!isLatestContextRequest(requestId)) {
-        return;
+    } catch {
+      if (isLatestContextRequest(requestId, "bootstrap")) {
+        setSecondaryError(hasSnapshot ? "核心状态校准失败，已保留当前缓存，可稍后重试。" : "工作台核心状态读取失败，请检查本地服务后重试。");
       }
-      clearProjectContextViewState();
-      setError(exception instanceof Error ? exception.message : "项目上下文加载失败");
     } finally {
-      if (isLatestContextRequest(requestId)) {
+      if (isLatestContextRequest(requestId, "bootstrap")) {
         setLoading(false);
       }
     }
+  }
+
+  function hydrateDashboardSnapshot(snapshot: DashboardSnapshot) {
+    setMaterials(snapshot.materials);
+    setSuggestions(snapshot.suggestions);
+    setEvolutionRecords(snapshot.evolutionRecords);
+    setEvidenceBundles(snapshot.evidenceBundles);
+    setChangeConflicts(snapshot.changeConflicts);
+    setChanges(snapshot.changes);
+    setOutputs(snapshot.outputs);
+    setTasks(snapshot.tasks);
+    setMemory(snapshot.memory);
+    setProjectPath(snapshot.memory?.localProjectPath ?? snapshot.workSessionScan?.projectPath ?? "");
+    setWorkSessionScan(snapshot.workSessionScan);
+    setGithubStatus(snapshot.githubStatus);
+    setScanWarnings(snapshot.workSessionScan?.warnings ?? []);
+    setBootstrapPendingReviewCount(snapshot.pendingSedimentReviewCount);
+    setBootstrapCurrentStage(snapshot.memory?.currentStage ?? "");
+    setSecondaryLoadedProjectId(snapshot.selectedProjectId);
+    setSecondaryError("");
   }
 
   function clearProjectContextViewState() {
@@ -336,6 +403,12 @@ export default function DashboardPage() {
     setWorkSessionScan(null);
     setGithubStatus(null);
     setScanWarnings([]);
+    setBootstrapPendingReviewCount(0);
+    setBootstrapCurrentStage("");
+    setBootstrapProviderConfigured(false);
+    setBootstrapProviderName("");
+    setSecondaryLoadedProjectId("");
+    setSecondaryError("");
     setStatsFocus("");
   }
 
@@ -384,7 +457,9 @@ export default function DashboardPage() {
     setError("");
     setNotice("");
     try {
-      await deleteProject(session.accessToken, selectedProjectId);
+      const deletedProjectId = selectedProjectId;
+      await deleteProject(session.accessToken, deletedProjectId);
+      clearDashboardSnapshot(deletedProjectId);
       const updatedProjects = await listProjects(session.accessToken);
       const nextProjectId = resolveSelectedProjectId(updatedProjects, "");
       setProjects(updatedProjects);
@@ -543,7 +618,7 @@ export default function DashboardPage() {
           </Button>
         </Link>
       }
-      eyebrow="ProjectFlow V3.3.7"
+      eyebrow="ProjectFlow V3.3.8.1"
       title="工作台"
     >
       <PageContainer>
@@ -565,10 +640,10 @@ export default function DashboardPage() {
               </Button>
               {selectedProject ? <InfoBubble label={selectedProject.status} title="当前项目阶段，仅展示状态，不是操作按钮。" /> : null}
               <InfoBubble
-                label={configuredProvider ? `模型：${configuredProvider.name}` : "未配置模型"}
-                tone={configuredProvider ? "success" : "warning"}
+                label={providerConfigured ? `模型：${activeProviderName}` : "未配置模型"}
+                tone={providerConfigured ? "success" : "warning"}
                 dot
-                title={configuredProvider ? "当前可用于项目理解分析的模型配置。" : "未配置模型时仍可使用本地规则分析。"}
+                title={providerConfigured ? "当前可用于项目理解分析的模型配置。" : "未配置模型时仍可使用本地规则分析。"}
               />
               <Button
                 variant="ghost"
@@ -591,50 +666,20 @@ export default function DashboardPage() {
           }
         />
 
-        <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <InteractiveStat
-            active={statsFocus === "materials"}
-            hint={hasUsableProjectZip ? `${paths.length} 个文件信号` : "暂无源码结构"}
-            label="项目资料"
-            onClick={() => setStatsFocus(statsFocus === "materials" ? "" : "materials")}
-            value={materials.length}
-          />
-          <InteractiveStat
-            active={statsFocus === "changes"}
-            hint="去沉淀确认"
-            label="建议沉淀"
-            onClick={() => setStatsFocus(statsFocus === "changes" ? "" : "changes")}
-            tone={pendingReviewCount ? "warning" : "slate"}
-            value={pendingReviewCount}
-          />
-          <InteractiveStat
-            active={statsFocus === "sessions"}
-            hint="待整理变更"
-            label="待整理变更"
-            onClick={() => setStatsFocus(statsFocus === "sessions" ? "" : "sessions")}
-            tone={todaySessions.length ? "brand" : "slate"}
-            value={todaySessions.length}
-          />
-          <InteractiveStat
-            active={statsFocus === "tasks"}
-            hint={memory?.currentStage || selectedProject?.status || "—"}
-            label="下一步任务"
-            onClick={() => setStatsFocus(statsFocus === "tasks" ? "" : "tasks")}
-            value={activeTasks.length}
-          />
-        </section>
-
-        {statsFocus ? (
-          <StatsFocusPanel
-            activeTasks={activeTasks}
-            architecture={architecture}
-            changes={pendingChanges}
-            focus={statsFocus}
-            paths={paths}
-            suggestions={pendingSuggestions}
-            workSessions={todaySessions}
-          />
+        {secondaryError ? (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <span>{secondaryError}</span>
+            <button className="font-semibold underline underline-offset-2" onClick={() => void refreshProjectContext(selectedProjectId)} type="button">重试次要数据</button>
+          </div>
         ) : null}
+
+        <DashboardOverviewStats
+          activeTasks={activeTasks} architecture={architecture} changes={pendingChanges}
+          materialsCount={materials.length} materialsHint={hasUsableProjectZip ? `${paths.length} 个文件信号` : "暂无源码结构"}
+          onFocus={setStatsFocus} paths={paths} pendingReviewCount={pendingReviewCount}
+          stageHint={memory?.currentStage || bootstrapCurrentStage || selectedProject?.status || "—"}
+          statsFocus={statsFocus} suggestions={pendingSuggestions} workSessions={todaySessions}
+        />
 
         <FlowGuideDialog onClose={() => setShowFlowGuide(false)} open={showFlowGuide} state={projectFlowState} />
 
@@ -677,7 +722,7 @@ export default function DashboardPage() {
               onShowGitHubLogin={handleShowGitHubLogin}
               onOpenLoginTerminal={handleOpenLoginTerminal}
               onClearLoginGuide={handleClearLoginGuide}
-              modelName={configuredProvider ? configuredProvider.name : null}
+              modelName={activeProviderName || null}
             />
 
             <PendingChangesPanel
@@ -718,7 +763,7 @@ export default function DashboardPage() {
                             ? "模型分析中"
                             : analysis
                               ? "重新分析"
-                              : configuredProvider
+                              : providerConfigured
                                 ? "运行模型分析"
                                 : "本地规则分析"}
                       </Button>
@@ -760,7 +805,7 @@ export default function DashboardPage() {
                   ) : null}
                   {jobError ? <p className="mt-3 text-sm text-warning-fg">{jobError}</p> : null}
                   <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                    <MiniFact label="工程阶段" value={memory?.currentStage || selectedProject.status} />
+                    <MiniFact label="工程阶段" value={memory?.currentStage || bootstrapCurrentStage || selectedProject.status} />
                     <MiniFact label="进行中" value={memory?.inProgressCapabilities || activeTasks[0]?.title || "等待确认"} />
                     <MiniFact label="风险" value={memory?.currentRisks || "暂无已确认风险"} />
                   </div>
@@ -808,9 +853,9 @@ export default function DashboardPage() {
             <Card shadow="card" padding="md">
               <p className="text-sm font-semibold text-ink">模型状态</p>
               <p className="mt-2 text-sm leading-6 text-muted">
-                {configuredProvider ? "已配置模型。深度分析结果必须经用户确认后写入项目沉淀。" : "未配置 API。文件理解页会显示本地规则解释，深度分析入口会引导到设置页。"}
+                {providerConfigured ? "已配置模型。深度分析结果必须经用户确认后写入项目沉淀。" : "未配置 API。文件理解页会显示本地规则解释，深度分析入口会引导到设置页。"}
               </p>
-              {!configuredProvider ? (
+              {!providerConfigured ? (
                 <Link className="mt-3 inline-flex" href="/settings">
                   <Button variant="secondary" size="sm">
                     去设置模型 <ArrowRight className="h-3.5 w-3.5" />

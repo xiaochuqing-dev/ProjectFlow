@@ -91,11 +91,19 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   return payload.data;
 }
 
-async function requestJson<T>(path: string, options: RequestInit): Promise<T> {
+async function requestJson<T>(path: string, options: RequestInit, serverErrorMessage?: string): Promise<T> {
   const response = await fetchWithFriendlyError(`${apiBaseUrl()}${path}`, options);
-  const payload = await readApiPayload<T>(response);
+  let payload: ApiResponse<T> & ApiErrorResponse;
+  try {
+    payload = await readApiPayload<T>(response);
+  } catch (error) {
+    if (response.status >= 500 && serverErrorMessage) {
+      throw new Error(serverErrorMessage);
+    }
+    throw error;
+  }
   if (!response.ok) {
-    throw new Error(payload.error?.message ?? "请求失败，请稍后重试");
+    throw new Error(payload.error?.message ?? (response.status >= 500 ? serverErrorMessage : undefined) ?? "请求失败，请稍后重试");
   }
   return payload.data;
 }
@@ -1143,6 +1151,40 @@ export type WorkSessionScanResult = {
   firstScan: boolean;
 };
 
+export type DashboardBootstrap = {
+  project: Project;
+  memory: {
+    positioning: string;
+    currentStage: string;
+    localProjectPath: string;
+    updatedAt: string;
+  };
+  latestScanJob: {
+    id: string;
+    status: ProjectAnalysisJobStatus;
+    createdAt: string;
+    updatedAt: string;
+    completedAt: string | null;
+  } | null;
+  workSessionScan: WorkSessionScanResult;
+  pendingSedimentReviewCount: number;
+  latestProjectAnalysis: {
+    id: string;
+    summary: string;
+    analysisSource: string;
+    modelUsed: boolean;
+    providerName: string;
+    confidence: string;
+    createdAt: string;
+  } | null;
+  providerAvailability: {
+    configured: boolean;
+    providerName: string;
+    modelName: string;
+  };
+  generatedAt: string;
+};
+
 export type ChangeBatch = {
   id: string;
   projectId: string;
@@ -1505,13 +1547,13 @@ export function listProjectSediments(token: string, projectId: string): Promise<
 export function listSedimentReviewBatches(token: string, projectId: string): Promise<SedimentReviewBatch[]> {
   return requestJson<SedimentReviewBatch[]>(`/projects/${projectId}/sediment-review-batches`, {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, "沉淀批次读取失败，请查看本地服务日志后重试。");
 }
 
 export function getSedimentReviewBatch(token: string, batchId: string): Promise<SedimentReviewBatchDetail> {
   return requestJson<SedimentReviewBatchDetail>(`/sediment-review-batches/${batchId}`, {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, "批次详情读取失败，请查看本地服务日志后重试。");
 }
 
 export function getCapabilityAnalysisOverview(token: string, projectId: string): Promise<CapabilityAnalysisOverview> {
@@ -1805,6 +1847,14 @@ export function startProjectWorkSessionScan(token: string, projectId: string): P
 
 export function listProjectWorkSessions(token: string, projectId: string): Promise<WorkSessionCandidate[]> {
   return requestJson<WorkSessionCandidate[]>(`/projects/${projectId}/work-sessions`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function getDashboardBootstrap(token: string, projectId: string): Promise<DashboardBootstrap> {
+  return requestJson<DashboardBootstrap>(`/projects/${projectId}/dashboard-bootstrap`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

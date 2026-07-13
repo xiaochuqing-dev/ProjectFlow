@@ -27,6 +27,7 @@ test("项目分析生成可恢复的模型批次", async ({ page, request }) => 
   const fixture = await createAnalyzableProject(request, "分析批次");
   const job = await startScan(request, fixture.projectId);
   await waitForJob(request, job.id, ["SUCCEEDED", "SUCCEEDED_WITH_WARNINGS"]);
+  const emptyProject = await createBareProject(request, "快照隔离");
 
   const batches = await api<Batch[]>(request, "GET", `/projects/${fixture.projectId}/sediment-review-batches`);
   expect(batches).toHaveLength(1);
@@ -40,6 +41,39 @@ test("项目分析生成可恢复的模型批次", async ({ page, request }) => 
   await page.reload();
   await expect(page.getByText("完整模型分析")).toBeVisible();
   await page.goto(`/dashboard?projectId=${fixture.projectId}`);
+  await expect(page.getByText("最新分析批次")).toBeVisible({ timeout: 3_000 });
+
+  await page.goto("/settings");
+  const snapshotReturnStartedAt = Date.now();
+  const snapshotCalibration = page.waitForResponse((response) => response.url().includes(`/projects/${fixture.projectId}/dashboard-bootstrap`));
+  await page.goto(`/dashboard?projectId=${fixture.projectId}`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("最新分析批次")).toBeVisible({ timeout: 750 });
+  const snapshotVisibleMs = Date.now() - snapshotReturnStartedAt;
+  await snapshotCalibration;
+  console.log(`V3381_METRIC dashboard_snapshot_visible_ms=${snapshotVisibleMs} calibration_ms=${Date.now() - snapshotReturnStartedAt}`);
+
+  await page.evaluate(() => window.sessionStorage.clear());
+  const reloadStartedAt = Date.now();
+  const reloadBootstrap = page.waitForResponse((response) => response.url().includes(`/projects/${fixture.projectId}/dashboard-bootstrap`));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.getByText("最新分析批次")).toBeVisible({ timeout: 3_000 });
+  const reloadVisibleMs = Date.now() - reloadStartedAt;
+  await reloadBootstrap;
+  console.log(`V3381_METRIC dashboard_reload_visible_ms=${reloadVisibleMs} bootstrap_ms=${Date.now() - reloadStartedAt}`);
+  expect(reloadVisibleMs).toBeLessThan(3_000);
+
+  await page.locator("select").first().selectOption(emptyProject.id);
+  await expect(page.getByText("最新分析批次")).toHaveCount(0);
+  await page.locator("select").first().selectOption(fixture.projectId);
+  await expect(page.getByText("最新分析批次")).toBeVisible({ timeout: 750 });
+
+  await page.route(`**/api/projects/${fixture.projectId}/github/status`, (route) => route.abort());
+  await page.goto("/settings");
+  await page.goto(`/dashboard?projectId=${fixture.projectId}`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("最新分析批次")).toBeVisible({ timeout: 750 });
+  await expect(page.getByText(/GitHub.*刷新失败，核心分析结果已保留/)).toBeVisible({ timeout: 3_000 });
+  await page.unroute(`**/api/projects/${fixture.projectId}/github/status`);
+
   await page.goto(`/sediment-review?projectId=${fixture.projectId}`);
   await expect(page.getByText("完整模型分析")).toBeVisible();
   await expect(page.getByText("分析任务失败", { exact: false })).toHaveCount(0);
@@ -51,6 +85,9 @@ test("沉淀处理逐条确认并隔离本地事实草稿", async ({ page, reque
   const modelBatch = (await api<Batch[]>(request, "GET", `/projects/${fixture.projectId}/sediment-review-batches`))[0];
 
   await selectProject(page, fixture.projectId);
+  await page.goto(`/sediment-review?projectId=${fixture.projectId}`);
+  await expect(page.getByText("完整模型分析")).toBeVisible();
+  await expect(page.getByRole("link", { name: `继续处理 ${modelBatch.pendingCount} 条` })).toBeVisible();
   await page.goto(`/sediment-review/${modelBatch.batchId}?projectId=${fixture.projectId}`);
   await expect(page.getByText(/批次进度 0 \/ /)).toBeVisible();
   await page.getByRole("button", { name: "新建并确认" }).click();
@@ -62,6 +99,9 @@ test("沉淀处理逐条确认并隔离本地事实草稿", async ({ page, reque
   const sediments = await api<Array<{ id: string; capabilityStatus: string }>>(request, "GET", `/projects/${fixture.projectId}/sediments`);
   expect(sediments).toHaveLength(1);
   expect(sediments[0].capabilityStatus).toBe("PENDING_ANALYSIS");
+  await page.goto(`/sediment-review?projectId=${fixture.projectId}`);
+  await expect(page.getByText("已处理").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: updated.batch.pendingCount > 0 ? `继续处理 ${updated.batch.pendingCount} 条` : "查看批次详情" })).toBeVisible();
 
   appendCommit(fixture.repository, "docs/local-draft.txt", "local draft", "docs: add local draft evidence");
   await request.post(`${modelControl}/fail-next`, { data: { count: 2 } });
@@ -182,6 +222,20 @@ async function createAnalyzableProject(request: APIRequestContext, label: string
   const repository = createRepository(label);
   await api(request, "PATCH", `/projects/${project.id}/memory/local-path`, { localProjectPath: repository });
   return { projectId: project.id, repository };
+}
+
+async function createBareProject(request: APIRequestContext, label: string) {
+  const project = await api<{ id: string }>(request, "POST", "/projects", {
+    name: `E2E ${label} ${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    description: "用于验证工作台项目级快照隔离",
+    status: "PLANNING",
+    techStack: [],
+    repoUrl: "",
+    startDate: "2026-07-13",
+    endDate: null,
+  });
+  projects.add(project.id);
+  return project;
 }
 
 function createRepository(label: string) {

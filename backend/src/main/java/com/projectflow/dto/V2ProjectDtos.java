@@ -440,6 +440,53 @@ public final class V2ProjectDtos {
     ) {
     }
 
+    public record DashboardBootstrapResponse(
+        ProjectDtos.ProjectResponse project,
+        DashboardMemorySummary memory,
+        DashboardJobSummary latestScanJob,
+        WorkSessionScanResponse workSessionScan,
+        long pendingSedimentReviewCount,
+        DashboardProjectAnalysisSummary latestProjectAnalysis,
+        DashboardProviderAvailability providerAvailability,
+        Instant generatedAt
+    ) {
+    }
+
+    public record DashboardMemorySummary(
+        String positioning,
+        String currentStage,
+        String localProjectPath,
+        Instant updatedAt
+    ) {
+    }
+
+    public record DashboardJobSummary(
+        UUID id,
+        String status,
+        Instant createdAt,
+        Instant updatedAt,
+        Instant completedAt
+    ) {
+    }
+
+    public record DashboardProjectAnalysisSummary(
+        UUID id,
+        String summary,
+        String analysisSource,
+        boolean modelUsed,
+        String providerName,
+        String confidence,
+        Instant createdAt
+    ) {
+    }
+
+    public record DashboardProviderAvailability(
+        boolean configured,
+        String providerName,
+        String modelName
+    ) {
+    }
+
     public record WorkSessionCandidateResponse(
         String sessionId,
         UUID projectId,

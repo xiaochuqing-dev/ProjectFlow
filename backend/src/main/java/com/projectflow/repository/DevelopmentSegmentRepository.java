@@ -9,5 +9,6 @@ import com.projectflow.entity.DevelopmentSegment;
 
 public interface DevelopmentSegmentRepository extends JpaRepository<DevelopmentSegment, UUID> {
     List<DevelopmentSegment> findByBatchIdOrderByCreatedAtAsc(UUID batchId);
+    List<DevelopmentSegment> findByBatchIdInOrderByCreatedAtAsc(List<UUID> batchIds);
     List<DevelopmentSegment> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
 }

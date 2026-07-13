@@ -47,6 +47,7 @@ import com.projectflow.service.ProjectAnalysisJobRunner;
 import com.projectflow.service.ProjectAnalysisJobService;
 import com.projectflow.service.ProjectCapabilityService;
 import com.projectflow.service.ProjectSedimentService;
+import com.projectflow.service.DashboardBootstrapService;
 import com.projectflow.service.WorkSessionScanService;
 import com.sun.net.httpserver.HttpServer;
 
@@ -85,6 +86,7 @@ class ProjectFlowPostgresIT {
     @Autowired WorkSessionScanService workSessionScanService;
     @Autowired ProjectSedimentService sedimentService;
     @Autowired ProjectCapabilityService capabilityService;
+    @Autowired DashboardBootstrapService dashboardBootstrapService;
     @Autowired PlatformTransactionManager transactionManager;
     @Autowired ObjectMapper objectMapper;
 
@@ -143,6 +145,10 @@ class ProjectFlowPostgresIT {
         var scan = workSessionScanService.scan(fixture.userId(), fixture.project().getId());
         assertThat(scan.batch().segmentationMode()).isEqualTo("MODEL");
         assertThat(changeRepository.findByProjectIdOrderByCreatedAtDesc(fixture.project().getId())).hasSize(1);
+        var bootstrap = dashboardBootstrapService.load(fixture.userId(), fixture.project().getId());
+        assertThat(bootstrap.workSessionScan().batch().id()).isEqualTo(scan.batch().id());
+        assertThat(bootstrap.workSessionScan().segments()).hasSize(1);
+        assertThat(bootstrap.pendingSedimentReviewCount()).isEqualTo(1);
         var change = changeRepository.findByProjectIdOrderByCreatedAtDesc(fixture.project().getId()).get(0);
         var confirmation = sedimentService.confirm(fixture.userId(), change.getId(), SedimentAction.NEW_SEDIMENT, null);
         assertThat(confirmation.sediment().capabilityStatus()).isEqualTo("PENDING_ANALYSIS");

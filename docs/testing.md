@@ -1,5 +1,9 @@
 # Testing
 
+## V3.3.8.1 data-read gates
+
+`DataReadReliabilityTest` seeds a legacy nullable batch/change/segment beside a normal batch, verifies list/detail degradation, measures a 50-batch list at four prepared statements, and validates the persisted Dashboard Bootstrap response. Frontend behavior tests cover weak-result merging, project-isolated snapshots, legacy-key migration, and freshness metadata. Playwright covers immediate return from Settings, F5 after sessionStorage clearing, A/B project isolation, secondary GitHub failure isolation, and sediment list/detail/confirmation statistics. PostgreSQL workflow acceptance also reads its persisted scan through Dashboard Bootstrap.
+
 Backend unit and H2 compatibility:
 
 cd backend

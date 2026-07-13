@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.3.8.1 数据读取可靠性 - 2026-07-13
+
+用真实用户 H2 复现并修复沉淀处理中心历史空字段 500；ChangeBatch、ProjectChange、DevelopmentSegment 读取改为保守 null-safe，旧批次显示“历史数据不完整”，不回填、不删除历史。批次列表按 batches/changes/segments 批量读取，50 批次固定 4 条查询。工作台按项目保存 schema v2 快照，完整分析结果不会被 session-only 弱响应清空；新增数据库只读 Dashboard Bootstrap，在无快照 F5 时快速恢复批次、推进段和待处理数量，次要接口失败只显示局部错误。
+
 ## ProjectFlow V3.3.8 真实模型可靠性 - 2026-07-12
 
 统一 6 个真实模型入口，新增 Provider/model capability 与任务级动态参数策略，取消 temperature 0.3、复杂任务 4000 和恢复 2000 的固定限制。结构化输出改用 balanced 多候选扫描、目标集合定位、snake_case/外层包装适配、Schema repair、截断与 reasoning 分型恢复。真实 DeepSeek 通过隔离应用副本完成所有入口调用，ProjectFlow 套娃覆盖 30 提交、148 文件、15 份 Agent result；首次真实 Schema 偏离被复现并修复。旧 H2 启动同时补齐 job status enum、计时列与 nullable worktree flag。

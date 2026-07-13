@@ -1,5 +1,11 @@
 # Data Model
 
+## V3.3.8.1 read compatibility
+
+`ChangeBatch`, `ProjectChange`, and `DevelopmentSegment` remain business facts even when historical rows predate newer diagnostic fields. Entity/DTO reads now apply conservative null-safe values for batch model/provider/scope/GitHub/fingerprint/timing/status/timestamps, change source/quality/strength/action/evidence, and segment generation/quality/fallback/evidence/status fields. No data backfill rewrites historical values; incomplete batches are exposed as `LEGACY_INCOMPLETE` for user review.
+
+Dashboard snapshots use schema version 2 and the key `projectflow:dashboardSnapshot:{projectId}` with project ID, capture time, latest job ID, latest batch ID, and batch update time. This browser record is disposable cache metadata, not a database entity or business source.
+
 ## V3.3.8 model diagnostics
 
 No new model-response table is introduced. Persisted job/result diagnostics add safe parameter provenance, capability profile, retry type, Schema match, reasoning-budget signal and failure stage/code. They intentionally exclude API keys, Authorization, full prompts, raw responses and reasoning text.

@@ -17,7 +17,9 @@ import com.projectflow.dto.ApiResponse;
 import com.projectflow.dto.AuthDtos.AuthUser;
 import com.projectflow.dto.ProjectDtos.ProjectRequest;
 import com.projectflow.dto.ProjectDtos.ProjectResponse;
+import com.projectflow.dto.V2ProjectDtos.DashboardBootstrapResponse;
 import com.projectflow.service.AuthService;
+import com.projectflow.service.DashboardBootstrapService;
 import com.projectflow.service.ProjectService;
 
 import jakarta.validation.Valid;
@@ -26,10 +28,16 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/projects")
 public class ProjectController {
     private final ProjectService projectService;
+    private final DashboardBootstrapService dashboardBootstrapService;
     private final AuthService authService;
 
-    public ProjectController(ProjectService projectService, AuthService authService) {
+    public ProjectController(
+        ProjectService projectService,
+        DashboardBootstrapService dashboardBootstrapService,
+        AuthService authService
+    ) {
         this.projectService = projectService;
+        this.dashboardBootstrapService = dashboardBootstrapService;
         this.authService = authService;
     }
 
@@ -55,6 +63,15 @@ public class ProjectController {
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
         return ApiResponse.ok(projectService.detail(user.id(), projectId));
+    }
+
+    @GetMapping("/{projectId}/dashboard-bootstrap")
+    ApiResponse<DashboardBootstrapResponse> dashboardBootstrap(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(dashboardBootstrapService.load(user.id(), projectId));
     }
 
     @PutMapping("/{projectId}")

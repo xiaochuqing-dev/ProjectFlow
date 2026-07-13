@@ -42,6 +42,59 @@ export function InteractiveStat({
   );
 }
 
+type StatsFocus = "materials" | "changes" | "sessions" | "tasks";
+
+export function DashboardOverviewStats({
+  activeTasks,
+  architecture,
+  changes,
+  materialsCount,
+  materialsHint,
+  onFocus,
+  paths,
+  pendingReviewCount,
+  stageHint,
+  statsFocus,
+  suggestions,
+  workSessions,
+}: {
+  activeTasks: TaskItem[];
+  architecture: ReturnType<typeof buildProjectArchitecture>;
+  changes: ProjectChange[];
+  materialsCount: number;
+  materialsHint: string;
+  onFocus: (focus: StatsFocus | "") => void;
+  paths: string[];
+  pendingReviewCount: number;
+  stageHint: string;
+  statsFocus: StatsFocus | "";
+  suggestions: AiSuggestion[];
+  workSessions: WorkSessionCandidate[];
+}) {
+  const toggle = (focus: StatsFocus) => onFocus(statsFocus === focus ? "" : focus);
+  return (
+    <>
+      <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <InteractiveStat active={statsFocus === "materials"} hint={materialsHint} label="项目资料" onClick={() => toggle("materials")} value={materialsCount} />
+        <InteractiveStat active={statsFocus === "changes"} hint="去沉淀确认" label="建议沉淀" onClick={() => toggle("changes")} tone={pendingReviewCount ? "warning" : "slate"} value={pendingReviewCount} />
+        <InteractiveStat active={statsFocus === "sessions"} hint="待整理变更" label="待整理变更" onClick={() => toggle("sessions")} tone={workSessions.length ? "brand" : "slate"} value={workSessions.length} />
+        <InteractiveStat active={statsFocus === "tasks"} hint={stageHint} label="下一步任务" onClick={() => toggle("tasks")} value={activeTasks.length} />
+      </section>
+      {statsFocus ? (
+        <StatsFocusPanel
+          activeTasks={activeTasks}
+          architecture={architecture}
+          changes={changes}
+          focus={statsFocus}
+          paths={paths}
+          suggestions={suggestions}
+          workSessions={workSessions}
+        />
+      ) : null}
+    </>
+  );
+}
+
 export function StatsFocusPanel({
   activeTasks,
   architecture,

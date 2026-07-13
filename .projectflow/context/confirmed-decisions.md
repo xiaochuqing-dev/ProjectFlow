@@ -1,4 +1,12 @@
-# Confirmed V3.3.8 decisions
+# Confirmed V3.3.8.1 decisions
+
+- 分析结果的事实来源是数据库；sessionStorage 仅用于快速恢复；Dashboard 使用轻量 Bootstrap Read Model 校准核心状态。
+- session-only 弱响应不得清空已有 batch 或非空 segments；数据库权威响应才可明确清空。
+- Dashboard snapshot 使用 projectId 隔离和 schemaVersion 2，旧单 key 只做一次兼容迁移。
+- Bootstrap 只读持久化项目、memory、最新 job/batch/segments/sessions、待处理统计、分析摘要和 Provider 可用性；禁止 Git、GitHub CLI、模型和文件扫描。
+- 历史 batch/change/segment 缺失字段在读取边界保守降级；不做破坏性回填，单条坏数据不得拖垮列表。
+- 批次列表使用固定批量查询，不允许恢复逐批次 changes/segments 的 N+1。
+- V3.3.7 后台任务和 V3.3.8 模型可靠性边界保持不变。
 
 - 6 个真实模型入口统一登记并通过网关，Provider 测试不再自行发送 HTTP。
 - Temperature 配置值不再被全局 0.3 封顶；不支持时省略。任务建议值只用于策略与诊断，不冒充用户配置。

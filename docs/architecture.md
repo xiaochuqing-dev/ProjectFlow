@@ -2,7 +2,11 @@
 
 ## System Overview
 
-ProjectFlow uses a separated frontend and backend architecture. The current V3.3.8 product spine is a developer workbench that turns real project activity into confirmed project sediment and then into traceable capability analysis.
+ProjectFlow uses a separated frontend and backend architecture. The current V3.3.8.1 product spine is a developer workbench that turns real project activity into confirmed project sediment and then into traceable capability analysis.
+
+## V3.3.8.1 dashboard read boundary
+
+The database is the source of truth for analysis jobs, change batches, development segments, formal changes, and sediments. A project-scoped sessionStorage snapshot may render immediately, but the lightweight `dashboard-bootstrap` read model always calibrates it from persisted facts. Bootstrap performs only latest/count reads; Git, GitHub CLI, model calls, filesystem scans, and long analysis remain outside this boundary. Materials, suggestions, history, tasks, evidence, conflicts, outputs, and live GitHub inspection load independently and cannot clear the core scan result on failure.
 
 ## V3.3.8 model reliability boundary
 

@@ -1,12 +1,12 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-07-11
+Last updated: 2026-07-13
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.3.8 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
+ProjectFlow V3.3.8.1 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
 
 Current direction:
 
@@ -16,7 +16,14 @@ Current direction:
 - AI/model calls are candidate generators only; user confirmation is required before treating output as official project facts.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
 
-V3.3.8 focus:
+V3.3.8.1 focus:
+
+- Persisted jobs, batches, development segments, formal changes, and sediments are authoritative; project-scoped sessionStorage snapshots are disposable first-render cache only.
+- Dashboard Bootstrap restores core persisted state without Git, GitHub CLI, filesystem, or model work. Secondary reads cannot clear the core result when they fail.
+- Legacy nullable batch/change/segment fields degrade safely, and sediment batch lists use fixed bulk queries rather than per-batch N+1 reads.
+- V3.3.7 job reliability and V3.3.8 model reliability remain unchanged.
+
+V3.3.8 focus (still applies):
 
 - Six model entrypoints share one task registry, Provider capability layer, dynamic request policy, output adapter, failure classifier and diagnostics vocabulary.
 - Temperature is configured/recommended/effective/sent separately. Unsupported parameters are omitted; there is no global 0.3 ceiling.
@@ -70,7 +77,7 @@ Do not treat ProjectFlow as a generic Kanban app, SaaS admin panel, hotel/librar
 
 ## Current Stage
 
-The project has moved beyond the V1/V2 planning baseline. Current V3.3.3 focus:
+The project has moved beyond the V1/V2 planning baseline. Current V3.3.8.1 focus:
 
 - Workbench first screen exposes: add/import project → bind local path → analyze new changes → review development segments → confirm sediment → reuse output.
 - Scan boundaries use the last confirmed review cursor rather than the current day.

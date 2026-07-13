@@ -6,8 +6,10 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -246,8 +248,23 @@ public class ProjectSedimentService {
     @Transactional(readOnly = true)
     public List<SedimentReviewBatchResponse> listReviewBatches(UUID userId, UUID projectId) {
         ownedProject(userId, projectId);
-        return batchRepository.findByProjectIdOrderByScanStartedAtDesc(projectId).stream()
-            .map(this::reviewBatchResponse)
+        List<ChangeBatch> batches = batchRepository.findByProjectIdOrderByScanStartedAtDesc(projectId);
+        if (batches.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> batchIds = batches.stream().map(ChangeBatch::getId).toList();
+        Map<UUID, List<ProjectChange>> changesByBatch = changeRepository.findBySourceBatchIdInOrderByCreatedAtAsc(batchIds).stream()
+            .collect(Collectors.groupingBy(ProjectChange::getSourceBatchId));
+        Map<UUID, List<DevelopmentSegment>> segmentsByBatch = segmentRepository.findByBatchIdInOrderByCreatedAtAsc(batchIds).stream()
+            .collect(Collectors.groupingBy(DevelopmentSegment::getBatchId));
+        return batches.stream()
+            .map(batch -> reviewBatchResponse(
+                batch,
+                changesByBatch.getOrDefault(batch.getId(), List.of()),
+                (int) segmentsByBatch.getOrDefault(batch.getId(), List.of()).stream()
+                    .filter(segment -> !"MODEL".equals(segment.getGenerationMode()))
+                    .count()
+            ))
             .toList();
     }
 
@@ -257,11 +274,12 @@ public class ProjectSedimentService {
             .orElseThrow(() -> new AppException("CHANGE_BATCH_NOT_FOUND", "分析批次不存在", HttpStatus.NOT_FOUND));
         ownedProject(userId, batch.getProjectId());
         List<ProjectChange> changes = changeRepository.findBySourceBatchIdOrderByCreatedAtAsc(batchId);
-        List<DevelopmentSegmentResponse> localDrafts = pendingChangeScanService.listSegments(batchId).stream()
+        List<DevelopmentSegmentResponse> segments = pendingChangeScanService.listSegments(batchId);
+        List<DevelopmentSegmentResponse> localDrafts = segments.stream()
             .filter(segment -> !"MODEL".equals(segment.generationMode()))
             .toList();
         List<SedimentReviewItemResponse> items = changes.stream().map(this::reviewItemResponse).toList();
-        return new SedimentReviewBatchDetailResponse(reviewBatchResponse(batch), items, localDrafts);
+        return new SedimentReviewBatchDetailResponse(reviewBatchResponse(batch, changes, localDrafts.size()), items, localDrafts);
     }
 
     private ProjectSediment createSediment(ProjectChange change, DevelopmentSegment segment) {
@@ -368,23 +386,27 @@ public class ProjectSedimentService {
         return files;
     }
 
-    private SedimentReviewBatchResponse reviewBatchResponse(ChangeBatch batch) {
-        List<ProjectChange> changes = changeRepository.findBySourceBatchIdOrderByCreatedAtAsc(batch.getId());
-        List<DevelopmentSegmentResponse> segments = pendingChangeScanService.listSegments(batch.getId());
-        int localDrafts = (int) segments.stream().filter(segment -> !"MODEL".equals(segment.generationMode())).count();
+    private SedimentReviewBatchResponse reviewBatchResponse(
+        ChangeBatch batch,
+        List<ProjectChange> changes,
+        int localDrafts
+    ) {
         int pending = (int) changes.stream().filter(change ->
             change.getStatus() == ProjectChangeStatus.PENDING || change.getStatus() == ProjectChangeStatus.EDITED
         ).count();
         int ignored = (int) changes.stream().filter(change -> change.getStatus() == ProjectChangeStatus.IGNORED).count();
         int processed = changes.size() - pending;
-        String resultSource = batch.getModelStatus().startsWith("SUCCESS")
-            ? "SUCCESS_WITH_WARNINGS".equals(batch.getModelStatus()) ? "MODEL_PARTIAL_RESULT" : "MODEL_RESULT"
-            : localDrafts > 0 ? "LOCAL_FACT_DRAFT" : "NEEDS_REANALYSIS";
+        String modelStatus = batch.getModelStatus();
+        String resultSource = modelStatus.isBlank()
+            ? "LEGACY_INCOMPLETE"
+            : modelStatus.startsWith("SUCCESS")
+                ? "SUCCESS_WITH_WARNINGS".equals(modelStatus) ? "MODEL_PARTIAL_RESULT" : "MODEL_RESULT"
+                : localDrafts > 0 ? "LOCAL_FACT_DRAFT" : "NEEDS_REANALYSIS";
         return new SedimentReviewBatchResponse(
             batch.getId(), batch.getScanStartedAt(), batch.getScanFinishedAt(), batch.getBranchName(), batch.getStatus().name(),
             batch.getNewCommitCount(), batch.getChangedFileCount(), batch.getAgentResultCount(), batch.getModelStatus(),
             batch.getModelProvider(), resultSource, changes.size(), localDrafts, processed, pending, ignored,
-            !batch.getModelStatus().startsWith("SUCCESS") || localDrafts > 0, timeGroup(batch.getScanStartedAt())
+            !modelStatus.startsWith("SUCCESS") || localDrafts > 0, timeGroup(batch.getScanStartedAt())
         );
     }
 
@@ -398,6 +420,7 @@ public class ProjectSedimentService {
     }
 
     private String timeGroup(Instant value) {
+        if (value == null || Instant.EPOCH.equals(value)) return "EARLIER";
         LocalDate date = value.atZone(ZoneId.systemDefault()).toLocalDate();
         LocalDate today = LocalDate.now(ZoneId.systemDefault());
         if (date.equals(today)) return "TODAY";

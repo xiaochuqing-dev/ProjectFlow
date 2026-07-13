@@ -15,4 +15,6 @@ public interface AiProviderRepository extends JpaRepository<AiProvider, UUID> {
     Optional<AiProvider> findByIdAndUserId(UUID id, UUID userId);
 
     Optional<AiProvider> findByUserIdAndTypeAndBaseUrlAndModelName(UUID userId, AiProviderType type, String baseUrl, String modelName);
+
+    Optional<AiProvider> findFirstByUserIdAndDefaultEnabledTrueOrderByUpdatedAtDesc(UUID userId);
 }

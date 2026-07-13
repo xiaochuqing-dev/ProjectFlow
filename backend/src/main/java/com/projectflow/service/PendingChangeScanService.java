@@ -105,19 +105,19 @@ public class PendingChangeScanService {
         if (diagnostics.analysisScope() != null && !diagnostics.analysisScope().isBlank()) {
             batch.recordAnalysisScope(diagnostics.analysisScope());
         }
-        return toResponse(batchRepository.save(batch));
+        return toBatchResponse(batchRepository.save(batch));
     }
 
     @Transactional(readOnly = true)
     public List<DevelopmentSegmentResponse> listSegments(UUID batchId) {
-        return segmentRepository.findByBatchIdOrderByCreatedAtAsc(batchId).stream().map(this::toResponse).toList();
+        return segmentRepository.findByBatchIdOrderByCreatedAtAsc(batchId).stream().map(PendingChangeScanService::toSegmentResponse).toList();
     }
 
     @Transactional
     public List<DevelopmentSegmentResponse> persistSegments(UUID projectId, UUID batchId, List<SegmentDraft> drafts, SegmentDiagnostics diagnostics) {
         List<DevelopmentSegment> existing = segmentRepository.findByBatchIdOrderByCreatedAtAsc(batchId);
         if (!existing.isEmpty()) {
-            return existing.stream().map(this::toResponse).toList();
+            return existing.stream().map(PendingChangeScanService::toSegmentResponse).toList();
         }
         List<DevelopmentSegment> segments = new ArrayList<>();
         List<String> titles = new ArrayList<>();
@@ -153,14 +153,14 @@ public class PendingChangeScanService {
             segment.updateAnalysis(diagnostics.generationMode(), diagnostics.modelProvider(), diagnostics.fallbackReason(), quality.status(), quality.reason(), urls, uncertainties);
             segments.add(segment);
         }
-        return segmentRepository.saveAll(segments).stream().map(this::toResponse).toList();
+        return segmentRepository.saveAll(segments).stream().map(PendingChangeScanService::toSegmentResponse).toList();
     }
 
     @Transactional
     public ChangeBatchResponse updateSegmentCount(UUID batchId, int segmentCount) {
         ChangeBatch batch = batchRepository.findById(batchId).orElseThrow();
         batch.updateSegmentCount(segmentCount);
-        return toResponse(batchRepository.save(batch));
+        return toBatchResponse(batchRepository.save(batch));
     }
 
     private CommandResult command(Path projectRoot, List<String> command) {
@@ -183,7 +183,7 @@ public class PendingChangeScanService {
         }
     }
 
-    private ChangeBatchResponse toResponse(ChangeBatch batch) {
+    static ChangeBatchResponse toBatchResponse(ChangeBatch batch) {
         return new ChangeBatchResponse(
             batch.getId(), batch.getProjectId(), batch.getScanStartedAt(), batch.getScanFinishedAt(),
             batch.getBaseCommitSha(), batch.getHeadCommitSha(), batch.getBranchName(), batch.getNewCommitCount(),
@@ -195,7 +195,7 @@ public class PendingChangeScanService {
         );
     }
 
-    private DevelopmentSegmentResponse toResponse(DevelopmentSegment segment) {
+    static DevelopmentSegmentResponse toSegmentResponse(DevelopmentSegment segment) {
         return new DevelopmentSegmentResponse(
             segment.getId(), segment.getProjectId(), segment.getBatchId(), segment.getTitle(), segment.getPlainSummary(),
             segment.getMainChanges(), segment.getUserVisibleValue(), segment.getIncludedCommitRefs(),
@@ -221,13 +221,13 @@ public class PendingChangeScanService {
         ChangeBatch batch = batchRepository.findById(batchId).orElseThrow();
         batch.updateSegmentCount(segmentCount);
         batch.updateTotalScanMs(totalScanMs);
-        return toResponse(batchRepository.save(batch));
+        return toBatchResponse(batchRepository.save(batch));
     }
 
     @Transactional(readOnly = true)
     public ReusableScan findReusable(UUID projectId, String fingerprint) {
         return batchRepository.findFirstByProjectIdAndScanFingerprintOrderByScanStartedAtDesc(projectId, fingerprint)
-            .map(batch -> new ReusableScan(toResponse(batch), listSegments(batch.getId())))
+            .map(batch -> new ReusableScan(toBatchResponse(batch), listSegments(batch.getId())))
             .filter(value -> !value.segments().isEmpty())
             .orElse(null);
     }

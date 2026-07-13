@@ -158,32 +158,37 @@ public class ChangeBatch {
 
     public UUID getId() { return id; }
     public UUID getProjectId() { return projectId; }
-    public Instant getScanStartedAt() { return scanStartedAt; }
+    public Instant getScanStartedAt() { return firstNonNull(scanStartedAt, createdAt, updatedAt); }
     public Instant getScanFinishedAt() { return scanFinishedAt; }
-    public String getBaseCommitSha() { return baseCommitSha; }
-    public String getHeadCommitSha() { return headCommitSha; }
-    public String getBranchName() { return branchName; }
+    public String getBaseCommitSha() { return safe(baseCommitSha); }
+    public String getHeadCommitSha() { return safe(headCommitSha); }
+    public String getBranchName() { return safe(branchName); }
     public int getNewCommitCount() { return newCommitCount; }
     public int getChangedFileCount() { return changedFileCount; }
     public int getAgentResultCount() { return agentResultCount; }
     public int getSegmentCount() { return segmentCount; }
-    public ChangeBatchStatus getStatus() { return status; }
-    public List<String> getWarnings() { return List.copyOf(warnings); }
+    public ChangeBatchStatus getStatus() { return status == null ? ChangeBatchStatus.PENDING : status; }
+    public List<String> getWarnings() { return warnings == null ? List.of() : List.copyOf(warnings); }
     public boolean isFirstScan() { return firstScan; }
-    public String getScanFingerprint() { return scanFingerprint; }
+    public String getScanFingerprint() { return safe(scanFingerprint); }
     public boolean isWorktreeDirty() { return worktreeDirty; }
-    public String getGithubStatus() { return githubStatus; }
-    public String getRemoteRelation() { return remoteRelation; }
-    public String getSegmentationMode() { return segmentationMode; }
-    public String getModelStatus() { return modelStatus; }
-    public String getModelProvider() { return modelProvider; }
-    public String getFallbackReason() { return fallbackReason; }
+    public String getGithubStatus() { return safe(githubStatus); }
+    public String getRemoteRelation() { return safe(remoteRelation); }
+    public String getSegmentationMode() { return safe(segmentationMode); }
+    public String getModelStatus() { return safe(modelStatus); }
+    public String getModelProvider() { return safe(modelProvider); }
+    public String getFallbackReason() { return safe(fallbackReason); }
     public long getGitScanMs() { return gitScanMs == null ? 0L : gitScanMs; }
     public long getModelSegmentMs() { return modelSegmentMs == null ? 0L : modelSegmentMs; }
     public long getGithubInspectMs() { return githubInspectMs == null ? 0L : githubInspectMs; }
     public long getTotalScanMs() { return totalScanMs == null ? 0L : totalScanMs; }
-    public String getAnalysisScope() { return analysisScope; }
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getUpdatedAt() { return updatedAt; }
+    public String getAnalysisScope() { return safe(analysisScope); }
+    public Instant getCreatedAt() { return firstNonNull(createdAt, scanStartedAt, updatedAt); }
+    public Instant getUpdatedAt() { return firstNonNull(updatedAt, scanFinishedAt, createdAt); }
     private static String safe(String value) { return value == null ? "" : value.trim(); }
+    private static Instant firstNonNull(Instant first, Instant second, Instant third) {
+        if (first != null) return first;
+        if (second != null) return second;
+        return third == null ? Instant.EPOCH : third;
+    }
 }

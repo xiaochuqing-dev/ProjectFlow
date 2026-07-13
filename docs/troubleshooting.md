@@ -1,5 +1,9 @@
 # Troubleshooting
 
+If the sediment processing center reports “沉淀批次读取失败，请查看本地服务日志后重试”, inspect the backend log for the returned error code. Current V3.3.8.1 reads tolerate historical nullable fields and label incomplete batches instead of requiring database deletion. Do not manually erase old batches.
+
+If a completed scan is absent after navigation, call `GET /api/projects/{projectId}/dashboard-bootstrap`. A correct response proves persisted state independently of sessionStorage. Clearing sessionStorage is safe; the page should restore from this endpoint. A GitHub/output/material refresh warning is secondary and must not clear the latest batch or development segments.
+
 PostgreSQL Testcontainers says no valid Docker environment: start Docker Desktop and rerun `mvn.cmd -Ppostgres-it verify`. This is a real test failure, not a model or H2 failure.
 
 Playwright cannot find a browser: run `npm.cmd run test:e2e:install`. On Windows local verification can use installed Microsoft Edge; CI installs Chromium and ffmpeg.

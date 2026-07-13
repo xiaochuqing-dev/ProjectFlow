@@ -140,24 +140,25 @@ public class DevelopmentSegment {
     public UUID getId() { return id; }
     public UUID getProjectId() { return projectId; }
     public UUID getBatchId() { return batchId; }
-    public String getTitle() { return title; }
-    public String getPlainSummary() { return plainSummary; }
-    public List<String> getMainChanges() { return List.copyOf(mainChanges); }
-    public String getUserVisibleValue() { return userVisibleValue; }
-    public List<String> getIncludedCommitRefs() { return List.copyOf(includedCommitRefs); }
-    public List<String> getIncludedAgentResultRefs() { return List.copyOf(includedAgentResultRefs); }
-    public List<String> getAffectedFiles() { return List.copyOf(affectedFiles); }
-    public List<String> getEvidenceRefs() { return List.copyOf(evidenceRefs); }
-    public EvidenceConfidence getConfidence() { return confidence; }
-    public DevelopmentSegmentStatus getStatus() { return status; }
-    public String getGenerationMode() { return generationMode; }
-    public String getModelProvider() { return modelProvider; }
-    public String getFallbackReason() { return fallbackReason; }
-    public String getQualityStatus() { return qualityStatus; }
-    public String getQualityReason() { return qualityReason; }
-    public List<String> getCommitUrls() { return List.copyOf(commitUrls); }
-    public List<String> getUncertainties() { return List.copyOf(uncertainties); }
+    public String getTitle() { return safe(title); }
+    public String getPlainSummary() { return safe(plainSummary); }
+    public List<String> getMainChanges() { return immutable(mainChanges); }
+    public String getUserVisibleValue() { return safe(userVisibleValue); }
+    public List<String> getIncludedCommitRefs() { return immutable(includedCommitRefs); }
+    public List<String> getIncludedAgentResultRefs() { return immutable(includedAgentResultRefs); }
+    public List<String> getAffectedFiles() { return immutable(affectedFiles); }
+    public List<String> getEvidenceRefs() { return immutable(evidenceRefs); }
+    public EvidenceConfidence getConfidence() { return confidence == null ? EvidenceConfidence.LOW : confidence; }
+    public DevelopmentSegmentStatus getStatus() { return status == null ? DevelopmentSegmentStatus.NEEDS_REVIEW : status; }
+    public String getGenerationMode() { return generationMode == null || generationMode.isBlank() ? "LOCAL_RULE" : generationMode.trim(); }
+    public String getModelProvider() { return safe(modelProvider); }
+    public String getFallbackReason() { return safe(fallbackReason); }
+    public String getQualityStatus() { return qualityStatus == null || qualityStatus.isBlank() ? "NEEDS_REVIEW" : qualityStatus.trim(); }
+    public String getQualityReason() { return safe(qualityReason); }
+    public List<String> getCommitUrls() { return immutable(commitUrls); }
+    public List<String> getUncertainties() { return immutable(uncertainties); }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     private static String safe(String value) { return value == null ? "" : value.trim(); }
+    private static List<String> immutable(List<String> values) { return values == null ? List.of() : List.copyOf(values); }
 }

@@ -1,5 +1,7 @@
 # Background jobs
 
+V3.3.8.1 does not change job creation, cancellation, retry, queue, budget, or restart semantics. After a successful `WORK_SESSION_SCAN`, the persisted job identifies the latest successful execution while the dashboard reconstructs the full visible result from persisted batch, segment, and work-session facts. The frontend writes that same complete result to the selected project's disposable snapshot immediately; a weak session-only refresh cannot replace its batch or segments.
+
 V3.3.7 uses ProjectAnalysisJob for project, file, capability interpretation, work-session scan and capability-card analysis.
 
 V3.3.8 keeps the same persisted job boundary. Gateway transport and output-recovery requests contribute to the same request/token/time budget. Retry type is diagnostic metadata, not a new job and not a path around active-job uniqueness.

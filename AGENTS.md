@@ -1,9 +1,16 @@
-<!-- PROJECTFLOW V3.3.8 CONTEXT START -->
-ProjectFlow 当前版本为 V3.3.8。后续 Agent 必须按“待整理变更 -> 开发推进段 -> 批次化沉淀处理 -> 项目沉淀 -> 能力分析”理解产品，不要回到旧的“今日开发 / 项目资产字段”主线。
+<!-- PROJECTFLOW V3.3.8.1 CONTEXT START -->
+ProjectFlow 当前版本为 V3.3.8.1。后续 Agent 必须按“待整理变更 -> 开发推进段 -> 批次化沉淀处理 -> 项目沉淀 -> 能力分析”理解产品，不要回到旧的“今日开发 / 项目资产字段”主线。
 
 开始任务前请阅读 `.projectflow/AGENT_PROTOCOL.md`。完成开发任务后，按协议把结果写入 `.projectflow/agent-results/`。不要删除添加项目、zip 导入、本地项目绑定、模型配置、登录等核心入口。
 
 开发推进段必须描述真实开发结果、用户或开发者可感知变化、验证情况和不确定项。禁止用 backend/frontend/docs/config 等目录名、提交数量或“开发推进”空话替代具体摘要。能力与成果页以结构化 Capability Card 为主，旧 `completedCapabilities` 仅作兼容档案。
+
+V3.3.8.1 关键决策（后续 Agent 必须遵守）：
+- 分析结果以数据库中的 job、批次、开发推进段、正式建议和项目沉淀为事实来源；sessionStorage 只用于按项目快速恢复，不得作为永久业务存储。
+- 弱读取结果不得覆盖已有完整 batch/segments；只有数据库明确证明不存在时才允许清空。
+- 旧批次、正式建议和开发推进段的可空字段必须 null-safe；单条旧数据不完整不得使整个列表失败。
+- 工作台第一屏通过轻量 Bootstrap Read Model 读取持久化事实，禁止在该接口执行 Git、GitHub CLI、文件扫描或模型调用。
+- V3.3.7 后台任务可靠性和 V3.3.8 模型可靠性已完成；除直接受本轮改动影响外，不得重复重构。
 
 V3.3.8 关键决策（后续 Agent 必须遵守）：
 - 所有真实模型入口必须登记为 `ModelTaskType` 并通过统一 `ModelGatewayService`；禁止业务 Service 私自发模型 HTTP 请求。
@@ -57,7 +64,7 @@ V3.3.3 仍有效的关键决策：
 - 多来源证据（本地 Git / 工作区 diff / GitHub / Agent result / 扫描范围）要整理成分析输入快照交给模型，模型基于证据灵活判断真实开发状态，不写死优先级。
 - 需要模型理解的入口（分析新变化、分析项目能力）必须有模型配置前置检查；未配置模型时不生成低质量本地模板结果，明确提示去配置模型。
 - 规则负责证据事实，模型负责灵活理解，用户负责最终确认。
-<!-- PROJECTFLOW V3.3.8 CONTEXT END -->
+<!-- PROJECTFLOW V3.3.8.1 CONTEXT END -->
 
 # ProjectFlow Local Rules
 

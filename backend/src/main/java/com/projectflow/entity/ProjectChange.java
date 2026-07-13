@@ -187,15 +187,15 @@ public class ProjectChange {
     }
 
     public ProjectChangeStatus getStatus() {
-        return status;
+        return status == null ? ProjectChangeStatus.PENDING : status;
     }
 
     public String getTitle() {
-        return title;
+        return safe(title, "历史建议（数据不完整）");
     }
 
     public String getSummary() {
-        return summary;
+        return safe(summary, "历史建议缺少摘要，请重新分析后再确认。");
     }
 
     public String getDetails() {
@@ -239,7 +239,7 @@ public class ProjectChange {
     public UUID getTargetSedimentId() { return targetSedimentId; }
     public String getProblemSolved() { return problemSolved; }
     public String getSuggestionReason() { return suggestionReason; }
-    public List<String> getEvidenceRefs() { return List.copyOf(evidenceRefs); }
+    public List<String> getEvidenceRefs() { return evidenceRefs == null ? List.of() : List.copyOf(evidenceRefs); }
     public EvidenceConfidence getEvidenceConfidence() { return evidenceConfidence; }
     public boolean isNeedsUserReview() { return Boolean.TRUE.equals(needsUserReview); }
     public UUID getSourceBatchId() { return sourceBatchId; }

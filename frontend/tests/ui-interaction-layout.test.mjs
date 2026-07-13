@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 const root = process.cwd();
 const dashboard = readFileSync(join(root, "src/app/dashboard/page.tsx"), "utf8");
+const dashboardStats = readFileSync(join(root, "src/components/dashboard/DashboardStats.tsx"), "utf8");
 const devLogs = readFileSync(join(root, "src/app/dev-logs/page.tsx"), "utf8");
 const outputs = readFileSync(join(root, "src/app/ai-review/page.tsx"), "utf8");
 const primitives = readFileSync(join(root, "src/components/ui/primitives.tsx"), "utf8");
@@ -20,7 +21,7 @@ assert.match(dashboard, /打开上手流程/, "dashboard should expose a compact
 assert.match(flowGuideDialog, /FlowStepStrip/, "flow steps should be displayed as colored rounded strip cards inside the dialog");
 assert.doesNotMatch(dashboard, /<ProjectFlowGuide state=\{projectFlowState\} \/>/, "dashboard should not permanently render the large guide block");
 
-assert.match(dashboard, /InteractiveStat/, "dashboard metrics should be clickable interaction entries, not dead number cards");
+assert.match(dashboard + dashboardStats, /InteractiveStat/, "dashboard metrics should be clickable interaction entries, not dead number cards");
 assert.match(dashboard, /statsFocus/, "dashboard should use metric clicks to focus related content");
 assert.match(dashboard, /ArchitectureQuickEntry/, "dashboard should put a compact architecture entry in the right rail");
 assert.match(architectureQuickEntry, /架构入口/, "right rail should expose the architecture summary entry");

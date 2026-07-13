@@ -1,6 +1,15 @@
 # ProjectFlow
 
-ProjectFlow V3.3.8 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+ProjectFlow V3.3.8.1 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+
+## V3.3.8.1 Data Read Reliability
+
+- The sediment processing center tolerates legacy nullable batch, change, and segment fields; one incomplete historical row no longer makes the full list fail.
+- Batch review uses fixed bulk queries for batches, formal changes, and development segments instead of per-batch reads.
+- Completed analysis results remain database facts. Project-scoped sessionStorage snapshots are only an immediate-render cache and cannot replace persisted state.
+- `GET /api/projects/{projectId}/dashboard-bootstrap` restores the first-screen project, memory, latest scan job, batch, segments, pending-review count, project-analysis summary, and Provider availability from persisted data only.
+- Returning to the workbench renders the project snapshot immediately; F5 without a snapshot uses the lightweight bootstrap. Secondary GitHub/history/material/output failures preserve the core result and show a local retry notice.
+- This patch does not change the V3.3.7 job model or the V3.3.8 model gateway, parameter, reasoning, JSON recovery, or real-Provider paths.
 
 ## V3.3.8 Real Model Reliability
 
@@ -68,7 +77,7 @@ ProjectFlow V3.3.8 is a local-first tool for AI-assisted solo developers to unde
 
 It is built for developers who use agents such as Codex, Claude Code, or other coding assistants to modify real projects and then need a clear way to understand what changed, review the evidence, maintain a project profile, and generate reusable output such as daily reviews, README material, reports, and resume-ready summaries.
 
-## V3.3.8 Workflow
+## V3.3.8.1 Workflow
 
 ProjectFlow is not a Kanban board, daily-report generator, or hosted PR/CI system. Its primary workflow is:
 
@@ -136,7 +145,7 @@ ProjectFlow/
 +-- .projectflow/             local agent protocol/context/runtime data
 +-- docker-compose.yml        PostgreSQL and Redis mode
 +-- .env.example              repo-safe environment template
-+-- start.bat                 simple V3.3.8 Windows entry
++-- start.bat                 simple V3.3.8.1 Windows entry
 +-- start-projectflow.bat     embedded Windows launcher
 +-- start-projectflow.ps1     Docker/team startup orchestration
 `-- README.md

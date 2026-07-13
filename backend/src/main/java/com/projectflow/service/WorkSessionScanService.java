@@ -408,7 +408,7 @@ public class WorkSessionScanService {
         ProjectSpace project = projectRepository.findByIdAndUserId(projectId, userId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
         return workSessionRepository.findByProjectIdOrderByEndTimeDesc(project.getId()).stream()
-            .map(this::toWorkSessionResponse)
+            .map(WorkSessionScanService::toWorkSessionResponse)
             .toList();
     }
 
@@ -459,7 +459,7 @@ public class WorkSessionScanService {
         return toWorkSessionResponse(workSessionRepository.save(session));
     }
 
-    private WorkSessionCandidateResponse toWorkSessionResponse(WorkSession session) {
+    static WorkSessionCandidateResponse toWorkSessionResponse(WorkSession session) {
         return new WorkSessionCandidateResponse(
             session.getId().toString(),
             session.getProjectId(),
