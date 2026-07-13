@@ -128,13 +128,13 @@ cd ..\backend
 C:\Users\Administrator\Desktop\apache-maven-3.9.9\bin\mvn.cmd -q test
 ```
 
-Startup:
+Docker/team startup:
 
 ```powershell
 .\start-projectflow.ps1
 ```
 
-or double-click `start-projectflow.bat`.
+For local embedded mode, double-click `Start-ProjectFlow.bat`. It uses repository-relative paths, verifies frontend dependencies from `package-lock.json`, rebuilds the current checkout, and does not modify Git history.
 
 ## Repository Map
 
@@ -145,8 +145,9 @@ docs/                     product, architecture, data model, stage plans, report
 .projectflow/             agent bridge protocol/context/results for this project
 docker-compose.yml        PostgreSQL and Redis
 .env.example              repo-safe environment template
-start-projectflow.ps1     Windows startup orchestration
-start-projectflow.bat     simple Windows launcher
+Start-ProjectFlow.bat     portable Windows embedded quick launcher
+start.bat                 compatibility launcher
+start-projectflow.ps1     Docker/team startup orchestration
 ```
 
 Key docs to read selectively:
