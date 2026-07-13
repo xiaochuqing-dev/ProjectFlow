@@ -1,5 +1,9 @@
 # Update history
 
+## 开源 Windows 快速启动入口 - 2026-07-14
+
+仓库根目录新增便携 Start-ProjectFlow.bat，克隆后的 Windows 用户可直接双击。入口不包含个人路径、不修改 Git 历史；首次运行或 package-lock 变化时执行 npm ci，每次重新构建生产前端并启动 Spring Boot/H2。成功运行记录版本、源提交、本地修改标记、依赖状态、前端 Build ID 和就绪时间，旧 start.bat 保持兼容。
+
 ## ProjectFlow V3.3.8.1 数据读取可靠性 - 2026-07-13
 
 用真实用户 H2 复现并修复沉淀处理中心历史空字段 500；ChangeBatch、ProjectChange、DevelopmentSegment 读取改为保守 null-safe，旧批次显示“历史数据不完整”，不回填、不删除历史。批次列表按 batches/changes/segments 批量读取，50 批次固定 4 条查询。工作台按项目保存 schema v2 快照，完整分析结果不会被 session-only 弱响应清空；新增数据库只读 Dashboard Bootstrap，在无快照 F5 时快速恢复批次、推进段和待处理数量，次要接口失败只显示局部错误。

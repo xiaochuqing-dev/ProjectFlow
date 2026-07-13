@@ -5,13 +5,38 @@ param (
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "ProjectFlow V3.3.8 - local embedded mode"
-
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $backendDir = Join-Path $root "backend"
 $frontendDir = Join-Path $root "frontend"
 $logDir = Join-Path $root "logs"
 $dataDir = Join-Path $root ".projectflow\local-data"
+$frontendPackage = Get-Content -LiteralPath (Join-Path $frontendDir "package.json") -Raw | ConvertFrom-Json
+$productVersion = [string]$frontendPackage.version
+$packageLockPath = Join-Path $frontendDir "package-lock.json"
+$dependencyMarkerPath = Join-Path $frontendDir "node_modules\.projectflow-package-lock.sha256"
+$packageLockHash = (Get-FileHash -LiteralPath $packageLockPath -Algorithm SHA256).Hash
+$installedPackageLockHash = if (Test-Path -LiteralPath $dependencyMarkerPath) {
+    (Get-Content -LiteralPath $dependencyMarkerPath -Raw).Trim()
+} else {
+    ""
+}
+$frontendDependenciesReady = (Test-Path -LiteralPath (Join-Path $frontendDir "node_modules\next\package.json")) -and $installedPackageLockHash -eq $packageLockHash
+$sourceRevision = "unknown"
+$sourceHasLocalChanges = $false
+$gitCommand = Get-Command "git.exe" -ErrorAction SilentlyContinue
+if (-not $gitCommand) {
+    $gitCommand = Get-Command "git" -ErrorAction SilentlyContinue
+}
+if ($gitCommand) {
+    $revisionOutput = & $gitCommand.Source -C $root rev-parse HEAD 2>$null
+    if ($LASTEXITCODE -eq 0 -and $revisionOutput) {
+        $sourceRevision = ([string]$revisionOutput).Trim()
+    }
+    $sourceHasLocalChanges = @(& $gitCommand.Source -C $root status --porcelain --untracked-files=normal 2>$null).Count -gt 0
+}
+
+Write-Host "ProjectFlow V$productVersion - local embedded mode"
+Write-Host "Source revision: $sourceRevision$(if ($sourceHasLocalChanges) { ' + local working tree' } else { '' })"
 
 function Normalize-ProcessPath {
     $envVars = [Environment]::GetEnvironmentVariables("Process")
@@ -212,6 +237,10 @@ if ($CheckOnly) {
     Write-Host "Maven: $mavenPath"
     Write-Host "npm: $npmPath"
     Write-Host "Data: $dataDir"
+    Write-Host "Version: $productVersion"
+    Write-Host "Source revision: $sourceRevision"
+    Write-Host "Local changes included on next build: $sourceHasLocalChanges"
+    Write-Host "Frontend dependencies ready: $frontendDependenciesReady"
     Write-Host "Embedded startup checks passed."
     exit 0
 }
@@ -222,12 +251,26 @@ try {
     New-Item -ItemType Directory -Force -Path $logDir, $dataDir | Out-Null
     Set-Location $root
 
+    $buildEvidencePath = Join-Path $logDir "last-embedded-build.json"
+    Remove-Item -LiteralPath $buildEvidencePath -Force -ErrorAction SilentlyContinue
+
     Stop-ProjectFlowProcesses -Port 3000
     Stop-ProjectFlowProcesses -Port 8080
 
     $env:NEXT_PUBLIC_API_BASE_URL = "http://127.0.0.1:8080/api"
     $env:NEXT_PUBLIC_API_PORT = "8080"
+    if (-not $frontendDependenciesReady) {
+        Invoke-Checked -Label "Installing frontend dependencies..." -FilePath $npmPath -Arguments @("ci") -WorkingDirectory $frontendDir
+        Set-Content -LiteralPath $dependencyMarkerPath -Value $packageLockHash -Encoding ASCII
+        $frontendDependenciesReady = $true
+    }
     Invoke-Checked -Label "Building frontend..." -FilePath $npmPath -Arguments @("run", "build") -WorkingDirectory $frontendDir
+    $frontendBuildIdPath = Join-Path $frontendDir ".next\BUILD_ID"
+    if (-not (Test-Path -LiteralPath $frontendBuildIdPath)) {
+        throw "Frontend build completed without .next\BUILD_ID."
+    }
+    $frontendBuildId = (Get-Content -LiteralPath $frontendBuildIdPath -Raw).Trim()
+    $frontendBuiltAt = Get-Date
 
     $backendLog = Join-Path $logDir "backend-embedded.log"
     $frontendLog = Join-Path $logDir "frontend-embedded.log"
@@ -259,16 +302,31 @@ try {
         throw "Frontend did not become ready. See logs\frontend-embedded.log."
     }
 
+    [ordered]@{
+        version = $productVersion
+        sourceRevision = $sourceRevision
+        hasLocalChanges = $sourceHasLocalChanges
+        frontendDependencies = "verified"
+        frontendBuildId = $frontendBuildId
+        frontendBuiltAt = $frontendBuiltAt.ToString("o")
+        readyAt = (Get-Date).ToString("o")
+        frontendUrl = $frontendUrl
+        backendHealthUrl = $backendHealthUrl
+    } | ConvertTo-Json | Set-Content -LiteralPath $buildEvidencePath -Encoding UTF8
+
     if (-not $NoBrowser) {
         Start-Process $frontendUrl
     }
 
     Write-Host ""
-    Write-Host "ProjectFlow V3.3.8 embedded mode is running."
+    Write-Host "ProjectFlow V$productVersion embedded mode is running."
+    Write-Host "Source:   $sourceRevision$(if ($sourceHasLocalChanges) { ' + local working tree' } else { '' })"
+    Write-Host "Build ID: $frontendBuildId"
     Write-Host "Frontend: $frontendUrl"
     Write-Host "Backend:  $backendHealthUrl"
     Write-Host "Data:     $dataDir"
     Write-Host "Logs:     $logDir"
+    Write-Host "Evidence: $buildEvidencePath"
     Write-Host ""
     Write-Host "Press Enter in this window to stop ProjectFlow."
     [Console]::ReadLine() | Out-Null

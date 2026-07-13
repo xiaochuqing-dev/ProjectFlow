@@ -6,6 +6,7 @@
 - Bootstrap 只读持久化项目、memory、最新 job/batch/segments/sessions、待处理统计、分析摘要和 Provider 可用性；禁止 Git、GitHub CLI、模型和文件扫描。
 - 历史 batch/change/segment 缺失字段在读取边界保守降级；不做破坏性回填，单条坏数据不得拖垮列表。
 - 批次列表使用固定批量查询，不允许恢复逐批次 changes/segments 的 N+1。
+- 开源 Windows 快速启动入口使用仓库相对路径，首次或 package-lock 变化时安装前端依赖，每次重建当前工作树；它不修改 Git 历史，并记录可核对的版本、提交、本地修改标记和前端 Build ID。
 - V3.3.7 后台任务和 V3.3.8 模型可靠性边界保持不变。
 
 - 6 个真实模型入口统一登记并通过网关，Provider 测试不再自行发送 HTTP。

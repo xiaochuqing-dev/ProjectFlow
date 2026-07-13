@@ -1,0 +1,32 @@
+{
+  "taskGoal": "为 GitHub 开源用户提供不含个人路径、可双击完成依赖准备和完整启动的 Windows 快速入口。",
+  "actualChanges": [
+    "将原小写 Windows 启动文件重命名为醒目的 Start-ProjectFlow.bat，并保持 start.bat 兼容入口；所有路径均相对仓库，不包含个人目录。",
+    "首次启动或 package-lock.json 变化时自动执行 npm ci，每次启动都重新构建 production 前端并通过 Maven 编译启动 Spring Boot/H2。",
+    "成功运行后记录版本、源提交、本地修改标记、依赖状态、前端 Build ID 和就绪时间，便于确认当前实例对应的构建来源。",
+    "README、项目上下文、后续 Agent 规则和文档契约测试已同步开源快速启动方式。"
+  ],
+  "keyFiles": [
+    "Start-ProjectFlow.bat",
+    "start.bat",
+    "start-projectflow-embedded.bat",
+    "start-projectflow-embedded.ps1",
+    "README.md",
+    "PROJECT_CONTEXT.md",
+    "AGENTS.md",
+    "frontend/tests/v33-documentation.test.mjs",
+    ".projectflow/context/confirmed-decisions.md",
+    ".projectflow/context/current-work.md",
+    ".projectflow/context/update-history.md"
+  ],
+  "verification": {
+    "build": "在独立干净工作树中删除依赖前提下通过 Start-ProjectFlow.bat 自动执行 npm ci、Next.js production build 和 Maven spring-boot:run；生成 Build ID f_5LtftI3xv3-aCgNmg9W。",
+    "tests": "PowerShell 语法解析、Start-ProjectFlow.bat -CheckOnly、start.bat -CheckOnly、V3.3 文档契约测试和 git diff --check 全部通过。",
+    "manualCheck": "全新 H2 实例启动后前端登录页、Build ID 静态资源均返回 200，后端健康状态为 UP，3000/8080 正常监听；临时实例停止后，原桌面 ProjectFlow 数据实例已重新构建并恢复运行。"
+  },
+  "unfinished": [],
+  "sedimentCandidates": [
+    "开源桌面快速入口应只依赖仓库相对路径，并在依赖锁变化时自动恢复依赖，避免新用户首次双击因 node_modules 缺失失败。",
+    "本地启动应每次重建当前检出内容并留下版本、提交和产物 Build ID，不能仅凭进程存在声称运行了最新代码。"
+  ]
+}

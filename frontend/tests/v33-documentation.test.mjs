@@ -5,8 +5,16 @@ import { join } from "node:path";
 const root = join(process.cwd(), "..");
 const read = (path) => readFileSync(join(root, path), "utf8");
 
-assert.ok(existsSync(join(root, "start.bat")), "root start.bat should provide the simple Windows entry");
-assert.match(read("start.bat"), /start-projectflow-embedded\.bat/i, "start.bat should delegate to the maintained embedded launcher");
+assert.ok(existsSync(join(root, "Start-ProjectFlow.bat")), "root Start-ProjectFlow.bat should provide the portable Windows entry");
+assert.match(read("Start-ProjectFlow.bat"), /start-projectflow-embedded\.bat/i, "portable launcher should delegate to the maintained embedded launcher");
+assert.doesNotMatch(read("Start-ProjectFlow.bat"), /[A-Z]:\\Users\\/i, "portable launcher must not contain a personal absolute path");
+assert.match(read("start.bat"), /Start-ProjectFlow\.bat/i, "legacy start.bat should delegate to the portable launcher");
+
+const embeddedLauncher = read("start-projectflow-embedded.ps1");
+assert.match(embeddedLauncher, /package-lock\.json/, "embedded launcher should fingerprint frontend dependencies");
+assert.match(embeddedLauncher, /Arguments @\("ci"\)/, "embedded launcher should install missing or changed frontend dependencies");
+assert.match(embeddedLauncher, /Arguments @\("run", "build"\)/, "embedded launcher should rebuild the production frontend");
+assert.match(embeddedLauncher, /last-embedded-build\.json/, "embedded launcher should record runtime build evidence");
 
 const readme = read("README.md");
 for (const term of ["ProjectFlow V3.3", "待整理变更", "开发推进段", "建议沉淀", "项目沉淀", "GitHub CLI"]) {

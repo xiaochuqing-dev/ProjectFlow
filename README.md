@@ -145,8 +145,8 @@ ProjectFlow/
 +-- .projectflow/             local agent protocol/context/runtime data
 +-- docker-compose.yml        PostgreSQL and Redis mode
 +-- .env.example              repo-safe environment template
-+-- start.bat                 simple V3.3.8.1 Windows entry
-+-- start-projectflow.bat     embedded Windows launcher
++-- Start-ProjectFlow.bat     portable Windows quick launcher
++-- start.bat                 compatibility launcher
 +-- start-projectflow.ps1     Docker/team startup orchestration
 `-- README.md
 ```
@@ -156,14 +156,16 @@ ProjectFlow/
 Windows embedded mode (recommended):
 
 ```powershell
-.\start.bat
+.\Start-ProjectFlow.bat
 ```
 
-This starts the H2-backed backend and production frontend, then opens:
+On Windows, users can also double-click `Start-ProjectFlow.bat` in the repository root. It uses only paths relative to the cloned project, runs `npm ci` on the first launch or after `package-lock.json` changes, rebuilds the production frontend every time, starts the H2-backed backend, and opens:
 
 ```text
 http://127.0.0.1:3000/login
 ```
+
+The launcher does not pull, merge, or modify Git history. It runs the current checkout, and writes the last successful version, source revision, local-change flag, dependency status, frontend Build ID, and ready time to `logs/last-embedded-build.json`. The older `start.bat` name remains a compatible wrapper.
 
 Docker/team mode:
 
