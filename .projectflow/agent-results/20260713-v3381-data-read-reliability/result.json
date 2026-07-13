@@ -1,0 +1,31 @@
+{
+  "taskGoal": "完成 ProjectFlow V3.3.8.1 数据读取可靠性修复，确保旧数据可读、工作台可快速恢复、核心读取接口稳定且不改造既有任务和模型主链路。",
+  "actualChanges": [
+    "修复旧 ChangeBatch、ProjectChange、DevelopmentSegment 空字段读取，历史异常批次降级显示为历史数据不完整，单条旧记录不再拖垮沉淀列表或详情。",
+    "将沉淀批次列表改为固定批量查询，50 批次保持 4 条 SQL，避免随批次数增加的 N+1 查询。",
+    "新增纯数据库 Dashboard Bootstrap Read Model，并在工作台按项目保存版本化快照；弱 work session 响应不再清空完整批次和开发推进段。",
+    "隔离工作台次要接口失败和跨项目迟到响应，完整成功任务立即更新页面状态与项目快照。",
+    "更新 V3.3.8.1 版本、架构、数据模型、测试、兼容说明和可靠性实施报告。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ProjectSedimentService.java",
+    "backend/src/main/java/com/projectflow/service/DashboardBootstrapService.java",
+    "backend/src/main/java/com/projectflow/controller/ProjectController.java",
+    "frontend/src/app/projects/[projectId]/dashboard/page.tsx",
+    "frontend/src/lib/dashboard-snapshot.ts",
+    "backend/src/test/java/com/projectflow/service/DataReadReliabilityTest.java",
+    "e2e/core-workflow.spec.ts",
+    "docs/projectflow-v3.3.8.1-data-read-reliability-report.md"
+  ],
+  "verification": {
+    "build": "后端 Maven 编译通过；前端 TypeScript、Next.js production build 通过。",
+    "tests": "后端与 H2 197 项通过；PostgreSQL 16 Testcontainers 2 项通过；前端契约测试 22 项通过；真实前后端 Playwright 4 项通过；敏感内容扫描通过。GitHub Actions Run 29253336055 核心门禁通过，真实 DeepSeek 因无安全 Key 按规则跳过。",
+    "manualCheck": "在真实用户 H2 上确认沉淀列表从 500 恢复为 200，11 个批次均可见，历史缺失诊断有明确标记；工作台显示最新批次的 32 个提交、155 个文件和 8 个开发推进段；进入 8 条正式建议详情并实际确认 1 条，生成项目沉淀 b4883b47-d3d6-42d6-9beb-8f6edcaf80a0，进度从 0/8 变为 1/8，未清库。"
+  },
+  "unfinished": [],
+  "sedimentCandidates": [
+    "历史数据读取应在实体、聚合映射和页面错误提示三层保持空值兼容，未知诊断应保守标记而非猜测回填。",
+    "工作台恢复应以数据库为事实源、按项目快照为快速缓存，弱响应只能补充而不能清空已确认的完整结果。",
+    "列表读取的性能回归应同时约束耗时和 SQL 查询数，避免数据量增加后重新引入 N+1。"
+  ]
+}

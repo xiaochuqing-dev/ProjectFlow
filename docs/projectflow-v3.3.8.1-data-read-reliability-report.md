@@ -55,7 +55,7 @@ ChangeBatch 的 modelStatus、modelProvider、segmentationMode、fallbackReason�
 
 ## 10. CI、提交与已知剩余问题
 
-远程 GitHub Actions：待提交推送后补录。最终实现提交 SHA：待提交后补录。
+远程 GitHub Actions：Run 29253336055，最终 attempt 3 核心作业全部通过。attempt 1 的 frontend-quality 与 browser-e2e 均在 Set up job 阶段遇到 GitHub `Service Unavailable / Failed to resolve action download info`，没有执行项目代码；attempt 2 的 frontend-quality 通过，browser-e2e runner 在 Playwright 依赖安装停滞 15 分钟后被取消；attempt 3 更换 runner 后依赖安装 30 秒、4 项核心浏览器流程全部通过。optional-real-deepseek 因未提供安全 Key 按规则 SKIPPED。实现提交 SHA：`aa360d57d2f1abe805f7f8efaa38982ec68a2635`。
 
 已知剩余问题：缺失的历史模型诊断不可恢复，只能保守标记；项目仍使用 Hibernate ddl-auto=update；sessionStorage 可被浏览器清理，但已由数据库 Bootstrap 兜底。后续只需观察真实大库的索引和慢查询，不进入 V3.3.9，也不提前实现增量能力分析、向量库、Flyway 全量体系或多实例 Worker。
 
