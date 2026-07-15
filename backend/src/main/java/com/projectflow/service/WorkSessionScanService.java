@@ -13,11 +13,13 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,11 +34,13 @@ import com.projectflow.dto.V2ProjectDtos.WorkSessionScanResponse;
 import com.projectflow.dto.V2ProjectDtos.AgentSignatureFeedbackResponse;
 import com.projectflow.entity.AgentSignatureFeedback;
 import com.projectflow.entity.ProjectAnalysisJob;
+import com.projectflow.entity.ProjectFactOrigin;
 import com.projectflow.entity.ProjectMemory;
 import com.projectflow.entity.ProjectSpace;
 import com.projectflow.entity.WorkSession;
 import com.projectflow.repository.AgentSignatureFeedbackRepository;
 import com.projectflow.repository.ProjectAnalysisJobRepository;
+import com.projectflow.repository.ProjectFactAgentResultRefRepository;
 import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.repository.WorkSessionRepository;
@@ -65,10 +69,12 @@ public class WorkSessionScanService {
     private final PendingChangeScanService pendingChangeScanService;
     private final DevelopmentSegmentationService developmentSegmentationService;
     private final ModelSegmentEnricher modelSegmentEnricher;
-    private final ProjectSedimentService projectSedimentService;
+    private final ProjectFactIngestionService projectFactIngestionService;
     private final GitHubCliService gitHubCliService;
     private final ProjectAnalysisJobRepository jobRepository;
+    private final ProjectFactAgentResultRefRepository factAgentResultRefRepository;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
     // V3.3.3: 阶段推进用独立事务提交，避免搭 scan 大事务的便车导致前端轮询看不到 stage 推进。
     private final TransactionTemplate stageTransactionTemplate;
 
@@ -81,10 +87,12 @@ public class WorkSessionScanService {
         PendingChangeScanService pendingChangeScanService,
         DevelopmentSegmentationService developmentSegmentationService,
         ModelSegmentEnricher modelSegmentEnricher,
-        ProjectSedimentService projectSedimentService,
+        ProjectFactIngestionService projectFactIngestionService,
         GitHubCliService gitHubCliService,
         ProjectAnalysisJobRepository jobRepository,
+        ProjectFactAgentResultRefRepository factAgentResultRefRepository,
         ObjectMapper objectMapper,
+        ApplicationEventPublisher eventPublisher,
         PlatformTransactionManager transactionManager
     ) {
         this.projectRepository = projectRepository;
@@ -95,10 +103,12 @@ public class WorkSessionScanService {
         this.pendingChangeScanService = pendingChangeScanService;
         this.developmentSegmentationService = developmentSegmentationService;
         this.modelSegmentEnricher = modelSegmentEnricher;
-        this.projectSedimentService = projectSedimentService;
+        this.projectFactIngestionService = projectFactIngestionService;
         this.gitHubCliService = gitHubCliService;
         this.jobRepository = jobRepository;
+        this.factAgentResultRefRepository = factAgentResultRefRepository;
         this.objectMapper = objectMapper;
+        this.eventPublisher = eventPublisher;
         this.stageTransactionTemplate = new TransactionTemplate(transactionManager);
         this.stageTransactionTemplate.setPropagationBehavior(
             org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW
@@ -128,7 +138,9 @@ public class WorkSessionScanService {
         GitEvidence evidence = readPendingCommits(project.getId(), projectRoot, branchName, warnings, scanPlan.gitLogArguments());
         GitEvidence uncommittedEvidence = readUncommittedEvidence(project.getId(), projectRoot, branchName, warnings);
         WorktreeFacts worktreeFacts = readWorktreeFacts(projectRoot);
-        List<ChangeAtom> agentResultAtoms = readAgentResultAtoms(projectRoot, warnings);
+        List<ChangeAtom> agentResultAtoms = uncoveredAgentResultAtoms(
+            project.getId(), readAgentResultAtoms(projectRoot, warnings)
+        );
         WorkSessionCandidateResponse uncommitted = uncommittedEvidence.hasChanges() ? uncommittedEvidence.toResponse() : null;
         long gitScanMs = elapsedMs(gitStarted);
         ensureJobActive(jobId);
@@ -152,6 +164,16 @@ public class WorkSessionScanService {
         List<ChangeAtom> atoms = new ArrayList<>(evidence.toAtoms());
         atoms.addAll(uncommittedEvidence.toAtoms());
         atoms.addAll(agentResultAtoms);
+        if (evidence.commitCount() == 0 && atoms.isEmpty()) {
+            var latest = pendingChangeScanService.findLatest(project.getId());
+            if (latest != null) {
+                warnings.add("扫描指纹未变化：当前没有新的提交、工作区变化或 Agent result，已保留最近项目记录。");
+                return new WorkSessionScanResponse(
+                    project.getId(), projectRoot.toString(), branchName, Instant.now(), persistedSessions, warnings,
+                    latest.batch(), latest.segments(), false
+                );
+            }
+        }
         boolean worktreeDirty = uncommitted != null;
         String fingerprint = fingerprint(
             project.getId(), scanPlan, projectRoot, atoms, modelSegmentEnricher.configurationKey(userId), github.status(), github.remoteRelation()
@@ -159,10 +181,16 @@ public class WorkSessionScanService {
         var reusable = pendingChangeScanService.findReusable(project.getId(), fingerprint);
         if (reusable != null) {
             warnings.add("扫描指纹未变化，已复用已有开发推进段。");
+            advanceStage(jobId, "PERSIST_FACTS", "正在幂等补写项目事实");
+            projectFactIngestionService.ingestBatch(
+                project.getId(), reusable.batch().id(), ProjectFactOrigin.INCREMENTAL_SCAN, true
+            );
+            ChangeBatchResponse reusableBatch = pendingChangeScanService.getBatch(reusable.batch().id());
+            requestHistoryRebuild(userId, project.getId(), reusableBatch.headCommitSha());
             advanceStage(jobId, "SUCCEEDED", "分析完成（复用已有结果）");
             return new WorkSessionScanResponse(
                 project.getId(), projectRoot.toString(), branchName, Instant.now(), persistedSessions, warnings,
-                reusable.batch(), reusable.segments(), scanPlan.firstScan()
+                reusableBatch, reusable.segments(), scanPlan.firstScan()
             );
         }
         // V3.3.3: 构建分析输入快照，把多来源证据整理成结构化事实交给模型。
@@ -180,7 +208,7 @@ public class WorkSessionScanService {
         for (String qw : enrichment.qualityWarnings()) warnings.add(qw);
         ensureJobActive(jobId);
 
-        advanceStage(jobId, "PERSIST", "正在分类保存模型结果或本地事实草稿");
+        advanceStage(jobId, "PERSIST", "正在保存开发推进段并自动记录项目事实");
         ensureJobActive(jobId);
         long totalScanMs = elapsedMs(scanStarted);
         String analysisScopeJson = buildAnalysisScopeJson(snapshot, enrichment, worktreeDirty, github);
@@ -194,11 +222,14 @@ public class WorkSessionScanService {
         List<DevelopmentSegmentResponse> segments = pendingChangeScanService.persistSegments(
             project.getId(), batch.id(), drafts,
             // 任务级模型问题只在 batch 展示一次，不复制到每个本地事实摘要卡片。
-            new SegmentDiagnostics(enrichment.mode(), enrichment.providerName(), "", github.status(), github.commitUrlTemplate())
+            new SegmentDiagnostics(enrichment.mode(), enrichment.providerName(), "", github.status(), github.commitUrlTemplate()),
+            atomTimes(atoms)
         );
         ensureJobActive(jobId);
-        projectSedimentService.createSuggestions(project.getId(), segments);
         batch = pendingChangeScanService.finish(batch.id(), segments.size(), elapsedMs(scanStarted));
+        projectFactIngestionService.ingestBatch(project.getId(), batch.id(), ProjectFactOrigin.INCREMENTAL_SCAN, true);
+        batch = pendingChangeScanService.getBatch(batch.id());
+        requestHistoryRebuild(userId, project.getId(), batch.headCommitSha());
         advanceStage(jobId, "SUCCEEDED", "分析完成");
         return new WorkSessionScanResponse(
             project.getId(),
@@ -211,6 +242,118 @@ public class WorkSessionScanService {
             segments,
             scanPlan.firstScan()
         );
+    }
+
+    /** Processes one explicit, oldest-to-newest history chunk. */
+    public HistoryChunkResult scanHistoryChunk(
+        UUID userId,
+        UUID projectId,
+        UUID jobId,
+        List<String> commitShas
+    ) {
+        if (commitShas == null || commitShas.isEmpty()) {
+            throw new IllegalArgumentException("History chunk requires commits");
+        }
+        long started = System.nanoTime();
+        ensureJobActive(jobId);
+        ProjectSpace project = projectRepository.findByIdAndUserId(projectId, userId)
+            .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "Project was not found", HttpStatus.NOT_FOUND));
+        ProjectMemory memory = memoryRepository.findByProjectId(projectId)
+            .orElseThrow(() -> new AppException("PROJECT_PATH_REQUIRED", "Bind a local project path before scanning", HttpStatus.BAD_REQUEST));
+        Path root = localProjectPathGuard.requireGitProjectDirectory(memory.getLocalProjectPath()).path();
+        if ("none".equals(modelSegmentEnricher.configurationKey(userId))) {
+            throw new AppException("MODEL_NOT_CONFIGURED", "配置模型后才能补齐项目历史记忆", HttpStatus.BAD_REQUEST);
+        }
+
+        List<String> warnings = new ArrayList<>();
+        warnings.add("这是自动历史事实重建批次，不影响当前增量事实游标。");
+        advanceStage(jobId, "HISTORY_GIT_SCAN", "正在读取一个有界历史提交批次");
+        String branch = runGit(root, warnings, "branch", "--show-current").trim();
+        List<String> args = new ArrayList<>(List.of(
+            "log", "--no-walk=unsorted", "--numstat",
+            "--pretty=format:__PF_COMMIT__%x09%H%x09%an%x09%aI%x09%s"
+        ));
+        args.addAll(commitShas);
+        long gitStarted = System.nanoTime();
+        GitEvidence evidence = readPendingCommits(projectId, root, branch, warnings, args);
+        long gitScanMs = elapsedMs(gitStarted);
+        List<ChangeAtom> atoms = new ArrayList<>(evidence.toAtoms());
+        ensureJobActive(jobId);
+
+        GitHubStatusResponse github = new GitHubStatusResponse(
+            false, false, false, "", "", "", branch, "", "", "", "",
+            "NOT_USED", "unknown", 0, 0, List.of()
+        );
+        WorktreeFacts worktree = new WorktreeFacts(false, false, false, false, List.of(), List.of(), List.of(), false);
+        ScanPlan plan = new ScanPlan(
+            commitShas.get(0), commitShas.get(commitShas.size() - 1), branch, false, args, warnings
+        );
+        String modelKey = modelSegmentEnricher.configurationKey(userId);
+        String fingerprint = historyFingerprint(projectId, commitShas, modelKey);
+        var reusable = pendingChangeScanService.findReusable(projectId, fingerprint);
+        if (reusable != null) {
+            projectFactIngestionService.ingestBatch(projectId, reusable.batch().id(), ProjectFactOrigin.HISTORY_BACKFILL, false);
+            pendingChangeScanService.markScanType(reusable.batch().id(), "HISTORY_BACKFILL");
+            return new HistoryChunkResult(
+                pendingChangeScanService.getBatch(reusable.batch().id()), reusable.segments(), true
+            );
+        }
+
+        AnalysisInputSnapshot snapshot = buildSnapshot(plan, evidence, worktree, github, List.of(), modelKey);
+        recordInputSummary(jobId, snapshot);
+        List<SegmentDraft> fallback = developmentSegmentationService.group(atoms);
+        advanceStage(jobId, "HISTORY_MODEL_ENRICH", "正在用已配置模型归并历史开发推进段");
+        long modelStarted = System.nanoTime();
+        var enrichment = modelSegmentEnricher.enrichWithDiagnostics(userId, atoms, fallback, snapshot);
+        long modelMs = elapsedMs(modelStarted);
+        ensureJobActive(jobId);
+        if (!"MODEL".equals(enrichment.mode())) {
+            throw new AppException(
+                "HISTORY_MODEL_UNAVAILABLE",
+                enrichment.fallbackReason().isBlank() ? "历史事实模型分析未成功，本批已暂停" : enrichment.fallbackReason(),
+                HttpStatus.BAD_GATEWAY
+            );
+        }
+        warnings.addAll(enrichment.qualityWarnings());
+        if (!enrichment.fallbackReason().isBlank()) warnings.add(enrichment.fallbackReason());
+        String scope = buildAnalysisScopeJson(snapshot, enrichment, false, github);
+
+        advanceStage(jobId, "HISTORY_PERSIST", "正在持久化历史开发推进段与项目事实");
+        ChangeBatchResponse batch = pendingChangeScanService.persist(
+            projectId, plan, evidence.commitCount(), evidence.changedFileCount(), 0, warnings,
+            new ScanDiagnostics(
+                fingerprint, false, "NOT_USED", "unknown", enrichment.mode(), enrichment.modelStatus(),
+                enrichment.providerName(), enrichment.fallbackReason(), gitScanMs, modelMs, 0, elapsedMs(started), scope
+            )
+        );
+        pendingChangeScanService.markScanType(batch.id(), "HISTORY_BACKFILL");
+        List<DevelopmentSegmentResponse> segments = pendingChangeScanService.persistSegments(
+            projectId, batch.id(), enrichment.segments(),
+            new SegmentDiagnostics(enrichment.mode(), enrichment.providerName(), enrichment.fallbackReason(), "NOT_USED", ""),
+            atomTimes(atoms)
+        );
+        ensureJobActive(jobId);
+        pendingChangeScanService.finish(batch.id(), segments.size(), elapsedMs(started));
+        projectFactIngestionService.ingestBatch(projectId, batch.id(), ProjectFactOrigin.HISTORY_BACKFILL, false);
+        return new HistoryChunkResult(pendingChangeScanService.getBatch(batch.id()), segments, false);
+    }
+
+    private Map<String, Instant> atomTimes(List<ChangeAtom> atoms) {
+        return atoms.stream()
+            .filter(atom -> atom.id() != null && atom.occurredAt() != null)
+            .collect(java.util.stream.Collectors.toMap(
+                ChangeAtom::id,
+                ChangeAtom::occurredAt,
+                (left, right) -> left.isBefore(right) ? left : right,
+                LinkedHashMap::new
+            ));
+    }
+
+    private void requestHistoryRebuild(UUID userId, UUID projectId, String upperBoundSha) {
+        boolean configured = !"none".equals(modelSegmentEnricher.configurationKey(userId));
+        eventPublisher.publishEvent(new ProjectFactHistoryRequestedEvent(
+            userId, projectId, upperBoundSha == null ? "" : upperBoundSha, configured
+        ));
     }
 
     private void ensureJobActive(UUID jobId) {
@@ -637,6 +780,24 @@ public class WorkSessionScanService {
         }
     }
 
+    private List<ChangeAtom> uncoveredAgentResultAtoms(UUID projectId, List<ChangeAtom> atoms) {
+        Set<String> covered = new LinkedHashSet<>(factAgentResultRefRepository.findDistinctAgentResultRefsByProjectId(projectId));
+        return atoms.stream().filter(atom -> {
+            String id = atom.id() == null ? "" : atom.id();
+            String ref = id.startsWith("agent:") ? "agent-result:" + id.substring(6) : "agent-result:" + id;
+            return !covered.contains(ref);
+        }).toList();
+    }
+
+    private String historyFingerprint(UUID projectId, List<String> commits, String modelConfig) {
+        String input = String.join("\n", projectId.toString(), "HISTORY_BACKFILL", String.join("|", commits), modelConfig, "v3.4.0");
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(input.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+
     private long elapsedMs(long started) {
         return Math.max(0, (System.nanoTime() - started) / 1_000_000L);
     }
@@ -908,5 +1069,12 @@ public class WorkSessionScanService {
         private FileStat merge(FileStat other) {
             return new FileStat(added + other.added, deleted + other.deleted);
         }
+    }
+
+    public record HistoryChunkResult(
+        ChangeBatchResponse batch,
+        List<DevelopmentSegmentResponse> segments,
+        boolean reused
+    ) {
     }
 }

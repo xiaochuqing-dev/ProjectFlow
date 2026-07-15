@@ -29,7 +29,7 @@ const STAGE_LABELS: Record<string, string> = {
   GIT_SCAN: "正在读取本地 Git 提交与工作区变化",
   GITHUB_INSPECT: "正在检查 GitHub 状态",
   MODEL_ENRICH: "正在调用模型分析开发推进段",
-  PERSIST: "正在分类保存模型结果或本地事实草稿",
+  PERSIST: "正在保存开发推进段和项目事实",
   SUCCEEDED: "分析完成",
   FAILED: "分析失败",
 };
@@ -81,7 +81,7 @@ export function PendingChangesPanel({
             <ScanLine className="h-4 w-4 text-brand" />
             <h2 className="text-sm font-semibold text-ink">待整理变更</h2>
           </div>
-          <p className="mt-1 text-xs leading-5 text-muted">从上次确认点读取本地 Git 与 Agent result，再归并为可确认的开发推进段。</p>
+          <p className="mt-1 text-xs leading-5 text-muted">从上次自动记录的事实游标读取本地 Git 与 Agent result，归并开发推进段后自动保存有证据的项目事实。</p>
         </div>
         <div className="flex items-center gap-2">
           {activeJob && (activeJob.status === "QUEUED" || activeJob.status === "RUNNING") ? (
@@ -95,7 +95,7 @@ export function PendingChangesPanel({
             size="sm"
             disabled={!hasProjectPath || scanning}
             onClick={onScan}
-            title={hasProjectPath ? "分析从上次整理点到当前 HEAD 的新变化" : "先绑定本地项目路径"}
+            title={hasProjectPath ? "分析从上次事实游标到当前 HEAD 的新变化" : "先绑定本地项目路径"}
           >
             {scanning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
             分析新变化
@@ -157,21 +157,22 @@ export function PendingChangesPanel({
       {batch ? (
         <div className="border-b border-line bg-surfaceAlt px-5 py-3 text-xs text-muted">
           <span className="font-semibold text-ink">{batch.newCommitCount} 个提交</span>
-          <span> · {batch.changedFileCount} 个文件 · {safeSegments.length} 个开发推进段</span>
+          <span> · {batch.changedFileCount} 个文件 · {safeSegments.length} 个开发推进段 · 自动记录 {batch.factCount ?? 0} 条项目事实</span>
+          {batch.attentionCount ? <span className="ml-2 text-warning-fg">{batch.attentionCount} 条需要关注</span> : null}
           {batch.firstScan ? <span className="ml-2 text-warning-fg">首次扫描最近 30 个提交</span> : null}
           {batch.worktreeDirty ? <span className="ml-2 text-warning-fg">包含未提交变化</span> : null}
         </div>
       ) : null}
 
-      {safeSegments.length > 0 ? (
+      {safeSegments.length > 0 || (batch?.factCount ?? 0) > 0 ? (
         <div>
           <div className="border-b border-line px-5 py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div><p className="font-semibold text-ink">最新分析批次</p><p className="mt-1 text-sm text-muted">{batch?.modelStatus?.startsWith("SUCCESS") ? `${safeSegments.length} 条模型分析结果等待处理` : `${safeSegments.length} 条本地事实草稿，建议重新模型分析或人工整理`}</p></div>
-              <Link className="inline-flex items-center gap-1 rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white" href={`/sediment-review${scan?.projectId ? `?projectId=${scan.projectId}` : ""}`}>进入沉淀处理中心 <ArrowRight className="h-4 w-4" /></Link>
+              <div><p className="font-semibold text-ink">最新分析批次</p><p className="mt-1 text-sm text-muted">已自动记录 {batch?.factCount ?? 0} 条项目事实{batch?.attentionCount ? `，其中 ${batch.attentionCount} 条需要关注` : ""}。完成后可以直接离开，无需逐条确认。</p></div>
+              <Link className="inline-flex items-center gap-1 rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white" href={`/sediment-review${scan?.projectId ? `?projectId=${scan.projectId}` : ""}`}>查看项目记录 <ArrowRight className="h-4 w-4" /></Link>
             </div>
           </div>
-          <details className="border-b border-line">
+          {safeSegments.length ? <details className="border-b border-line">
             <summary className="cursor-pointer px-5 py-3 text-sm font-semibold text-slate-700">查看开发推进段详情（{safeSegments.length}）</summary>
             <div className="divide-y divide-line border-t border-line">
             {safeSegments.map((segment) => (
@@ -206,10 +207,10 @@ export function PendingChangesPanel({
             </article>
             ))}
             </div>
-          </details>
+          </details> : null}
           <div className="flex justify-end px-5 py-4">
             <Link className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-brand-hover" href={`/sediment-review${scan?.projectId ? `?projectId=${scan.projectId}` : ""}`}>
-              进入沉淀处理中心 <ArrowRight className="h-4 w-4" />
+              查看项目记录 <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
           {/* V3.3.3: 分析口径展示 + 诊断信息。让用户知道本次用了什么来源。 */}
@@ -258,7 +259,7 @@ export function PendingChangesPanel({
         </div>
       ) : (
         <div className="px-5 py-6 text-sm leading-6 text-muted">
-          {hasProjectPath ? "当前还没有待整理变更。分析后，ProjectFlow 会在这里显示开发推进段。" : "先绑定本地项目路径，ProjectFlow 才能读取 Git 变化。"}
+          {hasProjectPath ? "当前还没有待整理变更。分析后，ProjectFlow 会显示开发推进段并自动记录项目事实。" : "先绑定本地项目路径，ProjectFlow 才能读取 Git 变化。"}
         </div>
       )}
 
@@ -308,7 +309,7 @@ function qualityStatusLabel(qualityStatus: string): string {
 
 function qualityBadgeTone(qualityStatus: string, status: string): "success" | "warning" | "slate" {
   if (status === "CONFIRMED") return "success";
-  if (qualityStatus === "PASS") return "warning";
+  if (qualityStatus === "PASS") return "success";
   return "slate";
 }
 

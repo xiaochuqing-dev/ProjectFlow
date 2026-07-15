@@ -10,7 +10,9 @@ const repositories = new Set<string>();
 const projects = new Set<string>();
 
 type Job = { id: string; status: string; requestCount: number; inputSummary?: string; retriedFromJobId?: string | null };
-type Batch = { batchId: string; formalSuggestionCount: number; localDraftCount: number; pendingCount: number; processedCount: number; resultSource: string };
+type Batch = { batchId: string; projectId: string; factCount: number; attentionCount: number; commitCount: number; changedFileCount: number; resultSource: string };
+type PageResult<T> = { items: T[]; page: number; size: number; totalElements: number; totalPages: number };
+type Fact = { id: string; batchId: string; title: string; recordStatus: string; evidenceCount: number };
 
 test.beforeEach(async ({ request }) => {
   await request.post(`${modelControl}/reset`);
@@ -23,23 +25,23 @@ test.afterEach(async ({ request }) => {
   repositories.clear();
 });
 
-test("项目分析生成可恢复的模型批次", async ({ page, request }) => {
+test("项目分析自动记录事实并保持工作台快速恢复", async ({ page, request }) => {
   const fixture = await createAnalyzableProject(request, "分析批次");
   const job = await startScan(request, fixture.projectId);
   await waitForJob(request, job.id, ["SUCCEEDED", "SUCCEEDED_WITH_WARNINGS"]);
   const emptyProject = await createBareProject(request, "快照隔离");
 
-  const batches = await api<Batch[]>(request, "GET", `/projects/${fixture.projectId}/sediment-review-batches`);
-  expect(batches).toHaveLength(1);
-  expect(batches[0]).toMatchObject({ resultSource: "MODEL_RESULT", localDraftCount: 0 });
-  expect(batches[0].formalSuggestionCount).toBeGreaterThan(0);
+  const batches = await api<PageResult<Batch>>(request, "GET", `/projects/${fixture.projectId}/project-record-batches?page=0&size=20`);
+  expect(batches.items).toHaveLength(1);
+  expect(batches.items[0].resultSource).toBe("MODEL_RESULT");
+  expect(batches.items[0].factCount).toBeGreaterThan(0);
 
   await selectProject(page, fixture.projectId);
   await page.goto(`/sediment-review?projectId=${fixture.projectId}`);
-  await expect(page.getByText("完整模型分析")).toBeVisible();
-  await expect(page.getByText("正式建议").first()).toBeVisible();
+  await expect(page.getByText("项目事实").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "查看批次记录" })).toBeVisible();
   await page.reload();
-  await expect(page.getByText("完整模型分析")).toBeVisible();
+  await expect(page.getByRole("link", { name: "查看批次记录" })).toBeVisible();
   await page.goto(`/dashboard?projectId=${fixture.projectId}`);
   await expect(page.getByText("最新分析批次")).toBeVisible({ timeout: 3_000 });
 
@@ -75,57 +77,46 @@ test("项目分析生成可恢复的模型批次", async ({ page, request }) => 
   await page.unroute(`**/api/projects/${fixture.projectId}/github/status`);
 
   await page.goto(`/sediment-review?projectId=${fixture.projectId}`);
-  await expect(page.getByText("完整模型分析")).toBeVisible();
+  await expect(page.getByRole("link", { name: "查看批次记录" })).toBeVisible();
   await expect(page.getByText("分析任务失败", { exact: false })).toHaveCount(0);
 });
 
-test("沉淀处理逐条确认并隔离本地事实草稿", async ({ page, request }) => {
-  const fixture = await createAnalyzableProject(request, "沉淀闭环");
+test("批次事实无需确认并可继续分析下一批", async ({ page, request }) => {
+  const fixture = await createAnalyzableProject(request, "自动事实闭环");
   await waitForJob(request, (await startScan(request, fixture.projectId)).id, ["SUCCEEDED", "SUCCEEDED_WITH_WARNINGS"]);
-  const modelBatch = (await api<Batch[]>(request, "GET", `/projects/${fixture.projectId}/sediment-review-batches`))[0];
+  const firstBatches = await api<PageResult<Batch>>(request, "GET", `/projects/${fixture.projectId}/project-record-batches?page=0&size=20`);
+  const firstBatch = firstBatches.items[0];
+  const firstFacts = await api<PageResult<Fact>>(request, "GET", `/projects/${fixture.projectId}/facts?batchId=${firstBatch.batchId}&page=0&size=100`);
+  expect(firstFacts.items.length).toBe(firstBatch.factCount);
 
   await selectProject(page, fixture.projectId);
   await page.goto(`/sediment-review?projectId=${fixture.projectId}`);
-  await expect(page.getByText("完整模型分析")).toBeVisible();
-  await expect(page.getByRole("link", { name: `继续处理 ${modelBatch.pendingCount} 条` })).toBeVisible();
-  await page.goto(`/sediment-review/${modelBatch.batchId}?projectId=${fixture.projectId}`);
-  await expect(page.getByText(/批次进度 0 \/ /)).toBeVisible();
-  await page.getByRole("button", { name: "新建并确认" }).click();
-  await expect(page.getByText("已进入待能力分析", { exact: true })).toBeVisible();
-
-  const updated = await api<{ batch: Batch }>(request, "GET", `/sediment-review-batches/${modelBatch.batchId}`);
-  expect(updated.batch.processedCount).toBe(1);
-  expect(updated.batch.pendingCount).toBe(modelBatch.pendingCount - 1);
-  const sediments = await api<Array<{ id: string; capabilityStatus: string }>>(request, "GET", `/projects/${fixture.projectId}/sediments`);
-  expect(sediments).toHaveLength(1);
-  expect(sediments[0].capabilityStatus).toBe("PENDING_ANALYSIS");
-  await page.goto(`/sediment-review?projectId=${fixture.projectId}`);
-  await expect(page.getByText("已处理").first()).toBeVisible();
-  await expect(page.getByRole("link", { name: updated.batch.pendingCount > 0 ? `继续处理 ${updated.batch.pendingCount} 条` : "查看批次详情" })).toBeVisible();
-
-  appendCommit(fixture.repository, "docs/local-draft.txt", "local draft", "docs: add local draft evidence");
-  await request.post(`${modelControl}/fail-next`, { data: { count: 2 } });
-  await waitForJob(request, (await startScan(request, fixture.projectId)).id, ["SUCCEEDED", "SUCCEEDED_WITH_WARNINGS"]);
-  const batches = await api<Batch[]>(request, "GET", `/projects/${fixture.projectId}/sediment-review-batches`);
-  const localBatch = batches.find((batch) => batch.resultSource === "LOCAL_FACT_DRAFT");
-  expect(localBatch).toBeTruthy();
-  expect(localBatch).toMatchObject({ formalSuggestionCount: 0, pendingCount: 0 });
-  expect(localBatch!.localDraftCount).toBeGreaterThan(0);
-
-  await page.goto(`/sediment-review?projectId=${fixture.projectId}`);
-  await expect(page.getByText("本地事实草稿").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "查看批次记录" })).toBeVisible();
+  await page.goto(`/sediment-review/${firstBatch.batchId}?projectId=${fixture.projectId}`);
+  await expect(page.getByText("本批次项目事实")).toBeVisible();
+  await expect(page.getByText(firstFacts.items[0].title)).toBeVisible();
+  await expect(page.getByRole("button", { name: /确认|新建|合并|补充证据/ })).toHaveCount(0);
+  await page.getByText("展开事实与证据").first().click();
+  await expect(page.getByText("证据引用", { exact: false }).first()).toBeVisible();
   await page.reload();
-  await expect(page.getByText("本地事实草稿").first()).toBeVisible();
-  await page.goto(`/project-sediments/${sediments[0].id}?projectId=${fixture.projectId}`);
-  await expect(page.getByText("待能力分析", { exact: false }).first()).toBeVisible();
+  await expect(page.getByText(firstFacts.items[0].title)).toBeVisible();
+
+  appendCommit(fixture.repository, "docs/second-batch.txt", "second batch", "docs: add second batch evidence");
+  await waitForJob(request, (await startScan(request, fixture.projectId)).id, ["SUCCEEDED", "SUCCEEDED_WITH_WARNINGS"]);
+  const secondBatches = await api<PageResult<Batch>>(request, "GET", `/projects/${fixture.projectId}/project-record-batches?page=0&size=20`);
+  expect(secondBatches.items).toHaveLength(2);
+  const allFacts = await api<PageResult<Fact>>(request, "GET", `/projects/${fixture.projectId}/facts?page=0&size=100`);
+  expect(allFacts.totalElements).toBeGreaterThan(firstFacts.totalElements);
+  expect(allFacts.items.some((fact) => fact.id === firstFacts.items[0].id)).toBeTruthy();
+  await page.goto(`/sediment-review?projectId=${fixture.projectId}`);
+  await expect(page.getByRole("link", { name: "查看批次记录" })).toHaveCount(2);
+  await expect(page.getByText(/继续处理.*条/)).toHaveCount(0);
 });
 
 test("项目沉淀生成能力，后续失败不覆盖上次成功结果", async ({ page, request }) => {
   const fixture = await createAnalyzableProject(request, "能力闭环");
   await waitForJob(request, (await startScan(request, fixture.projectId)).id, ["SUCCEEDED", "SUCCEEDED_WITH_WARNINGS"]);
-  const batch = (await api<Batch[]>(request, "GET", `/projects/${fixture.projectId}/sediment-review-batches`))[0];
-  const detail = await api<{ formalSuggestions: Array<{ changeId: string }> }>(request, "GET", `/sediment-review-batches/${batch.batchId}`);
-  await api(request, "POST", `/project-changes/${detail.formalSuggestions[0].changeId}/confirm`, { action: "NEW_SEDIMENT", targetSedimentId: null });
+  await createLegacySedimentFromFirstWorkSession(request, fixture.projectId);
 
   await selectProject(page, fixture.projectId);
   await page.goto(`/project-intelligence/capabilities?projectId=${fixture.projectId}`);
@@ -174,9 +165,7 @@ test("任务刷新、取消与 retry 复用等价活动任务", async ({ page, r
   await waitForJob(request, failed.id, ["FAILED"]);
 
   await waitForJob(request, (await startScan(request, fixture.projectId)).id, ["SUCCEEDED", "SUCCEEDED_WITH_WARNINGS"]);
-  const batch = (await api<Batch[]>(request, "GET", `/projects/${fixture.projectId}/sediment-review-batches`))[0];
-  const detail = await api<{ formalSuggestions: Array<{ changeId: string }> }>(request, "GET", `/sediment-review-batches/${batch.batchId}`);
-  await api(request, "POST", `/project-changes/${detail.formalSuggestions[0].changeId}/confirm`, { action: "NEW_SEDIMENT", targetSedimentId: null });
+  await createLegacySedimentFromFirstWorkSession(request, fixture.projectId);
 
   await request.post(`${modelControl}/delay-next`, { data: { count: 1, ms: 2500 } });
   const active = await startCapability(request, fixture.projectId);
@@ -268,6 +257,16 @@ async function startScan(request: APIRequestContext, projectId: string) {
 
 async function startCapability(request: APIRequestContext, projectId: string) {
   return api<Job>(request, "POST", `/projects/${projectId}/capabilities/analyze/jobs`);
+}
+
+async function createLegacySedimentFromFirstWorkSession(request: APIRequestContext, projectId: string) {
+  // V3.4 scans must not create ProjectChange suggestions. These capability regressions
+  // explicitly seed one legacy-compatible sediment through the retained evidence workflow.
+  const sessions = await api<Array<{ sessionId: string }>>(request, "GET", `/projects/${projectId}/work-sessions`);
+  expect(sessions.length).toBeGreaterThan(0);
+  const bundle = await api<{ id: string }>(request, "POST", `/work-sessions/${sessions[0].sessionId}/evidence-bundles`);
+  const change = await api<{ id: string }>(request, "POST", `/evidence-bundles/${bundle.id}/draft-changes`);
+  await api(request, "POST", `/project-changes/${change.id}/confirm`, { action: "NEW_SEDIMENT", targetSedimentId: null });
 }
 
 async function waitForJob(request: APIRequestContext, jobId: string, statuses: string[]) {

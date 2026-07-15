@@ -81,6 +81,11 @@ public class ProjectAnalysisJobService {
         return startJob(userId, projectId, ProjectAnalysisJobType.WORK_SESSION_SCAN, null, null, null);
     }
 
+    public ProjectAnalysisJobResponse startProjectFactHistoryRebuild(UUID userId, UUID projectId, String upperBoundSha) {
+        String upperBound = upperBoundSha == null ? "" : upperBoundSha.trim();
+        return startJob(userId, projectId, ProjectAnalysisJobType.PROJECT_FACT_HISTORY_REBUILD, upperBound, null, null);
+    }
+
     // V3.3.4: 能力分析异步任务。点击"分析项目能力"创建 job，后端异步执行；刷新/离开页面后可恢复。
     public ProjectAnalysisJobResponse startCapabilityCardAnalysis(UUID userId, UUID projectId) {
         return startJob(userId, projectId, ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS, null, null, null);

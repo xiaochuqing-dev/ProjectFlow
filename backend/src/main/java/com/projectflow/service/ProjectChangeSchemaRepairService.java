@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import javax.sql.DataSource;
 
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -27,10 +28,12 @@ public class ProjectChangeSchemaRepairService {
     }
 
     @EventListener(ApplicationReadyEvent.class)
+    @Order(0)
     public void repairOnStartup() {
         ensureEvidenceBundleSourceTypeAllowed();
         ensureAnalysisJobTypeAllowed();
         ensureAnalysisJobStatusAllowed();
+        ensureChangeBatchStatusAllowed();
         ensureChangeBatchTimingColumns();
         // ChangeBatch 的 4 个耗时字段在 v3.3.2 才加入，ddl-auto:update 只加列不补 NOT NULL，
         // 老行这 4 列为 NULL。实体已改成 Long 可容忍，这里再把存量 NULL 补 0，让数据恢复正常。
@@ -128,6 +131,24 @@ public class ProjectChangeSchemaRepairService {
         );
         if (!"enum".equalsIgnoreCase(statusType)) return;
         jdbcTemplate.execute("ALTER TABLE project_analysis_jobs ALTER COLUMN status " + h2JobStatusEnumDefinition());
+    }
+
+    public void ensureChangeBatchStatusAllowed() {
+        if (!isH2Database() || !hasColumn("change_batches", "status")) return;
+        String statusType = jdbcTemplate.query(
+            """
+                SELECT data_type
+                FROM information_schema.columns
+                WHERE table_name = 'change_batches'
+                  AND column_name = 'status'
+                """,
+            resultSet -> resultSet.next() ? resultSet.getString("data_type") : ""
+        );
+        if (!"enum".equalsIgnoreCase(statusType)) return;
+        String values = Arrays.stream(com.projectflow.entity.ChangeBatchStatus.values())
+            .map(Enum::name).map(value -> "'" + value + "'")
+            .collect(Collectors.joining(",", "ENUM(", ")"));
+        jdbcTemplate.execute("ALTER TABLE change_batches ALTER COLUMN status " + values);
     }
 
     private boolean isH2Database() {

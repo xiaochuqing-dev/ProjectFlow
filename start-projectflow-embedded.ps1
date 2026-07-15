@@ -197,6 +197,37 @@ function Stop-ProjectFlowProcesses {
     throw "Port $Port is still in use after stopping previous ProjectFlow processes. Close it manually and run this script again."
 }
 
+function Clear-StaleEmbeddedDatabaseLock {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$DataDirectory
+    )
+
+    $lockPath = Join-Path $DataDirectory "projectflow.lock.db"
+    if (-not (Test-Path -LiteralPath $lockPath)) {
+        return
+    }
+
+    $lockContent = Get-Content -LiteralPath $lockPath -Raw -ErrorAction Stop
+    $serverLine = [regex]::Match($lockContent, "(?m)^server=([^\r\n]+)$")
+    if (-not $serverLine.Success) {
+        return
+    }
+
+    $endpoint = $serverLine.Groups[1].Value
+    $lastColon = $endpoint.LastIndexOf(':')
+    $databaseHost = if ($lastColon -gt 0) { $endpoint.Substring(0, $lastColon) } else { $endpoint }
+    $port = if ($lastColon -gt 0) { [int]$endpoint.Substring($lastColon + 1) } else { 0 }
+    $reachable = $port -gt 0 -and (Test-NetConnection -ComputerName $databaseHost -Port $port -InformationLevel Quiet -WarningAction SilentlyContinue)
+
+    if ($reachable) {
+        throw "Embedded data is still in use by H2 server $endpoint. Stop that process before starting ProjectFlow."
+    }
+
+    Write-Host "Removing stale embedded database lock from unavailable H2 server $endpoint..."
+    Remove-Item -LiteralPath $lockPath -Force
+}
+
 function Start-ProjectJob {
     param (
         [Parameter(Mandatory = $true)]
@@ -256,6 +287,7 @@ try {
 
     Stop-ProjectFlowProcesses -Port 3000
     Stop-ProjectFlowProcesses -Port 8080
+    Clear-StaleEmbeddedDatabaseLock -DataDirectory $dataDir
 
     $env:NEXT_PUBLIC_API_BASE_URL = "http://127.0.0.1:8080/api"
     $env:NEXT_PUBLIC_API_PORT = "8080"

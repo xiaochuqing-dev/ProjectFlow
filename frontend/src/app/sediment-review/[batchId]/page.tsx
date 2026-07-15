@@ -2,153 +2,208 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, RefreshCw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, ChevronDown, RefreshCw } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui";
 import {
-  confirmProjectChange,
-  getSedimentReviewBatch,
-  listProjectSediments,
-  type ProjectSediment,
-  type SedimentAction,
-  type SedimentConfirmation,
-  type SedimentReviewBatchDetail,
+  getProjectFact,
+  getProjectRecordBatch,
+  listProjectFacts,
+  type ProjectFact,
+  type ProjectFactSummary,
+  type ProjectRecordBatch,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
+import { compactProjectPath } from "@/lib/project-insights";
+import { formatFactOccurredRange, formatProjectRecordRange } from "@/lib/project-fact-memory";
+import {
+  factOriginLabel,
+  factRecordStatusLabel,
+  factSourceModeLabel,
+  projectRecordBatchStatusLabel,
+  qualityStatusLabel,
+} from "@/lib/status-labels";
 
-export default function SedimentReviewBatchPage() {
+export default function ProjectRecordBatchPage() {
   const params = useParams<{ batchId: string }>();
   const searchParams = useSearchParams();
-  const projectId = searchParams.get("projectId") ?? "";
-  const [detail, setDetail] = useState<SedimentReviewBatchDetail | null>(null);
-  const [sediments, setSediments] = useState<ProjectSediment[]>([]);
-  const [index, setIndex] = useState(0);
-  const [action, setAction] = useState<SedimentAction>("NEW_SEDIMENT");
-  const [targetId, setTargetId] = useState("");
-  const [feedback, setFeedback] = useState<SedimentConfirmation | null>(null);
+  const queryProjectId = searchParams.get("projectId") ?? "";
+  const [batch, setBatch] = useState<ProjectRecordBatch | null>(null);
+  const [facts, setFacts] = useState<ProjectFactSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-
-  const pendingItems = useMemo(() => detail?.formalSuggestions.filter((item) => item.status === "PENDING" || item.status === "EDITED") ?? [], [detail]);
-  const current = pendingItems[Math.min(index, Math.max(0, pendingItems.length - 1))];
+  const requestVersion = useRef(0);
+  const loadedBatchId = useRef("");
 
   useEffect(() => {
     void refresh();
   }, [params.batchId]);
 
-  useEffect(() => {
-    if (!current) return;
-    setAction(current.suggestedAction || "NEW_SEDIMENT");
-    setTargetId(current.targetSedimentId ?? "");
-  }, [current?.changeId]);
-
   async function refresh() {
     const session = readSession();
     if (!session || !params.batchId) return;
+    const version = ++requestVersion.current;
+    if (loadedBatchId.current !== params.batchId) {
+      loadedBatchId.current = params.batchId;
+      setBatch(null);
+      setFacts([]);
+    }
     setLoading(true);
     setError("");
     try {
-      const [batch, sedimentItems] = await Promise.all([
-        getSedimentReviewBatch(session.accessToken, params.batchId),
-        projectId ? listProjectSediments(session.accessToken, projectId) : Promise.resolve([]),
-      ]);
-      setDetail(batch);
-      setSediments(sedimentItems);
-      setIndex((value) => Math.min(value, Math.max(0, batch.batch.pendingCount - 1)));
+      const result = await getProjectRecordBatch(session.accessToken, params.batchId);
+      if (version !== requestVersion.current) return;
+      const firstPage = result.facts;
+      let allFacts = firstPage?.items ?? [];
+      const projectId = result.batch.projectId || queryProjectId;
+      const totalPages = firstPage?.totalPages ?? 1;
+      if (projectId && totalPages > 1) {
+        const remaining = await Promise.all(Array.from({ length: totalPages - 1 }, (_, index) =>
+          listProjectFacts(session.accessToken, projectId, {
+            batchId: result.batch.batchId,
+            page: index + 1,
+            size: firstPage.size || 20,
+          })));
+        allFacts = [...allFacts, ...remaining.flatMap((page) => page.items ?? [])];
+      }
+      if (version !== requestVersion.current) return;
+      setBatch(result.batch);
+      setFacts(allFacts);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "批次详情加载失败");
+      if (version === requestVersion.current) setError(exception instanceof Error ? exception.message : "批次记录加载失败");
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   }
 
-  async function confirmCurrent() {
-    const session = readSession();
-    if (!session || !current) return;
-    const needsTarget = action === "MERGE_EXISTING" || action === "EVIDENCE_ONLY";
-    if (needsTarget && !targetId) {
-      setError("请选择要更新的项目沉淀");
-      return;
-    }
-    setSaving(true);
-    setError("");
-    try {
-      const result = await confirmProjectChange(session.accessToken, current.changeId, action, needsTarget ? targetId : null);
-      setFeedback(result);
-      await refresh();
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "沉淀确认失败");
-    } finally {
-      setSaving(false);
-    }
-  }
-
+  const projectId = batch?.projectId || queryProjectId;
   const centerPath = projectId ? `/sediment-review?projectId=${projectId}` : "/sediment-review";
   return (
-    <AppShell eyebrow="逐条决策并实时更新批次进度" title="处理分析批次">
+    <AppShell eyebrow="一次查看本批次全部项目事实" title="批次记录">
       <div className="space-y-5 p-8">
-        <Link className="inline-flex items-center gap-1 text-sm font-semibold text-slate-700" href={centerPath}><ArrowLeft className="h-4 w-4" />返回沉淀处理中心</Link>
-        {error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p> : null}
-        {feedback ? <ConfirmationFeedback feedback={feedback} onClose={() => setFeedback(null)} /> : null}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link className="inline-flex items-center gap-1 text-sm font-semibold text-slate-700" href={centerPath}><ArrowLeft className="h-4 w-4" />返回项目记录</Link>
+          <button className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-semibold disabled:opacity-60" disabled={loading} onClick={() => void refresh()} type="button"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />刷新</button>
+        </div>
+        {error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}{facts.length ? " 已保留当前可用事实。" : ""}</p> : null}
 
-        {detail ? (
-          <section className="rounded-md border border-line bg-white p-5 shadow-panel">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs text-muted">{new Date(detail.batch.scanStartedAt).toLocaleString("zh-CN")} · {detail.batch.branchName}</p>
-                <h2 className="mt-1 font-semibold">批次进度 {detail.batch.processedCount} / {detail.batch.formalSuggestionCount}</h2>
-              </div>
-              <div className="flex gap-2"><Badge label={`正式建议 ${detail.batch.formalSuggestionCount}`} tone="brand" /><Badge label={`本地草稿 ${detail.batch.localDraftCount}`} tone={detail.batch.localDraftCount ? "warning" : "slate"} /></div>
-            </div>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-slate-950" style={{ width: `${detail.batch.formalSuggestionCount ? Math.round(detail.batch.processedCount / detail.batch.formalSuggestionCount * 100) : 100}%` }} /></div>
+        {batch ? <BatchSummary batch={batch} /> : null}
+
+        {facts.length ? (
+          <section className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold text-slate-950">本批次项目事实</h2><Badge label={`${facts.length} 条`} tone="brand" /></div>
+            {facts.map((fact) => <FactCard fact={fact} key={fact.id} projectId={projectId} />)}
           </section>
+        ) : !loading && batch ? (
+          <section className="rounded-md border border-dashed border-line bg-white p-10 text-center"><p className="font-semibold">本批次暂无可展示事实</p><p className="mt-2 text-sm text-muted">历史迁移或事实写入可能尚未完成，可返回工作台重新分析。</p></section>
         ) : null}
-
-        {current ? (
-          <section className="rounded-md border border-line bg-white shadow-panel">
-            <div className="border-b border-line p-5">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge label={`${index + 1} / ${pendingItems.length}`} tone="slate" />
-                <Badge label={sourceLabel(current.contentSource)} tone={current.contentSource === "MODEL_RESULT" ? "success" : "warning"} />
-                <Badge label={qualityLabel(current.qualityStatus)} tone={current.qualityStatus === "PASS" ? "success" : "warning"} />
-              </div>
-              <h2 className="mt-4 text-xl font-semibold text-slate-950">{current.title}</h2>
-              <p className="mt-2 leading-7 text-slate-600">{current.summary}</p>
-              <p className="mt-3 text-sm text-muted">{current.evidenceCount} 条证据 · 本次涉及 {current.affectedFileCount} 个文件</p>
-            </div>
-            <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="space-y-4">
-                <div className={`rounded-md p-4 text-sm ${current.recommendationStrength === "HIGH" ? "bg-blue-50 text-blue-950" : "bg-slate-50 text-slate-700"}`}>
-                  <p className="font-semibold">{strengthLabel(current.recommendationStrength)} · {actionLabel(current.suggestedAction || "NEW_SEDIMENT")}</p>
-                  <p className="mt-1 text-xs leading-5">推荐只作为决策辅助；你可以在右侧调整处理方式。</p>
-                </div>
-                <details className="rounded-md border border-line p-4 text-sm"><summary className="cursor-pointer font-semibold">查看证据与诊断入口</summary><div className="mt-3 flex gap-3"><Link className="font-semibold text-blue-700" href={`/project-changes/${current.changeId}`}>查看完整建议与证据</Link>{detail?.batch.needsReanalysis ? <Link className="font-semibold text-amber-700" href={projectId ? `/dashboard?projectId=${projectId}` : "/dashboard"}>重新模型分析</Link> : null}</div></details>
-              </div>
-              <div className="space-y-3 rounded-md border border-line p-4">
-                <label className="block text-sm font-semibold">处理方式<select className="mt-2 w-full rounded-md border border-line bg-white px-3 py-2 font-normal" onChange={(event) => setAction(event.target.value as SedimentAction)} value={action}><option value="NEW_SEDIMENT">新建项目沉淀</option><option value="MERGE_EXISTING">合并到已有沉淀</option><option value="EVIDENCE_ONLY">只补充证据</option><option value="IGNORE">暂不沉淀</option></select></label>
-                {action === "MERGE_EXISTING" || action === "EVIDENCE_ONLY" ? <label className="block text-sm font-semibold">目标沉淀<select className="mt-2 w-full rounded-md border border-line bg-white px-3 py-2 font-normal" onChange={(event) => setTargetId(event.target.value)} value={targetId}><option value="">请选择</option>{sediments.map((sediment) => <option value={sediment.id} key={sediment.id}>{sediment.title}</option>)}</select></label> : null}
-                <button className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60" disabled={saving} onClick={() => void confirmCurrent()} type="button">{saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{actionLabel(action)}</button>
-                <button className="w-full rounded-md border border-line px-4 py-2 text-sm font-semibold" onClick={() => setIndex((value) => Math.min(pendingItems.length - 1, value + 1))} type="button">跳过，处理下一条</button>
-                <Link className="block text-center text-xs font-semibold text-muted" href={centerPath}>稍后处理并返回</Link>
-              </div>
-            </div>
-            <div className="flex justify-between border-t border-line p-4"><button className="inline-flex items-center gap-1 text-sm font-semibold disabled:opacity-40" disabled={index === 0} onClick={() => setIndex((value) => Math.max(0, value - 1))} type="button"><ArrowLeft className="h-4 w-4" />上一条</button><button className="inline-flex items-center gap-1 text-sm font-semibold disabled:opacity-40" disabled={index >= pendingItems.length - 1} onClick={() => setIndex((value) => Math.min(pendingItems.length - 1, value + 1))} type="button">下一条<ArrowRight className="h-4 w-4" /></button></div>
-          </section>
-        ) : !loading ? <section className="rounded-md border border-line bg-white p-10 text-center"><p className="font-semibold">本批次正式建议已处理完</p><p className="mt-2 text-sm text-muted">本地事实草稿仍保留在下方，不会被自动写入项目沉淀。</p></section> : null}
-
-        {detail?.localDrafts.length ? <section className="rounded-md border border-amber-200 bg-amber-50 p-5"><h2 className="font-semibold text-amber-950">本地事实草稿 {detail.localDrafts.length} 条</h2><p className="mt-1 text-sm text-amber-800">这些内容未经过完整模型语义归并，可能重复、模板化或不完整，不会自动成为正式成果。</p><div className="mt-4 space-y-2">{detail.localDrafts.map((draft) => <article className="rounded-md bg-white p-4" key={draft.id}><p className="font-semibold">{draft.title}</p><p className="mt-1 line-clamp-2 text-sm text-slate-600">{draft.plainSummary}</p></article>)}</div></section> : null}
       </div>
     </AppShell>
   );
 }
 
-function ConfirmationFeedback({ feedback, onClose }: { feedback: SedimentConfirmation; onClose: () => void }) {
-  return <section className="rounded-md border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-950"><div className="flex justify-between gap-4"><div><p className="font-semibold">{feedback.actionLabel}完成</p><p className="mt-1">{feedback.resultMessage}</p><p className="mt-2">新增证据 {feedback.evidenceAdded} 条 · 本次涉及文件 {feedback.filesAdded} 个 · {feedback.summaryUpdated ? "摘要已更新" : "摘要保持不变"}</p><p className="mt-1">{feedback.usedByNextCapabilityAnalysis ? "已进入待能力分析" : "未进入能力分析"}</p></div><button className="text-xs font-semibold" onClick={onClose} type="button">关闭</button></div>{feedback.sedimentPath ? <Link className="mt-3 inline-flex font-semibold text-emerald-800" href={feedback.sedimentPath}>查看项目沉淀</Link> : null}</section>;
+function BatchSummary({ batch }: { batch: ProjectRecordBatch }) {
+  return (
+    <section className="rounded-md border border-line bg-white p-5 shadow-panel">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge label={projectRecordBatchStatusLabel(batch.batchStatus, batch.attentionCount ?? 0)} tone={batch.attentionCount ? "warning" : "success"} />
+        <span className="text-xs text-muted">{formatProjectRecordRange(batch)}</span>
+      </div>
+      <h2 className="mt-3 text-xl font-semibold text-slate-950">{batch.branchName || "当前分支"}</h2>
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
+        <Metric label="项目事实" value={batch.factCount ?? 0} />
+        <Metric label="需要关注" value={batch.attentionCount ?? 0} />
+        <Metric label="提交" value={batch.commitCount ?? 0} />
+        <Metric label="文件" value={batch.changedFileCount ?? 0} />
+        <Metric label="Agent result" value={batch.agentResultCount ?? 0} />
+      </div>
+    </section>
+  );
 }
 
-function sourceLabel(value: string) { if (value === "MODEL_RESULT") return "完整模型分析"; if (value === "MODEL_PARTIAL_RESULT") return "部分模型恢复"; if (value === "AGENT_RESULT_DRAFT") return "Agent result 草稿"; if (value === "LEGACY_INCOMPLETE") return "历史数据不完整"; return "本地事实草稿"; }
-function qualityLabel(value: string) { if (value === "PASS") return "可确认"; if (value === "NEEDS_EVIDENCE") return "缺证据"; if (value === "NEEDS_CHINESE_REWRITE") return "需中文整理"; return "需复核"; }
-function strengthLabel(value: string) { if (value === "HIGH") return "高可信推荐"; if (value === "MEDIUM") return "中等可信推荐"; if (value === "NOT_RECOMMENDED") return "不建议自动推荐"; return "仅供参考"; }
-function actionLabel(value: SedimentAction | "") { if (value === "MERGE_EXISTING") return "合并并确认"; if (value === "EVIDENCE_ONLY") return "补充证据并确认"; if (value === "IGNORE") return "暂不沉淀"; return "新建并确认"; }
+function FactCard({ fact, projectId }: { fact: ProjectFactSummary; projectId: string }) {
+  const [detail, setDetail] = useState<ProjectFact | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const needsAttention = fact.recordStatus === "NEEDS_ATTENTION";
+
+  async function loadDetail() {
+    const session = readSession();
+    if (!session || detail || loading) return;
+    setLoading(true);
+    setError("");
+    try {
+      setDetail(await getProjectFact(session.accessToken, fact.id));
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "事实详情加载失败");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <details className={`group rounded-md border bg-white shadow-panel ${needsAttention ? "border-amber-300" : "border-line"}`} onToggle={(event) => { if (event.currentTarget.open) void loadDetail(); }}>
+      <summary className="cursor-pointer list-none p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge label={factRecordStatusLabel(fact.recordStatus)} tone={needsAttention ? "warning" : "success"} />
+          <Badge label={qualityStatusLabel(fact.qualityStatus)} tone={fact.qualityStatus === "PASS" ? "success" : "warning"} />
+          <Badge label={factSourceModeLabel(fact.sourceMode)} tone="slate" />
+          <span className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-slate-600">展开事实与证据<ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></span>
+        </div>
+        <h3 className="mt-3 text-lg font-semibold text-slate-950 break-words">{fact.title}</h3>
+        <p className="mt-2 text-sm leading-6 text-slate-600 break-words">{fact.summary}</p>
+        <p className="mt-3 text-xs text-muted">{formatFactOccurredRange(fact.occurredFrom, fact.occurredTo)}</p>
+        <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted"><span>{fact.commitCount ?? 0} 个提交</span><span>{fact.agentResultCount ?? 0} 个 Agent result</span><span>{fact.evidenceCount ?? 0} 条证据</span><span>{fact.affectedFileCount ?? 0} 个文件</span></div>
+        {needsAttention ? <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">{fact.attentionReason || "这条事实的证据或时间信息需要关注，但不会阻塞后续分析。"}</p> : null}
+      </summary>
+      <div className="border-t border-line p-5">
+        {loading ? <p className="text-sm text-muted">正在读取完整事实与证据…</p> : null}
+        {error ? <p className="rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</p> : null}
+        {detail ? <FactDetailContent fact={detail} /> : null}
+        {needsAttention && projectId ? <Link className="mt-4 inline-flex rounded-md border border-amber-300 px-3 py-2 text-sm font-semibold text-amber-900" href={`/dashboard?projectId=${projectId}`}>重新分析当前批次</Link> : null}
+      </div>
+    </details>
+  );
+}
+
+function FactDetailContent({ fact }: { fact: ProjectFact }) {
+  const mainChanges = fact.mainChanges ?? [];
+  const commitRefs = fact.commitRefs ?? [];
+  const commitUrls = fact.commitUrls ?? [];
+  const agentResultRefs = fact.agentResultRefs ?? [];
+  const affectedFiles = fact.affectedFiles ?? [];
+  const evidenceRefs = fact.evidenceRefs ?? [];
+  return (
+    <div className="space-y-5 text-sm">
+      {mainChanges.length ? <section><h4 className="font-semibold text-slate-950">主要变化</h4><ul className="mt-2 space-y-1 leading-6 text-slate-700">{mainChanges.map((item, index) => <li key={`${item}-${index}`}>• {item}</li>)}</ul></section> : null}
+      {fact.userVisibleValue ? <section><h4 className="font-semibold text-slate-950">用户或开发者可感知价值</h4><p className="mt-2 leading-6 text-slate-700">{fact.userVisibleValue}</p></section> : null}
+      <section className="grid gap-4 md:grid-cols-2">
+        <ReferenceList title="提交引用" items={commitRefs} links={commitUrls} />
+        <ReferenceList title="Agent result 引用" items={agentResultRefs} />
+        <ReferenceList title="涉及文件" items={affectedFiles.map(compactProjectPath)} />
+        <ReferenceList title="证据引用" items={evidenceRefs} />
+      </section>
+      <dl className="grid gap-3 rounded-md bg-slate-50 p-4 text-xs sm:grid-cols-2 lg:grid-cols-4">
+        <Diagnostic label="事实来源" value={factOriginLabel(fact.origin)} />
+        <Diagnostic label="整理方式" value={factSourceModeLabel(fact.sourceMode)} />
+        <Diagnostic label="来源开发推进段" value={fact.sourceSegmentId || "历史来源未知"} />
+        <Diagnostic label="来源分析批次" value={fact.batchId || "旧版来源未关联批次"} />
+      </dl>
+    </div>
+  );
+}
+
+function ReferenceList({ title, items, links = [] }: { title: string; items: string[]; links?: string[] }) {
+  return (
+    <div className="rounded-md border border-line p-4"><h4 className="font-semibold text-slate-950">{title} · {items.length}</h4>{items.length ? <div className="mt-2 space-y-1 text-xs leading-5 text-slate-600">{items.map((item, index) => links[index] ? <a className="block break-all font-medium text-blue-700 hover:underline" href={links[index]} key={`${item}-${index}`} rel="noreferrer" target="_blank">{item}</a> : <p className="break-all" key={`${item}-${index}`}>{item}</p>)}</div> : <p className="mt-2 text-xs text-muted">无</p>}</div>
+  );
+}
+
+function Diagnostic({ label, value }: { label: string; value: string }) {
+  return <div><dt className="text-muted">{label}</dt><dd className="mt-1 break-all font-medium text-slate-800">{value}</dd></div>;
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return <div className="rounded-md bg-slate-50 p-3"><p className="text-xs text-muted">{label}</p><p className="mt-1 font-semibold">{value}</p></div>;
+}

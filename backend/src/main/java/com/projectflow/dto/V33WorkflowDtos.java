@@ -25,6 +25,11 @@ public final class V33WorkflowDtos {
         int changedFileCount,
         int agentResultCount,
         int segmentCount,
+        int factCount,
+        int attentionCount,
+        Instant factOccurredFrom,
+        Instant factOccurredTo,
+        String scanType,
         String status,
         List<String> warnings,
         boolean firstScan,
@@ -66,7 +71,9 @@ public final class V33WorkflowDtos {
         String qualityStatus,
         String qualityReason,
         List<String> commitUrls,
-        List<String> uncertainties
+        List<String> uncertainties,
+        Instant occurredFrom,
+        Instant occurredTo
     ) {
     }
 

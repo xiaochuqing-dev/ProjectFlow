@@ -1,0 +1,30 @@
+{
+  "taskGoal": "确保桌面 Start-ProjectFlow.bat 在每次代码修改后都能可靠重建并运行最新工作树。",
+  "actualChanges": [
+    "桌面启动器不再因本地修改直接拒绝启动：工作区干净时快进同步 GitHub master，存在本地修改时保护修改、跳过远程写入并完整重建当前工作树。",
+    "嵌入启动链统一从前端包信息读取产品版本，并在每次成功运行后记录源提交、本地修改标记、前端 Build ID、构建时间和就绪时间。",
+    "start.bat、start-projectflow.bat 和嵌入入口统一转发检查及无浏览器参数，移除重复的旧版本提示；既有 H2 锁恢复修改保持不变。",
+    "后续 Agent 规则和项目上下文已明确要求代码或构建配置修改后通过桌面 BAT 验证最新工作树。"
+  ],
+  "keyFiles": [
+    "start-projectflow-embedded.ps1",
+    "start-projectflow-embedded.bat",
+    "start-projectflow.bat",
+    "start.bat",
+    "AGENTS.md",
+    "README.md",
+    ".projectflow/context/confirmed-decisions.md",
+    ".projectflow/context/current-work.md",
+    ".projectflow/context/update-history.md"
+  ],
+  "verification": {
+    "build": "通过桌面 BAT 使用带本地修改的工作树完成 Next.js production build，并由 Maven spring-boot:run 重新编译启动后端；最终前端 Build ID 为 XqJ5ruLgDz8DX_BoxCO_K。",
+    "tests": "PowerShell 语法解析通过；桌面 /check-only、start.bat -CheckOnly 和兼容启动入口 -CheckOnly 均返回 0；git diff --check 通过。",
+    "manualCheck": "真实桌面 BAT 启动链保持运行；构建证据显示 V3.3.8.1、源提交 27d01d94637eaf2b0e6f8d2db573afc909fc8131、包含本地修改。前端登录页、Build ID 静态资源和后端健康接口均返回 200/UP，3000 与 8080 正常监听。"
+  },
+  "unfinished": [],
+  "sedimentCandidates": [
+    "本地桌面启动器应区分远程最新基线与本地最新工作树：干净时安全同步，脏时保护修改并重建，不能把未提交代码当成禁止启动条件。",
+    "可执行构建应留下版本、源提交、本地修改标记和产物 Build ID，便于确认当前运行实例是否来自最新代码。"
+  ]
+}

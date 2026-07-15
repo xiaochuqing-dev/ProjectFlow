@@ -305,10 +305,10 @@ function accessHint(step: DashboardStep, hasSelectedProject: boolean): { title: 
       return { title: "当前项目还没有可分析的材料，导入完整 zip 后生成画像。", cta: undefined };
     case "no_path":
       return { title: "绑定本地项目文件夹路径后，才能分析新变化与扫描 Agent 写回内容。", cta: undefined };
-    case "has_pending":
-      return { title: `当前有 ${step.count} 条建议沉淀。`, cta: "去沉淀确认", ctaHref: "/tasks" };
+    case "has_facts":
+      return { title: `最近批次已自动记录 ${step.count} 条项目事实${step.attentionCount ? `，其中 ${step.attentionCount} 条需要关注` : ""}。`, cta: "查看项目记录", ctaHref: "/sediment-review" };
     case "scan_updates":
-      return { title: "项目已就绪，分析新变化获取待整理变更。", cta: undefined };
+      return { title: "项目已就绪。分析新变化后，ProjectFlow 会自动记录有证据的项目事实。", cta: undefined };
     default:
       return { title: hasSelectedProject ? "项目接入就绪。" : "导入项目 zip 开始。" };
   }

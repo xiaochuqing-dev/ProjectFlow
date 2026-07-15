@@ -17,20 +17,20 @@ assert.match(embeddedLauncher, /Arguments @\("run", "build"\)/, "embedded launch
 assert.match(embeddedLauncher, /last-embedded-build\.json/, "embedded launcher should record runtime build evidence");
 
 const readme = read("README.md");
-for (const term of ["ProjectFlow V3.3", "待整理变更", "开发推进段", "建议沉淀", "项目沉淀", "GitHub CLI"]) {
+for (const term of ["ProjectFlow V3.4.0", "Project Fact", "Change Batch", "Development Segment", "Project Records", "Project Memory", "GitHub CLI"]) {
   assert.match(readme, new RegExp(term), `README should explain ${term}`);
 }
 assert.match(readme, /本地 Git.*主数据源/s, "README should retain local Git as the primary source");
-assert.match(readme, /Agent result.*增强数据源/s, "README should explain agent results as enrichment");
-assert.match(readme, /不再以.*今日开发.*主边界/s, "README should explain the cursor-based boundary");
+assert.match(readme, /Agent result files are an enhancement/, "README should explain agent results as enrichment");
+assert.match(readme, /ProjectFactCursor.*after fact ingestion succeeds/s, "README should explain the automatic fact cursor boundary");
 
 const agents = read("AGENTS.md");
-assert.match(agents, /PROJECTFLOW V3\.3\.\d+(?:\.\d+)? CONTEXT START/, "AGENTS should contain a bounded V3.3 context entry");
+assert.match(agents, /PROJECTFLOW V3\.4\.0 CONTEXT START/, "AGENTS should contain a bounded V3.4 context entry");
 assert.match(agents, /\.projectflow\/AGENT_PROTOCOL\.md/, "AGENTS should route agents to the detailed protocol");
 
 const context = read("PROJECT_CONTEXT.md");
-assert.match(context, /Current V3\.3/, "compact project context should identify the current release");
-assert.match(context, /待整理变更.*开发推进段.*建议沉淀.*项目沉淀/s, "compact project context should record the current workflow");
+assert.match(context, /Current V3\.4\.0/, "compact project context should identify the current release");
+assert.match(context, /分析新变化.*DevelopmentSegment.*ProjectFact.*项目记忆/s, "compact project context should record the automatic fact workflow");
 
 for (const path of [
   ".projectflow/AGENT_PROTOCOL.md",
@@ -55,4 +55,4 @@ assert.match(protocol, /sedimentCandidates/);
 assert.match(protocol, /not_run/);
 assert.match(protocol, /仓库相对路径/);
 
-console.log("V3.3 documentation checks passed");
+console.log("V3.4 documentation checks passed");

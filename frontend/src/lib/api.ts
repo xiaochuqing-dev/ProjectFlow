@@ -848,6 +848,131 @@ export type SedimentReviewBatchDetail = {
   localDrafts: DevelopmentSegment[];
 };
 
+export type ProjectFactRecordStatus = "RECORDED" | "NEEDS_ATTENTION";
+
+export type ProjectFactOrigin =
+  | "INCREMENTAL_SCAN"
+  | "HISTORY_BACKFILL"
+  | "LEGACY_SEGMENT_MIGRATION"
+  | "LEGACY_SEDIMENT_MIGRATION"
+  | string;
+
+export type ProjectFactSummary = {
+  id: string;
+  projectId: string;
+  batchId: string | null;
+  sourceSegmentId: string | null;
+  legacySedimentId: string | null;
+  origin: ProjectFactOrigin;
+  title: string;
+  summary: string;
+  occurredFrom: string | null;
+  occurredTo: string | null;
+  sourceMode: string;
+  qualityStatus: string;
+  confidence: string;
+  recordStatus: ProjectFactRecordStatus;
+  attentionReason: string;
+  commitCount: number;
+  agentResultCount: number;
+  affectedFileCount: number;
+  evidenceCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProjectFact = ProjectFactSummary & {
+  mainChanges: string[];
+  userVisibleValue: string;
+  commitRefs: string[];
+  commitUrls: string[];
+  agentResultRefs: string[];
+  affectedFiles: string[];
+  evidenceRefs: string[];
+  factFingerprint: string;
+};
+
+export type ProjectFactPage = {
+  items: ProjectFactSummary[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type ProjectFactQuery = {
+  from?: string;
+  to?: string;
+  batchId?: string;
+  recordStatus?: ProjectFactRecordStatus;
+  page?: number;
+  size?: number;
+};
+
+export type ProjectRecordBatch = {
+  batchId: string;
+  projectId: string;
+  scanStartedAt: string | null;
+  scanFinishedAt: string | null;
+  factOccurredFrom: string | null;
+  factOccurredTo: string | null;
+  branchName: string;
+  batchStatus: string;
+  scanType: string;
+  commitCount: number;
+  changedFileCount: number;
+  agentResultCount: number;
+  factCount: number;
+  attentionCount: number;
+  modelStatus: string;
+  modelProvider: string;
+  resultSource: string;
+  needsReanalysis: boolean;
+};
+
+export type ProjectRecordBatchPage = {
+  items: ProjectRecordBatch[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type ProjectRecordBatchDetail = {
+  batch: ProjectRecordBatch;
+  facts: ProjectFactPage;
+};
+
+export type FactMemoryOverview = {
+  projectId: string;
+  totalFactCount: number;
+  recordedFactCount: number;
+  attentionFactCount: number;
+  coveredCommitCount: number;
+  totalCommitCount: number;
+  earliestOccurredAt: string | null;
+  latestOccurredAt: string | null;
+};
+
+export type ProjectFactHistoryState = {
+  projectId: string;
+  status: "NOT_STARTED" | "WAITING_FOR_MODEL" | "RUNNING" | "PAUSED" | "COMPLETED" | "FAILED" | string;
+  headSnapshotSha: string;
+  upperBoundSha: string;
+  totalCommitCount: number;
+  coveredCommitCount: number;
+  remainingCommitCount: number;
+  lastProcessedCommitSha: string;
+  currentChunk: number;
+  completedChunkCount: number;
+  lastBatchId: string | null;
+  startedAt: string | null;
+  updatedAt: string | null;
+  completedAt: string | null;
+  errorCode: string;
+  errorSummary: string;
+};
+
 export type CapabilityAnalysisOverview = {
   lastSuccessfulAt: string | null;
   lastInputSedimentCount: number;
@@ -954,7 +1079,7 @@ export type ProjectAnalysisJobStatus =
   | "RETRYABLE"
   | "EXPIRED"
   | "REJECTED";
-export type ProjectAnalysisJobType = "PROJECT" | "FILE" | "CAPABILITY_INTERPRET" | "WORK_SESSION_SCAN" | "CAPABILITY_CARD_ANALYSIS";
+export type ProjectAnalysisJobType = "PROJECT" | "FILE" | "CAPABILITY_INTERPRET" | "WORK_SESSION_SCAN" | "PROJECT_FACT_HISTORY_REBUILD" | "CAPABILITY_CARD_ANALYSIS";
 
 export type ProjectAnalysisJob = {
   id: string;
@@ -1197,7 +1322,12 @@ export type ChangeBatch = {
   changedFileCount: number;
   agentResultCount: number;
   segmentCount: number;
-  status: "PENDING" | "PARTIAL" | "REVIEWED" | "FAILED";
+  factCount: number;
+  attentionCount: number;
+  factOccurredFrom: string | null;
+  factOccurredTo: string | null;
+  scanType: string;
+  status: "PENDING" | "PARTIAL" | "REVIEWED" | "FACTS_RECORDED" | "FACTS_RECORDED_WITH_ATTENTION" | "FAILED";
   warnings: string[];
   firstScan: boolean;
   scanFingerprint: string;
@@ -1536,6 +1666,50 @@ export function retryProjectAnalysisJob(token: string, jobId: string): Promise<P
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });
+}
+
+export function listProjectFacts(token: string, projectId: string, query: ProjectFactQuery = {}): Promise<ProjectFactPage> {
+  const params = new URLSearchParams();
+  if (query.from) params.set("from", query.from);
+  if (query.to) params.set("to", query.to);
+  if (query.batchId) params.set("batchId", query.batchId);
+  if (query.recordStatus) params.set("recordStatus", query.recordStatus);
+  params.set("page", String(query.page ?? 0));
+  params.set("size", String(query.size ?? 20));
+  return requestJson<ProjectFactPage>(`/projects/${projectId}/facts?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, "项目事实读取失败，请稍后重试。");
+}
+
+export function getProjectFact(token: string, factId: string): Promise<ProjectFact> {
+  return requestJson<ProjectFact>(`/project-facts/${factId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, "项目事实详情读取失败，请稍后重试。");
+}
+
+export function getFactMemoryOverview(token: string, projectId: string): Promise<FactMemoryOverview> {
+  return requestJson<FactMemoryOverview>(`/projects/${projectId}/fact-memory-overview`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, "项目记忆概览读取失败，请稍后重试。");
+}
+
+export function getProjectFactHistoryState(token: string, projectId: string): Promise<ProjectFactHistoryState> {
+  return requestJson<ProjectFactHistoryState>(`/projects/${projectId}/fact-history-state`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, "历史记忆补齐状态读取失败，请稍后重试。");
+}
+
+export function listProjectRecordBatches(token: string, projectId: string, page = 0, size = 40): Promise<ProjectRecordBatchPage> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  return requestJson<ProjectRecordBatchPage>(`/projects/${projectId}/project-record-batches?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, "项目记录读取失败，请稍后重试。");
+}
+
+export function getProjectRecordBatch(token: string, batchId: string): Promise<ProjectRecordBatchDetail> {
+  return requestJson<ProjectRecordBatchDetail>(`/project-record-batches/${batchId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, "批次记录读取失败，请稍后重试。");
 }
 
 export function listProjectSediments(token: string, projectId: string): Promise<ProjectSediment[]> {

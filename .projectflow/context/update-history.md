@@ -3,6 +3,13 @@
 ## 开源 Windows 快速启动入口 - 2026-07-14
 
 仓库根目录新增便携 Start-ProjectFlow.bat，克隆后的 Windows 用户可直接双击。入口不包含个人路径、不修改 Git 历史；首次运行或 package-lock 变化时执行 npm ci，每次重新构建生产前端并启动 Spring Boot/H2。成功运行记录版本、源提交、本地修改标记、依赖状态、前端 Build ID 和就绪时间，旧 start.bat 保持兼容。
+## ProjectFlow V3.4.0 自动项目事实与长期记忆 - 2026-07-15
+
+产品主链从“模型建议、开发者逐条确认沉淀”切换为“分析新变化、开发推进段、自动 ProjectFact、项目记录与项目记忆”。DevelopmentSegment 保持分析层，ProjectFact 成为长期事实层；正常证据充分结果自动记录，异常进入 NEEDS_ATTENTION 且不阻塞批次或下一次扫描。新增独立 FactCursor 与 bounded history backfill 方向，旧 ProjectChange、ProjectSediment、ProjectReviewCursor 和 ProjectMemory 保留兼容。本阶段不重做 V3.3.7 job 或 V3.3.8 model gateway，也不提前实现完整 timeline、生命周期能力地图、Hermes 或 Obsidian 正式同步。最终自动化、H2/PostgreSQL、浏览器、性能、桌面启动、CI 和提交证据统一记录到 V3.4.0 独立实施报告，本文不预写结果。
+
+## 桌面最新工作树构建可靠性 - 2026-07-14
+
+修复桌面启动器在存在本地修改时直接拒绝启动的问题。工作区干净时仍先快进同步 GitHub master；存在本地修改时跳过远程写入并完整重建当前工作树，不覆盖用户改动。嵌入启动脚本从 package.json 读取版本，每次成功运行记录源提交、本地修改标记、前端 Build ID 和就绪时间；start.bat、兼容启动入口和桌面 BAT 共用同一构建链。已用真实桌面 BAT 完成 V3.3.8.1 前端 production build、后端 Spring Boot/H2 启动及 3000/8080 健康验证。
 
 ## ProjectFlow V3.3.8.1 数据读取可靠性 - 2026-07-13
 

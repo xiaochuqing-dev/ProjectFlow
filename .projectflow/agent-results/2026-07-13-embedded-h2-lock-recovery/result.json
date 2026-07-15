@@ -1,0 +1,20 @@
+{
+  "taskGoal": "修复双击 start-projectflow-embedded.bat 后嵌入式后端未就绪的问题，并重新启动验证。",
+  "actualChanges": [
+    "嵌入式 H2 改为单进程文件数据库，不再启用会遗留远程服务锁的 AUTO_SERVER 模式。",
+    "启动脚本会在启动前识别指向不可访问 H2 服务的旧锁文件并安全移除；若旧服务仍可访问则停止并提示先关闭该服务，避免同时写入同一份数据。"
+  ],
+  "keyFiles": [
+    "backend/src/main/resources/application-embedded.yml",
+    "start-projectflow-embedded.ps1"
+  ],
+  "verification": {
+    "build": "通过桌面启动器执行的前端生产构建后，前端服务返回 HTTP 200。",
+    "tests": "not_run",
+    "manualCheck": "已重新运行 start-projectflow-embedded.bat；后端 /api/health 返回 HTTP 200 和 UP，前端 /login 返回 HTTP 200。"
+  },
+  "unfinished": [],
+  "sedimentCandidates": [
+    "嵌入式启动流程现在可从旧 Docker/虚拟机 H2 服务遗留锁中恢复，并在真实占用时阻止不安全启动。"
+  ]
+}

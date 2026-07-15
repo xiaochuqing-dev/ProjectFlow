@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,7 +36,9 @@ public class ProjectAnalysisJobRunner {
     private final ProjectMemoryService projectMemoryService;
     private final WorkSessionScanService workSessionScanService;
     private final ProjectCapabilityService projectCapabilityService;
+    private final ProjectFactHistoryService projectFactHistoryService;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ProjectAnalysisJobRunner(
         ProjectAnalysisJobRepository jobRepository,
@@ -45,7 +48,9 @@ public class ProjectAnalysisJobRunner {
         ProjectMemoryService projectMemoryService,
         WorkSessionScanService workSessionScanService,
         ProjectCapabilityService projectCapabilityService,
-        ObjectMapper objectMapper
+        ProjectFactHistoryService projectFactHistoryService,
+        ObjectMapper objectMapper,
+        ApplicationEventPublisher eventPublisher
     ) {
         this.jobRepository = jobRepository;
         this.modelUsageRecordRepository = modelUsageRecordRepository;
@@ -54,7 +59,9 @@ public class ProjectAnalysisJobRunner {
         this.projectMemoryService = projectMemoryService;
         this.workSessionScanService = workSessionScanService;
         this.projectCapabilityService = projectCapabilityService;
+        this.projectFactHistoryService = projectFactHistoryService;
         this.objectMapper = objectMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Async
@@ -100,6 +107,19 @@ public class ProjectAnalysisJobRunner {
                 if (!checkpoint(jobId, false)) return;
                 String resultJson = objectMapper.writeValueAsString(result);
                 markSucceeded(jobId, resultJson, null);
+            } else if (job.getJobType() == ProjectAnalysisJobType.PROJECT_FACT_HISTORY_REBUILD) {
+                if (!checkpoint(jobId, true)) return;
+                var result = projectFactHistoryService.processNextChunk(
+                    job.getUserId(), job.getProjectId(), job.getId(), job.getFilePath()
+                );
+                recordHistoryUsage(jobId, result.diagnosticsJson());
+                if (!checkpoint(jobId, false)) return;
+                markSucceeded(jobId, "", null);
+                if (result.hasMore()) {
+                    eventPublisher.publishEvent(new ProjectFactHistoryRequestedEvent(
+                        job.getUserId(), job.getProjectId(), result.upperBoundSha(), true
+                    ));
+                }
             } else if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS) {
                 // V3.3.4: 能力分析异步化。卡片由 service 持久化，job 记录阶段与完成状态。
                 // resultJson 只存简要摘要，前端完成后重新拉取 capability-cards。
@@ -294,6 +314,27 @@ public class ProjectAnalysisJobRunner {
         }
     }
 
+    private void recordHistoryUsage(UUID jobId, String diagnosticsJson) {
+        if (diagnosticsJson == null || diagnosticsJson.isBlank()) return;
+        try {
+            var diagnostics = objectMapper.readTree(diagnosticsJson);
+            int requests = Math.max(0, diagnostics.path("requestCount").asInt(0));
+            jobRepository.findById(jobId).ifPresent(job -> {
+                for (int index = 0; index < requests; index++) {
+                    job.recordModelRequest(
+                        index == 0 ? diagnostics.path("promptTokens").asInt(0) : 0,
+                        index == 0 ? diagnostics.path("completionTokens").asInt(0) : 0,
+                        index == 0 ? diagnostics.path("totalTokens").asInt(0) : 0
+                    );
+                }
+                job.recordDiagnostics(diagnosticsJson, diagnostics.path("modelContentPresent").asBoolean(requests > 0));
+                jobRepository.save(job);
+            });
+        } catch (JsonProcessingException ignored) {
+            // 历史事实和 checkpoint 已经持久化，诊断解析失败不覆盖正式结果。
+        }
+    }
+
     private void recordCapabilityUsage(
         ProjectAnalysisJob job,
         ProjectCapabilityService.CapabilityDiagnostics diagnostics,
@@ -340,6 +381,7 @@ public class ProjectAnalysisJobRunner {
             case PROJECT -> "PROJECT_ANALYSIS";
             case CAPABILITY_INTERPRET -> "CAPABILITY_INTERPRET";
             case WORK_SESSION_SCAN -> "WORK_SESSION_SCAN";
+            case PROJECT_FACT_HISTORY_REBUILD -> "PROJECT_FACT_HISTORY_REBUILD";
             case CAPABILITY_CARD_ANALYSIS -> "CAPABILITY_CARD_ANALYSIS";
             case FILE -> "FILE_ANALYSIS";
         };

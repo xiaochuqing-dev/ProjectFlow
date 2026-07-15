@@ -45,8 +45,9 @@ for (const file of userFacingFiles) {
 }
 
 const projectIntelligence = read("src/app/project-intelligence/page.tsx");
-assert.match(projectIntelligence, /SedimentOverview/, "project sediment should be the primary overview");
-assert.match(projectIntelligence, /建议沉淀/, "project sediment should expose pending recommendations as a secondary entry");
+assert.match(projectIntelligence, /FactMemoryOverviewPanel/, "project facts should be the primary project memory overview");
+assert.match(projectIntelligence, /旧版已确认沉淀/, "legacy sediments should remain available only as compatibility content");
+assert.match(projectIntelligence, /自动项目事实与长期记忆/, "project memory should explain the V3.4 product direction");
 assert.doesNotMatch(projectIntelligence, /label="可信依据"/, "可信依据 should not be a primary right-rail entry");
 assert.doesNotMatch(projectIntelligence, /label="时间线变化"/, "时间线变化 should be merged into project timeline");
 

@@ -1,0 +1,36 @@
+{
+  "taskGoal": "将 ProjectFlow V3.3.8.1 的逐条人工沉淀主链升级为 V3.4.0 自动项目事实、事实游标、项目记录、项目记忆和有界历史回填主链。",
+  "actualChanges": [
+    "分析新变化完成后，证据充分的 DevelopmentSegment 会自动生成长期 ProjectFact，新扫描不再创建人工 ProjectChange 建议队列，用户无需逐条确认即可继续下一批。",
+    "ProjectFact、规范化 commit/Agent result 引用、FactCursor 与独立 HistoryState 已持久化；同批重试和并发写入幂等，关注项不会阻塞批次或增量游标。",
+    "项目记录按批次和月份展示自动事实，批次详情按需读取完整证据；项目记忆以 facts、coverage、最早/最近事实和历史补齐状态为主，旧沉淀保留为兼容内容。",
+    "历史回填复用现有后台任务，按 25 commits 从旧到新处理并跳过已覆盖提交；修复了 100+ commit Git 输出填满子进程管道导致超时的问题。",
+    "V3.3.8.1 风格 batch、segment、sediment 可在文件型 H2 原地幂等迁移，无 source segment 的旧沉淀按证据质量保守处理。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/entity/ProjectFact.java",
+    "backend/src/main/java/com/projectflow/service/ProjectFactIngestionService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectFactHistoryService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectFactMigrationService.java",
+    "backend/src/main/java/com/projectflow/controller/ProjectFactController.java",
+    "backend/src/main/java/com/projectflow/service/WorkSessionScanService.java",
+    "frontend/src/app/sediment-review/page.tsx",
+    "frontend/src/app/sediment-review/[batchId]/page.tsx",
+    "frontend/src/app/project-intelligence/page.tsx",
+    "docs/projectflow-v3.4.0-project-fact-memory-report.md"
+  ],
+  "verification": {
+    "build": "前端 TypeScript noEmit 与 Next.js 16.2.7 production build 通过；后端 test-compile 通过。",
+    "tests": "20 个 V3.4.0 定向后端测试和 24 个前端 contract tests 通过；100/1000/5000 facts 与 105 commits 有界历史场景有实际结果。",
+    "manualCheck": "not_run：按用户要求立即收尾，未执行本机真实 H2、桌面启动、Playwright、PostgreSQL Testcontainers 和完整后端回归。"
+  },
+  "unfinished": [
+    "运行完整 backend test suite、PostgreSQL Testcontainers、Playwright、敏感内容扫描和 Start-ProjectFlow.bat。",
+    "用当前真实 ProjectFlow H2 核对 32 commits/155 files、20 commits/97 files 等旧批次迁移数量。",
+    "确认本次 GitHub Actions 核心门禁结果；CI 状态不能在推送前预写为通过。"
+  ],
+  "sedimentCandidates": [
+    "自动事实写入应把事实持久化、批次完成和游标推进放在同一事务，并用来源证据指纹与批次行锁保证 H2/PostgreSQL 幂等。",
+    "读取大量 Git 子进程输出时必须并行排空 stdout/stderr，否则进程可能因管道缓冲区写满而等待，外层最终误判为命令超时。"
+  ]
+}

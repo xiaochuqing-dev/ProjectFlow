@@ -119,13 +119,60 @@ export function githubDiagnosticLabel(status: string | undefined | null, relatio
 // 质量门槛标记器状态 -> 中文。
 export function qualityStatusLabel(qualityStatus: string | undefined | null): string {
   switch (qualityStatus) {
-    case "PASS": return "待确认";
+    case "PASS": return "质量通过";
     case "NEEDS_REVIEW": return "需复核";
     case "NEEDS_CHINESE_REWRITE": return "需中文修正";
     case "NEEDS_EVIDENCE": return "需补证据";
     case "PARTIAL_EVIDENCE": return "部分证据";
     case "LOW_CONFIDENCE": return "低置信度";
     case "NEEDS_MANUAL": return "需人工整理";
-    default: return "待确认";
+    default: return "需复核";
+  }
+}
+
+export function factRecordStatusLabel(status: string | undefined | null): string {
+  return status === "NEEDS_ATTENTION" ? "需要关注" : "已记录";
+}
+
+export function projectRecordBatchStatusLabel(status: string | undefined | null, attentionCount = 0): string {
+  switch (status) {
+    case "FACTS_RECORDED": return "已自动记录";
+    case "FACTS_RECORDED_WITH_ATTENTION": return `已自动记录，有 ${attentionCount} 条需要关注`;
+    case "PENDING": return "分析中";
+    case "FAILED": return "分析失败";
+    case "REVIEWED":
+    case "PARTIAL": return "历史人工处理批次";
+    default: return attentionCount > 0 ? `已记录，有 ${attentionCount} 条需要关注` : "已记录";
+  }
+}
+
+export function factOriginLabel(origin: string | undefined | null): string {
+  switch (origin) {
+    case "INCREMENTAL_SCAN": return "增量分析";
+    case "HISTORY_BACKFILL": return "历史记忆补齐";
+    case "LEGACY_SEGMENT_MIGRATION": return "旧开发推进段迁移";
+    case "LEGACY_SEDIMENT_MIGRATION": return "旧版沉淀迁移";
+    default: return "项目分析";
+  }
+}
+
+export function factSourceModeLabel(mode: string | undefined | null, providerName?: string): string {
+  switch (mode) {
+    case "MODEL": return providerName ? `模型 · ${providerName}` : "模型分析";
+    case "AGENT_RESULT": return "Agent result";
+    case "LOCAL_RULE": return "本地事实规则";
+    default: return "证据事实";
+  }
+}
+
+export function factHistoryStatusLabel(status: string | undefined | null): string {
+  switch (status) {
+    case "NOT_STARTED": return "尚未开始补齐";
+    case "WAITING_FOR_MODEL": return "等待配置模型";
+    case "RUNNING": return "正在补齐历史记忆";
+    case "PAUSED": return "历史补齐已暂停";
+    case "COMPLETED": return "历史记忆已补齐";
+    case "FAILED": return "历史补齐失败";
+    default: return "历史补齐状态待初始化";
   }
 }

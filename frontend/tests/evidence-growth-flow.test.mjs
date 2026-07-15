@@ -19,17 +19,19 @@ assert.match(api, /draftProjectChangeFromEvidenceBundle/, "frontend API should c
 assert.match(dashboard, /PendingChangesPanel/, "dashboard should render the V3.3 pending-change flow");
 assert.match(pendingChangesPanel, /分析新变化/, "dashboard should expose the cursor-based scan action");
 assert.match(pendingChangesPanel, /开发推进段/, "dashboard should group raw changes into reviewable segments");
-assert.match(pendingChangesPanel, /进入沉淀处理中心/, "dashboard should route batches to the sediment processing center");
+assert.match(pendingChangesPanel, /查看项目记录/, "dashboard should route automatically recorded facts to project records");
 assert.match(api, /batch: ChangeBatch \| null/, "scan responses should expose a stable change batch");
 assert.match(api, /segments: DevelopmentSegment\[\]/, "scan responses should expose deterministic segments");
+assert.match(api, /export type ProjectFact/, "frontend API should expose long-lived project facts");
+assert.match(api, /listProjectRecordBatches/, "frontend API should expose batch-oriented project records");
 
 assert.match(tasks, /ChangeReviewSidebar/, "change review route should render the write-target sidebar");
 assert.match(changeReviewSidebar, /确认后写入/, "change review should preview where confirmed facts go");
 assert.match(changeReviewSidebar, /changeMemoryTargets/, "change review should derive project-memory target fields");
 assert.match(changeReviewSidebar, /每日回顾、README 草稿、周报/, "change review should explain downstream reuse");
 
-assert.match(intelligence, /项目时间线/, "project profile should expose project growth history");
-assert.match(intelligence, /输出来源/, "project profile copy should connect growth records to outputs");
+assert.match(intelligence, /项目事实概览/, "project memory should expose the new factual foundation");
+assert.match(intelligence, /旧版已确认沉淀/, "legacy confirmed sediments should remain available as compatibility content");
 
 assert.match(outputs, /生成依据/, "output generation should show source readiness");
 assert.match(outputs, /OutputSourceMetric/, "output generation should summarize available source assets");

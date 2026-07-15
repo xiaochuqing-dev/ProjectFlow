@@ -8,11 +8,11 @@ const detail = readFileSync(join(root, "src/app/project-sediments/[sedimentId]/p
 const settings = readFileSync(join(root, "src/app/settings/page.tsx"), "utf8");
 const api = readFileSync(join(root, "src/lib/api.ts"), "utf8");
 
-assert.match(intelligence, /title="项目沉淀"/, "project intelligence route should adopt sediment title");
-assert.match(intelligence, /timeGroup\.items\.map/, "overview should render confirmed sediment objects inside status and time groups");
-assert.match(intelligence, /sediments\.length === 0/, "overview should teach the empty state");
+assert.match(intelligence, /title="项目记忆"/, "project intelligence route should adopt project memory title");
+assert.match(intelligence, /LegacySediments/, "project memory should retain confirmed sediment objects in a compatibility area");
+assert.match(intelligence, /旧版已确认沉淀/, "project memory should explain legacy confirmed sediments");
 assert.doesNotMatch(intelligence, /\{fieldConfig\.map\([\s\S]*暂无已确认内容/, "default overview must not render every empty subjective field");
-assert.match(intelligence, /兼容档案字段/, "legacy memory fields should remain available but secondary");
+assert.match(intelligence, /兼容项目档案/, "legacy memory fields should remain available but secondary");
 
 assert.match(detail, /它解决的问题/, "detail first screen should explain the problem solved");
 assert.match(detail, /来源概览/, "detail should summarize sources");

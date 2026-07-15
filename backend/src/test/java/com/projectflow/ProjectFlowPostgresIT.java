@@ -33,9 +33,9 @@ import com.projectflow.entity.ProjectAnalysisJob;
 import com.projectflow.entity.ProjectAnalysisJobStatus;
 import com.projectflow.entity.ProjectAnalysisJobType;
 import com.projectflow.entity.ProjectMemory;
+import com.projectflow.entity.ProjectSediment;
 import com.projectflow.entity.ProjectSpace;
 import com.projectflow.entity.ProjectStatus;
-import com.projectflow.entity.SedimentAction;
 import com.projectflow.repository.AiProviderRepository;
 import com.projectflow.repository.ProjectAnalysisJobRepository;
 import com.projectflow.repository.ProjectCapabilityCardRepository;
@@ -43,10 +43,11 @@ import com.projectflow.repository.ProjectChangeRepository;
 import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.repository.ProjectSedimentRepository;
+import com.projectflow.repository.ProjectFactCursorRepository;
+import com.projectflow.repository.ProjectFactRepository;
 import com.projectflow.service.ProjectAnalysisJobRunner;
 import com.projectflow.service.ProjectAnalysisJobService;
 import com.projectflow.service.ProjectCapabilityService;
-import com.projectflow.service.ProjectSedimentService;
 import com.projectflow.service.DashboardBootstrapService;
 import com.projectflow.service.WorkSessionScanService;
 import com.sun.net.httpserver.HttpServer;
@@ -82,9 +83,10 @@ class ProjectFlowPostgresIT {
     @Autowired ProjectAnalysisJobRepository jobRepository;
     @Autowired ProjectChangeRepository changeRepository;
     @Autowired ProjectSedimentRepository sedimentRepository;
+    @Autowired ProjectFactRepository factRepository;
+    @Autowired ProjectFactCursorRepository factCursorRepository;
     @Autowired ProjectCapabilityCardRepository cardRepository;
     @Autowired WorkSessionScanService workSessionScanService;
-    @Autowired ProjectSedimentService sedimentService;
     @Autowired ProjectCapabilityService capabilityService;
     @Autowired DashboardBootstrapService dashboardBootstrapService;
     @Autowired PlatformTransactionManager transactionManager;
@@ -102,7 +104,7 @@ class ProjectFlowPostgresIT {
             }
             String content = requestBody.contains("capabilities") || requestBody.contains("项目能力")
                 ? "{\"capabilities\":[{\"name\":\"PostgreSQL 工作流可靠性\",\"summary\":\"真实数据库下完成沉淀与能力闭环。\",\"problemSolved\":\"验证事务和关系持久化。\",\"featureEntry\":\"能力与成果\",\"sourceIndexes\":[\"S1\"],\"readme\":\"真实 PostgreSQL 16 工作流验证。\",\"resume\":\"完成项目沉淀到能力卡片闭环。\",\"interview\":\"可说明事务、幂等和失败保留。\"}]}"
-                : "{\"segments\":[{\"segmentTitle\":\"完成 PostgreSQL 工作流验证\",\"plainSummary\":\"将固定 Git 证据整理为可确认开发推进段。\",\"sourceIndexes\":[\"S1\"],\"mainChanges\":[\"读取提交证据\",\"生成分析批次\",\"形成正式建议\"],\"userVisibleValue\":\"验证真实数据库业务闭环。\",\"affectedFiles\":[],\"confidence\":\"HIGH\",\"needsUserReview\":true}]}";
+                : "{\"segments\":[{\"segmentTitle\":\"完成 PostgreSQL 自动事实工作流验证\",\"plainSummary\":\"将固定 Git 证据整理为开发推进段并自动记录项目事实。\",\"sourceIndexes\":[\"S1\"],\"mainChanges\":[\"读取提交证据\",\"生成分析批次\",\"自动形成项目事实\"],\"userVisibleValue\":\"验证真实数据库自动事实闭环。\",\"affectedFiles\":[],\"confidence\":\"HIGH\",\"needsUserReview\":false}]}";
             String escaped = new ObjectMapper().writeValueAsString(content);
             writeResponse(exchange, 200, "{\"choices\":[{\"message\":{\"content\":" + escaped + "},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":120,\"completion_tokens\":80,\"total_tokens\":200}}");
         });
@@ -144,14 +146,29 @@ class ProjectFlowPostgresIT {
 
         var scan = workSessionScanService.scan(fixture.userId(), fixture.project().getId());
         assertThat(scan.batch().segmentationMode()).isEqualTo("MODEL");
-        assertThat(changeRepository.findByProjectIdOrderByCreatedAtDesc(fixture.project().getId())).hasSize(1);
+        assertThat(changeRepository.findByProjectIdOrderByCreatedAtDesc(fixture.project().getId())).isEmpty();
+        assertThat(factRepository.countByProjectId(fixture.project().getId())).isEqualTo(1);
+        var fact = factRepository.findByBatchIdOrderByOccurredFromAscCreatedAtAsc(scan.batch().id()).get(0);
+        assertThat(fact.getCommitRefs()).isNotEmpty();
+        assertThat(factCursorRepository.findByProjectId(fixture.project().getId()).orElseThrow().getLastBatchId())
+            .isEqualTo(scan.batch().id());
+
+        var repeatedScan = workSessionScanService.scan(fixture.userId(), fixture.project().getId());
+        assertThat(repeatedScan.batch().id()).isEqualTo(scan.batch().id());
+        assertThat(factRepository.countByProjectId(fixture.project().getId())).isEqualTo(1);
         var bootstrap = dashboardBootstrapService.load(fixture.userId(), fixture.project().getId());
         assertThat(bootstrap.workSessionScan().batch().id()).isEqualTo(scan.batch().id());
         assertThat(bootstrap.workSessionScan().segments()).hasSize(1);
-        assertThat(bootstrap.pendingSedimentReviewCount()).isEqualTo(1);
-        var change = changeRepository.findByProjectIdOrderByCreatedAtDesc(fixture.project().getId()).get(0);
-        var confirmation = sedimentService.confirm(fixture.userId(), change.getId(), SedimentAction.NEW_SEDIMENT, null);
-        assertThat(confirmation.sediment().capabilityStatus()).isEqualTo("PENDING_ANALYSIS");
+        assertThat(bootstrap.pendingSedimentReviewCount()).isZero();
+
+        ProjectSediment legacySediment = new ProjectSediment(fixture.project().getId());
+        legacySediment.updateCore(
+            "PostgreSQL 旧沉淀兼容", "旧沉淀继续参与既有能力分析", "验证 V3.3.x 兼容链路",
+            "PROJECT_CAPABILITY", List.of(scan.segments().get(0).id().toString()), fact.getEvidenceRefs()
+        );
+        legacySediment.recordConfirmation(scan.batch().id(), fact.getAffectedFiles(), "MODEL_RESULT", "PASS");
+        legacySediment = sedimentRepository.saveAndFlush(legacySediment);
+        assertThat(legacySediment.getCapabilityStatus()).isEqualTo("PENDING_ANALYSIS");
 
         ProjectAnalysisJob capabilityJob = new ProjectAnalysisJob(
             fixture.project().getId(), fixture.userId(), ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS, null
@@ -167,7 +184,7 @@ class ProjectFlowPostgresIT {
         capabilityJob.markSucceeded("{\"cardCount\":1}", null);
         jobRepository.saveAndFlush(capabilityJob);
 
-        var reloadedSediment = sedimentRepository.findById(confirmation.sediment().id()).orElseThrow();
+        var reloadedSediment = sedimentRepository.findById(legacySediment.getId()).orElseThrow();
         var reloadedCard = cardRepository.findById(confirmedCard.id()).orElseThrow();
         assertThat(reloadedSediment.getLastCapabilityAnalysisJobId()).isEqualTo(capabilityJob.getId());
         assertThat(reloadedSediment.getCapabilityStatus()).isNotEqualTo("PENDING_ANALYSIS");

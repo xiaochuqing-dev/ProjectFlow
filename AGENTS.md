@@ -1,16 +1,36 @@
-<!-- PROJECTFLOW V3.3.8.1 CONTEXT START -->
-ProjectFlow 当前版本为 V3.3.8.1。后续 Agent 必须按“待整理变更 -> 开发推进段 -> 批次化沉淀处理 -> 项目沉淀 -> 能力分析”理解产品，不要回到旧的“今日开发 / 项目资产字段”主线。
+<!-- PROJECTFLOW V3.4.0 CONTEXT START -->
+ProjectFlow 当前版本为 V3.4.0。后续 Agent 必须按“分析新变化 -> 开发推进段 -> 自动项目事实 -> 项目记录 / 项目记忆”理解产品。正常事实不逐条确认，只有异常进入“需要关注”。
 
 开始任务前请阅读 `.projectflow/AGENT_PROTOCOL.md`。完成开发任务后，按协议把结果写入 `.projectflow/agent-results/`。不要删除添加项目、zip 导入、本地项目绑定、模型配置、登录等核心入口。
 
-开发推进段必须描述真实开发结果、用户或开发者可感知变化、验证情况和不确定项。禁止用 backend/frontend/docs/config 等目录名、提交数量或“开发推进”空话替代具体摘要。能力与成果页以结构化 Capability Card 为主，旧 `completedCapabilities` 仅作兼容档案。
+开发推进段和项目事实必须描述真实发生的开发结果、用户或开发者可感知变化、验证情况和不确定项。禁止用 backend/frontend/docs/config 等目录名、提交数量或“开发推进”空话替代具体摘要。能力与成果页以结构化 Capability Card 为主，旧 `completedCapabilities` 仅作兼容档案。
 
-V3.3.8.1 关键决策（后续 Agent 必须遵守）：
-- 分析结果以数据库中的 job、批次、开发推进段、正式建议和项目沉淀为事实来源；sessionStorage 只用于按项目快速恢复，不得作为永久业务存储。
+V3.4.0 关键决策（后续 Agent 必须遵守）：
+- 正常 evidence-backed 项目事实自动记录，不得要求逐条人工确认；人工确认不是 ProjectFact 主链的一部分。
+- `DevelopmentSegment` 是单次分析产物，`ProjectFact` 是稳定长期事实；后续分析、历程或能力生成不得删除或批量替换原始事实。
+- ProjectFact 只描述已经发生的事情；“下一步建议”、重要性判断和未来规划不得自动写成事实。
+- ProjectFact 不按标题相似度自动主题合并；事实指纹优先基于项目、来源 segment/batch 和排序后的 commit、Agent result、evidence 引用。
+- 同一 batch/job/retry、reusable batch、服务恢复和 history backfill 必须幂等；并发写入不得生成重复事实。
+- `FactCursor` 只在该批 facts 成功持久化后推进；写入失败不得提前推进。
+- `NEEDS_ATTENTION` 只承载无有效证据、证据冲突、边界不完整或无法安全去重等异常，不阻塞其他事实、批次完成或 cursor。
+- 增量 `FactCursor` 与历史 backfill cursor 必须分离；历史重建不得改变普通增量扫描边界。
+- 历史 backfill 必须分 bounded chunk、oldest-to-newest 执行并持久化 checkpoint；禁止一次把完整 Git 历史塞给模型。
+- 已有 facts、segments 或 sediments 覆盖的 commit 不得重复模型分析；重启、取消和 retry 从 checkpoint 继续。
+- 新的正常扫描不得创建人工 sediment suggestion；`ProjectChange`、`SedimentAction`、`ProjectSediment` 和 `ProjectReviewCursor` 只作 V3.3.x 数据与旧链接兼容。
+- 旧 `DevelopmentSegment` 优先迁移为 ProjectFact；有 source segment 的旧 sediment 不得再生成第二份事实，无证据旧数据不得伪装成普通事实。
+- 事实时间来自 commit/Agent result/批次证据时间，不得用今天的写入时间冒充历史发生时间；降级时间必须可诊断。
+- V3.3.7 job infrastructure 与 V3.3.8 model gateway 保持稳定，不得为本阶段重写。
+- 数据库中的 batch、segment、fact、cursor 和 history state 是事实来源；页面缓存只作加速层。
+- 所有 ProjectFact、记录、记忆、游标和历史状态 API 必须校验 userId 与 projectId 归属。
+- 本阶段不提前实现完整 timeline、全生命周期 capability map、Hermes 正式同步或 Obsidian 正式同步。
+- V3.4.0 收尾必须生成 `docs/projectflow-v3.4.0-project-fact-memory-report.md`，只记录实际观察到的测试、性能、H2、PostgreSQL、Playwright、桌面启动、CI、提交和已知风险，不得预写通过结果。
+
+V3.3.8.1 读取与启动可靠性（仍然有效）：
+- 分析结果以数据库中的 job、批次、开发推进段、项目事实、游标和历史状态为事实来源；sessionStorage 只用于按项目快速恢复，不得作为永久业务存储。
 - 弱读取结果不得覆盖已有完整 batch/segments；只有数据库明确证明不存在时才允许清空。
 - 旧批次、正式建议和开发推进段的可空字段必须 null-safe；单条旧数据不完整不得使整个列表失败。
 - 工作台第一屏通过轻量 Bootstrap Read Model 读取持久化事实，禁止在该接口执行 Git、GitHub CLI、文件扫描或模型调用。
-- 每次完成代码或构建配置修改后，必须验证仓库根目录 `Start-ProjectFlow.bat` 能重新构建并运行当前工作树。该入口不得依赖个人绝对路径；成功启动证据记录到 `logs/last-embedded-build.json`。
+- 每次完成代码或构建配置修改后，必须验证仓库根目录 `Start-ProjectFlow.bat` 能用相对路径重建并运行当前工作树；桌面入口在工作区干净时先快进同步 GitHub master，存在本地修改时必须保护修改、跳过远程同步并构建当前工作树。成功启动证据记录到 `logs/last-embedded-build.json`。
 - V3.3.7 后台任务可靠性和 V3.3.8 模型可靠性已完成；除直接受本轮改动影响外，不得重复重构。
 
 V3.3.8 关键决策（后续 Agent 必须遵守）：
@@ -34,10 +54,10 @@ V3.3.7 关键决策（后续 Agent 必须遵守）：
 - 开发完成至少运行后端测试、H2 兼容、前端生产构建和 Playwright；PostgreSQL Testcontainers 在 Docker/CI 环境运行并作为阻断门禁。
 - V3.3.7 收尾报告必须记录测试数量、核心 E2E 范围、PostgreSQL workflow、H2 旧库升级、CI Run、真实 DeepSeek 状态、关键文件和提交 SHA。
 
-V3.3.6 关键决策（后续 Agent 必须遵守）：
-- 工作台只显示分析批次摘要；沉淀处理中心按时间和批次组织，并默认逐条处理正式建议。
-- 本地事实草稿和 Agent result 草稿不得自动生成正式沉淀建议；来源、质量和推荐强度必须明确显示。
-- 确认项目沉淀后必须记录来源批次、涉及文件和待能力分析状态；能力分析以已确认项目沉淀为输入并记录输入快照。
+V3.3.6 兼容层决策（仅用于旧数据和旧链接）：
+- 旧沉淀处理中心、四类 SedimentAction、ProjectChange 和 ProjectSediment API 继续可读，不得重新成为新扫描主链。
+- 旧本地草稿和 Agent result 草稿不得在兼容分支中自动升级为人工沉淀建议；V3.4 ProjectFact 是否记录只按客观证据与质量规则判断。
+- 旧已确认项目沉淀保留来源批次、涉及文件和能力分析状态；既有能力分析语义保持兼容。
 - 能力分析失败不得消耗待分析状态或覆盖上次成功卡片；成功持久化后才更新沉淀参与状态。
 - Git、文件、GitHub、Agent result 和模型等外部耗时调用不得放在方法级长事务中。
 
@@ -45,7 +65,7 @@ V3.3.5 关键决策（仍然有效）：
 - 模型链路必须区分请求、响应、截断、JSON 解析、目标结构识别、证据绑定和持久化阶段。诊断保留 finish reason、token usage、实际 Max Tokens/Temperature、超时、Provider/model、紧凑重试与部分恢复结果，不显示 Key 或原始响应。
 - 模型疑似截断时执行一次紧凑重试；截断根数组中已经完整的条目可以保留并标记警告，不能笼统归为“格式无效”。
 - DisplayContentSanitizer 只负责规范化，不再在持久化前截断。列表使用展示层预览，详情展示完整内容；旧省略号数据标记后引导重新分析，不假装恢复。
-- 沉淀确认使用“系统推荐 + 后果预览 + 明确结果”，普通用户不需要理解内部枚举；确认后反馈目标、证据数、文件数、摘要变化与查看入口。
+- 旧沉淀确认兼容页继续使用“系统推荐 + 后果预览 + 明确结果”，但该规则不适用于自动 ProjectFact 主链。
 - 能力卡片关联分析 job。页面区分当前成功批次、最近失败和历史；失败不替换上次成功候选，已确认能力始终保留，旧版无 job 卡片标为来源未知。
 - Provider 支持测试、编辑、唯一默认、删除保护和用户确认后的重复清理。Key 留空保留，只有显式勾选才清除；新模型任务只使用明确默认项。
 
@@ -64,8 +84,8 @@ V3.3.3 仍有效的关键决策：
 - 模型结果保留优先，质量门槛改为标记器（PASS / NEEDS_REVIEW / NEEDS_CHINESE_REWRITE / NEEDS_EVIDENCE / PARTIAL_EVIDENCE / LOW_CONFIDENCE），不再整批丢弃模型结果。只有模型完全不可用（未配置 / 调用失败 / 未返回 / 无法解析 JSON / 证据完全不可用）才回退本地规则。
 - 多来源证据（本地 Git / 工作区 diff / GitHub / Agent result / 扫描范围）要整理成分析输入快照交给模型，模型基于证据灵活判断真实开发状态，不写死优先级。
 - 需要模型理解的入口（分析新变化、分析项目能力）必须有模型配置前置检查；未配置模型时不生成低质量本地模板结果，明确提示去配置模型。
-- 规则负责证据事实，模型负责灵活理解，用户负责最终确认。
-<!-- PROJECTFLOW V3.3.8.1 CONTEXT END -->
+- 规则负责证据事实，模型负责灵活理解；正常客观事实自动记录，用户只处理主观编辑和异常关注项。
+<!-- PROJECTFLOW V3.4.0 CONTEXT END -->
 
 # ProjectFlow Local Rules
 

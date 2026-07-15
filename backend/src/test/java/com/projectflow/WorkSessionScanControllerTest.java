@@ -215,27 +215,28 @@ class WorkSessionScanControllerTest {
         run(projectPath, "git", "add", ".");
         run(projectPath, "git", "commit", "-m", "feat: add feedback evidence");
 
-        mockMvc.perform(post("/api/projects/" + projectId + "/scan")
+        MvcResult feedbackScan = mockMvc.perform(post("/api/projects/" + projectId + "/scan")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.sessions[0].agentType").value("CODEX"))
-            .andExpect(jsonPath("$.data.sessions[0].detectionMethod").value("USER_FEEDBACK"));
+            .andExpect(jsonPath("$.data.sessions[0].detectionMethod").value("USER_FEEDBACK"))
+            .andReturn();
+
+        String committedSessionId = objectMapper.readTree(feedbackScan.getResponse().getContentAsString())
+            .at("/data/sessions/0/sessionId")
+            .asText();
 
         Files.writeString(projectPath.resolve("src/app/page.tsx"), "export default function Page() { return <main>Conflict</main>; }\n");
         MvcResult conflictScan = mockMvc.perform(post("/api/projects/" + projectId + "/scan")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.sessions.length()").value(greaterThanOrEqualTo(2)))
+            .andExpect(jsonPath("$.data.sessions.length()").value(greaterThanOrEqualTo(1)))
             .andExpect(jsonPath("$.data.batch.worktreeDirty").value(true))
             .andReturn();
 
         String uncommittedSessionId = objectMapper.readTree(conflictScan.getResponse().getContentAsString())
             .at("/data/sessions/0/sessionId")
             .asText();
-        String committedSessionId = objectMapper.readTree(conflictScan.getResponse().getContentAsString())
-            .at("/data/sessions/1/sessionId")
-            .asText();
-
         mockMvc.perform(post("/api/work-sessions/" + uncommittedSessionId + "/evidence-bundles")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk());

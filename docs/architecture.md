@@ -2,11 +2,34 @@
 
 ## System Overview
 
-ProjectFlow uses a separated frontend and backend architecture. The current V3.3.8.1 product spine is a developer workbench that turns real project activity into confirmed project sediment and then into traceable capability analysis.
+ProjectFlow uses a separated frontend and backend architecture. The V3.4.0 product spine is a local-first project memory system that turns real Git, worktree, and Agent evidence into durable Project Facts without routine manual confirmation.
+
+## V3.4.0 automatic fact memory boundary
+
+The proven scan front half remains: `PendingChangeScanService` prepares an incremental range, evidence readers build an `AnalysisInputSnapshot`, and `DevelopmentSegmentationService` plus optional model enrichment produce `DevelopmentSegment` records. The persistence back half changes: validated segments enter fact ingestion, produce idempotent `ProjectFact` rows, update batch fact statistics, and advance `ProjectFactCursor` only after successful persistence.
+
+```mermaid
+flowchart LR
+    Evidence[Git / worktree / Agent evidence] --> Snapshot[AnalysisInputSnapshot]
+    Snapshot --> Segment[DevelopmentSegment]
+    Segment --> Validate[Evidence and quality validation]
+    Validate -->|recordable| Fact[ProjectFact]
+    Validate -->|exception| Attention[Needs Attention]
+    Fact --> Records[Project Records]
+    Fact --> Memory[Project Memory read models]
+    Fact --> Cursor[Fact Cursor advances]
+    Attention --> Records
+```
+
+`DevelopmentSegment` belongs to one analysis batch and retains model/fallback diagnostics. `ProjectFact` is the stable long-term record of what happened. Facts are append-oriented, are not merged by title similarity, and are not replaced by later timeline or capability generation. Evidence conflicts, missing evidence, incomplete boundaries, and unsafe duplicates become `NEEDS_ATTENTION`; they never block other facts or the next incremental range.
+
+Historical reconstruction uses the existing durable-job reliability infrastructure but a separate history state/checkpoint from the incremental Fact Cursor. It processes bounded commit chunks oldest-first, skips already covered commits, preserves completed chunks on cancellation, and resumes from persisted state. It never sends the full repository history to one model request.
+
+`ProjectChange`, `SedimentAction`, `ProjectSediment`, `ProjectReviewCursor`, and the legacy `ProjectMemory` profile row remain compatibility boundaries. New normal scans do not create the manual sediment suggestion queue. Complete timeline, lifecycle capability map, Hermes sync, and Obsidian sync are future fact consumers, not V3.4.0 architecture components.
 
 ## V3.3.8.1 dashboard read boundary
 
-The database is the source of truth for analysis jobs, change batches, development segments, formal changes, and sediments. A project-scoped sessionStorage snapshot may render immediately, but the lightweight `dashboard-bootstrap` read model always calibrates it from persisted facts. Bootstrap performs only latest/count reads; Git, GitHub CLI, model calls, filesystem scans, and long analysis remain outside this boundary. Materials, suggestions, history, tasks, evidence, conflicts, outputs, and live GitHub inspection load independently and cannot clear the core scan result on failure.
+The database is the source of truth for analysis jobs, change batches, development segments, Project Facts, fact cursors, history state, and legacy compatibility records. A project-scoped sessionStorage snapshot may render immediately, but the lightweight `dashboard-bootstrap` read model always calibrates it from persisted state. Bootstrap performs only latest/count/bounded projection reads; Git, GitHub CLI, model calls, filesystem scans, history reconstruction, and long analysis remain outside this boundary. Secondary reads cannot clear the core scan result on failure.
 
 ## V3.3.8 model reliability boundary
 
@@ -22,9 +45,9 @@ HTTP creation requests only validate ownership, lock the project row, reuse or p
 
 The restart listener requeues untouched QUEUED jobs. RUNNING work before model dispatch becomes RETRYABLE; work at or beyond a model stage becomes INTERRUPTED because automatic replay could duplicate billing. Completed and confirmed records are never deleted by cancellation or recovery.
 
-## V3.3.6 Batch Review and Transaction Boundaries
+## V3.3.6 legacy batch review and transaction boundaries
 
-`ChangeBatch` is the sediment-processing batch. The batch list aggregates formal suggestions, local drafts, processed items, pending items, model status, and time group without expanding every item. The batch detail loads one formal suggestion at a time; local fact drafts remain a separate read-only queue until a new model analysis or explicit manual organization.
+The V3.3.x batch review remains readable for old records and links. Its formal suggestions, local drafts, actions, and confirmed sediments are compatibility data; they do not define V3.4.0 batch completion or Fact Cursor advancement.
 
 Confirmed `ProjectSediment` records source batch IDs, affected files, source/quality labels, and capability-analysis state. Capability analysis snapshots sediment IDs, performs the model call outside a transaction, atomically replaces only unconfirmed cards, and marks sediments analyzed only after successful persistence.
 
@@ -56,9 +79,9 @@ flowchart LR
 | --- | --- |
 | Next.js frontend | App shell, dashboard flow state, project profile, change review, daily review, output display |
 | Spring Boot backend | Auth, ownership checks, import analysis, work-session scanning, evidence lifecycle, AI orchestration, persistence |
-| PostgreSQL | Source of truth for users, projects, tasks, logs, materials, changes, memory, evidence bundles, AI outputs |
+| PostgreSQL | Source of truth for users, projects, batches, segments, facts, cursors, history state, legacy records, and outputs |
 | Redis | AI task state, project statistics cache, rate limits, future import locks |
-| AI provider | Mock provider first; later DeepSeek or OpenAI-compatible provider |
+| AI provider | OpenAI-compatible Provider through ModelGateway; fixed compatible services are test infrastructure only |
 
 ## Frontend Architecture
 
@@ -140,7 +163,8 @@ Recent service/controller split:
 | Project import and legacy suggestions | `ProjectIntelligenceController`, `ProjectIntelligenceService` |
 | Project materials | `ProjectMaterialController`, `ProjectMaterialService` |
 | Project analysis jobs and records | `ProjectAnalysisController`, `ProjectAnalysisService`, `ProjectAnalysisJobService`, `ProjectAnalysisRecordService` |
-| Project memory and fact sources | `ProjectMemoryController`, `ProjectMemoryService` |
+| Project fact memory | `ProjectFactIngestionService`, `ProjectFactService`, `ProjectFactController`, history-state/backfill coordination |
+| Legacy project memory and fact sources | `ProjectMemoryController`, `ProjectMemoryService` |
 | Structured change review | `ProjectChangeController`, `ProjectChangeReviewService` |
 | Zip scanning | `ProjectZipScanService` |
 | Model calls and fallback | `ModelGatewayService` |
@@ -148,7 +172,31 @@ Recent service/controller split:
 
 ## Key Flows
 
-### V3.2 Evidence To Growth Flow
+### V3.4 automatic fact and history flow
+
+```mermaid
+flowchart LR
+    Bind[Bind local Git project] --> Scan[Analyze new changes]
+    Scan --> Batch[Change Batch]
+    Batch --> Segments[Development Segments]
+    Segments --> Facts[Automatic Project Facts]
+    Facts --> Cursor[Advance Fact Cursor]
+    Facts --> Records[Project Records]
+    Facts --> FactMemory[Project Memory]
+    Cursor --> Backfill[Start or resume bounded history backfill]
+    Backfill --> OlderFacts[Older Project Facts]
+    OlderFacts --> Records
+```
+
+Rules:
+
+- Fact persistence and incremental cursor advancement share one success boundary.
+- `NEEDS_ATTENTION` is a fact-quality state, not a blocking approval queue.
+- A reusable batch may idempotently fill missing facts before returning.
+- History coverage and incremental coverage are independent; history work cannot move the normal cursor backward.
+- Read APIs use ownership checks, pagination and aggregate/projection queries rather than loading all facts.
+
+### V3.2 evidence-to-growth compatibility flow
 
 ```mermaid
 flowchart LR
@@ -169,9 +217,9 @@ Rules:
 
 - Zip import creates the initial profile and file structure; it is not the daily change tracker.
 - Local project path is required before Git evidence, agent result scanning, and context sync.
-- Evidence Bundle is objective evidence, not a confirmed project fact.
+- Evidence Bundle is objective evidence, not a stable V3.4 ProjectFact.
 - Project Change is the editable review object.
-- Only accepted changes and user-confirmed memory become output sources and synced context.
+- Existing accepted changes and user-confirmed memory remain compatibility sources; later fact-native outputs will consume stable ProjectFact read models.
 - The dashboard must expose the next action without requiring documentation.
 
 ### Authentication

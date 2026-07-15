@@ -21,8 +21,8 @@ assert.match(pendingPanel, /开发推进段/, "pending panel should explain segm
 assert.match(pendingPanel, /<details/, "raw evidence must be collapsed by default");
 assert.doesNotMatch(pendingPanel, /刷新今日开发|开发成果审查|项目资产入库台/, "old workflow language must leave the primary panel");
 
-assert.match(shell, /沉淀处理/, "navigation should use sediment processing language");
-assert.match(shell, /项目沉淀/, "navigation should use project sediment language");
+assert.match(shell, /项目记录/, "navigation should use project record language");
+assert.match(shell, /项目记忆/, "navigation should use project memory language");
 assert.match(tasks, /title="沉淀确认"/, "tasks route should keep its URL but use the V3.3 title");
 assert.match(reviewList, /NEW_SEDIMENT/, "review must support creating a sediment");
 assert.match(reviewList, /MERGE_EXISTING/, "review must support merging a sediment");
@@ -34,5 +34,6 @@ assert.match(api, /export type ChangeBatch/, "API contract should expose change 
 assert.match(api, /export type DevelopmentSegment/, "API contract should expose development segments");
 assert.match(api, /export type ProjectSediment/, "API contract should expose confirmed sediments");
 assert.match(api, /confirmProjectChange/, "API contract should expose four-action confirmation");
+assert.match(api, /getProjectFact/, "API contract should expose automatic fact details while retaining legacy confirmation");
 
 console.log("V3.3 pending workflow checks passed");

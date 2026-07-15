@@ -1,5 +1,84 @@
 # Data Model
 
+## V3.4.0 project fact memory
+
+`ChangeBatch`, `DevelopmentSegment`, and `ProjectFact` are deliberately separate layers. A batch is the time/evidence container for one incremental or historical range. A segment is a model/rule analysis result with diagnostics. A fact is the durable, append-oriented record of what objectively happened.
+
+### project_facts
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| id | UUID | Primary key |
+| project_id | UUID | Owned project |
+| batch_id | UUID, nullable | Source Change Batch; nullable for compatible legacy provenance |
+| source_segment_id | UUID, nullable | Source Development Segment |
+| legacy_sediment_id | UUID, nullable | Compatibility source when no segment is available |
+| origin | varchar | INCREMENTAL_SCAN, HISTORY_BACKFILL, LEGACY_SEGMENT_MIGRATION, LEGACY_SEDIMENT_MIGRATION |
+| title | varchar/text | Concrete fact title |
+| summary | text | Objective description of what happened |
+| main_changes | text/json | Concrete changes, not future recommendations |
+| user_visible_value | text | User/developer-visible result when evidence supports it |
+| occurred_from / occurred_to | timestamptz | Evidence occurrence window, not ingestion time |
+| commit_refs | text/json | Stable commit references |
+| commit_urls | text/json | Optional safe remote links |
+| agent_result_refs | text/json | Bound Agent result references |
+| affected_files | text/json | Related paths |
+| evidence_refs | text/json | Validated evidence identity |
+| source_mode | varchar | MODEL, MODEL_PARTIAL_RESULT, LOCAL_RULE, AGENT_RESULT, or compatible source label |
+| quality_status | varchar | Preserved quality-gate result |
+| confidence | varchar | Evidence/model confidence metadata |
+| record_status | varchar | RECORDED or NEEDS_ATTENTION |
+| attention_reason | text, nullable | Human-readable exceptional evidence/quality reason |
+| fact_fingerprint | varchar | Stable source/evidence-derived idempotency key |
+| created_at / updated_at | timestamptz | Persistence timestamps |
+
+`fact_fingerprint` must not depend primarily on model title or summary. The service canonicalizes project/source identity and sorted commit, Agent-result, and evidence references. Service-level reuse plus a database uniqueness boundary prevents duplicate facts across batch reuse, retry, restart, concurrent ingestion, migration, and history replay.
+
+`project_fact_commit_refs` is a normalized coverage table with `project_id`, `fact_id`, `commit_sha`, and `created_at`. Its unique `(fact_id, commit_sha)` boundary and `(project_id, commit_sha)` index support distinct coverage counting and covered-commit skipping without loading every fact/evidence list.
+
+`RECORDED` requires a valid source segment or compatible legacy source, usable title/summary, and valid objective evidence. A complete partial model result may be recorded when its fact boundary is reliable. LOCAL_RULE with Git evidence and Agent result bound to code evidence may also be recorded. Missing evidence never becomes a strong fact; it produces `NEEDS_ATTENTION`, an analysis-only diagnostic, or no ProjectFact according to the quality policy.
+
+### project_fact_cursors
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| id | UUID | Primary key |
+| project_id | UUID | One incremental cursor per project |
+| last_recorded_commit_sha | varchar | Latest commit whose batch fact ingestion completed |
+| last_recorded_at | timestamptz | Successful advancement time |
+| branch_name | varchar | Branch observed for the cursor |
+| last_batch_id | UUID | Batch that advanced the cursor |
+| created_at / updated_at | timestamptz | Persistence timestamps |
+
+Initialization order is existing Fact Cursor, then legacy Review Cursor, then the bounded first-scan policy. Fact persistence, batch fact statistics, and cursor advancement share one success boundary. `NEEDS_ATTENTION` does not block advancement; an ingestion failure does.
+
+### project_fact_history_states
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| id | UUID | Primary key |
+| project_id | UUID | One history coverage state per project |
+| status | varchar | NOT_STARTED, WAITING_FOR_MODEL, RUNNING, PAUSED, COMPLETED, FAILED, or compatible state |
+| head_snapshot_sha | varchar | Stable backfill upper boundary; read DTO may expose the same value as `upperBoundSha` |
+| total_commit_count | integer/long | Commits in the bounded coverage calculation |
+| covered_commit_count | integer/long | Commits already represented by facts/segments/legacy evidence |
+| remaining_commit_count | integer/long | Commits still uncovered |
+| last_processed_commit_sha | varchar | Persistent checkpoint |
+| current_chunk / completed_chunk_count | integer | Bounded progress |
+| last_batch_id | UUID | Latest completed historical batch |
+| started_at / updated_at / completed_at | timestamptz | Lifecycle timestamps |
+| error_code / error_summary | varchar/text | Safe resumable failure diagnostics |
+
+History state never replaces the incremental Fact Cursor. Completed chunks and facts survive cancellation/restart; retry resumes from the checkpoint and skips covered commits.
+
+### Change Batch fact state
+
+New batches express fact recording rather than manual completion. `fact_count`, `attention_count`, `fact_occurred_from`, `fact_occurred_to`, and `scan_type` support Project Records without expanding every fact. New status values are `FACTS_RECORDED` and `FACTS_RECORDED_WITH_ATTENTION`. Legacy `PENDING`, `PARTIAL`, and `REVIEWED` remain readable and are not rewritten blindly.
+
+### Stable compatibility boundary
+
+Existing `ProjectChange`, `ProjectSediment`, `SedimentAction`, `ProjectReviewCursor`, and the legacy `ProjectMemory` row are retained. A legacy sediment with a source segment reuses that segment's fact identity; a sediment without a segment may create one legacy fact only when objective evidence exists. Old pending changes do not block Fact Cursor advancement.
+
 ## V3.3.8.1 read compatibility
 
 `ChangeBatch`, `ProjectChange`, and `DevelopmentSegment` remain business facts even when historical rows predate newer diagnostic fields. Entity/DTO reads now apply conservative null-safe values for batch model/provider/scope/GitHub/fingerprint/timing/status/timestamps, change source/quality/strength/action/evidence, and segment generation/quality/fallback/evidence/status fields. No data backfill rewrites historical values; incomplete batches are exposed as `LEGACY_INCOMPLETE` for user review.
@@ -54,6 +133,12 @@ erDiagram
     projects ||--o{ work_sessions : scans
     work_sessions ||--o{ evidence_bundles : produces
     projects ||--o{ project_analysis_records : stores
+    projects ||--o{ change_batches : analyzes
+    change_batches ||--o{ development_segments : groups
+    change_batches ||--o{ project_facts : records
+    projects ||--o{ project_facts : remembers
+    projects ||--o| project_fact_cursors : advances
+    projects ||--o| project_fact_history_states : covers
     dev_logs ||--o{ ai_outputs : may_source
 ```
 
@@ -160,7 +245,7 @@ Imported or scanned source material used to create project understanding.
 
 ## project_memory
 
-The confirmed project archive. Outputs and context sync should prefer this over unreviewed evidence.
+Legacy subjective project archive. It remains readable for profile fields and V3.3.x consumers, but it is not the V3.4 factual memory core. New timelines, capability maps, and external integrations should be based on ProjectFact read models rather than `completed_capabilities` text.
 
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -213,7 +298,7 @@ Objective evidence package for a work session.
 
 ## project_changes
 
-Reviewable structured change generated from evidence.
+Legacy reviewable structured change generated from evidence. It remains available for V3.3.x data and links; normal V3.4 scans do not create this as their fact-recording path.
 
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -275,7 +360,12 @@ Persisted project or file analysis result.
 | work_sessions | project_id, ended_at desc |
 | evidence_bundles | project_id, status, updated_at desc |
 | project_analysis_records | project_id, created_at desc |
+| project_facts | unique project_id + fact_fingerprint; project_id + occurred_to; batch_id; source_segment_id; project_id + record_status |
+| project_fact_commit_refs | unique fact_id + commit_sha; project_id + commit_sha |
+| project_fact_cursors | unique project_id |
+| project_fact_history_states | unique project_id |
+| change_batches | project_id and existing batch-order queries; fact counts/status remain row metadata |
 
 ## Ownership Rule
 
-All resource access is scoped through `projects.user_id`. A user can access tasks, dev logs, import records, AI outputs, project materials, work sessions, evidence bundles, changes, memory, fact sources, or analysis records only if the parent project belongs to that user.
+All resource access is scoped through `projects.user_id`. A user can access tasks, logs, imports, outputs, materials, work sessions, evidence bundles, changes, memory, fact sources, facts, cursors, history states, batches, segments, or analysis records only if the parent project belongs to that user.

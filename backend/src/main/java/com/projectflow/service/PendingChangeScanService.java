@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -17,9 +18,11 @@ import com.projectflow.dto.V33WorkflowDtos.DevelopmentSegmentResponse;
 import com.projectflow.entity.ChangeBatch;
 import com.projectflow.entity.DevelopmentSegment;
 import com.projectflow.entity.DevelopmentSegmentStatus;
+import com.projectflow.entity.ProjectFactCursor;
 import com.projectflow.entity.ProjectReviewCursor;
 import com.projectflow.repository.ChangeBatchRepository;
 import com.projectflow.repository.DevelopmentSegmentRepository;
+import com.projectflow.repository.ProjectFactCursorRepository;
 import com.projectflow.repository.ProjectReviewCursorRepository;
 import com.projectflow.service.DevelopmentSegmentationService.SegmentDraft;
 
@@ -33,17 +36,20 @@ public class PendingChangeScanService {
     private static final long COMMAND_TIMEOUT_SECONDS = 15;
 
     private final ProjectReviewCursorRepository cursorRepository;
+    private final ProjectFactCursorRepository factCursorRepository;
     private final ChangeBatchRepository batchRepository;
     private final DevelopmentSegmentRepository segmentRepository;
     private final SegmentQualityGate qualityGate;
 
     public PendingChangeScanService(
         ProjectReviewCursorRepository cursorRepository,
+        ProjectFactCursorRepository factCursorRepository,
         ChangeBatchRepository batchRepository,
         DevelopmentSegmentRepository segmentRepository,
         SegmentQualityGate qualityGate
     ) {
         this.cursorRepository = cursorRepository;
+        this.factCursorRepository = factCursorRepository;
         this.batchRepository = batchRepository;
         this.segmentRepository = segmentRepository;
         this.qualityGate = qualityGate;
@@ -51,9 +57,17 @@ public class PendingChangeScanService {
 
     public ScanPlan prepare(Path projectRoot, UUID projectId, String branchName) {
         String head = command(projectRoot, List.of("git", "rev-parse", "HEAD")).output().trim();
-        ProjectReviewCursor cursor = cursorRepository.findByProjectId(projectId).orElse(null);
+        ProjectFactCursor factCursor = factCursorRepository.findByProjectId(projectId).orElse(null);
+        ProjectReviewCursor legacyCursor = cursorRepository.findByProjectId(projectId).orElse(null);
         List<String> warnings = new ArrayList<>();
-        if (cursor == null || cursor.getLastReviewedCommitSha() == null || cursor.getLastReviewedCommitSha().isBlank()) {
+        if (factCursor == null && legacyCursor != null && !legacyCursor.getLastReviewedCommitSha().isBlank()) {
+            factCursor = new ProjectFactCursor(projectId);
+            factCursor.advance(
+                legacyCursor.getLastReviewedCommitSha(), legacyCursor.getLastReviewedAt(), legacyCursor.getLastReviewedBranch(), null
+            );
+            factCursor = factCursorRepository.save(factCursor);
+        }
+        if (factCursor == null || factCursor.getLastRecordedCommitSha().isBlank()) {
             warnings.add("这是首次扫描，ProjectFlow 先整理最近 30 个提交。");
             return new ScanPlan(
                 "",
@@ -65,7 +79,7 @@ public class PendingChangeScanService {
             );
         }
 
-        String base = cursor.getLastReviewedCommitSha();
+        String base = factCursor.getLastRecordedCommitSha();
         CommandResult ancestor = command(projectRoot, List.of("git", "merge-base", "--is-ancestor", base, "HEAD"));
         if (ancestor.exitCode() == 0) {
             return new ScanPlan(
@@ -79,7 +93,7 @@ public class PendingChangeScanService {
         }
 
         warnings.add("检测到提交历史变化，本次将按最近未整理时间重新扫描。");
-        Instant since = cursor.getLastReviewedAt() == null ? Instant.now().minusSeconds(7 * 86_400L) : cursor.getLastReviewedAt();
+        Instant since = factCursor.getLastRecordedAt() == null ? Instant.now().minusSeconds(7 * 86_400L) : factCursor.getLastRecordedAt();
         return new ScanPlan(
             base,
             head,
@@ -115,6 +129,17 @@ public class PendingChangeScanService {
 
     @Transactional
     public List<DevelopmentSegmentResponse> persistSegments(UUID projectId, UUID batchId, List<SegmentDraft> drafts, SegmentDiagnostics diagnostics) {
+        return persistSegments(projectId, batchId, drafts, diagnostics, Map.of());
+    }
+
+    @Transactional
+    public List<DevelopmentSegmentResponse> persistSegments(
+        UUID projectId,
+        UUID batchId,
+        List<SegmentDraft> drafts,
+        SegmentDiagnostics diagnostics,
+        Map<String, Instant> atomTimes
+    ) {
         List<DevelopmentSegment> existing = segmentRepository.findByBatchIdOrderByCreatedAtAsc(batchId);
         if (!existing.isEmpty()) {
             return existing.stream().map(PendingChangeScanService::toSegmentResponse).toList();
@@ -151,6 +176,12 @@ public class PendingChangeScanService {
             // V3.3.3: 把质量理由作为不确定性提示，让用户知道为什么需要复核。
             if (!quality.reason().isBlank()) uncertainties.add(quality.reason());
             segment.updateAnalysis(diagnostics.generationMode(), diagnostics.modelProvider(), diagnostics.fallbackReason(), quality.status(), quality.reason(), urls, uncertainties);
+            List<Instant> times = draft.includedAtomIds().stream()
+                .map(atomTimes::get)
+                .filter(java.util.Objects::nonNull)
+                .sorted()
+                .toList();
+            if (!times.isEmpty()) segment.recordOccurrence(times.get(0), times.get(times.size() - 1));
             segments.add(segment);
         }
         return segmentRepository.saveAll(segments).stream().map(PendingChangeScanService::toSegmentResponse).toList();
@@ -161,6 +192,18 @@ public class PendingChangeScanService {
         ChangeBatch batch = batchRepository.findById(batchId).orElseThrow();
         batch.updateSegmentCount(segmentCount);
         return toBatchResponse(batchRepository.save(batch));
+    }
+
+    @Transactional
+    public ChangeBatchResponse markScanType(UUID batchId, String scanType) {
+        ChangeBatch batch = batchRepository.findById(batchId).orElseThrow();
+        batch.markScanType(scanType);
+        return toBatchResponse(batchRepository.save(batch));
+    }
+
+    @Transactional(readOnly = true)
+    public ChangeBatchResponse getBatch(UUID batchId) {
+        return batchRepository.findById(batchId).map(PendingChangeScanService::toBatchResponse).orElseThrow();
     }
 
     private CommandResult command(Path projectRoot, List<String> command) {
@@ -187,7 +230,8 @@ public class PendingChangeScanService {
         return new ChangeBatchResponse(
             batch.getId(), batch.getProjectId(), batch.getScanStartedAt(), batch.getScanFinishedAt(),
             batch.getBaseCommitSha(), batch.getHeadCommitSha(), batch.getBranchName(), batch.getNewCommitCount(),
-            batch.getChangedFileCount(), batch.getAgentResultCount(), batch.getSegmentCount(), batch.getStatus().name(),
+            batch.getChangedFileCount(), batch.getAgentResultCount(), batch.getSegmentCount(), batch.getFactCount(),
+            batch.getAttentionCount(), batch.getFactOccurredFrom(), batch.getFactOccurredTo(), batch.getScanType(), batch.getStatus().name(),
             batch.getWarnings(), batch.isFirstScan(), batch.getScanFingerprint(), batch.isWorktreeDirty(),
             batch.getGithubStatus(), batch.getRemoteRelation(), batch.getSegmentationMode(), batch.getModelStatus(),
             batch.getModelProvider(), batch.getFallbackReason(), batch.getGitScanMs(), batch.getModelSegmentMs(),
@@ -202,7 +246,8 @@ public class PendingChangeScanService {
             segment.getIncludedAgentResultRefs(), segment.getAffectedFiles(), segment.getEvidenceRefs(),
             segment.getConfidence().name(), segment.getStatus().name(), segment.getCreatedAt(), segment.getUpdatedAt(),
             segment.getGenerationMode(), segment.getModelProvider(), segment.getFallbackReason(), segment.getQualityStatus(),
-            segment.getQualityReason(), segment.getCommitUrls(), segment.getUncertainties()
+            segment.getQualityReason(), segment.getCommitUrls(), segment.getUncertainties(),
+            segment.getOccurredFrom(), segment.getOccurredTo()
         );
     }
 
@@ -229,6 +274,13 @@ public class PendingChangeScanService {
         return batchRepository.findFirstByProjectIdAndScanFingerprintOrderByScanStartedAtDesc(projectId, fingerprint)
             .map(batch -> new ReusableScan(toBatchResponse(batch), listSegments(batch.getId())))
             .filter(value -> !value.segments().isEmpty())
+            .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public ReusableScan findLatest(UUID projectId) {
+        return batchRepository.findFirstByProjectIdOrderByScanStartedAtDesc(projectId)
+            .map(batch -> new ReusableScan(toBatchResponse(batch), listSegments(batch.getId())))
             .orElse(null);
     }
 

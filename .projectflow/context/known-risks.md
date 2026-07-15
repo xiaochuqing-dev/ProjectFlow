@@ -1,5 +1,14 @@
 # Known risks
 
+- V3.4.0 紧急收尾未执行 Playwright、PostgreSQL Testcontainers、本机真实 H2、桌面 `Start-ProjectFlow.bat`、完整后端回归和敏感内容扫描；GitHub Actions 结果需在推送后核对，任何文档不得提前写成通过。
+
+- ProjectFact、FactCursor 和 HistoryState 仍依赖 Hibernate `ddl-auto=update`，尚无正式 Flyway 迁移版本；必须持续保留文件型 H2 旧库升级与 PostgreSQL Testcontainers 门禁，升级失败时不得删除用户数据库。
+- 旧 DevelopmentSegment 和 ProjectSediment 的历史证据可能不完整；迁移只能幂等生成有证据事实，不能恢复不存在的模型诊断或伪造强事实。
+- 历史 Git 可能存在 rewritten、orphan、浅克隆或无法定位时间的提交；应降级为可诊断 NEEDS_ATTENTION，不能阻塞已成功 chunk 或普通增量扫描。
+- Fact fingerprint 绑定来源和证据可避免同一分析重复写入，但不同历史来源对同一客观事件的跨来源重复仍需保守保留或标记关注，不能用标题相似度破坏性合并。
+- 长期事实量会持续增长；项目记录和记忆 read model 必须分页并使用 count/min/max/latest/projection，禁止 Java 全量装载和 batch→facts N+1。
+- 旧能力分析仍依赖 ProjectSediment 输入；迁移到完整 fact-native 生命周期能力地图属于后续阶段，V3.4.0 不应伪装为已经完成。
+- Hermes、Obsidian、完整日/周/月/全周期 timeline 只有事实层基础，尚无稳定正式同步或生成协议。
 - V3.3.8.1 对旧批次采用读时默认值而非回填，因此“历史数据不完整”只能保守提示，缺失的原始模型诊断无法恢复。
 - Dashboard Bootstrap 当前依赖 Hibernate 派生 latest/count 查询；数据量继续扩大后仍需结合真实数据库索引与慢查询观察，但不得改回全量历史加载。
 - sessionStorage 可能被浏览器清理或禁用；这是允许的，F5 必须回退到数据库 Bootstrap，缓存不能成为事实来源。
@@ -18,7 +27,7 @@
 - 固定兼容模型服务只证明结构化业务流程与失败分支，不证明真实 DeepSeek 的限流、长输出、网络延迟或 Provider 私有字段行为。
 - 部分 Provider 会把主要推理放在 reasoning 字段而 content 为空；不得将其误报为普通空响应。
 - 紧凑重试不能无限递归，也不能沿用原输出预算。
-- 本地草稿不得通过 DTO 或兼容分支重新进入正式 ProjectChange。
+- 新扫描不得通过 DTO 或兼容分支重新进入人工 ProjectChange 主链；旧 ProjectChange 仍须可读。
 - 能力分析失败不得覆盖上次成功卡片，也不得把待分析沉淀标为已处理。
 - 新增字段必须兼容旧行；禁止要求用户删除数据库。
 - 前端不得显示 API Key、原始模型响应、内部枚举或默认展开绝对路径。

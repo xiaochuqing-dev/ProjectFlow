@@ -42,6 +42,16 @@ public class ChangeBatch {
     private int agentResultCount;
     @Column(name = "segment_count", nullable = false)
     private int segmentCount;
+    @Column(name = "fact_count")
+    private Integer factCount = 0;
+    @Column(name = "attention_count")
+    private Integer attentionCount = 0;
+    @Column(name = "fact_occurred_from")
+    private Instant factOccurredFrom;
+    @Column(name = "fact_occurred_to")
+    private Instant factOccurredTo;
+    @Column(name = "scan_type", length = 40)
+    private String scanType = "INCREMENTAL_SCAN";
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private ChangeBatchStatus status;
@@ -127,6 +137,17 @@ public class ChangeBatch {
 
     public void updateSegmentCount(int count) { this.segmentCount = Math.max(0, count); }
     public void updateTotalScanMs(long value) { this.totalScanMs = Math.max(0, value); }
+    public void markScanType(String value) { this.scanType = safe(value).isBlank() ? "INCREMENTAL_SCAN" : safe(value); }
+    public void markFactsRecorded(int facts, int attention, Instant occurredFrom, Instant occurredTo) {
+        this.factCount = Math.max(0, facts);
+        this.attentionCount = Math.max(0, attention);
+        this.factOccurredFrom = occurredFrom;
+        this.factOccurredTo = occurredTo == null ? occurredFrom : occurredTo;
+        this.status = this.attentionCount > 0
+            ? ChangeBatchStatus.FACTS_RECORDED_WITH_ATTENTION
+            : ChangeBatchStatus.FACTS_RECORDED;
+        if (this.scanFinishedAt == null) this.scanFinishedAt = Instant.now();
+    }
     public void updateDiagnostics(
         String fingerprint, boolean dirty, String github, String remote, String mode, String model,
         String provider, String fallback, long gitMs, long modelMs, long githubMs, long totalMs
@@ -167,6 +188,11 @@ public class ChangeBatch {
     public int getChangedFileCount() { return changedFileCount; }
     public int getAgentResultCount() { return agentResultCount; }
     public int getSegmentCount() { return segmentCount; }
+    public int getFactCount() { return factCount == null ? 0 : factCount; }
+    public int getAttentionCount() { return attentionCount == null ? 0 : attentionCount; }
+    public Instant getFactOccurredFrom() { return factOccurredFrom; }
+    public Instant getFactOccurredTo() { return factOccurredTo == null ? factOccurredFrom : factOccurredTo; }
+    public String getScanType() { return scanType == null || scanType.isBlank() ? "INCREMENTAL_SCAN" : scanType.trim(); }
     public ChangeBatchStatus getStatus() { return status == null ? ChangeBatchStatus.PENDING : status; }
     public List<String> getWarnings() { return warnings == null ? List.of() : List.copyOf(warnings); }
     public boolean isFirstScan() { return firstScan; }

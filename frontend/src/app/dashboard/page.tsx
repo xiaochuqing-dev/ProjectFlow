@@ -85,17 +85,15 @@ export default function DashboardPage() {
   const [file, setFile] = useState<File | null>(null);
   const [showZipImport, setShowZipImport] = useState(false);
   const [showFlowGuide, setShowFlowGuide] = useState(false);
-  const [statsFocus, setStatsFocus] = useState<"materials" | "changes" | "sessions" | "tasks" | "">("");
+  const [statsFocus, setStatsFocus] = useState<"materials" | "facts" | "attention" | "tasks" | "">("");
   const [projectPath, setProjectPath] = useState("");
   const [globalRule, setGlobalRule] = useState("");
   const [workSessionScan, setWorkSessionScan] = useState<WorkSessionScanResult | null>(null);
   const [githubStatus, setGithubStatus] = useState<GitHubStatus | null>(null);
   const [scanWarnings, setScanWarnings] = useState<string[]>([]);
-  const [bootstrapPendingReviewCount, setBootstrapPendingReviewCount] = useState(0);
   const [bootstrapCurrentStage, setBootstrapCurrentStage] = useState("");
   const [bootstrapProviderName, setBootstrapProviderName] = useState("");
   const [bootstrapProviderConfigured, setBootstrapProviderConfigured] = useState(false);
-  const [secondaryLoadedProjectId, setSecondaryLoadedProjectId] = useState("");
   const [secondaryError, setSecondaryError] = useState("");
   // 有快照时先用旧数据渲染、不显示加载条；后台静默刷新。
   const [loading, setLoading] = useState(true);
@@ -131,9 +129,8 @@ export default function DashboardPage() {
   const analysis = analysisRejectedByNoise ? null : rawAnalysis;
   const pendingSuggestions = suggestions.filter((suggestion) => suggestion.status === "PENDING");
   const pendingChanges = changes.filter((change) => change.status === "PENDING" || change.status === "EDITED");
-  const pendingReviewCount = secondaryLoadedProjectId === selectedProjectId
-    ? pendingSuggestions.length + pendingChanges.length
-    : bootstrapPendingReviewCount;
+  const latestFactCount = workSessionScan?.batch?.factCount ?? 0;
+  const latestAttentionCount = workSessionScan?.batch?.attentionCount ?? 0;
   const configuredProvider = providers.find((provider) => provider.id && provider.apiKeyConfigured && provider.defaultEnabled);
   const activeProviderName = configuredProvider?.name || (bootstrapProviderConfigured ? bootstrapProviderName : "");
   const providerConfigured = Boolean(configuredProvider || bootstrapProviderConfigured);
@@ -157,6 +154,8 @@ export default function DashboardPage() {
     workSessions: todaySessions,
     evidenceBundles,
     pendingChanges,
+    recordedFactCount: latestFactCount,
+    attentionCount: latestAttentionCount,
     outputs,
   });
   // 当前下一步 —— 把原来的平铺改成单一焦点
@@ -164,9 +163,9 @@ export default function DashboardPage() {
     if (!selectedProject) return { kind: "no_project" };
     if (!hasMaterials) return { kind: "no_material" };
     if (!hasProjectPath) return { kind: "no_path" };
-    if (pendingReviewCount > 0) return { kind: "has_pending", count: pendingReviewCount };
+    if (latestFactCount > 0) return { kind: "has_facts", count: latestFactCount, attentionCount: latestAttentionCount };
     return { kind: "scan_updates" };
-  }, [selectedProject, hasMaterials, hasProjectPath, pendingReviewCount]);
+  }, [selectedProject, hasMaterials, hasProjectPath, latestFactCount, latestAttentionCount]);
   const shouldShowZipImport = currentStep.kind === "no_project" || showZipImport;
 
   useEffect(() => {
@@ -253,11 +252,11 @@ export default function DashboardPage() {
       latestScanJobId: latestScanJob.id,
       latestBatchId: result.batch?.id ?? null,
       latestBatchUpdatedAt: result.batch?.scanFinishedAt ?? result.batch?.scanStartedAt ?? latestScanJob.completedAt,
-      pendingSedimentReviewCount: result.segments.length,
       workSessionScan: result,
     });
-    setBootstrapPendingReviewCount(result.segments.length);
-    setNotice(result.segments.length ? `已归并为 ${result.segments.length} 个开发推进段。` : "当前没有待整理变更。");
+    setNotice(result.batch?.factCount
+      ? `已归并为 ${result.segments.length} 个开发推进段，并自动记录 ${result.batch.factCount} 条项目事实${result.batch.attentionCount ? `；${result.batch.attentionCount} 条需要关注` : ""}。`
+      : result.segments.length ? `已归并为 ${result.segments.length} 个开发推进段，当前没有可自动记录的项目事实。` : "当前没有待整理变更。");
     void refreshProjectContext(selectedProjectId);
     // refreshProjectContext uses the dashboard request guard; the terminal job id/status is the trigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -281,7 +280,7 @@ export default function DashboardPage() {
       listAiSuggestions(session.accessToken, projectId).catch(() => failed("建议")),
       listProjectEvolutionRecords(session.accessToken, projectId).catch(() => failed("演进记录")),
       listTasks(session.accessToken, projectId).catch(() => failed("任务")),
-      getProjectMemory(session.accessToken, projectId).catch(() => failed("项目沉淀")),
+      getProjectMemory(session.accessToken, projectId).catch(() => failed("兼容项目档案")),
       listProjectWorkSessions(session.accessToken, projectId).catch(() => failed("工作会话")),
       listProjectEvidenceBundles(session.accessToken, projectId).catch(() => failed("证据包")),
       listProjectChangeConflicts(session.accessToken, projectId).catch(() => failed("冲突")),
@@ -316,9 +315,6 @@ export default function DashboardPage() {
     if (changeItems !== undefined) { setChanges(changeItems); snapshotPatch.changes = changeItems; }
     if (outputItems !== undefined) { setOutputs(outputItems); snapshotPatch.outputs = outputItems; }
     if (github !== undefined) { setGithubStatus(github); snapshotPatch.githubStatus = github; }
-    if (suggestionItems !== undefined && changeItems !== undefined) {
-      setSecondaryLoadedProjectId(projectId);
-    }
     patchDashboardSnapshot(snapshotPatch);
     if (failures.length > 0) {
       setSecondaryError(`${failures.join("、")}刷新失败，核心分析结果已保留。`);
@@ -345,7 +341,6 @@ export default function DashboardPage() {
         : [result.project, ...current]);
       setProjectPath(result.memory.localProjectPath ?? "");
       setBootstrapCurrentStage(result.memory.currentStage ?? "");
-      setBootstrapPendingReviewCount(result.pendingSedimentReviewCount);
       setBootstrapProviderConfigured(result.providerAvailability.configured);
       setBootstrapProviderName(result.providerAvailability.providerName);
       setWorkSessionScan(result.workSessionScan);
@@ -355,7 +350,6 @@ export default function DashboardPage() {
         latestScanJobId: result.latestScanJob?.id ?? null,
         latestBatchId: result.workSessionScan.batch?.id ?? null,
         latestBatchUpdatedAt: result.workSessionScan.batch?.scanFinishedAt ?? result.workSessionScan.batch?.scanStartedAt ?? null,
-        pendingSedimentReviewCount: result.pendingSedimentReviewCount,
         workSessionScan: result.workSessionScan,
       });
     } catch {
@@ -383,9 +377,7 @@ export default function DashboardPage() {
     setWorkSessionScan(snapshot.workSessionScan);
     setGithubStatus(snapshot.githubStatus);
     setScanWarnings(snapshot.workSessionScan?.warnings ?? []);
-    setBootstrapPendingReviewCount(snapshot.pendingSedimentReviewCount);
     setBootstrapCurrentStage(snapshot.memory?.currentStage ?? "");
-    setSecondaryLoadedProjectId(snapshot.selectedProjectId);
     setSecondaryError("");
   }
 
@@ -403,11 +395,9 @@ export default function DashboardPage() {
     setWorkSessionScan(null);
     setGithubStatus(null);
     setScanWarnings([]);
-    setBootstrapPendingReviewCount(0);
     setBootstrapCurrentStage("");
     setBootstrapProviderConfigured(false);
     setBootstrapProviderName("");
-    setSecondaryLoadedProjectId("");
     setSecondaryError("");
     setStatsFocus("");
   }
@@ -618,7 +608,7 @@ export default function DashboardPage() {
           </Button>
         </Link>
       }
-      eyebrow="ProjectFlow V3.3.8.1"
+      eyebrow="ProjectFlow V3.4.0"
       title="工作台"
     >
       <PageContainer>
@@ -674,11 +664,11 @@ export default function DashboardPage() {
         ) : null}
 
         <DashboardOverviewStats
-          activeTasks={activeTasks} architecture={architecture} changes={pendingChanges}
+          activeTasks={activeTasks} architecture={architecture} batch={workSessionScan?.batch}
           materialsCount={materials.length} materialsHint={hasUsableProjectZip ? `${paths.length} 个文件信号` : "暂无源码结构"}
-          onFocus={setStatsFocus} paths={paths} pendingReviewCount={pendingReviewCount}
+          onFocus={setStatsFocus} paths={paths} projectId={selectedProjectId}
           stageHint={memory?.currentStage || bootstrapCurrentStage || selectedProject?.status || "—"}
-          statsFocus={statsFocus} suggestions={pendingSuggestions} workSessions={todaySessions}
+          statsFocus={statsFocus}
         />
 
         <FlowGuideDialog onClose={() => setShowFlowGuide(false)} open={showFlowGuide} state={projectFlowState} />
@@ -806,7 +796,7 @@ export default function DashboardPage() {
                   {jobError ? <p className="mt-3 text-sm text-warning-fg">{jobError}</p> : null}
                   <div className="mt-5 grid gap-3 sm:grid-cols-3">
                     <MiniFact label="工程阶段" value={memory?.currentStage || bootstrapCurrentStage || selectedProject.status} />
-                    <MiniFact label="进行中" value={memory?.inProgressCapabilities || activeTasks[0]?.title || "等待确认"} />
+                    <MiniFact label="进行中" value={memory?.inProgressCapabilities || activeTasks[0]?.title || "等待新变化"} />
                     <MiniFact label="风险" value={memory?.currentRisks || "暂无已确认风险"} />
                   </div>
                 </div>
@@ -853,7 +843,7 @@ export default function DashboardPage() {
             <Card shadow="card" padding="md">
               <p className="text-sm font-semibold text-ink">模型状态</p>
               <p className="mt-2 text-sm leading-6 text-muted">
-                {providerConfigured ? "已配置模型。深度分析结果必须经用户确认后写入项目沉淀。" : "未配置 API。文件理解页会显示本地规则解释，深度分析入口会引导到设置页。"}
+                {providerConfigured ? "已配置模型。分析新变化后，有证据的结果会自动记录为项目事实。" : "未配置 API。正常增量分析仍可按本地事实规则工作；历史记忆补齐会等待模型配置。"}
               </p>
               {!providerConfigured ? (
                 <Link className="mt-3 inline-flex" href="/settings">

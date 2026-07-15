@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Button, Card } from "@/components/ui";
-import type { AiSuggestion, ProjectChange, TaskItem, WorkSessionCandidate } from "@/lib/api";
+import type { ChangeBatch, TaskItem } from "@/lib/api";
 import { compactProjectPath, buildProjectArchitecture } from "@/lib/project-insights";
 
 export function InteractiveStat({
@@ -25,93 +25,71 @@ export function InteractiveStat({
     warning: "hover:border-warning/40 hover:bg-warning-soft",
   }[tone];
   return (
-    <button
-      className={`group min-w-0 rounded-card border bg-elevated p-4 text-left transition duration-150 hover:-translate-y-0.5 hover:shadow-card ${
-        active ? "border-brand bg-brand-soft shadow-card" : `border-line ${toneClass}`
-      }`}
-      onClick={onClick}
-      type="button"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-muted">{label}</p>
-        <ArrowRight className={`h-3.5 w-3.5 transition ${active ? "text-brand" : "text-muted group-hover:text-brand"}`} />
-      </div>
+    <button className={`group min-w-0 rounded-card border bg-elevated p-4 text-left transition duration-150 hover:-translate-y-0.5 hover:shadow-card ${active ? "border-brand bg-brand-soft shadow-card" : `border-line ${toneClass}`}`} onClick={onClick} type="button">
+      <div className="flex items-center justify-between gap-2"><p className="text-xs text-muted">{label}</p><ArrowRight className={`h-3.5 w-3.5 transition ${active ? "text-brand" : "text-muted group-hover:text-brand"}`} /></div>
       <p className="mt-1.5 text-xl font-semibold leading-7 text-ink">{value}</p>
       {hint ? <p className="mt-0.5 text-xs text-muted">{hint}</p> : null}
     </button>
   );
 }
 
-type StatsFocus = "materials" | "changes" | "sessions" | "tasks";
+type StatsFocus = "materials" | "facts" | "attention" | "tasks";
 
 export function DashboardOverviewStats({
   activeTasks,
   architecture,
-  changes,
+  batch,
   materialsCount,
   materialsHint,
   onFocus,
   paths,
-  pendingReviewCount,
+  projectId,
   stageHint,
   statsFocus,
-  suggestions,
-  workSessions,
 }: {
   activeTasks: TaskItem[];
   architecture: ReturnType<typeof buildProjectArchitecture>;
-  changes: ProjectChange[];
+  batch: ChangeBatch | null | undefined;
   materialsCount: number;
   materialsHint: string;
   onFocus: (focus: StatsFocus | "") => void;
   paths: string[];
-  pendingReviewCount: number;
+  projectId: string;
   stageHint: string;
   statsFocus: StatsFocus | "";
-  suggestions: AiSuggestion[];
-  workSessions: WorkSessionCandidate[];
 }) {
   const toggle = (focus: StatsFocus) => onFocus(statsFocus === focus ? "" : focus);
+  const factCount = batch?.factCount ?? 0;
+  const attentionCount = batch?.attentionCount ?? 0;
   return (
     <>
       <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <InteractiveStat active={statsFocus === "materials"} hint={materialsHint} label="项目资料" onClick={() => toggle("materials")} value={materialsCount} />
-        <InteractiveStat active={statsFocus === "changes"} hint="去沉淀确认" label="建议沉淀" onClick={() => toggle("changes")} tone={pendingReviewCount ? "warning" : "slate"} value={pendingReviewCount} />
-        <InteractiveStat active={statsFocus === "sessions"} hint="待整理变更" label="待整理变更" onClick={() => toggle("sessions")} tone={workSessions.length ? "brand" : "slate"} value={workSessions.length} />
+        <InteractiveStat active={statsFocus === "facts"} hint="最近分析批次" label="项目事实" onClick={() => toggle("facts")} tone={factCount ? "brand" : "slate"} value={factCount} />
+        <InteractiveStat active={statsFocus === "attention"} hint="不阻塞后续分析" label="需要关注" onClick={() => toggle("attention")} tone={attentionCount ? "warning" : "slate"} value={attentionCount} />
         <InteractiveStat active={statsFocus === "tasks"} hint={stageHint} label="下一步任务" onClick={() => toggle("tasks")} value={activeTasks.length} />
       </section>
-      {statsFocus ? (
-        <StatsFocusPanel
-          activeTasks={activeTasks}
-          architecture={architecture}
-          changes={changes}
-          focus={statsFocus}
-          paths={paths}
-          suggestions={suggestions}
-          workSessions={workSessions}
-        />
-      ) : null}
+      {statsFocus ? <StatsFocusPanel activeTasks={activeTasks} architecture={architecture} batch={batch} focus={statsFocus} paths={paths} projectId={projectId} /> : null}
     </>
   );
 }
 
-export function StatsFocusPanel({
+function StatsFocusPanel({
   activeTasks,
   architecture,
-  changes,
+  batch,
   focus,
   paths,
-  suggestions,
-  workSessions,
+  projectId,
 }: {
   activeTasks: TaskItem[];
   architecture: ReturnType<typeof buildProjectArchitecture>;
-  changes: ProjectChange[];
-  focus: "materials" | "changes" | "sessions" | "tasks";
+  batch: ChangeBatch | null | undefined;
+  focus: StatsFocus;
   paths: string[];
-  suggestions: AiSuggestion[];
-  workSessions: WorkSessionCandidate[];
+  projectId: string;
 }) {
+  const recordsPath = `/sediment-review${projectId ? `?projectId=${projectId}` : ""}`;
   const content = {
     materials: {
       title: "项目资料",
@@ -120,25 +98,25 @@ export function StatsFocusPanel({
       href: "",
       items: [architecture.entrypoints[0]?.path, architecture.coreModules[0]?.path, architecture.dependencySignals[0]?.path].filter(Boolean) as string[],
     },
-    changes: {
-      title: "待确认成果",
-      body: suggestions.length || changes.length ? "这些候选需要确认后才会进入项目沉淀。" : "暂无建议沉淀。",
-      action: "去确认成果",
-      href: "/tasks",
-      items: [...suggestions.map((item) => item.title), ...changes.map((item) => item.title)].slice(0, 3),
+    facts: {
+      title: "最近批次项目事实",
+      body: batch?.factCount ? `已自动记录 ${batch.factCount} 条有证据的项目事实，无需逐条确认。` : "最近批次还没有可展示的项目事实。",
+      action: "查看项目记录",
+      href: recordsPath,
+      items: batch ? [`${batch.newCommitCount} 个提交`, `${batch.changedFileCount} 个文件`, `${batch.segmentCount} 个开发推进段`] : [],
     },
-    sessions: {
-      title: "待整理变更",
-      body: workSessions.length ? "这些 Git 变化可继续整理为开发推进段。" : "当前没有待整理变更。",
-      action: "分析新变化",
-      href: "",
-      items: workSessions.slice(0, 3).map((item) => item.taskIntent || `${item.changedFiles} 个文件变化`),
+    attention: {
+      title: "需要关注",
+      body: batch?.attentionCount ? `${batch.attentionCount} 条事实存在证据、时间或质量异常；其他事实和下一次扫描不受影响。` : "最近批次没有需要关注的事实。",
+      action: "查看原因与证据",
+      href: recordsPath,
+      items: batch?.attentionCount ? ["异常不阻塞批次完成", "可随时重新分析"] : [],
     },
     tasks: {
       title: "下一步任务",
       body: activeTasks.length ? "这些任务会参与每日回顾和成果输出。" : "暂无下一步任务。",
-      action: "进入沉淀确认",
-      href: "/tasks",
+      action: "查看每日回顾",
+      href: "/dev-logs",
       items: activeTasks.slice(0, 3).map((item) => item.title),
     },
   }[focus];
@@ -146,35 +124,13 @@ export function StatsFocusPanel({
   return (
     <Card shadow="card" padding="md" className="mb-6 border-brand/20 bg-brand-soft/40">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-brand">已选入口</p>
-          <h3 className="mt-1 text-lg font-semibold text-ink">{content.title}</h3>
-          <p className="mt-1 text-sm leading-6 text-body">{content.body}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {content.items.length ? content.items.map((item) => (
-              <span className="max-w-full break-all rounded-field bg-elevated px-3 py-1.5 font-mono text-xs text-muted" key={item}>
-                {item.includes("/") ? compactProjectPath(item) : item}
-              </span>
-            )) : <span className="rounded-field bg-elevated px-3 py-1.5 text-xs text-muted">无</span>}
-          </div>
-        </div>
-        {content.href ? (
-          <Link href={content.href}>
-            <Button variant="primary" size="sm">
-              {content.action} <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
-        ) : null}
+        <div className="min-w-0"><p className="text-xs font-semibold text-brand">已选入口</p><h3 className="mt-1 text-lg font-semibold text-ink">{content.title}</h3><p className="mt-1 text-sm leading-6 text-body">{content.body}</p><div className="mt-3 flex flex-wrap gap-2">{content.items.length ? content.items.map((item) => <span className="max-w-full break-all rounded-field bg-elevated px-3 py-1.5 font-mono text-xs text-muted" key={item}>{item.includes("/") ? compactProjectPath(item) : item}</span>) : <span className="rounded-field bg-elevated px-3 py-1.5 text-xs text-muted">无</span>}</div></div>
+        {content.href ? <Link href={content.href}><Button variant="primary" size="sm">{content.action}<ArrowRight className="h-3.5 w-3.5" /></Button></Link> : null}
       </div>
     </Card>
   );
 }
 
 export function MiniFact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 rounded-field border border-line bg-surfaceAlt p-3">
-      <p className="text-xs text-muted">{label}</p>
-      <p className="mt-1 break-all text-sm font-semibold leading-5 text-ink">{value}</p>
-    </div>
-  );
+  return <div className="min-w-0 rounded-field border border-line bg-surfaceAlt p-3"><p className="text-xs text-muted">{label}</p><p className="mt-1 break-all text-sm font-semibold leading-5 text-ink">{value}</p></div>;
 }

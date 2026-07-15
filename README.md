@@ -1,6 +1,21 @@
 # ProjectFlow
 
-ProjectFlow V3.3.8.1 is a local-first tool for AI-assisted solo developers to understand development changes and turn them into confirmed, reusable project sediment.
+ProjectFlow V3.4.0 is a local-first project memory system for AI-assisted solo developers. It reads real Git, worktree, and Agent evidence, automatically organizes development facts by analysis batch, and preserves how a project grew from its earliest history to its latest changes.
+
+ProjectFlow 自动维护项目从创建至今的长期记忆。让每一个项目记得自己是怎样成长到今天的。
+
+Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns that raw development evidence into durable Change Batches, evidence-backed Project Facts, and long-lived Project Memory.
+
+## V3.4.0 Automatic Project Fact Memory
+
+- “Analyze new changes” keeps the proven Git/worktree/Agent evidence and model-segmentation pipeline, then automatically ingests valid Development Segments as Project Facts.
+- Normal evidence-backed facts are recorded immediately. Users no longer process every item through create, merge, evidence-only, or ignore decisions.
+- Evidence conflicts, missing evidence, incomplete fact boundaries, and unsafe duplicates become `NEEDS_ATTENTION`; they do not block the rest of the batch or the next incremental scan.
+- `ProjectFactCursor` advances only after fact ingestion succeeds. It is independent from the legacy manual `ProjectReviewCursor`.
+- Existing Development Segments and confirmed Project Sediments migrate idempotently without deleting old batches, changes, sediments, links, or H2 data.
+- Uncovered Git history is rebuilt oldest-first in bounded background chunks with persistent coverage and checkpoints. Already covered commits are not sent to the model again.
+- Project Records is the batch-oriented fact browser. Project Memory uses Project Facts as its primary factual layer and keeps V3.3.x sediment/profile fields in a compatibility area.
+- V3.4.0 does not redesign the V3.3.7 job infrastructure or V3.3.8 model gateway, and does not pre-build the later timeline, lifecycle capability map, Hermes sync, or Obsidian sync.
 
 ## V3.3.8.1 Data Read Reliability
 
@@ -70,54 +85,56 @@ ProjectFlow V3.3.8.1 is a local-first tool for AI-assisted solo developers to un
 - **Model-result retention priority**: the quality gate is now a *marker*, not a batch rejector. As long as the model returns a parseable structure, results are retained and tagged with `PASS` / `NEEDS_REVIEW` / `NEEDS_CHINESE_REWRITE` / `NEEDS_EVIDENCE` / `PARTIAL_EVIDENCE` / `LOW_CONFIDENCE`. Local-rule fallback is used only when the model is fully unavailable (not configured / call failed / no content / unparseable JSON / all evidence invalid).
 - **Forced Chinese for user-visible content**: titles, summaries, main changes, capability names, README/resume/interview expressions, and fallback summaries must be natural Simplified Chinese. English commit messages, file paths, class names, and interface names may remain only in evidence details.
 - **Model configuration precondition**: entries that depend on model quality (**分析新变化**, **分析项目能力**) check whether a model is configured first. If not configured, ProjectFlow shows Git facts with a "facts-only, no model interpretation" notice and guides the user to configure a model rather than fabricating low-quality local-template results.
-- **Unified analysis input snapshot**: local Git, worktree diff (unstaged/staged/untracked), GitHub state, Agent results, and scan scope are organized into a structured snapshot fed to the model. The model is told it is judging the *real* development state from multi-source evidence — not choosing between GitHub and local Git. Rules provide facts; the model interprets flexibly; the user confirms.
+- **Unified analysis input snapshot**: local Git, worktree diff (unstaged/staged/untracked), GitHub state, Agent results, and scan scope are organized into a structured snapshot fed to the model. The model judges the *real* development state from multi-source evidence rather than choosing between GitHub and local Git. V3.4.0 now records validated objective facts automatically while preserving subjective user decisions outside the fact layer.
 - **Analysis scope display**: every completed scan shows what sources participated (local Git / worktree diff / staged / untracked / Agent result count / GitHub status / model status / merge mode / uncommitted content / remote-unsynced / evidence gaps), not a vague "model merge failed".
 - **GitHub on the home screen**: the workbench shows GitHub status and action entries directly under "GitHub" (not "GitHub 增强"): login guide (copy `gh auth login --web --clipboard`), refresh sync status (read-only, never pull/merge/rebase), re-check. ProjectFlow never reads, displays, or stores GitHub tokens.
 - **Capability page quality**: **分析项目能力** requires a configured model and generates Chinese, concrete, product-specific capability cards tied to real ProjectFlow features — no template names like "项目资产沉淀能力", no raw commit-message card names.
 
 It is built for developers who use agents such as Codex, Claude Code, or other coding assistants to modify real projects and then need a clear way to understand what changed, review the evidence, maintain a project profile, and generate reusable output such as daily reviews, README material, reports, and resume-ready summaries.
 
-## V3.3.8.1 Workflow
+## V3.4.0 Workflow
 
 ProjectFlow is not a Kanban board, daily-report generator, or hosted PR/CI system. Its primary workflow is:
 
-1. Add a project through zip import and bind its real local folder.
-2. Analyze **待整理变更** from the last confirmed review cursor to the current Git HEAD.
-3. Group objective Git and Agent-result evidence into human-readable **开发推进段**.
-4. Separate formal model 建议沉淀 from local fact drafts and organize them by analysis batch and time.
-5. Process formal suggestions one at a time: create, merge, evidence-only, ignore, skip, or defer.
-6. Preserve confirmed content as traceable **项目沉淀**, mark it pending capability analysis, and analyze it into capability cards when requested.
+1. Add or import a project and bind its real local Git folder.
+2. Analyze new changes from the last automatically recorded Fact Cursor to the current Git HEAD.
+3. Group Git, worktree, and Agent evidence into analysis-layer Development Segments.
+4. Automatically ingest valid evidence-backed segments as durable Project Facts.
+5. Persist facts by Change Batch and advance the Fact Cursor without manual confirmation.
+6. Record exceptional quality or evidence problems as Needs Attention without blocking later scans.
+7. Rebuild uncovered Git history oldest-first in bounded background chunks with persistent checkpoints.
+8. Use Project Facts as the factual foundation for later timelines, capability analysis, outputs, and external knowledge integrations.
 
-The governing rule is: rules collect facts, models interpret, rules validate, and users confirm. ProjectFlow no longer uses “今日开发” as the primary boundary; a persistent review cursor covers changes accumulated across days.
+The governing rule is: rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records objective facts. Users remain responsible for subjective profile edits and exceptional attention items, not routine fact confirmation.
 
 Local Git is the primary data source. Agent result files are an enhancement that adds task intent, verification, and unfinished work. GitHub CLI is an optional enhancement for repository metadata and commit links; missing installation, login, or remote access never blocks local Git analysis, and ProjectFlow does not read or store GitHub tokens.
 
-数据源边界：本地 Git 是主数据源；Agent result 是增强数据源；GitHub CLI 是可选增强数据源。V3.3.3 不再以“今日开发”为主边界。
+数据源边界：本地 Git 是主数据源；Agent result 补充任务意图与验证；GitHub CLI 是只读可选增强。数据库中的批次、事实和游标是长期记忆来源，页面缓存只负责加速显示。
 
 ## Core Concepts
 
 | Concept | Meaning |
 | --- | --- |
-| Project Profile | Current understanding of the project: purpose, architecture, modules, risks, decisions, progress, and output material |
-| Project Material | Imported zip, local files, agent result, or historical source material used for analysis |
-| Change Batch | New changes between the last confirmed review cursor and the current HEAD |
-| Development Segment | A deterministic, evidence-backed grouping of related commits, files, and Agent results |
-| Suggested Sediment | A user-reviewed proposal to create, merge, add evidence, or ignore |
-| Project Sediment | Confirmed project capability or outcome with sources and developer notes |
-| Work Session / Evidence Bundle / Project Change | Compatibility records retained for existing data and old links |
-| Project Memory | Confirmed project archive used by daily review, output generation, and `.projectflow/context` sync |
-| Fact Source | Field-level trace explaining where a profile field came from |
-| Growth Timeline | Long-term history of how the project changed over time |
+| Project Fact | Evidence-backed, durable record of something that actually happened in the project |
+| Change Batch | One analyzed range of incremental or historical development changes |
+| Development Segment | Analysis-layer semantic grouping produced from raw Git, worktree, and Agent evidence |
+| Project Records | Batch-oriented view of automatically recorded Project Facts |
+| Project Memory | Long-lived collection of Project Facts and their source batches |
+| Needs Attention | Exceptional fact-quality issue that may need human review but never blocks the main flow |
+| Fact Cursor | Latest incrementally analyzed commit successfully recorded into Project Facts |
+| History Backfill | Bounded background reconstruction of uncovered Git history, oldest first |
+| Project Profile / legacy ProjectMemory | Compatibility archive for subjective fields and historical profile content |
+| Suggested Sediment / Project Sediment / Project Change | V3.3.x compatibility records retained for old data and links; not the new scan path |
 
 ## Current Features
 
 - JWT authentication with project-scoped ownership checks.
 - Project creation, switching, deletion, and local path binding.
 - Complete project zip import with architecture/file understanding.
-- Cursor-based local Git scanning with safe first-scan and rewritten-history fallbacks.
-- Rule-based grouping plus optional model enrichment and evidence validation.
-- Project sediment confirmation and focused evidence-backed detail pages.
-- Daily review and output generation using confirmed project archive data.
+- Fact-cursor-based local Git scanning with safe first-scan and rewritten-history fallbacks.
+- Rule-based grouping plus optional model enrichment, evidence validation, and automatic Project Fact ingestion.
+- Batch-oriented Project Records, fact detail evidence, Needs Attention isolation, and bounded history backfill.
+- Daily review and output generation with legacy compatibility while later fact-native consumers are developed.
 - `.projectflow/AGENT_PROTOCOL.md`, structured Agent results, context sync, and health checks.
 - Optional GitHub CLI status and remote-link enrichment with local-only fallback.
 - AI provider configuration with local-template fallback when a model is unavailable.
@@ -165,7 +182,7 @@ On Windows, users can also double-click `Start-ProjectFlow.bat` in the repositor
 http://127.0.0.1:3000/login
 ```
 
-The launcher does not pull, merge, or modify Git history. It runs the current checkout, and writes the last successful version, source revision, local-change flag, dependency status, frontend Build ID, and ready time to `logs/last-embedded-build.json`. The older `start.bat` name remains a compatible wrapper.
+The repository launcher does not pull, merge, or modify Git history. The desktop wrapper fast-forwards `origin/master` only for a clean worktree and otherwise preserves local changes. Both rebuild the selected working tree; the last successful version, source revision, local-change flag, dependency state, frontend Build ID, and ready time are written to `logs/last-embedded-build.json`. The older `start.bat` name remains compatible.
 
 Docker/team mode:
 
@@ -186,7 +203,7 @@ cd frontend
 npm.cmd run build
 
 cd ..\backend
-C:\Users\Administrator\Desktop\apache-maven-3.9.9\bin\mvn.cmd -q test
+mvn.cmd test
 
 # PostgreSQL Testcontainers（需要 Docker；CI 中为阻断门禁）
 cd backend
@@ -194,6 +211,7 @@ mvn.cmd -Ppostgres-it verify
 
 # 浏览器端真实前后端流程
 cd ..\frontend
+$env:MAVEN_CMD=(Get-Command mvn.cmd).Source
 npm.cmd run test:e2e
 
 # 前端契约、类型和生产构建

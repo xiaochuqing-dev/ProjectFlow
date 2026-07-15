@@ -13,8 +13,9 @@ const outputOptionsCard = read("src/components/dashboard/OutputOptionsCard.tsx")
 const intelligence = read("src/app/project-intelligence/page.tsx");
 const outputs = read("src/app/ai-review/page.tsx");
 
-assert.match(appShell, /沉淀处理/, "navigation should expose the V3.3.6 sediment processing workflow");
-assert.match(appShell, /项目沉淀/, "navigation should expose confirmed project sediments");
+assert.match(appShell, /项目记录/, "navigation should expose automatically recorded project facts");
+assert.match(appShell, /项目记忆/, "navigation should expose long-lived project memory");
+assert.doesNotMatch(appShell, /沉淀处理/, "manual sediment processing must leave the primary navigation");
 assert.doesNotMatch(appShell, /变更审查|项目画像/, "main navigation should avoid legacy internal-facing labels");
 
 assert.match(tasks, /title="沉淀确认"/, "review page should present itself as sediment confirmation");
@@ -31,8 +32,8 @@ assert.match(projectAccessCard, /绑定本地项目/, "local project access shou
 assert.match(projectAccessCard, /Agent 高级设置/, "agent protocol actions should be grouped under advanced settings");
 assert.match(projectAccessCard, /<details/, "advanced agent actions should be collapsed by default");
 
-assert.match(intelligence, /title="项目沉淀"/, "project intelligence page should emphasize confirmed sediments");
-assert.match(intelligence, /只有用户确认后/, "sediment page should explain its trust boundary");
+assert.match(intelligence, /title="项目记忆"/, "project intelligence route should present project memory");
+assert.match(intelligence, /项目事实概览/, "project memory should prioritize automatically recorded facts");
 assert.doesNotMatch(intelligence, /字段来源链/, "project intelligence first layer should not expose fact-source-chain jargon");
 assert.doesNotMatch(intelligence, /长期档案/, "project intelligence first layer should avoid long-term archive jargon");
 

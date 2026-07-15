@@ -1,0 +1,15 @@
+{
+  "taskGoal": "在不删除源码、依赖安装、本地业务数据和 Git 数据的前提下，清理 ProjectFlow 中累积的可重建构建产物并验证桌面启动链路。",
+  "actualChanges": [
+    "清理了前端 .next 和后端 target 中累积的开发缓存、旧版本 JAR、隔离 Maven 缓存及测试临时仓库；官方启动器随后仅重建当前运行所需产物，项目占用由 1033.69 MiB 降至 416.70 MiB，净释放 616.99 MiB。",
+    "保留了 frontend/node_modules、本地 H2 数据库、Git 仓库、源码、项目文档和既有未提交修改；清理没有改变受 Git 管理的源码状态。"
+  ],
+  "keyFiles": [],
+  "verification": {
+    "build": "桌面嵌入式启动链路从空 frontend/.next 和 backend/target 成功完成 Next.js 16.2.7 生产构建及 Java 17 后端重新编译。",
+    "tests": "not_run",
+    "manualCheck": "启动器确认前端登录页与后端健康接口均可访问，并生成 logs/last-embedded-build.json；验证结束后 3000 和 8080 端口均已正常停止。"
+  },
+  "unfinished": [],
+  "sedimentCandidates": []
+}

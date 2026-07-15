@@ -1,5 +1,19 @@
 # Model Analysis
 
+## V3.4.0 fact boundary
+
+V3.4.0 does not make the model the database truth and does not redesign the V3.3.8 gateway. The model continues to organize an `AnalysisInputSnapshot` into `DevelopmentSegment` analysis results. Backend rules then validate project/batch ownership, source references, evidence, quality, content, occurrence time, and idempotency before fact persistence.
+
+A normal MODEL segment with valid evidence and usable content may become a `RECORDED` ProjectFact automatically. A complete item recovered from truncation/reasoning output may also be recorded when its fact boundary is reliable; a recovery request by itself does not force human review. LOCAL_RULE with Git evidence and Agent result bound to objective code evidence may become facts under the same evidence rule. Agent-result-only or evidence-free output cannot masquerade as a strong fact.
+
+The model is not asked to guess occurrence time. Commit and Agent-result timestamps are collected by evidence readers and passed to the persistence boundary. Fact fingerprinting uses source/evidence identity rather than generated title or summary.
+
+`NEEDS_ATTENTION` represents a final evidence/quality exception such as conflicting sources, an incomplete fact boundary, unsafe duplication, or degraded time. It does not mean the model job or entire batch failed and does not block the Fact Cursor.
+
+History backfill reuses the registered development-segmentation model path and current request/token/time budgets in bounded chunks. It never sends the entire Git history in one prompt and never re-analyzes already covered commits.
+
+Because V3.4.0 keeps the ModelGateway, Provider capability, dynamic parameter, Schema repair, truncation, and reasoning-recovery contracts, fixed-model automation is used for fact ingestion, history, and browser regression. The V3.3.8 full real-DeepSeek matrix is not repeated unless this boundary is actually changed; any affected real check must be reported separately and must never be conflated with fixed-model evidence.
+
 ProjectFlow V3.3.8 registers six real model entrypoints: Provider connection test, development-segment merge, whole-project analysis, file analysis, capability interpretation, and project-capability analysis. Production business services call `ModelGatewayService` with a `ModelTaskType`; direct model HTTP calls outside the gateway are not allowed.
 
 The request policy combines Provider type, model name, capability profile, task type, input size, expected output shape, reasoning behavior, Provider output ceiling, and configured Temperature. Diagnostics retain configured, recommended, effective, sent/omitted, and decision reason separately. Unsupported Temperature or JSON mode fields are omitted.

@@ -31,14 +31,14 @@ assert.match(devLogs, /\/dev-logs\/sources\?projectId=/, "daily review source su
 assert.equal(devLogs.match(/\/dev-logs\/sources\?projectId=/g)?.length ?? 0, 1, "daily review sources should expose one merged source entry instead of four duplicate buttons");
 assert.doesNotMatch(devLogs, />有<\/span>|>无<\/span>/, "daily source cards should not duplicate counts with yes/no labels");
 
-assert.match(intelligence, /\/project-intelligence\/timeline\?projectId=/, "project profile should link to growth timeline page");
-assert.match(intelligence, /\/project-intelligence\/capabilities\?projectId=/, "project profile should link completed capabilities to a focused page");
-assert.match(intelligence, /SedimentOverview/, "confirmed sediments should render as the default overview");
+assert.match(intelligence, /\/project-intelligence\/timeline\$\{suffix\}/, "project memory should link to the compatibility timeline page");
+assert.match(intelligence, /\/project-intelligence\/capabilities\$\{suffix\}/, "project memory should link completed capabilities to a focused page");
+assert.match(intelligence, /FactMemoryOverviewPanel/, "project facts should render as the default overview");
 assert.doesNotMatch(intelligence, /label="可信依据"/, "可信依据 should not be a primary right-rail entry");
 assert.doesNotMatch(intelligence, /label="时间线变化"/, "时间线变化 should be merged into project timeline");
-assert.match(intelligence, /ArchiveEntryCard/, "project profile right rail should use navigation entries instead of long embedded lists");
-assert.match(intelligence, /项目沉淀/, "project profile should present confirmed sediments by default");
-assert.match(intelligence, /兼容档案字段/, "legacy profile fields should stay behind a compatibility entry");
+assert.match(intelligence, /NavigationCard/, "project memory right rail should use navigation entries instead of long embedded lists");
+assert.match(intelligence, /项目事实概览/, "project memory should present project facts by default");
+assert.match(intelligence, /兼容项目档案/, "legacy profile fields should stay behind a compatibility entry");
 assert.match(intelligence, /ProjectAssetPanels/, "project profile should reuse extracted asset panel components");
 
 assert.match(resourceTimeline, /FilterSelect/, "long-term resource pages should share month/type/status filters");
@@ -49,9 +49,8 @@ assert.doesNotMatch(resourceTimeline, /item\.detail/, "long-term resource lists 
 assert.match(resourceTimeline, /查看详情/, "long-term resource cards should route to a detail page when one exists");
 assert.match(resourceTimeline, /compactPath/, "long-term resource cards should compress long paths instead of showing full path strings");
 
-assert.doesNotMatch(intelligence, /最近：\$\{analysisRecords\[0\]\.summary\}/, "project profile entry cards should not embed the latest analysis summary");
-assert.match(intelligence, /latestAt=/, "project profile entry cards should show latest time as navigation metadata");
-assert.match(intelligence, /latestLabel=/, "project profile entry cards should show compact latest type metadata");
+assert.doesNotMatch(intelligence, /最近：\$\{analysisRecords\[0\]\.summary\}/, "project memory entry cards should not embed the latest analysis summary");
+assert.match(intelligence, /辅助项目分析（不作为项目事实）/, "model analysis must stay visibly separate from facts");
 
 for (const route of [
   "src/app/project-intelligence/timeline/page.tsx",

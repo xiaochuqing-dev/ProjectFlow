@@ -56,23 +56,23 @@ const server = http.createServer(async (request, response) => {
   const content = prompt.includes("capabilities") || prompt.includes("项目能力")
     ? JSON.stringify({ capabilities: [{
         name: "后台任务可靠性",
-        summary: "基于已确认项目沉淀形成可取消、可恢复且可追溯的分析能力。",
+        summary: "基于兼容项目沉淀形成可取消、可恢复且可追溯的分析能力。",
         problemSolved: "避免重复调用和结果覆盖。",
         featureEntry: "能力与成果 / 分析项目能力",
         sourceIndexes: ["S1"],
         readme: "支持持久化任务、取消与恢复。",
-        resume: "完成后台分析任务可靠性与项目沉淀闭环。",
+        resume: "完成后台分析任务可靠性与历史兼容闭环。",
         interview: "可说明幂等、取消检查点与持久化状态设计。"
       }] })
     : JSON.stringify({ segments: [{
         segmentTitle: "完成可追溯的项目变化分析",
         plainSummary: "将固定测试仓库中的提交和未提交变化整理为开发推进段。",
         sourceIndexes: ["S1"],
-        mainChanges: ["读取本地 Git 变化", "生成分析批次", "形成待确认的正式建议"],
-        userVisibleValue: "用户可以按批次检查真实开发结果并决定是否沉淀。",
+        mainChanges: ["读取本地 Git 变化", "生成分析批次", "自动记录有证据的项目事实"],
+        userVisibleValue: "用户完成分析后可以直接离开，并按批次查看自动保存的项目事实。",
         affectedFiles: [],
         confidence: "HIGH",
-        needsUserReview: true
+        needsUserReview: false
       }] });
   return json(response, 200, {
     choices: [{ message: { content }, finish_reason: "stop" }],

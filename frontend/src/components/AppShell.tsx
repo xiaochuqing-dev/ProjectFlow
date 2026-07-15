@@ -3,7 +3,7 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpenText, ClipboardCheck, DatabaseZap, LayoutDashboard, Settings, Sparkles } from "lucide-react";
+import { BookOpenText, DatabaseZap, History, LayoutDashboard, Settings, Sparkles } from "lucide-react";
 
 type AppShellProps = {
   title: string;
@@ -14,8 +14,8 @@ type AppShellProps = {
 
 const navItems = [
   { label: "工作台", href: "/dashboard", icon: LayoutDashboard },
-  { label: "沉淀处理", href: "/sediment-review", icon: ClipboardCheck },
-  { label: "项目沉淀", href: "/project-intelligence", icon: DatabaseZap },
+  { label: "项目记录", href: "/sediment-review", icon: History },
+  { label: "项目记忆", href: "/project-intelligence", icon: DatabaseZap },
   { label: "每日回顾", href: "/dev-logs", icon: BookOpenText },
   { label: "成果输出", href: "/ai-review", icon: Sparkles },
   { label: "设置", href: "/settings", icon: Settings },
@@ -32,14 +32,14 @@ export function AppShell({ title, eyebrow, actions, children }: AppShellProps) {
             PF
           </div>
           <div>
-            <p className="text-base font-semibold text-ink">ProjectFlow <span className="text-xs font-medium text-muted">V3.3.8.1</span></p>
-            <p className="text-xs text-muted">开发变化与项目沉淀</p>
+            <p className="text-base font-semibold text-ink">ProjectFlow <span className="text-xs font-medium text-muted">V3.4.0</span></p>
+            <p className="text-xs text-muted">自动项目事实与长期记忆</p>
           </div>
         </div>
         <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href || (item.href === "/project-intelligence" && pathname.includes("/files"));
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`) || (item.href === "/project-intelligence" && pathname.includes("/files"));
             return (
               <Link
                 className={`group relative flex items-center gap-3 rounded-field px-3 py-2 text-sm transition-colors ${

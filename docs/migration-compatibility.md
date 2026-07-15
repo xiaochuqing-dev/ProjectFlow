@@ -1,5 +1,23 @@
 # Migration compatibility
 
+## V3.4.0 Project Fact migration
+
+V3.4.0 adds Project Fact, incremental Fact Cursor, and persistent history-coverage state, plus fact-recording metadata required by batches/read models. The project still uses Hibernate `ddl-auto=update`; this is not a versioned Flyway migration system and must be reported as such.
+
+Compatibility rules:
+
+- Current H2 data upgrades without clearing `.projectflow/local-data/`; PostgreSQL tables and old rows remain intact.
+- New nullable fields use null-safe reads and new required fields use safe defaults that do not fabricate historical meaning.
+- Existing Change Batches, Development Segments, ProjectChanges, ProjectSediments, ProjectReviewCursor, jobs, Providers, memories, and capability cards are not deleted or reassigned blindly.
+- Legacy Development Segments are the preferred migration source. Migration derives a stable source/evidence fingerprint and may be rerun without increasing the fact count.
+- A legacy sediment with `sourceSegmentId` reuses the segment-derived fact and records compatibility provenance instead of creating a second fact.
+- A legacy sediment without a segment creates a `LEGACY_SEDIMENT_MIGRATION` fact only when objective evidence is usable. Evidence-free legacy text remains compatibility content and never becomes a strong fact.
+- Old pending ProjectChanges remain readable and do not block Fact Cursor initialization or advancement.
+- A missing Fact Cursor initializes from the legacy Review Cursor when available; otherwise the bounded first-scan policy remains. History checkpoint state is separate.
+- Migration failure must stop cursor advancement and preserve all prior data. It must never be “fixed” by deleting the database or old batches.
+
+The file-backed H2 upgrade test must seed a V3.3.8.1-style database, restart the current application, verify old relationships and idempotent fact creation, and rerun migration. PostgreSQL Testcontainers must verify the same uniqueness and transaction boundaries. Actual test counts and observed upgrade results belong in the V3.4.0 implementation report, not in this compatibility contract.
+
 ## V3.3.8.1 nullable analysis history
 
 Historical ChangeBatch, ProjectChange, and DevelopmentSegment rows may lack fields added by later releases. Read-time defaults keep list and detail APIs usable without destructive migration: blank diagnostics remain blank, missing status/quality values use conservative review states, missing collections become empty, missing counters become zero, and missing timestamps fall back to related persisted times or the epoch. The service labels a batch with absent model status as historical incomplete. V3.3.8.1 performs no data backfill, so existing correct values and historical evidence are not overwritten.

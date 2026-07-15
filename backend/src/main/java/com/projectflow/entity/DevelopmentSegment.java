@@ -69,6 +69,10 @@ public class DevelopmentSegment {
     @Convert(converter = StringListConverter.class)
     @Column(name = "uncertainties", columnDefinition = "text")
     private List<String> uncertainties = new ArrayList<>();
+    @Column(name = "occurred_from")
+    private Instant occurredFrom;
+    @Column(name = "occurred_to")
+    private Instant occurredTo;
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
     @Column(name = "updated_at", nullable = false)
@@ -122,6 +126,10 @@ public class DevelopmentSegment {
     }
 
     public void markConfirmed() { status = DevelopmentSegmentStatus.CONFIRMED; }
+    public void recordOccurrence(Instant from, Instant to) {
+        this.occurredFrom = from;
+        this.occurredTo = to == null ? from : to;
+    }
     public void updateAnalysis(
         String mode, String provider, String fallback, String quality, String qualityDetail,
         List<String> urls, List<String> uncertaintyItems
@@ -157,6 +165,8 @@ public class DevelopmentSegment {
     public String getQualityReason() { return safe(qualityReason); }
     public List<String> getCommitUrls() { return immutable(commitUrls); }
     public List<String> getUncertainties() { return immutable(uncertainties); }
+    public Instant getOccurredFrom() { return occurredFrom; }
+    public Instant getOccurredTo() { return occurredTo == null ? occurredFrom : occurredTo; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     private static String safe(String value) { return value == null ? "" : value.trim(); }

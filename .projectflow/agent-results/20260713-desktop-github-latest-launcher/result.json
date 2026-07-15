@@ -1,0 +1,18 @@
+{
+  "taskGoal": "确保桌面上的 ProjectFlow bat 启动时使用 GitHub master 的最新构建代码。",
+  "actualChanges": [
+    "更新桌面 Start-ProjectFlow.bat：启动前检查 Git、确认当前分支为 master、拒绝覆盖本地未提交或未跟踪改动、从 GitHub fetch 并执行安全的 fast-forward 更新，最后校验本地提交与 origin/master 一致后才启动 ProjectFlow。",
+    "桌面启动器新增 /check-only 检查模式，可只验证 GitHub 最新代码而不启动服务。",
+    "本机 ProjectFlow 仓库已从 453dc07 快进到 GitHub master 最新提交 30061d8；该提交对应的 V3.3.8 Quality Gates 已成功。"
+  ],
+  "keyFiles": [
+    "desktop/Start-ProjectFlow.bat"
+  ],
+  "verification": {
+    "build": "not_run; launcher verification did not start the application build",
+    "tests": "not_run; no application code path was changed",
+    "manualCheck": "passed: cmd.exe call of Desktop\\Start-ProjectFlow.bat /check-only fetched GitHub master, confirmed commit 30061d83224df85b9cda826a40ad708af68ff065, and exited without starting services; GitHub Actions run 29166686378 for this commit completed successfully"
+  },
+  "unfinished": [],
+  "sedimentCandidates": []
+}

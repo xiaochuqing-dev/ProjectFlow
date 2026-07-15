@@ -1,6 +1,18 @@
 # Troubleshooting
 
-If the sediment processing center reports “沉淀批次读取失败，请查看本地服务日志后重试”, inspect the backend log for the returned error code. Current V3.3.8.1 reads tolerate historical nullable fields and label incomplete batches instead of requiring database deletion. Do not manually erase old batches.
+If a successful V3.4.0 scan shows segments but no Project Facts, inspect the batch fact-ingestion status and safe failure diagnostics before retrying. A reusable batch is expected to idempotently fill missing facts. Do not delete the batch, move the Fact Cursor manually, or rerun the model blindly; an ingestion failure must leave the cursor unchanged.
+
+`NEEDS_ATTENTION` is not a failed batch. It means a fact has missing/conflicting evidence, an incomplete boundary, degraded occurrence time, or an unsafe duplicate decision. Other facts remain recorded and the incremental cursor may advance. If the whole next scan is blocked, treat that as a cursor/transaction defect rather than expected attention behavior.
+
+If history coverage is not moving, distinguish `WAITING_FOR_MODEL`, `RUNNING`, `PAUSED`, and `FAILED`. Check the persisted upper bound, last processed commit, completed chunk count, and safe error summary. Completed facts and chunks must survive cancellation or restart. Retry resumes from the checkpoint and must not resend covered commits; never clear Project Facts to restart history.
+
+If an old commit appears under today's date, inspect its commit/Agent evidence time and fact occurrence window. `createdAt` is ingestion time, not event time. Missing reliable evidence time must be marked as a degraded diagnostic or Needs Attention rather than silently displayed as today.
+
+If duplicate facts appear after retry or migration, compare source batch/segment and canonical commit/Agent/evidence references. The fingerprint is evidence-derived, not title-derived. Do not merge/delete long-term facts by title similarity; preserve data and fix the idempotency boundary.
+
+For V3.3.8.1 H2 upgrades, preserve `.projectflow/local-data/` and validate a copied/file-backed database first. Current startup may add ProjectFact, FactCursor, and history-state schema and idempotently migrate legacy segments/sediments. Never delete the real database, old batches, old changes, old sediments, or Review Cursor as an upgrade workaround.
+
+If the legacy sediment processing center reports “沉淀批次读取失败，请查看本地服务日志后重试”, inspect the backend log for the returned error code. V3.3.8.1 compatibility reads tolerate historical nullable fields and label incomplete batches instead of requiring database deletion. Do not manually erase old batches.
 
 If a completed scan is absent after navigation, call `GET /api/projects/{projectId}/dashboard-bootstrap`. A correct response proves persisted state independently of sessionStorage. Clearing sessionStorage is safe; the page should restore from this endpoint. A GitHub/output/material refresh warning is secondary and must not clear the latest batch or development segments.
 

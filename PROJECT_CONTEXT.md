@@ -1,24 +1,36 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-07-13
+Last updated: 2026-07-15
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.3.8.1 is a local-first development-change understanding and project-sedimentation tool for AI-assisted solo developers.
+ProjectFlow V3.4.0 is a local-first project memory system for AI-assisted solo developers. It automatically organizes real development evidence into durable project facts and preserves how a project grew from its earliest history to its latest changes.
 
 Current direction:
 
 - Local Git supplies objective change evidence; Agent results add task intent and verification context.
-- The primary workflow is 待整理变更 → 开发推进段 → 建议沉淀 → 项目沉淀.
-- Rules collect and validate facts, models interpret them, and users make the final confirmation.
-- AI/model calls are candidate generators only; user confirmation is required before treating output as official project facts.
+- The primary workflow is 分析新变化 → DevelopmentSegment → 自动 ProjectFact → 项目记录 / 项目记忆.
+- Rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records normal evidence-backed facts.
+- Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
+
+V3.4.0 focus:
+
+- `DevelopmentSegment` remains the analysis-layer result; `ProjectFact` is the stable long-term memory entity.
+- New scans no longer create the normal manual ProjectChange/sediment suggestion queue. V3.3.x changes, actions, sediments and review cursors remain readable compatibility records.
+- Fact fingerprints use source and evidence identity rather than title similarity. Reusable batches, retries, restarts, concurrent ingestion and history replay must not duplicate facts.
+- `ProjectFactCursor` advances only after fact persistence succeeds. `NEEDS_ATTENTION` does not block it.
+- Existing Development Segments and confirmed sediments migrate idempotently; H2 and PostgreSQL data are preserved.
+- Uncovered Git history is rebuilt oldest-first in bounded background chunks with separate persistent coverage/checkpoint state.
+- Project Records presents batches and facts; Project Memory treats Project Facts as the primary factual layer and legacy ProjectMemory fields as compatibility archive content.
+- The V3.3.7 job infrastructure, V3.3.8 model gateway and V3.3.8.1 read boundary stay intact.
+- Complete timeline, lifecycle capability map, Hermes sync and Obsidian sync are later phases, not V3.4.0 deliverables.
 
 V3.3.8.1 focus:
 
-- Persisted jobs, batches, development segments, formal changes, and sediments are authoritative; project-scoped sessionStorage snapshots are disposable first-render cache only.
+- Persisted jobs, batches, development segments, Project Facts, and cursors are authoritative for the new flow; formal changes and sediments remain authoritative inside their compatibility views. Project-scoped sessionStorage snapshots are disposable first-render cache only.
 - Dashboard Bootstrap restores core persisted state without Git, GitHub CLI, filesystem, or model work. Secondary reads cannot clear the core result when they fail.
 - Legacy nullable batch/change/segment fields degrade safely, and sediment batch lists use fixed bulk queries rather than per-batch N+1 reads.
 - V3.3.7 job reliability and V3.3.8 model reliability remain unchanged.
@@ -38,7 +50,7 @@ V3.3.7 focus:
 - Duplicate active input returns the existing job; bounded executors and explicit rejection prevent unlimited work; cancellation checkpoints stop later model calls and formal persistence.
 - Restart recovery requeues untouched queued work only. A potentially sent model request is never replayed automatically because its billing state is unknown.
 
-V3.3.6 focus:
+V3.3.6 compatibility focus:
 
 - Sediment processing is organized by analysis batch and time; the workbench shows a summary and the processing center handles one formal suggestion at a time.
 - Local fact and Agent-result drafts remain visible but never automatically enter the formal suggestion flow.
@@ -77,25 +89,17 @@ Do not treat ProjectFlow as a generic Kanban app, SaaS admin panel, hotel/librar
 
 ## Current Stage
 
-The project has moved beyond the V1/V2 planning baseline. Current V3.3.8.1 focus:
+The project has moved beyond manual sediment processing. Current V3.4.0 focus:
 
-- Workbench first screen exposes: add/import project → bind local path → analyze new changes → review development segments → confirm sediment → reuse output.
-- Scan boundaries use the last confirmed review cursor rather than the current day.
-- Suggested sediment supports NEW_SEDIMENT, MERGE_EXISTING, EVIDENCE_ONLY, and IGNORE.
-- Subjective fields without confirmed evidence stay hidden from the default project-sediment view.
-- ProjectFlow must be usable without reading docs or requiring an agent to explain the workflow.
-- Workbench actions should prioritize the next concrete step, not a flat set of unrelated buttons.
-- Evidence Bundle lifecycle is now product-visible through `status`, `nextAction`, and `changeId`.
-- Change review is the project asset intake desk: accepted changes write to Project Memory and Fact Sources.
-- Project profile should show both current fields and project growth history.
-- Daily review and outputs should explain which confirmed sources they use.
-- Left-side first-screen actions still include raw project connection: import zip, bind real project path, write `.projectflow` protocol, scan agent result.
-- "Project facts" UI language should become "项目画像" / "项目档案".
-- Model API value should move upstream into project analysis, module/file explanation, risk identification, agent result parsing, and profile update suggestions.
-- Model-not-configured and model-failed states must keep local-rule fallback usable.
-- Segment output must describe concrete results and pass evidence plus quality validation.
-- Scan fingerprints stabilize repeated analysis and diagnostics explain model, fallback, GitHub, worktree, and remote state.
-- Capability output is stored as structured cards generated from the whole confirmed project evidence set.
+- Workbench: add/import project → bind local path → analyze new changes → automatic facts → leave safely.
+- Incremental scan boundaries use the last successfully recorded Fact Cursor, not the last manual review decision.
+- Project Records groups permanent facts by analysis batch and month; batch detail shows all facts and evidence without routine confirmation controls.
+- Project Memory shows fact count, commit coverage, earliest/latest fact and recent facts; old sediments and profile fields remain in a compatibility area.
+- Historical reconstruction starts only after a successful recent analysis, runs in bounded chunks, persists checkpoints, and never blocks normal incremental scans.
+- Facts describe what happened. Recommendations, importance judgments and future plans remain outside the automatic fact layer.
+- ProjectFlow must remain usable without reading docs or asking an agent to explain the workflow.
+- Add/import project, zip import, local binding, model configuration, login, Agent bridge, GitHub read-only status and existing outputs remain available.
+- Capability cards remain structured outputs, but the later full fact-native capability map is outside this stage.
 
 Recent implementation report says these are already present:
 
@@ -107,8 +111,9 @@ Recent implementation report says these are already present:
 
 Known remaining boundary:
 
-- Analysis records exist, but deeper persistent `ProjectAnalysisRun` / `ProjectFileInsight` style history is still a likely next step.
-- Real DeepSeek key/network validation may not have been done locally.
+- V3.4.0 establishes the fact layer, not a complete day/week/month/all-cycle timeline or lifecycle capability map.
+- Hermes and Obsidian are future consumers of fact read models; no formal synchronization protocol is implemented here.
+- The legacy ProjectMemory entity and completedCapabilities text remain compatibility fields, not the new source of project history.
 - File analysis is based on imported zip summaries and key content, not full source indexing.
 
 ## Tech Stack
@@ -125,16 +130,16 @@ cd frontend
 npm.cmd run build
 
 cd ..\backend
-C:\Users\Administrator\Desktop\apache-maven-3.9.9\bin\mvn.cmd -q test
+mvn.cmd test
 ```
 
 Docker/team startup:
 
 ```powershell
-.\start-projectflow.ps1
+.\start.bat
 ```
 
-For local embedded mode, double-click `Start-ProjectFlow.bat`. It uses repository-relative paths, verifies frontend dependencies from `package-lock.json`, rebuilds the current checkout, and does not modify Git history.
+For local embedded mode, double-click the repository or desktop `Start-ProjectFlow.bat`. The repository entry uses relative paths, verifies dependencies from `package-lock.json`, rebuilds the current checkout, and does not modify Git history. Docker/team mode remains available through `start-projectflow.ps1`.
 
 ## Repository Map
 
@@ -155,6 +160,7 @@ Key docs to read selectively:
 - `README.md`: product scope, tech stack, local startup.
 - `docs/architecture.md`: frontend/backend layering and core flows.
 - `docs/data-model.md`: base V1 data model and ownership rule.
+- `docs/project-fact-memory.md`: V3.4 fact definition, ingestion, cursors, history backfill, read models, and legacy compatibility.
 - `docs/api-design.md`: V1 API shape and endpoint baseline.
 - `docs/v2-core-plan.md`: Project Material, Project Memory, Snapshot/Diff, AI suggestion confirmation model.
 - `docs/v3-product-direction-plan.md`: V3 developer workbench direction and agent/ProjectFlow split.
@@ -188,17 +194,19 @@ Core services:
 - `AiOutputService`: weekly report, project summary, resume bullets, README section outputs.
 - `ProjectIntelligenceService`: materials, zip import, project analysis, file analysis, suggestions, memory, snapshots, evolution records, project changes, fact sources, analysis records.
 - `ProjectAgentBridgeService`: writes `.projectflow` protocol/context/task briefs, scans agent result files, creates materials/suggestions/changes.
-- `WorkSessionScanService`: reads the bound local project path and Git evidence to create work sessions.
-- `EvidenceBundleService`: creates or updates one evidence bundle per work session and exposes lifecycle state.
-- `EvidenceDraftChangeService`: turns an evidence bundle into an editable structured project change.
+- `WorkSessionScanService`: reads the bound local project path and Git evidence, persists batches/segments, and hands validated analysis results to automatic fact ingestion.
+- `ProjectFactIngestionService` / `ProjectFactService` and history coordination: persist idempotent Project Facts, advance the incremental Fact Cursor, expose project-owned paged fact/read models, and coordinate legacy/history coverage.
+- `EvidenceBundleService` and `EvidenceDraftChangeService`: retain the earlier evidence/change workflow for compatibility and non-fact review use cases.
 
 Important backend constraints:
 
 - All project-owned resources must be scoped through project ownership.
 - Real secrets belong in environment variables or user provider config, not committed files.
-- Model output is candidate data; do not silently overwrite confirmed user/project memory content.
+- Model output remains analysis data until evidence validation. Valid objective segments may become immutable Project Facts automatically; model output must never overwrite existing facts or subjective profile content.
 - Zip import skips `.git`, dependency/build output, logs, `.env`, binary/media/archive files.
-- Evidence bundles are not confirmed project facts; accepted project changes are.
+- Development Segments and Evidence Bundles are analysis/evidence records, not the stable Project Fact layer.
+- Normal Project Facts do not require confirmation. Missing or conflicting evidence must produce Needs Attention or no strong fact, never fabricated certainty.
+- Fact Cursor advancement and fact persistence share one success boundary; history and incremental cursors remain separate.
 - File model analysis must skip sensitive paths.
 - Local-rule fallback should keep pages useful when model API is missing or fails.
 
@@ -218,8 +226,8 @@ Important files:
 Current main nav in `AppShell.tsx`:
 
 - `工作台` -> `/dashboard`
-- `变更审查` -> `/tasks`
-- `项目画像` -> `/project-intelligence`
+- `项目记录` -> `/sediment-review`
+- `项目记忆` -> `/project-intelligence`
 - `每日回顾` -> `/dev-logs`
 - `成果输出` -> `/ai-review`
 - `设置` -> `/settings`
@@ -233,6 +241,7 @@ Important routes:
 - `/dev-logs`
 - `/imports`
 - `/project-intelligence`
+- `/sediment-review`, `/sediment-review/[batchId]`（V3.4 项目记录路由，保留旧路径以兼容链接）
 - `/project-analysis-records/[recordId]`
 - `/ai-review`
 - `/settings`
@@ -262,6 +271,8 @@ Core endpoint groups:
 - Project analysis: `/projects/{projectId}/analysis/run`, `/projects/{projectId}/files/analyze`, `/projects/{projectId}/analysis-records`, `/project-analysis-records/{recordId}`
 - Suggestions/changes: `/projects/{projectId}/suggestions`, `/ai-suggestions/{suggestionId}`, `/projects/{projectId}/changes`, `/project-changes/{changeId}`
 - Memory/history: `/projects/{projectId}/memory`, `/projects/{projectId}/fact-sources`, `/projects/{projectId}/snapshots`, `/projects/{projectId}/evolution-records`
+- Project facts: `/projects/{projectId}/facts`, `/project-facts/{factId}`, `/projects/{projectId}/fact-memory-overview`, `/projects/{projectId}/fact-history-state`
+- Project records: `/projects/{projectId}/project-record-batches`, `/project-record-batches/{batchId}`
 - Agent bridge: `/projects/{projectId}/agent-bridge/protocol`, `/projects/{projectId}/agent-bridge/scan`, `/projects/{projectId}/agent-bridge/tasks/{taskId}/brief`
 
 Response shape:
@@ -287,7 +298,7 @@ Base V1:
 - `ImportRecord`
 - `AiOutput`
 
-V2/V3 project intelligence:
+V2/V3 project intelligence and compatibility:
 
 - `AiProvider`
 - `ProjectMaterial`
@@ -299,9 +310,18 @@ V2/V3 project intelligence:
 - `ProjectFactSource`
 - `ProjectAnalysisRecord`
 
+V3.4 project fact memory:
+
+- `ChangeBatch`: one incremental or historical analysis range.
+- `DevelopmentSegment`: analysis-layer semantic grouping.
+- `ProjectFact`: stable evidence-backed record of what happened.
+- `ProjectFactCursor`: latest incremental commit successfully recorded as facts.
+- `ProjectFactHistoryState`: history coverage, checkpoint and backfill lifecycle.
+- Legacy `ProjectChange`, `ProjectSediment`, `ProjectReviewCursor`, and `ProjectMemory`: compatibility data, not the new scan path.
+
 Ownership rule:
 
-- A user can access task/log/material/suggestion/change/memory/output data only through a project owned by that user.
+- A user can access task/log/material/suggestion/change/memory/output/fact/cursor/history data only through a project owned by that user.
 
 ## Agent Bridge
 
@@ -328,13 +348,13 @@ Agent result requirements:
 - Read `.projectflow/AGENT_PROTOCOL.md` before substantial work.
 - Write structured `result.json` with task goal, actual changes, repository-relative key files, verification, unfinished work, and sediment candidates.
 - Use `not_run` for checks that were not run; never present plans as completed capability.
-- ProjectFlow imports Agent results as candidate evidence. Users still make the final sediment decision.
+- ProjectFlow imports Agent results as candidate evidence. Agent-result-only claims do not become strong facts unless objective evidence and quality rules support them; normal evidence-backed facts do not require a separate sediment decision.
 
 ## Implementation Habits
 
-- Keep changes narrow and aligned with the current V3.1 direction.
+- Keep changes narrow and aligned with the current V3.4 automatic project fact memory direction.
 - Prefer existing services, DTO records, repository patterns, and API client types.
-- If adding backend behavior, add focused tests in `backend/src/test/java/com/projectflow`.
+- If adding backend behavior, add focused tests in `backend/src/test/java/com/projectflow`, including H2/PostgreSQL parity for persistence and idempotency where relevant.
 - If touching frontend routes or API types, verify `npm.cmd run build`.
 - If touching backend service/controller/entity behavior, verify targeted tests or full `mvn.cmd -q test`.
 - Do not commit local secrets or real `.env`.

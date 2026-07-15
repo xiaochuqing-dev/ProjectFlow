@@ -1,12 +1,23 @@
-# Confirmed V3.3.8.1 decisions
+# Confirmed V3.4.0 decisions
+
+- ProjectFlow 的核心定位是“自动维护项目从创建至今的长期记忆”。
+- 新主链是“分析新变化 → DevelopmentSegment → 自动 ProjectFact → 项目记录 / 项目记忆”；人退出正常事实确认主链。
+- DevelopmentSegment 是分析产物，ProjectFact 是长期事实；事实只能描述已经发生的事情，不承载未来建议或重要性判断。
+- 正常 evidence-backed MODEL、可靠 partial、LOCAL_RULE + Git evidence、Agent result + 代码 evidence 可按质量规则自动记录；无证据不得伪装成 RECORDED 强事实。
+- NEEDS_ATTENTION 只处理证据冲突、不足、边界不完整或无法安全去重等异常，不阻塞其他 facts、batch 完成、FactCursor 或下一次扫描。
+- factFingerprint 优先使用来源 segment/batch 与排序后的 commit、Agent result、evidence 引用，不使用标题相似度作为事实唯一性。
+- FactCursor 只在事实持久化成功后推进；旧 ReviewCursor 仅用于首次兼容初始化，之后不再决定增量边界。
+- history cursor/checkpoint 与 incremental FactCursor 分离；backfill 必须 bounded、oldest-to-newest，已覆盖 commit 不重复模型分析。
+- ProjectChange、SedimentAction、ProjectSediment、ProjectReviewCursor 和旧 ProjectMemory 是 V3.3.x 兼容层，新扫描不得继续创建人工建议队列。
+- ProjectFact 是未来项目历程、项目能力、Hermes、Obsidian 和成果输出的事实基础；完整消费者不在 V3.4.0 提前实现。
 
 - 分析结果的事实来源是数据库；sessionStorage 仅用于快速恢复；Dashboard 使用轻量 Bootstrap Read Model 校准核心状态。
 - session-only 弱响应不得清空已有 batch 或非空 segments；数据库权威响应才可明确清空。
 - Dashboard snapshot 使用 projectId 隔离和 schemaVersion 2，旧单 key 只做一次兼容迁移。
-- Bootstrap 只读持久化项目、memory、最新 job/batch/segments/sessions、待处理统计、分析摘要和 Provider 可用性；禁止 Git、GitHub CLI、模型和文件扫描。
+- Bootstrap 只读持久化项目、memory、最新 job/batch/segments、轻量事实统计、sessions、兼容待处理统计、分析摘要和 Provider 可用性；禁止 Git、GitHub CLI、模型和文件扫描。
 - 历史 batch/change/segment 缺失字段在读取边界保守降级；不做破坏性回填，单条坏数据不得拖垮列表。
 - 批次列表使用固定批量查询，不允许恢复逐批次 changes/segments 的 N+1。
-- 开源 Windows 快速启动入口使用仓库相对路径，首次或 package-lock 变化时安装前端依赖，每次重建当前工作树；它不修改 Git 历史，并记录可核对的版本、提交、本地修改标记和前端 Build ID。
+- 仓库 Windows 入口使用相对路径、按 package-lock 验证依赖、重建当前工作树且不修改 Git 历史；桌面启动器在工作区干净时快进同步 origin/master，存在本地修改时保护修改、跳过拉取并继续构建。成功运行后记录版本、提交、本地修改标记和前端 Build ID。
 - V3.3.7 后台任务和 V3.3.8 模型可靠性边界保持不变。
 
 - 6 个真实模型入口统一登记并通过网关，Provider 测试不再自行发送 HTTP。
@@ -24,9 +35,8 @@
 
 - 空 content 不等于普通空响应；若 finish reason 为 length、用量接近上限或存在 reasoning 内容，则按疑似截断处理。
 - 输出恢复最多一次；V3.3.8 已用分型动态预算取代固定 2000 tokens。
-- 正式建议只来自有证据绑定的 MODEL 开发推进段；LOCAL_RULE 和 AGENT_RESULT 仅保留为本地草稿。
-- 沉淀处理以分析批次为入口，批次列表展示摘要，详情页逐条处理正式建议。
-- 推荐强度分为强、中、仅供参考、不推荐；强推荐必须同时满足证据和目标相似度条件。
+- 旧正式建议仍只按原证据绑定规则读取；该规则不再决定 V3.4 ProjectFact 是否可自动记录。
+- 旧沉淀批次、四类处理动作和推荐强度继续作为兼容数据，不得重新成为新扫描入口。
 - 能力分析输入改为已确认项目沉淀；失败不改变沉淀的待分析状态。
 - 外部 Git、GitHub、模型调用均不放在数据库长事务中。
 - 新增数据库字段使用可空或安全默认值，兼容 H2 与 PostgreSQL 既有数据。
