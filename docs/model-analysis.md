@@ -33,3 +33,7 @@ Retry types are `TRANSPORT_RETRY`, `TRUNCATION_RETRY`, `EMPTY_AFTER_REASONING_RE
 Reasoning text is never stored, logged, or returned. Diagnostics retain only presence, length, and whether reasoning likely exhausted the shared output budget. API keys, Authorization, full prompts and raw Provider responses are also excluded.
 
 Legal JSON with the wrong business shape is not classified as a syntax failure. It receives one Schema repair request that re-encodes existing semantics into the minimal target Schema without re-running the analysis. Complete entries from a truncated array may be retained as a partial result.
+
+## V3.4.2 capability tasks
+
+`PROJECT_CAPABILITY_MAP_BOOTSTRAP` and `PROJECT_CAPABILITY_MAP_INCREMENTAL` are registered ModelTaskTypes and use the unified gateway. The model returns internal operations plus no-change and attention classifications; it never chooses database UUIDs, maturity or user-facing confirmation. Validation requires every allowed fact exactly once, rejects unknown/cross-project fact or capability IDs, duplicate/missing coverage, planning/reasoning/maturity fields and unsafe merge. Provider, model, usage, finish reason, parameters, retries and failure stage remain safe diagnostics; key, Authorization, full prompt, raw response and reasoning text are never stored.

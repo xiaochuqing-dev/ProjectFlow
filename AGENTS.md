@@ -1,9 +1,41 @@
-<!-- PROJECTFLOW V3.4.1 CONTEXT START -->
-ProjectFlow 当前版本为 V3.4.1。后续 Agent 必须按“分析新变化 -> 开发推进段 -> 自动项目事实 -> 项目记录 / 项目记忆 -> 自动项目历程”理解产品。正常事实不逐条确认，只有异常进入“需要关注”。
+<!-- PROJECTFLOW V3.4.2 CONTEXT START -->
+ProjectFlow 当前版本为 V3.4.2。后续 Agent 必须按“分析新变化 -> 开发推进段 -> 自动项目事实 -> 项目记录 / 项目记忆 -> 自动项目历程 -> 全生命周期能力地图”理解产品。正常事实和能力演进不逐条确认，只有异常进入“需要关注”。
 
 开始任务前请阅读 `.projectflow/AGENT_PROTOCOL.md`。完成开发任务后，按协议把结果写入 `.projectflow/agent-results/`。不要删除添加项目、zip 导入、本地项目绑定、模型配置、登录等核心入口。
 
-开发推进段和项目事实必须描述真实发生的开发结果、用户或开发者可感知变化、验证情况和不确定项。禁止用 backend/frontend/docs/config 等目录名、提交数量或“开发推进”空话替代具体摘要。能力与成果页以结构化 Capability Card 为主，旧 `completedCapabilities` 仅作兼容档案。
+开发推进段和项目事实必须描述真实发生的开发结果、用户或开发者可感知变化、验证情况和不确定项。禁止用 backend/frontend/docs/config 等目录名、提交数量或“开发推进”空话替代具体摘要。能力主页面以长期 `ProjectCapability` 地图为主，旧 `ProjectCapabilityCard` 和 `completedCapabilities` 仅作兼容档案。
+
+V3.4.2 事实原生能力地图规则（后续 Agent 必须遵守）：
+- ProjectFact 是唯一事实来源。
+- Timeline 是时间派生层。
+- ProjectCapability 是稳定、长期的能力实体。
+- ProjectCapabilityCard 是旧版兼容数据。
+- 能力刷新不得删除 ProjectFact。
+- 能力刷新不得重写已经记录的历史 Evolution。
+- 正常能力变化无需用户确认。
+- 模型 operation 只是内部协议，不是用户选择。
+- 全历史 bootstrap 必须覆盖全部 ProjectFact。
+- 不得用 recent-N 冒充完整能力地图。
+- 每个输入 ProjectFact 必须被明确分类。
+- Timeline Theme 不是 Project Capability。
+- 稳定身份不得只依赖名称。
+- 未知 capability ID 必须判为无效。
+- 未知或跨项目 fact ID 必须判为无效。
+- 成熟度必须由确定性规则给出并可解释。
+- 模型数值成熟度没有权威性。
+- 模型调用必须在事实事务之外执行。
+- GET 请求不得触发付费模型调用。
+- 刷新失败必须保留上一次成功地图。
+- 历史补齐不得在每个 chunk 后重建完整地图。
+- 合并必须非破坏性，保留来源能力、关系、演进与 redirect。
+- 高风险合并必须进入 attention。
+- 旧 CONFIRMED 卡片必须保留，但不是事实；只在来源可追到 ProjectFact 时迁移。
+- V3.4.0 ProjectFact 架构保持稳定。
+- V3.4.1 Timeline 架构保持稳定。
+- V3.3.8 ModelGateway 核心保持稳定。
+- 所有能力 API 必须校验 userId 与 projectId 归属。
+- 禁止修改操作系统文件或全局机器配置。
+- 只能使用仓库内或当前进程内方案解决环境问题。
 
 V3.4.1 自动项目历程规则（后续 Agent 必须遵守）：
 - 工作台只分析新变化，不得重新加入 daily 或下一步规划主链。
@@ -36,7 +68,7 @@ V3.4.0 关键决策（后续 Agent 必须遵守）：
 - V3.3.7 job infrastructure 与 V3.3.8 model gateway 保持稳定，不得为本阶段重写。
 - 数据库中的 batch、segment、fact、cursor 和 history state 是事实来源；页面缓存只作加速层。
 - 所有 ProjectFact、记录、记忆、游标和历史状态 API 必须校验 userId 与 projectId 归属。
-- 本阶段不提前实现完整 timeline、全生命周期 capability map、Hermes 正式同步或 Obsidian 正式同步。
+- Timeline 与全生命周期 capability map 已分别在 V3.4.1、V3.4.2 实现；本阶段不提前实现 Hermes 正式同步或 Obsidian 正式同步。
 - V3.4.0 收尾必须生成 `docs/projectflow-v3.4.0-project-fact-memory-report.md`，只记录实际观察到的测试、性能、H2、PostgreSQL、Playwright、桌面启动、CI、提交和已知风险，不得预写通过结果。
 
 V3.3.8.1 读取与启动可靠性（仍然有效）：
@@ -99,7 +131,7 @@ V3.3.3 仍有效的关键决策：
 - 多来源证据（本地 Git / 工作区 diff / GitHub / Agent result / 扫描范围）要整理成分析输入快照交给模型，模型基于证据灵活判断真实开发状态，不写死优先级。
 - 需要模型理解的入口（分析新变化、分析项目能力）必须有模型配置前置检查；未配置模型时不生成低质量本地模板结果，明确提示去配置模型。
 - 规则负责证据事实，模型负责灵活理解；正常客观事实自动记录，用户只处理主观编辑和异常关注项。
-<!-- PROJECTFLOW V3.4.1 CONTEXT END -->
+<!-- PROJECTFLOW V3.4.2 CONTEXT END -->
 
 # ProjectFlow Local Rules
 

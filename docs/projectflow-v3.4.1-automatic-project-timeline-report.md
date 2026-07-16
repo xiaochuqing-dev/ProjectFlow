@@ -265,3 +265,5 @@ Hibernate ddl-auto=update 仍不是版本化迁移；外部 Provider 仍可能�
 ## 63. report path
 
 docs/projectflow-v3.4.1-automatic-project-timeline-report.md
+
+V3.4.2 在 ProjectFact 与 Timeline 之上建设生命周期能力地图，详见 V3.4.2 report。

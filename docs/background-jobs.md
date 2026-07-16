@@ -31,3 +31,7 @@ Each job allows at most 3 model requests, 10 minutes total elapsed time and 60,0
 Cancellation is idempotent. QUEUED becomes CANCELLED directly; RUNNING becomes CANCEL_REQUESTED and reaches CANCELLED at the next safe checkpoint. Checkpoints surround Git, GitHub, model dispatch/response and fact/legacy persistence. Existing successful results, Project Facts, completed history chunks, sediments, and confirmed cards remain intact.
 
 On restart, QUEUED is re-enqueued. A pre-model RUNNING job becomes RETRYABLE. A job at a model or persistence stage becomes INTERRUPTED and requires explicit retry because billing state may be unknown.
+
+## V3.4.2 capability map refresh
+
+`PROJECT_CAPABILITY_MAP_REFRESH` reuses the durable queue, active-input uniqueness, budgets, heartbeat, cancellation and restart rules. The scope contains the project and source fingerprint. After-commit fact events mark the map dirty and coalesce an equivalent active job; model calls run outside fact transactions. Bootstrap pages all facts in 120-item chunks; incremental refresh selects only missing or stale coverage. History backfill accumulates dirty state and schedules one refresh after completion. A successful apply updates capabilities, evolutions, relations, coverage and map state atomically. Failure keeps the last successful map and retry remains an explicit recovery operation.

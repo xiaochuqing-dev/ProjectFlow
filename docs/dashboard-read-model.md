@@ -24,3 +24,7 @@ The service performs database-only latest/count/projection/bounded-list reads. I
 Sessions may refresh independently. A session-only response with no loaded batch or segments preserves an existing complete batch and non-empty segment list. A weak secondary fact/history response cannot clear an authoritative batch or fact summary. An authoritative bootstrap may explicitly establish absence. Every response and snapshot is guarded by project ID and request generation so a late A response cannot overwrite B.
 
 The project-scoped snapshot records display-calibration identifiers such as `projectId`, `capturedAt`, latest scan job/batch IDs, and batch update time. It never becomes Project Fact, Fact Cursor, or history-state storage. The default freshness diagnostic is five minutes; stale cache can render while database calibration runs. Logout clears all snapshots, project deletion clears only that project's snapshot, and a legacy single key migrates only when its project matches.
+
+## V3.4.2 capability read boundary
+
+Capability Map stays outside Dashboard Bootstrap so the workbench first screen remains lightweight and model-free. Its page loads overview, paged capabilities, changes, attention and legacy compatibility independently, retains successful sections on secondary failure, and uses a project request generation to reject late A responses after switching to B. Capability detail uses bounded evolution and joined fact pages rather than N+1 reads. No capability GET marks dirty or dispatches a model task.

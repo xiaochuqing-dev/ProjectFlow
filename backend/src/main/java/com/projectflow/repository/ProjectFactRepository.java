@@ -30,6 +30,22 @@ public interface ProjectFactRepository extends JpaRepository<ProjectFact, UUID> 
     Optional<ProjectFact> findFirstByProjectIdOrderByOccurredFromAscCreatedAtAsc(UUID projectId);
     Optional<ProjectFact> findFirstByProjectIdOrderByOccurredToDescCreatedAtDesc(UUID projectId);
     List<ProjectFact> findTop10ByProjectIdOrderByOccurredToDescCreatedAtDesc(UUID projectId);
+    Page<ProjectFact> findByProjectIdOrderByTimelineEventAtAscCreatedAtAsc(UUID projectId, Pageable pageable);
+
+    @Query(value = """
+        select fact from ProjectFact fact where fact.projectId = :projectId and not exists (
+          select coverage from ProjectCapabilityFactCoverage coverage
+          where coverage.projectId = :projectId and coverage.factId = fact.id
+            and coverage.sourceFactUpdatedAt = fact.updatedAt
+        ) order by fact.timelineEventAt asc, fact.createdAt asc
+        """, countQuery = """
+        select count(fact) from ProjectFact fact where fact.projectId = :projectId and not exists (
+          select coverage from ProjectCapabilityFactCoverage coverage
+          where coverage.projectId = :projectId and coverage.factId = fact.id
+            and coverage.sourceFactUpdatedAt = fact.updatedAt
+        )
+        """)
+    Page<ProjectFact> findCapabilityFactsNeedingCoverage(@Param("projectId") UUID projectId, Pageable pageable);
 
     @Query(value = """
         select new com.projectflow.repository.ProjectFactSummaryRow(
@@ -195,6 +211,12 @@ public interface ProjectFactRepository extends JpaRepository<ProjectFact, UUID> 
         order by fact.id
         """)
     List<TimelineFactVersionRow> lifecycleVersions(@Param("projectId") UUID projectId);
+
+    @Query("""
+        select new com.projectflow.repository.TimelineFactVersionRow(fact.id, fact.updatedAt)
+        from ProjectFact fact where fact.projectId = :projectId order by fact.id
+        """)
+    List<TimelineFactVersionRow> capabilityVersions(@Param("projectId") UUID projectId);
 
     @Query("""
         select new com.projectflow.repository.TimelineFactPeriodVersionRow(fact.id, fact.timelineMonthKey, fact.updatedAt)

@@ -82,3 +82,7 @@ V3.3.8 adds focused tests for Provider/model capability selection, task/input-aw
 `RealDeepSeekIT` is optional and runs only with `PROJECTFLOW_RUN_REAL_MODEL=true` plus a secure `DEEPSEEK_API_KEY`. It validates all six registered small-input entrypoints. Local release acceptance additionally drives actual application APIs against an isolated copy of the configured embedded Provider and records medium/large ProjectFlow self-analysis separately from fixed-model automation.
 
 Real DeepSeek is disabled unless PROJECTFLOW_RUN_REAL_MODEL=true and DEEPSEEK_API_KEY is present. The fixed input caps output at 128 tokens, task requests at 3 and total asserted usage below 1,000 tokens. Without a key the workflow prints SKIPPED.
+
+## V3.4.2 capability map gates
+
+Focused backend cases cover 42-fact reclassification, exact classification, unknown/duplicate/missing IDs, stable identity, aliases, deterministic maturity, safe and high-risk merge, bootstrap/incremental/no-change, ownership, filters, retry and old-READY preservation. Performance fixtures jointly cover 5000 facts, 100 capabilities, 1000 evolutions, 10000 relations, 300 Timeline themes, a 230-fact month, and 500 incremental facts with measured P50/P95 and Hibernate statement counts. Release gates remain the complete backend/H2 suite, old file-backed H2 upgrade, a safe copy of the current H2 database, PostgreSQL 16 Testcontainers, frontend contracts, TypeScript, production build, all Playwright flows, sensitive scan, repository BAT startup and GitHub Actions. Actual results belong only in the V3.4.2 report.

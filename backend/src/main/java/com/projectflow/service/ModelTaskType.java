@@ -51,6 +51,16 @@ public enum ModelTaskType {
         List.of(), List.of("periodSummary", "stages", "ungroupedMonthKeys"), List.of(),
         "{\"periodSummary\":\"\",\"stages\":[{\"title\":\"\",\"summary\":\"\",\"monthKeys\":[\"2026-07\"]}],\"ungroupedMonthKeys\":[]}"
     ),
+    PROJECT_CAPABILITY_MAP_BOOTSTRAP(
+        "全生命周期能力地图初始化", 7_000, 20_000, 0.1, false,
+        List.of(), List.of("operations", "noCapabilityChangeFactIds", "attentionFacts"), List.of(),
+        "{\"operations\":[{\"type\":\"NEW_CAPABILITY\",\"temporaryKey\":\"C1\",\"canonicalName\":\"\",\"summary\":\"\",\"problemSolved\":\"\",\"longTermValue\":\"\",\"productAreas\":[],\"factIds\":[\"uuid\"],\"evolutionTitle\":\"\",\"evolutionSummary\":\"\"}],\"noCapabilityChangeFactIds\":[],\"attentionFacts\":[]}"
+    ),
+    PROJECT_CAPABILITY_MAP_INCREMENTAL(
+        "全生命周期能力地图增量维护", 6_000, 20_000, 0.1, false,
+        List.of(), List.of("operations", "noCapabilityChangeFactIds", "attentionFacts"), List.of(),
+        "{\"operations\":[{\"type\":\"ENHANCE_CAPABILITY\",\"capabilityId\":\"uuid\",\"factIds\":[\"uuid\"],\"summary\":\"\",\"evolutionTitle\":\"\",\"evolutionSummary\":\"\"}],\"noCapabilityChangeFactIds\":[],\"attentionFacts\":[]}"
+    ),
     LEGACY_STRUCTURED(
         "兼容结构化调用", 2_048, 20_000, 0.2, false,
         List.of("items", "results"), List.of(), List.of(), "{}"

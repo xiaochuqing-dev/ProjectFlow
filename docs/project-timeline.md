@@ -44,4 +44,4 @@ Timeline API 提供 overview、周期列表、周期详情、主题事实、life
 
 前端 `/timeline` 默认按月，支持按日、按周、按月和全部；项目切换立即清除旧状态，并用请求代次阻止慢响应覆盖新项目。`/dev-logs` 继续作为 Daily Review 旧链接兼容，不再是主导航时间视图。
 
-V3.4.1 不实现完整生命周期能力地图，也不实现 Hermes 或 Obsidian 正式同步。它们只能在后续阶段消费同一 ProjectFact 记忆层。
+V3.4.1 本身不实现完整生命周期能力地图。V3.4.2 已在 ProjectFact 与 Timeline 之上增加独立 Capability Map：Timeline 仍回答“何时发生”，Capability 回答“完整事实证明具备什么能力”。Timeline Theme 不能直接成为 Capability，能力只绑定具体 ProjectFact。Hermes 和 Obsidian 正式同步仍属于后续阶段。

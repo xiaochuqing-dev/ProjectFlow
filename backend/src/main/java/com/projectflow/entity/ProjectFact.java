@@ -229,6 +229,12 @@ public class ProjectFact {
         this.timelineMonthKey = safe(monthKey);
     }
 
+    /** V3.4.2 只重新评级既有证据，不改写事实内容、来源、时间、指纹或游标。 */
+    public void reclassify(ProjectFactRecordStatus status, String reason) {
+        this.recordStatus = status == null ? ProjectFactRecordStatus.NEEDS_ATTENTION : status;
+        this.attentionReason = safe(reason);
+    }
+
     public UUID getId() { return id; }
     public UUID getProjectId() { return projectId; }
     public UUID getBatchId() { return batchId; }

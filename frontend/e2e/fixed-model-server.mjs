@@ -5,6 +5,7 @@ let delayNext = 0;
 let delayMs = 0;
 let failTask = "capability";
 let delayTask = "capability";
+let capabilityMode = "auto";
 
 function json(response, status, value) {
   response.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
@@ -27,6 +28,7 @@ const server = http.createServer(async (request, response) => {
     delayMs = 0;
     failTask = "capability";
     delayTask = "capability";
+    capabilityMode = "auto";
     return json(response, 200, { ok: true });
   }
   if (request.method === "POST" && request.url === "/control/fail-next") {
@@ -42,6 +44,11 @@ const server = http.createServer(async (request, response) => {
     delayTask = String(payload.task || "capability");
     return json(response, 200, { delayNext, delayMs });
   }
+  if (request.method === "POST" && request.url === "/control/capability-mode") {
+    const payload = JSON.parse((await body(request)) || "{}");
+    capabilityMode = String(payload.mode || "auto");
+    return json(response, 200, { capabilityMode });
+  }
   if (request.method !== "POST" || request.url !== "/v1/chat/completions") {
     return json(response, 404, { error: "not found" });
   }
@@ -53,11 +60,13 @@ const server = http.createServer(async (request, response) => {
   const task = prompt.includes("项目历程") ? "timeline"
     : prompt.includes("capabilities") || prompt.includes("项目能力") ? "capability"
       : "segment";
-  if (delayNext > 0 && (delayTask === "any" || delayTask === task)) {
+  const matchesTask = (configured) => configured === "any" || configured === task
+    || (configured.startsWith("timeline:") && task === "timeline" && prompt.includes(`periodKey=${configured.slice("timeline:".length)}`));
+  if (delayNext > 0 && matchesTask(delayTask)) {
     delayNext -= 1;
     await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
-  if (failNext > 0 && (failTask === "any" || failTask === task)) {
+  if (failNext > 0 && matchesTask(failTask)) {
     failNext -= 1;
     return json(response, 503, { error: { message: "controlled E2E failure" } });
   }
@@ -82,6 +91,8 @@ const server = http.createServer(async (request, response) => {
           }],
           ungroupedFactIds: [],
         })
+      : prompt.includes("ALLOWED_FACT_IDS_JSON=")
+        ? capabilityMapContent(prompt)
       : prompt.includes("capabilities") || prompt.includes("项目能力")
     ? JSON.stringify({ capabilities: [{
         name: "后台任务可靠性",
@@ -119,6 +130,41 @@ function jsonArrayAfter(prompt, marker) {
   } catch {
     return [];
   }
+}
+
+function capabilityMapContent(prompt) {
+  const factIds = jsonArrayAfter(prompt, "ALLOWED_FACT_IDS_JSON=");
+  if (capabilityMode === "no-change") {
+    return JSON.stringify({ operations: [], noCapabilityChangeFactIds: factIds, attentionFacts: [] });
+  }
+  const existing = jsonArrayAfter(prompt, "EXISTING_CAPABILITIES_JSON=");
+  const capabilityId = existing[0]?.capabilityId || "";
+  const operation = capabilityId
+    ? {
+        type: "ENHANCE_CAPABILITY",
+        capabilityId,
+        canonicalName: existing[0]?.canonicalName || "可追溯项目演进能力",
+        summary: "基于新增项目事实持续增强可追溯的工程能力。",
+        problemSolved: existing[0]?.problemSolved || "避免项目变化失去长期解释",
+        longTermValue: "持续积累可追溯、可维护的项目能力证据。",
+        productAreas: existing[0]?.productAreas || ["项目记忆"],
+        factIds,
+        evolutionTitle: "新增事实增强长期能力",
+        evolutionSummary: "本次事实形成新的能力演进和证据关系。",
+      }
+    : {
+        type: "NEW_CAPABILITY",
+        temporaryKey: "TMP-E2E-1",
+        canonicalName: "可追溯项目演进能力",
+        summary: "把真实开发事实持续组织为可追溯的长期能力。",
+        problemSolved: "避免项目变化失去长期解释",
+        longTermValue: "持续积累可追溯、可维护的项目能力证据。",
+        productAreas: ["项目记忆"],
+        factIds,
+        evolutionTitle: "形成可追溯项目演进能力",
+        evolutionSummary: "完整事实首次形成长期能力地图。",
+      };
+  return JSON.stringify({ operations: factIds.length ? [operation] : [], noCapabilityChangeFactIds: [], attentionFacts: [] });
 }
 
 server.listen(19037, "127.0.0.1");

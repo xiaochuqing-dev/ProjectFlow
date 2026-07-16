@@ -178,3 +178,7 @@ V3.4.0 establishes the factual foundation. It does not implement:
 - a redesign of the V3.3.8 model gateway.
 
 Those later consumers must build on Project Facts without modifying the original fact record.
+
+## V3.4.2 capability consumer
+
+Capability Map is now a derived long-lived consumer of the full ProjectFact set. It may add ProjectCapability, immutable Evolution, fact relations, coverage and attention, but it never edits or deletes a fact, changes FactCursor, or treats Timeline Summary/Theme as factual input. Each source fact is classified for the current generation. Failed generation preserves the previous successful map. Formal Hermes and Obsidian integrations remain later consumers of the same facts, Timeline and capabilities.

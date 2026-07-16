@@ -10,5 +10,6 @@ import com.projectflow.entity.ProjectCapabilityCard;
 
 public interface ProjectCapabilityCardRepository extends JpaRepository<ProjectCapabilityCard, UUID> {
     List<ProjectCapabilityCard> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
+    List<ProjectCapabilityCard> findByStatusOrderByCreatedAtAsc(CapabilityCardStatus status);
     void deleteByProjectIdAndStatus(UUID projectId, CapabilityCardStatus status);
 }

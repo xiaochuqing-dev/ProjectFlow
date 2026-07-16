@@ -12,6 +12,7 @@ import com.projectflow.entity.ProjectTimelineTheme;
 
 public interface ProjectTimelineThemeRepository extends JpaRepository<ProjectTimelineTheme, UUID> {
     List<ProjectTimelineTheme> findBySummaryIdOrderBySortOrderAsc(UUID summaryId);
+    List<ProjectTimelineTheme> findBySummaryIdInOrderBySortOrderAsc(List<UUID> summaryIds);
     Optional<ProjectTimelineTheme> findByIdAndProjectId(UUID id, UUID projectId);
     void deleteBySummaryId(UUID summaryId);
 

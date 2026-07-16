@@ -10,13 +10,13 @@ function read(path) {
 
 const page = read("src/app/project-intelligence/capabilities/page.tsx");
 
-// 小卡列表：默认不铺开所有字段，存在"查看详情"入口
-assert.match(page, /查看详情/, "capability page should render compact cards with a detail entry");
+assert.match(page, /能力地图/, "capability page should be the lifecycle capability map");
+assert.match(page, /全部事实/, "capability map should explain full-history coverage");
 
 // 序号不能是卡片主标题（不能出现 "能力 {index + 1}" 这类序号角标作主视觉）
 assert.doesNotMatch(page, /能力 \{index \+ 1\}/, "capability card title must not be a numeric placeholder like 能力 N");
 
-// 能力名映射文件应存在，能力名以"能力"结尾而非整句事实
+// 旧能力名与成果表达工具继续保留，避免破坏已有输出兼容。
 assert.ok(existsSync(join(root, "src/lib/capability-names.ts")), "capability-names.ts should exist");
 assert.ok(existsSync(join(root, "src/lib/capability-assets.ts")), "capability-assets.ts should exist");
 
@@ -25,11 +25,8 @@ assert.match(names, /能力["')\]]/, "capability names should end with 能力 (e
 // 兜底应是保守的分桶名"项目资产沉淀能力"，不是"取事实首段 + 能力"
 assert.match(names, /项目资产沉淀能力/, "fallback name should be conservative bucket name 项目资产沉淀能力");
 
-// 存在可复用场景标签
-assert.match(page, /README/, "capability card should show reusable scene labels (README)");
-assert.match(page, /简历/, "capability card should show reusable scene labels (简历)");
-
-// 存在"生成能力解读"入口（P4 才实现按钮逻辑，但入口文案先占位）
-assert.match(page, /生成能力解读/, "capability page should have a generate-interpretation entry");
+assert.match(page, /最近能力变化/, "capability map should show automatic evolution changes");
+assert.match(page, /旧版能力卡片/, "legacy cards should remain in a compatibility section");
+assert.doesNotMatch(page, /updateCapabilityCard|startCapabilityCardAnalysisJob/, "legacy card actions must not remain in the main capability flow");
 
 console.log("capability asset library checks passed");

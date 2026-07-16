@@ -73,8 +73,8 @@ class ProjectFlowH2UpgradeIntegrationTest {
             assertThat(fact.getOccurredFrom()).isCloseTo(
                 legacy.fallbackOccurredAt(), org.assertj.core.api.Assertions.within(1, java.time.temporal.ChronoUnit.MILLIS)
             );
-            assertThat(fact.getRecordStatus()).isEqualTo(com.projectflow.entity.ProjectFactRecordStatus.NEEDS_ATTENTION);
-            assertThat(fact.getAttentionReason()).contains("回退到分析批次时间");
+            assertThat(fact.getRecordStatus()).isEqualTo(com.projectflow.entity.ProjectFactRecordStatus.RECORDED);
+            assertThat(fact.getAttentionReason()).isEmpty();
             assertThat(cursors.findByProjectId(legacy.projectId()).orElseThrow().getLastRecordedCommitSha())
                 .isEqualTo(legacy.headSha());
 

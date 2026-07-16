@@ -38,6 +38,7 @@ public class ProjectAnalysisJobRunner {
     private final ProjectCapabilityService projectCapabilityService;
     private final ProjectFactHistoryService projectFactHistoryService;
     private final ProjectTimelineSummaryService projectTimelineSummaryService;
+    private final ProjectCapabilityMapService projectCapabilityMapService;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -51,6 +52,7 @@ public class ProjectAnalysisJobRunner {
         ProjectCapabilityService projectCapabilityService,
         ProjectFactHistoryService projectFactHistoryService,
         ProjectTimelineSummaryService projectTimelineSummaryService,
+        ProjectCapabilityMapService projectCapabilityMapService,
         ObjectMapper objectMapper,
         ApplicationEventPublisher eventPublisher
     ) {
@@ -63,6 +65,7 @@ public class ProjectAnalysisJobRunner {
         this.projectCapabilityService = projectCapabilityService;
         this.projectFactHistoryService = projectFactHistoryService;
         this.projectTimelineSummaryService = projectTimelineSummaryService;
+        this.projectCapabilityMapService = projectCapabilityMapService;
         this.objectMapper = objectMapper;
         this.eventPublisher = eventPublisher;
     }
@@ -124,6 +127,7 @@ public class ProjectAnalysisJobRunner {
                     ));
                 } else {
                     eventPublisher.publishEvent(new ProjectTimelineRefreshRequestedEvent(job.getUserId(), job.getProjectId()));
+                    eventPublisher.publishEvent(new ProjectCapabilityRefreshRequestedEvent(job.getUserId(), job.getProjectId()));
                 }
             } else if (job.getJobType() == ProjectAnalysisJobType.PROJECT_TIMELINE_REFRESH) {
                 if (!checkpoint(jobId, true)) return;
@@ -138,6 +142,18 @@ public class ProjectAnalysisJobRunner {
                 if (!checkpoint(jobId, false)) return;
                 markSucceeded(jobId, outcome.resultJson(), null);
                 eventPublisher.publishEvent(new ProjectTimelineRefreshRequestedEvent(job.getUserId(), job.getProjectId()));
+            } else if (job.getJobType() == ProjectAnalysisJobType.PROJECT_CAPABILITY_MAP_REFRESH) {
+                if (!checkpoint(jobId, true)) return;
+                jobRepository.findById(jobId).ifPresent(current -> {
+                    current.advanceStage("CAPABILITY_MAP_MODEL", "正在根据完整项目事实维护长期能力地图");
+                    jobRepository.save(current);
+                });
+                var outcome = projectCapabilityMapService.refresh(
+                    job.getUserId(), job.getProjectId(), job.getId(), job.getFilePath()
+                );
+                recordTimelineUsage(jobId, outcome.diagnostics());
+                if (!checkpoint(jobId, false)) return;
+                markSucceeded(jobId, outcome.resultJson(), null);
             } else if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS) {
                 // V3.3.4: 能力分析异步化。卡片由 service 持久化，job 记录阶段与完成状态。
                 // resultJson 只存简要摘要，前端完成后重新拉取 capability-cards。
@@ -422,6 +438,7 @@ public class ProjectAnalysisJobRunner {
             case WORK_SESSION_SCAN -> "WORK_SESSION_SCAN";
             case PROJECT_FACT_HISTORY_REBUILD -> "PROJECT_FACT_HISTORY_REBUILD";
             case PROJECT_TIMELINE_REFRESH -> "PROJECT_TIMELINE_REFRESH";
+            case PROJECT_CAPABILITY_MAP_REFRESH -> "PROJECT_CAPABILITY_MAP_REFRESH";
             case CAPABILITY_CARD_ANALYSIS -> "CAPABILITY_CARD_ANALYSIS";
             case FILE -> "FILE_ANALYSIS";
         };

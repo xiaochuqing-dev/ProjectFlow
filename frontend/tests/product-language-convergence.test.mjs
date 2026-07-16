@@ -52,9 +52,9 @@ assert.doesNotMatch(projectIntelligence, /label="可信依据"/, "可信依据 s
 assert.doesNotMatch(projectIntelligence, /label="时间线变化"/, "时间线变化 should be merged into project timeline");
 
 const capabilities = read("src/app/project-intelligence/capabilities/page.tsx");
-assert.match(capabilities, /能力与成果/, "capabilities page should be renamed to 能力与成果");
-for (const text of ["解决什么问题", "为什么重要", "来源证据", "可复用表达"]) {
-  assert.match(capabilities, new RegExp(text), `capability asset cards should show ${text}`);
+assert.match(capabilities, /能力地图/, "capabilities page should be the fact-native capability map");
+for (const text of ["事实覆盖", "最近能力变化", "能力层需要关注", "旧版能力卡片"]) {
+  assert.match(capabilities, new RegExp(text), `capability map should show ${text}`);
 }
 
 const flowState = read("src/lib/project-flow-state.ts");

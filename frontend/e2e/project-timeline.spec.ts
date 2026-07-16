@@ -70,7 +70,7 @@ test("V3.4.1 时间线 A-G：边界分组、自动摘要、追溯、切换、失
   await expect(page.getByText(empty.name).first()).toBeVisible();
   await expect(page.getByText(july.currentSummary!.summary)).toHaveCount(0);
 
-  await request.post(`${modelControl}/fail-next`, { data: { task: "timeline", count: 2 } });
+  await request.post(`${modelControl}/fail-next`, { data: { task: "timeline:2026-W29", count: 2 } });
   appendDatedCommit(fixture.repository, "src/failure-refresh.txt", "failure refresh", "fix: refresh existing week", "2026-07-16T12:00:00+08:00");
   await scanAndWait(request, fixture.projectId);
   const failedWeek = await waitForPeriodStatus(request, fixture.projectId, "WEEK", "2026-W29", "FAILED");

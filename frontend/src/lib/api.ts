@@ -1522,6 +1522,155 @@ export type CapabilityCard = {
   updatedAt: string;
 };
 
+export type CapabilityMapOverview = {
+  projectId: string;
+  capabilityCount: number;
+  activeCount: number;
+  mergedCount: number;
+  maturityDistribution: Record<string, number>;
+  sourceFactCount: number;
+  coveredFactCount: number;
+  assignedFactCount: number;
+  noCapabilityChangeFactCount: number;
+  unassignedFactCount: number;
+  attentionCount: number;
+  sourceFactFingerprint: string;
+  mapStatus: string;
+  stale: boolean;
+  latestSuccessfulAt: string | null;
+  latestAttemptAt: string | null;
+  errorCode: string;
+  errorSummary: string;
+  historyCoverage: { status: string; coveredCount: number; totalCount: number; remainingCount: number };
+  timelineCoverage: { status: string; coveredCount: number; totalCount: number; remainingCount: number };
+};
+
+export type ProjectCapability = {
+  id: string;
+  projectId: string;
+  name: string;
+  summary: string;
+  status: "ACTIVE" | "MERGED" | "ARCHIVED";
+  maturity: "FORMING" | "FORMED" | "CONTINUOUSLY_ENHANCED" | "LONG_TERM_STABLE";
+  maturityReason: string;
+  firstFormedAt: string | null;
+  lastEnhancedAt: string | null;
+  factCount: number;
+  batchCount: number;
+  commitCount: number;
+  evolutionCount: number;
+  attentionCount: number;
+  stale: boolean;
+  mergedIntoCapabilityId: string | null;
+};
+
+export type ProjectCapabilityPage = {
+  items: ProjectCapability[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type CapabilityEvolution = {
+  id: string;
+  capabilityId: string;
+  type: string;
+  versionBefore: number;
+  versionAfter: number;
+  title: string;
+  summary: string;
+  occurredAt: string;
+  sourceFactCount: number;
+  sourceBatchCount: number;
+  sourceTimelinePeriods: string[];
+  analysisJobId: string | null;
+  mergedFromCapabilityId: string | null;
+};
+
+export type CapabilityEvolutionPage = {
+  items: CapabilityEvolution[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type CapabilityFact = {
+  factId: string;
+  projectId: string;
+  batchId: string | null;
+  title: string;
+  summary: string;
+  occurredFrom: string | null;
+  occurredTo: string | null;
+  recordStatus: string;
+  attentionReason: string;
+  commitCount: number;
+  affectedFileCount: number;
+  evidenceCount: number;
+  relationRole: string;
+  sourceEvolutionId: string;
+  linkedAt: string;
+};
+
+export type CapabilityFactPage = {
+  items: CapabilityFact[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type ProjectCapabilityDetail = {
+  id: string;
+  projectId: string;
+  name: string;
+  aliases: string[];
+  summary: string;
+  problemSolved: string;
+  longTermValue: string;
+  productAreas: string[];
+  status: "ACTIVE" | "MERGED" | "ARCHIVED";
+  maturity: ProjectCapability["maturity"];
+  maturityReason: string;
+  firstFormedAt: string | null;
+  lastEnhancedAt: string | null;
+  factCount: number;
+  batchCount: number;
+  commitCount: number;
+  evidenceCount: number;
+  attentionCount: number;
+  evolutionCount: number;
+  currentVersion: number;
+  generationMode: string;
+  mergedIntoCapabilityId: string | null;
+  readmeExpression: string;
+  resumeExpression: string;
+  interviewExpression: string;
+  evolutions: CapabilityEvolutionPage;
+  recentFacts: CapabilityFactPage;
+  mergedHistory: ProjectCapability[];
+  stale: boolean;
+};
+
+export type CapabilityAttentionPage = {
+  items: Array<{
+    id: string;
+    type: string;
+    reason: string;
+    factId: string | null;
+    sourceCapabilityId: string | null;
+    targetCapabilityId: string | null;
+    status: string;
+    createdAt: string;
+  }>;
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
 export type EvidenceSource = {
   sourceType: string;
   sourceRef: string;
@@ -1947,6 +2096,63 @@ export function startCapabilityCardAnalysisJob(token: string, projectId: string)
 
 export function listProjectCapabilityCards(token: string, projectId: string): Promise<CapabilityCard[]> {
   return requestJson<CapabilityCard[]>(`/projects/${projectId}/capability-cards`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getCapabilityMapOverview(token: string, projectId: string): Promise<CapabilityMapOverview> {
+  return requestJson<CapabilityMapOverview>(`/projects/${projectId}/capability-map/overview`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function listProjectCapabilities(
+  token: string,
+  projectId: string,
+  filters: { status?: string; maturity?: string; search?: string; sort?: string; page?: number; size?: number } = {},
+): Promise<ProjectCapabilityPage> {
+  const query = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") query.set(key, String(value));
+  });
+  return requestJson<ProjectCapabilityPage>(`/projects/${projectId}/capabilities?${query.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getProjectCapability(token: string, capabilityId: string): Promise<ProjectCapabilityDetail> {
+  return requestJson<ProjectCapabilityDetail>(`/project-capabilities/${capabilityId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function listCapabilityEvolutions(token: string, capabilityId: string, page = 0, size = 20): Promise<CapabilityEvolutionPage> {
+  return requestJson<CapabilityEvolutionPage>(`/project-capabilities/${capabilityId}/evolutions?page=${page}&size=${size}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function listCapabilityFacts(token: string, capabilityId: string, page = 0, size = 20): Promise<CapabilityFactPage> {
+  return requestJson<CapabilityFactPage>(`/project-capabilities/${capabilityId}/facts?page=${page}&size=${size}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function listCapabilityMapChanges(token: string, projectId: string, page = 0, size = 20): Promise<CapabilityEvolutionPage> {
+  return requestJson<CapabilityEvolutionPage>(`/projects/${projectId}/capability-map/changes?page=${page}&size=${size}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function listCapabilityMapAttention(token: string, projectId: string, page = 0, size = 20): Promise<CapabilityAttentionPage> {
+  return requestJson<CapabilityAttentionPage>(`/projects/${projectId}/capability-map/attention?page=${page}&size=${size}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function retryCapabilityMap(token: string, projectId: string): Promise<{ status: string }> {
+  return requestJson<{ status: string }>(`/projects/${projectId}/capability-map/retry`, {
+    method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });
 }

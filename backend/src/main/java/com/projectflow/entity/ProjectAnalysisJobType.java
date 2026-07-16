@@ -7,6 +7,7 @@ public enum ProjectAnalysisJobType {
     WORK_SESSION_SCAN,
     PROJECT_FACT_HISTORY_REBUILD,
     PROJECT_TIMELINE_REFRESH,
+    PROJECT_CAPABILITY_MAP_REFRESH,
     // V3.3.4: 能力分析异步化，刷新/离开页面不丢任务。
     CAPABILITY_CARD_ANALYSIS
 }

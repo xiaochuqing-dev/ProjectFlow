@@ -1,0 +1,32 @@
+{
+  "taskGoal": "实施 ProjectFlow V3.4.2 事实原生全生命周期能力地图，把完整 ProjectFact 历史自动沉淀为稳定、可追溯、可增量演进的长期能力。",
+  "actualChanges": [
+    "新增 ProjectCapability、Evolution、fact relation、coverage、attention 与 map state，形成全历史 bootstrap、逐事实完整分类和后续增量刷新主链。",
+    "模型只通过统一 ModelGateway 提议 NEW、ENHANCE、ADD_EVIDENCE、MERGE，规则负责 ownership、稳定身份、成熟度、全覆盖和非破坏性 merge 校验；失败保留旧 READY。",
+    "42 条历史 attention 按证据完整性确定性重分类为 37 RECORDED 与 5 NEEDS_ATTENTION，FactCursor、事实内容和 fingerprint 保持不变；失败 WEEK 摘要恢复为完整 READY。",
+    "能力主页面与详情页改为完整覆盖、成熟度、Evolution、事实证据、近期变化和异常关注；旧 CANDIDATE/IGNORED 卡片只保留兼容读取。",
+    "补齐 H2、PostgreSQL 16、固定模型、真实 Provider 安全副本、5000 facts 性能、前端契约、Playwright 与桌面启动验收。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ProjectCapabilityMapService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectCapabilityQueryService.java",
+    "backend/src/main/java/com/projectflow/controller/ProjectCapabilityController.java",
+    "backend/src/main/java/com/projectflow/entity/ProjectCapability.java",
+    "frontend/src/app/project-intelligence/capabilities/page.tsx",
+    "frontend/src/app/project-intelligence/capabilities/[capabilityId]/page.tsx",
+    "docs/project-capability-map.md",
+    "docs/projectflow-v3.4.2-fact-native-capability-map-report.md"
+  ],
+  "verification": {
+    "build": "后端 Maven 全量 297/297；前端契约 44/44、TypeScript noEmit 和 Next.js production build 通过。",
+    "tests": "PostgreSQL 16 Testcontainers 3/3、文件型 H2 升级 2/2、Playwright 7/7 通过；5000 facts 查询 P95 为 20/7/9/4/4ms。",
+    "manualCheck": "真实 H2 安全副本完成 42→37/5、WEEK retry、42/42 bootstrap 和 44/44 incremental；真实 Provider bootstrap 2 requests、incremental 1 request；根目录桌面 BAT 以 V3.4.2 当前工作树启动成功，原始 H2 恢复为任务前哈希。"
+  },
+  "unfinished": [
+    "等待本次提交推送后的 GitHub Actions 完整门禁，失败时继续修复并重跑。"
+  ],
+  "sedimentCandidates": [
+    "长生命周期模型归纳必须用逐 fact coverage 表和严格全集校验约束；Provider 遗漏时只允许一次有界覆盖修复，仍不完整则整批失败并保留旧成功图。",
+    "能力稳定身份应绑定项目、问题、产品区域和规范语义，并用非破坏性 merge redirect 保留历史关系，不能把名称相似当作自动合并依据。"
+  ]
+}

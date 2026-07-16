@@ -1,10 +1,23 @@
 # ProjectFlow
 
-ProjectFlow V3.4.1 is a local-first project memory system for AI-assisted solo developers. It reads real Git, worktree, and Agent evidence, automatically organizes development facts, and maintains a traceable timeline from the project's earliest recorded history to its latest changes.
+ProjectFlow V3.4.2 is a local-first project memory system for AI-assisted solo developers. It reads real Git, worktree, and Agent evidence, automatically organizes development facts, maintains a traceable timeline, and explains what the complete fact history proves the project can do.
 
 ProjectFlow 自动维护项目从创建至今的长期记忆。让每一个项目记得自己是怎样成长到今天的。
 
 Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns that raw development evidence into durable Change Batches, evidence-backed Project Facts, and long-lived Project Memory.
+
+## V3.4.2 Fact-native Lifecycle Capability Map
+
+- `ProjectFact` remains the factual source of truth. Timeline organizes facts over time; Capability Map explains the stable capabilities proved by the complete fact history.
+- `ProjectCapability` is a long-lived entity with a stable identity, aliases, deterministic maturity, non-destructive merge history, and traceable versions. It is not a per-run card.
+- New facts automatically create, enhance, or add evidence to capabilities. Routine changes are applied without confirmation; every input fact is classified as capability evidence, no capability change, or attention.
+- Every capability and evolution traces to facts, batches, commits, files, Agent results, and evidence. Timeline Theme remains period-local and is never promoted into a capability by itself.
+- Full-history bootstrap uses bounded chunks and explicit coverage. Incremental refresh processes only uncovered or changed facts and reuses the V3.3.7 durable job and V3.3.8 model gateway boundaries.
+- Stable identity uses project, problem, product area, and canonical meaning rather than name alone. Merges preserve source entities, relations, evolutions, aliases, and redirects; unsafe merges become attention.
+- Maturity is determined by explainable fact, batch, commit, evidence, evolution, time-span, and attention rules. Model-provided maturity scores are rejected.
+- Failed refreshes preserve the previous successful map. GET requests never trigger model calls, and history backfill does not rebuild the whole map after every chunk.
+- Legacy `ProjectCapabilityCard` data remains readable for compatibility. Only traceable confirmed cards may seed a long-lived capability; candidate and ignored cards do not enter the main chain.
+- Hermes and Obsidian formal integration remains the next phase and will consume Facts, Timeline, and Capabilities rather than becoming new fact sources.
 
 ## V3.4.1 Automatic Project Timeline
 
@@ -98,17 +111,18 @@ Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns tha
 
 It is built for developers who use agents such as Codex, Claude Code, or other coding assistants to modify real projects and then need a clear way to understand what changed, review the evidence, maintain a project profile, and generate reusable output such as daily reviews, README material, reports, and resume-ready summaries.
 
-## V3.4.1 Workflow
+## V3.4.2 Workflow
 
 ProjectFlow is not a Kanban board, daily-report generator, or hosted PR/CI system. Its primary workflow is:
 
 1. Bind a real local Git project.
 2. Analyze new changes.
 3. Automatically record evidence-backed Project Facts.
-4. Continue rebuilding uncovered Git history.
+4. Rebuild uncovered Git history.
 5. Organize facts into Day / Week / Month / Lifecycle Timeline views.
-6. Automatically maintain derived period summaries and trace every theme back to facts and evidence.
-7. Let later capability and external integrations consume the same fact memory.
+6. Automatically initialize and maintain the lifecycle Capability Map.
+7. Trace capabilities and evolution to facts and evidence.
+8. Let later external integrations consume Facts, Timeline, and Capabilities.
 
 The governing rule is: rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records objective facts. Users remain responsible for subjective profile edits and exceptional attention items, not routine fact confirmation.
 
@@ -132,8 +146,17 @@ Local Git is the primary data source. Agent result files are an enhancement that
 | Timeline Summary | Automatically generated, replaceable derived summary that covers every fact in its period |
 | Timeline Theme | Period-local grouping whose membership traces to Project Facts; it is not a Project Capability |
 | Derived Summary | Model-generated content that can be rebuilt without changing source facts or deterministic statistics |
+| Project Capability | Stable long-lived capability proved by Project Facts, with a system-owned identity and current version |
+| Capability Evolution | Immutable NEW, ENHANCE, ADD_EVIDENCE, MERGE, or correction event bound to source facts |
+| Capability Fact Relation | Queryable link from a capability and evolution to the exact supporting Project Fact |
+| Capability Maturity | Deterministic, explainable stage derived from evidence breadth, history, evolution, and attention |
+| Capability Map State | Durable coverage, dirty fingerprint, latest successful result, and failure-preservation state |
+| Capability Change | Recent evolution read model; it describes happened capability change, never future planning |
+| Capability Merge | Non-destructive redirect that retains source capability history, relations, and aliases |
 | Project Profile / legacy ProjectMemory | Compatibility archive for subjective fields and historical profile content |
 | Suggested Sediment / Project Sediment / Project Change | V3.3.x compatibility records retained for old data and links; not the new scan path |
+
+Legacy capability concepts retained only for compatibility are `ProjectCapabilityCard`, `CapabilityCardStatus`, and manual capability confirmation.
 
 ## Current Features
 

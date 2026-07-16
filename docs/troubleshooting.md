@@ -39,3 +39,7 @@ An old H2 database fails on a null optimistic-lock version: V3.3.7 finalization 
 If an old H2 database rejects `CANCEL_REQUESTED` or another current job state, V3.3.8 expands the historical job-status enum on startup. It also adds missing change-batch timing columns and backfills nullable timing/worktree flags before normal reads. Do not delete the database to work around these upgrade errors.
 
 If diagnostics report `SCHEMA_MISMATCH`, ProjectFlow performs one targeted Schema repair. `SCHEMA_REPAIR_FAILED` means the second JSON was still not compatible; old successful results remain. `OUTPUT_BUDGET_EXHAUSTED` and `REASONING_EXHAUSTED_OUTPUT` use different recovery budgets and should not be treated as network failures.
+
+## V3.4.2 capability map
+
+`WAITING_FOR_MODEL` means facts remain readable but no default Provider can generate the map. `FAILED` means no successful map exists; `READY_STALE` means a prior READY map is preserved while the latest refresh failed or new facts are dirty. Retry the failed refresh after correcting Provider connectivity or Schema output; do not delete capability tables or ProjectFact. Unknown fact/capability IDs, duplicate or missing classification, prohibited planning/maturity fields and unsafe merge are validation failures, not database loss. File-backed H2 upgrades must be tested on a copy and allowed to run `ddl-auto=update`; never delete the user database or edit machine-wide configuration.

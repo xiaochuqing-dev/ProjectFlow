@@ -1,5 +1,13 @@
 # Known risks
 
+- V3.4.2 能力表仍通过 Hibernate `ddl-auto=update` 升级，尚无 Flyway 版本；必须保留文件型 H2 安全副本和 PostgreSQL 16 Testcontainers 门禁，禁止删库规避升级问题。
+- Provider 可能返回 Schema 漂移、遗漏 fact 或高风险 merge；严格校验会拒绝本次刷新并保留旧 READY，用户看到的是 stale/attention 而不是部分覆盖冒充成功。
+- 旧能力卡片只有 CONFIRMED 且 sourceRefs 可追到 ProjectFact 时才迁移；无来源旧卡片继续留在兼容区，不能伪造事实关系。
+- 42 条旧 attention 的确定性重分类只移除“发生时间回退”这一单一异常；质量问题、可能重复等其他原因继续保留 attention。
+- 全历史 bootstrap 会增加首次模型调用和写入成本；120-fact chunk、job 请求/token/时长预算和 history 完成后统一刷新限制规模。
+- Hermes 与 Obsidian 尚无正式同步协议；下一阶段只能消费 Facts、Timeline 与 Capabilities，不能成为新的事实源。
+- 禁止通过修改系统文件或全局机器配置解决环境问题；只能使用仓库内和进程内方案。
+
 - V3.4.1 Timeline 派生表仍通过 Hibernate `ddl-auto=update` 升级，尚无 Flyway 版本；必须保留复制库、当前真实 H2 与 PostgreSQL Testcontainers 验收，禁止以删库处理升级问题。
 - Timeline summary 依赖外部 Provider，可能受网络、限流、模型 Schema 漂移和长响应影响；事实与确定性统计必须始终可读，旧 READY 必须保留，诊断不得保存 prompt、raw response 或 reasoning。
 - 历史迁移与 backfill 可能短时间产生大量 dirty periods；启动迁移必须抑制逐批摘要任务，history chunk 只累计 dirty，完成后再用有界持久化队列处理。

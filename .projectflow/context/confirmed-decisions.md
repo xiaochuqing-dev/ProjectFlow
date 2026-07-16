@@ -1,4 +1,15 @@
-# Confirmed V3.4.1 decisions
+# Confirmed V3.4.2 decisions
+
+- ProjectFact 是唯一事实来源，Timeline 是时间派生层，ProjectCapability 是稳定长期能力层；Timeline Theme 不等于 Capability。
+- Bootstrap 覆盖全部 ProjectFact 并逐条分类；增量刷新只处理未覆盖或事实版本已变化的输入，不允许 recent-N 冒充完整地图。
+- NEW_CAPABILITY、ENHANCE_CAPABILITY、ADD_EVIDENCE、MERGE_CAPABILITY 仅为内部模型协议；正常结果经规则校验后自动应用，无需用户确认。
+- stable identity 绑定项目、问题、产品区域与规范语义，不只依赖名称；名称变化进入 aliases。
+- Evolution 不被重写，能力 merge 保留来源实体、旧关系、旧演进和 redirect；高风险 merge 进入 attention。
+- 成熟度只由 fact、batch、commit、evidence、evolution、时间跨度和 attention 的确定性规则计算，模型 maturity 字段无效。
+- source fingerprint、持久化 job 与 coverage 提供幂等、取消、retry 和 restart 语义；GET 不调用模型，失败保留旧 READY。
+- 旧 CONFIRMED 卡片在来源可追到 ProjectFact 时迁移；CANDIDATE、NEEDS_CONFIRMATION、IGNORED 和无来源卡片不进入主链。
+- V3.4.0 Fact、V3.4.1 Timeline、V3.3.8 ModelGateway 与 V3.3.7 Job 基础设施不重构；所有能力 API 校验所有权。
+- 只能修改仓库内代码、测试、文档、项目脚本与项目数据库结构，禁止修改系统文件或全局机器配置。
 
 - 项目历程是 ProjectFact 之上的时间 read model / derived layer；摘要、主题和关系不得修改或替换事实。
 - factEventAt 优先 occurredTo、回退 occurredFrom，并在统一 Timeline Zone 下持久化 day、ISO week 和 month assignment。

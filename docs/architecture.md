@@ -282,3 +282,7 @@ sequenceDiagram
 - AI API keys are backend-only environment variables.
 - Real `.env` files are ignored by Git.
 - Parse errors and AI errors return safe messages without leaking secrets.
+
+## V3.4.2 fact-native capability layer
+
+The durable flow is ProjectFact truth → Timeline temporal read model → ProjectCapability long-lived derived map. Capability bootstrap and incremental refresh reuse the persistent job executor and ModelGateway, call models outside fact transactions, validate exact source-fact coverage, then atomically apply stable capabilities, immutable evolutions, normalized fact relations and coverage. GET endpoints are read-only. Source fingerprints coalesce duplicate work; history backfill defers map generation until completion; a failed refresh retains the last successful map. Legacy capability cards remain a separate compatibility boundary.

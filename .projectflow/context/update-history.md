@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.4.2 事实原生全生命周期能力地图 - 2026-07-16
+
+在 ProjectFact 与 Timeline 之上新增长期 ProjectCapability、不可破坏的 Capability Evolution、规范化 fact relation、逐 fact coverage、attention 和 map state。系统对全历史分块 bootstrap，之后只处理未覆盖或已变化 facts；模型通过内部 NEW/ENHANCE/ADD_EVIDENCE/MERGE 协议提议，规则完成所有权、全覆盖、稳定身份、成熟度与安全 merge 校验并自动应用。旧能力卡片退出主页面和正常主链，只保留兼容读取及可追溯 CONFIRMED 迁移。42 条旧 attention 按确定性证据规则重新分类，失败刷新保留旧 READY。未修改系统文件或全局机器配置；真实门禁状态记录在 V3.4.2 report。
+
 ## ProjectFlow V3.4.1 自动项目历程 - 2026-07-16
 
 在 V3.4.0 ProjectFact 事实层上新增 DAY、ISO WEEK、MONTH、LIFECYCLE 时间 read model。factEventAt 与固定时区 assignment 持久化，统计由数据库确定性聚合；周、月和完整生命周期通过统一 ModelGateway 生成全覆盖派生摘要与期间主题，主题可追溯到 fact、batch 和 evidence。after-commit 事件、fingerprint 和持久化 job 自动维护 dirty scope；历史补齐延后生成，失败保留旧 READY，用户不保存或确认。主导航以项目历程替换每日回顾，旧 DevLog 路由继续兼容。生命周期能力地图与 Hermes/Obsidian 正式同步未在本版本实现。

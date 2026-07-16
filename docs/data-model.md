@@ -372,4 +372,8 @@ Persisted project or file analysis result.
 
 ## Ownership Rule
 
-All resource access is scoped through `projects.user_id`. A user can access tasks, logs, imports, outputs, materials, work sessions, evidence bundles, changes, memory, fact sources, facts, cursors, history states, batches, segments, or analysis records only if the parent project belongs to that user.
+All resource access is scoped through `projects.user_id`. A user can access tasks, logs, imports, outputs, materials, work sessions, evidence bundles, changes, memory, fact sources, facts, cursors, history states, batches, segments, capabilities, evolutions, capability-fact relations, capability coverage, attention, map states, or analysis records only if the parent project belongs to that user.
+
+## V3.4.2 capability map entities
+
+`project_capabilities` stores stable identity, aliases, current semantic state, deterministic maturity, source statistics, version, expressions and non-destructive merge redirect. `project_capability_evolutions` records immutable version events with an idempotent operation fingerprint. `project_capability_facts` is the unique capability/fact relation with role and source evolution. `project_capability_fact_coverage` gives one current classification per project/fact. `project_capability_attention` stores exceptional invalid evidence or unsafe merge review. `project_capability_map_states` stores full-history source fingerprint, coverage, dirty/generation state and last-success preservation. Legacy `project_capability_cards` is unchanged compatibility data.

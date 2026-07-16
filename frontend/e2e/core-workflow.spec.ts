@@ -113,8 +113,8 @@ test("批次事实无需确认并可继续分析下一批", async ({ page, reque
   await expect(page.getByText(/继续处理.*条/)).toHaveCount(0);
 });
 
-test("自动事实不会伪装成待确认沉淀，能力分析保持显式前置条件", async ({ page, request }) => {
-  const fixture = await createAnalyzableProject(request, "能力前置条件");
+test("自动事实建立长期能力地图且不制造逐卡处理主流程", async ({ page, request }) => {
+  const fixture = await createAnalyzableProject(request, "长期能力地图");
   await waitForJob(request, (await startScan(request, fixture.projectId)).id, ["SUCCEEDED", "SUCCEEDED_WITH_WARNINGS"]);
 
   const sediments = await api<unknown[]>(request, "GET", `/projects/${fixture.projectId}/sediments`);
@@ -122,12 +122,20 @@ test("自动事实不会伪装成待确认沉淀，能力分析保持显式前�
   expect(sediments).toHaveLength(0);
   expect(facts.totalElements).toBeGreaterThan(0);
 
-  const failed = await waitForJob(request, (await startCapability(request, fixture.projectId)).id, ["FAILED"]);
-  expect(failed.requestCount).toBe(0);
+  let mapOverview: { mapStatus: string; coveredFactCount: number; sourceFactCount: number; activeCount: number } | null = null;
+  await expect.poll(async () => {
+    const current = await api<{ mapStatus: string; coveredFactCount: number; sourceFactCount: number; activeCount: number }>(request, "GET", `/projects/${fixture.projectId}/capability-map/overview`);
+    mapOverview = current;
+    return current.mapStatus;
+  }, { timeout: 60_000 }).toBe("READY");
+  expect(mapOverview!.coveredFactCount).toBe(mapOverview!.sourceFactCount);
+  expect(mapOverview!.activeCount).toBeGreaterThan(0);
   await selectProject(page, fixture.projectId);
   await page.goto(`/project-intelligence/capabilities?projectId=${fixture.projectId}`);
-  await expect(page.getByText("整体项目能力分析")).toBeVisible();
-  await expect(page.getByText("待能力分析").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "能力地图", level: 2 })).toBeVisible();
+  await expect(page.getByText(/项长期能力/).first()).toBeVisible();
+  await expect(page.getByText("当前生效结果")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /确认|忽略|分析新增沉淀/ })).toHaveCount(0);
 });
 
 test("任务取消与 retry 复用等价活动分析任务", async ({ request }) => {
@@ -223,10 +231,6 @@ function git(repository: string, ...args: string[]) {
 
 async function startScan(request: APIRequestContext, projectId: string) {
   return api<Job>(request, "POST", `/projects/${projectId}/scan/jobs`);
-}
-
-async function startCapability(request: APIRequestContext, projectId: string) {
-  return api<Job>(request, "POST", `/projects/${projectId}/capabilities/analyze/jobs`);
 }
 
 async function waitForJob(request: APIRequestContext, jobId: string, statuses: string[]) {

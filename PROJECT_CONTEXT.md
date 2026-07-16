@@ -6,23 +6,33 @@ Use this file as the first read for substantial ProjectFlow work. It is a compac
 
 ## Product Position
 
-ProjectFlow V3.4.1 is a local-first project memory system for AI-assisted solo developers. It automatically organizes real development evidence into durable project facts and maintains a traceable automatic project timeline over those facts.
+ProjectFlow V3.4.2 is a local-first project memory system for AI-assisted solo developers. It automatically organizes real development evidence into durable project facts, maintains a traceable timeline, and derives a stable lifecycle Capability Map from complete fact history.
 
 Current direction:
 
 - Local Git supplies objective change evidence; Agent results add task intent and verification context.
-- The primary workflow is 分析新变化 → DevelopmentSegment → 自动 ProjectFact → 项目记录 / 项目记忆 → 自动项目历程.
+- The primary workflow is 分析新变化 → DevelopmentSegment → 自动 ProjectFact → 项目记录 / 项目记忆 → 自动项目历程 → 全生命周期能力地图.
 - Rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records normal evidence-backed facts.
 - Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
 
-V3.4.1 focus:
+V3.4.2 focus:
+
+- `ProjectFact` remains the only factual source. Timeline is the temporal derived layer; `ProjectCapability` is the stable long-lived capability layer.
+- Full-history bootstrap classifies every fact in bounded chunks. Incremental refresh handles only uncovered or changed facts with internal NEW/ENHANCE/ADD_EVIDENCE/MERGE operations.
+- Stable identity is system-owned and includes project, problem, product area and canonical meaning. Every evolution and relation traces back to facts, batches, commits, files, Agent results and evidence.
+- Maturity is deterministic and explainable. Merges are non-destructive; unsafe or incomplete classification becomes capability attention.
+- Durable dirty/fingerprint/job state keeps GET model-free, coalesces duplicate work, defers full-map refresh during history backfill, and preserves the last successful map on failure.
+- `/project-intelligence/capabilities` is the main capability map. Legacy cards remain a compatibility section; only traceable CONFIRMED cards may seed stable capabilities.
+- Timeline Theme is not Project Capability. Hermes and Obsidian remain future consumers.
+
+V3.4.1 focus (still applies):
 
 - `ProjectFact` is the only factual source for Timeline. `factEventAt` uses `occurredTo`, falling back to `occurredFrom`, and is assigned to day, ISO week, and month in the configured Timeline zone.
 - Day exposes facts directly. Week/month/lifecycle summaries are derived, replaceable model output with explicit complete coverage and no next steps, roadmap, priority, or future planning.
 - Timeline summaries and period-local themes never mutate facts. Theme membership traces to owned facts and evidence; Timeline Theme is not Project Capability.
 - Fact after-commit events mark affected week/month/lifecycle scopes dirty. Persistent refresh jobs coalesce work, keep GET model-free, defer while history backfill runs, and preserve old READY content on refresh failure.
-- `/timeline` is the main time view. `/dev-logs` and Daily Review remain legacy compatibility; lifecycle capability maps and formal Hermes/Obsidian sync remain future work.
+- `/timeline` is the main time view. `/dev-logs` and Daily Review remain legacy compatibility; formal Hermes/Obsidian sync remains future work.
 
 V3.4.0 focus:
 
@@ -97,7 +107,7 @@ Do not treat ProjectFlow as a generic Kanban app, SaaS admin panel, hotel/librar
 
 ## Current Stage
 
-The project has moved beyond manual sediment processing. Current V3.4.1 focus:
+The project has moved beyond manual sediment and per-run capability-card processing. Current V3.4.2 focus:
 
 - Workbench: add/import project → bind local path → analyze new changes → automatic facts → leave safely.
 - Incremental scan boundaries use the last successfully recorded Fact Cursor, not the last manual review decision.
@@ -108,7 +118,7 @@ The project has moved beyond manual sediment processing. Current V3.4.1 focus:
 - Facts describe what happened. Recommendations, importance judgments and future plans remain outside the automatic fact layer.
 - ProjectFlow must remain usable without reading docs or asking an agent to explain the workflow.
 - Add/import project, zip import, local binding, model configuration, login, Agent bridge, GitHub read-only status and existing outputs remain available.
-- Capability cards remain structured outputs, but the later full fact-native capability map is outside this stage.
+- The fact-native lifecycle Capability Map is maintained automatically; legacy capability cards are compatibility outputs outside the main chain.
 
 Recent implementation report says these are already present:
 
@@ -120,8 +130,8 @@ Recent implementation report says these are already present:
 
 Known remaining boundary:
 
-- V3.4.1 completes the day/week/month/lifecycle Timeline read model but not a fact-native lifecycle capability map.
-- Hermes and Obsidian are future consumers of fact read models; no formal synchronization protocol is implemented here.
+- V3.4.2 completes the fact-native lifecycle Capability Map over ProjectFact and Timeline.
+- Hermes and Obsidian are future consumers of Facts, Timeline and Capabilities; no formal synchronization protocol is implemented here.
 - The legacy ProjectMemory entity and completedCapabilities text remain compatibility fields, not the new source of project history.
 - File analysis is based on imported zip summaries and key content, not full source indexing.
 
@@ -284,6 +294,7 @@ Core endpoint groups:
 - Project facts: `/projects/{projectId}/facts`, `/project-facts/{factId}`, `/projects/{projectId}/fact-memory-overview`, `/projects/{projectId}/fact-history-state`
 - Project records: `/projects/{projectId}/project-record-batches`, `/project-record-batches/{batchId}`
 - Project timeline: `/projects/{projectId}/timeline/overview`, `/timeline/periods`, `/timeline/periods/{granularity}/{periodKey}`, `/timeline/themes/{themeId}/facts`, `/timeline/lifecycle`, `/timeline/retry`
+- Capability map: `/projects/{projectId}/capability-map/overview`, `/projects/{projectId}/capabilities`, `/project-capabilities/{capabilityId}`, `/project-capabilities/{capabilityId}/evolutions`, `/project-capabilities/{capabilityId}/facts`, `/projects/{projectId}/capability-map/changes`, `/projects/{projectId}/capability-map/attention`, `/projects/{projectId}/capability-map/retry`
 - Agent bridge: `/projects/{projectId}/agent-bridge/protocol`, `/projects/{projectId}/agent-bridge/scan`, `/projects/{projectId}/agent-bridge/tasks/{taskId}/brief`
 
 Response shape:
@@ -331,11 +342,17 @@ V3.4 project fact memory:
 - `ProjectTimelineSummary`: versioned derived summary for one week, month, or lifecycle scope.
 - `ProjectTimelineTheme`: period-local theme with explicit fact membership; not a capability.
 - `ProjectTimelineThemeFact`: traceable theme-to-fact relation.
+- `ProjectCapability`: stable long-lived capability with system-owned identity, aliases, deterministic maturity and merge redirect.
+- `ProjectCapabilityEvolution`: immutable trace of capability formation, enhancement, evidence addition or merge.
+- `ProjectCapabilityFact`: normalized capability-to-fact relation with formation/enhancement/evidence role.
+- `ProjectCapabilityFactCoverage`: exact classification of every source fact for the current generation.
+- `ProjectCapabilityMapState`: durable source fingerprint, coverage, successful result and failure-preservation state.
+- `ProjectCapabilityAttention`: exceptional missing evidence, invalid classification or unsafe merge record.
 - Legacy `ProjectChange`, `ProjectSediment`, `ProjectReviewCursor`, and `ProjectMemory`: compatibility data, not the new scan path.
 
 Ownership rule:
 
-- A user can access task/log/material/suggestion/change/memory/output/fact/cursor/history data only through a project owned by that user.
+- A user can access task/log/material/suggestion/change/memory/output/fact/cursor/history/capability data only through a project owned by that user.
 
 ## Agent Bridge
 
