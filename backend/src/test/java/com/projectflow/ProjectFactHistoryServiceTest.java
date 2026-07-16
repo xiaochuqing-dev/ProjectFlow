@@ -187,6 +187,8 @@ class ProjectFactHistoryServiceTest {
         git(root, "config", "user.email", "history@example.com");
         git(root, "config", "user.name", "ProjectFlow History Test");
         git(root, "config", "gc.auto", "0");
+        git(root, "config", "gc.autoDetach", "false");
+        git(root, "config", "maintenance.auto", "false");
         Path file = root.resolve("src/history.txt");
         Files.createDirectories(file.getParent());
         for (int index = 0; index < count; index += 1) {
