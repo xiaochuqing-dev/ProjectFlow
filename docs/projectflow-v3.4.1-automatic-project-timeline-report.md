@@ -88,7 +88,7 @@ V3.4.1 在 V3.4.0 自动 ProjectFact 长期记忆之上增加时间 read model�
 
 ## 19. Gate 0 CI
 
-状态：FAILED。基线 commit 4bff544 的 Run 29435440657 中 backend、frontend、sensitive 成功，postgres、browser 失败，optional-real-deepseek 为 SKIPPED；失败已在本地修复并通过，V3.4.1 推送后的核心 CI 当前为 NOT_RUN。
+状态：PASSED。基线 commit 4bff544 的 Run 29435440657 曾由 postgres、browser 失败暴露问题；修复后 Run 29479640124 在 commit f16865d 上完成，backend、postgres、frontend、browser、sensitive 全部成功，optional-real-deepseek 按条件为 SKIPPED。
 
 ## 20. V3.4.1 产品目标
 
@@ -236,7 +236,7 @@ DevLog entity、API、/dev-logs 与旧输出路径保留；Timeline 不创建“
 
 ## 56. GitHub Actions final Run
 
-状态：NOT_RUN。V3.4.1 尚未推送；推送后必须等待 backend-unit-and-h2、postgres-integration、frontend-quality、browser-e2e、sensitive-content 全部成功，再把 Run 与 job 结果写回本节。
+状态：PASSED。GitHub Actions Run 29479640124，commit f16865d6398f2235bc7bcbb5224124da7970bd1f：backend-unit-and-h2、postgres-integration、frontend-quality、browser-e2e、sensitive-content 均 success；optional-real-deepseek 为 SKIPPED。Run：https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/29479640124
 
 ## 57. real Timeline Provider validation
 
@@ -260,7 +260,7 @@ Hibernate ddl-auto=update 仍不是版本化迁移；外部 Provider 仍可能�
 
 ## 62. final commit SHA
 
-状态：NOT_RUN。代码提交尚未创建；准确实现 SHA 在首次推送后写回，避免在同一提交中制造自引用值。
+状态：PASSED。主实现 commit 为 21e6344caca20d01f116576130cc7ad4f7358511；最终经完整 CI 验证的代码与测试 commit 为 f16865d6398f2235bc7bcbb5224124da7970bd1f。报告证据提交不自引用其自身 SHA。
 
 ## 63. report path
 

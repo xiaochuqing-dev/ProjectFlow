@@ -25,12 +25,10 @@
   ],
   "verification": {
     "build": "PASSED：TypeScript noEmit、Next.js 16.2.7 production build 和根目录 Start-ProjectFlow.bat 实际启动均通过。",
-    "tests": "PASSED：后端 H2 284/284、PostgreSQL 16.14 Testcontainers 2/2、前端 contracts 39/39、Playwright 6/6；5000 facts/36 months 和 230 facts 全覆盖实测通过。",
+    "tests": "PASSED：后端 H2 284/284、PostgreSQL 16.14 Testcontainers 2/2、前端 contracts 39/39、Playwright 6/6；5000 facts/36 months 和 230 facts 全覆盖实测通过；GitHub Actions Run 29479640124 的五个核心 job 全部成功。",
     "manualCheck": "PASSED：当前真实 H2 为 facts 42、attention 42、duplicates 0、去重 commit refs 56；安全副本 history 从 132/133 续跑到 133/133 且重启后 facts 46/46 指纹唯一；真实 Provider 小样本和桌面启动已验证。"
   },
-  "unfinished": [
-    "V3.4.1 首次推送后的 GitHub Actions 核心 Run 尚未产生，必须等待全部核心 job 完成后再关闭本项。"
-  ],
+  "unfinished": [],
   "sedimentCandidates": [
     "长期事实之上的模型摘要应设计为可重建派生层：数据库负责确定性统计，输出必须显式全覆盖来源 ID，刷新失败保留旧成功版本且不能反向修改事实。",
     "历史回填遇到无差异提交时应推进独立 checkpoint 而不生成伪事实；将“无可分析变化”与模型失败分开，能避免回填永久卡在最后一个 commit。"
