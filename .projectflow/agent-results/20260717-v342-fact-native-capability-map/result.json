@@ -22,9 +22,7 @@
     "tests": "PostgreSQL 16 Testcontainers 3/3、文件型 H2 升级 2/2、Playwright 7/7 通过；5000 facts 查询 P95 为 20/7/9/4/4ms。",
     "manualCheck": "真实 H2 安全副本完成 42→37/5、WEEK retry、42/42 bootstrap 和 44/44 incremental；真实 Provider bootstrap 2 requests、incremental 1 request；根目录桌面 BAT 以 V3.4.2 当前工作树启动成功，原始 H2 恢复为任务前哈希。"
   },
-  "unfinished": [
-    "等待本次提交推送后的 GitHub Actions 完整门禁，失败时继续修复并重跑。"
-  ],
+  "unfinished": [],
   "sedimentCandidates": [
     "长生命周期模型归纳必须用逐 fact coverage 表和严格全集校验约束；Provider 遗漏时只允许一次有界覆盖修复，仍不完整则整批失败并保留旧成功图。",
     "能力稳定身份应绑定项目、问题、产品区域和规范语义，并用非破坏性 merge redirect 保留历史关系，不能把名称相似当作自动合并依据。"

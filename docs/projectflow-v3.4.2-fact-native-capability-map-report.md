@@ -202,7 +202,7 @@ PASSED。固定模型自动化确认问题和区域不一致的相似名称 merg
 
 ## 51. GitHub Actions
 
-NOT_RUN。
+PASSED。实现提交 `381552a6532c08c3e52e6113a2c8062eb4a044be` 的 Run `29514792540` 成功；backend-unit-and-h2、postgres-integration、frontend-quality、browser-e2e、sensitive-content 全绿，可选 real DeepSeek 因未配置独立 CI Key 按设计 SKIPPED。Run URL：`https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/29514792540`。
 
 ## 52. known risks
 
@@ -218,7 +218,7 @@ Hermes 与 Obsidian 正式同步，且只能消费 Facts、Timeline 和 Capabili
 
 ## 55. final commit SHA
 
-NOT_RUN。
+实现提交 SHA：`381552a6532c08c3e52e6113a2c8062eb4a044be`。本报告的证据提交不自引用，其最终 SHA 在任务回复中给出。
 
 ## 56. report path
 
