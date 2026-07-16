@@ -25,7 +25,7 @@ assert.match(readme, /Agent result files are an enhancement/, "README should exp
 assert.match(readme, /ProjectFactCursor.*after fact ingestion succeeds/s, "README should explain the automatic fact cursor boundary");
 
 const agents = read("AGENTS.md");
-assert.match(agents, /PROJECTFLOW V3\.4\.0 CONTEXT START/, "AGENTS should contain a bounded V3.4 context entry");
+assert.match(agents, /PROJECTFLOW V3\.4\.1 CONTEXT START/, "AGENTS should contain the bounded V3.4.1 context entry");
 assert.match(agents, /\.projectflow\/AGENT_PROTOCOL\.md/, "AGENTS should route agents to the detailed protocol");
 
 const context = read("PROJECT_CONTEXT.md");
