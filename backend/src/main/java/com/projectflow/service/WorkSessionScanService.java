@@ -302,6 +302,13 @@ public class WorkSessionScanService {
         AnalysisInputSnapshot snapshot = buildSnapshot(plan, evidence, worktree, github, List.of(), modelKey);
         recordInputSummary(jobId, snapshot);
         List<SegmentDraft> fallback = developmentSegmentationService.group(atoms);
+        if (fallback.isEmpty()) {
+            throw new AppException(
+                "HISTORY_NO_ANALYZABLE_CHANGES",
+                "该历史提交批次没有可记录的代码变化，已作为历史边界跳过。",
+                HttpStatus.UNPROCESSABLE_ENTITY
+            );
+        }
         advanceStage(jobId, "HISTORY_MODEL_ENRICH", "正在用已配置模型归并历史开发推进段");
         long modelStarted = System.nanoTime();
         var enrichment = modelSegmentEnricher.enrichWithDiagnostics(userId, atoms, fallback, snapshot);
@@ -770,9 +777,12 @@ public class WorkSessionScanService {
         UUID projectId, ScanPlan plan, Path root, List<ChangeAtom> atoms, String modelConfig, String githubStatus, String remoteRelation
     ) {
         String worktree = runGit(root, new ArrayList<>(), "status", "--porcelain=v1", "--untracked-files=all");
-        String atomIds = atoms.stream().map(ChangeAtom::id).sorted().reduce("", (left, right) -> left + "|" + right);
-        String input = String.join("\n", projectId.toString(), plan.branchName(), plan.baseCommitSha(), plan.headCommitSha(), worktree,
-            atomIds, "v3.3.3", modelConfig, githubStatus, remoteRelation);
+        String agentResultIds = atoms.stream().map(ChangeAtom::id).filter(id -> id != null && id.startsWith("agent:"))
+            .sorted().reduce("", (left, right) -> left + "|" + right);
+        // The head already identifies committed input. Excluding the moving cursor base keeps an
+        // unchanged worktree reusable after the first scan advances that cursor.
+        String input = String.join("\n", projectId.toString(), plan.branchName(), plan.headCommitSha(), worktree,
+            agentResultIds, "v3.3.3", modelConfig, githubStatus, remoteRelation);
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(input.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException exception) {

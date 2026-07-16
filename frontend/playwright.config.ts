@@ -2,14 +2,17 @@ import { defineConfig, devices } from "@playwright/test";
 import path from "node:path";
 
 const isWindows = process.platform === "win32";
-const windowsMaven = process.env.MAVEN_CMD ?? "C:\\Users\\Administrator\\Desktop\\apache-maven-3.9.9\\bin\\mvn.cmd";
+const windowsMaven = process.env.MAVEN_CMD ?? "mvn.cmd";
+const windowsMavenCommand = /\s/.test(windowsMaven) ? `"${windowsMaven}"` : windowsMaven;
 const backendCommand = isWindows
-  ? `"${windowsMaven}" -q spring-boot:run -Dspring-boot.run.profiles=embedded -Dspring-boot.run.arguments=--server.port=18080`
+  ? `${windowsMavenCommand} -q spring-boot:run "-Dspring-boot.run.profiles=embedded" "-Dspring-boot.run.arguments=--server.port=18080"`
   : "mvn -q spring-boot:run -Dspring-boot.run.profiles=embedded -Dspring-boot.run.arguments=--server.port=18080";
 
 export default defineConfig({
   testDir: "./e2e",
+  timeout: 120_000,
   fullyParallel: false,
+  workers: 1,
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"], ["html", { outputFolder: "playwright-report", open: "never" }]],
   use: {

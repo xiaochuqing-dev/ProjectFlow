@@ -27,7 +27,10 @@ import jakarta.persistence.UniqueConstraint;
         @Index(name = "idx_project_fact_project_time", columnList = "project_id,occurred_to"),
         @Index(name = "idx_project_fact_batch", columnList = "batch_id"),
         @Index(name = "idx_project_fact_segment", columnList = "source_segment_id"),
-        @Index(name = "idx_project_fact_status", columnList = "project_id,record_status")
+        @Index(name = "idx_project_fact_status", columnList = "project_id,record_status"),
+        @Index(name = "idx_project_fact_timeline_day", columnList = "project_id,timeline_day_key"),
+        @Index(name = "idx_project_fact_timeline_week", columnList = "project_id,timeline_week_key"),
+        @Index(name = "idx_project_fact_timeline_month", columnList = "project_id,timeline_month_key")
     }
 )
 public class ProjectFact {
@@ -68,6 +71,18 @@ public class ProjectFact {
 
     @Column(name = "occurred_to")
     private Instant occurredTo;
+
+    @Column(name = "timeline_event_at")
+    private Instant timelineEventAt;
+
+    @Column(name = "timeline_day_key", length = 10)
+    private String timelineDayKey;
+
+    @Column(name = "timeline_week_key", length = 8)
+    private String timelineWeekKey;
+
+    @Column(name = "timeline_month_key", length = 7)
+    private String timelineMonthKey;
 
     @Convert(converter = StringListConverter.class)
     @Column(name = "commit_refs", columnDefinition = "text")
@@ -207,6 +222,13 @@ public class ProjectFact {
         if (sedimentId != null) this.legacySedimentId = sedimentId;
     }
 
+    public void assignTimeline(Instant eventAt, String dayKey, String weekKey, String monthKey) {
+        this.timelineEventAt = eventAt;
+        this.timelineDayKey = safe(dayKey);
+        this.timelineWeekKey = safe(weekKey);
+        this.timelineMonthKey = safe(monthKey);
+    }
+
     public UUID getId() { return id; }
     public UUID getProjectId() { return projectId; }
     public UUID getBatchId() { return batchId; }
@@ -219,6 +241,10 @@ public class ProjectFact {
     public String getUserVisibleValue() { return safe(userVisibleValue); }
     public Instant getOccurredFrom() { return occurredFrom; }
     public Instant getOccurredTo() { return occurredTo == null ? occurredFrom : occurredTo; }
+    public Instant getTimelineEventAt() { return timelineEventAt; }
+    public String getTimelineDayKey() { return safe(timelineDayKey); }
+    public String getTimelineWeekKey() { return safe(timelineWeekKey); }
+    public String getTimelineMonthKey() { return safe(timelineMonthKey); }
     public List<String> getCommitRefs() { return immutable(commitRefs); }
     public List<String> getCommitUrls() { return immutable(commitUrls); }
     public List<String> getAgentResultRefs() { return immutable(agentResultRefs); }

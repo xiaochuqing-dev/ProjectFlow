@@ -1,5 +1,7 @@
 # Project Fact Memory
 
+V3.4.1 adds the automatic Project Timeline as a temporal consumer of this fact layer. Facts remain append-oriented truth; day/week/month/lifecycle assignments, deterministic statistics, summaries and themes are derived views described in `docs/project-timeline.md`. A Timeline refresh never mutates ProjectFact.
+
 ## Product purpose
 
 ProjectFlow V3.4.0 automatically maintains a project's long-term memory from its earliest available Git history to its latest development changes.

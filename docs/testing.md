@@ -1,5 +1,9 @@
 # Testing
 
+## V3.4.1 timeline gates
+
+Timeline acceptance includes 60 focused backend cases for time boundaries, ownership, deterministic statistics, coverage, invalid IDs, chunk synthesis, refresh/failure/cancel/retry semantics and history interaction; 15 frontend contracts; Playwright A-H business flows; and a real synthetic performance gate with 100 batches, 5000 facts, 36 months, 300 themes and a 230-fact month. Full backend/H2, PostgreSQL Testcontainers, production build, all Playwright flows, copied and current file-backed H2, desktop BAT, sensitive scan, push and current CI remain release gates. Actual results belong only in the V3.4.1 report.
+
 ## V3.4.0 project fact memory gates
 
 V3.4.0 release acceptance must prove the automatic fact path, not only entity persistence. Required backend coverage includes:

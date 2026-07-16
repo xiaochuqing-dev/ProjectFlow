@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ import com.projectflow.entity.ProjectFact;
 import com.projectflow.entity.ProjectFactAgentResultRef;
 import com.projectflow.entity.ProjectFactCommitRef;
 import com.projectflow.entity.ProjectFactCursor;
+import com.projectflow.entity.ProjectFactFileRef;
 import com.projectflow.entity.ProjectFactOrigin;
 import com.projectflow.entity.ProjectFactRecordStatus;
 import com.projectflow.repository.ChangeBatchRepository;
@@ -30,6 +32,7 @@ import com.projectflow.repository.DevelopmentSegmentRepository;
 import com.projectflow.repository.ProjectFactCommitRefRepository;
 import com.projectflow.repository.ProjectFactAgentResultRefRepository;
 import com.projectflow.repository.ProjectFactCursorRepository;
+import com.projectflow.repository.ProjectFactFileRefRepository;
 import com.projectflow.repository.ProjectFactRepository;
 
 @Service
@@ -41,7 +44,10 @@ public class ProjectFactIngestionService {
     private final ProjectFactRepository factRepository;
     private final ProjectFactCommitRefRepository commitRefRepository;
     private final ProjectFactAgentResultRefRepository agentResultRefRepository;
+    private final ProjectFactFileRefRepository fileRefRepository;
     private final ProjectFactCursorRepository cursorRepository;
+    private final TimelinePeriodResolver timelinePeriodResolver;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ProjectFactIngestionService(
         ChangeBatchRepository batchRepository,
@@ -49,14 +55,20 @@ public class ProjectFactIngestionService {
         ProjectFactRepository factRepository,
         ProjectFactCommitRefRepository commitRefRepository,
         ProjectFactAgentResultRefRepository agentResultRefRepository,
-        ProjectFactCursorRepository cursorRepository
+        ProjectFactFileRefRepository fileRefRepository,
+        ProjectFactCursorRepository cursorRepository,
+        TimelinePeriodResolver timelinePeriodResolver,
+        ApplicationEventPublisher eventPublisher
     ) {
         this.batchRepository = batchRepository;
         this.segmentRepository = segmentRepository;
         this.factRepository = factRepository;
         this.commitRefRepository = commitRefRepository;
         this.agentResultRefRepository = agentResultRefRepository;
+        this.fileRefRepository = fileRefRepository;
         this.cursorRepository = cursorRepository;
+        this.timelinePeriodResolver = timelinePeriodResolver;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -71,6 +83,17 @@ public class ProjectFactIngestionService {
         UUID batchId,
         ProjectFactOrigin origin,
         boolean advanceIncrementalCursor
+    ) {
+        return ingestBatch(projectId, batchId, origin, advanceIncrementalCursor, true);
+    }
+
+    @Transactional
+    public IngestionResult ingestBatch(
+        UUID projectId,
+        UUID batchId,
+        ProjectFactOrigin origin,
+        boolean advanceIncrementalCursor,
+        boolean publishTimelineEvent
     ) {
         ChangeBatch batch = batchRepository.findLockedById(batchId)
             .filter(value -> value.getProjectId().equals(projectId))
@@ -107,6 +130,11 @@ public class ProjectFactIngestionService {
             cursor.advance(batch.getHeadCommitSha(), Instant.now(), batch.getBranchName(), batch.getId());
             cursorRepository.save(cursor);
         }
+        if (publishTimelineEvent) {
+            eventPublisher.publishEvent(new ProjectFactsCommittedEvent(
+                projectId, facts.stream().map(ProjectFact::getId).toList()
+            ));
+        }
         return new IngestionResult(batch.getId(), facts.size(), attention, occurredFrom, occurredTo);
     }
 
@@ -118,8 +146,10 @@ public class ProjectFactIngestionService {
         ProjectFact existing = factRepository.findByProjectIdAndFactFingerprint(segment.getProjectId(), fingerprint)
             .orElse(null);
         if (existing != null) {
+            ensureTimelineAssignment(existing);
             ensureCommitRefs(existing);
             ensureAgentResultRefs(existing);
+            ensureFileRefs(existing);
             return existing;
         }
 
@@ -143,9 +173,11 @@ public class ProjectFactIngestionService {
             sourceMode(segment), segment.getQualityStatus(), segment.getConfidence(), status,
             String.join("；", new LinkedHashSet<>(reasons))
         );
+        ensureTimelineAssignment(fact);
         fact = factRepository.save(fact);
         ensureCommitRefs(fact);
         ensureAgentResultRefs(fact);
+        ensureFileRefs(fact);
         return fact;
     }
 
@@ -219,6 +251,21 @@ public class ProjectFactIngestionService {
                 agentResultRefRepository.save(new ProjectFactAgentResultRef(fact.getProjectId(), fact.getId(), ref));
             }
         }
+    }
+
+    private void ensureFileRefs(ProjectFact fact) {
+        for (String value : fact.getAffectedFiles()) {
+            String path = value == null ? "" : value.trim().replace('\\', '/');
+            if (path.isBlank() || path.length() > 1_000) continue;
+            if (!fileRefRepository.existsByFactIdAndFilePath(fact.getId(), path)) {
+                fileRefRepository.save(new ProjectFactFileRef(fact.getProjectId(), fact.getId(), path));
+            }
+        }
+    }
+
+    private void ensureTimelineAssignment(ProjectFact fact) {
+        TimelinePeriodResolver.Assignment assignment = timelinePeriodResolver.assign(fact);
+        fact.assignTimeline(assignment.eventAt(), assignment.dayKey(), assignment.weekKey(), assignment.monthKey());
     }
 
     public static String fingerprint(

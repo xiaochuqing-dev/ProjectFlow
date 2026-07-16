@@ -13,6 +13,7 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.projectflow.dto.AiProviderDtos.AiProviderRequest;
 import com.projectflow.dto.AiProviderDtos.AiProviderResponse;
@@ -30,15 +31,18 @@ public class AiProviderService {
     private final AiProviderRepository aiProviderRepository;
     private final AiProviderUrlGuard aiProviderUrlGuard;
     private final ModelGatewayService modelGatewayService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public AiProviderService(
         AiProviderRepository aiProviderRepository,
         AiProviderUrlGuard aiProviderUrlGuard,
-        ModelGatewayService modelGatewayService
+        ModelGatewayService modelGatewayService,
+        ApplicationEventPublisher eventPublisher
     ) {
         this.aiProviderRepository = aiProviderRepository;
         this.aiProviderUrlGuard = aiProviderUrlGuard;
         this.modelGatewayService = modelGatewayService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -75,7 +79,9 @@ public class AiProviderService {
             request.defaultEnabled(),
             request.purposeTags()
         );
-        return toResponse(aiProviderRepository.save(provider));
+        AiProvider saved = aiProviderRepository.save(provider);
+        if (saved.isDefaultEnabled()) eventPublisher.publishEvent(new ModelProviderConfiguredEvent(userId));
+        return toResponse(saved);
     }
 
     @Transactional
@@ -95,6 +101,7 @@ public class AiProviderService {
             request.defaultEnabled(),
             request.purposeTags()
         );
+        if (provider.isDefaultEnabled()) eventPublisher.publishEvent(new ModelProviderConfiguredEvent(userId));
         return toResponse(provider);
     }
 

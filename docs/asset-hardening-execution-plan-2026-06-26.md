@@ -3,7 +3,7 @@
 > 生成日期：2026-06-26
 > 代码基线：`a52f17e merge: product experience convergence (P1-P6)`（GitHub master）
 > 基准文档：`Downloads/ProjectFlow_开工说明书_资产变真变实变硬_2026-06-26_审查建议.txt`
-> 工作目录：`C:\Users\xiaochuqing\ZCodeProject\ProjectFlow`
+> 工作目录：`<workspace>\ProjectFlow`
 
 ---
 

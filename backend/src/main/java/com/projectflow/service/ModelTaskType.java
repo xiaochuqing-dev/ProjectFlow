@@ -41,6 +41,16 @@ public enum ModelTaskType {
         List.of(), List.of("name", "capabilityName", "capability_name", "title", "summary", "plain_summary", "description"),
         "{\"capabilities\":[{\"name\":\"\",\"summary\":\"\",\"problemSolved\":\"\",\"featureEntry\":\"\",\"sourceIndexes\":[\"S1\"],\"readme\":\"\",\"resume\":\"\",\"interview\":\"\"}]}"
     ),
+    PROJECT_TIMELINE_PERIOD_SUMMARY(
+        "项目历程时间段摘要", 4_000, 16_000, 0.1, false,
+        List.of(), List.of("periodSummary", "themes", "ungroupedFactIds"), List.of(),
+        "{\"periodSummary\":\"\",\"themes\":[{\"title\":\"\",\"summary\":\"\",\"factIds\":[\"uuid\"]}],\"ungroupedFactIds\":[]}"
+    ),
+    PROJECT_TIMELINE_LIFECYCLE_SUMMARY(
+        "项目完整历程摘要", 4_000, 16_000, 0.1, false,
+        List.of(), List.of("periodSummary", "stages", "ungroupedMonthKeys"), List.of(),
+        "{\"periodSummary\":\"\",\"stages\":[{\"title\":\"\",\"summary\":\"\",\"monthKeys\":[\"2026-07\"]}],\"ungroupedMonthKeys\":[]}"
+    ),
     LEGACY_STRUCTURED(
         "兼容结构化调用", 2_048, 20_000, 0.2, false,
         List.of("items", "results"), List.of(), List.of(), "{}"

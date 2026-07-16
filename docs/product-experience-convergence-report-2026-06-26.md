@@ -12,8 +12,8 @@
 
 - `start-projectflow.bat` → 调用 `start-projectflow-embedded.ps1`
 - 脚本第 8 行 `$root = Split-Path -Parent $MyInvocation.MyCommand.Path` 解析出 bat 所在目录
-- bat 位于 `C:\Users\xiaochuqing\ZCodeProject\ProjectFlow`（master 分支，提交 `b6483c7`，**未含本轮改动**）
-- 本轮所有改动提交在 worktree `C:\Users\xiaochuqing\.config\superpowers\worktrees\ProjectFlow\product-experience-convergence`（提交 `597e30a`）
+- bat 位于 `<workspace>\ProjectFlow`（master 分支，提交 `b6483c7`，**未含本轮改动**）
+- 本轮所有改动提交在 worktree `<worktree>\ProjectFlow\product-experience-convergence`（提交 `597e30a`）
 
 当前 3000/8080 端口跑的是 master 旧版本，所以页面无变化。
 
@@ -89,7 +89,7 @@
 
 **方案 A（推荐，合并到 master）：**
 ```bash
-cd C:\Users\xiaochuqing\ZCodeProject\ProjectFlow
+cd <workspace>\ProjectFlow
 git merge product-experience-convergence
 ```
 然后正常双击 `start-projectflow.bat`。
@@ -97,7 +97,7 @@ git merge product-experience-convergence
 **方案 B（临时验证，不合并）：**
 关闭当前 3000/8080 进程，手动在 worktree 目录启动：
 ```bash
-cd C:\Users\xiaochuqing\.config\superpowers\worktrees\ProjectFlow\product-experience-convergence\frontend
+cd <worktree>\ProjectFlow\product-experience-convergence\frontend
 npm.cmd run build
 npm.cmd run start -- --hostname 127.0.0.1 --port 3000
 ```

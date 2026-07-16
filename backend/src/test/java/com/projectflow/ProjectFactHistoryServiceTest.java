@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -40,6 +41,7 @@ import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.service.ProjectFactHistoryService;
 import com.projectflow.service.WorkSessionScanService;
+import com.projectflow.support.AppException;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -114,6 +116,45 @@ class ProjectFactHistoryServiceTest {
         }
     }
 
+    @Test
+    void checkpointsAHistoryCommitWithoutAnalyzableChangesInsteadOfPausingForever() throws Exception {
+        Path repository = createGitHistory(1);
+        try {
+            UUID userId = UUID.randomUUID();
+            ProjectSpace project = new ProjectSpace(userId);
+            project.update("No-change history", "history boundary test", ProjectStatus.BUILDING, List.of("Git"), "", LocalDate.now(), null);
+            project = projectRepository.saveAndFlush(project);
+            ProjectMemory memory = new ProjectMemory(project.getId());
+            memory.update("History", "Backfill", "", "", "", "", "", "", "");
+            memory.rememberLocalProjectPath(repository.toAbsolutePath().normalize().toString());
+            memoryRepository.saveAndFlush(memory);
+
+            UUID projectId = project.getId();
+            when(workSessionScanService.scanHistoryChunk(eq(userId), eq(projectId), any(), anyList()))
+                .thenThrow(new AppException(
+                    "HISTORY_NO_ANALYZABLE_CHANGES",
+                    "该历史提交批次没有可记录的代码变化，已作为历史边界跳过。",
+                    HttpStatus.UNPROCESSABLE_ENTITY
+                ));
+
+            String head = git(repository, "rev-parse", "HEAD").trim();
+            var result = historyService.processNextChunk(userId, projectId, null, head);
+
+            assertThat(result.batchId()).isNull();
+            assertThat(result.processedCommitCount()).isEqualTo(1);
+            assertThat(result.coveredCommitCount()).isEqualTo(1);
+            assertThat(result.hasMore()).isFalse();
+            assertThat(result.diagnosticsJson()).contains("skippedNoAnalyzableChanges");
+            var state = historyStateRepository.findByProjectId(projectId).orElseThrow();
+            assertThat(state.getStatus()).isEqualTo(ProjectFactHistoryStatus.COMPLETED);
+            assertThat(state.getLastProcessedCommitSha()).isEqualTo(head);
+            assertThat(state.getRemainingCommitCount()).isZero();
+            assertThat(factRepository.countByProjectId(projectId)).isZero();
+        } finally {
+            Files.walk(repository).sorted(java.util.Comparator.reverseOrder()).forEach(path -> path.toFile().delete());
+        }
+    }
+
     private void persistCoveredFact(UUID projectId, List<String> commits, String label) {
         String fingerprint = String.format("%064x", Math.abs(label.hashCode()) + 1L);
         ProjectFact fact = new ProjectFact(projectId, null, null, ProjectFactOrigin.HISTORY_BACKFILL, fingerprint);
@@ -145,6 +186,7 @@ class ProjectFactHistoryServiceTest {
         git(root, "init", "-b", "master");
         git(root, "config", "user.email", "history@example.com");
         git(root, "config", "user.name", "ProjectFlow History Test");
+        git(root, "config", "gc.auto", "0");
         Path file = root.resolve("src/history.txt");
         Files.createDirectories(file.getParent());
         for (int index = 0; index < count; index += 1) {

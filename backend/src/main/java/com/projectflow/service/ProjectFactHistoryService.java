@@ -109,19 +109,27 @@ public class ProjectFactHistoryService {
 
             List<String> chunk = plan.uncovered().stream().limit(HISTORY_CHUNK_COMMIT_LIMIT).toList();
             markRunning(projectId, upperBound, allCommits.size(), plan.coveredCount());
-            WorkSessionScanService.HistoryChunkResult scan = workSessionScanService.scanHistoryChunk(
-                userId, projectId, jobId, chunk
-            );
+            WorkSessionScanService.HistoryChunkResult scan = null;
+            boolean skippedNoChanges = false;
+            try {
+                scan = workSessionScanService.scanHistoryChunk(userId, projectId, jobId, chunk);
+            } catch (AppException exception) {
+                if (!"HISTORY_NO_ANALYZABLE_CHANGES".equals(exception.getCode())) throw exception;
+                skippedNoChanges = true;
+            }
 
             Set<String> coveredAfter = coveredCommits(projectId);
             CoveragePlan after = plan(allCommits, chunk.get(chunk.size() - 1), coveredAfter);
             int coveredCount = allCommits.size() - after.uncovered().size();
+            UUID batchId = scan == null ? null : scan.batch().id();
             recordChunk(
-                projectId, upperBound, chunk.get(chunk.size() - 1), scan.batch().id(), allCommits.size(), coveredCount
+                projectId, upperBound, chunk.get(chunk.size() - 1), batchId, allCommits.size(), coveredCount
             );
             return new HistoryStepResult(
-                upperBound, scan.batch().id(), chunk.size(), allCommits.size(), coveredCount,
-                !after.uncovered().isEmpty(), scan.batch().analysisScope()
+                upperBound, batchId, chunk.size(), allCommits.size(), coveredCount,
+                !after.uncovered().isEmpty(), skippedNoChanges
+                    ? "{\"skippedNoAnalyzableChanges\":true}"
+                    : scan.batch().analysisScope()
             );
         } catch (CancellationException exception) {
             pause(projectId, "CANCELLED", "历史事实补齐已暂停，已完成的事实仍然保留。");

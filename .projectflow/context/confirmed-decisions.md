@@ -1,4 +1,14 @@
-# Confirmed V3.4.0 decisions
+# Confirmed V3.4.1 decisions
+
+- 项目历程是 ProjectFact 之上的时间 read model / derived layer；摘要、主题和关系不得修改或替换事实。
+- factEventAt 优先 occurredTo、回退 occurredFrom，并在统一 Timeline Zone 下持久化 day、ISO week 和 month assignment。
+- DAY 直接读 facts；WEEK/MONTH/LIFECYCLE 通过 ModelGateway 生成派生摘要，必须显式覆盖所有来源 facts。
+- 未知、跨项目、遗漏或非法 fact ID 使模型输出失败；recent-N 截断不得冒充完整摘要。
+- Timeline output 禁止下一步、路线图、优先级和未来规划；用户不保存、不确认摘要。
+- Timeline Theme 是期间局部主题，不是 Project Capability；主题必须通过关系表追溯 facts、batch 与 evidence。
+- fact after-commit 事件合并 dirty scope；GET 不调用模型；历史补齐期间延后生成，完成后恢复。
+- 失败刷新保留旧 READY 内容；没有模型时事实与确定性统计仍可读，配置模型后自动恢复等待项。
+- `/timeline` 是主时间视图；`/dev-logs` 只作 Daily Review 兼容入口。
 
 - ProjectFlow 的核心定位是“自动维护项目从创建至今的长期记忆”。
 - 新主链是“分析新变化 → DevelopmentSegment → 自动 ProjectFact → 项目记录 / 项目记忆”；人退出正常事实确认主链。

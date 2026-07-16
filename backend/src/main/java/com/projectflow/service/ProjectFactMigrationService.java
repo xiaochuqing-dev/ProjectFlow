@@ -98,7 +98,9 @@ public class ProjectFactMigrationService {
             boolean complete = true;
             for (ChangeBatch batch : batches) {
                 try {
-                    ingestionService.ingestBatch(projectId, batch.getId(), ProjectFactOrigin.LEGACY_SEGMENT_MIGRATION, false);
+                    ingestionService.ingestBatch(
+                        projectId, batch.getId(), ProjectFactOrigin.LEGACY_SEGMENT_MIGRATION, false, false
+                    );
                 } catch (RuntimeException exception) {
                     complete = false;
                     LOGGER.warn("Legacy segment fact migration failed: batchId={}", batch.getId(), exception);
@@ -106,7 +108,9 @@ public class ProjectFactMigrationService {
             }
             if (complete && !batches.isEmpty()) {
                 ChangeBatch latest = batches.get(batches.size() - 1);
-                ingestionService.ingestBatch(projectId, latest.getId(), ProjectFactOrigin.LEGACY_SEGMENT_MIGRATION, true);
+                ingestionService.ingestBatch(
+                    projectId, latest.getId(), ProjectFactOrigin.LEGACY_SEGMENT_MIGRATION, true, false
+                );
             }
         });
     }

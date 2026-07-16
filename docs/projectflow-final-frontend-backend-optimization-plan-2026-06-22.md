@@ -106,7 +106,7 @@
 
 - `cd frontend && npm.cmd run build`
 - `cd frontend && npx.cmd tsc --noEmit --noUnusedLocals --noUnusedParameters`
-- `cd backend && C:\Users\Administrator\Desktop\apache-maven-3.9.9\bin\mvn.cmd -q test`
+- `cd backend && mvn -q test`
 
 ### P1：安全护栏
 

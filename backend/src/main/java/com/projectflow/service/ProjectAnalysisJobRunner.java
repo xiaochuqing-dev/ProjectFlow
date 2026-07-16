@@ -37,6 +37,7 @@ public class ProjectAnalysisJobRunner {
     private final WorkSessionScanService workSessionScanService;
     private final ProjectCapabilityService projectCapabilityService;
     private final ProjectFactHistoryService projectFactHistoryService;
+    private final ProjectTimelineSummaryService projectTimelineSummaryService;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -49,6 +50,7 @@ public class ProjectAnalysisJobRunner {
         WorkSessionScanService workSessionScanService,
         ProjectCapabilityService projectCapabilityService,
         ProjectFactHistoryService projectFactHistoryService,
+        ProjectTimelineSummaryService projectTimelineSummaryService,
         ObjectMapper objectMapper,
         ApplicationEventPublisher eventPublisher
     ) {
@@ -60,6 +62,7 @@ public class ProjectAnalysisJobRunner {
         this.workSessionScanService = workSessionScanService;
         this.projectCapabilityService = projectCapabilityService;
         this.projectFactHistoryService = projectFactHistoryService;
+        this.projectTimelineSummaryService = projectTimelineSummaryService;
         this.objectMapper = objectMapper;
         this.eventPublisher = eventPublisher;
     }
@@ -119,7 +122,22 @@ public class ProjectAnalysisJobRunner {
                     eventPublisher.publishEvent(new ProjectFactHistoryRequestedEvent(
                         job.getUserId(), job.getProjectId(), result.upperBoundSha(), true
                     ));
+                } else {
+                    eventPublisher.publishEvent(new ProjectTimelineRefreshRequestedEvent(job.getUserId(), job.getProjectId()));
                 }
+            } else if (job.getJobType() == ProjectAnalysisJobType.PROJECT_TIMELINE_REFRESH) {
+                if (!checkpoint(jobId, true)) return;
+                jobRepository.findById(jobId).ifPresent(current -> {
+                    current.advanceStage("TIMELINE_MODEL_SUMMARY", "正在根据已记录的项目事实生成历程摘要");
+                    jobRepository.save(current);
+                });
+                var outcome = projectTimelineSummaryService.refresh(
+                    job.getUserId(), job.getProjectId(), job.getId(), job.getFilePath()
+                );
+                recordTimelineUsage(jobId, outcome.diagnostics());
+                if (!checkpoint(jobId, false)) return;
+                markSucceeded(jobId, outcome.resultJson(), null);
+                eventPublisher.publishEvent(new ProjectTimelineRefreshRequestedEvent(job.getUserId(), job.getProjectId()));
             } else if (job.getJobType() == ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS) {
                 // V3.3.4: 能力分析异步化。卡片由 service 持久化，job 记录阶段与完成状态。
                 // resultJson 只存简要摘要，前端完成后重新拉取 capability-cards。
@@ -192,6 +210,9 @@ public class ProjectAnalysisJobRunner {
                 capabilityException != null && capabilityException.modelReturned()
             );
             recordFailedUsage(job, exception, startedAt);
+            if (job.getJobType() == ProjectAnalysisJobType.PROJECT_TIMELINE_REFRESH) {
+                eventPublisher.publishEvent(new ProjectTimelineRefreshRequestedEvent(job.getUserId(), job.getProjectId()));
+            }
         }
     }
 
@@ -335,6 +356,24 @@ public class ProjectAnalysisJobRunner {
         }
     }
 
+    private void recordTimelineUsage(UUID jobId, java.util.List<ModelGatewayService.ModelCallDiagnostics> diagnostics) {
+        if (diagnostics == null || diagnostics.isEmpty()) return;
+        jobRepository.findById(jobId).ifPresent(job -> {
+            for (ModelGatewayService.ModelCallDiagnostics item : diagnostics) {
+                int requests = Math.max(1, item.requestCount());
+                for (int index = 0; index < requests; index++) {
+                    job.recordModelRequest(
+                        index == 0 ? item.promptTokens() : 0,
+                        index == 0 ? item.completionTokens() : 0,
+                        index == 0 ? item.totalTokens() : 0
+                    );
+                }
+            }
+            job.recordDiagnostics(safeJson(diagnostics), diagnostics.stream().anyMatch(ModelGatewayService.ModelCallDiagnostics::contentPresent));
+            jobRepository.save(job);
+        });
+    }
+
     private void recordCapabilityUsage(
         ProjectAnalysisJob job,
         ProjectCapabilityService.CapabilityDiagnostics diagnostics,
@@ -382,6 +421,7 @@ public class ProjectAnalysisJobRunner {
             case CAPABILITY_INTERPRET -> "CAPABILITY_INTERPRET";
             case WORK_SESSION_SCAN -> "WORK_SESSION_SCAN";
             case PROJECT_FACT_HISTORY_REBUILD -> "PROJECT_FACT_HISTORY_REBUILD";
+            case PROJECT_TIMELINE_REFRESH -> "PROJECT_TIMELINE_REFRESH";
             case CAPABILITY_CARD_ANALYSIS -> "CAPABILITY_CARD_ANALYSIS";
             case FILE -> "FILE_ANALYSIS";
         };

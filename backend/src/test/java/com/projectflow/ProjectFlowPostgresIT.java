@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -98,11 +99,18 @@ class ProjectFlowPostgresIT {
         modelPort = modelServer.getAddress().getPort();
         modelServer.createContext("/v1/chat/completions", exchange -> {
             String requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-            if (FAIL_NEXT.getAndUpdate(value -> Math.max(0, value - 1)) > 0) {
+            boolean capabilityRequest = requestBody.contains("capabilities") || requestBody.contains("项目能力");
+            if (capabilityRequest && FAIL_NEXT.getAndUpdate(value -> Math.max(0, value - 1)) > 0) {
                 writeResponse(exchange, 503, "{\"error\":{\"message\":\"controlled PostgreSQL workflow failure\"}}");
                 return;
             }
-            String content = requestBody.contains("capabilities") || requestBody.contains("项目能力")
+            if (requestBody.contains("ALLOWED_IDS_JSON=") || requestBody.contains("ALLOWED_MONTH_KEYS_JSON=")) {
+                String content = timelineContent(requestBody);
+                String escaped = new ObjectMapper().writeValueAsString(content);
+                writeResponse(exchange, 200, "{\"choices\":[{\"message\":{\"content\":" + escaped + "},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":120,\"completion_tokens\":80,\"total_tokens\":200}}");
+                return;
+            }
+            String content = capabilityRequest
                 ? "{\"capabilities\":[{\"name\":\"PostgreSQL 工作流可靠性\",\"summary\":\"真实数据库下完成沉淀与能力闭环。\",\"problemSolved\":\"验证事务和关系持久化。\",\"featureEntry\":\"能力与成果\",\"sourceIndexes\":[\"S1\"],\"readme\":\"真实 PostgreSQL 16 工作流验证。\",\"resume\":\"完成项目沉淀到能力卡片闭环。\",\"interview\":\"可说明事务、幂等和失败保留。\"}]}"
                 : "{\"segments\":[{\"segmentTitle\":\"完成 PostgreSQL 自动事实工作流验证\",\"plainSummary\":\"将固定 Git 证据整理为开发推进段并自动记录项目事实。\",\"sourceIndexes\":[\"S1\"],\"mainChanges\":[\"读取提交证据\",\"生成分析批次\",\"自动形成项目事实\"],\"userVisibleValue\":\"验证真实数据库自动事实闭环。\",\"affectedFiles\":[],\"confidence\":\"HIGH\",\"needsUserReview\":false}]}";
             String escaped = new ObjectMapper().writeValueAsString(content);
@@ -263,6 +271,41 @@ class ProjectFlowPostgresIT {
         Process process = new ProcessBuilder(command).directory(root.toFile()).redirectErrorStream(true).start();
         String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         if (process.waitFor() != 0) throw new AssertionError(String.join(" ", command) + " failed: " + output);
+    }
+
+    private static String timelineContent(String requestBody) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        String prompt = mapper.readTree(requestBody).path("messages").findValuesAsText("content").stream()
+            .reduce("", (left, right) -> left + "\n" + right);
+        if (prompt.contains("ALLOWED_MONTH_KEYS_JSON=")) {
+            List<String> monthKeys = jsonArrayAfter(mapper, prompt, "ALLOWED_MONTH_KEYS_JSON=");
+            return mapper.writeValueAsString(Map.of(
+                "periodSummary", "项目已经形成连续且可追溯的历史演进。",
+                "stages", List.of(Map.of(
+                    "title", "持续演进", "summary", "各月事实共同构成项目的持续演进。", "monthKeys", monthKeys
+                )),
+                "ungroupedMonthKeys", List.of()
+            ));
+        }
+        List<String> factIds = jsonArrayAfter(mapper, prompt, "ALLOWED_IDS_JSON=");
+        return mapper.writeValueAsString(Map.of(
+            "periodSummary", "本时间段形成了有证据支撑的项目演进记录。",
+            "themes", List.of(Map.of(
+                "title", "可追溯的项目变化", "summary", "已记录事实完整反映本时间段的项目变化。", "factIds", factIds
+            )),
+            "ungroupedFactIds", List.of()
+        ));
+    }
+
+    private static List<String> jsonArrayAfter(ObjectMapper mapper, String prompt, String marker) throws IOException {
+        int start = prompt.indexOf(marker);
+        if (start < 0) return List.of();
+        String line = prompt.substring(start + marker.length()).split("\\R", 2)[0];
+        var values = mapper.readTree(line);
+        if (!values.isArray()) return List.of();
+        List<String> result = new java.util.ArrayList<>();
+        values.forEach(value -> result.add(value.asText()));
+        return result;
     }
 
     private static void writeResponse(com.sun.net.httpserver.HttpExchange exchange, int status, String body) throws IOException {

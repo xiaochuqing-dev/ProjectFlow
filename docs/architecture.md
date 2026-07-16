@@ -1,8 +1,12 @@
 # Architecture
 
+## V3.4.1 automatic timeline boundary
+
+`ProjectFact` remains the factual source of truth. `ProjectTimelineService` is a database read model for deterministic day/ISO-week/month/lifecycle statistics; `ProjectTimelineSummaryService` maintains replaceable summaries and period-local themes through the existing persistent job executor and ModelGateway. Fact after-commit events mark scopes dirty, GET requests never invoke a model, history backfill defers generation until completion, and a failed refresh preserves the previous successful content. See `docs/project-timeline.md`.
+
 ## System Overview
 
-ProjectFlow uses a separated frontend and backend architecture. The V3.4.0 product spine is a local-first project memory system that turns real Git, worktree, and Agent evidence into durable Project Facts without routine manual confirmation.
+ProjectFlow uses a separated frontend and backend architecture. The V3.4.1 product spine is a local-first project memory system that turns real Git, worktree, and Agent evidence into durable Project Facts and a traceable automatic Timeline without routine manual confirmation.
 
 ## V3.4.0 automatic fact memory boundary
 

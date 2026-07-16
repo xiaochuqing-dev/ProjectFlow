@@ -1,5 +1,9 @@
 # Migration compatibility
 
+## V3.4.1 Timeline assignment migration
+
+Current startup adds nullable Timeline assignment fields and derived tables through the existing `ddl-auto=update` boundary. A paged migration assigns old Project Facts from their occurrence time and normalizes file refs idempotently without loading every fact or deleting legacy rows. Legacy segment migration suppresses per-batch Timeline jobs; the startup Timeline bootstrap coalesces the completed fact set. H2 copied/current-database and PostgreSQL gates must verify rerun stability, batch/fact counts, zero fingerprint duplicates and unchanged legacy relations.
+
 ## V3.4.0 Project Fact migration
 
 V3.4.0 adds Project Fact, incremental Fact Cursor, and persistent history-coverage state, plus fact-recording metadata required by batches/read models. The project still uses Hibernate `ddl-auto=update`; this is not a versioned Flyway migration system and must be reported as such.

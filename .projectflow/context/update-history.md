@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.4.1 自动项目历程 - 2026-07-16
+
+在 V3.4.0 ProjectFact 事实层上新增 DAY、ISO WEEK、MONTH、LIFECYCLE 时间 read model。factEventAt 与固定时区 assignment 持久化，统计由数据库确定性聚合；周、月和完整生命周期通过统一 ModelGateway 生成全覆盖派生摘要与期间主题，主题可追溯到 fact、batch 和 evidence。after-commit 事件、fingerprint 和持久化 job 自动维护 dirty scope；历史补齐延后生成，失败保留旧 READY，用户不保存或确认。主导航以项目历程替换每日回顾，旧 DevLog 路由继续兼容。生命周期能力地图与 Hermes/Obsidian 正式同步未在本版本实现。
+
 ## 开源 Windows 快速启动入口 - 2026-07-14
 
 仓库根目录新增便携 Start-ProjectFlow.bat，克隆后的 Windows 用户可直接双击。入口不包含个人路径、不修改 Git 历史；首次运行或 package-lock 变化时执行 npm ci，每次重新构建生产前端并启动 Spring Boot/H2。成功运行记录版本、源提交、本地修改标记、依赖状态、前端 Build ID 和就绪时间，旧 start.bat 保持兼容。

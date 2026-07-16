@@ -1,5 +1,9 @@
 # Background jobs
 
+## V3.4.1 timeline refresh
+
+`PROJECT_TIMELINE_REFRESH` reuses the persisted V3.3.7 executor. Fact after-commit events mark only affected week/month/lifecycle rows dirty using a fact-version fingerprint. Jobs call the registered Timeline ModelTaskType outside fact transactions, then atomically replace derived theme relations. Equivalent scope jobs are idempotent, budgets remain bounded, and completion/failure schedules the next dirty scope. During history backfill, dirty scopes accumulate without generation and resume once history completes. Cancellation restores dirty state; transport/schema/coverage failure keeps facts and previous READY content.
+
 ## V3.4.0 fact ingestion and history reconstruction
 
 V3.4.0 reuses the V3.3.7 persisted executor, active-job uniqueness, budgets, cancellation, retry lineage, and restart semantics. It does not introduce an unbounded second worker system.

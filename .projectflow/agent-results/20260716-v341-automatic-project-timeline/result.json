@@ -1,0 +1,38 @@
+{
+  "taskGoal": "补齐 V3.4.0 真实收尾门禁，并在 ProjectFact 事实层上完成 V3.4.1 自动项目历程、时间事实视图、全覆盖派生摘要、真实验收和交付。",
+  "actualChanges": [
+    "新增日、ISO 周、月和完整生命周期项目历程；ProjectFact 仍是唯一事实来源，确定性统计由数据库聚合，用户打开页面即可读取且无需保存或确认。",
+    "周、月和生命周期摘要统一通过 ModelGateway 生成并验证完整事实覆盖；期间主题可追到 ProjectFact、批次和证据，未知、跨项目或遗漏事实 ID 会拒绝生成。",
+    "事实提交后在事务外自动合并 dirty 周期并创建持久化刷新任务；相同 fingerprint 不重算，失败、中断和取消保留旧 READY 内容，没有模型时事实与统计仍可读。",
+    "历史补齐继续按 bounded chunk 与独立 checkpoint 运行，期间延后摘要刷新；修复无差异历史提交永久停住的问题，使其不调用模型、不生成伪事实而安全推进 checkpoint。",
+    "主导航以项目历程替换每日回顾，支持日、周、月、全部切换、历史覆盖和摘要状态；DevLog 实体、API 与旧路由继续兼容。",
+    "补齐 V3.4.0 的完整后端、PostgreSQL、Playwright、当前真实 H2、旧批次迁移、history、桌面启动和敏感内容验收，并修复实际暴露的跨平台测试与任务恢复缺陷。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/entity/ProjectFact.java",
+    "backend/src/main/java/com/projectflow/entity/ProjectTimelineSummary.java",
+    "backend/src/main/java/com/projectflow/entity/ProjectTimelineTheme.java",
+    "backend/src/main/java/com/projectflow/service/TimelinePeriodResolver.java",
+    "backend/src/main/java/com/projectflow/service/ProjectTimelineService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectTimelineSummaryService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectFactIngestionService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectFactHistoryService.java",
+    "backend/src/main/java/com/projectflow/controller/ProjectTimelineController.java",
+    "frontend/src/app/timeline/page.tsx",
+    "frontend/src/lib/project-timeline.ts",
+    "docs/project-timeline.md",
+    "docs/projectflow-v3.4.1-automatic-project-timeline-report.md"
+  ],
+  "verification": {
+    "build": "PASSED：TypeScript noEmit、Next.js 16.2.7 production build 和根目录 Start-ProjectFlow.bat 实际启动均通过。",
+    "tests": "PASSED：后端 H2 284/284、PostgreSQL 16.14 Testcontainers 2/2、前端 contracts 39/39、Playwright 6/6；5000 facts/36 months 和 230 facts 全覆盖实测通过。",
+    "manualCheck": "PASSED：当前真实 H2 为 facts 42、attention 42、duplicates 0、去重 commit refs 56；安全副本 history 从 132/133 续跑到 133/133 且重启后 facts 46/46 指纹唯一；真实 Provider 小样本和桌面启动已验证。"
+  },
+  "unfinished": [
+    "V3.4.1 首次推送后的 GitHub Actions 核心 Run 尚未产生，必须等待全部核心 job 完成后再关闭本项。"
+  ],
+  "sedimentCandidates": [
+    "长期事实之上的模型摘要应设计为可重建派生层：数据库负责确定性统计，输出必须显式全覆盖来源 ID，刷新失败保留旧成功版本且不能反向修改事实。",
+    "历史回填遇到无差异提交时应推进独立 checkpoint 而不生成伪事实；将“无可分析变化”与模型失败分开，能避免回填永久卡在最后一个 commit。"
+  ]
+}

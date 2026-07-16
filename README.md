@@ -1,12 +1,12 @@
 # ProjectFlow
 
-ProjectFlow V3.4.0 is a local-first project memory system for AI-assisted solo developers. It reads real Git, worktree, and Agent evidence, automatically organizes development facts by analysis batch, and preserves how a project grew from its earliest history to its latest changes.
+ProjectFlow V3.4.1 is a local-first project memory system for AI-assisted solo developers. It reads real Git, worktree, and Agent evidence, automatically organizes development facts, and maintains a traceable timeline from the project's earliest recorded history to its latest changes.
 
 ProjectFlow 自动维护项目从创建至今的长期记忆。让每一个项目记得自己是怎样成长到今天的。
 
 Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns that raw development evidence into durable Change Batches, evidence-backed Project Facts, and long-lived Project Memory.
 
-## V3.4.0 Automatic Project Fact Memory
+## V3.4.1 Automatic Project Timeline
 
 - “Analyze new changes” keeps the proven Git/worktree/Agent evidence and model-segmentation pipeline, then automatically ingests valid Development Segments as Project Facts.
 - Normal evidence-backed facts are recorded immediately. Users no longer process every item through create, merge, evidence-only, or ignore decisions.
@@ -15,7 +15,13 @@ Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns tha
 - Existing Development Segments and confirmed Project Sediments migrate idempotently without deleting old batches, changes, sediments, links, or H2 data.
 - Uncovered Git history is rebuilt oldest-first in bounded background chunks with persistent coverage and checkpoints. Already covered commits are not sent to the model again.
 - Project Records is the batch-oriented fact browser. Project Memory uses Project Facts as its primary factual layer and keeps V3.3.x sediment/profile fields in a compatibility area.
-- V3.4.0 does not redesign the V3.3.7 job infrastructure or V3.3.8 model gateway, and does not pre-build the later timeline, lifecycle capability map, Hermes sync, or Obsidian sync.
+- `ProjectFact` remains the factual source of truth. Timeline is a temporal read model and derived layer over those immutable facts.
+- Day view exposes facts directly. Week and month receive automatic derived summaries; lifecycle uses hierarchical month synthesis with explicit full-fact coverage.
+- Timeline summaries and period-local Timeline Themes never contain next-step planning, never mutate facts, and never require users to save or confirm them.
+- Every theme traces back to its facts, source batch, and evidence. Unknown IDs, missing coverage, and cross-project references invalidate a generated summary.
+- Failed refreshes preserve the previous successful summary while deterministic fact statistics remain available. History backfill expands older periods automatically without regenerating all summaries after every chunk.
+- Timeline Theme is not Project Capability. Lifecycle capability maps, Hermes sync, and Obsidian sync remain later phases.
+- V3.4.1 reuses the V3.3.7 job infrastructure and V3.3.8 model gateway rather than redesigning them.
 
 ## V3.3.8.1 Data Read Reliability
 
@@ -92,18 +98,17 @@ Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns tha
 
 It is built for developers who use agents such as Codex, Claude Code, or other coding assistants to modify real projects and then need a clear way to understand what changed, review the evidence, maintain a project profile, and generate reusable output such as daily reviews, README material, reports, and resume-ready summaries.
 
-## V3.4.0 Workflow
+## V3.4.1 Workflow
 
 ProjectFlow is not a Kanban board, daily-report generator, or hosted PR/CI system. Its primary workflow is:
 
-1. Add or import a project and bind its real local Git folder.
-2. Analyze new changes from the last automatically recorded Fact Cursor to the current Git HEAD.
-3. Group Git, worktree, and Agent evidence into analysis-layer Development Segments.
-4. Automatically ingest valid evidence-backed segments as durable Project Facts.
-5. Persist facts by Change Batch and advance the Fact Cursor without manual confirmation.
-6. Record exceptional quality or evidence problems as Needs Attention without blocking later scans.
-7. Rebuild uncovered Git history oldest-first in bounded background chunks with persistent checkpoints.
-8. Use Project Facts as the factual foundation for later timelines, capability analysis, outputs, and external knowledge integrations.
+1. Bind a real local Git project.
+2. Analyze new changes.
+3. Automatically record evidence-backed Project Facts.
+4. Continue rebuilding uncovered Git history.
+5. Organize facts into Day / Week / Month / Lifecycle Timeline views.
+6. Automatically maintain derived period summaries and trace every theme back to facts and evidence.
+7. Let later capability and external integrations consume the same fact memory.
 
 The governing rule is: rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records objective facts. Users remain responsible for subjective profile edits and exceptional attention items, not routine fact confirmation.
 
@@ -123,6 +128,10 @@ Local Git is the primary data source. Agent result files are an enhancement that
 | Needs Attention | Exceptional fact-quality issue that may need human review but never blocks the main flow |
 | Fact Cursor | Latest incrementally analyzed commit successfully recorded into Project Facts |
 | History Backfill | Bounded background reconstruction of uncovered Git history, oldest first |
+| Timeline Period | Deterministic day, ISO week, month, or lifecycle range assigned from a fact's occurrence time |
+| Timeline Summary | Automatically generated, replaceable derived summary that covers every fact in its period |
+| Timeline Theme | Period-local grouping whose membership traces to Project Facts; it is not a Project Capability |
+| Derived Summary | Model-generated content that can be rebuilt without changing source facts or deterministic statistics |
 | Project Profile / legacy ProjectMemory | Compatibility archive for subjective fields and historical profile content |
 | Suggested Sediment / Project Sediment / Project Change | V3.3.x compatibility records retained for old data and links; not the new scan path |
 

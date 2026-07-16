@@ -16,7 +16,7 @@ const navItems = [
   { label: "工作台", href: "/dashboard", icon: LayoutDashboard },
   { label: "项目记录", href: "/sediment-review", icon: History },
   { label: "项目记忆", href: "/project-intelligence", icon: DatabaseZap },
-  { label: "每日回顾", href: "/dev-logs", icon: BookOpenText },
+  { label: "项目历程", href: "/timeline", icon: BookOpenText },
   { label: "成果输出", href: "/ai-review", icon: Sparkles },
   { label: "设置", href: "/settings", icon: Settings },
 ];
@@ -32,7 +32,7 @@ export function AppShell({ title, eyebrow, actions, children }: AppShellProps) {
             PF
           </div>
           <div>
-            <p className="text-base font-semibold text-ink">ProjectFlow <span className="text-xs font-medium text-muted">V3.4.0</span></p>
+            <p className="text-base font-semibold text-ink">ProjectFlow <span className="text-xs font-medium text-muted">V3.4.1</span></p>
             <p className="text-xs text-muted">自动项目事实与长期记忆</p>
           </div>
         </div>

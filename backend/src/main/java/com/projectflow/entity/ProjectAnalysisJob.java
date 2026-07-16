@@ -224,6 +224,12 @@ public class ProjectAnalysisJob {
         this.queuePosition = Math.max(0, queuePosition);
     }
 
+    public void configureBudgets(int maxRequests, int maxTokens, long maxDurationMs) {
+        this.maxRequestCount = Math.max(1, maxRequests);
+        this.maxTotalTokens = Math.max(1, maxTokens);
+        this.maxDurationMs = Math.max(1_000L, maxDurationMs);
+    }
+
     public void configureRetry(UUID previousJobId, String reason) {
         this.retriedFromJobId = previousJobId;
         this.retryReason = reason == null ? "USER_RETRY" : reason.trim();

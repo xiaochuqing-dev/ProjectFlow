@@ -528,7 +528,7 @@ tracked 源码体积：
 
 - `frontend`: `npm.cmd run build` 通过。
 - `frontend`: 全部 `tests/*.mjs` 通过。
-- `backend`: `C:\Users\Administrator\Desktop\apache-maven-3.9.9\bin\mvn.cmd -q test` 通过。
+- `backend`: `mvn -q test` 通过。
 
 任务二阶段没有继续改业务代码，只更新本报告。报告中的代码事实来自当前仓库扫描。
 

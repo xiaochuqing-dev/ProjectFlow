@@ -111,6 +111,20 @@ class ProjectAnalysisJobRetryIdempotencyTest {
     }
 
     @Test
+    void historyJobIdempotencyKeyFitsThePostgresColumn() {
+        var response = service.startProjectFactHistoryRebuild(
+            userId,
+            project.getId(),
+            "0123456789abcdef0123456789abcdef01234567"
+        );
+
+        ProjectAnalysisJob created = jobRepository.findById(response.id()).orElseThrow();
+
+        assertThat(created.getIdempotencyKey()).hasSizeLessThanOrEqualTo(128);
+        assertThat(created.getIdempotencyKey()).startsWith("PROJECT_FACT_HISTORY_REBUILD:");
+    }
+
+    @Test
     void tenConcurrentRetriesCreateOnlyOneEquivalentActiveJob() throws Exception {
         ProjectAnalysisJob failed = failedJob(ProjectAnalysisJobType.PROJECT, null);
         int attempts = 10;

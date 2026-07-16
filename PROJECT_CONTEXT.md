@@ -1,20 +1,28 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.4.0 is a local-first project memory system for AI-assisted solo developers. It automatically organizes real development evidence into durable project facts and preserves how a project grew from its earliest history to its latest changes.
+ProjectFlow V3.4.1 is a local-first project memory system for AI-assisted solo developers. It automatically organizes real development evidence into durable project facts and maintains a traceable automatic project timeline over those facts.
 
 Current direction:
 
 - Local Git supplies objective change evidence; Agent results add task intent and verification context.
-- The primary workflow is 分析新变化 → DevelopmentSegment → 自动 ProjectFact → 项目记录 / 项目记忆.
+- The primary workflow is 分析新变化 → DevelopmentSegment → 自动 ProjectFact → 项目记录 / 项目记忆 → 自动项目历程.
 - Rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records normal evidence-backed facts.
 - Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
+
+V3.4.1 focus:
+
+- `ProjectFact` is the only factual source for Timeline. `factEventAt` uses `occurredTo`, falling back to `occurredFrom`, and is assigned to day, ISO week, and month in the configured Timeline zone.
+- Day exposes facts directly. Week/month/lifecycle summaries are derived, replaceable model output with explicit complete coverage and no next steps, roadmap, priority, or future planning.
+- Timeline summaries and period-local themes never mutate facts. Theme membership traces to owned facts and evidence; Timeline Theme is not Project Capability.
+- Fact after-commit events mark affected week/month/lifecycle scopes dirty. Persistent refresh jobs coalesce work, keep GET model-free, defer while history backfill runs, and preserve old READY content on refresh failure.
+- `/timeline` is the main time view. `/dev-logs` and Daily Review remain legacy compatibility; lifecycle capability maps and formal Hermes/Obsidian sync remain future work.
 
 V3.4.0 focus:
 
@@ -89,13 +97,14 @@ Do not treat ProjectFlow as a generic Kanban app, SaaS admin panel, hotel/librar
 
 ## Current Stage
 
-The project has moved beyond manual sediment processing. Current V3.4.0 focus:
+The project has moved beyond manual sediment processing. Current V3.4.1 focus:
 
 - Workbench: add/import project → bind local path → analyze new changes → automatic facts → leave safely.
 - Incremental scan boundaries use the last successfully recorded Fact Cursor, not the last manual review decision.
 - Project Records groups permanent facts by analysis batch and month; batch detail shows all facts and evidence without routine confirmation controls.
 - Project Memory shows fact count, commit coverage, earliest/latest fact and recent facts; old sediments and profile fields remain in a compatibility area.
 - Historical reconstruction starts only after a successful recent analysis, runs in bounded chunks, persists checkpoints, and never blocks normal incremental scans.
+- Project Timeline organizes facts by day, ISO week, month, and lifecycle, with deterministic database statistics and traceable automatic derived summaries.
 - Facts describe what happened. Recommendations, importance judgments and future plans remain outside the automatic fact layer.
 - ProjectFlow must remain usable without reading docs or asking an agent to explain the workflow.
 - Add/import project, zip import, local binding, model configuration, login, Agent bridge, GitHub read-only status and existing outputs remain available.
@@ -111,7 +120,7 @@ Recent implementation report says these are already present:
 
 Known remaining boundary:
 
-- V3.4.0 establishes the fact layer, not a complete day/week/month/all-cycle timeline or lifecycle capability map.
+- V3.4.1 completes the day/week/month/lifecycle Timeline read model but not a fact-native lifecycle capability map.
 - Hermes and Obsidian are future consumers of fact read models; no formal synchronization protocol is implemented here.
 - The legacy ProjectMemory entity and completedCapabilities text remain compatibility fields, not the new source of project history.
 - File analysis is based on imported zip summaries and key content, not full source indexing.
@@ -228,7 +237,7 @@ Current main nav in `AppShell.tsx`:
 - `工作台` -> `/dashboard`
 - `项目记录` -> `/sediment-review`
 - `项目记忆` -> `/project-intelligence`
-- `每日回顾` -> `/dev-logs`
+- `项目历程` -> `/timeline`
 - `成果输出` -> `/ai-review`
 - `设置` -> `/settings`
 
@@ -239,6 +248,7 @@ Important routes:
 - `/projects`, `/projects/[projectId]`, `/projects/[projectId]/files`
 - `/tasks`
 - `/dev-logs`
+- `/timeline`
 - `/imports`
 - `/project-intelligence`
 - `/sediment-review`, `/sediment-review/[batchId]`（V3.4 项目记录路由，保留旧路径以兼容链接）
@@ -273,6 +283,7 @@ Core endpoint groups:
 - Memory/history: `/projects/{projectId}/memory`, `/projects/{projectId}/fact-sources`, `/projects/{projectId}/snapshots`, `/projects/{projectId}/evolution-records`
 - Project facts: `/projects/{projectId}/facts`, `/project-facts/{factId}`, `/projects/{projectId}/fact-memory-overview`, `/projects/{projectId}/fact-history-state`
 - Project records: `/projects/{projectId}/project-record-batches`, `/project-record-batches/{batchId}`
+- Project timeline: `/projects/{projectId}/timeline/overview`, `/timeline/periods`, `/timeline/periods/{granularity}/{periodKey}`, `/timeline/themes/{themeId}/facts`, `/timeline/lifecycle`, `/timeline/retry`
 - Agent bridge: `/projects/{projectId}/agent-bridge/protocol`, `/projects/{projectId}/agent-bridge/scan`, `/projects/{projectId}/agent-bridge/tasks/{taskId}/brief`
 
 Response shape:
@@ -317,6 +328,9 @@ V3.4 project fact memory:
 - `ProjectFact`: stable evidence-backed record of what happened.
 - `ProjectFactCursor`: latest incremental commit successfully recorded as facts.
 - `ProjectFactHistoryState`: history coverage, checkpoint and backfill lifecycle.
+- `ProjectTimelineSummary`: versioned derived summary for one week, month, or lifecycle scope.
+- `ProjectTimelineTheme`: period-local theme with explicit fact membership; not a capability.
+- `ProjectTimelineThemeFact`: traceable theme-to-fact relation.
 - Legacy `ProjectChange`, `ProjectSediment`, `ProjectReviewCursor`, and `ProjectMemory`: compatibility data, not the new scan path.
 
 Ownership rule:

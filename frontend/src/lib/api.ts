@@ -973,6 +973,133 @@ export type ProjectFactHistoryState = {
   errorSummary: string;
 };
 
+export type TimelineGranularity = "DAY" | "WEEK" | "MONTH" | "LIFECYCLE";
+export type TimelineSummaryStatus =
+  | "DIRTY"
+  | "QUEUED"
+  | "GENERATING"
+  | "READY"
+  | "FAILED"
+  | "WAITING_FOR_MODEL"
+  | "NOT_REQUIRED"
+  | "NOT_GENERATED";
+
+export type TimelineHistoryCoverage = {
+  status: string;
+  coveredCommitCount: number;
+  totalCommitCount: number;
+  remainingCommitCount: number;
+  notice: string;
+};
+
+export type TimelineOverview = {
+  projectId: string;
+  timelineZone: string;
+  earliestFactAt: string | null;
+  latestFactAt: string | null;
+  factCount: number;
+  batchCount: number;
+  commitCoverage: { coveredCommitCount: number; totalCommitCount: number };
+  history: TimelineHistoryCoverage;
+  dirtyPeriodCount: number;
+  latestSummaryStatus: TimelineSummaryStatus;
+};
+
+export type TimelineStats = {
+  factCount: number;
+  batchCount: number;
+  commitCount: number;
+  fileCount: number;
+  agentResultCount: number;
+  attentionCount: number;
+  earliestEventAt: string | null;
+  latestEventAt: string | null;
+};
+
+export type TimelineSummary = {
+  id: string;
+  granularity: TimelineGranularity;
+  periodKey: string;
+  status: TimelineSummaryStatus;
+  summary: string;
+  sourceFactCount: number;
+  coveredFactCount: number;
+  stale: boolean;
+  generationVersion: number;
+  analysisJobId: string | null;
+  errorCode: string;
+  errorSummary: string;
+  generatedAt: string | null;
+  updatedAt: string;
+};
+
+export type TimelineTheme = {
+  id: string;
+  title: string;
+  summary: string;
+  sortOrder: number;
+  factCount: number;
+};
+
+export type TimelinePeriod = {
+  periodKey: string;
+  periodStart: string;
+  periodEnd: string;
+  stats: TimelineStats;
+  summaryStatus: TimelineSummaryStatus;
+  summaryPreview: string;
+  summaryStale: boolean;
+  themeCount: number;
+};
+
+export type TimelinePeriodPage = {
+  projectId: string;
+  timelineZone: string;
+  granularity: TimelineGranularity;
+  items: TimelinePeriod[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type TimelinePeriodDetail = {
+  projectId: string;
+  timelineZone: string;
+  granularity: TimelineGranularity;
+  periodKey: string;
+  periodStart: string;
+  periodEnd: string;
+  stats: TimelineStats;
+  currentSummary: TimelineSummary | null;
+  themes: TimelineTheme[];
+  sourceFactCount: number;
+  coveredFactCount: number;
+  facts: ProjectFactPage;
+  history: TimelineHistoryCoverage;
+};
+
+export type TimelineThemeFacts = {
+  projectId: string;
+  themeId: string;
+  title: string;
+  facts: ProjectFactPage;
+};
+
+export type TimelineLifecycle = {
+  projectId: string;
+  timelineZone: string;
+  earliestFactAt: string | null;
+  latestFactAt: string | null;
+  stats: TimelineStats;
+  currentSummary: TimelineSummary | null;
+  stages: TimelineTheme[];
+  months: TimelinePeriod[];
+  sourceFactCount: number;
+  coveredFactCount: number;
+  history: TimelineHistoryCoverage;
+};
+
 export type CapabilityAnalysisOverview = {
   lastSuccessfulAt: string | null;
   lastInputSedimentCount: number;
@@ -1697,6 +1824,73 @@ export function getProjectFactHistoryState(token: string, projectId: string): Pr
   return requestJson<ProjectFactHistoryState>(`/projects/${projectId}/fact-history-state`, {
     headers: { Authorization: `Bearer ${token}` },
   }, "历史记忆补齐状态读取失败，请稍后重试。");
+}
+
+export function getTimelineOverview(token: string, projectId: string): Promise<TimelineOverview> {
+  return requestJson<TimelineOverview>(`/projects/${projectId}/timeline/overview`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, "项目历程概览读取失败，请稍后重试。");
+}
+
+export function listTimelinePeriods(
+  token: string,
+  projectId: string,
+  granularity: Exclude<TimelineGranularity, "LIFECYCLE">,
+  page = 0,
+  size = 20,
+): Promise<TimelinePeriodPage> {
+  const params = new URLSearchParams({ granularity, page: String(page), size: String(size) });
+  return requestJson<TimelinePeriodPage>(`/projects/${projectId}/timeline/periods?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, "项目历程时间段读取失败，请稍后重试。");
+}
+
+export function getTimelinePeriod(
+  token: string,
+  projectId: string,
+  granularity: Exclude<TimelineGranularity, "LIFECYCLE">,
+  periodKey: string,
+  page = 0,
+  size = 20,
+): Promise<TimelinePeriodDetail> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  return requestJson<TimelinePeriodDetail>(
+    `/projects/${projectId}/timeline/periods/${granularity}/${encodeURIComponent(periodKey)}?${params.toString()}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+    "项目历程详情读取失败，请稍后重试。",
+  );
+}
+
+export function getTimelineThemeFacts(
+  token: string,
+  projectId: string,
+  themeId: string,
+  page = 0,
+  size = 20,
+): Promise<TimelineThemeFacts> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  return requestJson<TimelineThemeFacts>(`/projects/${projectId}/timeline/themes/${themeId}/facts?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, "项目历程主题事实读取失败，请稍后重试。");
+}
+
+export function getTimelineLifecycle(token: string, projectId: string): Promise<TimelineLifecycle> {
+  return requestJson<TimelineLifecycle>(`/projects/${projectId}/timeline/lifecycle`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, "项目完整历程读取失败，请稍后重试。");
+}
+
+export function retryTimelineSummary(
+  token: string,
+  projectId: string,
+  granularity: Exclude<TimelineGranularity, "DAY">,
+  periodKey: string,
+): Promise<{ status: string; granularity: string; periodKey: string }> {
+  return requestJson(`/projects/${projectId}/timeline/retry`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ granularity, periodKey }),
+  });
 }
 
 export function listProjectRecordBatches(token: string, projectId: string, page = 0, size = 40): Promise<ProjectRecordBatchPage> {

@@ -1,5 +1,9 @@
 # Model Analysis
 
+## V3.4.1 Timeline model tasks
+
+`PROJECT_TIMELINE_PERIOD_SUMMARY` and `PROJECT_TIMELINE_LIFECYCLE_SUMMARY` are registered ModelTaskTypes and use ModelGateway. Period prompts contain compact recorded-fact DTOs and an allowlist; lifecycle prompts contain compact month statistics/summaries and month keys. Output is rejected for unknown or missing IDs, cross-project membership, incomplete coverage, invalid schema, or next-step/roadmap/future-planning content. Large periods use bounded 120-fact chunks plus one synthesis request. Diagnostics retain only safe parameter, usage, finish and recovery metadata.
+
 ## V3.4.0 fact boundary
 
 V3.4.0 does not make the model the database truth and does not redesign the V3.3.8 gateway. The model continues to organize an `AnalysisInputSnapshot` into `DevelopmentSegment` analysis results. Backend rules then validate project/batch ownership, source references, evidence, quality, content, occurrence time, and idempotency before fact persistence.

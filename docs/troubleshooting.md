@@ -1,5 +1,9 @@
 # Troubleshooting
 
+If Timeline facts and statistics are visible but a summary is missing, inspect the persisted summary status before retrying. `WAITING_FOR_MODEL` means facts are safe and Provider configuration will requeue automatically. `DIRTY`, `QUEUED`, and `GENERATING` are normal refresh states. `FAILED` preserves any previous READY content as stale; retry is recovery only. Do not edit facts or delete the H2 database to repair a derived summary.
+
+If coverage is below sourceFactCount, inspect unknown/missing IDs, duplicate membership, planning fields, fact fingerprint changes, and history status. GET endpoints must not call the model. A running history backfill intentionally defers summary jobs until its checkpointed chunks complete.
+
 If a successful V3.4.0 scan shows segments but no Project Facts, inspect the batch fact-ingestion status and safe failure diagnostics before retrying. A reusable batch is expected to idempotently fill missing facts. Do not delete the batch, move the Fact Cursor manually, or rerun the model blindly; an ingestion failure must leave the cursor unchanged.
 
 `NEEDS_ATTENTION` is not a failed batch. It means a fact has missing/conflicting evidence, an incomplete boundary, degraded occurrence time, or an unsafe duplicate decision. Other facts remain recorded and the incremental cursor may advance. If the whole next scan is blocked, treat that as a cursor/transaction defect rather than expected attention behavior.

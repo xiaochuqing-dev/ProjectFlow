@@ -68,6 +68,25 @@ class ProjectAnalysisJobServiceTest {
     }
 
     @Test
+    void listsLegacyFileJobsWithNullableCollectionFields() {
+        UUID userId = UUID.randomUUID();
+        ProjectSpace project = new ProjectSpace(userId);
+        UUID projectId = project.getId();
+        ProjectAnalysisJob legacy = new ProjectAnalysisJob(projectId, userId, ProjectAnalysisJobType.FILE, "legacy.java");
+        legacy.markSucceeded("{\"path\":\"legacy.java\",\"role\":\"legacy\",\"summary\":\"kept\",\"evidence\":null,\"relatedFiles\":null,\"limitations\":null}", null);
+        when(projectRepository.findByIdAndUserId(projectId, userId)).thenReturn(Optional.of(project));
+        when(jobRepository.findByProjectIdOrderByCreatedAtDesc(projectId)).thenReturn(List.of(legacy));
+        ProjectAnalysisJobService service = new ProjectAnalysisJobService(
+            jobRepository, projectRepository, jobRunner, objectMapper, transactionManager
+        );
+
+        var jobs = service.listProjectJobs(userId, projectId);
+
+        assertThat(jobs).hasSize(1);
+        assertThat(jobs.get(0).fileResult().path()).isEqualTo("legacy.java");
+    }
+
+    @Test
     void recoverInterruptedJobsRequeuesQueuedAndMarksSafeRunningJobRetryable() {
         UUID projectId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();

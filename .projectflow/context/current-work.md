@@ -1,5 +1,5 @@
 # Current work
 
-ProjectFlow 当前进入 V3.4.0 自动项目事实与长期记忆主链：保留既有 Git/worktree/Agent evidence、DevelopmentSegment、后台任务和模型网关前半链，后半链改为自动 ProjectFact、FactCursor、项目记录和 bounded history backfill。正常证据充分事实不再逐条确认，异常进入 NEEDS_ATTENTION 且不阻塞下一次扫描；旧 ProjectChange、ProjectSediment、ProjectReviewCursor 和 ProjectMemory 继续兼容。完整 timeline、全生命周期能力地图、Hermes 与 Obsidian 正式同步不在本阶段实施。桌面启动链的本地修改保护、重建和 `logs/last-embedded-build.json` 证据规则保持不变；最终测试、真实旧库验收、CI 和提交结果以 V3.4.0 独立实施报告为准，不在上下文中预写。
+ProjectFlow 当前版本为 V3.4.1。主链是 Git/worktree/Agent evidence → DevelopmentSegment → 自动 ProjectFact → 项目记录 / 项目记忆 → 自动项目历程。`ProjectFact` 仍是事实来源；Timeline 只按 factEventAt 组织 DAY、ISO WEEK、MONTH、LIFECYCLE，并维护可重建、全覆盖、无下一步规划的派生摘要与期间主题。
 
-2026-07-16 按用户要求立即收尾并推送：实现与定向验证结果见 `docs/projectflow-v3.4.0-project-fact-memory-report.md`。Playwright、PostgreSQL Testcontainers、本机真实 H2、桌面启动、完整后端回归和 CI 结果未在本地完成，必须保持为待验证，不能描述为已通过。
+`/timeline` 已成为主时间视图，Daily Review 从主导航退出，`/dev-logs` 保留兼容。摘要刷新由 after-commit dirty event 和持久化 job 自动维护，GET 不调用模型，历史补齐期间延后生成，失败保留旧 READY。完整生命周期能力地图、Hermes 与 Obsidian 正式同步仍属下一阶段。最终 Gate 0、完整回归、真实 H2、Provider、桌面、CI、提交与推送证据只以 `docs/projectflow-v3.4.1-automatic-project-timeline-report.md` 的实际状态为准。

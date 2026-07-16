@@ -1,9 +1,23 @@
-<!-- PROJECTFLOW V3.4.0 CONTEXT START -->
-ProjectFlow 当前版本为 V3.4.0。后续 Agent 必须按“分析新变化 -> 开发推进段 -> 自动项目事实 -> 项目记录 / 项目记忆”理解产品。正常事实不逐条确认，只有异常进入“需要关注”。
+<!-- PROJECTFLOW V3.4.1 CONTEXT START -->
+ProjectFlow 当前版本为 V3.4.1。后续 Agent 必须按“分析新变化 -> 开发推进段 -> 自动项目事实 -> 项目记录 / 项目记忆 -> 自动项目历程”理解产品。正常事实不逐条确认，只有异常进入“需要关注”。
 
 开始任务前请阅读 `.projectflow/AGENT_PROTOCOL.md`。完成开发任务后，按协议把结果写入 `.projectflow/agent-results/`。不要删除添加项目、zip 导入、本地项目绑定、模型配置、登录等核心入口。
 
 开发推进段和项目事实必须描述真实发生的开发结果、用户或开发者可感知变化、验证情况和不确定项。禁止用 backend/frontend/docs/config 等目录名、提交数量或“开发推进”空话替代具体摘要。能力与成果页以结构化 Capability Card 为主，旧 `completedCapabilities` 仅作兼容档案。
+
+V3.4.1 自动项目历程规则（后续 Agent 必须遵守）：
+- 工作台只分析新变化，不得重新加入 daily 或下一步规划主链。
+- `ProjectFact` 是事实来源；Timeline 只是按事实时间组织的 read model / derived layer，摘要不得修改事实。
+- Timeline 模型只总结已经记录的事实，禁止下一步、路线图、优先级、未来规划或未发生能力。
+- DAY 直接展示事实，不调用模型；WEEK/MONTH 必须显式覆盖该周期全部事实，不得用 recent-N 冒充完整摘要。
+- 模型返回的未知 fact ID、跨项目 ID、遗漏覆盖或无法安全去重必须判为无效；覆盖数量必须可诊断。
+- Timeline Theme 只属于一个时间段，不是长期 Project Capability。
+- 摘要生成必须在事实事务之外执行；GET 请求不得触发模型调用。
+- fact after-commit 事件合并 dirty week/month/lifecycle；历史补齐不得在每个 chunk 后重建全部摘要。
+- 摘要刷新失败必须保留上次成功内容；用户不保存、不确认 Timeline 摘要，retry 只用于异常恢复。
+- DevLog / Daily Review 只作旧链接兼容，项目历程是主时间视图。
+- V3.4.0 的 ProjectFact、FactCursor、history 架构和 V3.3.8 ModelGateway 核心除非有已证明缺陷不得重构。
+- 所有 Timeline API 必须同时校验 userId 与 projectId 归属。
 
 V3.4.0 关键决策（后续 Agent 必须遵守）：
 - 正常 evidence-backed 项目事实自动记录，不得要求逐条人工确认；人工确认不是 ProjectFact 主链的一部分。
@@ -85,7 +99,7 @@ V3.3.3 仍有效的关键决策：
 - 多来源证据（本地 Git / 工作区 diff / GitHub / Agent result / 扫描范围）要整理成分析输入快照交给模型，模型基于证据灵活判断真实开发状态，不写死优先级。
 - 需要模型理解的入口（分析新变化、分析项目能力）必须有模型配置前置检查；未配置模型时不生成低质量本地模板结果，明确提示去配置模型。
 - 规则负责证据事实，模型负责灵活理解；正常客观事实自动记录，用户只处理主观编辑和异常关注项。
-<!-- PROJECTFLOW V3.4.0 CONTEXT END -->
+<!-- PROJECTFLOW V3.4.1 CONTEXT END -->
 
 # ProjectFlow Local Rules
 

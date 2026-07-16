@@ -1,5 +1,7 @@
 # Dashboard Read Model
 
+The V3.4.1 Timeline is a separate focused read model under `/timeline`; it does not enlarge Dashboard Bootstrap. The main navigation replaces Daily Review with Project Timeline, while `/dev-logs` remains a legacy route. Timeline project switching clears old visible data immediately and guards asynchronous responses by request generation.
+
 ## Authority and loading order
 
 Persisted ProjectAnalysisJob, ChangeBatch, DevelopmentSegment, ProjectFact, ProjectFactCursor, and ProjectFactHistoryState records are authoritative. ProjectChange and ProjectSediment remain authoritative only for their legacy compatibility views. React state is the current view. The schema-versioned, project-scoped sessionStorage snapshot is only an immediate-render cache.

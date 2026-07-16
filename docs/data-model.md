@@ -1,5 +1,9 @@
 # Data Model
 
+## V3.4.1 timeline derived data
+
+`project_facts` adds persisted `timeline_event_at`, day, ISO week, and month assignment fields. `project_fact_file_refs` normalizes file membership for deterministic distinct counts. `project_timeline_summaries` stores one versioned derived summary per project/granularity/key with fingerprint, coverage, status, previous-success content, diagnostics, and job linkage. `project_timeline_themes` stores period-local themes; `project_timeline_theme_facts` stores explicit owned theme-to-fact membership. These tables never copy full fact evidence and never replace ProjectFact.
+
 ## V3.4.0 project fact memory
 
 `ChangeBatch`, `DevelopmentSegment`, and `ProjectFact` are deliberately separate layers. A batch is the time/evidence container for one incremental or historical range. A segment is a model/rule analysis result with diagnostics. A fact is the durable, append-oriented record of what objectively happened.

@@ -276,11 +276,17 @@ class WorkSessionScanControllerTest {
         org.assertj.core.api.Assertions.assertThat(completed.path("stageMessage").asText()).isNotEmpty();
         org.assertj.core.api.Assertions.assertThat(completed.path("currentStepStartedAt").isTextual()).isTrue();
 
-        mockMvc.perform(get("/api/projects/" + projectId + "/analysis-jobs")
+        MvcResult jobsResult = mockMvc.perform(get("/api/projects/" + projectId + "/analysis-jobs")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data[0].id").value(jobId))
-            .andExpect(jsonPath("$.data[0].workSessionScanResult.projectId").value(projectId));
+            .andReturn();
+        JsonNode restoredJob = null;
+        for (JsonNode item : objectMapper.readTree(jobsResult.getResponse().getContentAsString()).path("data")) {
+            if (jobId.equals(item.path("id").asText())) restoredJob = item;
+        }
+        org.assertj.core.api.Assertions.assertThat(restoredJob).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(restoredJob.at("/workSessionScanResult/projectId").asText())
+            .isEqualTo(projectId);
 
         mockMvc.perform(get("/api/analysis-jobs/" + jobId)
                 .header("Authorization", "Bearer " + otherToken))

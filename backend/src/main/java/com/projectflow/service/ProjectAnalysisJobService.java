@@ -10,6 +10,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -61,6 +62,9 @@ public class ProjectAnalysisJobService {
         this.jobRunner = jobRunner;
         this.objectMapper = objectMapper;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.transactionTemplate.setPropagationBehavior(
+            org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW
+        );
     }
 
     public ProjectAnalysisJobResponse startProjectAnalysis(UUID userId, UUID projectId) {
@@ -89,6 +93,11 @@ public class ProjectAnalysisJobService {
     // V3.3.4: 能力分析异步任务。点击"分析项目能力"创建 job，后端异步执行；刷新/离开页面后可恢复。
     public ProjectAnalysisJobResponse startCapabilityCardAnalysis(UUID userId, UUID projectId) {
         return startJob(userId, projectId, ProjectAnalysisJobType.CAPABILITY_CARD_ANALYSIS, null, null, null);
+    }
+
+    public ProjectAnalysisJobResponse startTimelineRefresh(UUID userId, UUID projectId, String scope) {
+        String normalizedScope = scope == null ? "" : scope.trim();
+        return startJob(userId, projectId, ProjectAnalysisJobType.PROJECT_TIMELINE_REFRESH, normalizedScope, null, null);
     }
 
     public ProjectAnalysisJobResponse cancel(UUID userId, UUID jobId) {
@@ -139,7 +148,12 @@ public class ProjectAnalysisJobService {
             if (active.isPresent()) return new StartJobResult(active.get(), false);
             long activeCount = jobRepository.countByStatusIn(ACTIVE_STATUSES);
             ProjectAnalysisJob job = new ProjectAnalysisJob(projectId, userId, type, input);
-            job.configureExecution(fingerprint, projectId + ":" + type + ":" + fingerprint, (int) activeCount);
+            // projectId and type are already persisted and participate in active-job lookup.
+            // Keeping the idempotency token bounded avoids PostgreSQL rejecting long enum names.
+            job.configureExecution(fingerprint, type + ":" + fingerprint, (int) activeCount);
+            if (type == ProjectAnalysisJobType.PROJECT_TIMELINE_REFRESH) {
+                job.configureBudgets(48, 400_000, 600_000L);
+            }
             if (retriedFromJobId != null) job.configureRetry(retriedFromJobId, retryReason);
             if (activeCount >= globalActiveLimit) {
                 job.markRejected("当前分析任务过多，请稍后重试。未发起模型请求。");
@@ -188,6 +202,7 @@ public class ProjectAnalysisJobService {
     }
 
     @EventListener(ApplicationReadyEvent.class)
+    @Order(100)
     public void recoverInterruptedJobs() {
         List<UUID> queued = transactionTemplate.execute(status -> jobRepository.findAll().stream()
             .filter(job -> ACTIVE_STATUSES.contains(job.getStatus()))
@@ -356,11 +371,11 @@ public class ProjectAnalysisJobService {
     private boolean containsProjectNoise(ProjectAnalysisResponse response) {
         return containsProjectNoise(response.summary())
             || containsProjectNoise(response.architecture())
-            || response.modules().stream().anyMatch(this::containsProjectNoise)
-            || response.risks().stream().anyMatch(this::containsProjectNoise)
-            || response.importantFiles().stream().anyMatch(this::containsProjectNoise)
-            || response.evidence().stream().anyMatch(this::containsProjectNoise)
-            || response.limitations().stream().anyMatch(this::containsProjectNoise);
+            || safeList(response.modules()).stream().anyMatch(this::containsProjectNoise)
+            || safeList(response.risks()).stream().anyMatch(this::containsProjectNoise)
+            || safeList(response.importantFiles()).stream().anyMatch(this::containsProjectNoise)
+            || safeList(response.evidence()).stream().anyMatch(this::containsProjectNoise)
+            || safeList(response.limitations()).stream().anyMatch(this::containsProjectNoise);
     }
 
     private boolean containsProjectNoise(ProjectFileAnalysisResponse response) {
@@ -368,9 +383,13 @@ public class ProjectAnalysisJobService {
             || containsProjectNoise(response.role())
             || containsProjectNoise(response.summary())
             || containsProjectNoise(response.riskNotes())
-            || response.evidence().stream().anyMatch(this::containsProjectNoise)
-            || response.relatedFiles().stream().anyMatch(this::containsProjectNoise)
+            || safeList(response.evidence()).stream().anyMatch(this::containsProjectNoise)
+            || safeList(response.relatedFiles()).stream().anyMatch(this::containsProjectNoise)
             || containsProjectNoise(response.limitations());
+    }
+
+    private List<String> safeList(List<String> values) {
+        return values == null ? List.of() : values;
     }
 
     private boolean containsProjectNoise(String value) {
