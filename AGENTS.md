@@ -1,9 +1,24 @@
-<!-- PROJECTFLOW V3.4.4 CONTEXT START -->
-ProjectFlow 当前版本为 V3.4.4。后续 Agent 必须按“分析新变化 -> 开发推进段 -> 自动项目事实 -> 项目记录 / 项目记忆 -> 自动项目历程 -> 全生命周期能力地图 -> Project Memory Gateway -> Hermes 只读消费 / Obsidian 长期知识投影”理解产品。正常事实和能力演进不逐条确认，只有异常进入“需要关注”。
+<!-- PROJECTFLOW V3.4.5 CONTEXT START -->
+ProjectFlow 当前版本为 V3.4.5。后续 Agent 必须按“分析新变化 -> 开发推进段 -> 自动项目事实 -> 项目记录 / 项目记忆 -> 自动项目历程 -> 全生命周期能力地图 -> Project Memory Gateway -> Hermes 只读消费 / Obsidian 长期知识投影”理解产品。正常事实和能力演进不逐条确认，只有异常进入“需要关注”。
 
 开始任务前请阅读 `.projectflow/AGENT_PROTOCOL.md`。完成开发任务后，按协议把结果写入 `.projectflow/agent-results/`。不要删除添加项目、zip 导入、本地项目绑定、模型配置、登录等核心入口。
 
 开发推进段和项目事实必须描述真实发生的开发结果、用户或开发者可感知变化、验证情况和不确定项。禁止用 backend/frontend/docs/config 等目录名、提交数量或“开发推进”空话替代具体摘要。能力主页面以长期 `ProjectCapability` 地图为主，旧 `ProjectCapabilityCard` 和 `completedCapabilities` 仅作兼容档案。
+
+V3.4.5 Backend Intelligence Foundation 规则（后续 Agent 必须遵守）：
+- 所有真实模型入口继续登记为 ModelTaskType，并只通过 ModelGatewayService；业务 Service 不得直接依赖 Provider SDK 或拼协议请求。
+- Model Gateway 支持 OPENAI_RESPONSES、OPENAI_CHAT_COMPLETIONS、ANTHROPIC_MESSAGES；协议差异只存在于 adapter 层。
+- 标准协议必须使用官方 Java SDK。SDK 内建重试必须关闭，重试、取消、并发、预算和恢复只由 ProjectFlow 统一管理。
+- Provider 必须显式保存 protocol；旧 DeepSeek、OpenAI-compatible 和 Custom 配置幂等迁移为 Chat Completions，不得改变 Key、模型、默认项或参数。
+- finish reason、usage、request ID、reasoning presence、截断、拒绝、过滤、tool-use 和 incomplete 必须归一化；非完整结果不得静默当成成功 JSON。
+- 不支持 temperature、JSON mode、structured output 或 reasoning control 的模型不得收到相应字段；用户覆盖必须可诊断。
+- 兼容性测试至少覆盖连接、协议响应、结构化结果和 ProjectFlow 最小任务；Mock 不能描述为真实 Provider 验收。
+- Prompt、raw response、reasoning 原文、Key、Authorization 和自定义 Header 值不得持久化、记录或返回。
+- ProjectFact 仍是唯一事实来源；V3.4.5 不得以质量清理为由批量改写历史事实。
+- ProjectMemoryGatewayService 是稳定门面；跨层搜索由 ProjectMemorySearchService 承担，事实证据追踪由 ProjectEvidenceTraceService 承担。
+- Gateway、Hermes 和 Obsidian 读取不得触发模型或修改事实与派生层。
+- API Key 当前数据库存储仅是本地兼容方案，桌面产品化前必须迁移到操作系统安全存储。
+- V3.4.5 完成 backend business/logic consolidation 和模型协议基础；完整前端重建仍是后续阶段，不在本版本扩张。
 
 V3.4.4 Obsidian Projection / Sync 规则（后续 Agent 必须遵守）：
 - Obsidian 是知识投影，不是事实来源或数据库镜像；必须复用 Project Memory Gateway，不得直接重拼 Fact、Timeline、Capability Repository。
@@ -17,7 +32,7 @@ V3.4.4 Obsidian Projection / Sync 规则（后续 Agent 必须遵守）：
 - manifest 仅是可重建的投影状态，不是事实来源；损坏时从 Gateway 与受管 Note 恢复，禁止清空 Vault。
 - Obsidian 同步默认不调用模型，不写回 ProjectFact、Timeline、Capability 或 Evolution，不输出 diff、原文件、raw Agent result、模型原文、reasoning、凭证、诊断或绝对路径。
 - 本阶段只提供仓库内 validate/dry-run/status/sync CLI，不新增前端页面、一级导航、watcher 或全局配置。
-- V3.4.4 后下一阶段是 backend business/logic consolidation，再进行完整前端重建。
+- V3.4.5 已完成 backend business/logic consolidation 基础；下一阶段是 Automatic Memory Maintenance，完整前端重建继续延后。
 
 V3.4.3 Project Memory Gateway / Hermes 规则（后续 Agent 必须遵守）：
 - Project Memory Gateway 是 Facts、Timeline、Capabilities、Evolutions 对外的统一只读业务语义层；不得让外部消费者直接拼接内部 Repository 或全部 REST。
@@ -156,7 +171,7 @@ V3.3.3 仍有效的关键决策：
 - 多来源证据（本地 Git / 工作区 diff / GitHub / Agent result / 扫描范围）要整理成分析输入快照交给模型，模型基于证据灵活判断真实开发状态，不写死优先级。
 - 需要模型理解的入口（分析新变化、分析项目能力）必须有模型配置前置检查；未配置模型时不生成低质量本地模板结果，明确提示去配置模型。
 - 规则负责证据事实，模型负责灵活理解；正常客观事实自动记录，用户只处理主观编辑和异常关注项。
-<!-- PROJECTFLOW V3.4.4 CONTEXT END -->
+<!-- PROJECTFLOW V3.4.5 CONTEXT END -->
 
 # ProjectFlow Local Rules
 

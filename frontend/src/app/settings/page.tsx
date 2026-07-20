@@ -20,6 +20,8 @@ import {
   updateAiProvider,
   type AiProvider,
   type AiProviderType,
+  type ModelProtocol,
+  type AiProviderAuthMode,
   type DuplicateProviderGroup,
   type ModelUsageRecord,
   type AgentBridgeHealth,
@@ -141,6 +143,18 @@ function SettingsPageContent() {
         apiKey: String(formData.get("apiKey")),
         modelName: String(formData.get("modelName")),
         type: String(formData.get("type")) as AiProviderType,
+        protocol: String(formData.get("protocol")) as ModelProtocol,
+        endpointOverride: String(formData.get("endpointOverride") ?? ""),
+        authMode: String(formData.get("authMode")) as AiProviderAuthMode,
+        authHeaderName: String(formData.get("authHeaderName") ?? ""),
+        queryKeyName: String(formData.get("queryKeyName") ?? ""),
+        safeHeaders: parseSafeHeaders(String(formData.get("safeHeaders") ?? "")),
+        requestTimeoutSeconds: Number(formData.get("requestTimeoutSeconds")),
+        supportsTemperature: capabilityOverride(formData, "supportsTemperature"),
+        supportsJsonMode: capabilityOverride(formData, "supportsJsonMode"),
+        supportsStructuredOutput: capabilityOverride(formData, "supportsStructuredOutput"),
+        supportsReasoning: capabilityOverride(formData, "supportsReasoning"),
+        supportsReasoningControl: capabilityOverride(formData, "supportsReasoningControl"),
         temperature: Number(formData.get("temperature")),
         maxTokens: Number(formData.get("maxTokens")),
         defaultEnabled: editingProvider?.defaultEnabled ?? true,
@@ -191,6 +205,12 @@ function SettingsPageContent() {
       await updateAiProvider(session.accessToken, provider.id, {
         name: provider.name, baseUrl: provider.baseUrl, apiKey: "", modelName: provider.modelName,
         type: provider.type, temperature: provider.temperature, maxTokens: provider.maxTokens,
+        protocol: provider.protocol, endpointOverride: provider.endpointOverride ?? "", authMode: provider.authMode,
+        authHeaderName: provider.authHeaderName ?? "", queryKeyName: provider.queryKeyName ?? "",
+        requestTimeoutSeconds: provider.requestTimeoutSeconds ?? 240,
+        supportsTemperature: provider.supportsTemperature, supportsJsonMode: provider.supportsJsonMode,
+        supportsStructuredOutput: provider.supportsStructuredOutput, supportsReasoning: provider.supportsReasoning,
+        supportsReasoningControl: provider.supportsReasoningControl,
         defaultEnabled: !provider.defaultEnabled, purposeTags: provider.purposeTags, clearApiKey: false,
       });
       await refreshProviders();
@@ -269,7 +289,7 @@ function SettingsPageContent() {
             </div>
             <div>
               <h2 className="font-semibold text-slate-950">AI Provider</h2>
-              <p className="text-sm text-muted">配置 DeepSeek 或 OpenAI-compatible 模型。</p>
+              <p className="text-sm text-muted">配置 Provider、协议与兼容能力。</p>
             </div>
           </div>
 
@@ -288,10 +308,33 @@ function SettingsPageContent() {
               <span className="mb-1 block text-sm font-medium text-slate-700">类型</span>
               <select className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand" defaultValue={editingProvider?.type ?? "DEEPSEEK"} name="type">
                 <option value="DEEPSEEK">DeepSeek</option>
+                <option value="OPENAI">OpenAI</option>
+                <option value="ANTHROPIC">Anthropic</option>
                 <option value="OPENAI_COMPATIBLE">OpenAI-compatible</option>
                 <option value="CUSTOM">自定义</option>
               </select>
             </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-700">协议</span>
+                <select className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm" defaultValue={editingProvider?.protocol ?? "OPENAI_CHAT_COMPLETIONS"} name="protocol">
+                  <option value="OPENAI_RESPONSES">OpenAI Responses</option>
+                  <option value="OPENAI_CHAT_COMPLETIONS">OpenAI Chat Completions</option>
+                  <option value="ANTHROPIC_MESSAGES">Anthropic Messages</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-700">认证方式</span>
+                <select className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm" defaultValue={editingProvider?.authMode ?? "PROTOCOL_DEFAULT"} name="authMode">
+                  <option value="PROTOCOL_DEFAULT">协议默认</option>
+                  <option value="BEARER">Bearer</option>
+                  <option value="API_KEY_HEADER">API Key Header</option>
+                  <option value="ANTHROPIC_STANDARD">Anthropic 标准</option>
+                  <option value="QUERY_API_KEY">Query API Key</option>
+                  <option value="NONE">无认证</option>
+                </select>
+              </label>
+            </div>
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">API Base URL</span>
               <input className="w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-brand" defaultValue={editingProvider?.baseUrl ?? "https://api.deepseek.com"} name="baseUrl" placeholder="https://api.deepseek.com" required />
@@ -300,6 +343,31 @@ function SettingsPageContent() {
               <span className="mb-1 block text-sm font-medium text-slate-700">Model Name</span>
               <input className="w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-brand" defaultValue={editingProvider?.modelName ?? "deepseek-chat"} name="modelName" placeholder="deepseek-chat" required />
             </label>
+            <details className="rounded-md border border-line p-3">
+              <summary className="cursor-pointer text-sm font-medium text-slate-700">高级协议配置</summary>
+              <div className="mt-3 space-y-3">
+                <label className="block">
+                  <span className="mb-1 block text-xs text-slate-600">Endpoint Override（必须匹配所选协议路径）</span>
+                  <input className="w-full rounded-md border border-line px-3 py-2 text-sm" defaultValue={editingProvider?.endpointOverride ?? ""} name="endpointOverride" placeholder="留空使用标准端点" />
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <input className="rounded-md border border-line px-3 py-2 text-sm" defaultValue={editingProvider?.authHeaderName ?? ""} name="authHeaderName" placeholder="自定义认证 Header 名" />
+                  <input className="rounded-md border border-line px-3 py-2 text-sm" defaultValue={editingProvider?.queryKeyName ?? ""} name="queryKeyName" placeholder="Query Key 参数名" />
+                </div>
+                <textarea className="min-h-20 w-full rounded-md border border-line px-3 py-2 text-sm" name="safeHeaders" placeholder={editingProvider?.safeHeaderNames.length ? `留空保留已有 Header：${editingProvider.safeHeaderNames.join(", ")}` : "额外 Header，每行 Name: Value"} />
+                <label className="block">
+                  <span className="mb-1 block text-xs text-slate-600">请求超时（秒）</span>
+                  <input className="w-full rounded-md border border-line px-3 py-2 text-sm" defaultValue={editingProvider?.requestTimeoutSeconds ?? 240} max="900" min="30" name="requestTimeoutSeconds" type="number" />
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <CapabilitySelect defaultValue={editingProvider?.supportsTemperature} label="Temperature" name="supportsTemperature" />
+                  <CapabilitySelect defaultValue={editingProvider?.supportsJsonMode} label="JSON mode" name="supportsJsonMode" />
+                  <CapabilitySelect defaultValue={editingProvider?.supportsStructuredOutput} label="Structured output" name="supportsStructuredOutput" />
+                  <CapabilitySelect defaultValue={editingProvider?.supportsReasoning} label="Reasoning" name="supportsReasoning" />
+                  <CapabilitySelect defaultValue={editingProvider?.supportsReasoningControl} label="Reasoning control" name="supportsReasoningControl" />
+                </div>
+              </div>
+            </details>
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">API Key</span>
               <input className="w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-brand" name="apiKey" placeholder={editingProvider?.apiKeyConfigured ? "留空则保留原 Key" : "只保存到后端，不回显"} type="password" />
@@ -361,7 +429,7 @@ function SettingsPageContent() {
           <div className="rounded-md border border-line bg-white shadow-panel">
             <div className="border-b border-line px-5 py-3">
               <h2 className="font-semibold text-slate-950">已保存 Provider</h2>
-              <p className="mt-1 text-xs text-muted">连接测试只验证地址、模型名和 Key 基本可用，不代表长文本结构化分析一定成功。</p>
+              <p className="mt-1 text-xs text-muted">兼容性测试会验证连接、协议响应、结构化结果和一个 ProjectFlow 最小任务。</p>
             </div>
             <div className="divide-y divide-line">
               {providers.map((provider) => (
@@ -371,7 +439,7 @@ function SettingsPageContent() {
                       <p className="font-semibold text-slate-950">{provider.name}</p>
                       {provider.defaultEnabled ? <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-800">默认</span> : null}
                     </div>
-                    <p className="mt-1 text-muted">{provider.type} · {provider.modelName}</p>
+                    <p className="mt-1 text-muted">{provider.type} · {provider.protocol} · {provider.modelName}</p>
                     <p className="mt-1 truncate text-xs text-muted">{provider.baseUrl}</p>
                     <p className="mt-1 text-xs text-muted">Provider 能力上限：{provider.maxTokens} tokens · 配置 Temperature {provider.temperature}</p>
                   </div>
@@ -381,7 +449,7 @@ function SettingsPageContent() {
                   </div>
                   <div className="flex flex-wrap items-center justify-start gap-2 lg:justify-end">
                     <button className="rounded-md border border-line bg-white px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60" disabled={!provider.id || testingProviderId === provider.id} onClick={() => handleTest(provider)} type="button">
-                      {testingProviderId === provider.id ? "测试中..." : "测试连接"}
+                      {testingProviderId === provider.id ? "测试中..." : "兼容性测试"}
                     </button>
                     <button className="inline-flex items-center gap-1 rounded-md border border-line px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50" onClick={() => setEditingProvider(provider)} type="button"><Pencil className="h-3.5 w-3.5" />编辑</button>
                     <button className="inline-flex items-center gap-1 rounded-md border border-line px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60" disabled={providerActionId === provider.id} onClick={() => handleDefault(provider)} type="button"><Star className="h-3.5 w-3.5" />{provider.defaultEnabled ? "取消默认" : "设为默认"}</button>
@@ -503,4 +571,31 @@ function mergeSavedProvider(current: AiProvider[], provider: AiProvider) {
   return current.some((item) => item.id === provider.id)
     ? current.map((item) => (item.id === provider.id ? provider : item))
     : [provider, ...current];
+}
+
+function parseSafeHeaders(value: string): Record<string, string> | undefined {
+  if (!value.trim()) return undefined;
+  return Object.fromEntries(value.split(/\r?\n/).filter(Boolean).map((line) => {
+    const separator = line.indexOf(":");
+    if (separator <= 0) throw new Error(`Header 格式错误：${line}`);
+    return [line.slice(0, separator).trim(), line.slice(separator + 1).trim()];
+  }));
+}
+
+function capabilityOverride(formData: FormData, name: string): boolean | null {
+  const value = String(formData.get(name) ?? "AUTO");
+  return value === "AUTO" ? null : value === "YES";
+}
+
+function CapabilitySelect({ name, label, defaultValue }: { name: string; label: string; defaultValue: boolean | null | undefined }) {
+  return (
+    <label className="block text-xs text-slate-600">
+      <span className="mb-1 block">{label}</span>
+      <select className="w-full rounded-md border border-line bg-white px-2 py-2 text-sm" defaultValue={defaultValue == null ? "AUTO" : defaultValue ? "YES" : "NO"} name={name}>
+        <option value="AUTO">自动识别</option>
+        <option value="YES">支持</option>
+        <option value="NO">不支持</option>
+      </select>
+    </label>
+  );
 }

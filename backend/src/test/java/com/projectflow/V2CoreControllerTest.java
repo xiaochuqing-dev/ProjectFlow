@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -431,7 +432,7 @@ class V2CoreControllerTest {
             lastRequestBody.set(new String(exchange.getRequestBody().readAllBytes()));
             byte[] body = """
                 {"choices":[{"message":{"content":"{\\"summary\\":\\"Legacy Noise Project 是一个前后端项目。\\",\\"architecture\\":\\"apps/web 提供前端入口，services/api 提供后端接口。\\",\\"modules\\":[\\"frontend\\",\\"backend\\"],\\"risks\\":[\\"未发现明确风险证据。\\"],\\"importantFiles\\":[\\"apps/web/package.json\\",\\"services/api/pyproject.toml\\"],\\"evidence\\":[\\"apps/web/package.json：声明 React 依赖\\",\\"services/api/pyproject.toml：声明 FastAPI 依赖\\",\\"README.md：说明项目名称\\"],\\"limitations\\":[\\"仅依据已导入材料分析。\\"],\\"confidence\\":\\"high\\"}"}}]}
-                """.getBytes();
+                """.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, body.length);
             exchange.getResponseBody().write(body);
@@ -634,7 +635,7 @@ class V2CoreControllerTest {
             }
             body = """
                 {"choices":[{"message":{"content":"{\\"path\\":\\"src/app/page.tsx\\",\\"fileType\\":\\"source\\",\\"role\\":\\"页面入口\\",\\"summary\\":\\"该文件声明 Page 组件并作为页面入口。\\",\\"importance\\":\\"critical\\",\\"riskLevel\\":\\"none\\",\\"riskNotes\\":\\"未发现明确风险证据。\\",\\"evidence\\":[\\"Page：默认导出页面组件\\"],\\"relatedFiles\\":[],\\"limitations\\":\\"仅分析已索引片段。\\",\\"confidence\\":\\"high\\"}"}}]}
-                """.getBytes();
+                """.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, body.length);
             exchange.getResponseBody().write(body);

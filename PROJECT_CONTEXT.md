@@ -6,7 +6,7 @@ Use this file as the first read for substantial ProjectFlow work. It is a compac
 
 ## Product Position
 
-ProjectFlow V3.4.4 is a local-first project memory system for AI-assisted solo developers. It automatically organizes real development evidence into durable project facts, maintains a traceable timeline and stable lifecycle Capability Map, and exposes those layers through one bounded Project Memory Gateway to local read-only Hermes and a curated Obsidian knowledge projection.
+ProjectFlow V3.4.5 is a local-first project memory system for AI-assisted solo developers. It automatically organizes real development evidence into durable project facts, maintains a traceable timeline and stable lifecycle Capability Map, and exposes those layers through one bounded Project Memory Gateway to local read-only Hermes and a curated Obsidian knowledge projection.
 
 Current direction:
 
@@ -16,7 +16,15 @@ Current direction:
 - Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
 
-V3.4.4 focus:
+V3.4.5 focus:
+
+- Model Gateway V2 keeps one business facade while official SDK adapters support OpenAI Responses, OpenAI Chat Completions and Anthropic Messages.
+- ProjectFlow alone owns retry, cancellation, concurrency, dynamic budgets, finish/usage normalization, truncation/reasoning recovery and Schema repair; SDK retry is disabled.
+- Provider protocol, endpoint override, auth mode, timeout and capability overrides are explicit. Legacy providers migrate idempotently to Chat Completions without changing keys or defaults.
+- ProjectMemorySearchService and ProjectEvidenceTraceService are focused read slices behind the unchanged Project Memory Gateway API.
+- Real-data audit findings remain traceable; generic historical facts are not silently rewritten. The next phase is Automatic Memory Maintenance; full frontend rebuilding remains later.
+
+V3.4.4 focus (still applies):
 
 - Obsidian consumes Project Memory Gateway as a knowledge projection, not a source of truth or database mirror. It never calls a model or writes ProjectFlow facts and derived entities.
 - Default CORE produces Overview, monthly Timeline, stable Capability notes, compact monthly Fact indexes and navigation indexes. EXTENDED adds high-value facts; FULL_FACTS is explicit.
@@ -24,7 +32,7 @@ V3.4.4 focus:
 - Stable entity metadata, source version/content hash, projection version and a recoverable manifest drive deterministic incremental plans; unchanged notes receive zero writes.
 - Managed blocks preserve user frontmatter and authored content. Identity/marker/hash conflicts do not overwrite, and atomic writes recover from interruption.
 - Traversal, absolute escape, symlink/junction, reserved names, invalid characters, Unicode normalization and case collisions are constrained. Capability rename keeps stable paths and merge preserves redirect notes.
-- After V3.4.4 the next phase is backend business/logic consolidation, followed later by a full frontend rebuild.
+- The projection boundary remains stable in V3.4.5; watcher and remote projection transport are still deferred.
 
 V3.4.3 focus:
 

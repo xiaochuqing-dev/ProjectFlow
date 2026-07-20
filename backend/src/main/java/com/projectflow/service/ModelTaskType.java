@@ -14,6 +14,11 @@ public enum ModelTaskType {
         List.of(), List.of("ok"), List.of(),
         "{\"ok\":true}"
     ),
+    PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST(
+        "Provider ProjectFlow 最小任务测试", 512, 1_024, 0.0, false,
+        List.of(), List.of("summary", "architecture"), List.of(),
+        "{\"summary\":\"\",\"architecture\":\"\"}"
+    ),
     DEVELOPMENT_SEGMENT_MERGE(
         "分析新变化 / 开发推进段归并", 6_000, 20_000, 0.2, true,
         List.of("segments", "developmentSegments", "development_segments", "developmentProgressSegments", "development_progress_segments", "cards", "items", "results"),

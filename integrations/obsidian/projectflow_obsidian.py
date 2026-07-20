@@ -146,7 +146,7 @@ class GatewayClient:
         if parsed.scheme not in {"http", "https"} or not parsed.hostname:
             raise ProjectionError("PROJECTFLOW_BASE_URL_INVALID", "ProjectFlow backend URL is invalid.")
         if not self._loopback(parsed.hostname):
-            raise ProjectionError("PROJECTFLOW_REMOTE_DISABLED", "Obsidian sync accepts only a local loopback ProjectFlow backend in V3.4.4.")
+            raise ProjectionError("PROJECTFLOW_REMOTE_DISABLED", "Obsidian sync accepts only a local loopback ProjectFlow backend in V3.4.5.")
 
     @staticmethod
     def _loopback(host: str) -> bool:

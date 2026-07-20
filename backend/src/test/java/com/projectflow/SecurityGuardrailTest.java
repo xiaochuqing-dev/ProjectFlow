@@ -14,6 +14,7 @@ import com.projectflow.service.AiProviderUrlGuard;
 import com.projectflow.service.LocalProjectPathGuard;
 import com.projectflow.service.ProjectZipUploadGuard;
 import com.projectflow.support.AppException;
+import com.projectflow.entity.ModelProtocol;
 
 class SecurityGuardrailTest {
     @Test
@@ -44,6 +45,35 @@ class SecurityGuardrailTest {
         assertThat(guard.validateBaseUrl("https://api.deepseek.com/v1")).isEqualTo("https://api.deepseek.com/v1");
         assertThat(guard.validateBaseUrl("http://127.0.0.1:18080/v1")).isEqualTo("http://127.0.0.1:18080/v1");
         assertThat(guard.validateBaseUrl("http://localhost:18080/v1")).isEqualTo("http://localhost:18080/v1");
+        assertThat(guard.endpointUri("https://api.openai.com/v1", ModelProtocol.OPENAI_RESPONSES, null).toString())
+            .isEqualTo("https://api.openai.com/v1/responses");
+        assertThat(guard.sdkBaseUrl(
+            "https://relay.example/v1", ModelProtocol.OPENAI_CHAT_COMPLETIONS,
+            "https://relay.example/custom/chat/completions"
+        )).isEqualTo("https://relay.example/custom");
+        assertThatThrownBy(() -> guard.sdkBaseUrl(
+            "https://relay.example/v1", ModelProtocol.OPENAI_RESPONSES,
+            "https://relay.example/custom/chat/completions"
+        )).isInstanceOf(AppException.class).extracting("code").isEqualTo("AI_PROVIDER_URL_BLOCKED");
+        assertThatThrownBy(() -> guard.validateBaseUrl("https://user:secret@api.example/v1"))
+            .isInstanceOf(AppException.class).extracting("code").isEqualTo("AI_PROVIDER_URL_BLOCKED");
+    }
+
+    @Test
+    void aiProviderUrlGuardPermitsQueryOnlyOnAProtocolMatchingFullEndpointOverride() {
+        AiProviderUrlGuard guard = new AiProviderUrlGuard();
+
+        assertThat(guard.endpointUri(
+            "https://relay.example/v1", ModelProtocol.OPENAI_CHAT_COMPLETIONS,
+            "https://relay.example/custom/chat/completions?region=test"
+        ).toString()).endsWith("/custom/chat/completions?region=test");
+        assertThatThrownBy(() -> guard.sdkBaseUrl(
+            "https://relay.example/v1", ModelProtocol.OPENAI_CHAT_COMPLETIONS,
+            "https://relay.example/custom/chat/completions?region=test"
+        )).isInstanceOf(AppException.class);
+        assertThatThrownBy(() -> guard.endpointUri(
+            "https://relay.example/v1?region=test", ModelProtocol.OPENAI_CHAT_COMPLETIONS, null
+        )).isInstanceOf(AppException.class);
     }
 
     @Test

@@ -3,9 +3,12 @@ package com.projectflow.entity;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.UUID;
 
 import com.projectflow.support.StringListConverter;
+import com.projectflow.support.StringMapConverter;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
@@ -41,6 +44,51 @@ public class AiProvider {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private AiProviderType type;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "protocol", length = 40)
+    private ModelProtocol protocol;
+
+    @Column(name = "endpoint_override", length = 500)
+    private String endpointOverride;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_mode", length = 40)
+    private AiProviderAuthMode authMode;
+
+    @Column(name = "auth_header_name", length = 120)
+    private String authHeaderName;
+
+    @Column(name = "query_key_name", length = 120)
+    private String queryKeyName;
+
+    @Convert(converter = StringMapConverter.class)
+    @Column(name = "safe_headers", columnDefinition = "text")
+    private Map<String, String> safeHeaders = new LinkedHashMap<>();
+
+    @Column(name = "request_timeout_seconds")
+    private Integer requestTimeoutSeconds;
+
+    @Column(name = "supports_temperature")
+    private Boolean supportsTemperature;
+
+    @Column(name = "supports_json_mode")
+    private Boolean supportsJsonMode;
+
+    @Column(name = "supports_structured_output")
+    private Boolean supportsStructuredOutput;
+
+    @Column(name = "supports_reasoning")
+    private Boolean supportsReasoning;
+
+    @Column(name = "supports_reasoning_control")
+    private Boolean supportsReasoningControl;
+
+    @Column(name = "last_probe_profile", columnDefinition = "text")
+    private String lastProbeProfile;
+
+    @Column(name = "last_probed_at")
+    private Instant lastProbedAt;
 
     @Column(nullable = false)
     private Double temperature;
@@ -109,6 +157,24 @@ public class AiProvider {
         return type;
     }
 
+    public ModelProtocol getProtocol() {
+        return protocol == null ? defaultProtocol(type) : protocol;
+    }
+
+    public String getEndpointOverride() { return endpointOverride; }
+    public AiProviderAuthMode getAuthMode() { return authMode == null ? AiProviderAuthMode.PROTOCOL_DEFAULT : authMode; }
+    public String getAuthHeaderName() { return authHeaderName; }
+    public String getQueryKeyName() { return queryKeyName; }
+    public Map<String, String> getSafeHeaders() { return Map.copyOf(safeHeaders == null ? Map.of() : safeHeaders); }
+    public Integer getRequestTimeoutSeconds() { return requestTimeoutSeconds; }
+    public Boolean getSupportsTemperature() { return supportsTemperature; }
+    public Boolean getSupportsJsonMode() { return supportsJsonMode; }
+    public Boolean getSupportsStructuredOutput() { return supportsStructuredOutput; }
+    public Boolean getSupportsReasoning() { return supportsReasoning; }
+    public Boolean getSupportsReasoningControl() { return supportsReasoningControl; }
+    public String getLastProbeProfile() { return lastProbeProfile; }
+    public Instant getLastProbedAt() { return lastProbedAt; }
+
     public Double getTemperature() {
         return temperature;
     }
@@ -157,5 +223,61 @@ public class AiProvider {
 
     public void setDefaultEnabled(boolean enabled) {
         this.defaultEnabled = enabled;
+    }
+
+    public void configureProtocol(
+        ModelProtocol protocol,
+        String endpointOverride,
+        AiProviderAuthMode authMode,
+        String authHeaderName,
+        String queryKeyName,
+        Map<String, String> safeHeaders,
+        Integer requestTimeoutSeconds,
+        Boolean supportsTemperature,
+        Boolean supportsJsonMode,
+        Boolean supportsStructuredOutput,
+        Boolean supportsReasoning,
+        Boolean supportsReasoningControl
+    ) {
+        this.protocol = protocol == null ? defaultProtocol(type) : protocol;
+        this.endpointOverride = blankToNull(endpointOverride);
+        this.authMode = authMode == null ? AiProviderAuthMode.PROTOCOL_DEFAULT : authMode;
+        this.authHeaderName = blankToNull(authHeaderName);
+        this.queryKeyName = blankToNull(queryKeyName);
+        this.safeHeaders = safeHeaders == null ? new LinkedHashMap<>() : new LinkedHashMap<>(safeHeaders);
+        this.requestTimeoutSeconds = requestTimeoutSeconds;
+        this.supportsTemperature = supportsTemperature;
+        this.supportsJsonMode = supportsJsonMode;
+        this.supportsStructuredOutput = supportsStructuredOutput;
+        this.supportsReasoning = supportsReasoning;
+        this.supportsReasoningControl = supportsReasoningControl;
+    }
+
+    public boolean migrateProtocolDefaults() {
+        boolean changed = false;
+        if (protocol == null) {
+            protocol = defaultProtocol(type);
+            changed = true;
+        }
+        if (authMode == null) {
+            authMode = AiProviderAuthMode.PROTOCOL_DEFAULT;
+            changed = true;
+        }
+        return changed;
+    }
+
+    public void recordProbeProfile(String profile) {
+        this.lastProbeProfile = blankToNull(profile);
+        this.lastProbedAt = Instant.now();
+    }
+
+    private static ModelProtocol defaultProtocol(AiProviderType type) {
+        if (type == AiProviderType.OPENAI) return ModelProtocol.OPENAI_RESPONSES;
+        if (type == AiProviderType.ANTHROPIC) return ModelProtocol.ANTHROPIC_MESSAGES;
+        return ModelProtocol.OPENAI_CHAT_COMPLETIONS;
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

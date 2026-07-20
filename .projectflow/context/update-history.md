@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.4.5 Backend Intelligence Foundation - 2026-07-20
+
+完成真实 ProjectFact/Timeline/Capability/Gateway/Hermes/Obsidian 价值审计；保留 ProjectFact 唯一事实来源。Model Gateway V2 使用官方 OpenAI 与 Anthropic Java SDK 支持 Responses、Chat Completions、Messages，统一 canonical response、finish/usage、动态预算、单一 retry ownership 与分型恢复。Provider 新增协议、端点、认证、超时、能力覆盖和两阶段兼容性档案，旧配置幂等迁移。Project Memory Gateway 保持 API 稳定，跨层搜索和事实证据追踪拆为独立只读服务。下一阶段是 Automatic Memory Maintenance，完整前端重建继续延后。
+
 ## ProjectFlow V3.4.4 Obsidian 高价值知识投影与安全增量同步 - 2026-07-20
 
 在 Project Memory Gateway 上新增仓库内 Obsidian CLI，提供 validate、dry-run、status 与 sync。默认 CORE 将项目概览、按真实发生时间组织的月度历程、长期能力、月度事实索引和导航索引投影到专用 managed root，不默认一 Fact 一文件；EXTENDED 与显式 FULL_FACTS 控制独立事实 Note。每个受管 Note 使用稳定实体元数据和 managed block，manifest、source version/content hash、原子替换与 conflict side file 支持 no-op、增量、移动、重命名、merge redirect、中断与 manifest 恢复。路径遍历、symlink/junction、保留文件名、Unicode 和大小写碰撞受到约束，用户内容不被静默覆盖，同步不调用模型、不写回 ProjectFlow，也不新增前端入口。下一阶段是 backend business/logic consolidation。

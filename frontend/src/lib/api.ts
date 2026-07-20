@@ -404,7 +404,9 @@ export function listProjectModelUsageRecords(token: string, projectId: string): 
   });
 }
 
-export type AiProviderType = "MOCK" | "DEEPSEEK" | "OPENAI_COMPATIBLE" | "CUSTOM";
+export type AiProviderType = "MOCK" | "DEEPSEEK" | "OPENAI" | "ANTHROPIC" | "OPENAI_COMPATIBLE" | "CUSTOM";
+export type ModelProtocol = "OPENAI_RESPONSES" | "OPENAI_CHAT_COMPLETIONS" | "ANTHROPIC_MESSAGES";
+export type AiProviderAuthMode = "PROTOCOL_DEFAULT" | "BEARER" | "API_KEY_HEADER" | "ANTHROPIC_STANDARD" | "NONE" | "QUERY_API_KEY";
 
 export type AiProvider = {
   id: string | null;
@@ -412,11 +414,25 @@ export type AiProvider = {
   baseUrl: string;
   modelName: string;
   type: AiProviderType;
+  protocol: ModelProtocol;
+  endpointOverride: string | null;
+  authMode: AiProviderAuthMode;
+  authHeaderName: string | null;
+  queryKeyName: string | null;
+  safeHeaderNames: string[];
+  requestTimeoutSeconds: number | null;
+  supportsTemperature: boolean | null;
+  supportsJsonMode: boolean | null;
+  supportsStructuredOutput: boolean | null;
+  supportsReasoning: boolean | null;
+  supportsReasoningControl: boolean | null;
   temperature: number;
   maxTokens: number;
   defaultEnabled: boolean;
   purposeTags: string[];
   apiKeyConfigured: boolean;
+  lastProbeProfile: string | null;
+  lastProbedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -427,6 +443,18 @@ export type AiProviderPayload = {
   apiKey: string;
   modelName: string;
   type: AiProviderType;
+  protocol?: ModelProtocol;
+  endpointOverride?: string;
+  authMode?: AiProviderAuthMode;
+  authHeaderName?: string;
+  queryKeyName?: string;
+  safeHeaders?: Record<string, string>;
+  requestTimeoutSeconds?: number;
+  supportsTemperature?: boolean | null;
+  supportsJsonMode?: boolean | null;
+  supportsStructuredOutput?: boolean | null;
+  supportsReasoning?: boolean | null;
+  supportsReasoningControl?: boolean | null;
   temperature: number;
   maxTokens: number;
   defaultEnabled: boolean;
@@ -438,6 +466,21 @@ export type ProviderTestResult = {
   ok: boolean;
   provider: string;
   message: string;
+  profile: {
+    connection: string;
+    protocol: ModelProtocol;
+    authMode: AiProviderAuthMode;
+    auth: string;
+    structuredOutput: string;
+    jsonMode: string;
+    temperature: string;
+    reasoning: string;
+    usage: string;
+    outputLimitDetection: string;
+    projectFlowCompatibility: string;
+    warnings: string[];
+    requestsMade: number;
+  };
 };
 
 export type DuplicateProviderGroup = {

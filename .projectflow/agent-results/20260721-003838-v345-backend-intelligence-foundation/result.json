@@ -1,0 +1,41 @@
+{
+  "taskGoal": "完成 ProjectFlow V3.4.5 Backend Intelligence Foundation：真实价值审计、后端业务边界收敛、三协议 Model Gateway V2、Provider 迁移与兼容性探测，并完成发布门禁。",
+  "actualChanges": [
+    "基于哈希校验 H2 副本审计全部现有 ProjectFact、Timeline、Capability、Evolution、Gateway、Hermes、Obsidian 与 legacy 数据，并形成非营销结论。",
+    "保持 ProjectMemoryGatewayService API 门面稳定，将跨层搜索和事实证据追踪分别下沉到独立只读业务服务。",
+    "使用官方 OpenAI 与 Anthropic Java SDK 建立 Responses、Chat Completions、Messages adapter，并把 finish、usage、request id 与 reasoning 元数据归一化到同一可靠性管线。",
+    "保留动态 token、temperature、取消、单一 transport retry、Schema repair、截断和 reasoning 恢复；二次不完整恢复现在明确失败。",
+    "升级 Provider 协议、端点、认证、timeout、能力覆盖和安全探测档案，旧 DeepSeek、OpenAI-compatible、Custom 配置幂等迁移且保留 Key 与默认项。",
+    "对官方 SDK 无法表达的自定义 header、query-key、无鉴权 relay 增加受限薄兼容传输；标准认证仍使用官方 SDK。",
+    "完成最小设置页 DTO/UI 兼容、README、AGENTS、项目上下文、架构、Provider、Reconciliation、价值审计和实施报告更新。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ModelGatewayService.java",
+    "backend/src/main/java/com/projectflow/service/model/",
+    "backend/src/main/java/com/projectflow/service/AiProviderService.java",
+    "backend/src/main/java/com/projectflow/entity/AiProvider.java",
+    "backend/src/main/java/com/projectflow/service/ProjectMemorySearchService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectEvidenceTraceService.java",
+    "backend/src/test/java/com/projectflow/service/ModelGatewayProtocolMatrixTest.java",
+    "frontend/src/app/settings/page.tsx",
+    "docs/projectflow-v3.4.5-backend-intelligence-foundation-report.md",
+    "docs/projectflow-v3.4.5-value-audit.md"
+  ],
+  "verification": [
+    "PASSED backend/H2 full suite：309 tests，0 failures，0 errors，0 skipped。",
+    "PASSED 三协议 12 个 ModelTaskType 矩阵，以及截断、二次截断失败、Schema、reasoning、429、auth relay 契约。",
+    "PASSED frontend contracts 44/44、TypeScript、production build、Playwright 7/7。",
+    "PASSED Hermes 5/5、Obsidian 18/18、Maven package、Start-ProjectFlow CheckOnly 与 embedded health smoke。",
+    "BLOCKED PostgreSQL Testcontainers：本机没有可用 Docker；未伪报通过。",
+    "SKIPPED 真实模型：环境无安全真实协议 Key；fake relay 不作为真实模型验收。",
+    "PENDING GitHub Actions：本地提交和推送后执行。"
+  ],
+  "unfinished": [
+    "本机 PostgreSQL Testcontainers 受 Docker 环境阻断，由 GitHub Actions Docker gate 验证。",
+    "真实 OpenAI、Anthropic、DeepSeek 质量验收因无安全 Key 跳过。",
+    "API Key 仍为本地数据库存储，Desktop 产品化前需迁移到安全 SecretStore。",
+    "npm install 报告 2 个 moderate 和 2 个 high 依赖 advisory，本版本未做无关强制升级。",
+    "GitHub Actions 与 remote master 状态将在发布证据提交中补齐。"
+  ],
+  "sedimentCandidates": []
+}

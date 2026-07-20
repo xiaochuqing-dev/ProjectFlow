@@ -19,7 +19,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.entity.AiProvider;
+import com.projectflow.entity.AiProviderAuthMode;
 import com.projectflow.entity.AiProviderType;
+import com.projectflow.entity.ModelProtocol;
 import com.projectflow.entity.ChangeBatch;
 import com.projectflow.entity.DevelopmentSegment;
 import com.projectflow.entity.DevelopmentSegmentStatus;
@@ -44,6 +46,21 @@ import com.projectflow.service.ProjectAnalysisJobRunner;
 import com.projectflow.service.ProjectAnalysisJobService;
 
 class ProjectFlowH2UpgradeIntegrationTest {
+    @Test
+    void migratesEveryLegacyProviderFamilyConservativelyAndIdempotently() {
+        for (AiProviderType type : List.of(AiProviderType.DEEPSEEK, AiProviderType.OPENAI_COMPATIBLE, AiProviderType.CUSTOM)) {
+            AiProvider provider = new AiProvider(UUID.randomUUID());
+            provider.update(type.name(), "https://example.invalid/v1", "preserved-key", "legacy-model", type,
+                0.2, 2_000, true, List.of("LEGACY"));
+            assertThat(provider.migrateProtocolDefaults()).isTrue();
+            assertThat(provider.getProtocol()).isEqualTo(ModelProtocol.OPENAI_CHAT_COMPLETIONS);
+            assertThat(provider.getAuthMode()).isEqualTo(AiProviderAuthMode.PROTOCOL_DEFAULT);
+            assertThat(provider.getApiKey()).isEqualTo("preserved-key");
+            assertThat(provider.isDefaultEnabled()).isTrue();
+            assertThat(provider.migrateProtocolDefaults()).isFalse();
+        }
+    }
+
     @Test
     void upgradesV3381BatchSegmentsIntoFactsWithoutReanalysisOrDataLoss() throws Exception {
         Path root = Files.createTempDirectory("projectflow-v3381-fact-upgrade-");
@@ -105,6 +122,7 @@ class ProjectFlowH2UpgradeIntegrationTest {
                 jdbc.execute("alter table project_analysis_jobs drop column if exists " + column);
             }
             jdbc.execute("alter table project_analysis_jobs alter column status varchar(30)");
+            removeV345ProviderSchema(jdbc);
         }
 
         try (ConfigurableApplicationContext upgraded = start(url, "update")) {
@@ -117,6 +135,10 @@ class ProjectFlowH2UpgradeIntegrationTest {
 
             assertThat(projects.count()).isEqualTo(1);
             assertThat(providers.count()).isEqualTo(1);
+            AiProvider migratedProvider = providers.findAll().get(0);
+            assertThat(migratedProvider.getProtocol()).isEqualTo(ModelProtocol.OPENAI_CHAT_COMPLETIONS);
+            assertThat(migratedProvider.getApiKey()).isEqualTo("legacy-placeholder");
+            assertThat(migratedProvider.isDefaultEnabled()).isTrue();
             assertThat(sediments.count()).isEqualTo(1);
             assertThat(cards.count()).isEqualTo(2);
             assertThat(cards.findById(legacy.confirmedCardId())).get().extracting(ProjectCapabilityCard::getStatus)
@@ -223,6 +245,16 @@ class ProjectFlowH2UpgradeIntegrationTest {
         }
         jdbc.execute("alter table development_segments drop column if exists occurred_from");
         jdbc.execute("alter table development_segments drop column if exists occurred_to");
+    }
+
+    private void removeV345ProviderSchema(JdbcTemplate jdbc) {
+        for (String column : List.of(
+            "protocol", "endpoint_override", "auth_mode", "auth_header_name", "query_key_name", "safe_headers",
+            "request_timeout_seconds", "supports_temperature", "supports_json_mode", "supports_structured_output",
+            "supports_reasoning", "supports_reasoning_control", "last_probe_profile", "last_probed_at"
+        )) {
+            jdbc.execute("alter table ai_providers drop column if exists " + column);
+        }
     }
 
     private LegacyIds seedLegacyData(ConfigurableApplicationContext context) {

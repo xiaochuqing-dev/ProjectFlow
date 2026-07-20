@@ -1,4 +1,13 @@
-# V3.4.4 requirements
+# V3.4.5 requirements
+
+1. Model Gateway 必须支持 Responses、Chat Completions、Anthropic Messages，并对业务保持单一 canonical contract。
+2. 标准协议使用官方 Java SDK，SDK retry 关闭；ProjectFlow 保留唯一重试、预算、取消和恢复控制权。
+3. Provider 保存 protocol、endpoint、auth、timeout 与能力覆盖；旧配置幂等迁移且不得丢 Key 或默认项。
+4. 所有 ModelTaskType 必须跨三协议通过确定性兼容测试；真实 Provider 验收与固定 relay 证据分开描述。
+5. Gateway 保持统一只读门面，search/trace 下沉聚焦业务服务；不得改变 Fact、Timeline、Capability 的事实边界。
+6. Prompt、raw response、reasoning、Key、Authorization、自定义 Header 值和绝对路径不得进入 DTO 或日志。
+
+# V3.4.4 requirements retained
 
 1. Obsidian 必须复用 Project Memory Gateway，保持 ProjectFact 唯一事实来源与 occurredAt/eventAt 时间语义。
 2. 默认 CORE 生成 Overview、月度 Timeline、长期 Capability、月度 Fact Index 和导航索引，不默认一 Fact 一文件。

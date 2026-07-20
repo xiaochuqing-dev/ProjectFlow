@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.projectflow.support.AppException;
+import com.projectflow.entity.ModelProtocol;
 
 @Service
 public class AiProviderUrlGuard {
@@ -27,11 +28,53 @@ public class AiProviderUrlGuard {
         if (!localDevelopmentHost && isBlockedIpLiteral(host)) {
             throw blocked("AI provider URL cannot target private, loopback, or metadata IP ranges.");
         }
-        return uri.toString();
+        if (uri.getUserInfo() != null) {
+            throw blocked("AI provider URL cannot contain credentials.");
+        }
+        return trimTrailingSlash(uri.toString());
     }
 
     public URI chatCompletionsUri(String baseUrl) {
-        return URI.create(validateBaseUrl(baseUrl) + "/chat/completions");
+        return endpointUri(baseUrl, ModelProtocol.OPENAI_CHAT_COMPLETIONS, null);
+    }
+
+    public URI endpointUri(String baseUrl, ModelProtocol protocol, String endpointOverride) {
+        if (endpointOverride != null && !endpointOverride.isBlank()) {
+            URI endpoint = URI.create(validateBaseUrl(endpointOverride));
+            if (endpoint.getRawFragment() != null) {
+                throw blocked("Endpoint override cannot contain a fragment.");
+            }
+            if (!endpoint.getPath().endsWith(endpointSuffix(protocol))) {
+                throw blocked("Endpoint override must end with the selected protocol path: " + endpointSuffix(protocol));
+            }
+            return endpoint;
+        }
+        String validated = validateBaseUrl(baseUrl);
+        URI base = URI.create(validated);
+        if (base.getRawQuery() != null || base.getRawFragment() != null) {
+            throw blocked("Base URL cannot contain query or fragment; use the full endpoint override instead.");
+        }
+        String suffix = endpointSuffix(protocol);
+        return URI.create(base.getPath().endsWith(suffix) ? validated : validated + suffix);
+    }
+
+    /** 官方 SDK 接收服务根地址；显式 endpoint 通过剥离标准协议后缀安全映射为 SDK baseUrl。 */
+    public String sdkBaseUrl(String baseUrl, ModelProtocol protocol, String endpointOverride) {
+        URI endpointUri = endpointUri(baseUrl, protocol, endpointOverride);
+        if (endpointUri.getRawQuery() != null || endpointUri.getRawFragment() != null) {
+            throw blocked("Official SDK endpoints cannot contain query or fragment parameters.");
+        }
+        String endpoint = endpointUri.toString();
+        String suffix = endpointSuffix(protocol);
+        return trimTrailingSlash(endpoint.substring(0, endpoint.length() - suffix.length()));
+    }
+
+    public String endpointSuffix(ModelProtocol protocol) {
+        return switch (protocol) {
+            case OPENAI_RESPONSES -> "/responses";
+            case OPENAI_CHAT_COMPLETIONS -> "/chat/completions";
+            case ANTHROPIC_MESSAGES -> "/v1/messages";
+        };
     }
 
     private URI parse(String baseUrl) {
@@ -66,5 +109,11 @@ public class AiProviderUrlGuard {
 
     private AppException blocked(String message) {
         return new AppException("AI_PROVIDER_URL_BLOCKED", message, HttpStatus.BAD_REQUEST);
+    }
+
+    private String trimTrailingSlash(String value) {
+        String result = value;
+        while (result.endsWith("/")) result = result.substring(0, result.length() - 1);
+        return result;
     }
 }

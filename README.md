@@ -1,10 +1,20 @@
 # ProjectFlow
 
-ProjectFlow V3.4.4 is a local-first project memory system for AI-assisted solo developers. It reads real Git, worktree, and Agent evidence, automatically organizes development facts, maintains a traceable timeline and capability map, and exposes the same bounded project-memory semantics to Hermes and a curated Obsidian knowledge projection.
+ProjectFlow V3.4.5 is a local-first project memory system for AI-assisted solo developers. It reads real Git, worktree, and Agent evidence, automatically organizes development facts, maintains a traceable timeline and capability map, and exposes the same bounded project-memory semantics to Hermes and a curated Obsidian knowledge projection.
 
 ProjectFlow 自动维护项目从创建至今的长期记忆。让每一个项目记得自己是怎样成长到今天的。
 
 Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns that raw development evidence into durable Change Batches, evidence-backed Project Facts, and long-lived Project Memory.
+
+## V3.4.5 Backend Intelligence Foundation
+
+- Model Gateway V2 supports OpenAI Responses, OpenAI Chat Completions and Anthropic Messages through official Java SDKs while retaining one ProjectFlow-owned retry, cancellation, dynamic-budget and recovery policy.
+- Provider configuration now records protocol, endpoint override, authentication mode, timeout and capability overrides, with an idempotent legacy Chat-Completions migration and a two-stage compatibility probe.
+- Canonical diagnostics normalize finish state, usage, request ID, reasoning presence, truncation and Schema failures without persisting prompts, raw responses, reasoning or credentials.
+- Project Memory search and fact evidence tracing are focused read services behind the unchanged Gateway facade.
+- Official APIs and compatible relays share protocol adapters; transport reachability and real ProjectFlow task compatibility are reported separately.
+- Gemini, automatic background monitoring and Desktop GUI are intentionally excluded. The next stage is Automatic Memory Maintenance; full frontend rebuilding remains later.
+- The real-data Value Audit, architecture decisions, Provider guide and release evidence are in `docs/projectflow-v3.4.5-value-audit.md` and the related V3.4.5 reports.
 
 ## V3.4.3 Project Memory Gateway and Hermes MCP
 

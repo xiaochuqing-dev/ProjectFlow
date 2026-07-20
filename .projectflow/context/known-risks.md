@@ -1,5 +1,10 @@
 # Known risks
 
+- API Key 与自定义 Header 值当前仍保存在应用数据库，只适合本地兼容；桌面产品化前需迁移到 OS secure store。
+- 固定本地 relay 覆盖协议、SDK 和恢复契约，不代表真实 OpenAI、Anthropic 或 DeepSeek 的输出质量、限流与私有扩展。
+- Endpoint override 只支持保留标准协议尾路径的非标准前缀；完全自定义非标准协议不在 V3.4.5。
+- 早期迁移 facts 存在泛化摘要，部分 capabilities 合并了多个关注点；只能通过显式 reconciliation/evolution 改善，不能静默改事实。
+
 - Obsidian V3.4.4 是手动 one-shot CLI，不包含 watcher、后台定时器或正式前端配置；自动同步留给后续受控设计。
 - Projection manifest 是可重建状态而非事实源；用户复制同一受管实体形成多个 Note 时必须进入 conflict，由用户消除重复，不能自动猜测。
 - CORE 的月度 Fact Index 会随单月事实量增长；当前有总输入、分页和响应边界，超大项目仍应观察单月文件可读性，不能退化为默认一 Fact 一文件。

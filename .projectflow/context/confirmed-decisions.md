@@ -1,4 +1,10 @@
-# Confirmed V3.4.4 decisions
+# Confirmed V3.4.5 decisions
+
+- ModelGatewayService 是所有模型入口的稳定门面；三种协议只在官方 SDK adapter 层分叉，SDK retry 关闭。
+- Provider protocol 必须持久化；旧配置只补齐 Chat Completions 与默认 auth mode，不改 Key、模型、默认项和参数。
+- Canonical response 统一 visible content、finish、usage、request ID 与 reasoning presence；拒绝、过滤、tool-use、incomplete 不得静默成功。
+- Gateway 跨层检索由 ProjectMemorySearchService 承担，事实证据追踪由 ProjectEvidenceTraceService 承担；GET 仍不调模型。
+- 真实数据审计发现的泛化旧 facts 与过宽 capabilities 保持可追踪，不在 V3.4.5 批量改写历史。
 
 - Obsidian 是 Project Memory Gateway 的可重建知识投影消费者，不是事实源、数据库镜像或新的模型摘要入口。
 - 默认 CORE 只生成 Overview、月度 Timeline、Capability、月度 Fact Index 与三个索引；EXTENDED 只增加高价值 Fact，FULL_FACTS 必须显式选择。
