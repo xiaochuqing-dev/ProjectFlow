@@ -1,0 +1,33 @@
+{
+  "taskGoal": "完成 V3.4.4 Obsidian 高价值知识投影与安全增量同步，复用 Project Memory Gateway，并完成真实 Vault、当前 H2 安全副本、规模、恢复、全门禁和发布验收。",
+  "actualChanges": [
+    "新增仓库内 Obsidian CLI，提供 validate、dry-run、status 和 sync，并只连接 loopback Project Memory Gateway。",
+    "默认 CORE 生成项目概览、月度项目历程、长期能力、月度事实索引和导航索引；EXTENDED 与显式 FULL_FACTS 控制独立 Fact Note。",
+    "新增稳定 frontmatter、managed block、可重建 manifest、版本/hash 增量计划、原子写入、冲突 side file、移动/重命名恢复、merge redirect 和非破坏性 archive。",
+    "新增 traversal、symlink/junction、Windows 保留名、Unicode、大小写/稳定 ID 碰撞、磁盘错误、中断和 manifest 损坏保护。",
+    "使用 5000 facts 规模 fixture 与当前 ProjectFlow H2 安全副本生成真实受控 Vault，核对发生时间、双链、能力演进、Fact Trace、no-op 和人类可读质量。"
+  ],
+  "keyFiles": [
+    "integrations/obsidian/projectflow_obsidian.py",
+    "integrations/obsidian/test_projectflow_obsidian.py",
+    "run-projectflow-obsidian.ps1",
+    "docs/obsidian-projection-sync.md",
+    "docs/projectflow-v3.4.4-obsidian-projection-sync-report.md",
+    ".github/workflows/quality-gates.yml"
+  ],
+  "verification": {
+    "build": "passed: frontend TypeScript/production build and repository Start-ProjectFlow.bat V3.4.4; backend safe-copy startup",
+    "tests": "passed: backend/H2 302, frontend contracts 44, Playwright 7, Hermes MCP 5, Obsidian 18; GitHub PostgreSQL 16 and all blocking jobs passed in run 29731785408",
+    "manualCheck": "passed: current-H2 safe copy generated 26 CORE notes from 68 facts and 18 capabilities; Overview, July Timeline, Capability Evolution and Fact Index inspected; final no-op wrote 0 files and original H2 SHA-256 was restored"
+  },
+  "unfinished": [
+    "Automatic watcher, background sync and formal frontend configuration are intentionally outside V3.4.4.",
+    "Remote/network Vault semantics and remote ProjectFlow transport are not supported by this local release.",
+    "FULL_FACTS can create many files and remains an explicit opt-in profile."
+  ],
+  "sedimentCandidates": [
+    "Obsidian 等外部知识投影应复用统一 Project Memory Gateway，避免重新解释事实、时间和能力语义。",
+    "受管 Markdown 的安全增量同步应使用稳定实体 ID、managed block、version/hash、可重建 manifest 与原子替换。",
+    "用户内容冲突必须保留原文件并显式报告；能力重命名保持稳定路径，合并保留旧 Note、历史和 redirect。"
+  ]
+}
