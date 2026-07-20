@@ -82,12 +82,12 @@ API keys remain database-backed for local compatibility. They are absent from re
 
 ## 12. CI, release and V3.4.6 readiness
 
-NOT_RUN at the time this implementation report was first committed: GitHub Actions and remote-master confirmation are release steps performed after the local commit. Release evidence will update this section without changing implementation behavior.
+PASSED GitHub Actions run `29760842081` for implementation commit `175166225efb48b83fc0dd0a436b7d5d50b46c71`. Backend/H2, PostgreSQL Testcontainers, frontend quality, browser E2E, Hermes, Obsidian and sensitive-content jobs all completed successfully. Optional real DeepSeek was SKIPPED because no CI secret was supplied. This resolves the local Docker BLOCKED status with a successful Docker-backed PostgreSQL gate.
 
 V3.4.6 readiness is PASSED at the boundary level. `docs/evidence-reconciliation.md` defines CURRENTLY_REACHABLE, REVERTED_OR_NEGATED, UNREACHABLE_AFTER_REWRITE and UNKNOWN without deleting historical facts or silently advancing cursors. The next stage is Automatic Memory Maintenance through Project Observer → bounded cheap check → stable evidence decision → Analyze use case → history/memory update → controlled Obsidian/Hermes availability. No V3.4.6 runtime was implemented here.
 
-Final implementation commit: PENDING_LOCAL_COMMIT
+Final implementation commit: `175166225efb48b83fc0dd0a436b7d5d50b46c71`
 
-CI: NOT_RUN
+CI: PASSED, `https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/29760842081`
 
 Report: `docs/projectflow-v3.4.5-backend-intelligence-foundation-report.md`

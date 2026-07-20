@@ -26,16 +26,14 @@
     "PASSED 三协议 12 个 ModelTaskType 矩阵，以及截断、二次截断失败、Schema、reasoning、429、auth relay 契约。",
     "PASSED frontend contracts 44/44、TypeScript、production build、Playwright 7/7。",
     "PASSED Hermes 5/5、Obsidian 18/18、Maven package、Start-ProjectFlow CheckOnly 与 embedded health smoke。",
-    "BLOCKED PostgreSQL Testcontainers：本机没有可用 Docker；未伪报通过。",
+    "PASSED GitHub Actions PostgreSQL Testcontainers；本机无 Docker 的 BLOCKED 状态已由 CI Docker gate 补齐。",
     "SKIPPED 真实模型：环境无安全真实协议 Key；fake relay 不作为真实模型验收。",
-    "PENDING GitHub Actions：本地提交和推送后执行。"
+    "PASSED GitHub Actions run 29760842081：backend/H2、PostgreSQL、frontend、browser E2E、Hermes、Obsidian、sensitive-content 全绿。"
   ],
   "unfinished": [
-    "本机 PostgreSQL Testcontainers 受 Docker 环境阻断，由 GitHub Actions Docker gate 验证。",
     "真实 OpenAI、Anthropic、DeepSeek 质量验收因无安全 Key 跳过。",
     "API Key 仍为本地数据库存储，Desktop 产品化前需迁移到安全 SecretStore。",
-    "npm install 报告 2 个 moderate 和 2 个 high 依赖 advisory，本版本未做无关强制升级。",
-    "GitHub Actions 与 remote master 状态将在发布证据提交中补齐。"
+    "npm install 报告 2 个 moderate 和 2 个 high 依赖 advisory，本版本未做无关强制升级。"
   ],
   "sedimentCandidates": []
 }
