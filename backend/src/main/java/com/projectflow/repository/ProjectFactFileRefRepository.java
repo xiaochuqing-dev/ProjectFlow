@@ -11,6 +11,7 @@ import com.projectflow.entity.ProjectFactFileRef;
 
 public interface ProjectFactFileRefRepository extends JpaRepository<ProjectFactFileRef, UUID> {
     boolean existsByFactIdAndFilePath(UUID factId, String filePath);
+    List<ProjectFactFileRef> findByFactId(UUID factId);
 
     @Query("""
         select fact.timelineDayKey as periodKey, count(distinct ref.filePath) as itemCount

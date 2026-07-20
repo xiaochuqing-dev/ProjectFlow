@@ -1,5 +1,9 @@
 # Troubleshooting
 
+If Hermes cannot discover ProjectFlow tools, first run `hermes mcp test <server-name>` and confirm ProjectFlow is reachable on the configured loopback URL. The MCP adapter deliberately rejects non-loopback URLs in V3.4.3. `PROJECTFLOW_BACKEND_UNAVAILABLE` is retryable; `PROJECTFLOW_REMOTE_DISABLED`, ownership/not-found errors and `PROJECTFLOW_RESULT_TOO_LARGE` require correcting configuration, project scope, page size or detail level. Keep protocol stdout clean and inspect host stderr for process startup diagnostics.
+
+If a Gateway result appears in the wrong month, compare `occurredAt` with `recordedAt` and `analyzedAt`. Recent changes and Timeline use occurrence time. Do not repair this by rewriting facts or using ingestion time. Legacy sediment migration with a source batch derives its occurrence window from the batch/facts and assigns Timeline accordingly.
+
 If Timeline facts and statistics are visible but a summary is missing, inspect the persisted summary status before retrying. `WAITING_FOR_MODEL` means facts are safe and Provider configuration will requeue automatically. `DIRTY`, `QUEUED`, and `GENERATING` are normal refresh states. `FAILED` preserves any previous READY content as stale; retry is recovery only. Do not edit facts or delete the H2 database to repair a derived summary.
 
 If coverage is below sourceFactCount, inspect unknown/missing IDs, duplicate membership, planning fields, fact fingerprint changes, and history status. GET endpoints must not call the model. A running history backfill intentionally defers summary jobs until its checkpointed chunks complete.

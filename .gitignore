@@ -30,6 +30,10 @@ frontend/.e2e-data/
 target/
 *.class
 
+# Python adapters
+__pycache__/
+*.py[cod]
+
 # Local runtime data
 data/
 uploads/

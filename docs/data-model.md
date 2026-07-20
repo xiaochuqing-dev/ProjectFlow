@@ -377,3 +377,7 @@ All resource access is scoped through `projects.user_id`. A user can access task
 ## V3.4.2 capability map entities
 
 `project_capabilities` stores stable identity, aliases, current semantic state, deterministic maturity, source statistics, version, expressions and non-destructive merge redirect. `project_capability_evolutions` records immutable version events with an idempotent operation fingerprint. `project_capability_facts` is the unique capability/fact relation with role and source evolution. `project_capability_fact_coverage` gives one current classification per project/fact. `project_capability_attention` stores exceptional invalid evidence or unsafe merge review. `project_capability_map_states` stores full-history source fingerprint, coverage, dirty/generation state and last-success preservation. Legacy `project_capability_cards` is unchanged compatibility data.
+
+## V3.4.3 memory read audit
+
+`project_memory_read_audits` stores safe operational metadata for Gateway reads: user/project ownership, operation, result count, latency, status, caller hash, query length/hash, entity types, bounded filter summary and timestamp. It deliberately does not store full query text, credentials, authorization, prompts, responses, reasoning or project content. Audit rows are deleted with their project. The Gateway otherwise adds no new source-of-truth entity.

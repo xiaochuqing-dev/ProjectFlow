@@ -1,9 +1,20 @@
 <!-- PROJECTFLOW V3.4.2 CONTEXT START -->
-ProjectFlow 当前版本为 V3.4.2。后续 Agent 必须按“分析新变化 -> 开发推进段 -> 自动项目事实 -> 项目记录 / 项目记忆 -> 自动项目历程 -> 全生命周期能力地图”理解产品。正常事实和能力演进不逐条确认，只有异常进入“需要关注”。
+ProjectFlow 当前版本为 V3.4.3。后续 Agent 必须按“分析新变化 -> 开发推进段 -> 自动项目事实 -> 项目记录 / 项目记忆 -> 自动项目历程 -> 全生命周期能力地图 -> Project Memory Gateway -> Hermes 只读消费”理解产品。正常事实和能力演进不逐条确认，只有异常进入“需要关注”。
 
 开始任务前请阅读 `.projectflow/AGENT_PROTOCOL.md`。完成开发任务后，按协议把结果写入 `.projectflow/agent-results/`。不要删除添加项目、zip 导入、本地项目绑定、模型配置、登录等核心入口。
 
 开发推进段和项目事实必须描述真实发生的开发结果、用户或开发者可感知变化、验证情况和不确定项。禁止用 backend/frontend/docs/config 等目录名、提交数量或“开发推进”空话替代具体摘要。能力主页面以长期 `ProjectCapability` 地图为主，旧 `ProjectCapabilityCard` 和 `completedCapabilities` 仅作兼容档案。
+
+V3.4.3 Project Memory Gateway / Hermes 规则（后续 Agent 必须遵守）：
+- Project Memory Gateway 是 Facts、Timeline、Capabilities、Evolutions 对外的统一只读业务语义层；不得让外部消费者直接拼接内部 Repository 或全部 REST。
+- ProjectFact 仍是唯一事实来源；Timeline、Capability、Evolution 必须显式标为派生层。
+- Recent Changes 和 Timeline 只按 occurredAt / factEventAt 归属；recordedAt、analyzedAt、syncedAt 不得冒充发生时间。
+- Gateway GET、Hermes MCP 和 project brief 不得触发模型，不得修改事实、游标、Timeline 或 Capability Map。
+- Snapshot、Search、Recent、Timeline、Capabilities、Evolution、Fact Trace、Brief 必须有紧凑默认、分页或硬上限，并保留所有权校验。
+- Fact Trace 不返回 diff、绝对路径、fingerprint、prompt、raw response、reasoning、Key 或 Authorization。
+- 审计只能保存 operation、数量、耗时、状态、query 长度/哈希和 caller 哈希，不得保存完整私有查询。
+- Hermes 仅支持仓库内 local stdio + loopback backend；远程 MCP、Telegram 和写工具不在 V3.4.3 实现。
+- Hermes 是消费者，不是新的事实源；Obsidian V3.4.4 必须复用同一 Gateway 语义。
 
 V3.4.2 事实原生能力地图规则（后续 Agent 必须遵守）：
 - ProjectFact 是唯一事实来源。

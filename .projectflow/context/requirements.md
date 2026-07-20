@@ -1,3 +1,14 @@
+# V3.4.3 requirements
+
+1. 建立统一只读 Project Memory Gateway，覆盖 Snapshot、Recent、Search、Timeline、Capabilities、Evolution、Fact Trace 和 Brief。
+2. ProjectFact 保持唯一事实来源；所有派生层、稳定 ID、证据和时间语义必须明确。
+3. Recent 和 Timeline 按 occurredAt；7 月 17 日发生、8 月 20 日分析仍属于 7 月。
+4. 所有读取校验 userId/projectId，compact 默认、分页/硬上限，GET 不触发模型。
+5. 审计不保存完整 query、caller、凭证或内部敏感内容。
+6. Hermes 只通过 repository-local stdio MCP 读取 loopback backend，工具数量克制且全部只读。
+7. 前端冻结，不新增正式集成页面、一级导航或视觉重构。
+8. H2/PostgreSQL/当前安全副本保持兼容，不清库，不修改系统或全局机器配置。
+
 # V3.3.6 requirements
 
 1. 空正文结合 finish reason、token 用量和 reasoning 字段识别疑似截断，并只进行一次低预算紧凑重试。

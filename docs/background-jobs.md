@@ -35,3 +35,7 @@ On restart, QUEUED is re-enqueued. A pre-model RUNNING job becomes RETRYABLE. A 
 ## V3.4.2 capability map refresh
 
 `PROJECT_CAPABILITY_MAP_REFRESH` reuses the durable queue, active-input uniqueness, budgets, heartbeat, cancellation and restart rules. The scope contains the project and source fingerprint. After-commit fact events mark the map dirty and coalesce an equivalent active job; model calls run outside fact transactions. Bootstrap pages all facts in 120-item chunks; incremental refresh selects only missing or stale coverage. History backfill accumulates dirty state and schedules one refresh after completion. A successful apply updates capabilities, evolutions, relations, coverage and map state atomically. Failure keeps the last successful map and retry remains an explicit recovery operation.
+
+## V3.4.3 read-only integrations
+
+Project Memory Gateway and the Hermes stdio adapter do not create persistent jobs. Every read operates on the last persisted fact/timeline/capability state and never triggers model work from GET. A restarted MCP process rediscovers the same tools and data. Audit persistence is deliberately independent from source/derived memory state, so an audit failure cannot change or erase project memory.

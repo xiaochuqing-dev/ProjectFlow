@@ -14,6 +14,7 @@ public interface ProjectTimelineThemeRepository extends JpaRepository<ProjectTim
     List<ProjectTimelineTheme> findBySummaryIdOrderBySortOrderAsc(UUID summaryId);
     List<ProjectTimelineTheme> findBySummaryIdInOrderBySortOrderAsc(List<UUID> summaryIds);
     Optional<ProjectTimelineTheme> findByIdAndProjectId(UUID id, UUID projectId);
+    List<ProjectTimelineTheme> findByProjectIdOrderByUpdatedAtDesc(UUID projectId);
     void deleteBySummaryId(UUID summaryId);
 
     @Query("""

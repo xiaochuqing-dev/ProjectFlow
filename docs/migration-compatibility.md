@@ -39,3 +39,7 @@ The optimistic-lock `version` column is added with database default `0`. This is
 ## V3.4.2 capability compatibility
 
 Hibernate `ddl-auto=update` adds capability, evolution, relation, coverage, attention and map-state tables without changing ProjectFact, FactCursor, Timeline or legacy card rows. Startup reclassifies only evidence-complete PASS facts whose sole attention reason is the documented fallback occurrence time; fingerprints and cursors are untouched. A CONFIRMED legacy card may seed a stable capability only when its source references resolve through owned sediment/segment data to ProjectFact. Candidate, needs-confirmation and ignored cards remain unchanged. Migration is idempotent, never deletes cards or facts, and unresolved confirmed sources become attention rather than invented evidence.
+
+## V3.4.3 Gateway compatibility
+
+Hibernate adds only the safe memory-read audit table; Gateway DTOs and indexes reuse current entities. Existing ProjectFact, Timeline, Capability, Evolution, cursors, history and legacy rows are not rewritten. The one compatibility correction is temporal: a legacy sediment linked to an owned source batch inherits the batch's actual occurrence window and receives its Timeline assignment instead of being placed under migration time. The migration remains idempotent and preserves the original sediment and source batch. Current-database acceptance must run on a byte-identical safe copy and re-hash the untouched original afterward.

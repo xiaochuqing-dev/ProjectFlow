@@ -286,3 +286,7 @@ sequenceDiagram
 ## V3.4.2 fact-native capability layer
 
 The durable flow is ProjectFact truth → Timeline temporal read model → ProjectCapability long-lived derived map. Capability bootstrap and incremental refresh reuse the persistent job executor and ModelGateway, call models outside fact transactions, validate exact source-fact coverage, then atomically apply stable capabilities, immutable evolutions, normalized fact relations and coverage. GET endpoints are read-only. Source fingerprints coalesce duplicate work; history backfill defers map generation until completion; a failed refresh retains the last successful map. Legacy capability cards remain a separate compatibility boundary.
+
+## V3.4.3 Project Memory Gateway and Hermes
+
+Project Memory Gateway is an additive read-only business layer over Facts, Timeline, Capabilities and Evolutions. It normalizes snapshot, occurrence-time recent changes, cross-layer search, timeline, capability/evolution, fact trace and budgeted brief semantics while retaining explicit SOURCE versus DERIVED labels. The local stdio MCP adapter maps nine narrow tools to this Gateway. Neither the adapter nor GET endpoints invoke models or write project memory. Remote MCP and Obsidian projection remain separate boundaries.

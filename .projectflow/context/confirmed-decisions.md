@@ -1,3 +1,13 @@
+# Confirmed V3.4.3 decisions
+
+- Project Memory Gateway 是 Facts、Timeline、Capabilities、Evolutions 的统一只读业务语义层，不是内部 REST 聚合泄漏层。
+- ProjectFact 唯一事实来源不变；Timeline/Capability/Evolution 显式为 DERIVED，所有消费者共享 stable IDs 和 occurredAt。
+- Gateway 和 Hermes MCP 只有读工具，GET 不调用模型，不写 facts/cursors/history/map；compact、分页和输出预算有硬边界。
+- Fact trace 仅返回有界、脱敏、仓库相对证据；审计只保存 query/caller 哈希与长度。
+- V3.4.3 只支持 local stdio + loopback ProjectFlow；远程 MCP 和 Telegram 不实现。
+- Hermes 是即时查询消费者；Obsidian 是下一阶段长期阅读投影消费者，两者不能成为事实源。
+- 前端冻结，核心 Fact/Timeline/Capability/ModelGateway/Job 不无故重构。
+
 # Confirmed V3.4.2 decisions
 
 - ProjectFact 是唯一事实来源，Timeline 是时间派生层，ProjectCapability 是稳定长期能力层；Timeline Theme 不等于 Capability。

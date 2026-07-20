@@ -33,6 +33,31 @@ public interface ProjectFactRepository extends JpaRepository<ProjectFact, UUID> 
     Page<ProjectFact> findByProjectIdOrderByTimelineEventAtAscCreatedAtAsc(UUID projectId, Pageable pageable);
 
     @Query(value = """
+        select fact from ProjectFact fact
+        where fact.projectId = :projectId
+          and (:fromTime is null or fact.timelineEventAt >= :fromTime)
+          and (:toTime is null or fact.timelineEventAt <= :toTime)
+          and (lower(fact.title) like lower(concat('%', :query, '%'))
+            or lower(fact.summary) like lower(concat('%', :query, '%'))
+            or lower(fact.userVisibleValue) like lower(concat('%', :query, '%'))
+            or lower(fact.attentionReason) like lower(concat('%', :query, '%')))
+        order by fact.timelineEventAt desc, fact.createdAt desc
+        """, countQuery = """
+        select count(fact) from ProjectFact fact
+        where fact.projectId = :projectId
+          and (:fromTime is null or fact.timelineEventAt >= :fromTime)
+          and (:toTime is null or fact.timelineEventAt <= :toTime)
+          and (lower(fact.title) like lower(concat('%', :query, '%'))
+            or lower(fact.summary) like lower(concat('%', :query, '%'))
+            or lower(fact.userVisibleValue) like lower(concat('%', :query, '%'))
+            or lower(fact.attentionReason) like lower(concat('%', :query, '%')))
+        """)
+    Page<ProjectFact> searchMemoryCandidates(
+        @Param("projectId") UUID projectId, @Param("query") String query,
+        @Param("fromTime") Instant from, @Param("toTime") Instant to, Pageable pageable
+    );
+
+    @Query(value = """
         select fact from ProjectFact fact where fact.projectId = :projectId and not exists (
           select coverage from ProjectCapabilityFactCoverage coverage
           where coverage.projectId = :projectId and coverage.factId = fact.id

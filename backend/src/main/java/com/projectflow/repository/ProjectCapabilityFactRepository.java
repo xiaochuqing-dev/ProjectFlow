@@ -16,6 +16,8 @@ public interface ProjectCapabilityFactRepository extends JpaRepository<ProjectCa
     boolean existsByCapabilityIdAndFactId(UUID capabilityId, UUID factId);
     List<ProjectCapabilityFact> findByProjectIdAndCapabilityId(UUID projectId, UUID capabilityId);
     List<ProjectCapabilityFact> findByProjectIdAndSourceEvolutionId(UUID projectId, UUID evolutionId);
+    List<ProjectCapabilityFact> findByProjectIdAndSourceEvolutionIdIn(UUID projectId, List<UUID> evolutionIds);
+    List<ProjectCapabilityFact> findByProjectIdAndFactIdIn(UUID projectId, List<UUID> factIds);
     long countByCapabilityId(UUID capabilityId);
 
     @Query("""

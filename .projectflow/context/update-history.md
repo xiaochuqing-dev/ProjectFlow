@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.4.3 Project Memory Gateway 与 Hermes MCP - 2026-07-20
+
+在 Fact、Timeline、Capability 和 Evolution 之上增加统一只读 Project Memory Gateway，提供 snapshot、occurredAt recent changes、跨层 search、timeline、capabilities、chronological evolution、fact trace 和 budgeted brief，并用 SOURCE/DERIVED、稳定 ID、时间字段和证据引用保持语义一致。新增安全读取审计，不保存完整私有 query/caller 或凭证。仓库内无依赖 Python stdio MCP 暴露 9 个只读工具，只连接 loopback backend。真实 Hermes 在当前 H2 安全副本上能按发生时间回答 7 月变化、追溯 FactCursor，并对不存在的 Obsidian 正式同步明确无事实；原始 H2 哈希未变化。完整门禁结果写入 V3.4.3 report。
+
 ## ProjectFlow V3.4.2 事实原生全生命周期能力地图 - 2026-07-16
 
 在 ProjectFact 与 Timeline 之上新增长期 ProjectCapability、不可破坏的 Capability Evolution、规范化 fact relation、逐 fact coverage、attention 和 map state。系统对全历史分块 bootstrap，之后只处理未覆盖或已变化 facts；模型通过内部 NEW/ENHANCE/ADD_EVIDENCE/MERGE 协议提议，规则完成所有权、全覆盖、稳定身份、成熟度与安全 merge 校验并自动应用。旧能力卡片退出主页面和正常主链，只保留兼容读取及可追溯 CONFIRMED 迁移。42 条旧 attention 按确定性证据规则重新分类，失败刷新保留旧 READY。未修改系统文件或全局机器配置；真实门禁状态记录在 V3.4.2 report。

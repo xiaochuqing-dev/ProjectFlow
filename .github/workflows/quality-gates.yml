@@ -1,4 +1,4 @@
-name: ProjectFlow V3.4.2 Quality Gates
+name: ProjectFlow V3.4.3 Quality Gates
 
 on:
   push:
@@ -70,6 +70,16 @@ jobs:
       - name: 前端契约测试
         working-directory: frontend
         run: npm run test:contracts
+
+  hermes-mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: ProjectFlow 只读 stdio MCP 契约与故障恢复
+        run: python integrations/hermes/test_projectflow_mcp.py
 
   browser-e2e:
     runs-on: ubuntu-latest

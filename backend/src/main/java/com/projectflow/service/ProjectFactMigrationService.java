@@ -3,6 +3,7 @@ package com.projectflow.service;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
@@ -51,6 +52,7 @@ public class ProjectFactMigrationService {
     private final ProjectFactCommitRefRepository commitRefRepository;
     private final ProjectFactAgentResultRefRepository agentResultRefRepository;
     private final ProjectFactIngestionService ingestionService;
+    private final TimelinePeriodResolver timelinePeriodResolver;
     private final TransactionTemplate transactionTemplate;
 
     public ProjectFactMigrationService(
@@ -61,6 +63,7 @@ public class ProjectFactMigrationService {
         ProjectFactCommitRefRepository commitRefRepository,
         ProjectFactAgentResultRefRepository agentResultRefRepository,
         ProjectFactIngestionService ingestionService,
+        TimelinePeriodResolver timelinePeriodResolver,
         PlatformTransactionManager transactionManager
     ) {
         this.batchRepository = batchRepository;
@@ -70,6 +73,7 @@ public class ProjectFactMigrationService {
         this.commitRefRepository = commitRefRepository;
         this.agentResultRefRepository = agentResultRefRepository;
         this.ingestionService = ingestionService;
+        this.timelinePeriodResolver = timelinePeriodResolver;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -139,6 +143,12 @@ public class ProjectFactMigrationService {
             return;
         }
         UUID batchId = sediment.getSourceBatchIds().stream().map(this::parseUuid).filter(java.util.Objects::nonNull).findFirst().orElse(null);
+        ChangeBatch sourceBatch = batchId == null ? null : batchRepository.findById(batchId)
+            .filter(value -> value.getProjectId().equals(sediment.getProjectId())).orElse(null);
+        Instant occurredFrom = sourceBatch != null && sourceBatch.getFactOccurredFrom() != null
+            ? sourceBatch.getFactOccurredFrom() : sediment.getCreatedAt();
+        Instant occurredTo = sourceBatch != null && sourceBatch.getFactOccurredTo() != null
+            ? sourceBatch.getFactOccurredTo() : occurredFrom;
         List<String> evidence = sediment.getEvidenceRefs();
         boolean reliableEvidence = evidence.stream().anyMatch(this::isReliableEvidence);
         ProjectFact fact = new ProjectFact(
@@ -152,13 +162,15 @@ public class ProjectFactMigrationService {
         fact.updateContent(
             sediment.getTitle(), sediment.getSummary(),
             sediment.getProblemSolved().isBlank() ? List.of() : List.of(sediment.getProblemSolved()),
-            sediment.getProblemSolved(), sediment.getCreatedAt(), sediment.getCreatedAt(), commits, List.of(), agents,
+            sediment.getProblemSolved(), occurredFrom, occurredTo, commits, List.of(), agents,
             sediment.getAffectedFiles(), evidence, sediment.getContentSource(), sediment.getQualityStatus(),
             reliableEvidence ? EvidenceConfidence.MEDIUM : EvidenceConfidence.LOW,
             reliableEvidence ? ProjectFactRecordStatus.RECORDED : ProjectFactRecordStatus.NEEDS_ATTENTION,
             attention
         );
         fact.linkLegacySediment(sediment.getId());
+        TimelinePeriodResolver.Assignment assignment = timelinePeriodResolver.assign(fact);
+        fact.assignTimeline(assignment.eventAt(), assignment.dayKey(), assignment.weekKey(), assignment.monthKey());
         fact = factRepository.save(fact);
         for (String commit : commits) {
             String normalized = normalizeCommit(commit);

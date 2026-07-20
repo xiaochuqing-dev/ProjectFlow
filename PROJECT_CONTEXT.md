@@ -1,12 +1,12 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-07-16
+Last updated: 2026-07-20
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.4.2 is a local-first project memory system for AI-assisted solo developers. It automatically organizes real development evidence into durable project facts, maintains a traceable timeline, and derives a stable lifecycle Capability Map from complete fact history.
+ProjectFlow V3.4.3 is a local-first project memory system for AI-assisted solo developers. It automatically organizes real development evidence into durable project facts, maintains a traceable timeline and stable lifecycle Capability Map, and exposes those layers through one bounded Project Memory Gateway and local read-only Hermes MCP adapter.
 
 Current direction:
 
@@ -16,7 +16,14 @@ Current direction:
 - Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
 
-V3.4.2 focus:
+V3.4.3 focus:
+
+- Project Memory Gateway supplies snapshot, occurrence-time recent changes, unified cross-layer search, timeline, capabilities, evolution, fact trace and budgeted brief semantics.
+- ProjectFact remains SOURCE; Timeline, Capability and Evolution remain DERIVED. Stable IDs and occurrence time are shared across consumers.
+- Reads are owned, paged/bounded, compact by default, model-free and safely audited without full query text or credentials.
+- The repository-local Python stdio MCP exposes nine read-only tools to Hermes and accepts only a loopback backend. Remote transport and Obsidian projection are later boundaries.
+
+V3.4.2 focus (still applies):
 
 - `ProjectFact` remains the only factual source. Timeline is the temporal derived layer; `ProjectCapability` is the stable long-lived capability layer.
 - Full-history bootstrap classifies every fact in bounded chunks. Incremental refresh handles only uncovered or changed facts with internal NEW/ENHANCE/ADD_EVIDENCE/MERGE operations.
@@ -24,7 +31,7 @@ V3.4.2 focus:
 - Maturity is deterministic and explainable. Merges are non-destructive; unsafe or incomplete classification becomes capability attention.
 - Durable dirty/fingerprint/job state keeps GET model-free, coalesces duplicate work, defers full-map refresh during history backfill, and preserves the last successful map on failure.
 - `/project-intelligence/capabilities` is the main capability map. Legacy cards remain a compatibility section; only traceable CONFIRMED cards may seed stable capabilities.
-- Timeline Theme is not Project Capability. Hermes and Obsidian remain future consumers.
+- Timeline Theme is not Project Capability. Hermes now consumes the Gateway read-only; Obsidian remains the next projection consumer.
 
 V3.4.1 focus (still applies):
 

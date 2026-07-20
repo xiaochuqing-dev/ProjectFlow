@@ -24,6 +24,7 @@ import com.projectflow.repository.ProjectEvolutionRecordRepository;
 import com.projectflow.repository.ProjectFactSourceRepository;
 import com.projectflow.repository.ProjectMaterialRepository;
 import com.projectflow.repository.ProjectMemoryRepository;
+import com.projectflow.repository.ProjectMemoryReadAuditRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.repository.ProjectSnapshotRepository;
 import com.projectflow.repository.TaskRepository;
@@ -50,6 +51,7 @@ public class ProjectService {
     private final EvidenceBundleRepository evidenceBundleRepository;
     private final AgentSignatureFeedbackRepository agentSignatureFeedbackRepository;
     private final ModelUsageRecordRepository modelUsageRecordRepository;
+    private final ProjectMemoryReadAuditRepository memoryReadAuditRepository;
 
     public ProjectService(
         ProjectRepository projectRepository,
@@ -69,7 +71,8 @@ public class ProjectService {
         WorkSessionRepository workSessionRepository,
         EvidenceBundleRepository evidenceBundleRepository,
         AgentSignatureFeedbackRepository agentSignatureFeedbackRepository,
-        ModelUsageRecordRepository modelUsageRecordRepository
+        ModelUsageRecordRepository modelUsageRecordRepository,
+        ProjectMemoryReadAuditRepository memoryReadAuditRepository
     ) {
         this.projectRepository = projectRepository;
         this.materialRepository = materialRepository;
@@ -89,6 +92,7 @@ public class ProjectService {
         this.evidenceBundleRepository = evidenceBundleRepository;
         this.agentSignatureFeedbackRepository = agentSignatureFeedbackRepository;
         this.modelUsageRecordRepository = modelUsageRecordRepository;
+        this.memoryReadAuditRepository = memoryReadAuditRepository;
     }
 
     @Transactional
@@ -128,6 +132,7 @@ public class ProjectService {
         analysisJobRepository.deleteByProjectId(id);
         analysisRecordRepository.deleteByProjectId(id);
         modelUsageRecordRepository.deleteByProjectId(id);
+        memoryReadAuditRepository.deleteByProjectId(id);
         changeRepository.deleteByProjectId(id);
         suggestionRepository.deleteByProjectId(id);
         factSourceRepository.deleteByProjectId(id);

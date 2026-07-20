@@ -11,6 +11,7 @@ import com.projectflow.entity.ProjectFactAgentResultRef;
 
 public interface ProjectFactAgentResultRefRepository extends JpaRepository<ProjectFactAgentResultRef, UUID> {
     boolean existsByFactIdAndAgentResultRef(UUID factId, String agentResultRef);
+    List<ProjectFactAgentResultRef> findByFactId(UUID factId);
 
     @Query("select distinct ref.agentResultRef from ProjectFactAgentResultRef ref where ref.projectId = :projectId")
     List<String> findDistinctAgentResultRefsByProjectId(@Param("projectId") UUID projectId);

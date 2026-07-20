@@ -13,6 +13,7 @@ import com.projectflow.entity.ProjectCapabilityEvolution;
 public interface ProjectCapabilityEvolutionRepository extends JpaRepository<ProjectCapabilityEvolution, UUID> {
     Optional<ProjectCapabilityEvolution> findByProjectIdAndOperationFingerprint(UUID projectId, String fingerprint);
     Page<ProjectCapabilityEvolution> findByProjectIdAndCapabilityIdOrderByOccurredAtDescCreatedAtDesc(UUID projectId, UUID capabilityId, Pageable pageable);
+    Page<ProjectCapabilityEvolution> findByProjectIdAndCapabilityIdOrderByOccurredAtAscCreatedAtAsc(UUID projectId, UUID capabilityId, Pageable pageable);
     Page<ProjectCapabilityEvolution> findByProjectIdOrderByOccurredAtDescCreatedAtDesc(UUID projectId, Pageable pageable);
     List<ProjectCapabilityEvolution> findByProjectIdAndCapabilityIdOrderByOccurredAtAscCreatedAtAsc(UUID projectId, UUID capabilityId);
     long countByCapabilityId(UUID capabilityId);

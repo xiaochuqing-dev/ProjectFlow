@@ -1,5 +1,12 @@
 # Known risks
 
+- V3.4.3 仅支持 loopback stdio MCP；远程传输、远程身份、Telegram 与正式 Hermes 配置分发未实现，不能把本地验收描述为远程能力。
+- Gateway audit 仍由 Hibernate `ddl-auto=update` 建表，没有 Flyway；必须持续保留当前 H2 安全副本、旧库升级和 PostgreSQL 门禁。
+- Unified Search 是有界数据库候选与字段匹配，不是全文搜索引擎；超大项目需要按类型、时间和分页收窄，不能取消边界全量返回。
+- Hermes 外部模型回答质量依赖宿主模型，但 ProjectFlow 只负责提供有界、可追溯、明确 SOURCE/DERIVED 的数据；不得持久化 Hermes 问题或答案为事实。
+- 真实 Hermes 配置和 Provider Key 只能用于进程内隔离验收，不得复制或提交。
+- V3.4.3 尚未实现 Obsidian 投影；查询无事实时必须明确无正式同步，不得推测。
+
 - V3.4.2 能力表仍通过 Hibernate `ddl-auto=update` 升级，尚无 Flyway 版本；必须保留文件型 H2 安全副本和 PostgreSQL 16 Testcontainers 门禁，禁止删库规避升级问题。
 - Provider 可能返回 Schema 漂移、遗漏 fact 或高风险 merge；严格校验会拒绝本次刷新并保留旧 READY，用户看到的是 stale/attention 而不是部分覆盖冒充成功。
 - 旧能力卡片只有 CONFIRMED 且 sourceRefs 可追到 ProjectFact 时才迁移；无来源旧卡片继续留在兼容区，不能伪造事实关系。

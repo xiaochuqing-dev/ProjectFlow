@@ -37,6 +37,7 @@ public interface ProjectTimelineSummaryRepository extends JpaRepository<ProjectT
     List<ProjectTimelineSummary> findByProjectIdAndGranularityOrderByPeriodKeyDesc(
         UUID projectId, TimelineGranularity granularity
     );
+    List<ProjectTimelineSummary> findByProjectIdOrderByUpdatedAtDesc(UUID projectId);
     long countByProjectIdAndStatusIn(UUID projectId, List<ProjectTimelineSummaryStatus> statuses);
     Optional<ProjectTimelineSummary> findFirstByProjectIdOrderByUpdatedAtDesc(UUID projectId);
     List<ProjectTimelineSummary> findByProjectIdAndStatusInOrderByUpdatedAtAsc(

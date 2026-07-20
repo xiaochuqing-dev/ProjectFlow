@@ -1,7 +1,8 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { removeTestRepository } from "./support/repository-cleanup";
 
 const backend = "http://127.0.0.1:18037/api";
 const modelControl = "http://127.0.0.1:19037/control";
@@ -20,7 +21,7 @@ test.beforeEach(async ({ request }) => {
 test.afterEach(async ({ request }) => {
   for (const projectId of projects) await request.delete(`${backend}/projects/${projectId}`, { headers }).catch(() => undefined);
   projects.clear();
-  for (const repository of repositories) rmSync(repository, { recursive: true, force: true });
+  for (const repository of repositories) removeTestRepository(repository);
   repositories.clear();
 });
 

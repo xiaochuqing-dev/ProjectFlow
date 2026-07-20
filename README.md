@@ -1,10 +1,19 @@
 # ProjectFlow
 
-ProjectFlow V3.4.2 is a local-first project memory system for AI-assisted solo developers. It reads real Git, worktree, and Agent evidence, automatically organizes development facts, maintains a traceable timeline, and explains what the complete fact history proves the project can do.
+ProjectFlow V3.4.3 is a local-first project memory system for AI-assisted solo developers. It reads real Git, worktree, and Agent evidence, automatically organizes development facts, maintains a traceable timeline and capability map, and exposes the same bounded project-memory semantics to local agents through a read-only Gateway and MCP server.
 
 ProjectFlow 自动维护项目从创建至今的长期记忆。让每一个项目记得自己是怎样成长到今天的。
 
 Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns that raw development evidence into durable Change Batches, evidence-backed Project Facts, and long-lived Project Memory.
+
+## V3.4.3 Project Memory Gateway and Hermes MCP
+
+- Project Memory Gateway is the shared read-only semantic layer for Snapshot, occurrence-time Recent Changes, cross-layer Search, Timeline, Capabilities, chronological Evolution, Fact Trace and a budgeted Project Brief.
+- ProjectFact remains the only factual source. Timeline, Capability and Evolution results are explicitly derived and keep stable entity IDs and evidence links.
+- Recent/history reads use when work actually occurred, not when it was analyzed, recorded or synchronized. Failed derived refreshes retain deterministic facts and the last successful view.
+- Every endpoint is project-owned, compact by default, paged/bounded, model-free on GET and safely audited without storing full private queries.
+- `integrations/hermes/projectflow_mcp.py` exposes nine narrow, idempotent, non-destructive stdio tools. It accepts only a loopback ProjectFlow backend in this release and contains no generic REST or write tool.
+- Hermes is a consumer, never a fact source. Obsidian formal projection remains V3.4.4 and will reuse the same Gateway semantics.
 
 ## V3.4.2 Fact-native Lifecycle Capability Map
 
