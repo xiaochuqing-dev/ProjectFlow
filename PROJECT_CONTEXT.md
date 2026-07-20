@@ -6,7 +6,7 @@ Use this file as the first read for substantial ProjectFlow work. It is a compac
 
 ## Product Position
 
-ProjectFlow V3.4.3 is a local-first project memory system for AI-assisted solo developers. It automatically organizes real development evidence into durable project facts, maintains a traceable timeline and stable lifecycle Capability Map, and exposes those layers through one bounded Project Memory Gateway and local read-only Hermes MCP adapter.
+ProjectFlow V3.4.4 is a local-first project memory system for AI-assisted solo developers. It automatically organizes real development evidence into durable project facts, maintains a traceable timeline and stable lifecycle Capability Map, and exposes those layers through one bounded Project Memory Gateway to local read-only Hermes and a curated Obsidian knowledge projection.
 
 Current direction:
 
@@ -16,12 +16,22 @@ Current direction:
 - Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
 
+V3.4.4 focus:
+
+- Obsidian consumes Project Memory Gateway as a knowledge projection, not a source of truth or database mirror. It never calls a model or writes ProjectFlow facts and derived entities.
+- Default CORE produces Overview, monthly Timeline, stable Capability notes, compact monthly Fact indexes and navigation indexes. EXTENDED adds high-value facts; FULL_FACTS is explicit.
+- The repository-local CLI provides validate, dry-run, status and one-shot sync against an existing Vault and dedicated managed root. There is no frontend page, watcher or global configuration.
+- Stable entity metadata, source version/content hash, projection version and a recoverable manifest drive deterministic incremental plans; unchanged notes receive zero writes.
+- Managed blocks preserve user frontmatter and authored content. Identity/marker/hash conflicts do not overwrite, and atomic writes recover from interruption.
+- Traversal, absolute escape, symlink/junction, reserved names, invalid characters, Unicode normalization and case collisions are constrained. Capability rename keeps stable paths and merge preserves redirect notes.
+- After V3.4.4 the next phase is backend business/logic consolidation, followed later by a full frontend rebuild.
+
 V3.4.3 focus:
 
 - Project Memory Gateway supplies snapshot, occurrence-time recent changes, unified cross-layer search, timeline, capabilities, evolution, fact trace and budgeted brief semantics.
 - ProjectFact remains SOURCE; Timeline, Capability and Evolution remain DERIVED. Stable IDs and occurrence time are shared across consumers.
 - Reads are owned, paged/bounded, compact by default, model-free and safely audited without full query text or credentials.
-- The repository-local Python stdio MCP exposes nine read-only tools to Hermes and accepts only a loopback backend. Remote transport and Obsidian projection are later boundaries.
+- The repository-local Python stdio MCP exposes nine read-only tools to Hermes and accepts only a loopback backend. Remote transport remains a later secured boundary; Obsidian now reuses the same Gateway locally.
 
 V3.4.2 focus (still applies):
 
@@ -31,7 +41,7 @@ V3.4.2 focus (still applies):
 - Maturity is deterministic and explainable. Merges are non-destructive; unsafe or incomplete classification becomes capability attention.
 - Durable dirty/fingerprint/job state keeps GET model-free, coalesces duplicate work, defers full-map refresh during history backfill, and preserves the last successful map on failure.
 - `/project-intelligence/capabilities` is the main capability map. Legacy cards remain a compatibility section; only traceable CONFIRMED cards may seed stable capabilities.
-- Timeline Theme is not Project Capability. Hermes now consumes the Gateway read-only; Obsidian remains the next projection consumer.
+- Timeline Theme is not Project Capability. Hermes and Obsidian now consume the Gateway read-only for different immediate-query and long-term-reading uses.
 
 V3.4.1 focus (still applies):
 
@@ -39,7 +49,7 @@ V3.4.1 focus (still applies):
 - Day exposes facts directly. Week/month/lifecycle summaries are derived, replaceable model output with explicit complete coverage and no next steps, roadmap, priority, or future planning.
 - Timeline summaries and period-local themes never mutate facts. Theme membership traces to owned facts and evidence; Timeline Theme is not Project Capability.
 - Fact after-commit events mark affected week/month/lifecycle scopes dirty. Persistent refresh jobs coalesce work, keep GET model-free, defer while history backfill runs, and preserve old READY content on refresh failure.
-- `/timeline` is the main time view. `/dev-logs` and Daily Review remain legacy compatibility; formal Hermes/Obsidian sync remains future work.
+- `/timeline` is the main time view. `/dev-logs` and Daily Review remain legacy compatibility; external consumers reuse the Gateway and do not alter Timeline.
 
 V3.4.0 focus:
 

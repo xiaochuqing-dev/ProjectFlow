@@ -381,3 +381,7 @@ All resource access is scoped through `projects.user_id`. A user can access task
 ## V3.4.3 memory read audit
 
 `project_memory_read_audits` stores safe operational metadata for Gateway reads: user/project ownership, operation, result count, latency, status, caller hash, query length/hash, entity types, bounded filter summary and timestamp. It deliberately does not store full query text, credentials, authorization, prompts, responses, reasoning or project content. Audit rows are deleted with their project. The Gateway otherwise adds no new source-of-truth entity.
+
+## V3.4.4 projection state
+
+Obsidian adds no database entity. `.projectflow-manifest.json` is a Vault-local, atomically replaced and rebuildable projection index containing project/profile, stable entity keys, relative note paths, source versions, managed hashes, projection version, redirects, conflicts and sync generation. Note frontmatter repeats the stable identity/version/hash needed for discovery and recovery. Neither manifest nor Markdown is authoritative; ProjectFact remains SOURCE and Timeline/Capability/Evolution remain DERIVED Gateway data.

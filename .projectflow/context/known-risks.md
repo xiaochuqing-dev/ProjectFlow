@@ -1,18 +1,23 @@
 # Known risks
 
+- Obsidian V3.4.4 是手动 one-shot CLI，不包含 watcher、后台定时器或正式前端配置；自动同步留给后续受控设计。
+- Projection manifest 是可重建状态而非事实源；用户复制同一受管实体形成多个 Note 时必须进入 conflict，由用户消除重复，不能自动猜测。
+- CORE 的月度 Fact Index 会随单月事实量增长；当前有总输入、分页和响应边界，超大项目仍应观察单月文件可读性，不能退化为默认一 Fact 一文件。
+- 原子替换依赖本地文件系统语义；只支持现有本地 Vault 与 loopback ProjectFlow，网络盘、远程 Vault 和跨设备原子性未承诺。
+- FULL_FACTS 会显式生成大量文件，只适合用户主动选择；默认始终是 CORE。
+
 - V3.4.3 仅支持 loopback stdio MCP；远程传输、远程身份、Telegram 与正式 Hermes 配置分发未实现，不能把本地验收描述为远程能力。
 - Gateway audit 仍由 Hibernate `ddl-auto=update` 建表，没有 Flyway；必须持续保留当前 H2 安全副本、旧库升级和 PostgreSQL 门禁。
 - Unified Search 是有界数据库候选与字段匹配，不是全文搜索引擎；超大项目需要按类型、时间和分页收窄，不能取消边界全量返回。
 - Hermes 外部模型回答质量依赖宿主模型，但 ProjectFlow 只负责提供有界、可追溯、明确 SOURCE/DERIVED 的数据；不得持久化 Hermes 问题或答案为事实。
 - 真实 Hermes 配置和 Provider Key 只能用于进程内隔离验收，不得复制或提交。
-- V3.4.3 尚未实现 Obsidian 投影；查询无事实时必须明确无正式同步，不得推测。
 
 - V3.4.2 能力表仍通过 Hibernate `ddl-auto=update` 升级，尚无 Flyway 版本；必须保留文件型 H2 安全副本和 PostgreSQL 16 Testcontainers 门禁，禁止删库规避升级问题。
 - Provider 可能返回 Schema 漂移、遗漏 fact 或高风险 merge；严格校验会拒绝本次刷新并保留旧 READY，用户看到的是 stale/attention 而不是部分覆盖冒充成功。
 - 旧能力卡片只有 CONFIRMED 且 sourceRefs 可追到 ProjectFact 时才迁移；无来源旧卡片继续留在兼容区，不能伪造事实关系。
 - 42 条旧 attention 的确定性重分类只移除“发生时间回退”这一单一异常；质量问题、可能重复等其他原因继续保留 attention。
 - 全历史 bootstrap 会增加首次模型调用和写入成本；120-fact chunk、job 请求/token/时长预算和 history 完成后统一刷新限制规模。
-- Hermes 与 Obsidian 尚无正式同步协议；下一阶段只能消费 Facts、Timeline 与 Capabilities，不能成为新的事实源。
+- Hermes 与 Obsidian 都只能消费 Gateway，不能成为新的事实源；远程接入与外部写回仍无正式协议。
 - 禁止通过修改系统文件或全局机器配置解决环境问题；只能使用仓库内和进程内方案。
 
 - V3.4.1 Timeline 派生表仍通过 Hibernate `ddl-auto=update` 升级，尚无 Flyway 版本；必须保留复制库、当前真实 H2 与 PostgreSQL Testcontainers 验收，禁止以删库处理升级问题。

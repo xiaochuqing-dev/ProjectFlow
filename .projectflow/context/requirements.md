@@ -1,3 +1,14 @@
+# V3.4.4 requirements
+
+1. Obsidian 必须复用 Project Memory Gateway，保持 ProjectFact 唯一事实来源与 occurredAt/eventAt 时间语义。
+2. 默认 CORE 生成 Overview、月度 Timeline、长期 Capability、月度 Fact Index 和导航索引，不默认一 Fact 一文件。
+3. 每个 Note 使用稳定 frontmatter；同步由 entity/version/hash/projection version/manifest 驱动，UNCHANGED 零写入。
+4. 只允许写现有 Vault 下的专用 managed root 和 managed block，用户内容必须保留；冲突不得静默覆盖。
+5. 路径遍历、symlink/junction、Windows 保留名、非法字符、Unicode、大小写碰撞必须安全处理，文件与 manifest 原子写入。
+6. CLI 提供 validate、dry-run、status、sync；默认不调用模型，不新增前端或全局配置。
+7. rename 保持稳定链接，merge 保留旧 Note、历史与 redirect；中断和 manifest 损坏可恢复。
+8. 使用 5000 facts/36 months/100 capabilities/1000 evolutions 与当前 H2 安全副本验收，完整真实状态写入 V3.4.4 report。
+
 # V3.4.3 requirements
 
 1. 建立统一只读 Project Memory Gateway，覆盖 Snapshot、Recent、Search、Timeline、Capabilities、Evolution、Fact Trace 和 Brief。

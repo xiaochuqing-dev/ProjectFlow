@@ -1,9 +1,23 @@
-<!-- PROJECTFLOW V3.4.2 CONTEXT START -->
-ProjectFlow 当前版本为 V3.4.3。后续 Agent 必须按“分析新变化 -> 开发推进段 -> 自动项目事实 -> 项目记录 / 项目记忆 -> 自动项目历程 -> 全生命周期能力地图 -> Project Memory Gateway -> Hermes 只读消费”理解产品。正常事实和能力演进不逐条确认，只有异常进入“需要关注”。
+<!-- PROJECTFLOW V3.4.4 CONTEXT START -->
+ProjectFlow 当前版本为 V3.4.4。后续 Agent 必须按“分析新变化 -> 开发推进段 -> 自动项目事实 -> 项目记录 / 项目记忆 -> 自动项目历程 -> 全生命周期能力地图 -> Project Memory Gateway -> Hermes 只读消费 / Obsidian 长期知识投影”理解产品。正常事实和能力演进不逐条确认，只有异常进入“需要关注”。
 
 开始任务前请阅读 `.projectflow/AGENT_PROTOCOL.md`。完成开发任务后，按协议把结果写入 `.projectflow/agent-results/`。不要删除添加项目、zip 导入、本地项目绑定、模型配置、登录等核心入口。
 
 开发推进段和项目事实必须描述真实发生的开发结果、用户或开发者可感知变化、验证情况和不确定项。禁止用 backend/frontend/docs/config 等目录名、提交数量或“开发推进”空话替代具体摘要。能力主页面以长期 `ProjectCapability` 地图为主，旧 `ProjectCapabilityCard` 和 `completedCapabilities` 仅作兼容档案。
+
+V3.4.4 Obsidian Projection / Sync 规则（后续 Agent 必须遵守）：
+- Obsidian 是知识投影，不是事实来源或数据库镜像；必须复用 Project Memory Gateway，不得直接重拼 Fact、Timeline、Capability Repository。
+- 默认 CORE 只生成 Overview、月度 Timeline、长期 Capability、月度 Fact Index 和导航索引，禁止默认一条 Fact 一个文件；EXTENDED 只增加高价值 Fact，FULL_FACTS 必须显式选择。
+- ProjectFlow 只能写已配置 Vault 下的专用 managed root，只能替换 ProjectFlow managed block；用户 frontmatter 与 block 外内容必须原样保留。
+- 增量同步必须使用稳定 entity ID、source version、content hash、projection version 和 managed-root manifest；UNCHANGED 必须零写入。
+- 所有写入使用临时文件、flush/fsync 和原子替换；中断后重试不得产生半文件或重复文件。
+- managed block、marker、实体身份或归属冲突时禁止静默覆盖，必须保留用户文件并返回 conflict。
+- 路径遍历、绝对路径逃逸、symlink、Windows junction、保留设备名、非法字符、Unicode 和大小写碰撞必须安全处理。
+- 用户移动或重命名受管 Note 后以稳定实体元数据重建索引；Capability rename 保留稳定路径，merge 保留旧 Note、历史和 redirect。
+- manifest 仅是可重建的投影状态，不是事实来源；损坏时从 Gateway 与受管 Note 恢复，禁止清空 Vault。
+- Obsidian 同步默认不调用模型，不写回 ProjectFact、Timeline、Capability 或 Evolution，不输出 diff、原文件、raw Agent result、模型原文、reasoning、凭证、诊断或绝对路径。
+- 本阶段只提供仓库内 validate/dry-run/status/sync CLI，不新增前端页面、一级导航、watcher 或全局配置。
+- V3.4.4 后下一阶段是 backend business/logic consolidation，再进行完整前端重建。
 
 V3.4.3 Project Memory Gateway / Hermes 规则（后续 Agent 必须遵守）：
 - Project Memory Gateway 是 Facts、Timeline、Capabilities、Evolutions 对外的统一只读业务语义层；不得让外部消费者直接拼接内部 Repository 或全部 REST。
@@ -142,7 +156,7 @@ V3.3.3 仍有效的关键决策：
 - 多来源证据（本地 Git / 工作区 diff / GitHub / Agent result / 扫描范围）要整理成分析输入快照交给模型，模型基于证据灵活判断真实开发状态，不写死优先级。
 - 需要模型理解的入口（分析新变化、分析项目能力）必须有模型配置前置检查；未配置模型时不生成低质量本地模板结果，明确提示去配置模型。
 - 规则负责证据事实，模型负责灵活理解；正常客观事实自动记录，用户只处理主观编辑和异常关注项。
-<!-- PROJECTFLOW V3.4.2 CONTEXT END -->
+<!-- PROJECTFLOW V3.4.4 CONTEXT END -->
 
 # ProjectFlow Local Rules
 

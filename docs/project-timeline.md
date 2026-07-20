@@ -44,4 +44,8 @@ Timeline API 提供 overview、周期列表、周期详情、主题事实、life
 
 前端 `/timeline` 默认按月，支持按日、按周、按月和全部；项目切换立即清除旧状态，并用请求代次阻止慢响应覆盖新项目。`/dev-logs` 继续作为 Daily Review 旧链接兼容，不再是主导航时间视图。
 
-V3.4.1 本身不实现完整生命周期能力地图。V3.4.2 已在 ProjectFact 与 Timeline 之上增加独立 Capability Map：Timeline 仍回答“何时发生”，Capability 回答“完整事实证明具备什么能力”。Timeline Theme 不能直接成为 Capability，能力只绑定具体 ProjectFact。Hermes 和 Obsidian 正式同步仍属于后续阶段。
+V3.4.1 本身不实现完整生命周期能力地图。V3.4.2 已在 ProjectFact 与 Timeline 之上增加独立 Capability Map：Timeline 仍回答“何时发生”，Capability 回答“完整事实证明具备什么能力”。Timeline Theme 不能直接成为 Capability，能力只绑定具体 ProjectFact。
+
+## V3.4.4 外部时间投影
+
+Hermes 与 Obsidian 都通过 Project Memory Gateway 使用同一 Timeline 语义。Obsidian 月度 Note 只按 fact `eventAt`/`occurredAt` 归属，直接复用既有 summary、theme、统计与覆盖警告，不重新调用模型。7 月发生、8 月分析或同步的事实仍只进入 `YYYY-07.md`；`recordedAt`、`analyzedAt`、`syncedAt` 只作可解释元数据，不能改变月份。

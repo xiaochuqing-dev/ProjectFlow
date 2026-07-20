@@ -39,3 +39,7 @@ On restart, QUEUED is re-enqueued. A pre-model RUNNING job becomes RETRYABLE. A 
 ## V3.4.3 read-only integrations
 
 Project Memory Gateway and the Hermes stdio adapter do not create persistent jobs. Every read operates on the last persisted fact/timeline/capability state and never triggers model work from GET. A restarted MCP process rediscovers the same tools and data. Audit persistence is deliberately independent from source/derived memory state, so an audit failure cannot change or erase project memory.
+
+## V3.4.4 manual projection
+
+Obsidian sync is a repository-local one-shot CLI, not a durable ProjectFlow job. `dry-run` and `status` calculate the same deterministic plan without writes; `sync` executes atomic note and manifest replacements. No watcher, scheduler, debounce queue or model task is created. Interruption is recovered by cleaning recognized temp files and rebuilding the plan from Gateway plus note metadata.

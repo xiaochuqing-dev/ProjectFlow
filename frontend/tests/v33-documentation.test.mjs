@@ -17,7 +17,7 @@ assert.match(embeddedLauncher, /Arguments @\("run", "build"\)/, "embedded launch
 assert.match(embeddedLauncher, /last-embedded-build\.json/, "embedded launcher should record runtime build evidence");
 
 const readme = read("README.md");
-for (const term of ["ProjectFlow V3.4.3", "Project Fact", "Change Batch", "Development Segment", "Project Records", "Project Memory", "Project Capability", "Capability Evolution", "Project Memory Gateway", "Hermes MCP", "GitHub CLI"]) {
+for (const term of ["ProjectFlow V3.4.4", "Project Fact", "Change Batch", "Development Segment", "Project Records", "Project Memory", "Project Capability", "Capability Evolution", "Project Memory Gateway", "Hermes MCP", "Obsidian Projection", "Managed Root", "GitHub CLI"]) {
   assert.match(readme, new RegExp(term), `README should explain ${term}`);
 }
 assert.match(readme, /本地 Git.*主数据源/s, "README should retain local Git as the primary source");
@@ -25,11 +25,11 @@ assert.match(readme, /Agent result files are an enhancement/, "README should exp
 assert.match(readme, /ProjectFactCursor.*after fact ingestion succeeds/s, "README should explain the automatic fact cursor boundary");
 
 const agents = read("AGENTS.md");
-assert.match(agents, /PROJECTFLOW V3\.4\.2 CONTEXT START/, "AGENTS should contain the bounded V3.4.2 context entry");
+assert.match(agents, /PROJECTFLOW V3\.4\.4 CONTEXT START/, "AGENTS should contain the bounded V3.4.4 context entry");
 assert.match(agents, /\.projectflow\/AGENT_PROTOCOL\.md/, "AGENTS should route agents to the detailed protocol");
 
 const context = read("PROJECT_CONTEXT.md");
-assert.match(context, /ProjectFlow V3\.4\.3/, "compact project context should identify the current release");
+assert.match(context, /ProjectFlow V3\.4\.4/, "compact project context should identify the current release");
 assert.match(context, /分析新变化.*DevelopmentSegment.*ProjectFact.*项目记忆/s, "compact project context should record the automatic fact workflow");
 
 for (const path of [
@@ -45,6 +45,7 @@ for (const path of [
   "docs/project-capability-map.md",
   "docs/project-memory-gateway.md",
   "docs/hermes-mcp-integration.md",
+  "docs/obsidian-projection-sync.md",
 ]) {
   assert.ok(existsSync(join(root, path)), `${path} should be versioned`);
 }

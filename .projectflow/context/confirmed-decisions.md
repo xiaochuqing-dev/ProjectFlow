@@ -1,3 +1,14 @@
+# Confirmed V3.4.4 decisions
+
+- Obsidian 是 Project Memory Gateway 的可重建知识投影消费者，不是事实源、数据库镜像或新的模型摘要入口。
+- 默认 CORE 只生成 Overview、月度 Timeline、Capability、月度 Fact Index 与三个索引；EXTENDED 只增加高价值 Fact，FULL_FACTS 必须显式选择。
+- 同步只写现有 Vault 内的 dedicated managed root，只替换 managed block；用户 frontmatter 与 block 外内容必须保留。
+- 稳定 entity ID、source version、content hash、projection version 与 manifest 驱动 deterministic plan；UNCHANGED 零写入，文件原子替换。
+- managed 内容、marker、身份、重复实体或路径边界冲突时保留原文件并写 conflict；禁止静默覆盖、清空或目录全量重建。
+- 用户移动由实体元数据发现，Capability rename 保持旧路径，merge 保留旧 Note、历史与 redirect。
+- repository-local CLI 提供 validate、dry-run、status、sync；不增加前端、watcher、系统配置或用户 Vault 猜测。
+- V3.4.4 后先做 backend business/logic consolidation，再进行完整前端重建。
+
 # Confirmed V3.4.3 decisions
 
 - Project Memory Gateway 是 Facts、Timeline、Capabilities、Evolutions 的统一只读业务语义层，不是内部 REST 聚合泄漏层。
@@ -5,7 +16,7 @@
 - Gateway 和 Hermes MCP 只有读工具，GET 不调用模型，不写 facts/cursors/history/map；compact、分页和输出预算有硬边界。
 - Fact trace 仅返回有界、脱敏、仓库相对证据；审计只保存 query/caller 哈希与长度。
 - V3.4.3 只支持 local stdio + loopback ProjectFlow；远程 MCP 和 Telegram 不实现。
-- Hermes 是即时查询消费者；Obsidian 是下一阶段长期阅读投影消费者，两者不能成为事实源。
+- Hermes 是即时查询消费者；Obsidian 是长期阅读投影消费者，两者都不能成为事实源。
 - 前端冻结，核心 Fact/Timeline/Capability/ModelGateway/Job 不无故重构。
 
 # Confirmed V3.4.2 decisions

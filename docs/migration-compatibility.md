@@ -43,3 +43,7 @@ Hibernate `ddl-auto=update` adds capability, evolution, relation, coverage, atte
 ## V3.4.3 Gateway compatibility
 
 Hibernate adds only the safe memory-read audit table; Gateway DTOs and indexes reuse current entities. Existing ProjectFact, Timeline, Capability, Evolution, cursors, history and legacy rows are not rewritten. The one compatibility correction is temporal: a legacy sediment linked to an owned source batch inherits the batch's actual occurrence window and receives its Timeline assignment instead of being placed under migration time. The migration remains idempotent and preserves the original sediment and source batch. Current-database acceptance must run on a byte-identical safe copy and re-hash the untouched original afterward.
+
+## V3.4.4 projection compatibility
+
+Obsidian projection requires no schema migration and does not modify H2/PostgreSQL. Projection version `1` is stored in note metadata and manifest for future migrations. Missing/corrupt manifests are reconstructed from stable note identity and current Gateway output; established note paths survive capability rename and user move. Capability merge and profile/source removal are non-destructive redirects or archived entries. Existing Vault files outside the configured managed root are never inspected or changed.

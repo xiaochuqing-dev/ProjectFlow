@@ -181,8 +181,12 @@ Those later consumers must build on Project Facts without modifying the original
 
 ## V3.4.2 capability consumer
 
-Capability Map is now a derived long-lived consumer of the full ProjectFact set. It may add ProjectCapability, immutable Evolution, fact relations, coverage and attention, but it never edits or deletes a fact, changes FactCursor, or treats Timeline Summary/Theme as factual input. Each source fact is classified for the current generation. Failed generation preserves the previous successful map. Formal Hermes and Obsidian integrations remain later consumers of the same facts, Timeline and capabilities.
+Capability Map is now a derived long-lived consumer of the full ProjectFact set. It may add ProjectCapability, immutable Evolution, fact relations, coverage and attention, but it never edits or deletes a fact, changes FactCursor, or treats Timeline Summary/Theme as factual input. Each source fact is classified for the current generation. Failed generation preserves the previous successful map. Hermes and Obsidian consume the same facts, Timeline and capabilities through Project Memory Gateway.
 
 ## V3.4.3 external read semantics
 
 Project Memory Gateway is the stable consumer boundary for Project Facts and their derived views. It keeps Fact as SOURCE and Timeline/Capability/Evolution as DERIVED, uses occurrence time for recent/history placement, and exposes evidence trace without internal or sensitive payloads. Hermes consumes this boundary through local stdio MCP. It cannot create, modify, merge or delete a fact, and its read/audit activity does not advance FactCursor or alter history coverage.
+
+## V3.4.4 curated fact projection
+
+Obsidian uses Gateway month details to create compact monthly Fact Index notes. CORE never emits one note per fact. EXTENDED selects evolution-referenced and attention facts; FULL_FACTS must be explicit. Every projected fact retains stable Fact ID, occurrence time, status, source batch, related capability and a Fact Trace reference without copying raw evidence, diffs or source files. Projection sync cannot change a fact, cursor, history state or record time.

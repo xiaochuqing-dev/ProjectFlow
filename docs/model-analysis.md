@@ -41,3 +41,7 @@ Legal JSON with the wrong business shape is not classified as a syntax failure. 
 ## V3.4.3 integration boundary
 
 Project Memory Gateway, all nine Hermes MCP tools and the budgeted project brief are deterministic reads of already persisted memory. They do not register a ModelTaskType, call ModelGateway, summarize again, or persist agent answers. Any model used by a Hermes host remains outside ProjectFlow and receives only the bounded, sanitized Gateway result selected by the tool call.
+
+## V3.4.4 projection boundary
+
+Obsidian projection has no `ModelTaskType` and never calls ModelGateway. It deterministically formats the already persisted Snapshot, Timeline summaries/themes, Capabilities, Evolutions and Facts returned by Project Memory Gateway. Sync does not create editorial summaries, prompts, responses, reasoning diagnostics or Provider cost; the same source version and content hash therefore produce a stable no-op.

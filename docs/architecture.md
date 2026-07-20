@@ -289,4 +289,8 @@ The durable flow is ProjectFact truth → Timeline temporal read model → Proje
 
 ## V3.4.3 Project Memory Gateway and Hermes
 
-Project Memory Gateway is an additive read-only business layer over Facts, Timeline, Capabilities and Evolutions. It normalizes snapshot, occurrence-time recent changes, cross-layer search, timeline, capability/evolution, fact trace and budgeted brief semantics while retaining explicit SOURCE versus DERIVED labels. The local stdio MCP adapter maps nine narrow tools to this Gateway. Neither the adapter nor GET endpoints invoke models or write project memory. Remote MCP and Obsidian projection remain separate boundaries.
+Project Memory Gateway is an additive read-only business layer over Facts, Timeline, Capabilities and Evolutions. It normalizes snapshot, occurrence-time recent changes, cross-layer search, timeline, capability/evolution, fact trace and budgeted brief semantics while retaining explicit SOURCE versus DERIVED labels. The local stdio MCP adapter maps nine narrow tools to this Gateway. Neither the adapter nor GET endpoints invoke models or write project memory. Remote MCP remains a separate secured boundary.
+
+## V3.4.4 Obsidian projection boundary
+
+The repository-local projection CLI is a second Gateway consumer beside Hermes. It builds curated Markdown in a configured Vault managed root, never queries repositories directly, invokes a model, or writes ProjectFlow state. CORE keeps file growth proportional to months and capabilities rather than facts. Stable metadata and a recoverable manifest form the incremental control plane; managed blocks, conflicts, path containment, atomic replacement and non-destructive redirects protect user content. No frontend, watcher, persistent sync job or operating-system integration is added.

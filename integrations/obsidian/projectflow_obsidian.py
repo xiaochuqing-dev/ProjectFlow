@@ -1,0 +1,1042 @@
+#!/usr/bin/env python3
+"""Safe, curated ProjectFlow Project Memory projection for Obsidian vaults."""
+
+from __future__ import annotations
+
+import argparse
+import copy
+import hashlib
+import ipaddress
+import json
+import os
+import re
+import stat
+import sys
+import unicodedata
+import urllib.error
+import urllib.parse
+import urllib.request
+import uuid
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path, PurePath
+from typing import Any, Callable, Iterable
+
+
+PROJECTION_VERSION = "1"
+MANIFEST_NAME = ".projectflow-manifest.json"
+MANIFEST_BACKUP_NAME = ".projectflow-manifest.backup.json"
+CONFLICT_NAME = ".projectflow-conflicts.json"
+BEGIN_MARKER = "<!-- PROJECTFLOW:BEGIN -->"
+END_MARKER = "<!-- PROJECTFLOW:END -->"
+PROFILES = {"CORE", "EXTENDED", "FULL_FACTS"}
+MAX_PERIODS = 600
+MAX_FACTS = 100_000
+MAX_CAPABILITIES = 2_000
+MAX_EVOLUTIONS = 100_000
+MAX_PAGES = 1_000
+RESERVED_NAMES = {"CON", "PRN", "AUX", "NUL", *{f"COM{i}" for i in range(1, 10)}, *{f"LPT{i}" for i in range(1, 10)}}
+INVALID_FILENAME = re.compile(r"[<>:\"/\\|?*\x00-\x1f]")
+UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+
+
+class ProjectionError(Exception):
+    def __init__(self, code: str, message: str, *, retryable: bool = False):
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.retryable = retryable
+
+    def payload(self) -> dict[str, Any]:
+        return {"error": {"code": self.code, "message": self.message, "retryable": self.retryable}}
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def compact_text(value: Any, limit: int = 500) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    return text if len(text) <= limit else text[: max(1, limit - 1)].rstrip() + "…"
+
+
+def normalize_block(value: str) -> str:
+    return value.replace("\r\n", "\n").replace("\r", "\n").strip() + "\n"
+
+
+def filename(value: str, fallback: str = "未命名") -> str:
+    normalized = unicodedata.normalize("NFKC", str(value or ""))
+    normalized = INVALID_FILENAME.sub("-", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip(" .-")
+    normalized = re.sub(r"-+", "-", normalized)
+    if not normalized:
+        normalized = fallback
+    if normalized.upper().split(".", 1)[0] in RESERVED_NAMES:
+        normalized = "_" + normalized
+    normalized = normalized[:80].rstrip(" .")
+    return normalized or fallback
+
+
+def stable_slug(value: str) -> str:
+    try:
+        return uuid.UUID(str(value)).hex
+    except (ValueError, AttributeError):
+        return sha256_text(str(value))[:32]
+
+
+def note_link(path: str, label: str | None = None, anchor: str | None = None) -> str:
+    target = path[:-3] if path.lower().endswith(".md") else path
+    if anchor:
+        target += anchor
+    return f"[[{target}{'|' + label if label else ''}]]"
+
+
+def yaml_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    return json.dumps("" if value is None else str(value), ensure_ascii=False)
+
+
+def parse_scalar(value: str) -> Any:
+    value = value.strip()
+    if value.lower() == "true":
+        return True
+    if value.lower() == "false":
+        return False
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return value.strip("'\"")
+
+
+def event_at(fact: dict[str, Any]) -> str:
+    times = fact.get("time") or {}
+    return str(times.get("eventAt") or times.get("occurredTo") or times.get("occurredFrom") or "")
+
+
+def event_month(fact: dict[str, Any]) -> str:
+    value = event_at(fact)
+    return value[:7] if re.match(r"^\d{4}-\d{2}", value) else "unknown"
+
+
+def status_label(value: Any) -> str:
+    labels = {
+        "RECORDED": "已记录", "NEEDS_ATTENTION": "需要关注", "ACTIVE": "活跃", "MERGED": "已合并",
+        "FORMING": "形成中", "FORMED": "已形成", "CONTINUOUSLY_ENHANCED": "持续增强", "LONG_TERM_STABLE": "长期稳定",
+        "NEW_CAPABILITY": "形成能力", "ENHANCE_CAPABILITY": "增强能力", "ADD_EVIDENCE": "补充证据",
+        "MERGE_CAPABILITY": "合并能力", "CORRECTION": "修正记录", "FORMED_CAPABILITY": "形成能力",
+        "ENHANCED_CAPABILITY": "增强能力", "ADDED_EVIDENCE": "补充证据", "MERGED_CAPABILITY": "合并能力",
+        "READY": "已就绪", "FAILED": "生成失败", "WAITING_FOR_MODEL": "等待模型",
+    }
+    return labels.get(str(value or ""), compact_text(value, 60) or "未知")
+
+
+class GatewayClient:
+    def __init__(self, base_url: str = "http://127.0.0.1:8080", token: str = "", timeout: float = 20.0):
+        self.base_url = base_url.strip().rstrip("/")
+        self.token = token.strip()
+        self.timeout = max(1.0, min(60.0, float(timeout)))
+        parsed = urllib.parse.urlparse(self.base_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise ProjectionError("PROJECTFLOW_BASE_URL_INVALID", "ProjectFlow backend URL is invalid.")
+        if not self._loopback(parsed.hostname):
+            raise ProjectionError("PROJECTFLOW_REMOTE_DISABLED", "Obsidian sync accepts only a local loopback ProjectFlow backend in V3.4.4.")
+
+    @staticmethod
+    def _loopback(host: str) -> bool:
+        if host.lower() == "localhost":
+            return True
+        try:
+            return ipaddress.ip_address(host).is_loopback
+        except ValueError:
+            return False
+
+    def get(self, path: str, params: dict[str, Any] | None = None) -> Any:
+        query = {key: value for key, value in (params or {}).items() if value is not None and value != ""}
+        url = self.base_url + path
+        if query:
+            url += "?" + urllib.parse.urlencode(query, doseq=True)
+        headers = {"Accept": "application/json", "X-ProjectFlow-Caller": "obsidian-projection"}
+        if self.token:
+            headers["Authorization"] = "Bearer " + self.token
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=self.timeout) as response:
+                raw = response.read(2_000_001)
+        except urllib.error.HTTPError as error:
+            raw = error.read(64_000)
+            try:
+                body = json.loads(raw.decode("utf-8"))
+                detail = body.get("error") or {}
+                code = str(detail.get("code") or "PROJECTFLOW_REQUEST_FAILED")
+                message = str(detail.get("message") or f"ProjectFlow returned HTTP {error.code}.")
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                code, message = "PROJECTFLOW_REQUEST_FAILED", f"ProjectFlow returned HTTP {error.code}."
+            raise ProjectionError(code, message, retryable=error.code >= 500) from None
+        except (urllib.error.URLError, TimeoutError, OSError):
+            raise ProjectionError("PROJECTFLOW_BACKEND_UNAVAILABLE", "ProjectFlow backend is unavailable at the configured local URL.", retryable=True) from None
+        if len(raw) > 2_000_000:
+            raise ProjectionError("PROJECTFLOW_RESULT_TOO_LARGE", "ProjectFlow response exceeded the projection input bound.")
+        try:
+            body = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            raise ProjectionError("PROJECTFLOW_RESPONSE_INVALID", "ProjectFlow returned invalid JSON.", retryable=True) from None
+        if not isinstance(body, dict) or "data" not in body:
+            raise ProjectionError("PROJECTFLOW_RESPONSE_INVALID", "ProjectFlow response did not contain the expected data envelope.", retryable=True)
+        return body["data"]
+
+    def collect(self, project_id: str) -> dict[str, Any]:
+        base = f"/api/projects/{project_id}/project-memory"
+        snapshot = self.get(base + "/snapshot")
+        lifecycle = self.get(base + "/timeline", {"granularity": "LIFECYCLE", "detailLevel": "detailed"})
+        period_summaries = self._pages(base + "/timeline", "periods", {"granularity": "MONTH", "detailLevel": "detailed"})
+        if len(period_summaries) > MAX_PERIODS:
+            raise ProjectionError("PROJECTFLOW_RESULT_TOO_LARGE", "Project timeline exceeded the projection period bound.")
+        months: list[dict[str, Any]] = []
+        total_facts = 0
+        for period in period_summaries:
+            key = period.get("periodKey")
+            page = 0
+            detail: dict[str, Any] | None = None
+            facts: list[dict[str, Any]] = []
+            while True:
+                response = self.get(base + "/timeline", {
+                    "granularity": "MONTH", "periodKey": key, "page": page, "size": 100, "detailLevel": "detailed",
+                })
+                current = response.get("period") or {}
+                if detail is None:
+                    detail = copy.deepcopy(current)
+                fact_page = current.get("facts") or {}
+                facts.extend(fact_page.get("items") or [])
+                if total_facts + len(facts) > MAX_FACTS:
+                    raise ProjectionError("PROJECTFLOW_RESULT_TOO_LARGE", "Project facts exceeded the projection input bound.")
+                if not fact_page.get("hasMore"):
+                    break
+                page += 1
+                if page >= MAX_PAGES:
+                    raise ProjectionError("PROJECTFLOW_RESULT_TOO_LARGE", "Project fact pagination exceeded the projection bound.")
+            detail = detail or {"periodKey": key, "facts": {}}
+            detail["facts"] = {"items": facts, "totalElements": len(facts), "hasMore": False}
+            months.append(detail)
+            total_facts += len(facts)
+        capabilities = self._pages(base + "/capabilities", None, {
+            "activeOnly": "false", "detailLevel": "detailed", "size": 100,
+        })
+        if len(capabilities) > MAX_CAPABILITIES:
+            raise ProjectionError("PROJECTFLOW_RESULT_TOO_LARGE", "Project capabilities exceeded the projection input bound.")
+        evolutions: dict[str, list[dict[str, Any]]] = {}
+        total_evolutions = 0
+        for capability in capabilities:
+            capability_id = str(capability.get("capabilityId"))
+            evolutions[capability_id] = self._pages(
+                base + f"/capabilities/{capability_id}/evolution", None, {"detailLevel": "detailed", "size": 100}
+            )
+            total_evolutions += len(evolutions[capability_id])
+            if total_evolutions > MAX_EVOLUTIONS:
+                raise ProjectionError("PROJECTFLOW_RESULT_TOO_LARGE", "Capability evolutions exceeded the projection input bound.")
+        return {"snapshot": snapshot, "lifecycle": lifecycle, "months": months, "capabilities": capabilities, "evolutions": evolutions}
+
+    def _pages(self, path: str, nested: str | None, params: dict[str, Any]) -> list[dict[str, Any]]:
+        items: list[dict[str, Any]] = []
+        page = 0
+        while True:
+            if page >= MAX_PAGES:
+                raise ProjectionError("PROJECTFLOW_RESULT_TOO_LARGE", "Project Memory pagination exceeded the projection bound.")
+            request = dict(params)
+            request.update({"page": page, "size": request.get("size", 100)})
+            response = self.get(path, request)
+            page_data = response.get(nested) if nested else response
+            page_data = page_data or {}
+            items.extend(page_data.get("items") or [])
+            if not page_data.get("hasMore"):
+                break
+            page += 1
+        return items
+
+
+@dataclass
+class ExistingNote:
+    path: str
+    metadata: dict[str, Any]
+    user_frontmatter: list[str]
+    before_block: str
+    managed_body: str
+    after_block: str
+
+
+@dataclass
+class DesiredNote:
+    key: str
+    entity_type: str
+    entity_id: str
+    path: str
+    source_version: str
+    source_updated_at: str
+    body: str
+    extra_metadata: dict[str, Any]
+    redirected: bool = False
+
+    @property
+    def managed_hash(self) -> str:
+        return sha256_text(normalize_block(self.body))
+
+
+class AtomicWriter:
+    def __init__(self):
+        self.writes = 0
+        self.bytes_written = 0
+
+    def write(self, target: Path, content: str) -> None:
+        if target.exists() and is_link_or_reparse(target):
+            raise ProjectionError("OBSIDIAN_SYMLINK_ESCAPE", "A managed target is a symlink or junction.")
+        temp = target.with_name(f".{target.name}.projectflow-{uuid.uuid4().hex}.tmp")
+        raw = content.encode("utf-8")
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with open(temp, "xb") as handle:
+                handle.write(raw)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temp, target)
+        except OSError as error:
+            raise ProjectionError("OBSIDIAN_WRITE_FAILED", "Atomic managed-file write failed.", retryable=True) from error
+        finally:
+            if temp.exists():
+                try:
+                    temp.unlink()
+                except OSError:
+                    pass
+        self.writes += 1
+        self.bytes_written += len(raw)
+
+
+def is_link_or_reparse(path: Path) -> bool:
+    try:
+        value = path.lstat()
+    except FileNotFoundError:
+        return False
+    if stat.S_ISLNK(value.st_mode):
+        return True
+    attributes = getattr(value, "st_file_attributes", 0)
+    return bool(attributes & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400))
+
+
+class ObsidianProjection:
+    def __init__(
+        self,
+        source: Any,
+        vault: str | Path,
+        managed_root: str = "ProjectFlow",
+        profile: str = "CORE",
+        now: Callable[[], str] = utc_now,
+        interrupt_after_notes: int | None = None,
+    ):
+        self.source = source
+        self.vault = Path(vault).absolute()
+        self.managed_root_name = managed_root
+        self.profile = profile.upper()
+        self.now = now
+        self.interrupt_after_notes = interrupt_after_notes
+        if self.profile not in PROFILES:
+            raise ProjectionError("OBSIDIAN_PROFILE_INVALID", "Projection profile must be CORE, EXTENDED, or FULL_FACTS.")
+        self.root = self._validate_paths()
+
+    def _validate_paths(self) -> Path:
+        if not self.vault.exists() or not self.vault.is_dir():
+            raise ProjectionError("OBSIDIAN_VAULT_MISSING", "Obsidian vault directory does not exist.")
+        if is_link_or_reparse(self.vault):
+            raise ProjectionError("OBSIDIAN_SYMLINK_ESCAPE", "Vault root cannot be a symlink or junction.")
+        pure = PurePath(self.managed_root_name)
+        if pure.is_absolute() or not pure.parts or any(part in {"", ".", ".."} for part in pure.parts):
+            raise ProjectionError("OBSIDIAN_MANAGED_ROOT_INVALID", "Managed root must be a safe relative path without traversal.")
+        root = self.vault.joinpath(*pure.parts)
+        current = self.vault
+        for part in pure.parts:
+            current = current / part
+            if current.exists() and is_link_or_reparse(current):
+                raise ProjectionError("OBSIDIAN_SYMLINK_ESCAPE", "Managed root cannot traverse a symlink or junction.")
+        try:
+            if os.path.commonpath([str(self.vault.resolve()), str(root.resolve(strict=False))]) != str(self.vault.resolve()):
+                raise ProjectionError("OBSIDIAN_PATH_ESCAPE", "Managed root escapes the configured vault.")
+        except ValueError:
+            raise ProjectionError("OBSIDIAN_PATH_ESCAPE", "Managed root escapes the configured vault.") from None
+        return root
+
+    def validate(self, project_id: str | None = None) -> dict[str, Any]:
+        backend = "NOT_CHECKED"
+        if project_id:
+            data = self.source.collect(project_id)
+            actual = str(((data.get("snapshot") or {}).get("project") or {}).get("projectId") or "")
+            if actual != project_id:
+                raise ProjectionError("PROJECT_SCOPE_MISMATCH", "Gateway returned a different project.")
+            backend = "READY"
+        parent = self.root if self.root.exists() else next((item for item in [*self.root.parents] if item.exists()), self.vault)
+        return {
+            "status": "READY" if os.access(parent, os.W_OK) else "READ_ONLY",
+            "vault": "VALID",
+            "managedRoot": self.managed_root_name.replace("\\", "/"),
+            "managedRootExists": self.root.exists(),
+            "backend": backend,
+            "profile": self.profile,
+        }
+
+    def dry_run(self, project_id: str) -> dict[str, Any]:
+        prepared = self._prepare(project_id)
+        return self._result(prepared, executed=False, writer=AtomicWriter())
+
+    def status(self, project_id: str) -> dict[str, Any]:
+        prepared = self._prepare(project_id)
+        result = self._result(prepared, executed=False, writer=AtomicWriter())
+        result["lastSyncAt"] = prepared["manifest"].get("lastSyncAt")
+        result["syncGeneration"] = prepared["manifest"].get("syncGeneration", 0)
+        result["manifestRecovered"] = prepared["manifest_recovered"]
+        return result
+
+    def sync(self, project_id: str) -> dict[str, Any]:
+        self.root.mkdir(parents=True, exist_ok=True)
+        self._assert_contained(self.root)
+        self._cleanup_temps()
+        prepared = self._prepare(project_id)
+        writer = AtomicWriter()
+        note_writes = 0
+        for item in prepared["plan"]:
+            if item["action"] not in {"CREATED", "UPDATED", "REDIRECTED"}:
+                continue
+            note = prepared["desired_by_key"][item["key"]]
+            existing = prepared["existing_by_key"].get(item["key"])
+            target = self._safe_target(note.path)
+            rendered = self._render_note(note, existing, project_id)
+            writer.write(target, rendered)
+            note_writes += 1
+            if self.interrupt_after_notes is not None and note_writes >= self.interrupt_after_notes:
+                raise ProjectionError("OBSIDIAN_SYNC_INTERRUPTED", "Injected interruption after an atomic note write.", retryable=True)
+
+        manifest = self._next_manifest(project_id, prepared)
+        conflict_state_changed = prepared["conflicts"] != (prepared["manifest"].get("conflicts") or [])
+        manifest_changed = (prepared["manifest_recovered"] or prepared["path_reconciled"] or conflict_state_changed
+                            or any(item["action"] != "UNCHANGED" for item in prepared["plan"]))
+        old_manifest_path = self.root / MANIFEST_NAME
+        if manifest_changed:
+            if prepared["manifest_valid"] and old_manifest_path.exists():
+                writer.write(self.root / MANIFEST_BACKUP_NAME, old_manifest_path.read_text(encoding="utf-8"))
+            conflicts = manifest.get("conflicts") or []
+            conflict_path = self.root / CONFLICT_NAME
+            if conflicts or conflict_path.exists():
+                writer.write(self.root / CONFLICT_NAME, json.dumps({"projectId": project_id, "conflicts": conflicts}, ensure_ascii=False, indent=2) + "\n")
+            writer.write(old_manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
+        prepared["note_writes"] = note_writes
+        return self._result(prepared, executed=True, writer=writer)
+
+    def _prepare(self, project_id: str) -> dict[str, Any]:
+        if not UUID_RE.match(project_id):
+            raise ProjectionError("PROJECT_ID_INVALID", "Project id must be a UUID.")
+        data = self.source.collect(project_id)
+        snapshot_project = ((data.get("snapshot") or {}).get("project") or {})
+        if str(snapshot_project.get("projectId") or "") != project_id:
+            raise ProjectionError("PROJECT_SCOPE_MISMATCH", "Gateway returned a different project.")
+        manifest, manifest_valid, manifest_recovered = self._load_manifest(project_id)
+        discovered, discovery_conflicts = self._discover_notes(project_id)
+        desired = self._build_desired(project_id, data, manifest, discovered)
+        desired_by_key = {note.key: note for note in desired}
+        existing_by_key: dict[str, ExistingNote] = {}
+        plan: list[dict[str, Any]] = []
+        conflicts = list(discovery_conflicts)
+        manifest_files = manifest.get("files") or {}
+        for note in sorted(desired, key=lambda value: (value.path.casefold(), value.key)):
+            entry = manifest_files.get(note.key) or {}
+            target = self._safe_target(note.path)
+            existing: ExistingNote | None = None
+            if target.exists():
+                try:
+                    existing = self._read_note(target)
+                except ProjectionError as error:
+                    conflicts.append(self._conflict(note, note.path, error.code))
+                    plan.append({"action": "CONFLICT", "key": note.key, "path": note.path, "reason": error.code})
+                    continue
+            if existing is not None:
+                existing_by_key[note.key] = existing
+                identity_error = self._identity_error(existing, project_id, note)
+                stored_hash = str(entry.get("managedHash") or existing.metadata.get("content_hash") or "")
+                current_hash = sha256_text(normalize_block(existing.managed_body))
+                if identity_error or (stored_hash and stored_hash != current_hash):
+                    reason = identity_error or "MANAGED_BLOCK_EDITED"
+                    conflicts.append(self._conflict(note, note.path, reason))
+                    plan.append({"action": "CONFLICT", "key": note.key, "path": note.path, "reason": reason})
+                elif (current_hash == note.managed_hash
+                      and str(existing.metadata.get("projection_version")) == PROJECTION_VERSION
+                      and str(existing.metadata.get("source_version")) == note.source_version):
+                    plan.append({"action": "UNCHANGED", "key": note.key, "path": note.path, "reason": "hash-match"})
+                else:
+                    action = "REDIRECTED" if note.redirected else "UPDATED"
+                    plan.append({"action": action, "key": note.key, "path": note.path, "reason": "source-changed"})
+            else:
+                plan.append({"action": "CREATED", "key": note.key, "path": note.path, "reason": "missing"})
+        for key, entry in sorted(manifest_files.items()):
+            if key not in desired_by_key:
+                already_archived = str((entry or {}).get("status") or "") == "ARCHIVED"
+                plan.append({
+                    "action": "UNCHANGED" if already_archived else "ARCHIVED", "key": key,
+                    "path": str(entry.get("path") or ""), "reason": "already-archived" if already_archived else "source-absent",
+                })
+        path_reconciled = any(
+            key in desired_by_key and str((entry or {}).get("path") or "") not in {"", desired_by_key[key].path}
+            for key, entry in manifest_files.items()
+        )
+        return {
+            "project_id": project_id, "data": data, "manifest": manifest, "manifest_valid": manifest_valid,
+            "manifest_recovered": manifest_recovered, "desired": desired, "desired_by_key": desired_by_key,
+            "existing_by_key": existing_by_key, "plan": plan, "conflicts": conflicts, "path_reconciled": path_reconciled,
+        }
+
+    def _load_manifest(self, project_id: str) -> tuple[dict[str, Any], bool, bool]:
+        path = self.root / MANIFEST_NAME
+        if not path.exists():
+            return {"projectId": project_id, "files": {}, "conflicts": [], "syncGeneration": 0}, False, False
+        if is_link_or_reparse(path):
+            raise ProjectionError("OBSIDIAN_SYMLINK_ESCAPE", "Manifest cannot be a symlink or junction.")
+        try:
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(manifest, dict) or not isinstance(manifest.get("files"), dict):
+                raise ValueError
+            if manifest.get("projectId") not in {None, project_id}:
+                raise ProjectionError("OBSIDIAN_PROJECT_CONFLICT", "Managed root belongs to a different ProjectFlow project.")
+            return manifest, True, False
+        except ProjectionError:
+            raise
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError):
+            return {"projectId": project_id, "files": {}, "conflicts": [], "syncGeneration": 0}, False, True
+
+    def _discover_notes(self, project_id: str) -> tuple[dict[str, ExistingNote], list[dict[str, Any]]]:
+        found: dict[str, ExistingNote] = {}
+        conflicts: list[dict[str, Any]] = []
+        if not self.root.exists():
+            return found, conflicts
+        for path in sorted(self.root.rglob("*.md"), key=lambda value: str(value).casefold()):
+            if is_link_or_reparse(path):
+                raise ProjectionError("OBSIDIAN_SYMLINK_ESCAPE", "Managed root contains a symlink or junction.")
+            self._assert_contained(path)
+            try:
+                note = self._read_note(path)
+            except ProjectionError:
+                continue
+            if note.metadata.get("projectflow_managed") is not True or str(note.metadata.get("projectflow_project_id")) != project_id:
+                continue
+            entity_type = str(note.metadata.get("entity_type") or "")
+            entity_id = str(note.metadata.get("entity_id") or "")
+            if not entity_type or not entity_id:
+                continue
+            key = f"{entity_type}:{entity_id}"
+            relative = path.relative_to(self.root).as_posix()
+            note.path = relative
+            if key in found:
+                conflicts.append({"key": key, "path": relative, "reason": "DUPLICATE_ENTITY_NOTE"})
+            else:
+                found[key] = note
+        return found, conflicts
+
+    def _path_for(self, key: str, default: str, manifest: dict[str, Any], discovered: dict[str, ExistingNote]) -> str:
+        entry = (manifest.get("files") or {}).get(key) or {}
+        candidate = str(entry.get("path") or "")
+        if candidate and self._relative_safe(candidate) and self._safe_target(candidate).exists():
+            return candidate
+        if key in discovered:
+            return discovered[key].path
+        return default
+
+    def _build_desired(
+        self, project_id: str, data: dict[str, Any], manifest: dict[str, Any], discovered: dict[str, ExistingNote]
+    ) -> list[DesiredNote]:
+        snapshot = data.get("snapshot") or {}
+        lifecycle_query = data.get("lifecycle") or {}
+        lifecycle = lifecycle_query.get("lifecycle") or {}
+        months = sorted(data.get("months") or [], key=lambda value: str(value.get("periodKey") or ""))
+        capabilities = data.get("capabilities") or []
+        evolutions = data.get("evolutions") or {}
+        all_facts = [fact for month in months for fact in ((month.get("facts") or {}).get("items") or [])]
+        fact_by_id = {str(fact.get("factId")): fact for fact in all_facts}
+
+        paths: dict[str, str] = {}
+        paths["overview"] = self._path_for(f"PROJECT_OVERVIEW:{project_id}", "项目概览.md", manifest, discovered)
+        for month in months:
+            key = str(month.get("periodKey") or "unknown")
+            paths[f"timeline:{key}"] = self._path_for(f"TIMELINE_MONTH:{project_id}:{key}", f"项目历程/{filename(key)}.md", manifest, discovered)
+            paths[f"facts:{key}"] = self._path_for(f"FACT_INDEX_MONTH:{project_id}:{key}", f"项目事实/{filename(key)}.md", manifest, discovered)
+        for capability in capabilities:
+            cap_id = str(capability.get("capabilityId"))
+            default = f"项目能力/{filename(capability.get('canonicalName'), '能力')}--{stable_slug(cap_id)}.md"
+            paths[f"capability:{cap_id}"] = self._path_for(f"CAPABILITY:{cap_id}", default, manifest, discovered)
+        index_defaults = {
+            "CAPABILITY_INDEX": "索引/能力索引.md", "TIMELINE_INDEX": "索引/时间索引.md", "FACT_INDEX": "索引/事实索引.md",
+        }
+        for entity, default in index_defaults.items():
+            paths[f"index:{entity}"] = self._path_for(f"{entity}:{project_id}", default, manifest, discovered)
+
+        notes: list[DesiredNote] = []
+        note_time = str((snapshot.get("health") or {}).get("latestRealChangeAt") or snapshot.get("latestFactAt") or "")
+        overview_body = self._overview_body(snapshot, lifecycle, months, capabilities, evolutions, paths)
+        notes.append(self._note(
+            f"PROJECT_OVERVIEW:{project_id}", "PROJECT_OVERVIEW", project_id, paths["overview"],
+            f"{snapshot.get('factCount', 0)}:{snapshot.get('latestFactAt', '')}:{snapshot.get('activeCapabilityCount', 0)}",
+            note_time, overview_body, {},
+        ))
+
+        evolution_by_month: dict[str, list[dict[str, Any]]] = {}
+        for values in evolutions.values():
+            for evolution in values:
+                for period in evolution.get("sourcePeriods") or []:
+                    if re.match(r"^\d{4}-\d{2}$", str(period)):
+                        evolution_by_month.setdefault(str(period), []).append(evolution)
+        for month in months:
+            period = str(month.get("periodKey") or "unknown")
+            summary = month.get("summary") or {}
+            version = f"{summary.get('generationVersion', 0)}:{month.get('sourceFactCount', 0)}:{month.get('coveredFactCount', 0)}"
+            updated = str(summary.get("generatedAt") or month.get("periodEnd") or "")
+            extra = {
+                "period_key": period, "period_start": month.get("periodStart") or "", "period_end": month.get("periodEnd") or "",
+                "timeline_zone": lifecycle_query.get("timelineZone") or "UTC",
+            }
+            notes.append(self._note(
+                f"TIMELINE_MONTH:{project_id}:{period}", "TIMELINE_MONTH", f"{project_id}:{period}", paths[f"timeline:{period}"],
+                version, updated, self._timeline_body(month, evolution_by_month.get(period, []), paths), extra,
+            ))
+            facts = (month.get("facts") or {}).get("items") or []
+            latest = max((event_at(fact) for fact in facts), default="")
+            notes.append(self._note(
+                f"FACT_INDEX_MONTH:{project_id}:{period}", "FACT_INDEX_MONTH", f"{project_id}:{period}", paths[f"facts:{period}"],
+                f"{len(facts)}:{latest}", latest, self._fact_index_body(period, facts, capabilities, paths), {"period_key": period},
+            ))
+
+        for capability in capabilities:
+            cap_id = str(capability.get("capabilityId"))
+            cap_evolutions = evolutions.get(cap_id) or []
+            merged = str(capability.get("status") or "") == "MERGED" or bool(capability.get("mergedIntoCapabilityId"))
+            target_id = str(capability.get("mergedIntoCapabilityId") or "")
+            extra = {
+                "capability_id": cap_id, "capability_status": capability.get("status") or "",
+                "capability_version": capability.get("currentVersion") or 0,
+            }
+            if target_id:
+                extra["redirect_target"] = target_id
+            notes.append(self._note(
+                f"CAPABILITY:{cap_id}", "CAPABILITY", cap_id, paths[f"capability:{cap_id}"],
+                str(capability.get("currentVersion") or 0), str(capability.get("sourceUpdatedAt") or capability.get("lastEnhancedAt") or ""),
+                self._capability_body(capability, cap_evolutions, fact_by_id, paths, target_id), extra, redirected=merged,
+            ))
+
+        notes.extend([
+            self._note(f"CAPABILITY_INDEX:{project_id}", "CAPABILITY_INDEX", project_id, paths["index:CAPABILITY_INDEX"],
+                       str(len(capabilities)), note_time, self._capability_index_body(capabilities, paths), {}),
+            self._note(f"TIMELINE_INDEX:{project_id}", "TIMELINE_INDEX", project_id, paths["index:TIMELINE_INDEX"],
+                       str(len(months)), note_time, self._timeline_index_body(months, paths), {}),
+            self._note(f"FACT_INDEX:{project_id}", "FACT_INDEX", project_id, paths["index:FACT_INDEX"],
+                       str(len(all_facts)), note_time, self._fact_global_index_body(months, paths), {}),
+        ])
+
+        if self.profile != "CORE":
+            important = {str(fact_id) for values in evolutions.values() for evo in values for fact_id in (evo.get("sourceFactIds") or [])}
+            for fact in all_facts:
+                fact_id = str(fact.get("factId"))
+                if self.profile == "EXTENDED" and fact_id not in important and fact.get("recordStatus") != "NEEDS_ATTENTION":
+                    continue
+                month = event_month(fact)
+                default = f"重要事实/{filename(month)}/{filename(fact.get('title'), '事实')}--{stable_slug(fact_id)}.md"
+                path = self._path_for(f"FACT:{fact_id}", default, manifest, discovered)
+                notes.append(self._note(
+                    f"FACT:{fact_id}", "FACT", fact_id, path, str((fact.get("time") or {}).get("recordedAt") or event_at(fact)),
+                    str((fact.get("time") or {}).get("recordedAt") or event_at(fact)), self._fact_body(fact, capabilities, paths), {},
+                ))
+        return notes
+
+    @staticmethod
+    def _note(
+        key: str, entity_type: str, entity_id: str, path: str, source_version: str, source_updated_at: str,
+        body: str, extra: dict[str, Any], redirected: bool = False,
+    ) -> DesiredNote:
+        return DesiredNote(key, entity_type, entity_id, path, source_version, source_updated_at, normalize_block(body), extra, redirected)
+
+    def _overview_body(
+        self, snapshot: dict[str, Any], lifecycle: dict[str, Any], months: list[dict[str, Any]],
+        capabilities: list[dict[str, Any]], evolutions: dict[str, list[dict[str, Any]]], paths: dict[str, str],
+    ) -> str:
+        project = snapshot.get("project") or {}
+        recent = (snapshot.get("recentChanges") or {}).get("items") or []
+        lifecycle_summary = lifecycle.get("summary") or snapshot.get("lifecycleSummary") or {}
+        warnings = (snapshot.get("health") or {}).get("warnings") or []
+        lines = [
+            f"# {compact_text(project.get('name'), 120) or '项目概览'}",
+            "", compact_text(project.get("summary"), 800) or "当前没有项目定位摘要。", "", "## 当前状态", "",
+            f"- 事实：{snapshot.get('factCount', 0)}（已记录 {snapshot.get('recordedFactCount', 0)}，需要关注 {snapshot.get('attentionFactCount', 0)}）",
+            f"- 真实变化范围：{snapshot.get('earliestFactAt') or '未知'} → {snapshot.get('latestFactAt') or '未知'}",
+            f"- Git 历史覆盖：{snapshot.get('coveredCommitCount', 0)} / {snapshot.get('totalCommitCount', 0)}",
+            f"- 长期能力：{snapshot.get('activeCapabilityCount', 0)}",
+            "", "## 生命周期摘要", "", compact_text(lifecycle_summary.get("summary"), 1200) or compact_text(lifecycle_summary.get("notice"), 400) or "尚无生命周期摘要，事实与统计仍可读取。",
+            "", "## 主要能力", "",
+        ]
+        for capability in capabilities:
+            cap_id = str(capability.get("capabilityId"))
+            if capability.get("status") == "MERGED":
+                continue
+            lines.append(f"- {note_link(paths[f'capability:{cap_id}'], compact_text(capability.get('canonicalName'), 100))}：{compact_text(capability.get('summary'), 180)}")
+        lines += ["", "## 最近变化", ""]
+        for fact in recent[:5]:
+            month = event_month(fact)
+            lines.append(f"- {event_at(fact)[:10]} {compact_text(fact.get('title'), 140)}（{note_link(paths.get(f'facts:{month}', '索引/事实索引.md'), '事实索引')}）")
+        lines += ["", "## 最近能力演进", ""]
+        recent_evolutions = sorted((e for values in evolutions.values() for e in values), key=lambda value: str(value.get("occurredAt") or ""), reverse=True)[:5]
+        for evolution in recent_evolutions:
+            cap_id = str(evolution.get("capabilityId"))
+            cap_path = paths.get(f"capability:{cap_id}", paths["index:CAPABILITY_INDEX"])
+            lines.append(f"- {str(evolution.get('occurredAt') or '')[:10]} {note_link(cap_path, compact_text(evolution.get('title'), 120))}")
+        lines += ["", "## 导航", ""]
+        if months:
+            latest = str(months[-1].get("periodKey"))
+            lines.append(f"- 最新项目历程：{note_link(paths[f'timeline:{latest}'], latest)}")
+        lines += [
+            f"- {note_link(paths['index:TIMELINE_INDEX'], '时间索引')}", f"- {note_link(paths['index:CAPABILITY_INDEX'], '能力索引')}",
+            f"- {note_link(paths['index:FACT_INDEX'], '事实索引')}",
+        ]
+        attention = list(warnings)
+        if snapshot.get("attentionFactCount", 0):
+            attention.append(f"有 {snapshot.get('attentionFactCount')} 条事实需要关注。")
+        if attention:
+            lines += ["", "## 需要关注", "", *[f"- {compact_text(item, 240)}" for item in attention]]
+        return "\n".join(lines)
+
+    def _timeline_body(self, month: dict[str, Any], evolutions: list[dict[str, Any]], paths: dict[str, str]) -> str:
+        period = str(month.get("periodKey") or "unknown")
+        stats = month.get("stats") or {}
+        summary = month.get("summary") or {}
+        facts = (month.get("facts") or {}).get("items") or []
+        themes = month.get("themes") or []
+        lines = [
+            f"# {period} 项目历程", "", "## 月度概览", "",
+            compact_text(summary.get("summary"), 1600) or compact_text(summary.get("notice"), 500) or "本月事实可读，尚无自动摘要。",
+            "", "## 确定性统计", "",
+            f"- 事实：{stats.get('factCount', len(facts))}", f"- 提交：{stats.get('commitCount', 0)}", f"- 变更文件：{stats.get('fileCount', 0)}",
+            f"- 需要关注：{stats.get('attentionCount', 0)}", "", "## 时间线主题", "",
+        ]
+        lines += [f"- {compact_text(theme.get('title'), 140)}：{compact_text(theme.get('summary'), 240)}（{theme.get('factCount', 0)} 条事实）" for theme in themes] or ["- 本月没有单独的派生主题。"]
+        lines += ["", "## 主要事实", ""]
+        for fact in facts[:30]:
+            lines.append(f"- {event_at(fact)[:10]} {compact_text(fact.get('title'), 150)} · {note_link(paths[f'facts:{period}'], '事实', '#^fact-' + stable_slug(str(fact.get('factId'))))}")
+        if len(facts) > 30:
+            lines.append(f"- 其余 {len(facts) - 30} 条见 {note_link(paths[f'facts:{period}'], '本月事实索引')}。")
+        lines += ["", "## 能力变化", ""]
+        for evolution in sorted(evolutions, key=lambda value: str(value.get("occurredAt") or "")):
+            cap_id = str(evolution.get("capabilityId"))
+            lines.append(f"- {str(evolution.get('occurredAt') or '')[:10]} {note_link(paths.get(f'capability:{cap_id}', paths['index:CAPABILITY_INDEX']), compact_text(evolution.get('title'), 140))}")
+        if not evolutions:
+            lines.append("- 本月没有已记录的长期能力演进。")
+        history = month.get("history") or {}
+        if history.get("status") and history.get("status") != "COMPLETED":
+            lines += ["", "> 历史补齐尚未完成；本页只展示 ProjectFlow 当前已覆盖的真实事实。"]
+        lines += ["", f"返回：{note_link(paths['overview'], '项目概览')} · {note_link(paths['index:TIMELINE_INDEX'], '时间索引')}"]
+        return "\n".join(lines)
+
+    def _fact_index_body(self, period: str, facts: list[dict[str, Any]], capabilities: list[dict[str, Any]], paths: dict[str, str]) -> str:
+        cap_names = {str(cap.get("capabilityId")): compact_text(cap.get("canonicalName"), 100) for cap in capabilities}
+        lines = [f"# {period} 项目事实", "", f"共 {len(facts)} 条，按真实发生时间排列。", ""]
+        for fact in sorted(facts, key=event_at):
+            fact_id = str(fact.get("factId"))
+            caps = [note_link(paths[f"capability:{cap_id}"], cap_names.get(cap_id, "相关能力")) for cap_id in map(str, fact.get("relatedCapabilityIds") or []) if f"capability:{cap_id}" in paths]
+            lines += [
+                f"## {event_at(fact)[:10]} {compact_text(fact.get('title'), 150)}", "",
+                compact_text(fact.get("summary"), 500) or "（无额外摘要）", "",
+                f"- 状态：{status_label(fact.get('recordStatus'))}", f"- 稳定 Fact ID：`{fact_id}`",
+                f"- 来源批次：`{fact.get('batchId') or '未知'}`", f"- 相关能力：{'、'.join(caps) if caps else '暂无长期能力关联'}",
+                f"- 证据追溯：ProjectFlow Fact Trace `{fact_id}`", f"^fact-{stable_slug(fact_id)}", "",
+            ]
+        lines.append(f"返回：{note_link(paths[f'timeline:{period}'], '本月项目历程')} · {note_link(paths['index:FACT_INDEX'], '事实索引')}")
+        return "\n".join(lines)
+
+    def _capability_body(
+        self, capability: dict[str, Any], evolutions: list[dict[str, Any]], fact_by_id: dict[str, dict[str, Any]],
+        paths: dict[str, str], target_id: str,
+    ) -> str:
+        cap_id = str(capability.get("capabilityId"))
+        lines = [f"# {compact_text(capability.get('canonicalName'), 150) or '项目能力'}", ""]
+        if target_id:
+            target = paths.get(f"capability:{target_id}", paths["index:CAPABILITY_INDEX"])
+            lines += [f"> 此能力已合并到 {note_link(target, '目标能力')}。旧 Note 与历史保留，避免双链断裂。", ""]
+        aliases = [compact_text(item, 100) for item in capability.get("aliases") or []]
+        lines += [
+            "## 当前状态", "", compact_text(capability.get("summary"), 1000) or "当前没有能力摘要。", "",
+            f"- 稳定能力 ID：`{cap_id}`", f"- 别名：{'、'.join(aliases) if aliases else '无'}",
+            f"- 解决的问题：{compact_text(capability.get('problemSolved'), 500) or '未单独描述'}",
+            f"- 长期价值：{compact_text(capability.get('longTermValue'), 500) or '未单独描述'}",
+            f"- 成熟度：{status_label(capability.get('maturity'))}", f"- 成熟度依据：{compact_text(capability.get('maturityReason'), 500)}",
+            f"- 首次形成：{str(capability.get('firstFormedAt') or '')[:10] or '未知'}", f"- 最近增强：{str(capability.get('lastEnhancedAt') or '')[:10] or '未知'}",
+            f"- 当前版本：{capability.get('currentVersion', 0)}", f"- 事实 / 演进：{capability.get('factCount', 0)} / {capability.get('evolutionCount', len(evolutions))}",
+            "", "## 演进历程", "",
+        ]
+        for evolution in sorted(evolutions, key=lambda value: (str(value.get("occurredAt") or ""), int(value.get("versionAfter") or 0))):
+            periods = [note_link(paths[f"timeline:{period}"], period) for period in map(str, evolution.get("sourcePeriods") or []) if f"timeline:{period}" in paths]
+            fact_links = []
+            for fact_id in map(str, evolution.get("sourceFactIds") or []):
+                fact = fact_by_id.get(fact_id) or {}
+                month = event_month(fact) if fact else ""
+                if f"facts:{month}" in paths:
+                    fact_links.append(note_link(paths[f"facts:{month}"], compact_text(fact.get("title"), 80) or "事实", "#^fact-" + stable_slug(fact_id)))
+            lines += [
+                f"### v{evolution.get('versionAfter', 0)} · {str(evolution.get('occurredAt') or '')[:10]} · {status_label(evolution.get('type'))}", "",
+                compact_text(evolution.get("summary"), 700) or compact_text(evolution.get("title"), 200), "",
+                f"- 相关月份：{'、'.join(periods) if periods else '未单独归属'}",
+                f"- 来源事实：{'、'.join(fact_links) if fact_links else str(evolution.get('sourceFactCount', 0)) + ' 条'}", "",
+            ]
+        if not evolutions:
+            lines.append("- 尚无独立演进记录。")
+        representative_ids = list(dict.fromkeys(
+            str(fact_id) for evolution in evolutions for fact_id in (evolution.get("sourceFactIds") or [])
+        ))
+        if representative_ids:
+            lines += ["", "## 代表事实与证据追溯", ""]
+            for fact_id in representative_ids[:20]:
+                fact = fact_by_id.get(fact_id) or {}
+                month = event_month(fact) if fact else ""
+                if f"facts:{month}" in paths:
+                    link = note_link(paths[f"facts:{month}"], compact_text(fact.get("title"), 120) or "项目事实", "#^fact-" + stable_slug(fact_id))
+                    lines.append(f"- {link} · Fact Trace `{fact_id}`")
+                else:
+                    lines.append(f"- Fact Trace `{fact_id}`")
+        expressions = [("README", capability.get("readmeExpression")), ("简历", capability.get("resumeExpression")), ("面试", capability.get("interviewExpression"))]
+        valuable = [(label, compact_text(value, 800)) for label, value in expressions if compact_text(value, 800)]
+        if valuable:
+            lines += ["", "## 可复用表达", ""]
+            lines += [f"- {label}：{value}" for label, value in valuable]
+        lines += ["", f"返回：{note_link(paths['overview'], '项目概览')} · {note_link(paths['index:CAPABILITY_INDEX'], '能力索引')}"]
+        return "\n".join(lines)
+
+    @staticmethod
+    def _capability_index_body(capabilities: list[dict[str, Any]], paths: dict[str, str]) -> str:
+        lines = ["# 能力索引", ""]
+        for capability in capabilities:
+            cap_id = str(capability.get("capabilityId"))
+            lines.append(f"- {note_link(paths[f'capability:{cap_id}'], compact_text(capability.get('canonicalName'), 120))} · {status_label(capability.get('status'))} · {status_label(capability.get('maturity'))}")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _timeline_index_body(months: list[dict[str, Any]], paths: dict[str, str]) -> str:
+        lines = ["# 时间索引", ""]
+        for month in reversed(months):
+            period = str(month.get("periodKey"))
+            lines.append(f"- {note_link(paths[f'timeline:{period}'], period)} · {month.get('sourceFactCount', 0)} 条事实")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _fact_global_index_body(months: list[dict[str, Any]], paths: dict[str, str]) -> str:
+        lines = ["# 事实索引", "", "默认按月汇总，避免一条事实生成一个文件。", ""]
+        for month in reversed(months):
+            period = str(month.get("periodKey"))
+            count = len((month.get("facts") or {}).get("items") or [])
+            lines.append(f"- {note_link(paths[f'facts:{period}'], period)} · {count} 条事实")
+        return "\n".join(lines)
+
+    def _fact_body(self, fact: dict[str, Any], capabilities: list[dict[str, Any]], paths: dict[str, str]) -> str:
+        fact_id = str(fact.get("factId"))
+        month = event_month(fact)
+        cap_names = {str(cap.get("capabilityId")): cap.get("canonicalName") for cap in capabilities}
+        caps = [note_link(paths[f"capability:{cap_id}"], compact_text(cap_names.get(cap_id), 100)) for cap_id in map(str, fact.get("relatedCapabilityIds") or []) if f"capability:{cap_id}" in paths]
+        return "\n".join([
+            f"# {compact_text(fact.get('title'), 160)}", "", compact_text(fact.get("summary"), 1200), "",
+            f"- 真实发生时间：{event_at(fact)}", f"- 状态：{status_label(fact.get('recordStatus'))}", f"- Fact ID：`{fact_id}`",
+            f"- 来源批次：`{fact.get('batchId') or '未知'}`", f"- 相关能力：{'、'.join(caps) if caps else '暂无'}",
+            f"- 月度索引：{note_link(paths.get(f'facts:{month}', paths['index:FACT_INDEX']), month)}", "- 证据详情：请通过 ProjectFlow Fact Trace 按 ID 读取。",
+        ])
+
+    def _read_note(self, path: Path) -> ExistingNote:
+        self._assert_contained(path)
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            raise ProjectionError("OBSIDIAN_NOTE_UNREADABLE", "Managed note cannot be read as UTF-8.") from None
+        if not text.startswith("---\n") and not text.startswith("---\r\n"):
+            raise ProjectionError("OBSIDIAN_FRONTMATTER_INVALID", "Managed note frontmatter is missing.")
+        normalized = text.replace("\r\n", "\n")
+        end_frontmatter = normalized.find("\n---\n", 4)
+        if end_frontmatter < 0:
+            raise ProjectionError("OBSIDIAN_FRONTMATTER_INVALID", "Managed note frontmatter is damaged.")
+        frontmatter_text = normalized[4:end_frontmatter]
+        remainder = normalized[end_frontmatter + 5:]
+        begin = remainder.find(BEGIN_MARKER)
+        end = remainder.find(END_MARKER)
+        if begin < 0 or end < 0 or end < begin or remainder.find(BEGIN_MARKER, begin + 1) >= 0 or remainder.find(END_MARKER, end + 1) >= 0:
+            raise ProjectionError("OBSIDIAN_MANAGED_MARKERS_INVALID", "Managed block markers are missing or damaged.")
+        before = remainder[:begin]
+        body = remainder[begin + len(BEGIN_MARKER):end]
+        after = remainder[end + len(END_MARKER):]
+        metadata: dict[str, Any] = {}
+        user_lines: list[str] = []
+        managed_keys = self._managed_metadata_keys()
+        for line in frontmatter_text.split("\n"):
+            match = re.match(r"^([A-Za-z0-9_]+):\s*(.*)$", line)
+            if match:
+                key, raw = match.groups()
+                metadata[key] = parse_scalar(raw)
+                if key not in managed_keys:
+                    user_lines.append(line)
+            else:
+                user_lines.append(line)
+        return ExistingNote(path.relative_to(self.root).as_posix(), metadata, user_lines, before, normalize_block(body), after)
+
+    @staticmethod
+    def _managed_metadata_keys() -> set[str]:
+        return {
+            "projectflow_managed", "projectflow_project_id", "entity_type", "entity_id", "source_version", "content_hash",
+            "generated_at", "source_updated_at", "projection_version", "period_key", "period_start", "period_end", "timeline_zone",
+            "capability_id", "capability_status", "capability_version", "redirect_target",
+        }
+
+    def _render_note(self, note: DesiredNote, existing: ExistingNote | None, project_id: str) -> str:
+        metadata = {
+            "projectflow_managed": True, "projectflow_project_id": project_id, "entity_type": note.entity_type,
+            "entity_id": note.entity_id, "source_version": note.source_version, "content_hash": note.managed_hash,
+            "generated_at": self.now(), "source_updated_at": note.source_updated_at, "projection_version": PROJECTION_VERSION,
+            **note.extra_metadata,
+        }
+        frontmatter = ["---", *[f"{key}: {yaml_value(value)}" for key, value in metadata.items()]]
+        if existing:
+            frontmatter.extend(line for line in existing.user_frontmatter if line.strip())
+            before = existing.before_block
+            after = existing.after_block
+        else:
+            before = ""
+            after = "\n\n# 我的笔记\n\n"
+        return "\n".join(frontmatter) + "\n---\n" + before + BEGIN_MARKER + "\n" + normalize_block(note.body) + END_MARKER + after
+
+    @staticmethod
+    def _identity_error(existing: ExistingNote, project_id: str, note: DesiredNote) -> str:
+        meta = existing.metadata
+        if meta.get("projectflow_managed") is not True:
+            return "NOT_PROJECTFLOW_MANAGED"
+        if str(meta.get("projectflow_project_id") or "") != project_id:
+            return "PROJECT_ID_MISMATCH"
+        if str(meta.get("entity_type") or "") != note.entity_type or str(meta.get("entity_id") or "") != note.entity_id:
+            return "ENTITY_ID_MISMATCH"
+        return ""
+
+    @staticmethod
+    def _conflict(note: DesiredNote, path: str, reason: str) -> dict[str, Any]:
+        return {"key": note.key, "entityType": note.entity_type, "entityId": note.entity_id, "path": path, "reason": reason}
+
+    def _next_manifest(self, project_id: str, prepared: dict[str, Any]) -> dict[str, Any]:
+        previous = prepared["manifest"]
+        files: dict[str, Any] = {}
+        plan_by_key = {item["key"]: item for item in prepared["plan"]}
+        for note in prepared["desired"]:
+            action = plan_by_key[note.key]["action"]
+            if action == "CONFLICT":
+                old = (previous.get("files") or {}).get(note.key)
+                if old:
+                    files[note.key] = {**old, "status": "CONFLICT"}
+                continue
+            files[note.key] = {
+                "path": note.path, "entityType": note.entity_type, "entityId": note.entity_id,
+                "sourceVersion": note.source_version, "managedHash": note.managed_hash,
+                "projectionVersion": PROJECTION_VERSION, "status": "REDIRECT" if note.redirected else "ACTIVE",
+                "redirectTarget": note.extra_metadata.get("redirect_target", ""),
+            }
+        for item in prepared["plan"]:
+            if item["key"] not in prepared["desired_by_key"] and item["action"] in {"ARCHIVED", "UNCHANGED"}:
+                old = (previous.get("files") or {}).get(item["key"]) or {}
+                files[item["key"]] = {**old, "status": "ARCHIVED"}
+        return {
+            "projectionVersion": PROJECTION_VERSION, "projectId": project_id, "profile": self.profile,
+            "syncGeneration": int(previous.get("syncGeneration") or 0) + 1, "lastSyncAt": self.now(),
+            "files": files, "redirects": {key: value.get("redirectTarget") for key, value in files.items() if value.get("redirectTarget")},
+            "conflicts": prepared["conflicts"], "lastPlan": self._counts(prepared["plan"]),
+        }
+
+    def _result(self, prepared: dict[str, Any], executed: bool, writer: AtomicWriter) -> dict[str, Any]:
+        return {
+            "status": "COMPLETED_WITH_CONFLICTS" if prepared["conflicts"] else "COMPLETED",
+            "executed": executed, "projectId": prepared["project_id"], "profile": self.profile,
+            "managedRoot": self.managed_root_name.replace("\\", "/"), "plan": self._counts(prepared["plan"]),
+            "items": prepared["plan"], "conflicts": prepared["conflicts"], "noteWrites": prepared.get("note_writes", 0),
+            "totalWrites": writer.writes, "bytesWritten": writer.bytes_written, "manifestRecovered": prepared["manifest_recovered"],
+        }
+
+    @staticmethod
+    def _counts(plan: Iterable[dict[str, Any]]) -> dict[str, int]:
+        counts = {key: 0 for key in ["CREATED", "UPDATED", "UNCHANGED", "REDIRECTED", "ARCHIVED", "CONFLICT", "ERROR"]}
+        for item in plan:
+            counts[item["action"]] = counts.get(item["action"], 0) + 1
+        return counts
+
+    def _safe_target(self, relative: str) -> Path:
+        if not self._relative_safe(relative):
+            raise ProjectionError("OBSIDIAN_PATH_ESCAPE", "Projection path is invalid or escapes the managed root.")
+        target = self.root.joinpath(*PurePath(relative).parts)
+        current = self.root
+        for part in PurePath(relative).parts[:-1]:
+            current = current / part
+            if current.exists() and is_link_or_reparse(current):
+                raise ProjectionError("OBSIDIAN_SYMLINK_ESCAPE", "Projection path traverses a symlink or junction.")
+        self._assert_contained(target)
+        return target
+
+    @staticmethod
+    def _relative_safe(relative: str) -> bool:
+        pure = PurePath(relative)
+        return bool(relative) and not pure.is_absolute() and all(part not in {"", ".", ".."} for part in pure.parts)
+
+    def _assert_contained(self, path: Path) -> None:
+        try:
+            if os.path.commonpath([str(self.root.resolve(strict=False)), str(path.resolve(strict=False))]) != str(self.root.resolve(strict=False)):
+                raise ProjectionError("OBSIDIAN_PATH_ESCAPE", "Projection path escapes the managed root.")
+        except ValueError:
+            raise ProjectionError("OBSIDIAN_PATH_ESCAPE", "Projection path escapes the managed root.") from None
+
+    def _cleanup_temps(self) -> None:
+        if not self.root.exists():
+            return
+        for path in self.root.rglob("*.tmp"):
+            if ".projectflow-" not in path.name:
+                continue
+            self._assert_contained(path)
+            if not is_link_or_reparse(path):
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Project ProjectFlow memory into an Obsidian managed root.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    for command in ["validate", "dry-run", "sync", "status"]:
+        item = subparsers.add_parser(command)
+        item.add_argument("--vault", required=True, help="Existing Obsidian vault directory.")
+        item.add_argument("--managed-root", default="ProjectFlow", help="Safe relative dedicated managed folder.")
+        item.add_argument("--project-id", required=command != "validate", help="ProjectFlow project UUID.")
+        item.add_argument("--profile", choices=sorted(PROFILES), default="CORE")
+        item.add_argument("--base-url", default=os.getenv("PROJECTFLOW_BASE_URL", "http://127.0.0.1:8080"))
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        client = GatewayClient(args.base_url, os.getenv("PROJECTFLOW_ACCESS_TOKEN", ""), float(os.getenv("PROJECTFLOW_OBSIDIAN_TIMEOUT_SECONDS", "20")))
+        projection = ObsidianProjection(client, args.vault, args.managed_root, args.profile)
+        if args.command == "validate":
+            result = projection.validate(args.project_id)
+        elif args.command == "dry-run":
+            result = projection.dry_run(args.project_id)
+        elif args.command == "status":
+            result = projection.status(args.project_id)
+        else:
+            result = projection.sync(args.project_id)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result.get("status") not in {"READ_ONLY"} else 2
+    except ProjectionError as error:
+        print(json.dumps(error.payload(), ensure_ascii=False), file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

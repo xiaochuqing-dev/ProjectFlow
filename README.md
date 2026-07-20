@@ -1,6 +1,6 @@
 # ProjectFlow
 
-ProjectFlow V3.4.3 is a local-first project memory system for AI-assisted solo developers. It reads real Git, worktree, and Agent evidence, automatically organizes development facts, maintains a traceable timeline and capability map, and exposes the same bounded project-memory semantics to local agents through a read-only Gateway and MCP server.
+ProjectFlow V3.4.4 is a local-first project memory system for AI-assisted solo developers. It reads real Git, worktree, and Agent evidence, automatically organizes development facts, maintains a traceable timeline and capability map, and exposes the same bounded project-memory semantics to Hermes and a curated Obsidian knowledge projection.
 
 ProjectFlow 自动维护项目从创建至今的长期记忆。让每一个项目记得自己是怎样成长到今天的。
 
@@ -13,7 +13,18 @@ Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns tha
 - Recent/history reads use when work actually occurred, not when it was analyzed, recorded or synchronized. Failed derived refreshes retain deterministic facts and the last successful view.
 - Every endpoint is project-owned, compact by default, paged/bounded, model-free on GET and safely audited without storing full private queries.
 - `integrations/hermes/projectflow_mcp.py` exposes nine narrow, idempotent, non-destructive stdio tools. It accepts only a loopback ProjectFlow backend in this release and contains no generic REST or write tool.
-- Hermes is a consumer, never a fact source. Obsidian formal projection remains V3.4.4 and will reuse the same Gateway semantics.
+- Hermes is a consumer, never a fact source. Local stdio is the primary integration mode; remote access remains disabled by default and requires a separately secured future design.
+
+## V3.4.4 Obsidian Projection and Sync
+
+- Obsidian is a knowledge projection, not a database mirror. It consumes the same Project Memory Gateway semantics as Hermes and never becomes a source of truth.
+- Default `CORE` output contains one Overview, monthly Timeline notes, stable Capability notes, compact monthly Fact indexes, and navigation indexes. It does not generate one file per fact.
+- `EXTENDED` adds high-value facts referenced by capability evolution or attention; `FULL_FACTS` creates individual Fact notes only when explicitly selected.
+- The repository-local `run-projectflow-obsidian.ps1` command supports `validate`, `dry-run`, `status`, and one-shot `sync` against an existing Vault and a dedicated managed root.
+- Every note carries stable entity/version/hash metadata. Sync is incremental, atomic, path-safe, manifest-backed, and conflict-aware; unchanged files receive zero writes.
+- ProjectFlow replaces only its marked managed block. User frontmatter and authored content outside that block are retained, while managed edits, damaged markers, identity conflicts, traversal, symlink, or junction escape stop safe overwrite.
+- Capability rename keeps the stable note path. Capability merge retains the old note and writes a redirect to preserve history and backlinks.
+- Projection reads existing Fact, Timeline, Capability, and Evolution results through the Gateway and never regenerates them with a model.
 
 ## V3.4.2 Fact-native Lifecycle Capability Map
 
@@ -26,7 +37,7 @@ Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns tha
 - Maturity is determined by explainable fact, batch, commit, evidence, evolution, time-span, and attention rules. Model-provided maturity scores are rejected.
 - Failed refreshes preserve the previous successful map. GET requests never trigger model calls, and history backfill does not rebuild the whole map after every chunk.
 - Legacy `ProjectCapabilityCard` data remains readable for compatibility. Only traceable confirmed cards may seed a long-lived capability; candidate and ignored cards do not enter the main chain.
-- Hermes and Obsidian formal integration remains the next phase and will consume Facts, Timeline, and Capabilities rather than becoming new fact sources.
+- Hermes and Obsidian consume Facts, Timeline, Capabilities, and Evolutions through Project Memory Gateway without becoming new fact sources.
 
 ## V3.4.1 Automatic Project Timeline
 
@@ -42,7 +53,7 @@ Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns tha
 - Timeline summaries and period-local Timeline Themes never contain next-step planning, never mutate facts, and never require users to save or confirm them.
 - Every theme traces back to its facts, source batch, and evidence. Unknown IDs, missing coverage, and cross-project references invalidate a generated summary.
 - Failed refreshes preserve the previous successful summary while deterministic fact statistics remain available. History backfill expands older periods automatically without regenerating all summaries after every chunk.
-- Timeline Theme is not Project Capability. Lifecycle capability maps, Hermes sync, and Obsidian sync remain later phases.
+- Timeline Theme is not Project Capability. Capability Map, Hermes reads, and Obsidian projection consume facts through their own traceable layers.
 - V3.4.1 reuses the V3.3.7 job infrastructure and V3.3.8 model gateway rather than redesigning them.
 
 ## V3.3.8.1 Data Read Reliability
@@ -120,18 +131,20 @@ Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns tha
 
 It is built for developers who use agents such as Codex, Claude Code, or other coding assistants to modify real projects and then need a clear way to understand what changed, review the evidence, maintain a project profile, and generate reusable output such as daily reviews, README material, reports, and resume-ready summaries.
 
-## V3.4.2 Workflow
+## V3.4.4 Workflow
 
 ProjectFlow is not a Kanban board, daily-report generator, or hosted PR/CI system. Its primary workflow is:
 
-1. Bind a real local Git project.
+1. Bind local project and required model / GitHub access.
 2. Analyze new changes.
-3. Automatically record evidence-backed Project Facts.
-4. Rebuild uncovered Git history.
-5. Organize facts into Day / Week / Month / Lifecycle Timeline views.
-6. Automatically initialize and maintain the lifecycle Capability Map.
-7. Trace capabilities and evolution to facts and evidence.
-8. Let later external integrations consume Facts, Timeline, and Capabilities.
+3. ProjectFlow records Project Facts.
+4. History backfill completes uncovered Git history.
+5. Timeline organizes real occurrence history.
+6. Capability Map maintains long-lived capabilities.
+7. Project Memory Gateway exposes stable read semantics.
+8. Hermes queries project memory on demand.
+9. Obsidian receives curated long-term knowledge projection.
+10. Future frontend and external consumers reuse the same backend business semantics.
 
 The governing rule is: rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records objective facts. Users remain responsible for subjective profile edits and exceptional attention items, not routine fact confirmation.
 
@@ -162,6 +175,17 @@ Local Git is the primary data source. Agent result files are an enhancement that
 | Capability Map State | Durable coverage, dirty fingerprint, latest successful result, and failure-preservation state |
 | Capability Change | Recent evolution read model; it describes happened capability change, never future planning |
 | Capability Merge | Non-destructive redirect that retains source capability history, relations, and aliases |
+| Project Memory Gateway | Project-owned, compact and bounded business read semantics shared by external consumers |
+| Project Snapshot | Current project position, factual coverage, recent changes, capabilities and health |
+| Project Memory Search | Typed SOURCE/DERIVED search over facts, timeline, capabilities and evolutions |
+| Memory Context Pack | Budgeted Project Brief assembled from stable read models without exposing internals |
+| MCP Read Adapter | Nine-tool local stdio adapter that delegates read-only work to Project Memory Gateway |
+| Obsidian Projection | Curated long-term Markdown knowledge view derived from Project Memory Gateway |
+| Projection Profile | `CORE`, `EXTENDED`, or explicit `FULL_FACTS` output scope |
+| Managed Root | Dedicated Vault subfolder within which ProjectFlow may manage marked content |
+| Projection Manifest | Recoverable entity/path/version/hash index for incremental sync |
+| Sync Plan | Deterministic CREATED/UPDATED/UNCHANGED/REDIRECTED/ARCHIVED/CONFLICT/ERROR plan |
+| Sync Conflict | Safe refusal to overwrite when identity, managed content, markers, or path trust fails |
 | Project Profile / legacy ProjectMemory | Compatibility archive for subjective fields and historical profile content |
 | Suggested Sediment / Project Sediment / Project Change | V3.3.x compatibility records retained for old data and links; not the new scan path |
 

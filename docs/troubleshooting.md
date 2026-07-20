@@ -47,3 +47,7 @@ If diagnostics report `SCHEMA_MISMATCH`, ProjectFlow performs one targeted Schem
 ## V3.4.2 capability map
 
 `WAITING_FOR_MODEL` means facts remain readable but no default Provider can generate the map. `FAILED` means no successful map exists; `READY_STALE` means a prior READY map is preserved while the latest refresh failed or new facts are dirty. Retry the failed refresh after correcting Provider connectivity or Schema output; do not delete capability tables or ProjectFact. Unknown fact/capability IDs, duplicate or missing classification, prohibited planning/maturity fields and unsafe merge are validation failures, not database loss. File-backed H2 upgrades must be tested on a copy and allowed to run `ddl-auto=update`; never delete the user database or edit machine-wide configuration.
+
+## V3.4.4 Obsidian projection
+
+Run `validate`, then `dry-run`, before the first `sync`. Missing Vault, non-loopback backend, traversal, absolute escape, symlink/junction and read-only errors require correcting configuration; do not create a guessed Vault or weaken path checks. A managed hash, marker, identity or duplicate-entity conflict deliberately preserves the file and appears in the plan, manifest and conflict side file. Resolve the user-visible conflict and rerun. A corrupt manifest is rebuilt from Gateway data and note metadata. Interrupted temporary files are cleaned on restart. Never delete the managed root or user database as recovery; detailed codes and command examples are in `obsidian-projection-sync.md`.

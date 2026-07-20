@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.4.4 Obsidian 高价值知识投影与安全增量同步 - 2026-07-20
+
+在 Project Memory Gateway 上新增仓库内 Obsidian CLI，提供 validate、dry-run、status 与 sync。默认 CORE 将项目概览、按真实发生时间组织的月度历程、长期能力、月度事实索引和导航索引投影到专用 managed root，不默认一 Fact 一文件；EXTENDED 与显式 FULL_FACTS 控制独立事实 Note。每个受管 Note 使用稳定实体元数据和 managed block，manifest、source version/content hash、原子替换与 conflict side file 支持 no-op、增量、移动、重命名、merge redirect、中断与 manifest 恢复。路径遍历、symlink/junction、保留文件名、Unicode 和大小写碰撞受到约束，用户内容不被静默覆盖，同步不调用模型、不写回 ProjectFlow，也不新增前端入口。下一阶段是 backend business/logic consolidation。
+
 ## ProjectFlow V3.4.3 Project Memory Gateway 与 Hermes MCP - 2026-07-20
 
 在 Fact、Timeline、Capability 和 Evolution 之上增加统一只读 Project Memory Gateway，提供 snapshot、occurredAt recent changes、跨层 search、timeline、capabilities、chronological evolution、fact trace 和 budgeted brief，并用 SOURCE/DERIVED、稳定 ID、时间字段和证据引用保持语义一致。新增安全读取审计，不保存完整私有 query/caller 或凭证。仓库内无依赖 Python stdio MCP 暴露 9 个只读工具，只连接 loopback backend。真实 Hermes 在当前 H2 安全副本上能按发生时间回答 7 月变化、追溯 FactCursor，并对不存在的 Obsidian 正式同步明确无事实；原始 H2 哈希未变化。完整门禁结果写入 V3.4.3 report。

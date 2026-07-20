@@ -36,6 +36,6 @@ history backfill 运行时只累计 dirty，完成后触发一次完整覆盖刷
 
 API 提供 overview、稳定能力分页/筛选/搜索、详情、evolutions、facts、recent changes、attention 和 retry；所有入口通过 userId 与 projectId 校验所有权。主页面显示全历史覆盖、地图状态、成熟度、能力列表、近期变化、attention 和 stale 提示；旧卡片折叠在兼容区且没有旧分析/确认主操作。详情页显示当前版本、成熟度原因、merge redirect、演进和事实证据链。项目切换使用请求代次，慢响应不能让项目 A 闪回项目 B；次要读取失败保留已成功区块。
 
-## 后续边界
+## V3.4.4 外部能力消费
 
-Hermes 与 Obsidian 正式同步留到下一阶段。它们只能消费 ProjectFact、Timeline 和 ProjectCapability read models，不得成为事实来源，也不得修改历史 Evolution。
+Hermes 与 Obsidian 都通过 Project Memory Gateway 消费 ProjectCapability 和 chronological Evolution，不得成为事实来源或修改历史 Evolution。Obsidian Capability Note 使用稳定 capability ID、当前版本、成熟度依据、来源期间与代表 Fact Trace。名称变化保留既有路径；merge 保留旧 Note、历史和 redirect target，避免破坏 backlinks。
