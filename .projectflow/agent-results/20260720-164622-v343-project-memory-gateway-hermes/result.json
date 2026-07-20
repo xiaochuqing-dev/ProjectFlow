@@ -1,0 +1,35 @@
+{
+  "taskGoal": "完成 V3.4.3 Project Memory Gateway 与 Hermes 只读 MCP，验证统一语义、时间、证据、安全、规模、真实 Hermes、现有产品回归和发布门禁。",
+  "actualChanges": [
+    "新增统一只读 Project Memory Gateway，提供 snapshot、occurredAt recent changes、跨层 search、timeline、capabilities、chronological evolution、fact trace 和 budgeted brief。",
+    "新增安全读取审计，只记录 operation、数量、耗时、状态及 query/caller 哈希，不保存完整私有内容。",
+    "修正旧 sediment 迁移使用写入时间的缺陷，改用 source batch 的事实发生窗口并分配 Timeline。",
+    "新增 repository-local Python stdio MCP，暴露 9 个有界只读工具并明确拒绝远程 backend。",
+    "补齐 5000 facts/36 months/100 capabilities/1000 evolutions/10000 relations 性能、Hermes 子进程、真实 Hermes、安全副本、浏览器、启动器、文档和 CI 验收。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ProjectMemoryGatewayService.java",
+    "backend/src/main/java/com/projectflow/controller/ProjectMemoryGatewayController.java",
+    "backend/src/test/java/com/projectflow/ProjectMemoryGatewayTest.java",
+    "integrations/hermes/projectflow_mcp.py",
+    "integrations/hermes/test_projectflow_mcp.py",
+    "docs/project-memory-gateway.md",
+    "docs/hermes-mcp-integration.md",
+    "docs/projectflow-v3.4.3-project-memory-gateway-hermes-report.md"
+  ],
+  "verification": {
+    "build": "passed: frontend production build and repository Start-ProjectFlow.bat; backend 3.4.3 started against a safe current-H2 copy",
+    "tests": "passed: backend/H2 302, Gateway 5, scale 1, frontend contracts 44, Playwright 7, MCP 5; GitHub PostgreSQL 16 and all blocking jobs passed in run 29728864679",
+    "manualCheck": "passed: real Hermes v0.18.2 discovered 9 tools and answered July occurrence, FactCursor evidence, and absent Obsidian sync without hallucination; original H2 hashes preserved"
+  },
+  "unfinished": [
+    "Remote MCP transport/auth and Telegram are outside V3.4.3.",
+    "Obsidian projection is V3.4.4 and is not represented as completed in V3.4.3.",
+    "Gateway search is bounded field search rather than a dedicated full-text engine."
+  ],
+  "sedimentCandidates": [
+    "外部 Agent 和 Markdown 投影必须复用统一 Project Memory Gateway，不能各自重解释 Fact/Timeline/Capability。",
+    "发生时间、记录时间、分析时间、同步时间必须分离；历史归属只使用 occurredAt/factEventAt。",
+    "只读集成审计应保存查询哈希和长度而不是完整私有查询。"
+  ]
+}
