@@ -28,13 +28,13 @@
   "verification": {
     "build": "passed: frontend lint、47/47 contracts 和 Next.js 生产构建均通过，生成 23 个页面；根 Start-ProjectFlow.bat -NoBrowser 从当前工作树完成依赖校验、生产构建、Java 17 后端编译、H2 旧库启动和前后端健康检查，logs/last-embedded-build.json 记录 version=3.6.0、frontendBuildId=ltZE9q00FUsCYcac9ngkw、hasLocalChanges=true。",
     "tests": "passed: backend Maven 最终完整 H2 套件 323 项，0 failures，0 errors，1 条条件 benchmark skipped；新增官方 SCIP Java+TypeScript fixture、损坏索引回退、真实 Git bridge、幂等、Gradle 单体/Monorepo 边界等测试；Playwright 真实前后端 E2E 8/8。",
-    "manualCheck": "conditional_pass: ProjectFlow 页面、固定兼容模型契约和 Spring Petclinic 真实历史 bridge 已人工验收；固定模型未描述为真实 Provider。Docker daemon 不可用，因此本地 PostgreSQL Testcontainers 跳过；没有安全 Key，因此真实 Provider 测试跳过。"
+    "manualCheck": "conditional_pass: ProjectFlow 页面、固定兼容模型契约和 Spring Petclinic 真实历史 bridge 已人工验收；固定模型未描述为真实 Provider。本地 Docker daemon 不可用，但 GitHub Actions Run 30024524557 的真实 PostgreSQL Testcontainers、后端/H2、前端、Playwright、Hermes、Obsidian 和敏感内容门禁全部成功；没有安全 Key，因此真实 Provider 测试按设计跳过。"
   },
   "unfinished": [
     "V3.6 消费已有 index.scip，但没有编排跨语言 indexer 的安装与生产；scip-java 0.12.3 在当前 Windows 环境还存在上游调用 mvn 而非 mvn.cmd 的兼容问题。",
     "外部 SCIP index 与当前 Git revision 的强一致校验、真实大型 SCIP 索引的大小和 heap peak 尚未完成。",
     "有变化时仍执行一次有界组合重建，不是 changed-symbol 级增量；完整 milestone 选择和历史结构重建留给 V3.7。",
-    "真实 Provider 语义质量因没有安全 Key 跳过，本地 PostgreSQL 16 Testcontainers 因 Docker daemon 不可用跳过。",
+    "真实 Provider 语义质量因没有安全 Key 跳过；PostgreSQL 16 已由 GitHub Actions Testcontainers 门禁验证。",
     "Desktop 正式迁移、后台常驻、watcher、installer 和完整新 GUI 按范围未实现。"
   ],
   "sedimentCandidates": [

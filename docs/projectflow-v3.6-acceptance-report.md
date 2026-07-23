@@ -137,7 +137,7 @@ SKIPPED。环境没有可安全使用的 DEEPSEEK、OPENAI 或 ANTHROPIC Key。�
 
 ## V. PostgreSQL CI
 
-本地 Docker daemon 不可用，因此本地 Testcontainers SKIPPED。基线 CI Run 29987200093 在 `7c92c484...` 成功；V3.6 提交后的 PostgreSQL CI 状态将在推送后更新。
+本地 Docker daemon 不可用，因此本地 Testcontainers SKIPPED。V3.6 GitHub Actions Run 30024524557 已通过真实 PostgreSQL Testcontainers 集成测试；同一 Run 的后端/H2、前端、Playwright、Hermes、Obsidian 和敏感内容门禁也全部成功。可选真实 DeepSeek 因未配置安全 Key 按设计跳过。
 
 ## W. 已知风险
 
@@ -157,6 +157,6 @@ V3.7 聚焦 Incremental Refresh & Evolution Engine：绑定 producer revision、
 
 - 基线 SHA：`7c92c484546e43c7a5e9351611f57f8691aba989`
 - branch：`master`
-- V3.6 implementation SHA：提交后更新
-- V3.6 CI run：推送后更新
+- V3.6 implementation SHA：`23212ee20217d56f576b25989fb1c7396d47db95`
+- V3.6 CI run：`30024524557`，SUCCESS
 - 未创建分支、PR 或 release
