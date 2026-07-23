@@ -4,8 +4,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -14,20 +12,24 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.dto.ProjectUnderstandingDtos.AdaptiveAnalysisPlanResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.DynamicProjectProfileResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.EvidenceSourceMapResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.EvolutionPreviewResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.HistoricalCoverageResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectStructureIndexResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectUnderstandingSnapshotResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.RepositoryIntakeResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.SemanticScoutResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.StructureEvidence;
 import com.projectflow.dto.ProjectUnderstandingDtos.StructureDelta;
 import com.projectflow.dto.ProjectUnderstandingDtos.UnderstandingClaim;
+import com.projectflow.dto.ProjectUnderstandingDtos.UnderstandingAnalysisMetrics;
 import com.projectflow.dto.ProjectUnderstandingDtos.UnderstandingEvidenceCoverage;
 import com.projectflow.dto.ProjectUnderstandingDtos.UnderstandingQuality;
 import com.projectflow.dto.ProjectUnderstandingDtos.UnderstandingSection;
@@ -43,14 +45,14 @@ import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.repository.ProjectStructureIndexRepository;
 import com.projectflow.repository.ProjectUnderstandingSnapshotRepository;
+import com.projectflow.service.HistoricalCoverageService.HistoricalAnalysis;
+import com.projectflow.service.ProjectEvidenceDiscoveryService.DiscoveryResult;
+import com.projectflow.service.SemanticScoutService.ScoutResult;
 import com.projectflow.support.AppException;
 
 @Service
 public class ProjectUnderstandingService {
-    private static final String MODEL_ANALYSIS_VERSION = "understanding-v2";
-    private static final List<String> SECTION_NAMES = List.of(
-        "identity", "technology", "structure", "architecture", "capabilities", "engineeringState"
-    );
+    private static final String MODEL_ANALYSIS_VERSION = "understanding-v3";
 
     private final ProjectRepository projectRepository;
     private final ProjectMemoryRepository memoryRepository;
@@ -61,11 +63,12 @@ public class ProjectUnderstandingService {
     private final RepositoryIntakeService intakeService;
     private final ProjectStructureIndexer structureIndexer;
     private final ProjectEvolutionBridgeService evolutionBridgeService;
-    private final ModelGatewayService modelGateway;
+    private final ProjectEvidenceDiscoveryService evidenceDiscoveryService;
+    private final HistoricalCoverageService historicalCoverageService;
+    private final AdaptiveAnalysisPlanner analysisPlanner;
+    private final SemanticScoutService semanticScoutService;
+    private final DynamicProjectProfileSynthesizer profileSynthesizer;
     private final ObjectMapper objectMapper;
-
-    @Value("${projectflow.understanding.max-model-prompt-chars:48000}")
-    private int maxModelPromptChars;
 
     public ProjectUnderstandingService(
         ProjectRepository projectRepository,
@@ -77,7 +80,11 @@ public class ProjectUnderstandingService {
         RepositoryIntakeService intakeService,
         ProjectStructureIndexer structureIndexer,
         ProjectEvolutionBridgeService evolutionBridgeService,
-        ModelGatewayService modelGateway,
+        ProjectEvidenceDiscoveryService evidenceDiscoveryService,
+        HistoricalCoverageService historicalCoverageService,
+        AdaptiveAnalysisPlanner analysisPlanner,
+        SemanticScoutService semanticScoutService,
+        DynamicProjectProfileSynthesizer profileSynthesizer,
         ObjectMapper objectMapper
     ) {
         this.projectRepository = projectRepository;
@@ -89,7 +96,11 @@ public class ProjectUnderstandingService {
         this.intakeService = intakeService;
         this.structureIndexer = structureIndexer;
         this.evolutionBridgeService = evolutionBridgeService;
-        this.modelGateway = modelGateway;
+        this.evidenceDiscoveryService = evidenceDiscoveryService;
+        this.historicalCoverageService = historicalCoverageService;
+        this.analysisPlanner = analysisPlanner;
+        this.semanticScoutService = semanticScoutService;
+        this.profileSynthesizer = profileSynthesizer;
         this.objectMapper = objectMapper;
     }
 
@@ -102,6 +113,7 @@ public class ProjectUnderstandingService {
         UUID projectId,
         BiConsumer<String, String> progress
     ) {
+        long totalStarted = System.nanoTime();
         ProjectSpace project = ownedProject(userId, projectId);
         ProjectMemory memory = memoryRepository.findByProjectId(projectId)
             .orElseThrow(() -> new AppException(
@@ -131,10 +143,13 @@ public class ProjectUnderstandingService {
         }
 
         progress.accept("REPOSITORY_INTAKE", "正在盘点目录规模、语言、清单与 Git 可用性");
+        long scanStarted = System.nanoTime();
         RepositoryIntakeService.ScanResult scan = intakeService.scan(root);
+        long scanTimeMs = elapsedMs(scanStarted);
         ModelCancellationContext.throwIfCancelled();
 
         progress.accept("STRUCTURE_INDEX", "正在建立可复用的结构索引与证据编号");
+        long toolStarted = System.nanoTime();
         ProjectStructureIndex previousIndex = structureRepository.findByProjectId(projectId).orElse(null);
         Map<String, String> previousInventory = readInventory(previousIndex);
         ProjectStructureIndexResponse previousStructure = readStructure(previousIndex);
@@ -143,6 +158,19 @@ public class ProjectUnderstandingService {
             calculateDelta(previousInventory, scan.inventorySignatures(), scan.intake().scanTruncated(), previousIndex != null)
         );
         persistStructure(projectId, scan.intake(), index, scan.inventorySignatures());
+        ModelCancellationContext.throwIfCancelled();
+
+        progress.accept("EVIDENCE_DISCOVERY", "正在建立来源地图并抽取有界内容信号");
+        DiscoveryResult discovery = evidenceDiscoveryService.discover(scan);
+        ModelCancellationContext.throwIfCancelled();
+
+        progress.accept("HISTORICAL_COVERAGE", "正在核对可用历史、事实覆盖和里程碑锚点");
+        HistoricalAnalysis historical = historicalCoverageService.analyze(
+            projectId,
+            root,
+            scan.intake(),
+            discovery.sourceMap()
+        );
         ModelCancellationContext.throwIfCancelled();
 
         progress.accept("EVOLUTION_BRIDGE", "正在用已有事实和真实 Git 提交连接结构演进");
@@ -159,35 +187,134 @@ public class ProjectUnderstandingService {
             progress.accept("EVOLUTION_BRIDGE_SKIPPED", "演进桥未更新，当前结构理解仍可继续");
         }
         ModelCancellationContext.throwIfCancelled();
+        long toolTimeMs = elapsedMs(toolStarted);
 
-        AdaptiveAnalysisPlanResponse plan = plan(scan.intake(), index, provider != null);
-        ProjectUnderstandingSnapshotResponse deterministic = deterministicSnapshot(project, scan.intake(), index, plan);
+        SemanticScoutResponse deterministicScout = analysisPlanner.deterministicScout(
+            scan.intake(),
+            discovery.sourceMap()
+        );
+        long planStarted = System.nanoTime();
+        AdaptiveAnalysisPlanResponse plan = analysisPlanner.plan(
+            scan.intake(),
+            index,
+            discovery.sourceMap(),
+            historical.coverage(),
+            deterministicScout,
+            provider != null
+        );
+        long planTimeMs = elapsedMs(planStarted);
+        long synthesisStarted = System.nanoTime();
+        DynamicProjectProfileResponse deterministicProfile = profileSynthesizer.synthesize(
+            project,
+            scan.intake(),
+            index,
+            discovery.sourceMap(),
+            historical.coverage(),
+            deterministicScout,
+            plan,
+            null,
+            Set.of()
+        );
+        long deterministicSynthesisMs = elapsedMs(synthesisStarted);
+        ProjectUnderstandingSnapshotResponse deterministic = deterministicSnapshot(
+            project,
+            scan.intake(),
+            index,
+            plan,
+            discovery.sourceMap(),
+            deterministicScout,
+            deterministicProfile,
+            historical.coverage(),
+            historical.evolutionPreview()
+        );
 
         boolean semanticEligible = provider != null
-            && scan.intake().sourceFileCount() > 0
-            && !"UNKNOWN_NON_CODE".equals(scan.intake().classification());
+            && analysisPlanner.shouldUseSemanticModel(scan.intake(), discovery.sourceMap());
         if (!semanticEligible) {
             progress.accept("PERSIST_UNDERSTANDING", "正在保存确定性项目理解");
-            ProjectUnderstandingSnapshotResponse saved = persistSnapshot(projectId, deterministic);
+            UnderstandingAnalysisMetrics metrics = metrics(
+                discovery,
+                historical,
+                index,
+                plan,
+                null,
+                scanTimeMs,
+                0,
+                planTimeMs,
+                toolTimeMs,
+                deterministicSynthesisMs,
+                elapsedMs(totalStarted),
+                false
+            );
+            ProjectUnderstandingSnapshotResponse saved = persistSnapshot(
+                projectId,
+                withAnalysisMetrics(deterministic, metrics)
+            );
             return new RefreshOutcome(saved, false, false);
         }
 
-        progress.accept("UNDERSTANDING_MODEL", "正在对有界结构证据进行一次语义归纳");
+        progress.accept("SEMANTIC_SCOUT", "正在对压缩候选做一次语义分诊与项目形态判断");
         try {
-            String prompt = buildPrompt(project, scan.intake(), index);
-            ModelGatewayService.StructuredModelResponse response = modelGateway.callStructured(
+            ScoutResult semantic = semanticScoutService.scout(
                 provider,
-                prompt,
-                ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+                project,
+                scan.intake(),
+                index,
+                discovery,
+                historical.coverage()
             );
+            long semanticPlanStarted = System.nanoTime();
+            AdaptiveAnalysisPlanResponse semanticPlan = analysisPlanner.plan(
+                scan.intake(),
+                index,
+                discovery.sourceMap(),
+                historical.coverage(),
+                semantic.scout(),
+                true
+            );
+            planTimeMs += elapsedMs(semanticPlanStarted);
+            progress.accept("DYNAMIC_PROFILE", "正在校验证据并生成适用视图与动态项目档案");
+            long semanticSynthesisStarted = System.nanoTime();
+            DynamicProjectProfileResponse semanticProfile = profileSynthesizer.synthesize(
+                project,
+                scan.intake(),
+                index,
+                discovery.sourceMap(),
+                historical.coverage(),
+                semantic.scout(),
+                semanticPlan,
+                semantic.root(),
+                semantic.allowedEvidence()
+            );
+            long synthesisTimeMs = deterministicSynthesisMs + elapsedMs(semanticSynthesisStarted);
             ProjectUnderstandingSnapshotResponse enriched = mergeModel(
                 deterministic,
-                response.parsed().root(),
+                semantic.scout(),
+                semanticPlan,
+                semanticProfile,
                 index,
-                diagnostics(response.diagnostics())
+                diagnostics(semantic.diagnostics()),
+                semantic.invalidEvidenceFiltered()
+            );
+            UnderstandingAnalysisMetrics metrics = metrics(
+                discovery,
+                historical,
+                index,
+                semanticPlan,
+                semantic.diagnostics(),
+                scanTimeMs,
+                semantic.durationMs(),
+                planTimeMs,
+                toolTimeMs,
+                synthesisTimeMs,
+                elapsedMs(totalStarted),
+                false
             );
             progress.accept("PERSIST_UNDERSTANDING", "正在校验证据并保存当前理解");
-            ProjectUnderstandingSnapshotResponse saved = persistSnapshot(projectId, enriched);
+            ProjectUnderstandingSnapshotResponse saved = persistSnapshot(
+                projectId,
+                withAnalysisMetrics(enriched, metrics)
+            );
             return new RefreshOutcome(saved, false, true);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
@@ -238,55 +365,16 @@ public class ProjectUnderstandingService {
         }
     }
 
-    private AdaptiveAnalysisPlanResponse plan(
-        RepositoryIntakeResponse intake,
-        ProjectStructureIndexResponse index,
-        boolean providerConfigured
-    ) {
-        boolean semantic = providerConfigured && intake.sourceFileCount() > 0
-            && !"UNKNOWN_NON_CODE".equals(intake.classification());
-        boolean hierarchical = "LARGE".equals(intake.scale())
-            || "HUGE".equals(intake.scale())
-            || "MONOREPO".equals(intake.scale())
-            || "HUGE_MONOREPO".equals(intake.classification());
-        List<String> unavailable = new ArrayList<>(index.unsupportedAreas());
-        if (!intake.git().available()) unavailable.add("没有 Git 历史，无法给出能力演进时间线");
-        if (!providerConfigured) unavailable.add("没有可用默认模型，语义能力与架构判断保持未知");
-        String semanticMode;
-        if ("EMPTY".equals(intake.classification())) semanticMode = "SKIPPED_EMPTY";
-        else if ("UNKNOWN_NON_CODE".equals(intake.classification())) semanticMode = "SKIPPED_NON_CODE";
-        else if (!providerConfigured) semanticMode = "UNAVAILABLE";
-        else semanticMode = "ONE_PASS_BOUNDED";
-        List<String> reasons = new ArrayList<>();
-        reasons.add("先复用确定性结构索引，再决定是否调用模型");
-        reasons.add(hierarchical ? "规模较大，模型只接收压缩后的模块级证据" : "规模可控，模型接收有界结构证据");
-        if (!intake.git().available()) reasons.add("非 Git 项目仅理解当前状态，不伪造历史");
-        return new AdaptiveAnalysisPlanResponse(
-            index.symbols().isEmpty()
-                ? List.of("目录与文件盘点", "语言与 LOC 统计", "manifest/workspace 识别", "工程化信号识别", "证据编号")
-                : List.of(
-                    "目录与文件盘点", "语言与 LOC 统计", "manifest/workspace 识别", "SCIP Symbol/Definition/Reference",
-                    "JGraphT 重要节点排序", "关系驱动 Functional Area", "证据编号"
-                ),
-            index.indexerSource(),
-            semanticMode,
-            semantic ? 3 : 0,
-            semantic ? 12_000 : 0,
-            semantic ? 40_000 : 0,
-            semantic ? 600_000L : 120_000L,
-            hierarchical,
-            intake.git().available() ? "CURRENT_GIT_STATE_ONLY" : "UNAVAILABLE",
-            index.coverage().overall(),
-            List.copyOf(unavailable),
-            List.copyOf(reasons)
-        );
-    }
-
     private ProjectUnderstandingSnapshotResponse deterministicSnapshot(
         ProjectSpace project,
         RepositoryIntakeResponse intake,
         ProjectStructureIndexResponse index,
-        AdaptiveAnalysisPlanResponse plan
+        AdaptiveAnalysisPlanResponse plan,
+        EvidenceSourceMapResponse sourceMap,
+        SemanticScoutResponse semanticScout,
+        DynamicProjectProfileResponse dynamicProfile,
+        HistoricalCoverageResponse historicalCoverage,
+        EvolutionPreviewResponse evolutionPreview
     ) {
         Instant now = Instant.now();
         List<String> baseRefs = index.evidence().stream().map(StructureEvidence::id).limit(5).toList();
@@ -347,13 +435,15 @@ public class ProjectUnderstandingService {
                 : claim("engineering-1", "目录中存在 " + String.join("、", engineeringKinds) + " 相关文件。", "OBSERVED", confidence(index), baseRefs)
         );
         List<String> unknowns = new ArrayList<>(plan.unavailableCapabilities());
+        unknowns.addAll(dynamicProfile.unknowns());
         if (intake.scanTruncated()) unknowns.add("扫描达到安全上限，未覆盖的目录内容保持未知");
         String semanticStatus = switch (plan.semanticMode()) {
-            case "SKIPPED_EMPTY", "SKIPPED_NON_CODE" -> "NOT_APPLICABLE";
+            case "SKIPPED_EMPTY", "SKIPPED_NO_SUBSTANTIVE_EVIDENCE" -> "NOT_APPLICABLE";
             case "UNAVAILABLE" -> "MODEL_UNAVAILABLE";
             default -> "PENDING";
         };
         List<UnderstandingClaim> allClaims = claims(identity, technology, structure, architecture, capabilities, engineering);
+        allClaims.addAll(profileClaims(dynamicProfile));
         UnderstandingEvidenceCoverage evidenceCoverage = coverage(allClaims, intake, index);
         UnderstandingQuality quality = new UnderstandingQuality(
             semanticStatus,
@@ -383,31 +473,61 @@ public class ProjectUnderstandingService {
             index.indexVersion(),
             MODEL_ANALYSIS_VERSION,
             "CURRENT",
+            null,
+            sourceMap,
+            semanticScout,
+            dynamicProfile,
+            historicalCoverage,
+            evolutionPreview,
             null
         );
     }
 
     private ProjectUnderstandingSnapshotResponse mergeModel(
         ProjectUnderstandingSnapshotResponse base,
-        JsonNode root,
+        SemanticScoutResponse semanticScout,
+        AdaptiveAnalysisPlanResponse plan,
+        DynamicProjectProfileResponse dynamicProfile,
         ProjectStructureIndexResponse index,
-        ModelCallDiagnosticsResponse diagnostics
+        ModelCallDiagnosticsResponse diagnostics,
+        boolean invalidEvidenceFiltered
     ) {
-        Set<String> allowedEvidence = new LinkedHashSet<>();
-        index.evidence().forEach(item -> allowedEvidence.add(item.id()));
-        Map<String, UnderstandingSection> sections = new LinkedHashMap<>();
-        for (String name : SECTION_NAMES) {
-            sections.put(name, parseSection(name, root.path(name), allowedEvidence));
-        }
         LinkedHashSet<String> mergedUnknowns = new LinkedHashSet<>(base.unknowns());
-        mergedUnknowns.addAll(boundedTexts(root.path("unknowns"), 20, 300));
+        mergedUnknowns.addAll(semanticScout.unknowns());
+        mergedUnknowns.addAll(semanticScout.potentialConflicts());
+        mergedUnknowns.addAll(semanticScout.currentnessWarnings());
+        mergedUnknowns.addAll(dynamicProfile.unknowns());
         List<String> unknowns = List.copyOf(mergedUnknowns);
-        UnderstandingSection identity = prefer(sections.get("identity"), base.identity());
-        UnderstandingSection technology = prefer(sections.get("technology"), base.technology());
-        UnderstandingSection structure = prefer(sections.get("structure"), base.structure());
-        UnderstandingSection architecture = prefer(sections.get("architecture"), base.architecture());
-        UnderstandingSection capabilities = prefer(sections.get("capabilities"), base.capabilities());
-        UnderstandingSection engineering = prefer(sections.get("engineeringState"), base.engineeringState());
+        UnderstandingSection identity = legacySection(
+            dynamicProfile,
+            List.of("IDENTITY", "CURRENT_STATE", "DOCUMENT_OVERVIEW"),
+            base.identity()
+        );
+        UnderstandingSection technology = legacySection(
+            dynamicProfile,
+            List.of("TECHNOLOGY", "DEPENDENCIES"),
+            base.technology()
+        );
+        UnderstandingSection structure = legacySection(
+            dynamicProfile,
+            List.of("CURRENT_STRUCTURE", "STRUCTURE", "ROUTES", "COMPONENTS"),
+            base.structure()
+        );
+        UnderstandingSection architecture = legacySection(
+            dynamicProfile,
+            List.of("ARCHITECTURE"),
+            base.architecture()
+        );
+        UnderstandingSection capabilities = legacySection(
+            dynamicProfile,
+            List.of("CAPABILITIES", "USER_CAPABILITIES", "PURPOSE"),
+            base.capabilities()
+        );
+        UnderstandingSection engineering = legacySection(
+            dynamicProfile,
+            List.of("ENGINEERING_STATE", "BUILD_TEST_DEPLOY"),
+            base.engineeringState()
+        );
         List<UnderstandingClaim> allClaims = claims(
             identity,
             technology,
@@ -416,12 +536,16 @@ public class ProjectUnderstandingService {
             capabilities,
             engineering
         );
+        allClaims.addAll(profileClaims(dynamicProfile));
         UnderstandingQuality quality = new UnderstandingQuality(
             "SUCCEEDED",
             allClaims.isEmpty() ? "LOW" : confidence(index),
             true,
             false,
-            mergeLimitations(base.quality().limitations(), invalidEvidenceLimitation(root, allowedEvidence))
+            mergeLimitations(
+                base.quality().limitations(),
+                invalidEvidenceFiltered ? "模型返回的未知证据引用已过滤" : ""
+            )
         );
         return new ProjectUnderstandingSnapshotResponse(
             null,
@@ -438,120 +562,20 @@ public class ProjectUnderstandingService {
             quality,
             unknowns,
             base.intake(),
-            base.analysisPlan(),
+            plan,
             Instant.now(),
             base.sourceRevision(),
             base.structureIndexVersion(),
             base.modelAnalysisVersion(),
             "CURRENT",
-            diagnostics
+            diagnostics,
+            base.sourceMap(),
+            semanticScout,
+            dynamicProfile,
+            base.historicalCoverage(),
+            base.evolutionPreview(),
+            base.analysisMetrics()
         );
-    }
-
-    private UnderstandingSection parseSection(String name, JsonNode node, Set<String> allowedEvidence) {
-        if (!node.isObject()) return new UnderstandingSection("", List.of());
-        String summary = bounded(node.path("summary").asText("").trim(), 1200);
-        List<UnderstandingClaim> claims = new ArrayList<>();
-        if (node.path("claims").isArray()) {
-            int index = 0;
-            for (JsonNode claim : node.path("claims")) {
-                if (index >= 12) break;
-                String text = bounded(claim.path("text").asText("").trim(), 600);
-                List<String> refs = boundedTexts(claim.path("evidenceRefs"), 12, 100).stream()
-                    .filter(allowedEvidence::contains)
-                    .distinct()
-                    .toList();
-                if (!text.isBlank() && !refs.isEmpty()) {
-                    claims.add(new UnderstandingClaim(
-                        "model-" + name + "-" + (++index),
-                        text,
-                        "INFERRED",
-                        normalizeConfidence(claim.path("confidence").asText("MEDIUM")),
-                        refs
-                    ));
-                }
-            }
-        }
-        return claims.isEmpty()
-            ? new UnderstandingSection("", List.of())
-            : new UnderstandingSection(summary, List.copyOf(claims));
-    }
-
-    private String buildPrompt(
-        ProjectSpace project,
-        RepositoryIntakeResponse intake,
-        ProjectStructureIndexResponse index
-    ) throws JsonProcessingException {
-        Map<String, Object> context = new LinkedHashMap<>();
-        context.put("projectName", bounded(project.getName(), 200));
-        context.put("classification", intake.classification());
-        context.put("scale", intake.scale());
-        context.put("fileCount", intake.fileCount());
-        context.put("sourceFileCount", intake.sourceFileCount());
-        context.put("estimatedLoc", intake.estimatedLoc());
-        context.put("languages", intake.languageDistribution());
-        context.put("manifests", intake.manifestFiles().stream().limit(100).toList());
-        context.put("gitAvailable", intake.git().available());
-        context.put("modules", index.modules().stream().limit(250).toList());
-        context.put("entryPoints", index.entryPoints().stream().limit(100).toList());
-        context.put("importantNodes", index.importantNodes().stream()
-            .limit(50)
-            .map(item -> Map.of(
-                "id", item.id(),
-                "type", item.nodeType(),
-                "label", bounded(item.label(), 160),
-                "path", item.path(),
-                "score", item.score(),
-                "evidenceRefs", item.evidenceRefs().stream().limit(5).toList()
-            ))
-            .toList());
-        context.put("functionalAreas", index.functionalAreas().stream()
-            .limit(100)
-            .map(item -> Map.of(
-                "id", item.id(),
-                "label", bounded(item.label(), 160),
-                "confidence", item.confidence(),
-                "memberPaths", item.memberPaths().stream().limit(20).toList(),
-                "keySymbolIds", item.keySymbolIds().stream().limit(10).toList(),
-                "relationCount", item.relationCount(),
-                "evidenceRefs", item.evidenceRefs().stream().limit(12).toList()
-            ))
-            .toList());
-        context.put("symbols", index.symbols().stream()
-            .filter(item -> index.functionalAreas().stream().anyMatch(area -> area.keySymbolIds().contains(item.id())))
-            .map(item -> Map.of(
-                "id", item.id(),
-                "displayName", bounded(item.displayName(), 160),
-                "kind", item.kind(),
-                "path", item.path(),
-                "evidenceRef", item.evidenceRef()
-            ))
-            .limit(400)
-            .toList());
-        context.put("engineeringSignals", index.engineeringSignals());
-        Set<String> prioritizedRefs = new LinkedHashSet<>();
-        index.functionalAreas().forEach(area -> prioritizedRefs.addAll(area.evidenceRefs()));
-        index.importantNodes().forEach(node -> prioritizedRefs.addAll(node.evidenceRefs()));
-        List<StructureEvidence> selectedEvidence = index.evidence().stream()
-            .sorted(Comparator.comparing((StructureEvidence item) -> !prioritizedRefs.contains(item.id())))
-            .limit(700)
-            .toList();
-        context.put("evidence", selectedEvidence);
-        context.put("coverage", index.coverage());
-        context.put("dirtySet", index.delta());
-        context.put("unsupportedAreas", index.unsupportedAreas());
-        String compact = bounded(objectMapper.writeValueAsString(context), Math.max(8_000, maxModelPromptChars));
-        return """
-            你是项目理解器。只根据下面的确定性结构证据总结当前项目，不得把文件名、README 宣传或目录邻近当作已实现事实。
-            每条判断都必须引用 evidence 中真实存在的 id；无法证明就放入 unknowns。不要输出下一步、路线图或优先级。
-            observed 事实已由系统生成；你生成的所有 claims 都会被标记为 INFERRED。
-            只返回 JSON，结构为：
-            {"identity":{"summary":"","claims":[{"text":"","confidence":"HIGH|MEDIUM|LOW","evidenceRefs":["id"]}]},
-            "technology":{"summary":"","claims":[]},"structure":{"summary":"","claims":[]},
-            "architecture":{"summary":"","claims":[]},"capabilities":{"summary":"","claims":[]},
-            "engineeringState":{"summary":"","claims":[]},"unknowns":[]}
-            每个 section 最多 12 条 claims。证据上下文：
-            """ + compact;
     }
 
     private void persistStructure(
@@ -785,51 +809,30 @@ public class ProjectUnderstandingService {
         );
     }
 
-    private static UnderstandingSection prefer(UnderstandingSection candidate, UnderstandingSection fallback) {
-        if (candidate == null) return fallback;
-        boolean emptySummary = candidate.summary() == null || candidate.summary().isBlank();
-        boolean emptyClaims = candidate.claims() == null || candidate.claims().isEmpty();
-        return emptySummary && emptyClaims ? fallback : candidate;
+    private static UnderstandingSection legacySection(
+        DynamicProjectProfileResponse profile,
+        List<String> typeMarkers,
+        UnderstandingSection fallback
+    ) {
+        if (profile == null || profile.sections() == null) return fallback;
+        return profile.sections().stream()
+            .filter(section -> typeMarkers.stream().anyMatch(marker -> section.type().contains(marker)))
+            .findFirst()
+            .map(section -> new UnderstandingSection(section.summary(), section.claims()))
+            .orElse(fallback);
     }
 
-    private static String invalidEvidenceLimitation(JsonNode root, Set<String> allowedEvidence) {
-        for (String section : SECTION_NAMES) {
-            JsonNode claims = root.path(section).path("claims");
-            if (!claims.isArray()) continue;
-            for (JsonNode claim : claims) {
-                for (JsonNode ref : claim.path("evidenceRefs")) {
-                    if (!allowedEvidence.contains(ref.asText())) {
-                        return "模型返回的未知证据引用已过滤";
-                    }
-                }
-            }
-        }
-        return "";
+    private static List<UnderstandingClaim> profileClaims(DynamicProjectProfileResponse profile) {
+        if (profile == null || profile.sections() == null) return List.of();
+        return profile.sections().stream()
+            .flatMap(section -> section.claims().stream())
+            .toList();
     }
 
     private static List<String> mergeLimitations(List<String> base, String extra) {
         LinkedHashSet<String> values = new LinkedHashSet<>(base == null ? List.of() : base);
         if (extra != null && !extra.isBlank()) values.add(extra);
         return List.copyOf(values);
-    }
-
-    private static List<String> boundedTexts(JsonNode node, int maxItems, int maxLength) {
-        if (!node.isArray()) return List.of();
-        List<String> values = new ArrayList<>();
-        for (JsonNode item : node) {
-            String value = bounded(item.asText("").trim(), maxLength);
-            if (!value.isBlank()) values.add(value);
-            if (values.size() >= maxItems) break;
-        }
-        return List.copyOf(values);
-    }
-
-    private static String normalizeConfidence(String value) {
-        String normalized = value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
-        return switch (normalized) {
-            case "HIGH", "MEDIUM", "LOW" -> normalized;
-            default -> "MEDIUM";
-        };
     }
 
     private static String confidence(ProjectStructureIndexResponse index) {
@@ -860,11 +863,6 @@ public class ProjectUnderstandingService {
         };
     }
 
-    private static String bounded(String value, int max) {
-        if (value == null) return "";
-        return value.length() <= max ? value : value.substring(0, max);
-    }
-
     private static ModelCallDiagnosticsResponse diagnostics(ModelGatewayService.ModelCallDiagnostics value) {
         if (value == null) return null;
         return new ModelCallDiagnosticsResponse(
@@ -888,7 +886,15 @@ public class ProjectUnderstandingService {
             true,
             value.quality().limitations()
         );
-        return copy(value, value.id(), value.currentStatus(), quality);
+        ProjectUnderstandingSnapshotResponse cached = copy(value, value.id(), value.currentStatus(), quality);
+        UnderstandingAnalysisMetrics metrics = value.analysisMetrics();
+        if (metrics == null) return cached;
+        return withAnalysisMetrics(cached, new UnderstandingAnalysisMetrics(
+            metrics.discoveredEvidenceCount(), metrics.candidateEvidenceCount(), metrics.scoutEvidenceCount(),
+            metrics.deepReadCount(), metrics.skippedCount(), 0, 0, 0, 0, 0,
+            metrics.files(), metrics.loc(), metrics.docs(), metrics.commits(), metrics.tags(),
+            0, 0, 0, 0, 0, 0, true, metrics.historicalCoverage(), metrics.structureCoverage()
+        ));
     }
 
     private static ProjectUnderstandingSnapshotResponse withModelFailure(ProjectUnderstandingSnapshotResponse value) {
@@ -921,8 +927,69 @@ public class ProjectUnderstandingService {
             value.structure(), value.architecture(), value.capabilities(), value.engineeringState(),
             value.evidenceCoverage(), quality, value.unknowns(), value.intake(), value.analysisPlan(),
             value.analyzedAt(), value.sourceRevision(), value.structureIndexVersion(), value.modelAnalysisVersion(),
-            currentStatus, value.diagnostics()
+            currentStatus, value.diagnostics(), value.sourceMap(), value.semanticScout(), value.dynamicProfile(),
+            value.historicalCoverage(), value.evolutionPreview(), value.analysisMetrics()
         );
+    }
+
+    private static ProjectUnderstandingSnapshotResponse withAnalysisMetrics(
+        ProjectUnderstandingSnapshotResponse value,
+        UnderstandingAnalysisMetrics metrics
+    ) {
+        return new ProjectUnderstandingSnapshotResponse(
+            value.id(), value.projectId(), value.classification(), value.scale(), value.identity(), value.technology(),
+            value.structure(), value.architecture(), value.capabilities(), value.engineeringState(),
+            value.evidenceCoverage(), value.quality(), value.unknowns(), value.intake(), value.analysisPlan(),
+            value.analyzedAt(), value.sourceRevision(), value.structureIndexVersion(), value.modelAnalysisVersion(),
+            value.currentStatus(), value.diagnostics(), value.sourceMap(), value.semanticScout(), value.dynamicProfile(),
+            value.historicalCoverage(), value.evolutionPreview(), metrics
+        );
+    }
+
+    private static UnderstandingAnalysisMetrics metrics(
+        DiscoveryResult discovery,
+        HistoricalAnalysis historical,
+        ProjectStructureIndexResponse index,
+        AdaptiveAnalysisPlanResponse plan,
+        ModelGatewayService.ModelCallDiagnostics diagnostics,
+        long scanTimeMs,
+        long scoutTimeMs,
+        long planTimeMs,
+        long toolTimeMs,
+        long synthesisTimeMs,
+        long totalTimeMs,
+        boolean cacheHit
+    ) {
+        return new UnderstandingAnalysisMetrics(
+            discovery.sourceMap().discoveredEvidenceCount(),
+            discovery.sourceMap().candidateEvidenceCount(),
+            discovery.sourceMap().scoutEvidenceCount(),
+            discovery.sourceMap().deepReadCount(),
+            discovery.sourceMap().skippedCount(),
+            plan.toolsToInvoke().size(),
+            diagnostics == null ? 0 : diagnostics.requestCount(),
+            diagnostics == null ? 0 : diagnostics.promptTokens(),
+            diagnostics == null ? 0 : diagnostics.completionTokens(),
+            diagnostics == null ? 0 : diagnostics.totalTokens(),
+            index.metrics().fileCount(),
+            index.metrics().estimatedLoc(),
+            discovery.documentCount(),
+            historical.coverage().gitCommitCount(),
+            historical.coverage().tagCount(),
+            scanTimeMs,
+            scoutTimeMs,
+            planTimeMs,
+            toolTimeMs,
+            synthesisTimeMs,
+            totalTimeMs,
+            cacheHit,
+            historical.coverage().overallCoverage(),
+            index.coverage().overall()
+        );
+    }
+
+    private static long elapsedMs(long started) {
+        return Math.max(0, (System.nanoTime() - started) / 1_000_000);
     }
 
     public record RefreshOutcome(

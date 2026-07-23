@@ -230,7 +230,159 @@ public final class ProjectUnderstandingDtos {
         String historicalMode,
         double expectedCoverage,
         List<String> unavailableCapabilities,
-        List<String> planReasons
+        List<String> planReasons,
+        List<String> detectedProjectShapes,
+        List<String> applicableDimensions,
+        List<String> skippedDimensions,
+        List<String> evidencePriorities,
+        List<String> toolsToInvoke,
+        List<String> deepReadTargets,
+        String historicalStrategy,
+        String structureStrategy,
+        Map<String, Integer> semanticBudgets,
+        List<String> expectedOutputs,
+        String confidence
+    ) {
+    }
+
+    public record ProjectEvidenceSourceResponse(
+        String id,
+        String category,
+        String sourceType,
+        String locator,
+        String semanticRole,
+        String importance,
+        String currentness,
+        String confidence,
+        String deepReadStatus,
+        String summary,
+        List<String> evidenceRefs
+    ) {
+    }
+
+    public record EvidenceSourceMapResponse(
+        long discoveredEvidenceCount,
+        int candidateEvidenceCount,
+        int scoutEvidenceCount,
+        int deepReadCount,
+        long skippedCount,
+        Map<String, Long> categoryCounts,
+        List<ProjectEvidenceSourceResponse> sources,
+        List<String> warnings
+    ) {
+    }
+
+    public record ProjectShapeHypothesis(
+        String shape,
+        String confidence,
+        List<String> evidenceRefs,
+        String reason
+    ) {
+    }
+
+    public record EvidenceSourceAssessment(
+        String evidenceId,
+        String semanticRole,
+        String importance,
+        String currentness,
+        boolean shouldDeepRead,
+        boolean shouldSkip,
+        String reason,
+        String confidence
+    ) {
+    }
+
+    public record SemanticScoutResponse(
+        List<ProjectShapeHypothesis> projectShapeHypotheses,
+        List<EvidenceSourceAssessment> evidenceSourceAssessments,
+        List<String> applicableDimensions,
+        List<String> recommendedToolCalls,
+        List<String> unknowns,
+        List<String> skipCandidates,
+        List<String> potentialConflicts,
+        List<String> currentnessWarnings,
+        boolean modelUsed
+    ) {
+    }
+
+    public record DynamicProfileSection(
+        String id,
+        String type,
+        String title,
+        String summary,
+        List<UnderstandingClaim> claims,
+        String confidence,
+        String epistemicStatus,
+        int displayPriority,
+        String applicabilityReason
+    ) {
+    }
+
+    public record DynamicProjectProfileResponse(
+        String summary,
+        List<String> projectShapes,
+        List<String> applicableViews,
+        List<String> unavailableViews,
+        List<DynamicProfileSection> sections,
+        double evidenceCoverage,
+        String confidence,
+        List<String> unknowns
+    ) {
+    }
+
+    public record HistoricalCoverageResponse(
+        boolean historyAvailable,
+        String availability,
+        Instant earliestEvidenceAt,
+        Instant latestEvidenceAt,
+        long gitCommitCount,
+        long coveredCommitCount,
+        int tagCount,
+        int releaseCount,
+        int documentHistoryEvidenceCount,
+        int agentEvidenceCount,
+        List<String> coveredPeriods,
+        List<String> gapPeriods,
+        Map<String, String> confidenceByPeriod,
+        double overallCoverage,
+        List<String> limitations
+    ) {
+    }
+
+    public record EvolutionPreviewResponse(
+        String mode,
+        String strategy,
+        int milestoneCandidateCount,
+        List<String> anchors,
+        List<String> limitations
+    ) {
+    }
+
+    public record UnderstandingAnalysisMetrics(
+        long discoveredEvidenceCount,
+        int candidateEvidenceCount,
+        int scoutEvidenceCount,
+        int deepReadCount,
+        long skippedCount,
+        int toolCallCount,
+        int modelRequestCount,
+        int inputTokens,
+        int outputTokens,
+        int totalTokens,
+        long files,
+        long loc,
+        long docs,
+        long commits,
+        int tags,
+        long scanTimeMs,
+        long scoutTimeMs,
+        long planTimeMs,
+        long toolTimeMs,
+        long synthesisTimeMs,
+        long totalTimeMs,
+        boolean cacheHit,
+        double historicalCoverage,
+        double structureCoverage
     ) {
     }
 
@@ -290,7 +442,13 @@ public final class ProjectUnderstandingDtos {
         String structureIndexVersion,
         String modelAnalysisVersion,
         String currentStatus,
-        ModelCallDiagnosticsResponse diagnostics
+        ModelCallDiagnosticsResponse diagnostics,
+        EvidenceSourceMapResponse sourceMap,
+        SemanticScoutResponse semanticScout,
+        DynamicProjectProfileResponse dynamicProfile,
+        HistoricalCoverageResponse historicalCoverage,
+        EvolutionPreviewResponse evolutionPreview,
+        UnderstandingAnalysisMetrics analysisMetrics
     ) {
     }
 }

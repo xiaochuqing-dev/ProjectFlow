@@ -41,3 +41,16 @@ test("refresh is a recoverable persisted job and GET remains separate", () => {
   assert.match(page, /getProjectUnderstanding/);
   assert.match(page, /refreshProjectUnderstanding/);
 });
+
+test("V3.7 response and page expose adaptive evidence views", () => {
+  assert.match(api, /export type EvidenceSourceMap/);
+  assert.match(api, /export type SemanticScout/);
+  assert.match(api, /export type DynamicProjectProfile/);
+  assert.match(api, /export type HistoricalCoverage/);
+  assert.match(api, /toolsToInvoke: string\[\]/);
+  assert.match(page, /Evidence Sources/);
+  assert.match(page, /自适应分析计划/);
+  assert.match(page, /自适应项目档案/);
+  assert.match(page, /Historical Coverage/);
+  assert.match(page, /当前目录没有可分析内容，不生成架构、能力或时间线/);
+});

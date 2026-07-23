@@ -34,6 +34,7 @@ import com.projectflow.entity.ProjectUnderstandingSnapshot;
 import com.projectflow.repository.AiProviderRepository;
 import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
+import com.projectflow.repository.ProjectFactCommitRefRepository;
 import com.projectflow.repository.ProjectStructureIndexRepository;
 import com.projectflow.repository.ProjectUnderstandingSnapshotRepository;
 import com.projectflow.support.AppException;
@@ -98,6 +99,15 @@ class ProjectUnderstandingServiceTest {
         ReflectionTestUtils.setField(intake, "smallLoc", 20L);
         ReflectionTestUtils.setField(intake, "mediumLoc", 50L);
         ReflectionTestUtils.setField(intake, "largeLoc", 100L);
+        ProjectEvidenceDiscoveryService evidenceDiscovery = new ProjectEvidenceDiscoveryService();
+        ReflectionTestUtils.setField(evidenceDiscovery, "maxCandidates", 100);
+        ReflectionTestUtils.setField(evidenceDiscovery, "maxScoutEvidence", 40);
+        ReflectionTestUtils.setField(evidenceDiscovery, "maxSampleChars", 1600);
+        ReflectionTestUtils.setField(evidenceDiscovery, "maxSampleBytes", 8192);
+        AnalysisToolRegistry toolRegistry = new AnalysisToolRegistry();
+        AdaptiveAnalysisPlanner planner = new AdaptiveAnalysisPlanner(toolRegistry);
+        SemanticScoutService semanticScout = new SemanticScoutService(gateway, mapper);
+        ReflectionTestUtils.setField(semanticScout, "maxModelPromptChars", 48_000);
         service = new ProjectUnderstandingService(
             projects,
             memories,
@@ -111,10 +121,13 @@ class ProjectUnderstandingServiceTest {
                 new ScipProjectStructureIndexer()
             ),
             mock(ProjectEvolutionBridgeService.class),
-            gateway,
+            evidenceDiscovery,
+            new HistoricalCoverageService(commands, mock(ProjectFactCommitRefRepository.class)),
+            planner,
+            semanticScout,
+            new DynamicProjectProfileSynthesizer(),
             mapper
         );
-        ReflectionTestUtils.setField(service, "maxModelPromptChars", 48_000);
     }
 
     @Test
@@ -131,6 +144,68 @@ class ProjectUnderstandingServiceTest {
         assertThat(first.snapshot().evidenceCoverage().observedClaims()).isPositive();
         assertThat(second.cacheHit()).isTrue();
         assertThat(second.snapshot().quality().cacheHit()).isTrue();
+        verify(gateway, never()).callStructured(any(), any(), any(ModelTaskType.class));
+    }
+
+    @Test
+    void emptyDirectorySkipsModelAndDoesNotInventProfileSections() throws Exception {
+        providers.set(List.of(provider()));
+
+        var outcome = service.refresh(userId, projectId);
+
+        assertThat(outcome.modelUsed()).isFalse();
+        assertThat(outcome.snapshot().classification()).isEqualTo("EMPTY");
+        assertThat(outcome.snapshot().dynamicProfile().sections()).isEmpty();
+        assertThat(outcome.snapshot().historicalCoverage().historyAvailable()).isFalse();
+        assertThat(outcome.snapshot().analysisPlan().semanticMode()).isEqualTo("SKIPPED_EMPTY");
+        verify(gateway, never()).callStructured(any(), any(), any(ModelTaskType.class));
+    }
+
+    @Test
+    void nonEmptyTextUsesBoundedSemanticScoutButEmptyTextDoesNot() throws Exception {
+        providers.set(List.of(provider()));
+        Files.writeString(root.resolve("fuck-this-bug.md"), "# 事故复盘\n这里记录真实故障原因和决定。\n");
+        String content = """
+            {
+              "semanticScout":{
+                "projectShapeHypotheses":[],"evidenceSourceAssessments":[],
+                "applicableDimensions":["documentPurpose"],"recommendedToolCalls":["DOC_READER","DROP_DATABASE"],
+                "unknowns":[],"skipCandidates":[],"potentialConflicts":[],"currentnessWarnings":[]
+              },
+              "dynamicProfile":{"summary":"文档型材料","sections":[]},
+              "unknowns":[]
+            }
+            """;
+        ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
+        when(gateway.callStructured(any(), any(), eq(ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT)))
+            .thenReturn(new ModelGatewayService.StructuredModelResponse(
+                content,
+                new ModelOutputAdapter(mapper).parse(content, ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT)
+            ));
+
+        var outcome = service.refresh(userId, projectId);
+
+        assertThat(outcome.modelUsed()).isTrue();
+        assertThat(outcome.snapshot().classification()).isEqualTo("UNKNOWN_NON_CODE");
+        assertThat(outcome.snapshot().sourceMap().scoutEvidenceCount()).isEqualTo(1);
+        assertThat(outcome.snapshot().analysisPlan().toolsToInvoke()).contains("DOC_READER").doesNotContain("DROP_DATABASE");
+        assertThat(outcome.snapshot().dynamicProfile().sections())
+            .extracting(section -> section.type())
+            .contains("DOCUMENT_OVERVIEW")
+            .doesNotContain("CURRENT_STRUCTURE");
+    }
+
+    @Test
+    void emptyTextHasNoSubstantiveProfileAndUsesZeroModelRequests() throws Exception {
+        providers.set(List.of(provider()));
+        Files.writeString(root.resolve("empty.txt"), "");
+
+        var outcome = service.refresh(userId, projectId);
+
+        assertThat(outcome.modelUsed()).isFalse();
+        assertThat(outcome.snapshot().analysisPlan().semanticMode()).isEqualTo("SKIPPED_NO_SUBSTANTIVE_EVIDENCE");
+        assertThat(outcome.snapshot().dynamicProfile().projectShapes()).containsExactly("EMPTY_CONTENT");
+        assertThat(outcome.snapshot().dynamicProfile().sections()).isEmpty();
         verify(gateway, never()).callStructured(any(), any(), any(ModelTaskType.class));
     }
 
@@ -205,10 +280,18 @@ class ProjectUnderstandingServiceTest {
         providers.set(List.of(provider));
         String content = """
             {
-              "identity":{"summary":"无证据身份","claims":[{"text":"伪造判断","confidence":"HIGH","evidenceRefs":["unknown"]}]},
-              "technology":{"summary":"","claims":[]},"structure":{"summary":"","claims":[]},
-              "architecture":{"summary":"","claims":[]},"capabilities":{"summary":"","claims":[]},
-              "engineeringState":{"summary":"","claims":[]},"unknowns":[]
+              "semanticScout":{
+                "projectShapeHypotheses":[{"shape":"FAKE","confidence":"HIGH","evidenceRefs":["unknown"],"reason":"无证据"}],
+                "evidenceSourceAssessments":[],"applicableDimensions":[],"recommendedToolCalls":[],
+                "unknowns":[],"skipCandidates":[],
+                "potentialConflicts":[],"currentnessWarnings":[]
+              },
+              "dynamicProfile":{"summary":"无证据身份","sections":[
+                {"id":"fake","type":"IDENTITY","title":"伪造","summary":"伪造",
+                 "claims":[{"text":"伪造判断","confidence":"HIGH","evidenceRefs":["unknown"]}],
+                 "confidence":"HIGH","displayPriority":10,"applicabilityReason":""}
+              ]},
+              "unknowns":[]
             }
             """;
         ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
@@ -223,5 +306,21 @@ class ProjectUnderstandingServiceTest {
         assertThat(outcome.snapshot().identity().summary()).contains("Demo");
         assertThat(outcome.snapshot().identity().claims()).allMatch(claim -> !"伪造判断".equals(claim.text()));
         assertThat(outcome.snapshot().quality().limitations()).contains("模型返回的未知证据引用已过滤");
+    }
+
+    private AiProvider provider() {
+        AiProvider provider = new AiProvider(userId);
+        provider.update(
+            "provider",
+            "https://example.invalid",
+            "test-key",
+            "test-model",
+            AiProviderType.OPENAI,
+            0.1,
+            2048,
+            true,
+            List.of()
+        );
+        return provider;
     }
 }

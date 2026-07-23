@@ -57,7 +57,10 @@ const server = http.createServer(async (request, response) => {
   const prompt = Array.isArray(payload.messages)
     ? payload.messages.map((message) => String(message.content || "")).join("\n")
     : "";
-  const task = prompt.includes("项目理解器") || prompt.includes("\"engineeringState\"") ? "understanding"
+  const task = prompt.includes("项目理解器")
+      || prompt.includes("Semantic Scout")
+      || prompt.includes("\"semanticScout\"")
+      || prompt.includes("\"engineeringState\"") ? "understanding"
     : prompt.includes("项目历程") ? "timeline"
     : prompt.includes("capabilities") || prompt.includes("项目能力") ? "capability"
       : "segment";
@@ -74,12 +77,39 @@ const server = http.createServer(async (request, response) => {
 
   const content = task === "understanding"
     ? JSON.stringify({
-        identity: { summary: "这是一个有源码和工程证据的本地项目。", claims: [{ text: "当前目录包含可分析的源代码。", confidence: "HIGH", evidenceRefs: ["intake:scan"] }] },
-        technology: { summary: "技术组成以结构索引中的语言和清单为准。", claims: [{ text: "已识别源码语言和构建清单。", confidence: "HIGH", evidenceRefs: ["intake:scan"] }] },
-        structure: { summary: "项目具有明确的目录模块和候选入口。", claims: [{ text: "模块边界来自目录聚合。", confidence: "MEDIUM", evidenceRefs: ["intake:scan"] }] },
-        architecture: { summary: "当前仅能推断静态模块结构，运行时调用仍未知。", claims: [] },
-        capabilities: { summary: "项目具备可追溯的本地工作流能力。", claims: [{ text: "源码与工程清单共同支撑本地工作流。", confidence: "MEDIUM", evidenceRefs: ["intake:scan"] }] },
-        engineeringState: { summary: "仓库已经进入可持续开发状态。", claims: [{ text: "Git 与源码库存可用于后续增量理解。", confidence: "MEDIUM", evidenceRefs: ["intake:scan"] }] },
+        semanticScout: {
+          projectShapeHypotheses: [{
+            shape: "CODE_PROJECT",
+            confidence: "HIGH",
+            evidenceRefs: ["intake:scan"],
+            reason: "目录盘点确认存在源码和 Git 历史。",
+          }],
+          evidenceSourceAssessments: [],
+          applicableDimensions: ["CURRENT_STATE", "TECHNOLOGY", "CURRENT_STRUCTURE", "ENGINEERING_STATE", "EVOLUTION"],
+          recommendedToolCalls: ["SCIP_IF_AVAILABLE", "GIT_HISTORY"],
+          unknowns: ["缺少运行时观测，动态调用关系保持未知"],
+          skipCandidates: [],
+          potentialConflicts: [],
+          currentnessWarnings: [],
+        },
+        dynamicProfile: {
+          summary: "这是一个有源码、工程信号和可验证历史的本地项目。",
+          sections: [{
+            id: "semantic-current-state",
+            type: "CURRENT_STATE",
+            title: "语义当前状态",
+            summary: "源码库存和 Git 证据共同支持当前项目状态。",
+            claims: [{
+              text: "当前目录包含可分析的源代码，并已进入持续开发状态。",
+              confidence: "HIGH",
+              evidenceRefs: ["intake:scan"],
+            }],
+            confidence: "HIGH",
+            epistemicStatus: "INFERRED",
+            displayPriority: 15,
+            applicabilityReason: "存在源码和 Git 证据",
+          }],
+        },
         unknowns: ["缺少语义符号图，运行时调用关系保持未知"],
       })
     : prompt.includes("ALLOWED_MONTH_KEYS_JSON=")
