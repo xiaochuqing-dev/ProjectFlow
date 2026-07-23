@@ -1,0 +1,44 @@
+{
+  "taskGoal": "完成 ProjectFlow V3.5 通用项目理解基础：先研究成熟开源方案，再实现任意目录 Intake、结构索引、自适应模型边界、持久化当前理解、信任校准页面和真实验收。",
+  "actualChanges": [
+    "新增有界目录 Intake，能够区分空目录、非代码、无 Git 代码、小中大型和 Monorepo，并记录语言、LOC、manifest、Git、工程设施、覆盖率与风险。",
+    "新增可替换 ProjectStructureIndexer 边界及 manifest/filesystem provider，生成模块、入口、关系、证据编号和明确的 unsupported areas，没有自研语言 Parser 或 Symbol Protocol。",
+    "新增库存 fingerprint、结构缓存和 added/modified/removed/unchanged dirty set；无变化重跑直接复用当前快照并保持零模型调用。",
+    "新增 ProjectUnderstandingSnapshot 和 ProjectStructureIndex 持久化模型、所有权保护 API，以及复用现有 Durable Job 的刷新、取消、retry 和恢复流程。",
+    "新增受 Model Gateway V2 管理的 PROJECT_UNDERSTANDING_SNAPSHOT 任务；只发送压缩相对证据，过滤未知 evidence ID，区分 OBSERVED、INFERRED、unknowns、coverage 和 CURRENT/STALE。",
+    "新增当前项目理解页面，展示输入分类、技术与结构、证据覆盖、未知项、Git/模型可用性、缓存状态和持久化任务进度。",
+    "完成开源复用地图、当前状态审计、架构说明、Desktop/Core ADR 和最终验收报告，并更新 README、PROJECT_CONTEXT、AGENTS 和版本标识。",
+    "升级前端到 Next.js 16.2.11、Playwright 1.55.1 和 PostCSS 8.5.10，消除直接 Playwright 与 Next.js 本体的已修复告警；保留框架内部无兼容升级路径的上游风险记录。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/RepositoryIntakeService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectStructureIndexer.java",
+    "backend/src/main/java/com/projectflow/service/ManifestFilesystemProjectStructureIndexer.java",
+    "backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java",
+    "backend/src/main/java/com/projectflow/dto/ProjectUnderstandingDtos.java",
+    "backend/src/main/java/com/projectflow/controller/ProjectUnderstandingController.java",
+    "frontend/src/app/project-intelligence/understanding/page.tsx",
+    "frontend/src/lib/api.ts",
+    "docs/projectflow-v3.5-open-source-borrowing-map.md",
+    "docs/projectflow-v3.5-architecture.md",
+    "docs/projectflow-v3.5-acceptance-report.md"
+  ],
+  "verification": {
+    "build": "passed: frontend npm run build 使用 Next.js 16.2.11 成功；根 Start-ProjectFlow.bat -NoBrowser 从当前脏工作树执行 npm ci、生产构建并拉起前后端，logs/last-embedded-build.json 记录 frontendBuildId=YLblZHQcsAqIndQtKWSBr。",
+    "tests": "passed: backend mvn test 共 319 项，0 failures，0 errors，1 skipped；frontend lint 通过；contracts 47/47；Playwright Chromium E2E 8/8。真实 Spring Framework 基准为 11314 文件、9659 源文件、1536497 LOC、32 模块、coverage 0.799、0 模型请求。",
+    "manualCheck": "passed_with_skips: H2 旧数据和前后端健康端点由根启动脚本验证；Docker daemon 不可用，PostgreSQL Testcontainers 跳过；没有安全 Key，真实 Provider 跳过；固定模型仅作为自动化契约。"
+  },
+  "unfinished": [
+    "Tree-sitter/SCIP AST、symbol、import/call/reference provider 尚未内置，当前结构来源明确为 MANIFEST_FILESYSTEM。",
+    "dirty set 已持久化，但当前 provider 在发生变化时仍重建有界结构摘要；AST 级细粒度增量等待未来 Adapter。",
+    "真实 Provider 质量验收因没有安全 Key 跳过，PostgreSQL 16 Testcontainers 因 Docker daemon 不可用跳过，远程 CI 未运行。",
+    "最新稳定 Next.js 内部固定的 PostCSS 8.4.31 和 Sharp 0.34.5 仍有 npm audit 上游告警，未采用不受支持的强制 override。",
+    "完整 Desktop shell、后台 daemon、完整历史 Project Evolution UI 和跨平台安装器按范围故意留待后续阶段。"
+  ],
+  "sedimentCandidates": [
+    "任意目录项目理解应采用确定性 Intake、可替换结构索引、证据约束模型综合三层边界，避免把文件遍历和语言解析交给模型。",
+    "大型仓库应持久化库存 fingerprint 和 dirty set，无变化直接零模型复用；模型上下文只消费有界模块、入口、manifest 与证据编号。",
+    "当前解释与历史事实必须分离：ProjectUnderstandingSnapshot 可替换，ProjectFact 不因 currentness 变化而删除或被模型推断覆盖。",
+    "开源复用应同时检查许可证和运行时成本：受限许可证只借鉴，语言 Parser 与跨语言 Symbol Protocol 优先通过 Tree-sitter/SCIP Adapter 接入。"
+  ]
+}

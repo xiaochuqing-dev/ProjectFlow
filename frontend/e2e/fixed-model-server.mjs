@@ -57,7 +57,8 @@ const server = http.createServer(async (request, response) => {
   const prompt = Array.isArray(payload.messages)
     ? payload.messages.map((message) => String(message.content || "")).join("\n")
     : "";
-  const task = prompt.includes("项目历程") ? "timeline"
+  const task = prompt.includes("项目理解器") || prompt.includes("\"engineeringState\"") ? "understanding"
+    : prompt.includes("项目历程") ? "timeline"
     : prompt.includes("capabilities") || prompt.includes("项目能力") ? "capability"
       : "segment";
   const matchesTask = (configured) => configured === "any" || configured === task
@@ -71,7 +72,17 @@ const server = http.createServer(async (request, response) => {
     return json(response, 503, { error: { message: "controlled E2E failure" } });
   }
 
-  const content = prompt.includes("ALLOWED_MONTH_KEYS_JSON=")
+  const content = task === "understanding"
+    ? JSON.stringify({
+        identity: { summary: "这是一个有源码和工程证据的本地项目。", claims: [{ text: "当前目录包含可分析的源代码。", confidence: "HIGH", evidenceRefs: ["intake:scan"] }] },
+        technology: { summary: "技术组成以结构索引中的语言和清单为准。", claims: [{ text: "已识别源码语言和构建清单。", confidence: "HIGH", evidenceRefs: ["intake:scan"] }] },
+        structure: { summary: "项目具有明确的目录模块和候选入口。", claims: [{ text: "模块边界来自目录聚合。", confidence: "MEDIUM", evidenceRefs: ["intake:scan"] }] },
+        architecture: { summary: "当前仅能推断静态模块结构，运行时调用仍未知。", claims: [] },
+        capabilities: { summary: "项目具备可追溯的本地工作流能力。", claims: [{ text: "源码与工程清单共同支撑本地工作流。", confidence: "MEDIUM", evidenceRefs: ["intake:scan"] }] },
+        engineeringState: { summary: "仓库已经进入可持续开发状态。", claims: [{ text: "Git 与源码库存可用于后续增量理解。", confidence: "MEDIUM", evidenceRefs: ["intake:scan"] }] },
+        unknowns: ["缺少语义符号图，运行时调用关系保持未知"],
+      })
+    : prompt.includes("ALLOWED_MONTH_KEYS_JSON=")
     ? JSON.stringify({
         periodSummary: "项目从最早记录到当前形成了连续、可追溯的演进过程。",
         stages: [{

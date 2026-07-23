@@ -66,6 +66,11 @@ public enum ModelTaskType {
         List.of(), List.of("operations", "noCapabilityChangeFactIds", "attentionFacts"), List.of(),
         "{\"operations\":[{\"type\":\"ENHANCE_CAPABILITY\",\"capabilityId\":\"uuid\",\"factIds\":[\"uuid\"],\"summary\":\"\",\"evolutionTitle\":\"\",\"evolutionSummary\":\"\"}],\"noCapabilityChangeFactIds\":[],\"attentionFacts\":[]}"
     ),
+    PROJECT_UNDERSTANDING_SNAPSHOT(
+        "当前项目理解快照", 5_000, 16_000, 0.1, false,
+        List.of(), List.of("identity", "technology", "structure", "architecture", "capabilities", "engineeringState", "unknowns"), List.of(),
+        "{\"identity\":{\"summary\":\"\",\"claims\":[]},\"technology\":{\"summary\":\"\",\"claims\":[]},\"structure\":{\"summary\":\"\",\"claims\":[]},\"architecture\":{\"summary\":\"\",\"claims\":[]},\"capabilities\":{\"summary\":\"\",\"claims\":[]},\"engineeringState\":{\"summary\":\"\",\"claims\":[]},\"unknowns\":[]}"
+    ),
     LEGACY_STRUCTURED(
         "兼容结构化调用", 2_048, 20_000, 0.2, false,
         List.of("items", "results"), List.of(), List.of(), "{}"

@@ -1249,7 +1249,110 @@ export type ProjectAnalysisJobStatus =
   | "RETRYABLE"
   | "EXPIRED"
   | "REJECTED";
-export type ProjectAnalysisJobType = "PROJECT" | "FILE" | "CAPABILITY_INTERPRET" | "WORK_SESSION_SCAN" | "PROJECT_FACT_HISTORY_REBUILD" | "CAPABILITY_CARD_ANALYSIS";
+export type ProjectAnalysisJobType =
+  | "PROJECT"
+  | "FILE"
+  | "CAPABILITY_INTERPRET"
+  | "WORK_SESSION_SCAN"
+  | "PROJECT_FACT_HISTORY_REBUILD"
+  | "PROJECT_TIMELINE_REFRESH"
+  | "PROJECT_CAPABILITY_MAP_REFRESH"
+  | "PROJECT_UNDERSTANDING_REFRESH"
+  | "CAPABILITY_CARD_ANALYSIS";
+
+export type UnderstandingClaim = {
+  id: string;
+  text: string;
+  epistemicStatus: "OBSERVED" | "INFERRED" | "EXPLAINED";
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+  evidenceRefs: string[];
+};
+
+export type UnderstandingSection = {
+  summary: string;
+  claims: UnderstandingClaim[];
+};
+
+export type RepositoryIntake = {
+  classification: string;
+  scale: string;
+  accessible: boolean;
+  fileCount: number;
+  sourceFileCount: number;
+  totalBytes: number;
+  estimatedLoc: number;
+  languageDistribution: Record<string, number>;
+  manifestFiles: string[];
+  git: {
+    available: boolean;
+    branch: string;
+    head: string;
+    commitCount: number;
+    worktreeState: string;
+    submoduleCount: number;
+  };
+  nestedRepositoryCount: number;
+  monorepo: boolean;
+  generatedVendorRatio: number;
+  binaryRatio: number;
+  supportedStructureCoverage: number;
+  scanTruncated: boolean;
+  metricsSource: string;
+  sourceRevision: string;
+  contentHash: string;
+  warnings: string[];
+};
+
+export type ProjectUnderstandingSnapshot = {
+  id: string;
+  projectId: string;
+  classification: string;
+  scale: string;
+  identity: UnderstandingSection;
+  technology: UnderstandingSection;
+  structure: UnderstandingSection;
+  architecture: UnderstandingSection;
+  capabilities: UnderstandingSection;
+  engineeringState: UnderstandingSection;
+  evidenceCoverage: {
+    observedClaims: number;
+    inferredClaims: number;
+    explainedClaims: number;
+    evidenceBoundClaims: number;
+    intakeCoverage: number;
+    structureCoverage: number;
+    evidenceKinds: string[];
+  };
+  quality: {
+    semanticStatus: string;
+    confidence: "HIGH" | "MEDIUM" | "LOW";
+    modelUsed: boolean;
+    cacheHit: boolean;
+    limitations: string[];
+  };
+  unknowns: string[];
+  intake: RepositoryIntake;
+  analysisPlan: {
+    deterministicCapabilities: string[];
+    structureProvider: string;
+    semanticMode: string;
+    maxModelRequests: number;
+    maxModelInputTokens: number;
+    maxModelTotalTokens: number;
+    maxDurationMs: number;
+    hierarchical: boolean;
+    historicalMode: string;
+    expectedCoverage: number;
+    unavailableCapabilities: string[];
+    planReasons: string[];
+  };
+  analyzedAt: string;
+  sourceRevision: string;
+  structureIndexVersion: string;
+  modelAnalysisVersion: string;
+  currentStatus: "CURRENT" | "STALE";
+  diagnostics: ModelCallDiagnostics | null;
+};
 
 export type ProjectAnalysisJob = {
   id: string;
@@ -2237,6 +2340,23 @@ export function ignoreProjectChange(token: string, changeId: string): Promise<Pr
 export function runProjectAnalysis(token: string, projectId: string): Promise<ProjectAnalysisJob> {
   return requestJson<ProjectAnalysisJob>(`/projects/${projectId}/analysis/run`, {
     method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function refreshProjectUnderstanding(token: string, projectId: string): Promise<ProjectAnalysisJob> {
+  return requestJson<ProjectAnalysisJob>(`/projects/${projectId}/understanding/refresh`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function getProjectUnderstanding(token: string, projectId: string): Promise<ProjectUnderstandingSnapshot> {
+  return requestJson<ProjectUnderstandingSnapshot>(`/projects/${projectId}/understanding`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

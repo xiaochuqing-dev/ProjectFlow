@@ -1,9 +1,22 @@
-<!-- PROJECTFLOW V3.4.5 CONTEXT START -->
-ProjectFlow 当前版本为 V3.4.5。后续 Agent 必须按“分析新变化 -> 开发推进段 -> 自动项目事实 -> 项目记录 / 项目记忆 -> 自动项目历程 -> 全生命周期能力地图 -> Project Memory Gateway -> Hermes 只读消费 / Obsidian 长期知识投影”理解产品。正常事实和能力演进不逐条确认，只有异常进入“需要关注”。
+<!-- PROJECTFLOW V3.5.0 CONTEXT START -->
+<!-- PROJECTFLOW V3.4.5 CONTEXT START (retained compatibility baseline) -->
+ProjectFlow 当前版本为 V3.5.0。后续 Agent 必须按“当前项目理解 -> 分析新变化 -> 开发推进段 -> 自动项目事实 -> 项目记录 / 项目记忆 -> 自动项目历程 -> 全生命周期能力地图 -> Project Memory Gateway -> Hermes 只读消费 / Obsidian 长期知识投影”理解产品。正常事实和能力演进不逐条确认，只有异常进入“需要关注”。
 
 开始任务前请阅读 `.projectflow/AGENT_PROTOCOL.md`。完成开发任务后，按协议把结果写入 `.projectflow/agent-results/`。不要删除添加项目、zip 导入、本地项目绑定、模型配置、登录等核心入口。
 
 开发推进段和项目事实必须描述真实发生的开发结果、用户或开发者可感知变化、验证情况和不确定项。禁止用 backend/frontend/docs/config 等目录名、提交数量或“开发推进”空话替代具体摘要。能力主页面以长期 `ProjectCapability` 地图为主，旧 `ProjectCapabilityCard` 和 `completedCapabilities` 仅作兼容档案。
+
+V3.5 Universal Project Understanding 规则（后续 Agent 必须遵守）：
+- ProjectUnderstandingSnapshot 是可替换的当前解释，不是 ProjectFact、Timeline 或 Capability 的事实来源。
+- GET understanding/index 只读取持久化结果，不得扫描文件、调用 Git/模型或修改事实和派生层。
+- 任意目录先做有界 intake；无 Git 仍可理解当前结构，但历史能力必须明确不可用。
+- 结构来源统一经 ProjectStructureIndexer；不得为新增语言自研 Parser 或跨语言 Symbol Protocol，优先 Tree-sitter/SCIP 等成熟边界。
+- 模型只接收压缩后的相对路径和证据编号，不逐文件调用；空目录、非代码、无模型和未变化重跑为零模型调用。
+- OBSERVED、INFERRED、EXPLAINED、coverage、unknowns 和 CURRENT/STALE 必须保持可诊断，未知 evidence ID 必须过滤或判无效。
+- 扫描必须限制文件数、单文件读取、总读取量、详情样本、命令时间和模型上下文；达到上限时降低覆盖率并显示未知项。
+- 模型失败不得覆盖上次成功理解；没有旧结果时保留确定性 fallback。Prompt、raw response、reasoning、Key、Authorization 和绝对路径不得持久化。
+- scc 只是可选指标 Adapter，缺失时不得阻断；Tree-sitter、SCIP、Agent session Adapter 和 Desktop shell 均不得描述为 V3.5 已内置。
+- Desktop GUI 未来必须复用同一 Java Core/API；Tauri/Electron 选择必须经过单独 PoC，不在页面层复制业务规则。
 
 V3.4.5 Backend Intelligence Foundation 规则（后续 Agent 必须遵守）：
 - 所有真实模型入口继续登记为 ModelTaskType，并只通过 ModelGatewayService；业务 Service 不得直接依赖 Provider SDK 或拼协议请求。
@@ -171,7 +184,7 @@ V3.3.3 仍有效的关键决策：
 - 多来源证据（本地 Git / 工作区 diff / GitHub / Agent result / 扫描范围）要整理成分析输入快照交给模型，模型基于证据灵活判断真实开发状态，不写死优先级。
 - 需要模型理解的入口（分析新变化、分析项目能力）必须有模型配置前置检查；未配置模型时不生成低质量本地模板结果，明确提示去配置模型。
 - 规则负责证据事实，模型负责灵活理解；正常客观事实自动记录，用户只处理主观编辑和异常关注项。
-<!-- PROJECTFLOW V3.4.5 CONTEXT END -->
+<!-- PROJECTFLOW V3.5.0 CONTEXT END -->
 
 # ProjectFlow Local Rules
 

@@ -139,6 +139,35 @@ test("自动事实建立长期能力地图且不制造逐卡处理主流程", as
   await expect(page.getByRole("button", { name: /确认|忽略|分析新增沉淀/ })).toHaveCount(0);
 });
 
+test("当前项目理解通过持久化任务生成并在刷新后恢复", async ({ page, request }) => {
+  const fixture = await createAnalyzableProject(request, "当前项目理解");
+  appendCommit(fixture.repository, "src/App.java", "public final class App {}\n", "feat: add Java application entry");
+  const job = await api<Job>(request, "POST", `/projects/${fixture.projectId}/understanding/refresh`);
+  const completed = await waitForJob(request, job.id, ["SUCCEEDED", "SUCCEEDED_WITH_WARNINGS"]);
+  expect(completed.jobType).toBe("PROJECT_UNDERSTANDING_REFRESH");
+  expect(completed.requestCount).toBeGreaterThan(0);
+
+  const snapshot = await api<{
+    classification: string;
+    currentStatus: string;
+    quality: { modelUsed: boolean; semanticStatus: string };
+    evidenceCoverage: { inferredClaims: number; evidenceBoundClaims: number };
+    unknowns: string[];
+  }>(request, "GET", `/projects/${fixture.projectId}/understanding`);
+  expect(snapshot.currentStatus).toBe("CURRENT");
+  expect(snapshot.quality.modelUsed).toBeTruthy();
+  expect(snapshot.evidenceCoverage.inferredClaims).toBeGreaterThan(0);
+  expect(snapshot.evidenceCoverage.evidenceBoundClaims).toBeGreaterThan(0);
+
+  await selectProject(page, fixture.projectId);
+  await page.goto(`/project-intelligence/understanding?projectId=${fixture.projectId}`);
+  await expect(page.getByText("证据与可信度")).toBeVisible();
+  await expect(page.getByText("模型推断", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("仍然未知")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("证据与可信度")).toBeVisible();
+});
+
 test("任务取消与 retry 复用等价活动分析任务", async ({ request }) => {
   const fixture = await createAnalyzableProject(request, "任务可靠性");
   await request.post(`${modelControl}/fail-next`, { data: { count: 2, task: "timeline" } });

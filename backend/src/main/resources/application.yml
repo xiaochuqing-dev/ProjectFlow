@@ -51,6 +51,16 @@ projectflow:
     global-active-limit: ${PROJECTFLOW_JOB_GLOBAL_ACTIVE_LIMIT:20}
     # 服务关闭等待时间，单位：秒。
     shutdown-wait-seconds: ${PROJECTFLOW_JOB_SHUTDOWN_WAIT_SECONDS:30}
+  understanding:
+    # 扫描、索引和模型上下文都必须有界；达到上限时返回覆盖率与未知项，不静默伪装完整。
+    max-files: ${PROJECTFLOW_UNDERSTANDING_MAX_FILES:250000}
+    max-file-details: ${PROJECTFLOW_UNDERSTANDING_MAX_FILE_DETAILS:5000}
+    max-file-read-bytes: ${PROJECTFLOW_UNDERSTANDING_MAX_FILE_READ_BYTES:8388608}
+    max-total-read-bytes: ${PROJECTFLOW_UNDERSTANDING_MAX_TOTAL_READ_BYTES:536870912}
+    small-loc: ${PROJECTFLOW_UNDERSTANDING_SMALL_LOC:20000}
+    medium-loc: ${PROJECTFLOW_UNDERSTANDING_MEDIUM_LOC:100000}
+    large-loc: ${PROJECTFLOW_UNDERSTANDING_LARGE_LOC:500000}
+    max-model-prompt-chars: ${PROJECTFLOW_UNDERSTANDING_MAX_PROMPT_CHARS:48000}
 
 management:
   endpoints:

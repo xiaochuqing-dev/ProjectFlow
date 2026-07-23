@@ -105,6 +105,10 @@ public class ProjectAnalysisJobService {
         return startJob(userId, projectId, ProjectAnalysisJobType.PROJECT_CAPABILITY_MAP_REFRESH, normalizedScope, null, null);
     }
 
+    public ProjectAnalysisJobResponse startProjectUnderstandingRefresh(UUID userId, UUID projectId) {
+        return startJob(userId, projectId, ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH, null, null, null);
+    }
+
     public ProjectAnalysisJobResponse cancel(UUID userId, UUID jobId) {
         ProjectAnalysisJob job = transactionTemplate.execute(status -> {
             ProjectAnalysisJob current = findOwnedJob(userId, jobId);
@@ -160,6 +164,8 @@ public class ProjectAnalysisJobService {
                 job.configureBudgets(48, 400_000, 600_000L);
             } else if (type == ProjectAnalysisJobType.PROJECT_CAPABILITY_MAP_REFRESH) {
                 job.configureBudgets(64, 600_000, 600_000L);
+            } else if (type == ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH) {
+                job.configureBudgets(3, 40_000, 600_000L);
             }
             if (retriedFromJobId != null) job.configureRetry(retriedFromJobId, retryReason);
             if (activeCount >= globalActiveLimit) {
@@ -221,7 +227,8 @@ public class ProjectAnalysisJobService {
                     job.markInterrupted(false, "服务重启时模型请求状态未知，未自动重发以避免重复计费。请确认后重新运行。");
                 } else if (job.getJobType() == ProjectAnalysisJobType.PROJECT_TIMELINE_REFRESH
                     || job.getJobType() == ProjectAnalysisJobType.PROJECT_CAPABILITY_MAP_REFRESH
-                    || job.getJobType() == ProjectAnalysisJobType.PROJECT_FACT_HISTORY_REBUILD) {
+                    || job.getJobType() == ProjectAnalysisJobType.PROJECT_FACT_HISTORY_REBUILD
+                    || job.getJobType() == ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH) {
                     // 后台派生任务只暴露通用 job 状态和安全诊断，不把内部结果误解析为文件分析。
                 } else {
                     job.markInterrupted(true, "服务重启中断了任务，尚未产生模型费用，可以安全重新运行。");
@@ -318,6 +325,11 @@ public class ProjectAnalysisJobService {
                         summary.path("schemaMatched").asBoolean(false), summary.path("failureCode").asText(""),
                         summary.path("requestCount").asInt(0)
                     );
+                } else if (job.getJobType() == ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH
+                    || job.getJobType() == ProjectAnalysisJobType.PROJECT_TIMELINE_REFRESH
+                    || job.getJobType() == ProjectAnalysisJobType.PROJECT_CAPABILITY_MAP_REFRESH
+                    || job.getJobType() == ProjectAnalysisJobType.PROJECT_FACT_HISTORY_REBUILD) {
+                    // 这些任务的业务结果由各自的持久化只读接口提供，job 只承载生命周期和安全诊断。
                 } else {
                     fileResult = objectMapper.readValue(job.getResultJson(), ProjectFileAnalysisResponse.class);
                     if (containsProjectNoise(fileResult)) {

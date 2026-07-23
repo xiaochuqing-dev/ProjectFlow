@@ -1,12 +1,14 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-07-20
+Last updated: 2026-07-23
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.4.5 is a local-first project memory system for AI-assisted solo developers. It automatically organizes real development evidence into durable project facts, maintains a traceable timeline and stable lifecycle Capability Map, and exposes those layers through one bounded Project Memory Gateway to local read-only Hermes and a curated Obsidian knowledge projection.
+ProjectFlow V3.5.0 is a local-first project understanding and memory system for AI-assisted developers. It first builds an evidence-backed current understanding from any bound local directory, then keeps that replaceable interpretation separate from durable Project Facts, Timeline, lifecycle Capability Map, Project Memory Gateway, Hermes reads, and Obsidian projection.
+
+ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation retained by V3.5.0.
 
 Current direction:
 
@@ -15,6 +17,17 @@ Current direction:
 - Rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records normal evidence-backed facts.
 - Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
+
+V3.5 focus:
+
+- Repository intake works for empty, non-code, non-Git, ordinary Git, large, and multi-workspace directories. Missing Git only disables historical understanding.
+- `ProjectStructureIndexer` is the stable structure-provider boundary. V3.5 ships deterministic manifest/filesystem indexing, optionally reuses an already-installed `scc`, and explicitly leaves AST/symbol/call/reference coverage unavailable.
+- Intake and structure work is bounded by file count, per-file bytes, total read bytes, command timeout, sampled detail count, and compact model prompt size.
+- Adaptive plans are deterministic. Empty/non-code/no-model/unchanged inputs make zero model calls; eligible code projects use one bounded semantic stage through `ModelGatewayService` and the existing persistent Job system.
+- `ProjectUnderstandingSnapshot` distinguishes observed, inferred, evidence-bound, unknown, coverage, confidence, and current/stale state. It is current interpretation, never a new factual source.
+- GET understanding/index requests only read persisted results. They do not scan files, invoke Git, call models, advance facts, or modify derived history.
+- Failed semantic refreshes preserve the previous successful snapshot as stale; without a previous snapshot, a deterministic fallback remains readable.
+- Tree-sitter, SCIP, Agent session adapters, and Desktop shells remain explicit extension boundaries, not falsely claimed V3.5 built-ins.
 
 V3.4.5 focus:
 

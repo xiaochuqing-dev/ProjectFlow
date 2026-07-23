@@ -263,7 +263,7 @@ function FactMemoryOverviewPanel({ historyState, loading, overview, projectId, r
 
 function MemoryNavigation({ projectId }: { projectId: string }) {
   const suffix = projectId ? `?projectId=${projectId}` : "";
-  return <aside className="space-y-3"><NavigationCard href={`/sediment-review${suffix}`} label="项目记录" text="按批次和事实发生月份浏览完整项目历史。" /><NavigationCard href={`/project-intelligence/capabilities${suffix}`} label="能力与成果" text="查看已有能力卡片；后续将逐步改为读取项目事实。" /><NavigationCard href={`/project-intelligence/timeline${suffix}`} label="兼容项目时间线" text="查看旧版成长记录。" /><NavigationCard href={`/project-intelligence/analysis-records${suffix}`} label="辅助分析记录" text="查看项目分析和文件分析历史。" /></aside>;
+  return <aside className="space-y-3"><NavigationCard href={`/project-intelligence/understanding${suffix}`} label="当前项目理解" text="查看规模、结构、架构、能力、证据覆盖和未知项。" /><NavigationCard href={`/sediment-review${suffix}`} label="项目记录" text="按批次和事实发生月份浏览完整项目历史。" /><NavigationCard href={`/project-intelligence/capabilities${suffix}`} label="能力与成果" text="查看已有能力卡片；后续将逐步改为读取项目事实。" /><NavigationCard href={`/project-intelligence/timeline${suffix}`} label="兼容项目时间线" text="查看旧版成长记录。" /><NavigationCard href={`/project-intelligence/analysis-records${suffix}`} label="辅助分析记录" text="查看项目分析和文件分析历史。" /></aside>;
 }
 
 function NavigationCard({ href, label, text }: { href: string; label: string; text: string }) {

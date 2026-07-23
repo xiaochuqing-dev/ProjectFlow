@@ -27,6 +27,8 @@ import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectMemoryReadAuditRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.repository.ProjectSnapshotRepository;
+import com.projectflow.repository.ProjectStructureIndexRepository;
+import com.projectflow.repository.ProjectUnderstandingSnapshotRepository;
 import com.projectflow.repository.TaskRepository;
 import com.projectflow.repository.WorkSessionRepository;
 import com.projectflow.support.AppException;
@@ -52,6 +54,8 @@ public class ProjectService {
     private final AgentSignatureFeedbackRepository agentSignatureFeedbackRepository;
     private final ModelUsageRecordRepository modelUsageRecordRepository;
     private final ProjectMemoryReadAuditRepository memoryReadAuditRepository;
+    private final ProjectStructureIndexRepository structureIndexRepository;
+    private final ProjectUnderstandingSnapshotRepository understandingSnapshotRepository;
 
     public ProjectService(
         ProjectRepository projectRepository,
@@ -72,7 +76,9 @@ public class ProjectService {
         EvidenceBundleRepository evidenceBundleRepository,
         AgentSignatureFeedbackRepository agentSignatureFeedbackRepository,
         ModelUsageRecordRepository modelUsageRecordRepository,
-        ProjectMemoryReadAuditRepository memoryReadAuditRepository
+        ProjectMemoryReadAuditRepository memoryReadAuditRepository,
+        ProjectStructureIndexRepository structureIndexRepository,
+        ProjectUnderstandingSnapshotRepository understandingSnapshotRepository
     ) {
         this.projectRepository = projectRepository;
         this.materialRepository = materialRepository;
@@ -93,6 +99,8 @@ public class ProjectService {
         this.agentSignatureFeedbackRepository = agentSignatureFeedbackRepository;
         this.modelUsageRecordRepository = modelUsageRecordRepository;
         this.memoryReadAuditRepository = memoryReadAuditRepository;
+        this.structureIndexRepository = structureIndexRepository;
+        this.understandingSnapshotRepository = understandingSnapshotRepository;
     }
 
     @Transactional
@@ -133,6 +141,8 @@ public class ProjectService {
         analysisRecordRepository.deleteByProjectId(id);
         modelUsageRecordRepository.deleteByProjectId(id);
         memoryReadAuditRepository.deleteByProjectId(id);
+        understandingSnapshotRepository.deleteByProjectId(id);
+        structureIndexRepository.deleteByProjectId(id);
         changeRepository.deleteByProjectId(id);
         suggestionRepository.deleteByProjectId(id);
         factSourceRepository.deleteByProjectId(id);
