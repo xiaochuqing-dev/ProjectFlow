@@ -1,5 +1,19 @@
 # Architecture
 
+## V3.7 universal evidence intelligence boundary
+
+An explicit `PROJECT_UNDERSTANDING_REFRESH` job now follows:
+
+`Repository Intake → Evidence Discovery → Structure Index → Historical Coverage → Semantic Scout → Capability-validated Plan → Dynamic Profile → persisted read model`.
+
+`ProjectEvidenceDiscoveryService` reuses the bounded V3.5 inventory and adds relative, typed source candidates plus redacted UTF-8 samples. It does not become a parser or content database. `SemanticScoutService` reuses the existing `PROJECT_UNDERSTANDING_SNAPSHOT` Model Gateway task for one combined Scout/profile response; there is no second client or per-file model loop. Unknown evidence IDs are filtered before output.
+
+`AdaptiveAnalysisPlanner` owns deterministic guardrails and combines them with bounded Scout suggestions. `AnalysisToolRegistry` is the allow-list between model intent and engineering providers; the model never constructs a shell command. Existing filesystem/manifest, SCIP consumer, Git CLI, Agent result and document-reader boundaries remain the implementations.
+
+`DynamicProjectProfileSynthesizer` emits only applicable sections. `HistoricalCoverageService` uses bounded local Git metadata and existing ProjectFact commit references, then selects current-state-only, early-project, milestone-window or clustered-long-history strategies. It does not write Facts, Timeline, Capability or Evolution.
+
+The V3.7 fields live in the replaceable `snapshot_json`, so no migration is required. V3.6 fixed sections remain readable compatibility projections and the next explicit refresh rebuilds the V3.7 profile. All GET endpoints remain persisted reads.
+
 ## V3.6 deep structural intelligence boundary
 
 `CompositeProjectStructureIndexer` is the production `ProjectStructureIndexer` SPI. It always builds a bounded `MANIFEST_FILESYSTEM` fallback, then optionally consumes a safe project-local `index.scip` through Sourcegraph's official protobuf. SCIP definition/reference occurrences form a code-relation graph; JGraphT supplies PageRank important-node scoring and Label Propagation clustering. Missing, invalid, oversized, or truncated SCIP input degrades coverage and diagnostics without breaking current understanding.

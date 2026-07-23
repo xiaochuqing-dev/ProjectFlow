@@ -1,14 +1,14 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-07-23
+Last updated: 2026-07-24
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.6.0 is a local-first project understanding and memory system for AI-assisted developers. It first builds an evidence-backed current understanding from any bound local directory, then keeps that replaceable interpretation separate from durable Project Facts, Timeline, lifecycle Capability Map, Project Memory Gateway, Hermes reads, and Obsidian projection.
+ProjectFlow V3.7.0 is a local-first universal evidence understanding and project memory system for AI-assisted developers. It does not assume a fixed project shape: it discovers the material that exists, applies deterministic tools and bounded semantic reasoning, builds only the views supported by evidence, and keeps that replaceable interpretation separate from durable Project Facts, Timeline, lifecycle Capability Map, Project Memory Gateway, Hermes reads, and Obsidian projection.
 
-ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation. ProjectFlow V3.5.0 added the universal bounded intake and current-understanding foundation retained by V3.6.0.
+ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation. ProjectFlow V3.5.0 added the bounded intake foundation retained by V3.6.0 and V3.7.0.
 
 Current direction:
 
@@ -17,6 +17,19 @@ Current direction:
 - Rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records normal evidence-backed facts.
 - Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
+
+V3.7 focus:
+
+- `ProjectEvidenceDiscoveryService` builds a bounded Evidence Source Map over code, manifests, documents, configuration, tests, CI, migration, Agent context/results, Git and unknown text candidates. It samples UTF-8 content with hard limits and redacts likely credential fields.
+- Empty directories and blank text use zero model calls. Non-empty documents and oddly named TXT/Markdown files can enter the same single `PROJECT_UNDERSTANDING_SNAPSHOT` Model Gateway task used for bounded Scout and profile synthesis.
+- `SemanticScoutService` emits evidence-bound project-shape hypotheses, source assessments, applicable dimensions, tool requests, conflicts and currentness warnings. Unknown evidence IDs are discarded.
+- `AdaptiveAnalysisPlanner` combines semantic hypotheses with deterministic guardrails. `AnalysisToolRegistry` accepts only registered and available capabilities; a model cannot construct shell commands or claim unavailable Git/SCIP/remote evidence.
+- `DynamicProjectProfileSynthesizer` produces applicable sections rather than filling a fixed six-section template. Empty, document, script, code and short/long-history inputs may expose different views.
+- `HistoricalCoverageService` reports Git and Tag availability, earliest/latest evidence, ProjectFact commit coverage, covered/gap periods and explicit limits. Evolution Preview selects a bounded strategy and never performs per-commit model calls.
+- V3.7 persists these additions inside the replaceable understanding JSON. No new database schema is introduced; V3.6 snapshots remain readable through compatibility fields and are safely rebuilt on the next explicit refresh.
+- The refreshed UI exposes Evidence Sources, Analysis Plan, Applicable Views, Dynamic Sections, Historical Coverage, Unknowns and the existing evidence-backed Evolution Bridge without a visual redesign.
+- SCIP producer auto-install/invocation remains deferred after research: producer/runtime/build side effects are not silently introduced into arbitrary user projects. Existing official SCIP consumption and fallback stay production-safe.
+- No daemon, watcher, system tray, automatic background analysis, Desktop migration, generic RAG framework, parser, vector database or second model client is added.
 
 V3.6 focus:
 
@@ -147,7 +160,7 @@ Do not treat ProjectFlow as a generic Kanban app, SaaS admin panel, hotel/librar
 
 ## Current Stage
 
-The project has moved beyond manual sediment and per-run capability-card processing. Current V3.4.2 focus:
+The project has moved beyond fixed project-shape understanding. Current V3.7 focus:
 
 - Workbench: add/import project → bind local path → analyze new changes → automatic facts → leave safely.
 - Incremental scan boundaries use the last successfully recorded Fact Cursor, not the last manual review decision.
@@ -159,6 +172,8 @@ The project has moved beyond manual sediment and per-run capability-card process
 - ProjectFlow must remain usable without reading docs or asking an agent to explain the workflow.
 - Add/import project, zip import, local binding, model configuration, login, Agent bridge, GitHub read-only status and existing outputs remain available.
 - The fact-native lifecycle Capability Map is maintained automatically; legacy capability cards are compatibility outputs outside the main chain.
+- Project Understanding now begins with Evidence Discovery and returns a dynamic profile plus honest historical coverage; fixed V3.6 fields remain compatibility projections.
+- Open-world input behavior is explicit for empty, blank-text, document, small script, software, Monorepo, no-Git and long-history repositories.
 
 Recent implementation report says these are already present:
 

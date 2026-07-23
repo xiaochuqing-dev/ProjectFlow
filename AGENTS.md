@@ -1,4 +1,20 @@
-<!-- PROJECTFLOW V3.6.0 CONTEXT START -->
+<!-- PROJECTFLOW V3.7.0 CONTEXT START -->
+ProjectFlow 当前版本为 V3.7.0。后续 Agent 必须按“任意真实输入 -> 有界 Evidence Discovery -> Evidence Source Map -> Semantic Scout -> 自适应分析计划 -> 成熟工具取证 -> Dynamic Project Profile -> Historical Coverage -> 证据支持的演进 -> ProjectFact / Timeline / Capability / Gateway 消费”理解产品。
+
+V3.7 Universal Evidence Intelligence / Adaptive Analysis 规则（后续 Agent 必须遵守）：
+- 不预设项目一定有源码、Git、README、前端、后端、数据库、架构或完整历史；没有证据的视图可以不出现。
+- Evidence 是原始或规范化来源；Understanding、Analysis Plan、Dynamic Profile、Historical Coverage 和 Evolution Preview 都是可替换派生智能，不得污染 ProjectFact。
+- Discovery 只做有界 metadata、内容信号和安全采样；generated/vendor/binary/credential 不进入模型，绝对路径、Key、Authorization、完整仓库、prompt、raw response 和 reasoning 不持久化或返回。
+- Semantic Scout 只接收压缩候选和 evidence ID，Unknown ID 必须过滤。它判断语义角色、项目形态假设、适用维度、当前性风险和工具需要，不负责扫描、Git、Parser、SCIP、PageRank 或 shell。
+- Planner 的工具请求必须经 capability registry 校验；模型不得拼命令。FILESYSTEM、MANIFEST、SCIP、GIT、DOC_READER 和 Agent Result 继续复用现有 provider/边界。
+- 空目录和空白文本 0 模型；无变化尽量 0 模型；有内容非代码材料允许一次有界语义 Scout；大仓库不得逐文件、逐 Symbol 或逐 Commit 调模型。
+- Dynamic Profile section 由证据和适用性决定，允许 0 Architecture、0 Backend、0 Database、0 Timeline、0 Evolution。
+- Historical Coverage 必须显示 Git/Tag/Fact 覆盖、周期、gap 和限制。没有历史只展示当前状态；短历史不得伪造成熟阶段；长历史只筛 milestone windows。
+- GET understanding/structure/evolution 继续只读持久化结果，不运行扫描、Git、模型或事实写入。刷新继续复用 Durable Job、Model Gateway、Structure SPI 和 Evolution Bridge。
+- 不新增 schema 时旧 V3.6 snapshot 允许以兼容字段读取并在下一次主动刷新安全重建；不得为派生智能批量改写 Fact、Timeline、Capability 或已有 Evolution。
+- 不自研 parser、grammar、Symbol protocol、Git、PageRank、全文引擎、向量库、通用 RAG、LSP、Agent runtime、workflow engine、daemon、watcher 或 Desktop shell。
+
+<!-- PROJECTFLOW V3.6.0 CONTEXT START (retained compatibility baseline) -->
 <!-- PROJECTFLOW V3.4.5 CONTEXT START (retained compatibility baseline) -->
 ProjectFlow 当前版本为 V3.6.0。后续 Agent 必须按“当前项目理解 -> 深度结构索引 -> 证据支持的演进桥 -> 分析新变化 -> 开发推进段 -> 自动项目事实 -> 项目记录 / 项目记忆 -> 自动项目历程 -> 全生命周期能力地图 -> Project Memory Gateway -> Hermes 只读消费 / Obsidian 长期知识投影”理解产品。正常事实和能力演进不逐条确认，只有异常进入“需要关注”。
 
@@ -196,6 +212,7 @@ V3.3.3 仍有效的关键决策：
 - 需要模型理解的入口（分析新变化、分析项目能力）必须有模型配置前置检查；未配置模型时不生成低质量本地模板结果，明确提示去配置模型。
 - 规则负责证据事实，模型负责灵活理解；正常客观事实自动记录，用户只处理主观编辑和异常关注项。
 <!-- PROJECTFLOW V3.6.0 CONTEXT END -->
+<!-- PROJECTFLOW V3.7.0 CONTEXT END -->
 
 # ProjectFlow Local Rules
 

@@ -1,6 +1,6 @@
 # Third-party notices
 
-ProjectFlow V3.6 directly uses the following additional libraries.
+ProjectFlow V3.7 continues to use the following V3.6 libraries. V3.7 Evidence Discovery, Scout validation, planning, Dynamic Profile and Historical Coverage add no third-party runtime dependency and copy no community source code.
 
 ## SCIP Java Protocol
 

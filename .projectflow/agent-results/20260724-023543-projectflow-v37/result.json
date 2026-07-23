@@ -1,0 +1,45 @@
+{
+  "taskGoal": "按 V3.7 阶段提示词完成通用证据智能与自适应分析：以 UTF-8 读取需求，复用成熟协议、图算法、Git、模型网关和持久化任务基础，建立开放输入的 Evidence Source Map、Semantic Scout、Adaptive Plan、Dynamic Profile、Historical Coverage、产品验收和完整交付。 ",
+  "actualChanges": [
+    "新增有界 Evidence Source Map：统一发现源码、文档、测试、配置、历史和未知材料，使用稳定 evidence ID、相对定位、UTF-8 有界 sample、generated/vendor 排除和凭证脱敏，API 不返回原始 sample。",
+    "新增 Semantic Scout、AnalysisToolRegistry 和 AdaptiveAnalysisPlanner：模型只负责项目形态、材料语义、适用维度、当前性和冲突判断；工具调用受固定能力注册表、预算、文件存在性、Git/SCIP 可用性和 evidence allow-list 校验。",
+    "项目理解升级为 understanding-v3：空目录、空白材料和未变化缓存保持零模型调用；有材料时仅通过既有 ModelGatewayService 做一次有界结构化请求，失败保存确定性 fallback 或保留上次成功快照。",
+    "新增 Dynamic Project Profile、Historical Coverage 和 Evolution Preview：输出按证据和适用性动态生成的 section 列表，不默认伪造 Backend、Database、Architecture 或 Timeline；无 Git 时明确不可用，短历史只展示 early project。",
+    "复用既有 ProjectStructureIndexer、SCIP consumer、JGraphT、Git CLI、ProjectFact、Evolution Bridge 和 Durable Job，没有新增 Parser、Symbol Protocol、vector DB、Agent runtime、daemon 或隐式 runtime 安装。",
+    "更新 V3.7 API 类型、项目理解页面、导航、产品定位、架构/API/ADR/开源借用图和验收报告，并补充极端输入、真实 Git、未知工具拒绝、秘密脱敏、缓存和模型失败测试。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ProjectEvidenceDiscoveryService.java",
+    "backend/src/main/java/com/projectflow/service/SemanticScoutService.java",
+    "backend/src/main/java/com/projectflow/service/AdaptiveAnalysisPlanner.java",
+    "backend/src/main/java/com/projectflow/service/AnalysisToolRegistry.java",
+    "backend/src/main/java/com/projectflow/service/DynamicProjectProfileSynthesizer.java",
+    "backend/src/main/java/com/projectflow/service/HistoricalCoverageService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java",
+    "backend/src/main/java/com/projectflow/dto/ProjectUnderstandingDtos.java",
+    "frontend/src/app/project-intelligence/understanding/page.tsx",
+    "docs/projectflow-v3.7-universal-evidence-architecture.md",
+    "docs/projectflow-v3.7-open-source-borrowing-map.md",
+    "docs/projectflow-v3.7-product-acceptance.md",
+    "docs/projectflow-v3.7-acceptance-report.md"
+  ],
+  "verification": {
+    "build": "passed: backend compile/testCompile；frontend lint、48/48 contracts 和 Next.js 生产构建通过，生成 23 个静态页面；根 Start-ProjectFlow.bat -NoBrowser 从当前工作树完成依赖校验、生产构建、Java 17 后端启动和前后端健康检查，logs/last-embedded-build.json 记录 version=3.7.0、frontendBuildId=yMTbsys-r775niT2LOpRU、hasLocalChanges=true。",
+    "tests": "passed: backend Maven 完整 H2 套件 329 项，0 failures，0 errors，1 条条件跳过；V3.7 聚焦服务测试通过；真实前后端 Playwright 8/8。真实 benchmark 覆盖 4,450、68,657、235,265、833,665 和 3,550,729 LOC，Scout/deep-read 始终不超过 80 且模型请求为 0。",
+    "manualCheck": "conditional_pass: 空目录、空 TXT、奇怪命名文档、小脚本、前后端/Monorepo、无 Git、短历史、长历史和 README 冲突边界已按自动化、真实仓库与人工检查核验。Docker daemon 不可用，本地 PostgreSQL Testcontainers 跳过；无安全模型 Key，真实 Provider 质量验收跳过；远程 CI 待提交后填写。"
+  },
+  "unfinished": [
+    "真实 Provider 语义质量因没有安全 Key 跳过，固定模型只验证结构化契约。",
+    "官方 SCIP producer 的安全安装和跨语言编排仍为 deferred；当前只消费已有 index.scip 并保留 MANIFEST_FILESYSTEM fallback。",
+    "PDF、Office、非 UTF-8 和图片只做 metadata/candidate，不深读内容。",
+    "React、VS Code 等 large/huge 仓首次扫描在 Windows 上分别约 68.5 秒和 134.4 秒，后续需要增量 Discovery IO/cache。",
+    "Evolution Preview 仍是 coverage-sized 最小桥接，不是完整历史多版本结构重建。",
+    "本地 npm audit 报告现有 Next.js 传递依赖 3 个 high advisory，当前没有非破坏性的兼容修复建议。"
+  ],
+  "sedimentCandidates": [
+    "开放输入项目理解应先做低成本材料发现和有界 Semantic Scout，再由确定性 guardrail 生成动态分析计划；不要把整仓内容直接交给模型。",
+    "模型只能决定语义角色、适用维度和解释候选，文件读取、Git、SCIP、图关系、预算、证据合法性和工具执行必须由工程系统控制。",
+    "动态项目档案应允许零个 Architecture、Backend、Database 或 Timeline section；缺少真实证据时展示 unknown/limitation 比固定模板更可靠。",
+    "大型仓库应把 first-scan discovery 和 unchanged inventory fingerprint 分离，并固定 deep-read、prompt、历史窗口和模型调用上限。"
+  ]
+}
