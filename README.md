@@ -1,23 +1,22 @@
 # ProjectFlow
 
-ProjectFlow V3.5.0 is a local-first project understanding and memory system for AI-assisted developers. It accepts a bound local directory with or without Git, builds a bounded evidence-backed current understanding, and keeps durable project facts, timeline, capability map, Hermes reads, and Obsidian projection as separate traceable layers.
+ProjectFlow V3.6.0 understands what a software project is today and builds an evidence-backed foundation for explaining how it evolved there. It accepts a bound local directory with or without Git, builds a bounded current understanding, and keeps structure intelligence, durable project facts, timeline, capability map, Hermes reads, and Obsidian projection as separate traceable layers.
 
-ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation that V3.5.0 continues to reuse.
+ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation. ProjectFlow V3.5.0 added universal bounded project intake and current understanding. V3.6.0 reuses both foundations and adds precise SCIP structure consumption, standard graph analysis, and a minimum evidence-backed evolution bridge.
 
 ProjectFlow 自动维护项目从创建至今的长期记忆。让每一个项目记得自己是怎样成长到今天的。
 
 Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns that raw development evidence into durable Change Batches, evidence-backed Project Facts, and long-lived Project Memory.
 
-## V3.5 Universal Project Understanding
+## V3.6 Deep Structural Intelligence and Evolution Bridge
 
-- A new repository-intake stage classifies empty, non-code, non-Git, small, medium, large, and multi-workspace inputs before semantic analysis.
-- The deterministic `ProjectStructureIndexer` builds a reusable manifest/filesystem index with bounded relative-path evidence, module summaries, candidate entries, engineering signals, coverage, and explicit unsupported areas.
-- If the MIT-licensed `scc` executable is already available, ProjectFlow reuses its JSON language/LOC metrics. The built-in bounded scanner remains the correctness fallback, so no global installation is required.
-- Adaptive analysis uses zero model calls for empty/non-code/no-model inputs and unchanged snapshots. Eligible code projects receive one bounded semantic stage through the existing Model Gateway and durable Job infrastructure; per-file model loops are prohibited.
-- Claims distinguish `OBSERVED` repository evidence from `INFERRED` model synthesis. Unknown evidence references are filtered, limitations stay visible, and no current-understanding result is promoted into `ProjectFact`.
-- Structure indexes and understanding snapshots persist separately. GET is model-free and filesystem-free; a failed refresh keeps the last successful snapshot as `STALE`, or saves a deterministic fallback when none exists.
-- The focused `/project-intelligence/understanding` page exposes classification, scale, evidence coverage, unknowns, Git availability, model participation, cache reuse, and recoverable progress.
-- Open-source reuse decisions, architecture, desktop-core boundary, and acceptance evidence are documented in the V3.5 reports under `docs/`.
+- `CompositeProjectStructureIndexer` retains the bounded manifest/filesystem fallback and consumes a safe project-local `index.scip` through Sourcegraph's official SCIP protobuf.
+- Structure Index V2 adds Symbol, Definition, Reference, relation graph, JGraphT PageRank important nodes, relation-driven functional areas, provider diagnostics, coverage, and explicit unsupported areas.
+- Official language indexers own syntax and compilation knowledge. ProjectFlow does not invent parsers, language rules, or a cross-language symbol protocol.
+- The model receives only a compact allow-listed summary of important nodes, functional areas, relative paths, and evidence IDs. Empty, non-code, no-model, unchanged, and failed-provider paths retain zero-model or deterministic fallback behavior.
+- The minimum Evolution Bridge links a real Git parent and commit, an existing Project Fact, changed files, and an affected structural area. It is derived and idempotent; it never becomes a new fact source.
+- The focused understanding page keeps trust calibration visible and adds a compact evidence-backed before/change/after view.
+- Design decisions, open-source borrowing, architecture, performance, product acceptance, and validation evidence are recorded in the V3.6 reports under `docs/`.
 
 ## V3.4.5 Backend Intelligence Foundation
 

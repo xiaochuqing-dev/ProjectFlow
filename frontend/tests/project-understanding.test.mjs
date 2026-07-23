@@ -15,6 +15,8 @@ test("current understanding has focused API and page entry", () => {
   assert.match(api, /export type ProjectUnderstandingSnapshot/);
   assert.match(api, /export function refreshProjectUnderstanding/);
   assert.match(api, /export function getProjectUnderstanding/);
+  assert.match(api, /export function getProjectEvolutionBridges/);
+  assert.match(api, /export type ProjectEvolutionBridge/);
   assert.match(api, /PROJECT_UNDERSTANDING_REFRESH/);
   assert.match(memoryPage, /当前项目理解/);
 });
@@ -25,7 +27,9 @@ test("page exposes trust calibration instead of presenting all claims as facts",
   assert.match(page, /仍然未知/);
   assert.match(page, /证据覆盖/);
   assert.match(page, /没有 Git/);
+  assert.match(page, /证据支持的项目演进/);
   assert.doesNotMatch(page, /自动确认为项目事实/);
+  assert.doesNotMatch(page, /根据目录名推断历史/);
 });
 
 test("refresh is a recoverable persisted job and GET remains separate", () => {

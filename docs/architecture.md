@@ -1,5 +1,15 @@
 # Architecture
 
+## V3.6 deep structural intelligence boundary
+
+`CompositeProjectStructureIndexer` is the production `ProjectStructureIndexer` SPI. It always builds a bounded `MANIFEST_FILESYSTEM` fallback, then optionally consumes a safe project-local `index.scip` through Sourcegraph's official protobuf. SCIP definition/reference occurrences form a code-relation graph; JGraphT supplies PageRank important-node scoring and Label Propagation clustering. Missing, invalid, oversized, or truncated SCIP input degrades coverage and diagnostics without breaking current understanding.
+
+Structure Index V2 is rebuildable intelligence, not a fact source. Deterministic code owns provider parsing, symbol/reference relations, graph membership, coverage, budgets, and the evidence allow-list. The existing Model Gateway receives only a compact summary of important nodes, functional areas, relative paths, and evidence IDs for user-readable semantic synthesis. There is no per-file model loop.
+
+The minimum `ProjectEvolutionBridgeService` runs only during an explicit changed refresh. It joins an existing Project Fact to a real Git commit and parent, a bounded `git diff-tree` file set, and a current structural area. Its rows are idempotent derived records; they never mutate Facts, Timeline, Capability, or prior Capability Evolution. GET endpoints remain database-only.
+
+Tree-sitter, language-specific SCIP index production, Desktop shells, watchers, daemons, installers, and automatic updates remain outside the V3.6 runtime boundary.
+
 ## V3.4.1 automatic timeline boundary
 
 `ProjectFact` remains the factual source of truth. `ProjectTimelineService` is a database read model for deterministic day/ISO-week/month/lifecycle statistics; `ProjectTimelineSummaryService` maintains replaceable summaries and period-local themes through the existing persistent job executor and ModelGateway. Fact after-commit events mark scopes dirty, GET requests never invoke a model, history backfill defers generation until completion, and a failed refresh preserves the previous successful content. See `docs/project-timeline.md`.

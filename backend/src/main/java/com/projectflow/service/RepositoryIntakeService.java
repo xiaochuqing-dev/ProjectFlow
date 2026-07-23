@@ -46,6 +46,9 @@ public class RepositoryIntakeService {
         "docker-compose.yaml", "compose.yml", "compose.yaml"
     );
     private static final Pattern MAVEN_MODULE = Pattern.compile("<module>\\s*([^<]+?)\\s*</module>");
+    private static final Pattern GRADLE_INCLUDED_PROJECT = Pattern.compile(
+        "(?m)^\\s*include(?:Build)?\\s*(?:\\(|\\s)[^\\r\\n]*['\"]"
+    );
 
     private final LocalCommandExecutor commandExecutor;
     private final SccCodeMetricsAdapter sccAdapter;
@@ -193,6 +196,7 @@ public class RepositoryIntakeService {
             List.copyOf(accumulator.warnings)
         );
         return new ScanResult(
+            root.toAbsolutePath().normalize(),
             intake,
             List.copyOf(accumulator.fileDetails),
             accumulator.fileCount > accumulator.fileDetails.size(),
@@ -402,8 +406,11 @@ public class RepositoryIntakeService {
                 while (matcher.find()) {
                     addWorkspaceSignal(relative, matcher.group(1), accumulator);
                 }
+            } else if (lowerName.startsWith("settings.gradle")) {
+                if (GRADLE_INCLUDED_PROJECT.matcher(text).find()) {
+                    addWorkspaceSignal(relative, "workspace-declaration", accumulator);
+                }
             } else if (lowerName.contains("workspace")
-                || lowerName.startsWith("settings.gradle")
                 || ("cargo.toml".equals(lowerName) && text.contains("[workspace]"))
                 || "go.work".equals(lowerName)) {
                 addWorkspaceSignal(relative, "workspace-declaration", accumulator);
@@ -679,6 +686,7 @@ public class RepositoryIntakeService {
     }
 
     public record ScanResult(
+        Path root,
         RepositoryIntakeResponse intake,
         List<ScannedFile> fileDetails,
         boolean fileDetailsTruncated,

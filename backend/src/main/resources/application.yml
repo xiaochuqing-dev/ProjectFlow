@@ -61,6 +61,15 @@ projectflow:
     medium-loc: ${PROJECTFLOW_UNDERSTANDING_MEDIUM_LOC:100000}
     large-loc: ${PROJECTFLOW_UNDERSTANDING_LARGE_LOC:500000}
     max-model-prompt-chars: ${PROJECTFLOW_UNDERSTANDING_MAX_PROMPT_CHARS:48000}
+    scip:
+      # V3.6 只消费官方 SCIP protobuf；语言 indexer 独立运行，缺失或失败时回退到 manifest/filesystem。
+      max-index-bytes: ${PROJECTFLOW_SCIP_MAX_INDEX_BYTES:268435456}
+      max-documents: ${PROJECTFLOW_SCIP_MAX_DOCUMENTS:20000}
+      max-symbols: ${PROJECTFLOW_SCIP_MAX_SYMBOLS:50000}
+      max-definitions: ${PROJECTFLOW_SCIP_MAX_DEFINITIONS:50000}
+      max-references: ${PROJECTFLOW_SCIP_MAX_REFERENCES:100000}
+      max-relations: ${PROJECTFLOW_SCIP_MAX_RELATIONS:100000}
+      max-functional-areas: ${PROJECTFLOW_SCIP_MAX_FUNCTIONAL_AREAS:100}
 
 management:
   endpoints:

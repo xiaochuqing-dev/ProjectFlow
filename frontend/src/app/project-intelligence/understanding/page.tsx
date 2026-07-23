@@ -8,19 +8,21 @@ import { Badge, PageContainer, ProjectContextBar } from "@/components/ui";
 import { useProjectSelection } from "@/hooks/useProjectSelection";
 import {
   cancelProjectAnalysisJob,
+  getProjectEvolutionBridges,
   getProjectAnalysisJob,
   getProjectUnderstanding,
   listProjectAnalysisJobs,
   refreshProjectUnderstanding,
   retryProjectAnalysisJob,
   type ProjectAnalysisJob,
+  type ProjectEvolutionBridge,
   type ProjectUnderstandingSnapshot,
   type UnderstandingSection,
 } from "@/lib/api";
 
 export default function ProjectUnderstandingPage() {
   return (
-    <Suspense fallback={<AppShell eyebrow="V3.5 当前项目理解" title="项目理解"><PageContainer><div className="h-1 bg-slate-950" /></PageContainer></AppShell>}>
+    <Suspense fallback={<AppShell eyebrow="V3.6 当前结构与演进" title="项目理解"><PageContainer><div className="h-1 bg-slate-950" /></PageContainer></AppShell>}>
       <ProjectUnderstandingContent />
     </Suspense>
   );
@@ -30,6 +32,7 @@ function ProjectUnderstandingContent() {
   const searchParams = useSearchParams();
   const selection = useProjectSelection({ queryProjectId: searchParams.get("projectId") ?? "" });
   const [snapshot, setSnapshot] = useState<ProjectUnderstandingSnapshot | null>(null);
+  const [bridges, setBridges] = useState<ProjectEvolutionBridge[]>([]);
   const [job, setJob] = useState<ProjectAnalysisJob | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -38,14 +41,22 @@ function ProjectUnderstandingContent() {
   const loadSnapshot = useCallback(async (projectId: string, quiet = false) => {
     if (!selection.session || !projectId) {
       setSnapshot(null);
+      setBridges([]);
       return;
     }
     if (!quiet) setLoading(true);
     try {
-      setSnapshot(await getProjectUnderstanding(selection.session.accessToken, projectId));
+      const current = await getProjectUnderstanding(selection.session.accessToken, projectId);
+      setSnapshot(current);
+      setBridges(
+        await getProjectEvolutionBridges(selection.session.accessToken, projectId, 0, 10)
+          .then((page) => page.items)
+          .catch(() => []),
+      );
       setError("");
     } catch (exception) {
       setSnapshot(null);
+      setBridges([]);
       if (!quiet) setError(exception instanceof Error ? exception.message : "项目理解读取失败");
     } finally {
       if (!quiet) setLoading(false);
@@ -111,7 +122,7 @@ function ProjectUnderstandingContent() {
   }
 
   return (
-    <AppShell eyebrow="V3.5 当前项目理解" title={selection.selectedProject ? `${selection.selectedProject.name} · 项目理解` : "项目理解"}>
+    <AppShell eyebrow="V3.6 当前结构与演进" title={selection.selectedProject ? `${selection.selectedProject.name} · 项目理解` : "项目理解"}>
       <PageContainer>
         <ProjectContextBar
           actions={(
@@ -149,7 +160,7 @@ function ProjectUnderstandingContent() {
         ) : null}
         {error ? <div className="mb-5 flex gap-2 rounded-card border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{error}</span></div> : null}
 
-        {snapshot ? <UnderstandingView snapshot={snapshot} /> : (
+        {snapshot ? <UnderstandingView bridges={bridges} snapshot={snapshot} /> : (
           <section className="grid min-h-80 place-items-center rounded-card border border-line bg-white p-8 text-center shadow-card">
             <div>
               <ScanSearch className="mx-auto h-10 w-10 text-brand" />
@@ -163,7 +174,13 @@ function ProjectUnderstandingContent() {
   );
 }
 
-function UnderstandingView({ snapshot }: { snapshot: ProjectUnderstandingSnapshot }) {
+function UnderstandingView({
+  snapshot,
+  bridges,
+}: {
+  snapshot: ProjectUnderstandingSnapshot;
+  bridges: ProjectEvolutionBridge[];
+}) {
   const sections: Array<[string, UnderstandingSection]> = [
     ["项目身份", snapshot.identity],
     ["技术组成", snapshot.technology],
@@ -206,6 +223,28 @@ function UnderstandingView({ snapshot }: { snapshot: ProjectUnderstandingSnapsho
         <h2 className="flex items-center gap-2 font-semibold text-slate-950"><GitBranch className="h-4 w-4" />仓库接入状态</h2>
         <p className="mt-3 text-sm text-slate-700">{snapshot.intake.git.available ? `Git ${snapshot.intake.git.branch}，${snapshot.intake.git.commitCount} 次提交，工作区 ${snapshot.intake.git.worktreeState}` : "没有 Git：当前结构仍可理解，但历史演进明确标记为不可用。"}</p>
         <p className="mt-2 text-xs text-muted">分析时间 {new Date(snapshot.analyzedAt).toLocaleString("zh-CN")} · 指标来源 {snapshot.intake.metricsSource}</p>
+      </section>
+
+      <section className="rounded-card border border-line bg-white p-5 shadow-card">
+        <h2 className="font-semibold text-slate-950">证据支持的项目演进</h2>
+        {bridges.length ? (
+          <div className="mt-4 space-y-4">
+            {bridges.slice(0, 5).map((bridge) => (
+              <article className="rounded-field border border-line bg-slate-50 p-4" key={bridge.id}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge label={bridge.epistemicStatus === "OBSERVED" ? "已观察" : "证据推断"} tone={bridge.epistemicStatus === "OBSERVED" ? "success" : "slate"} />
+                  <span className="text-xs text-muted">{bridge.affectedAreaLabel} · {new Date(bridge.occurredAt).toLocaleDateString("zh-CN")}</span>
+                </div>
+                <p className="mt-2 text-sm font-semibold text-slate-950">{bridge.meaningfulChange}</p>
+                <div className="mt-3 grid gap-2 text-xs leading-5 text-slate-700 md:grid-cols-3">
+                  <p><span className="font-semibold">之前：</span>{bridge.beforeState}</p>
+                  <p><span className="font-semibold">变化：</span>{bridge.changedPaths.slice(0, 3).join("、")}</p>
+                  <p><span className="font-semibold">之后：</span>{bridge.afterState}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : <p className="mt-3 text-sm text-muted">尚无同时具备真实 Git 提交、ProjectFact 和结构区域证据的演进桥；系统不会为填充页面编造历史。</p>}
       </section>
     </div>
   );

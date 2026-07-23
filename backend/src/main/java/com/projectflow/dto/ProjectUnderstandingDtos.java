@@ -110,6 +110,84 @@ public final class ProjectUnderstandingDtos {
     ) {
     }
 
+    public record StructureSymbolNode(
+        String id,
+        String symbol,
+        String displayName,
+        String kind,
+        String path,
+        int startLine,
+        int startCharacter,
+        boolean external,
+        String evidenceRef
+    ) {
+    }
+
+    public record StructureOccurrence(
+        String symbolId,
+        String path,
+        int startLine,
+        int startCharacter,
+        int endLine,
+        int endCharacter,
+        String role,
+        String evidenceRef
+    ) {
+    }
+
+    public record StructureImportantNode(
+        String id,
+        String nodeType,
+        String label,
+        String path,
+        double score,
+        List<String> evidenceRefs
+    ) {
+    }
+
+    public record StructureFunctionalArea(
+        String id,
+        String label,
+        String confidence,
+        List<String> memberPaths,
+        List<String> keySymbolIds,
+        long relationCount,
+        List<String> evidenceRefs,
+        String namingSource
+    ) {
+    }
+
+    public record StructureProviderDiagnostic(
+        String provider,
+        String status,
+        String version,
+        long durationMs,
+        long indexBytes,
+        long documentCount,
+        long symbolCount,
+        long definitionCount,
+        long referenceCount,
+        long relationCount,
+        String message
+    ) {
+    }
+
+    public record StructureMetrics(
+        long fileCount,
+        long estimatedLoc,
+        long symbolCount,
+        long definitionCount,
+        long referenceCount,
+        long relationCount,
+        long functionalAreaCount,
+        long indexTimeMs,
+        long incrementalUpdateMs,
+        long memoryPeakBytes,
+        long indexSizeBytes,
+        boolean cacheHit
+    ) {
+    }
+
     public record ProjectStructureIndexResponse(
         String indexVersion,
         String indexerSource,
@@ -128,6 +206,13 @@ public final class ProjectUnderstandingDtos {
         StructureCoverage coverage,
         List<String> provenance,
         List<String> unsupportedAreas,
+        List<StructureSymbolNode> symbols,
+        List<StructureOccurrence> definitions,
+        List<StructureOccurrence> references,
+        List<StructureImportantNode> importantNodes,
+        List<StructureFunctionalArea> functionalAreas,
+        List<StructureProviderDiagnostic> providerDiagnostics,
+        StructureMetrics metrics,
         StructureDelta delta,
         Instant indexedAt
     ) {

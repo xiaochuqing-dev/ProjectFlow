@@ -21,6 +21,7 @@ import com.projectflow.repository.ProjectAnalysisJobRepository;
 import com.projectflow.repository.ProjectAnalysisRecordRepository;
 import com.projectflow.repository.ProjectChangeRepository;
 import com.projectflow.repository.ProjectEvolutionRecordRepository;
+import com.projectflow.repository.ProjectEvolutionBridgeRepository;
 import com.projectflow.repository.ProjectFactSourceRepository;
 import com.projectflow.repository.ProjectMaterialRepository;
 import com.projectflow.repository.ProjectMemoryRepository;
@@ -41,6 +42,7 @@ public class ProjectService {
     private final ProjectMemoryRepository memoryRepository;
     private final ProjectSnapshotRepository snapshotRepository;
     private final ProjectEvolutionRecordRepository evolutionRepository;
+    private final ProjectEvolutionBridgeRepository evolutionBridgeRepository;
     private final ProjectAnalysisRecordRepository analysisRecordRepository;
     private final ProjectAnalysisJobRepository analysisJobRepository;
     private final ProjectChangeRepository changeRepository;
@@ -64,6 +66,7 @@ public class ProjectService {
         ProjectMemoryRepository memoryRepository,
         ProjectSnapshotRepository snapshotRepository,
         ProjectEvolutionRecordRepository evolutionRepository,
+        ProjectEvolutionBridgeRepository evolutionBridgeRepository,
         ProjectAnalysisRecordRepository analysisRecordRepository,
         ProjectAnalysisJobRepository analysisJobRepository,
         ProjectChangeRepository changeRepository,
@@ -86,6 +89,7 @@ public class ProjectService {
         this.memoryRepository = memoryRepository;
         this.snapshotRepository = snapshotRepository;
         this.evolutionRepository = evolutionRepository;
+        this.evolutionBridgeRepository = evolutionBridgeRepository;
         this.analysisRecordRepository = analysisRecordRepository;
         this.analysisJobRepository = analysisJobRepository;
         this.changeRepository = changeRepository;
@@ -143,6 +147,7 @@ public class ProjectService {
         memoryReadAuditRepository.deleteByProjectId(id);
         understandingSnapshotRepository.deleteByProjectId(id);
         structureIndexRepository.deleteByProjectId(id);
+        evolutionBridgeRepository.deleteByProjectId(id);
         changeRepository.deleteByProjectId(id);
         suggestionRepository.deleteByProjectId(id);
         factSourceRepository.deleteByProjectId(id);

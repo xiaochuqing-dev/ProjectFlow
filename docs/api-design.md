@@ -31,6 +31,23 @@ Error responses:
 }
 ```
 
+## V3.6 Project Understanding and Evolution Bridge
+
+All endpoints validate authenticated user ownership of `projectId`.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/projects/{projectId}/understanding/refresh` | Create or reuse the durable current-understanding refresh job |
+| GET | `/projects/{projectId}/understanding` | Read the persisted replaceable understanding snapshot |
+| GET | `/projects/{projectId}/structure-index` | Read the persisted Structure Index V2 |
+| GET | `/projects/{projectId}/evolution-bridges?page=0&size=20` | Read bounded evidence-backed before/change/after bridge rows |
+
+Structure Index V2 exposes bounded file/module data plus `symbols`, `definitions`, `references`, `importantNodes`, `functionalAreas`, `providerDiagnostics`, `metrics`, `coverage`, `unsupportedAreas`, `delta`, source revision, and index version. SCIP identity remains opaque; paths are repository-relative.
+
+Evolution Bridge rows contain real before/after revisions, structure versions, meaningful change, affected area, epistemic status, confidence, source Fact IDs, source commit refs, changed relative paths, and evidence refs. The API never returns source text, full diffs, absolute paths, prompts, raw model responses, reasoning, keys, or Authorization.
+
+All three GET paths are persisted reads. They do not scan the repository, run Git, invoke a model, create Project Facts, or refresh derived layers.
+
 ## Auth
 
 | Method | Path | Purpose |

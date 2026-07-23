@@ -37,25 +37,37 @@ class RepositoryIntakeBenchmarkTest {
 
         long startedAt = System.nanoTime();
         var scan = intake.scan(root);
-        var index = new ManifestFilesystemProjectStructureIndexer().build(scan);
+        var manifest = new ManifestFilesystemProjectStructureIndexer();
+        var scip = new ScipProjectStructureIndexer();
+        var index = new CompositeProjectStructureIndexer(manifest, scip).build(scan);
         long elapsedMs = (System.nanoTime() - startedAt) / 1_000_000;
         long fingerprintStartedAt = System.nanoTime();
         String repeatFingerprint = intake.inventoryFingerprint(root);
         long fingerprintElapsedMs = (System.nanoTime() - fingerprintStartedAt) / 1_000_000;
 
         System.out.printf(
-            "PROJECTFLOW_V35_BENCHMARK classification=%s scale=%s files=%d sourceFiles=%d loc=%d modules=%d evidence=%d coverage=%.3f truncated=%s metrics=%s elapsedMs=%d fingerprintElapsedMs=%d%n",
+            "PROJECTFLOW_V36_BENCHMARK classification=%s scale=%s files=%d sourceFiles=%d loc=%d modules=%d symbols=%d definitions=%d references=%d relations=%d areas=%d evidence=%d coverage=%.3f truncated=%s metrics=%s indexBytes=%d indexTimeMs=%d incrementalUpdateMs=%d memoryPeakBytes=%d cacheHit=%s unsupported=%d fingerprintElapsedMs=%d%n",
             scan.intake().classification(),
             scan.intake().scale(),
             scan.intake().fileCount(),
             scan.intake().sourceFileCount(),
             scan.intake().estimatedLoc(),
             index.modules().size(),
+            index.symbols().size(),
+            index.definitions().size(),
+            index.references().size(),
+            index.relations().size(),
+            index.functionalAreas().size(),
             index.evidence().size(),
             index.coverage().overall(),
             scan.intake().scanTruncated(),
             scan.intake().metricsSource(),
+            index.metrics().indexSizeBytes(),
             elapsedMs,
+            index.metrics().incrementalUpdateMs(),
+            index.metrics().memoryPeakBytes(),
+            index.metrics().cacheHit(),
+            index.unsupportedAreas().size(),
             fingerprintElapsedMs
         );
         assertThat(scan.intake().fileCount()).isPositive();

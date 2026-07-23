@@ -106,7 +106,11 @@ class ProjectUnderstandingServiceTest {
             snapshots,
             new LocalProjectPathGuard(),
             intake,
-            new ManifestFilesystemProjectStructureIndexer(),
+            new CompositeProjectStructureIndexer(
+                new ManifestFilesystemProjectStructureIndexer(),
+                new ScipProjectStructureIndexer()
+            ),
+            mock(ProjectEvolutionBridgeService.class),
             gateway,
             mapper
         );

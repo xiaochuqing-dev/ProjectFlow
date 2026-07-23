@@ -107,4 +107,24 @@ class RepositoryIntakeServiceTest {
         var large = service.scan(root);
         assertThat(large.intake().scale()).isEqualTo("LARGE");
     }
+
+    @Test
+    void gradleRootNameAloneDoesNotPretendAProjectIsAMonorepo() throws Exception {
+        Files.writeString(root.resolve("settings.gradle"), "rootProject.name = 'single-app'\n");
+        Files.writeString(root.resolve("Main.java"), "class Main {}\n");
+
+        var singleProject = service.scan(root);
+
+        assertThat(singleProject.intake().monorepo()).isFalse();
+        assertThat(singleProject.intake().scale()).isEqualTo("SMALL");
+
+        Files.writeString(root.resolve("settings.gradle"), """
+            rootProject.name = 'workspace'
+            include 'app', 'library'
+            """);
+        var workspace = service.scan(root);
+
+        assertThat(workspace.intake().monorepo()).isTrue();
+        assertThat(workspace.intake().scale()).isEqualTo("MONOREPO");
+    }
 }

@@ -6,9 +6,9 @@ Use this file as the first read for substantial ProjectFlow work. It is a compac
 
 ## Product Position
 
-ProjectFlow V3.5.0 is a local-first project understanding and memory system for AI-assisted developers. It first builds an evidence-backed current understanding from any bound local directory, then keeps that replaceable interpretation separate from durable Project Facts, Timeline, lifecycle Capability Map, Project Memory Gateway, Hermes reads, and Obsidian projection.
+ProjectFlow V3.6.0 is a local-first project understanding and memory system for AI-assisted developers. It first builds an evidence-backed current understanding from any bound local directory, then keeps that replaceable interpretation separate from durable Project Facts, Timeline, lifecycle Capability Map, Project Memory Gateway, Hermes reads, and Obsidian projection.
 
-ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation retained by V3.5.0.
+ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation. ProjectFlow V3.5.0 added the universal bounded intake and current-understanding foundation retained by V3.6.0.
 
 Current direction:
 
@@ -18,16 +18,18 @@ Current direction:
 - Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
 
-V3.5 focus:
+V3.6 focus:
 
 - Repository intake works for empty, non-code, non-Git, ordinary Git, large, and multi-workspace directories. Missing Git only disables historical understanding.
-- `ProjectStructureIndexer` is the stable structure-provider boundary. V3.5 ships deterministic manifest/filesystem indexing, optionally reuses an already-installed `scc`, and explicitly leaves AST/symbol/call/reference coverage unavailable.
+- `ProjectStructureIndexer` remains the stable provider boundary. `CompositeProjectStructureIndexer` always builds the bounded manifest/filesystem fallback and optionally consumes a safe project-local `index.scip` through Sourcegraph's official protobuf.
+- Structure Index V2 records bounded Symbol, Definition, Reference, relation graph, JGraphT PageRank important nodes, relation-driven functional areas, provider diagnostics, metrics, coverage, and unknowns. ProjectFlow does not invent language parsers or a symbol protocol.
 - Intake and structure work is bounded by file count, per-file bytes, total read bytes, command timeout, sampled detail count, and compact model prompt size.
 - Adaptive plans are deterministic. Empty/non-code/no-model/unchanged inputs make zero model calls; eligible code projects use one bounded semantic stage through `ModelGatewayService` and the existing persistent Job system.
 - `ProjectUnderstandingSnapshot` distinguishes observed, inferred, evidence-bound, unknown, coverage, confidence, and current/stale state. It is current interpretation, never a new factual source.
 - GET understanding/index requests only read persisted results. They do not scan files, invoke Git, call models, advance facts, or modify derived history.
 - Failed semantic refreshes preserve the previous successful snapshot as stale; without a previous snapshot, a deterministic fallback remains readable.
-- Tree-sitter, SCIP, Agent session adapters, and Desktop shells remain explicit extension boundaries, not falsely claimed V3.5 built-ins.
+- The minimum Evolution Bridge is a derived, idempotent link among a real Git parent/commit, an existing Project Fact, changed files, and an affected structural area. Missing evidence produces no fabricated history.
+- Tree-sitter, external SCIP index production, Agent session adapters, and Desktop shells remain explicit extension boundaries, not falsely claimed V3.6 built-ins.
 
 V3.4.5 focus:
 

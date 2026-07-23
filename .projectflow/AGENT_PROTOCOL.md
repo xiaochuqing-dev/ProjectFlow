@@ -1,6 +1,6 @@
-# ProjectFlow V3.3.3 Agent Protocol
+# ProjectFlow V3.6 Agent Protocol
 
-Before starting substantial work, read `PROJECT_CONTEXT.md` and the task-relevant source files. ProjectFlow follows: rules collect facts, models interpret, rules validate, users confirm.
+Before starting substantial work, read `PROJECT_CONTEXT.md` and the task-relevant source files. ProjectFlow follows: rules collect evidence, models interpret within bounded evidence, rules validate, normal objective facts are recorded automatically, and only exceptions require user attention.
 
 After completing a task, create `.projectflow/agent-results/<timestamp-topic>/result.json` and optionally `summary.md`.
 
@@ -15,4 +15,4 @@ After completing a task, create `.projectflow/agent-results/<timestamp-topic>/re
 
 `actualChanges` and every sediment candidate must describe the concrete development result in human-readable language. Do not submit directory names, file/commit counts, “development progress”, or generic optimization claims as the result. Include user/developer-visible behavior, affected entry or flow, verification performed, and explicit uncertainty when tests, builds, model analysis, GitHub access, or other evidence is missing.
 
-Use `.projectflow/templates/result.json` as the shape. Do not include secrets, tokens, full diffs, generated artifacts, or unsupported claims. ProjectFlow imports results as candidate evidence; an Agent result never confirms a project sediment by itself.
+Use `.projectflow/templates/result.json` as the shape. Do not include secrets, tokens, full diffs, generated artifacts, unsupported claims, raw model output, reasoning, absolute paths, or fabricated evolution. ProjectFlow imports results as candidate evidence; an Agent result never becomes a Project Fact or historical bridge by itself.

@@ -1,0 +1,46 @@
+{
+  "taskGoal": "按照 V3.6 阶段提示词完成深度结构智能与演进桥接：先研究成熟代码智能方案，复用标准协议和图算法，形成 Structure Index V2、最小 Evolution Bridge、产品展示、性能与真实历史验收，并将代码和报告推送到 GitHub master。",
+  "actualChanges": [
+    "新增复合结构索引链：保留 MANIFEST_FILESYSTEM 降级能力，并通过官方 SCIP protobuf 消费 Symbol、Definition、Reference 和 Occurrence；索引不存在、超限或损坏时会显式诊断并安全回退。",
+    "Structure Index 升级为 structure-v2，新增重要节点、功能区域、provider diagnostics 和性能指标；直接复用 JGraphT PageRank 与 Label Propagation 做图排序和聚类，没有自研 Parser、跨语言 Symbol 协议或图算法。",
+    "项目理解升级为 understanding-v2，只向既有 Model Gateway 发送有界的重要节点、功能区域和证据编号；无变化继续命中缓存并保持零模型调用，失败继续保留上次成功理解。",
+    "新增最小 Evolution Bridge：用真实 Git parent、commit diff、ProjectFact 和当前结构区域建立 before、meaningful change、after 证据链，支持幂等生成、数量上限、项目所有权校验和只读分页查询，不修改 Fact、Timeline、Capability 或既有 Evolution。",
+    "项目理解页面新增证据支持的项目演进展示，并同步 3.6.0 产品定位、API、数据模型、架构、Desktop 同生命周期边界和完整开源借鉴说明。",
+    "完成真实 Spring Petclinic 历史回放，生成一条连接真实前后 commit、正常扫描 ProjectFact、真实 changed path、结构模块和证据引用的 INFERRED bridge；缺少历史深结构快照时没有冒充 OBSERVED。",
+    "完成 small、medium、large、huge 和超过一百万 LOC 仓库的有界性能记录，以及 ProjectFlow、Java、React、Python 和大型仓库的产品人工验收；没有外部 SCIP 索引的仓库明确保持 fallback 和 unknowns。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ScipProjectStructureIndexer.java",
+    "backend/src/main/java/com/projectflow/service/CompositeProjectStructureIndexer.java",
+    "backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectEvolutionBridgeService.java",
+    "backend/src/main/java/com/projectflow/dto/ProjectUnderstandingDtos.java",
+    "backend/src/main/java/com/projectflow/entity/ProjectEvolutionBridge.java",
+    "frontend/src/app/project-intelligence/understanding/page.tsx",
+    "docs/projectflow-v3.6-open-source-borrowing-map.md",
+    "docs/projectflow-v3.6-architecture.md",
+    "docs/projectflow-v3.6-structure-index-v2-adr.md",
+    "docs/projectflow-v3.6-evolution-bridge-adr.md",
+    "docs/projectflow-v3.6-product-acceptance.md",
+    "docs/projectflow-v3.6-acceptance-report.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "verification": {
+    "build": "passed: frontend lint、47/47 contracts 和 Next.js 生产构建均通过，生成 23 个页面；根 Start-ProjectFlow.bat -NoBrowser 从当前工作树完成依赖校验、生产构建、Java 17 后端编译、H2 旧库启动和前后端健康检查，logs/last-embedded-build.json 记录 version=3.6.0、frontendBuildId=ltZE9q00FUsCYcac9ngkw、hasLocalChanges=true。",
+    "tests": "passed: backend Maven 最终完整 H2 套件 323 项，0 failures，0 errors，1 条条件 benchmark skipped；新增官方 SCIP Java+TypeScript fixture、损坏索引回退、真实 Git bridge、幂等、Gradle 单体/Monorepo 边界等测试；Playwright 真实前后端 E2E 8/8。",
+    "manualCheck": "conditional_pass: ProjectFlow 页面、固定兼容模型契约和 Spring Petclinic 真实历史 bridge 已人工验收；固定模型未描述为真实 Provider。Docker daemon 不可用，因此本地 PostgreSQL Testcontainers 跳过；没有安全 Key，因此真实 Provider 测试跳过。"
+  },
+  "unfinished": [
+    "V3.6 消费已有 index.scip，但没有编排跨语言 indexer 的安装与生产；scip-java 0.12.3 在当前 Windows 环境还存在上游调用 mvn 而非 mvn.cmd 的兼容问题。",
+    "外部 SCIP index 与当前 Git revision 的强一致校验、真实大型 SCIP 索引的大小和 heap peak 尚未完成。",
+    "有变化时仍执行一次有界组合重建，不是 changed-symbol 级增量；完整 milestone 选择和历史结构重建留给 V3.7。",
+    "真实 Provider 语义质量因没有安全 Key 跳过，本地 PostgreSQL 16 Testcontainers 因 Docker daemon 不可用跳过。",
+    "Desktop 正式迁移、后台常驻、watcher、installer 和完整新 GUI 按范围未实现。"
+  ],
+  "sedimentCandidates": [
+    "跨语言代码智能应直接复用 SCIP 标准协议和官方 protobuf，把语言 indexer 作为可替换生产者；业务层只维护 derived Structure read model，不自创 Symbol/Occurrence 协议。",
+    "大型仓库语义理解应先用成熟图算法做关系排序和聚类，再向模型发送有界高价值结构摘要；Parser、Indexer 和 Graph 能确定的内容不应交给模型猜测。",
+    "结构演进桥应由真实 Git parent、commit diff、ProjectFact 和结构区域共同约束；缺少前后结构快照时必须降级为 INFERRED，不能为了展示伪造 OBSERVED。",
+    "高级结构 provider 必须是增强链而不是可用性前提：索引缺失、损坏或超限时保留确定性 fallback、coverage、unsupported 和 unknowns。"
+  ]
+}

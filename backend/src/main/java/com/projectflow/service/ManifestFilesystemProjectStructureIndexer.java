@@ -17,7 +17,9 @@ import com.projectflow.dto.ProjectUnderstandingDtos.StructureDelta;
 import com.projectflow.dto.ProjectUnderstandingDtos.StructureEntryPoint;
 import com.projectflow.dto.ProjectUnderstandingDtos.StructureEvidence;
 import com.projectflow.dto.ProjectUnderstandingDtos.StructureFileNode;
+import com.projectflow.dto.ProjectUnderstandingDtos.StructureMetrics;
 import com.projectflow.dto.ProjectUnderstandingDtos.StructureModuleNode;
+import com.projectflow.dto.ProjectUnderstandingDtos.StructureProviderDiagnostic;
 import com.projectflow.dto.ProjectUnderstandingDtos.StructureRelation;
 import com.projectflow.service.RepositoryIntakeService.ModuleSignal;
 import com.projectflow.service.RepositoryIntakeService.ScanResult;
@@ -156,6 +158,38 @@ public class ManifestFilesystemProjectStructureIndexer implements ProjectStructu
             List.of(
                 "未安装或未配置语义索引器，因此不提供可靠符号、调用、继承和引用关系",
                 "不会把未扫描源码内容或 README 宣传语自动当作已验证能力"
+            ),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(new StructureProviderDiagnostic(
+                "MANIFEST_FILESYSTEM",
+                "SUCCEEDED",
+                INDEX_VERSION,
+                0,
+                0,
+                scan.fileDetails().size(),
+                0,
+                0,
+                0,
+                relations.size(),
+                "确定性文件、manifest、workspace 与候选入口索引"
+            )),
+            new StructureMetrics(
+                scan.intake().fileCount(),
+                scan.intake().estimatedLoc(),
+                0,
+                0,
+                0,
+                relations.size(),
+                0,
+                0,
+                -1,
+                -1,
+                0,
+                false
             ),
             new StructureDelta(
                 "INITIAL",

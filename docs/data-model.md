@@ -1,5 +1,33 @@
 # Data Model
 
+## V3.6 structural intelligence and evolution bridge
+
+`project_structure_indexes` remains one replaceable, rebuildable structure row per project. Its JSON read model is versioned as `structure-v2` and adds bounded Symbol, Definition, Reference, graph relation, important-node, functional-area, provider-diagnostic, metric, coverage, unsupported-area, source-revision, and dirty-set data. It is derived intelligence and never replaces ProjectFact.
+
+`project_understanding_snapshots` uses `understanding-v2` for the semantic/cache boundary. It remains a replaceable current interpretation with observed/inferred claims, evidence coverage, unknowns, CURRENT/STALE status, and safe model diagnostics.
+
+### project_evolution_bridges
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| id | UUID | Primary key |
+| project_id | UUID | Owned project |
+| occurred_at | timestamptz | Existing Fact occurrence time |
+| before_revision / after_revision | varchar | Real Git parent and commit |
+| before_structure_version / after_structure_version | varchar | Structure read-model versions used by the bridge |
+| meaningful_change | text | Existing Project Fact summary |
+| affected_area_id / affected_area_label | varchar | Structure V2 area identity and display label |
+| before_state / after_state | text | Compact evidence-backed state description |
+| epistemic_status / confidence | varchar | OBSERVED only when both structure revisions align; otherwise INFERRED |
+| source_fact_ids | text/json | Existing owned Project Fact IDs |
+| source_commit_refs | text/json | Validated commit references |
+| changed_paths | text/json | Bounded repository-relative paths |
+| structure_evidence_refs | text/json | Valid current structure evidence IDs |
+| bridge_fingerprint | varchar | Deterministic idempotency boundary |
+| created_at | timestamptz | Persistence timestamp |
+
+The unique `(project_id, bridge_fingerprint)` constraint prevents retry or repeated-refresh duplication. Bridge rows are derived and may be rebuilt; they do not write back to Facts, Timeline, Capability, or Capability Evolution.
+
 ## V3.4.1 timeline derived data
 
 `project_facts` adds persisted `timeline_event_at`, day, ISO week, and month assignment fields. `project_fact_file_refs` normalizes file membership for deterministic distinct counts. `project_timeline_summaries` stores one versioned derived summary per project/granularity/key with fingerprint, coverage, status, previous-success content, diagnostics, and job linkage. `project_timeline_themes` stores period-local themes; `project_timeline_theme_facts` stores explicit owned theme-to-fact membership. These tables never copy full fact evidence and never replace ProjectFact.
@@ -368,6 +396,7 @@ Persisted project or file analysis result.
 | project_fact_commit_refs | unique fact_id + commit_sha; project_id + commit_sha |
 | project_fact_cursors | unique project_id |
 | project_fact_history_states | unique project_id |
+| project_evolution_bridges | unique project_id + bridge_fingerprint; project_id + occurred_at |
 | change_batches | project_id and existing batch-order queries; fact counts/status remain row metadata |
 
 ## Ownership Rule

@@ -1354,6 +1354,38 @@ export type ProjectUnderstandingSnapshot = {
   diagnostics: ModelCallDiagnostics | null;
 };
 
+export type ProjectEvolutionBridge = {
+  id: string;
+  projectId: string;
+  occurredAt: string;
+  beforeRevision: string;
+  afterRevision: string;
+  beforeStructureVersion: string;
+  afterStructureVersion: string;
+  meaningfulChange: string;
+  affectedAreaId: string;
+  affectedAreaLabel: string;
+  beforeState: string;
+  afterState: string;
+  epistemicStatus: "OBSERVED" | "INFERRED";
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+  sourceFactIds: string[];
+  sourceCommitRefs: string[];
+  changedPaths: string[];
+  evidenceRefs: string[];
+  generationVersion: number;
+  createdAt: string;
+};
+
+export type ProjectEvolutionBridgePage = {
+  items: ProjectEvolutionBridge[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+};
+
 export type ProjectAnalysisJob = {
   id: string;
   projectId: string;
@@ -2361,6 +2393,22 @@ export function getProjectUnderstanding(token: string, projectId: string): Promi
       Authorization: `Bearer ${token}`,
     },
   });
+}
+
+export function getProjectEvolutionBridges(
+  token: string,
+  projectId: string,
+  page = 0,
+  size = 20,
+): Promise<ProjectEvolutionBridgePage> {
+  return requestJson<ProjectEvolutionBridgePage>(
+    `/projects/${projectId}/evolution-bridges?page=${page}&size=${size}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
 }
 
 export function analyzeProjectFile(token: string, projectId: string, path: string): Promise<ProjectAnalysisJob> {

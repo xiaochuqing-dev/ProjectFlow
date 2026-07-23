@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -46,7 +47,7 @@ import com.projectflow.support.AppException;
 
 @Service
 public class ProjectUnderstandingService {
-    private static final String MODEL_ANALYSIS_VERSION = "understanding-v1";
+    private static final String MODEL_ANALYSIS_VERSION = "understanding-v2";
     private static final List<String> SECTION_NAMES = List.of(
         "identity", "technology", "structure", "architecture", "capabilities", "engineeringState"
     );
@@ -59,6 +60,7 @@ public class ProjectUnderstandingService {
     private final LocalProjectPathGuard pathGuard;
     private final RepositoryIntakeService intakeService;
     private final ProjectStructureIndexer structureIndexer;
+    private final ProjectEvolutionBridgeService evolutionBridgeService;
     private final ModelGatewayService modelGateway;
     private final ObjectMapper objectMapper;
 
@@ -74,6 +76,7 @@ public class ProjectUnderstandingService {
         LocalProjectPathGuard pathGuard,
         RepositoryIntakeService intakeService,
         ProjectStructureIndexer structureIndexer,
+        ProjectEvolutionBridgeService evolutionBridgeService,
         ModelGatewayService modelGateway,
         ObjectMapper objectMapper
     ) {
@@ -85,6 +88,7 @@ public class ProjectUnderstandingService {
         this.pathGuard = pathGuard;
         this.intakeService = intakeService;
         this.structureIndexer = structureIndexer;
+        this.evolutionBridgeService = evolutionBridgeService;
         this.modelGateway = modelGateway;
         this.objectMapper = objectMapper;
     }
@@ -113,7 +117,7 @@ public class ProjectUnderstandingService {
             && provider != null
             && "MODEL_UNAVAILABLE".equals(current.getSemanticStatus());
         boolean cacheCandidate = current != null
-            && current.getStructureIndexVersion().equals(ManifestFilesystemProjectStructureIndexer.INDEX_VERSION)
+            && current.getStructureIndexVersion().equals(CompositeProjectStructureIndexer.INDEX_VERSION)
             && current.getModelAnalysisVersion().equals(MODEL_ANALYSIS_VERSION)
             && "CURRENT".equals(current.getCurrentStatus())
             && !semanticUpgradeRequired;
@@ -132,11 +136,28 @@ public class ProjectUnderstandingService {
 
         progress.accept("STRUCTURE_INDEX", "正在建立可复用的结构索引与证据编号");
         ProjectStructureIndex previousIndex = structureRepository.findByProjectId(projectId).orElse(null);
+        Map<String, String> previousInventory = readInventory(previousIndex);
+        ProjectStructureIndexResponse previousStructure = readStructure(previousIndex);
         ProjectStructureIndexResponse index = withDelta(
             structureIndexer.build(scan),
-            calculateDelta(readInventory(previousIndex), scan.inventorySignatures(), scan.intake().scanTruncated(), previousIndex != null)
+            calculateDelta(previousInventory, scan.inventorySignatures(), scan.intake().scanTruncated(), previousIndex != null)
         );
         persistStructure(projectId, scan.intake(), index, scan.inventorySignatures());
+        ModelCancellationContext.throwIfCancelled();
+
+        progress.accept("EVOLUTION_BRIDGE", "正在用已有事实和真实 Git 提交连接结构演进");
+        try {
+            evolutionBridgeService.rebuild(
+                projectId,
+                root,
+                scan.intake().git(),
+                previousStructure,
+                index,
+                changedPaths(previousInventory, scan.inventorySignatures())
+            );
+        } catch (RuntimeException ignored) {
+            progress.accept("EVOLUTION_BRIDGE_SKIPPED", "演进桥未更新，当前结构理解仍可继续");
+        }
         ModelCancellationContext.throwIfCancelled();
 
         AdaptiveAnalysisPlanResponse plan = plan(scan.intake(), index, provider != null);
@@ -241,8 +262,13 @@ public class ProjectUnderstandingService {
         reasons.add(hierarchical ? "规模较大，模型只接收压缩后的模块级证据" : "规模可控，模型接收有界结构证据");
         if (!intake.git().available()) reasons.add("非 Git 项目仅理解当前状态，不伪造历史");
         return new AdaptiveAnalysisPlanResponse(
-            List.of("目录与文件盘点", "语言与 LOC 统计", "manifest/workspace 识别", "工程化信号识别", "证据编号"),
-            "MANIFEST_FILESYSTEM",
+            index.symbols().isEmpty()
+                ? List.of("目录与文件盘点", "语言与 LOC 统计", "manifest/workspace 识别", "工程化信号识别", "证据编号")
+                : List.of(
+                    "目录与文件盘点", "语言与 LOC 统计", "manifest/workspace 识别", "SCIP Symbol/Definition/Reference",
+                    "JGraphT 重要节点排序", "关系驱动 Functional Area", "证据编号"
+                ),
+            index.indexerSource(),
             semanticMode,
             semantic ? 3 : 0,
             semantic ? 12_000 : 0,
@@ -282,15 +308,31 @@ public class ProjectUnderstandingService {
                 : claim("technology-1", "当前主要技术信号来自：" + languageSummary + "。", "OBSERVED", confidence(index), intakeRef)
         );
         UnderstandingSection structure = section(
-            "识别到 " + index.modules().size() + " 个一级结构模块和 " + index.entryPoints().size() + " 个候选入口。",
-            claim("structure-1", "当前只确认目录包含关系，不把文件邻近误报为调用关系。", "OBSERVED", confidence(index), baseRefs)
+            index.symbols().isEmpty()
+                ? "识别到 " + index.modules().size() + " 个一级结构模块和 " + index.entryPoints().size() + " 个候选入口。"
+                : "精确索引识别到 " + index.symbols().size() + " 个符号、" + index.definitions().size()
+                    + " 个定义、" + index.references().size() + " 个引用和 " + index.functionalAreas().size() + " 个关系区域。",
+            index.symbols().isEmpty()
+                ? claim("structure-1", "当前只确认目录包含关系，不把文件邻近误报为调用关系。", "OBSERVED", confidence(index), baseRefs)
+                : claim("structure-1", "当前代码关系来自 SCIP definition/reference，并由标准图算法排序和聚类。", "OBSERVED", confidence(index), structuralRefs(index, baseRefs))
         );
         UnderstandingSection architecture = section(
-            "当前结构索引未提供可靠调用图、继承图和运行时边界，架构细节保持未知。",
-            null
+            index.functionalAreas().isEmpty()
+                ? "当前结构索引未提供可靠代码关系区域，架构细节保持未知。"
+                : "已形成 " + index.functionalAreas().size() + " 个由代码关系支持的结构区域；用户可读架构语义仍需有界归纳。",
+            index.functionalAreas().isEmpty() ? null
+                : claim(
+                    "architecture-1",
+                    "结构区域成员由 definition/reference 关系形成，不由 frontend、backend 等目录名直接决定。",
+                    "OBSERVED",
+                    confidence(index),
+                    index.functionalAreas().stream().flatMap(item -> item.evidenceRefs().stream()).distinct().limit(12).toList()
+                )
         );
         UnderstandingSection capabilities = section(
-            "尚未基于源码证据确认稳定业务能力；需要模型语义归纳或后续语义索引补充。",
+            index.functionalAreas().isEmpty()
+                ? "尚未基于源码关系确认稳定业务能力；需要模型语义归纳或后续语义索引补充。"
+                : "已准备关系区域、关键符号与入口证据；稳定业务能力名称仍只允许在证据约束下推断。",
             null
         );
         List<String> engineeringKinds = index.engineeringSignals().entrySet().stream()
@@ -452,8 +494,49 @@ public class ProjectUnderstandingService {
         context.put("gitAvailable", intake.git().available());
         context.put("modules", index.modules().stream().limit(250).toList());
         context.put("entryPoints", index.entryPoints().stream().limit(100).toList());
+        context.put("importantNodes", index.importantNodes().stream()
+            .limit(50)
+            .map(item -> Map.of(
+                "id", item.id(),
+                "type", item.nodeType(),
+                "label", bounded(item.label(), 160),
+                "path", item.path(),
+                "score", item.score(),
+                "evidenceRefs", item.evidenceRefs().stream().limit(5).toList()
+            ))
+            .toList());
+        context.put("functionalAreas", index.functionalAreas().stream()
+            .limit(100)
+            .map(item -> Map.of(
+                "id", item.id(),
+                "label", bounded(item.label(), 160),
+                "confidence", item.confidence(),
+                "memberPaths", item.memberPaths().stream().limit(20).toList(),
+                "keySymbolIds", item.keySymbolIds().stream().limit(10).toList(),
+                "relationCount", item.relationCount(),
+                "evidenceRefs", item.evidenceRefs().stream().limit(12).toList()
+            ))
+            .toList());
+        context.put("symbols", index.symbols().stream()
+            .filter(item -> index.functionalAreas().stream().anyMatch(area -> area.keySymbolIds().contains(item.id())))
+            .map(item -> Map.of(
+                "id", item.id(),
+                "displayName", bounded(item.displayName(), 160),
+                "kind", item.kind(),
+                "path", item.path(),
+                "evidenceRef", item.evidenceRef()
+            ))
+            .limit(400)
+            .toList());
         context.put("engineeringSignals", index.engineeringSignals());
-        context.put("evidence", index.evidence().stream().limit(700).toList());
+        Set<String> prioritizedRefs = new LinkedHashSet<>();
+        index.functionalAreas().forEach(area -> prioritizedRefs.addAll(area.evidenceRefs()));
+        index.importantNodes().forEach(node -> prioritizedRefs.addAll(node.evidenceRefs()));
+        List<StructureEvidence> selectedEvidence = index.evidence().stream()
+            .sorted(Comparator.comparing((StructureEvidence item) -> !prioritizedRefs.contains(item.id())))
+            .limit(700)
+            .toList();
+        context.put("evidence", selectedEvidence);
         context.put("coverage", index.coverage());
         context.put("dirtySet", index.delta());
         context.put("unsupportedAreas", index.unsupportedAreas());
@@ -509,6 +592,34 @@ public class ProjectUnderstandingService {
         }
     }
 
+    private ProjectStructureIndexResponse readStructure(ProjectStructureIndex entity) {
+        if (entity == null || entity.getIndexJson() == null || entity.getIndexJson().isBlank()) return null;
+        try {
+            return objectMapper.readValue(entity.getIndexJson(), ProjectStructureIndexResponse.class);
+        } catch (JsonProcessingException exception) {
+            return null;
+        }
+    }
+
+    private static Set<String> changedPaths(
+        Map<String, String> previous,
+        Map<String, String> current
+    ) {
+        LinkedHashSet<String> result = new LinkedHashSet<>();
+        current.entrySet().stream()
+            .filter(entry -> !entry.getValue().equals(previous.get(entry.getKey())))
+            .map(Map.Entry::getKey)
+            .sorted()
+            .limit(10_000)
+            .forEach(result::add);
+        previous.keySet().stream()
+            .filter(path -> !current.containsKey(path))
+            .sorted()
+            .limit(Math.max(0, 10_000 - result.size()))
+            .forEach(result::add);
+        return result;
+    }
+
     private static StructureDelta calculateDelta(
         Map<String, String> previous,
         Map<String, String> current,
@@ -553,6 +664,13 @@ public class ProjectUnderstandingService {
             value.coverage(),
             value.provenance(),
             value.unsupportedAreas(),
+            value.symbols(),
+            value.definitions(),
+            value.references(),
+            value.importantNodes(),
+            value.functionalAreas(),
+            value.providerDiagnostics(),
+            value.metrics(),
             delta,
             value.indexedAt()
         );
@@ -718,6 +836,18 @@ public class ProjectUnderstandingService {
         if (index.coverage().overall() >= 0.8) return "HIGH";
         if (index.coverage().overall() >= 0.5) return "MEDIUM";
         return "LOW";
+    }
+
+    private static List<String> structuralRefs(
+        ProjectStructureIndexResponse index,
+        List<String> fallback
+    ) {
+        List<String> refs = index.functionalAreas().stream()
+            .flatMap(item -> item.evidenceRefs().stream())
+            .distinct()
+            .limit(12)
+            .toList();
+        return refs.isEmpty() ? fallback : refs;
     }
 
     private static String classificationLabel(String value) {

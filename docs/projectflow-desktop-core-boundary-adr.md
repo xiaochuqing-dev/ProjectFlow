@@ -103,3 +103,9 @@ V3.5 仅保持两者可行，不实现 Desktop transport。
 ## 后果
 
 V3.5 的 RepositoryIntakeService、ProjectStructureIndexer 和 ProjectUnderstandingService 可在无浏览器环境由 Job、未来 CLI 或 Desktop sidecar 调用。当前 Web 页面只是读取持久化快照和提交 Job，不成为业务核心。
+
+## V3.6 复核补充
+
+V3.6 保持本 ADR 的 Java Core 与 delivery adapter 边界。Structure Index V2、SCIP 协议消费、图分析和 Evolution Bridge 都位于同一 Spring Core 生命周期内；页面只提交持久化 Job 并读取结果。
+
+本阶段仍不选择 Tauri 或 Electron，不实现 watcher、daemon、system tray、开机启动、Installer、Auto Update 或正式 Desktop transport。未来 PoC 必须复用同一 Core/API，并补齐随机端口或窄 IPC、进程回收、版本握手、数据升级与真实资源测量。
