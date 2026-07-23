@@ -2,7 +2,7 @@
 
 验收日期：2026-07-23
 
-验收基线：master，HEAD 6e408c2146a4a41c2e47e9a47654c280c93cb2c1，包含未提交的 V3.5 工作树。未创建提交，未运行远程 CI。
+验收基线：master，V3.5 实现提交 2cee45bb858de14cc2b5a464fa7b8141a2354372。验收在直接推送前完成，未运行远程 CI。
 
 ## A. 最终解决的问题
 
@@ -129,10 +129,12 @@ V3.5 故意没有实现 Tauri/Electron shell、JRE sidecar 打包、IPC、安装
 
 分支：master
 
-基线 HEAD：6e408c2146a4a41c2e47e9a47654c280c93cb2c1
+实现前基线 HEAD：6e408c2146a4a41c2e47e9a47654c280c93cb2c1
 
-工作树：包含 V3.5 未提交变更和用户原有启动可靠性改动。
+V3.5 实现提交：2cee45bb858de14cc2b5a464fa7b8141a2354372
 
-提交：未创建，用户未要求提交。
+发布方式：按用户要求直接提交并推送 master，不创建功能分支、PR 或 Release。
+
+未纳入提交：用户原有启动可靠性改动和旧 artifact-size-control Agent result，继续保留在本地工作树。
 
 远程 CI：未运行。
