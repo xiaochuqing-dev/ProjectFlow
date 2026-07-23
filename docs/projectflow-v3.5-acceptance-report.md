@@ -2,7 +2,7 @@
 
 验收日期：2026-07-23
 
-验收基线：master，V3.5 实现提交 2cee45bb858de14cc2b5a464fa7b8141a2354372。验收在直接推送前完成，未运行远程 CI。
+验收基线：master，V3.5 实现提交 2cee45bb858de14cc2b5a464fa7b8141a2354372。实现与首版报告推送后，GitHub Actions Run 29987020884 全部门禁通过。
 
 ## A. 最终解决的问题
 
@@ -118,7 +118,7 @@ V3.5 故意没有实现 Tauri/Electron shell、JRE sidecar 打包、IPC、安装
 | 大仓库 | Spring Framework 浅克隆 checkout | 11,314 文件，9,659 源文件，1,536,497 LOC，32 模块，214 evidence，coverage 0.799，未截断 |
 | 大仓库时间 | intake + manifest index | 观测到 9.417 秒和 74.960 秒；快速重复 fingerprint 为 233–260 ms，表明 Windows 文件缓存/安全扫描存在高方差 |
 | 大仓库模型成本 | benchmark | 0 requests，0 input tokens，0 output tokens；benchmark 只验证确定性结构层 |
-| PostgreSQL 16 | Testcontainers | SKIPPED：Docker Desktop daemon 不可用 |
+| PostgreSQL 16 | Testcontainers | 本地因 Docker Desktop daemon 不可用而跳过；GitHub Actions postgres-integration 真实门禁通过 |
 | 真实 Provider | OpenAI/Anthropic/Relay | SKIPPED：没有读取或使用安全 Key |
 | 固定模型 | Playwright local fixed model | 通过；仅作为自动化契约，不描述为真实 Provider 验收 |
 | npm audit | npm audit --json | 直接 Playwright 与 Next.js 本体告警已通过升级消除；仍有 3 个 Next.js 内部依赖上游告警 |
@@ -137,4 +137,4 @@ V3.5 实现提交：2cee45bb858de14cc2b5a464fa7b8141a2354372
 
 未纳入提交：用户原有启动可靠性改动和旧 artifact-size-control Agent result，继续保留在本地工作树。
 
-远程 CI：未运行。
+远程 CI：GitHub Actions Run 29987020884 通过。Hermes MCP、Obsidian Projection、PostgreSQL Testcontainers、Frontend Quality、Backend Unit/H2、Browser E2E 和 Sensitive Content 全部成功；optional-real-deepseek 因无安全 Key 按设计跳过。运行地址：https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/29987020884
