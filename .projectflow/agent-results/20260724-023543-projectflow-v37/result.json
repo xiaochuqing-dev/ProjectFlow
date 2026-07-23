@@ -26,7 +26,7 @@
   "verification": {
     "build": "passed: backend compile/testCompile；frontend lint、48/48 contracts 和 Next.js 生产构建通过，生成 23 个静态页面；根 Start-ProjectFlow.bat -NoBrowser 从当前工作树完成依赖校验、生产构建、Java 17 后端启动和前后端健康检查，logs/last-embedded-build.json 记录 version=3.7.0、frontendBuildId=yMTbsys-r775niT2LOpRU、hasLocalChanges=true。",
     "tests": "passed: backend Maven 完整 H2 套件 329 项，0 failures，0 errors，1 条条件跳过；V3.7 聚焦服务测试通过；真实前后端 Playwright 8/8。真实 benchmark 覆盖 4,450、68,657、235,265、833,665 和 3,550,729 LOC，Scout/deep-read 始终不超过 80 且模型请求为 0。",
-    "manualCheck": "conditional_pass: 空目录、空 TXT、奇怪命名文档、小脚本、前后端/Monorepo、无 Git、短历史、长历史和 README 冲突边界已按自动化、真实仓库与人工检查核验。Docker daemon 不可用，本地 PostgreSQL Testcontainers 跳过；无安全模型 Key，真实 Provider 质量验收跳过；远程 CI 待提交后填写。"
+    "manualCheck": "conditional_pass: 空目录、空 TXT、奇怪命名文档、小脚本、前后端/Monorepo、无 Git、短历史、长历史和 README 冲突边界已按自动化、真实仓库与人工检查核验。Docker daemon 不可用，本地 PostgreSQL Testcontainers 跳过；GitHub Actions Run 30034572176 的真实 PostgreSQL、backend/H2、frontend、Playwright、Hermes、Obsidian 和敏感内容门禁全部成功。无安全模型 Key，真实 Provider 质量验收按设计跳过。"
   },
   "unfinished": [
     "真实 Provider 语义质量因没有安全 Key 跳过，固定模型只验证结构化契约。",

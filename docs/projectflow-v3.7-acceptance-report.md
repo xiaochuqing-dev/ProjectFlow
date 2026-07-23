@@ -72,7 +72,7 @@ AB. 环境无安全 Key，真实 Provider：SKIPPED。
 
 ## AC–AH：门禁、结论和交付
 
-AC. Docker server 当前不可用，本地 PostgreSQL Testcontainers：SKIPPED；没有把 H2 描述成 PostgreSQL。远程 CI 待提交后核验。
+AC. Docker server 当前不可用，本地 PostgreSQL Testcontainers：SKIPPED；没有把 H2 描述成 PostgreSQL。GitHub Actions Run 30034572176 的 PostgreSQL Testcontainers 真实集成测试已通过。
 
 AD. 已通过 Maven 完整 H2 套件 329 项（0 failure、0 error、1 条条件跳过）、V3.7 聚焦测试、前端 lint、48/48 contracts、Next.js production build（23 个静态页面）和真实前后端 Playwright 8/8。仓库根 `Start-ProjectFlow.bat -NoBrowser` 已从当前工作树完成依赖校验、生产构建、Java 17 后端启动、H2 旧库读取和前后端健康检查；`logs/last-embedded-build.json` 记录 version=3.7.0、frontendBuildId=yMTbsys-r775niT2LOpRU、hasLocalChanges=true。
 
@@ -82,4 +82,4 @@ AF. 风险：真实模型未验收；SCIP producer 未自动化；非 UTF-8/PDF/
 
 AG. 下一阶段优先优化 Discovery IO/cache、真实 Provider 语义验收和安全 producer PoC，再决定是否深化完整 Evolution；不自动转向 Desktop。
 
-AH. 基线 `23186ca24e78796538e92444df0474e2bcbf5a28`。branch `codex/v3.7-universal-evidence`。implementation SHA、documentation SHA、PR、CI run/status 待实际提交和远程验证后填写。
+AH. 基线 `23186ca24e78796538e92444df0474e2bcbf5a28`。branch `codex/v3.7-universal-evidence`。implementation SHA `2df65c7`，documentation SHA `70e8dbb`，Draft PR #3。GitHub Actions Run 30034572176：SUCCESS；PostgreSQL、backend/H2、frontend、Playwright、Hermes、Obsidian 和 sensitive-content 全部通过，真实 DeepSeek 因无安全 Key 按设计跳过。
