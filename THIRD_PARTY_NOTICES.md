@@ -1,6 +1,6 @@
 # Third-party notices
 
-ProjectFlow V3.7.1 continues to use the following V3.6 libraries. Adaptive execution, context packing, diversity selection, caches, dimensional Historical Coverage and secret redaction add no third-party runtime dependency and copy no community source code.
+ProjectFlow V3.7.2 continues to use the following V3.6 libraries. Real-model evaluation, semantic calibration, high-value gating, current-result degradation and adapter contracts add no third-party runtime dependency and copy no community source code.
 
 ## SCIP Java Protocol
 
@@ -35,7 +35,7 @@ The four pinned JARs add approximately 2.30 MiB to the resolved runtime before e
 
 ## Design references not redistributed
 
-The V3.7.1 design review consulted mature public implementations but copied no source and added no dependency:
+The V3.7.1/V3.7.2 design reviews consulted mature public implementations but copied no source and added no dependency. The full V3.7.2 adoption/rejection record is in `docs/projectflow-v3.7.2-open-source-research.md`.
 
 - Aider RepoMap, Apache/MIT ecosystem implementation of token-budgeted repository selection and PageRank: https://github.com/paul-gauthier/aider/blob/main/aider/repomap.py
 - Gitleaks, MIT, rule/keyword/entropy secret detection: https://github.com/gitleaks/gitleaks

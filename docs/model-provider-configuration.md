@@ -33,3 +33,11 @@ Startup migration only fills missing protocol and auth mode. It preserves Provid
 Compatibility testing performs a basic structured transport/protocol task and a minimal ProjectFlow task. It reports connection, auth, protocol, structured-output/JSON/temperature/reasoning capability, usage, output-limit contract, overall ProjectFlow compatibility, warnings and request count. `FULL`, fallback compatibility and transport reachability are distinct states.
 
 API keys are still stored in the local application database for compatibility. They are excluded from DTOs, logs, diagnostics and artifacts, but at-rest storage remains a known risk. Desktop productization must move them behind an OS-backed SecretStore without changing the Provider contract.
+
+## V3.7.2 real-model evaluation
+
+The optional real-model quality gate uses the existing Provider configuration or CI environment injection and always calls Model Gateway V2. It does not construct a direct HTTP client or change the saved Provider. Local database-based evaluation reads a copied database in read-only mode; CI uses `DEEPSEEK_API_KEY`.
+
+Before a real run, confirm Provider family, protocol, endpoint, model, auth mode, timeout, output ceiling and retry policy. Evaluation artifacts contain only normalized evidence IDs, claims, dimensions, aggregate token/latency diagnostics and failure state. They exclude the Key, Authorization, prompt, raw response and reasoning. Estimated monetary cost remains `UNAVAILABLE` unless a dated reliable price source is explicitly configured.
+
+After using a temporary or shared real-model key, revoke or rotate it according to the Provider's policy. ProjectFlow cannot determine whether an external key was exposed outside this process.

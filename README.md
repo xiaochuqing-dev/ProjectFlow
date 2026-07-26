@@ -1,12 +1,33 @@
 # ProjectFlow
 
-ProjectFlow V3.7.1 does not assume what a user's project is. It discovers the material that actually exists, lets a bounded Semantic Scout request capabilities instead of commands, executes only registered deterministic providers, validates the new evidence, and conditionally performs a final synthesis. Every step remains bounded, diagnosable, evidence-linked and separate from durable Project Facts.
+ProjectFlow V3.7.2 does not assume what a user's project is. It discovers the material that actually exists, lets a bounded Semantic Scout request capabilities instead of commands, executes only registered deterministic providers, validates the new evidence, and conditionally performs a final synthesis. Every step remains bounded, diagnosable, evidence-linked and separate from durable Project Facts.
 
 ProjectFlow V3.4.5 established the model-protocol foundation, V3.5.0 added bounded repository intake, V3.6.0 added precise SCIP consumption and the minimum evolution bridge, and V3.7.0 added universal evidence discovery and adaptive planning. V3.7.1 closes the plan-to-execution gap with bounded DOC_READER, Git history, Tag, worktree, manifest and Agent-result providers, complete-JSON context packing, diversity-aware evidence selection, honest dimensional history coverage, discovery caches and outbound secret redaction.
+
+V3.7.2 validates that boundary with a ProjectFlow-only internal evaluation harness, an 18-case human ground-truth set, real Model Gateway runs, versioned semantic prompts, an auditable high-value evidence gate, current-result degradation when Final Synthesis fails, complete tool-cache identity, and three thin integration contracts. Evaluation rates and costs remain test/report artifacts and never enter product APIs, snapshots, databases or UI.
 
 ProjectFlow 不预设用户的项目是什么。它先发现真实存在的材料，再结合工程分析与有界的大模型推理判断什么值得分析、能知道什么，并基于证据理解项目当前状态及可还原的演进过程。
 
 Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns that raw development evidence into durable Change Batches, evidence-backed Project Facts, and long-lived Project Memory.
+
+## V3.7.2 Real Model Quality and Integration Boundary
+
+- Empty and blank inputs remain deterministic with 0 model calls. Other eligible inputs use one Semantic Scout call, and only a validated high-value evidence decision may trigger a second Final Synthesis call.
+- The second-stage decision exposes trigger reasons, skipped reasons and evidence IDs. Short, duplicated, metadata-only or unsupported tool output does not trigger it.
+- Final Synthesis timeout, cancellation, invalid schema or Provider failure produces `FAILED_DEGRADED`: Stage 1, validated tool evidence and a current limited profile are preserved instead of rolling back to an old snapshot.
+- Tool result identity includes source revision/hash, requested capabilities, deep-read targets, Provider version, execution budgets, strategy version and relevant source signatures.
+- The internal harness covers 18 ProjectFlow shapes and boundaries, fixed and real Providers, repeat runs, evidence/tool/view/conflict metrics, second-stage comparison, token/latency diagnostics and sanitized JSON/Markdown artifacts under `backend/target`.
+- Semantic Scout v3 and Final Synthesis v3 explicitly treat Agent results as process evidence, usage counters as process metadata, current source as current-state evidence, and stale/conflicting documents as uncertainty rather than facts. They also require atomic shapes, explicit unknowns, stable dimensions and information-gap-driven tool/deep-read choices.
+- External integrations are constrained to Evidence Source Adapter, Intelligence Provider Adapter and Projection Adapter contracts. Envelopes are project-bound, revisioned, redacted, bounded and raw-payload-free; they do not promote facts.
+- The real Provider result applies only to the dated, human-labelled representative set and prompt/model version; it is not an accuracy promise for arbitrary projects. V3.8, not V3.7.2, owns full Evidence-backed Evolution Reconstruction.
+- The successful real-Provider calibration pilot exposed Tool Selection, Dynamic View and repeatability gaps. The final v3 batch remains NOT PASSED because the only configured Provider returned HTTP 402 after the pilot; V3.8 is not quality-approved until the same versioned evaluation is rerun and all gates pass.
+- V3.7.2 adds no daemon and no Desktop product migration, and it creates no Git Tag or GitHub Release.
+
+## Product Constitution and Integration Boundary
+
+ProjectFlow owns project evidence normalization, Project Facts, current project interpretation, historical coverage, evidence-backed evolution reconstruction, lifecycle capability semantics, trust state, and the user experience that presents those results.
+
+ProjectFlow does not become a coding agent, agent manager, Provider switcher, token billing dashboard, model leaderboard, GitHub/GitLab replacement, Obsidian/Hermes replacement, generic RAG or workflow platform, parser/SCIP producer, updater, CLI version manager, or generic developer-tool control center. Mature external capabilities are connected through thin adapters when they add normalized project evidence or consume ProjectFlow projections; they remain responsible for their own execution, storage, health and product domain.
 
 ## V3.7.1 Adaptive Execution and Technical-debt Closure
 
@@ -18,7 +39,7 @@ Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns tha
 - Historical Coverage is a weighted, inspectable read model over Git metadata, ProjectFact linkage, tags, historical documents, Agent results, structural snapshots and optional remote evidence. Many commits alone never imply mature history coverage.
 - File inspection and shallow evidence sampling reuse signature-keyed in-process caches. Changed-small-set refreshes reopen changed files while retaining unchanged inspection results.
 - SCIP producer invocation remains deferred: ProjectFlow never auto-downloads an indexer, silently invokes a project build, or changes a user's runtime. Existing safe SCIP consumption and deterministic fallback remain the production boundary.
-- V3.7.1 is still not the final Project Life Reconstruction product or final UI. Timeline and evolution appear only where historical evidence supports them. Real Provider semantic quality remains explicitly unverified when no safe user-owned key is supplied.
+- V3.7.1 is still not the final Project Life Reconstruction product or final UI. Timeline and evolution appear only where historical evidence supports them. V3.7.2 adds bounded real-Provider quality evidence without making a universal accuracy promise.
 
 ## V3.7 Universal Evidence Intelligence and Adaptive Analysis
 
@@ -48,7 +69,7 @@ Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns tha
 - Canonical diagnostics normalize finish state, usage, request ID, reasoning presence, truncation and Schema failures without persisting prompts, raw responses, reasoning or credentials.
 - Project Memory search and fact evidence tracing are focused read services behind the unchanged Gateway facade.
 - Official APIs and compatible relays share protocol adapters; transport reachability and real ProjectFlow task compatibility are reported separately.
-- Gemini, automatic background monitoring and Desktop GUI are intentionally excluded. The next stage is Automatic Memory Maintenance; full frontend rebuilding remains later.
+- Gemini, automatic background monitoring and Desktop GUI are intentionally excluded. “Automatic Memory Maintenance is the next stage” was a historical V3.4.5 roadmap statement and is superseded; after V3.7.2 acceptance, the next scoped phase is V3.8 Evidence-backed Evolution Reconstruction.
 - The real-data Value Audit, architecture decisions, Provider guide and release evidence are in `docs/projectflow-v3.4.5-value-audit.md` and the related V3.4.5 reports.
 
 ## V3.4.3 Project Memory Gateway and Hermes MCP
@@ -329,11 +350,13 @@ npm.cmd run test:contracts
 npm.cmd run lint
 npm.cmd run build
 
-# 可选真实 DeepSeek，小输入且最多 3 次请求
+# 可选真实 DeepSeek：通用入口小输入 + ProjectFlow 代表集
 cd ..\backend
 $env:PROJECTFLOW_RUN_REAL_MODEL='true'
 $env:DEEPSEEK_API_KEY='<安全测试 Key>'
-mvn.cmd -Ppostgres-it -Dit.test=RealDeepSeekIT verify
+mvn.cmd -Dtest=RealDeepSeekIT test
+mvn.cmd -Dtest=ProjectFlowRealModelEvalIT test
+# 归一化本地结果位于 target/projectflow-eval/real，默认被 Git 忽略
 ```
 
 Embedded local data can be exported with:

@@ -345,3 +345,15 @@ V3.7.1 adds compatible optional JSON fields inside the understanding snapshot:
 - `analysisMetrics.inventoryFilesRead`, `inventoryCacheHits`, `sampleCacheHits`: current refresh I/O diagnostics.
 
 Old V3.7 snapshot JSON may omit these fields and remains readable. The next explicit refresh safely reconstructs current derived diagnostics. No schema migration or bulk Fact rewrite is required.
+
+## V3.7.2 Understanding Trust State
+
+Routes and ownership rules remain unchanged. V3.7.2 adds only compatible trust fields:
+
+- `analysisExecution.secondStageDecision.secondStageTriggered`
+- `analysisExecution.secondStageDecision.triggerReasons`
+- `analysisExecution.secondStageDecision.skippedReasons`
+- `analysisExecution.secondStageDecision.evidenceIds`
+- `finalSynthesisStatus`: `NOT_APPLICABLE`, `PENDING`, `SKIPPED_NO_HIGH_VALUE_EVIDENCE`, `SUCCEEDED` or `FAILED_DEGRADED`
+
+These fields explain whether new evidence justified Final Synthesis and whether the current result is degraded. They are not accuracy/hallucination scores. Internal eval metrics have no controller, DTO, Snapshot field or UI route.
