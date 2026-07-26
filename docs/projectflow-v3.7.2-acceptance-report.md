@@ -170,11 +170,11 @@ AO. implementation SHA？
 
 AP. documentation SHA？
 
-PENDING。
+`b08fd393b9cf5363a6577fd4d8e95dcaf0d077be`。
 
 AQ. PR number？
 
-PENDING。
+PR #5。
 
 AR. PR merge SHA？
 
