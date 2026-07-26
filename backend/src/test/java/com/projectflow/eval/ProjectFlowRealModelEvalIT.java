@@ -82,13 +82,30 @@ class ProjectFlowRealModelEvalIT {
         for (EvalCase testCase : selectedCases) {
             int runs = testCase.important() ? Math.max(1, importantRepetitions) : 1;
             for (int run = 1; run <= runs; run++) {
-                observations.add(runCase(gateway, provider, config, testCase, run));
+                System.out.printf(
+                    "REAL_EVAL_START case=%s run=%d/%d%n",
+                    testCase.id(),
+                    run,
+                    runs
+                );
+                ProjectFlowEvalObservation observation = runCase(gateway, provider, config, testCase, run);
+                observations.add(observation);
+                System.out.printf(
+                    "REAL_EVAL_DONE case=%s run=%d status=%s requests=%d tokens=%d latencyMs=%d%n",
+                    testCase.id(),
+                    run,
+                    observation.finalStatus(),
+                    observation.requestCount(),
+                    observation.totalTokens(),
+                    observation.latencyMs()
+                );
             }
         }
         ProjectFlowEvalHarness harness = new ProjectFlowEvalHarness(mapper);
         var evalRun = harness.evaluate(groundTruth, observations);
         Path output = Path.of("target", "projectflow-eval", "real");
         harness.writeArtifacts(evalRun, output);
+        System.out.println("REAL_EVAL_AGGREGATE " + mapper.writeValueAsString(evalRun.summary()));
 
         long successful = observations.stream().filter(value -> !value.failed()).count();
         assertThat(successful).as("真实模型至少应完成一个代表性 case").isPositive();
@@ -548,21 +565,59 @@ class ProjectFlowRealModelEvalIT {
         return String.join(">", types);
     }
 
-    private static ProviderConfig providerConfig() throws Exception {
+    static ProviderConfig providerConfig() throws Exception {
         String databasePath = System.getProperty("projectflow.eval.provider-db", "").strip();
         if (!databasePath.isBlank()) return providerFromDatabase(databasePath);
-        String apiKey = System.getenv("DEEPSEEK_API_KEY");
+        String genericApiKey = System.getenv("PROJECTFLOW_REAL_MODEL_API_KEY");
+        boolean genericProvider = genericApiKey != null && !genericApiKey.isBlank();
+        String apiKey = genericProvider ? genericApiKey.strip() : environment("DEEPSEEK_API_KEY");
         if (apiKey == null || apiKey.isBlank()) return null;
         return new ProviderConfig(
-            "DeepSeek real eval",
-            "https://api.deepseek.com",
+            environmentOrDefault(
+                "PROJECTFLOW_REAL_MODEL_PROVIDER",
+                genericProvider ? "OpenAI-compatible real eval" : "DeepSeek real eval"
+            ),
+            environmentOrDefault("PROJECTFLOW_REAL_MODEL_BASE_URL", "https://api.deepseek.com"),
             apiKey,
-            System.getenv().getOrDefault("DEEPSEEK_MODEL", "deepseek-chat"),
-            AiProviderType.DEEPSEEK,
-            ModelProtocol.OPENAI_CHAT_COMPLETIONS,
-            120,
-            16_000
+            environmentOrDefault(
+                "PROJECTFLOW_REAL_MODEL_NAME",
+                environmentOrDefault("DEEPSEEK_MODEL", "deepseek-chat")
+            ),
+            enumEnvironment(
+                "PROJECTFLOW_REAL_MODEL_TYPE",
+                AiProviderType.class,
+                genericProvider ? AiProviderType.OPENAI : AiProviderType.DEEPSEEK
+            ),
+            enumEnvironment(
+                "PROJECTFLOW_REAL_MODEL_PROTOCOL",
+                ModelProtocol.class,
+                genericProvider ? ModelProtocol.OPENAI_RESPONSES : ModelProtocol.OPENAI_CHAT_COMPLETIONS
+            ),
+            integerEnvironment("PROJECTFLOW_REAL_MODEL_TIMEOUT_SECONDS", 120),
+            integerEnvironment("PROJECTFLOW_REAL_MODEL_MAX_TOKENS", 16_000)
         );
+    }
+
+    private static String environment(String name) {
+        String value = System.getenv(name);
+        return value == null || value.isBlank() ? null : value.strip();
+    }
+
+    private static String environmentOrDefault(String name, String fallback) {
+        String value = System.getenv(name);
+        return value == null || value.isBlank() ? fallback : value.strip();
+    }
+
+    private static int integerEnvironment(String name, int fallback) {
+        String value = System.getenv(name);
+        if (value == null || value.isBlank()) return fallback;
+        return Integer.parseInt(value.strip());
+    }
+
+    private static <T extends Enum<T>> T enumEnvironment(String name, Class<T> type, T fallback) {
+        String value = System.getenv(name);
+        if (value == null || value.isBlank()) return fallback;
+        return Enum.valueOf(type, value.strip().toUpperCase(Locale.ROOT));
     }
 
     private static ProviderConfig providerFromDatabase(String databasePath) throws Exception {
@@ -625,7 +680,7 @@ class ProjectFlowRealModelEvalIT {
         return actual.stream().filter(expectedSet::contains).distinct().toList();
     }
 
-    private record ProviderConfig(
+    record ProviderConfig(
         String name,
         String baseUrl,
         String apiKey,
