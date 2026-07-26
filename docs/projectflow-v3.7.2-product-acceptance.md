@@ -56,3 +56,11 @@ Scope notice: 本指标仅代表本阶段人工标注代表性测试集，不构
 | 26 | Missing project binding rejected | Validator ownership-boundary test | PASS |
 
 Overall product-quality decision: NOT PASSED until the final v3 real-Provider batch is rerun and all release thresholds pass. Engineering safety boundaries remain accepted. No Tag or GitHub Release is part of V3.7.2 acceptance.
+
+## 2026-07-27 funded GLM revalidation
+
+The funded GLM `glm-5.2` / OpenAI Responses probe passed, and the complete unchanged 38-run batch was executed. The result remains `NOT PASSED`: 19 runs timed out, failure rate was 0.5000, Tool recall 0.1667, unnecessary-tool rate 0.7778, Dynamic View recall 0.0941 and Repeatability 0.4130.
+
+The new real production-chain acceptance called `ProjectUnderstandingService.refresh()` for eight core cases. Strange document and small script passed after correcting physical-versus-logical request bookkeeping. Frontend, backend, fullstack, no Git, Agent Result and ProjectFlow itself timed out in Stage 1. The strange-document case actually executed `DOC_READER`, passed real Tool Evidence into Final Synthesis, cited valid Evidence IDs and persisted/read back the snapshot.
+
+Unsupported Claim Rate remained 0 and critical must-not violations remained 0, but these do not compensate for the failed reliability, evidence recall, Tool, View, conflict and repeatability gates. V3.8 remains blocked. No Ground Truth, Prompt or threshold was modified.
