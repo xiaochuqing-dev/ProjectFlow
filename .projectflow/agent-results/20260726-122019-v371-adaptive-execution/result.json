@@ -1,0 +1,38 @@
+{
+  "taskGoal": "设计并完成 ProjectFlow V3.7.1 自适应执行与技术债收口，完成真实仓库、浏览器、启动器和 CI 验收并合并 master。",
+  "actualChanges": [
+    "项目理解刷新已形成 Discover、Scout、Plan、Execute、Validate、条件 Final Synthesis 闭环；模型只请求 capability 与 evidence ID，工程 Provider 执行固定参数工具。",
+    "新增有界文档、manifest、Agent result、Git history、Tag 和 worktree 取证，Tool Result 经过证据引用校验与脱敏后进入 Source Map 和条件最终归纳。",
+    "模型上下文改为按类别预算构造完整 JSON，并增加来源多样性、历史覆盖维度、敏感信息出口过滤、文件检查缓存和样本缓存诊断。",
+    "大仓库 fallback 只打开有界代表性源码内容，其余保留完整 metadata inventory 与明确 LOC 估算；React 和 VS Code 本机首扫分别从 V3.7 的 68.5 秒、134.4 秒降至约 1.2 秒、1.6 秒。",
+    "理解页面显示真实 capability 执行、上下文打包、来源类别覆盖和历史维度置信度；旧 V3.7 snapshot 缺少新字段时仍可读取。",
+    "完成 V3.7.1 版本、架构、API、开源调研、SCIP producer 延期决策、产品验收和最终验收文档。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/AnalysisExecutionCoordinator.java",
+    "backend/src/main/java/com/projectflow/service/BoundedLocalAnalysisCapabilityProvider.java",
+    "backend/src/main/java/com/projectflow/service/BudgetAwareContextPacker.java",
+    "backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java",
+    "backend/src/main/java/com/projectflow/service/RepositoryIntakeService.java",
+    "backend/src/main/java/com/projectflow/service/HistoricalCoverageService.java",
+    "backend/src/main/java/com/projectflow/service/SensitiveContentRedactor.java",
+    "frontend/src/app/project-intelligence/understanding/page.tsx",
+    "docs/projectflow-v3.7.1-acceptance-report.md",
+    "docs/projectflow-v3.7.1-product-acceptance.md"
+  ],
+  "verification": {
+    "build": "Frontend production build and Start-ProjectFlow.bat -NoBrowser passed for V3.7.1; launcher health evidence written to logs/last-embedded-build.json.",
+    "tests": "Backend 346 passed with one explicit-path benchmark skipped and separately executed on five real repositories; frontend contracts 49 passed; Hermes 5 passed; Obsidian 18 passed; Playwright first full run 7/8 and the sole timing failure passed isolated rerun; PostgreSQL remains a blocking GitHub CI gate.",
+    "manualCheck": "Five real repositories were inspected with bounded 0-model benchmarks; Docker was unavailable locally; no safe real Provider key was supplied, so real semantic quality is explicitly SKIPPED."
+  },
+  "unfinished": [
+    "Real Provider semantic-quality acceptance requires a user-owned safe key in a separate controlled run.",
+    "Automatic SCIP producer invocation remains deferred until an opt-in sandboxed PoC proves runtime, build, network and side-effect safety.",
+    "Final PR merge and master CI evidence are written into the acceptance report during publication."
+  ],
+  "sedimentCandidates": [
+    "可复用能力：以 capability registry 隔离模型意图与固定参数工程执行，并用 evidence ID 校验 Tool Result。",
+    "可复用能力：在完整 JSON 树上按类别预算收缩上下文，禁止序列化字符串截断。",
+    "可复用能力：大仓库以 metadata inventory、代表性内容采样和签名缓存分离完整发现与内容 I/O。"
+  ]
+}

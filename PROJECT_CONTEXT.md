@@ -1,12 +1,12 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-07-24
+Last updated: 2026-07-26
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.7.0 is a local-first universal evidence understanding and project memory system for AI-assisted developers. It does not assume a fixed project shape: it discovers the material that exists, applies deterministic tools and bounded semantic reasoning, builds only the views supported by evidence, and keeps that replaceable interpretation separate from durable Project Facts, Timeline, lifecycle Capability Map, Project Memory Gateway, Hermes reads, and Obsidian projection.
+ProjectFlow V3.7.1 is a local-first universal evidence understanding and project memory system for AI-assisted developers. It does not assume a fixed project shape: it discovers the material that exists, lets a bounded Scout request registered capabilities, executes deterministic providers under fixed limits, validates evidence references, and conditionally synthesizes only the views supported by evidence. Replaceable understanding remains separate from durable Project Facts, Timeline, lifecycle Capability Map, Project Memory Gateway, Hermes reads, and Obsidian projection.
 
 ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation. ProjectFlow V3.5.0 added the bounded intake foundation retained by V3.6.0 and V3.7.0.
 
@@ -19,6 +19,14 @@ Current direction:
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
 
 V3.7 focus:
+
+- V3.7.1 completes Discover → Scout → Plan → Execute → Validate → Synthesize. `AnalysisExecutionCoordinator` executes only validated capability names; providers own fixed commands and safe file access.
+- FILESYSTEM and SCIP reuse already computed results. `BoundedLocalAnalysisCapabilityProvider` supplies bounded DOC_READER, MANIFEST, AGENT_RESULT, GIT_HISTORY, GIT_TAG and WORKTREE evidence without persisting full documents, patches, prompts or command construction from model output.
+- Semantic analysis is capped at 0/1/2 Model Gateway requests. The second `FinalProfileSynthesisService` call is conditional on newly executed high-value evidence.
+- `BudgetAwareContextPacker` constructs complete JSON inside category and global budgets before serialization and exposes packing diagnostics. It never slices serialized JSON.
+- Discovery uses category/module quotas, duplicate compression, signature-keyed inspection and sample caches, and outbound secret redaction. Changed-small-set refreshes retain unchanged cached inspection results.
+- Historical Coverage exposes weighted dimensions and per-period confidence. Git commit volume is only one bounded signal; absent Fact, Tag, document and Agent evidence remains visible as low coverage.
+- External SCIP producer execution remains deferred after safe PoC review. No automatic download, project build, runtime mutation or machine-global setup is introduced.
 
 - `ProjectEvidenceDiscoveryService` builds a bounded Evidence Source Map over code, manifests, documents, configuration, tests, CI, migration, Agent context/results, Git and unknown text candidates. It samples UTF-8 content with hard limits and redacts likely credential fields.
 - Empty directories and blank text use zero model calls. Non-empty documents and oddly named TXT/Markdown files can enter the same single `PROJECT_UNDERSTANDING_SNAPSHOT` Model Gateway task used for bounded Scout and profile synthesis.

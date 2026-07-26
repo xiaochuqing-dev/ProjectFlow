@@ -1,12 +1,24 @@
 # ProjectFlow
 
-ProjectFlow V3.7.0 does not assume what a user's project is. It first discovers the material that actually exists, combines deterministic engineering analysis with bounded model reasoning to decide what is worth analyzing and what can be known, then builds an evidence-backed view of the current project and reconstructs evolution only where historical evidence supports it.
+ProjectFlow V3.7.1 does not assume what a user's project is. It discovers the material that actually exists, lets a bounded Semantic Scout request capabilities instead of commands, executes only registered deterministic providers, validates the new evidence, and conditionally performs a final synthesis. Every step remains bounded, diagnosable, evidence-linked and separate from durable Project Facts.
 
-ProjectFlow V3.4.5 established the model-protocol foundation, V3.5.0 added bounded repository intake, and V3.6.0 added precise SCIP consumption and the minimum evolution bridge. V3.7.0 reuses those layers and adds an Evidence Source Map, bounded Semantic Scout, capability-validated adaptive plan, Dynamic Project Profile, Historical Coverage, and an evidence-sized evolution strategy.
+ProjectFlow V3.4.5 established the model-protocol foundation, V3.5.0 added bounded repository intake, V3.6.0 added precise SCIP consumption and the minimum evolution bridge, and V3.7.0 added universal evidence discovery and adaptive planning. V3.7.1 closes the plan-to-execution gap with bounded DOC_READER, Git history, Tag, worktree, manifest and Agent-result providers, complete-JSON context packing, diversity-aware evidence selection, honest dimensional history coverage, discovery caches and outbound secret redaction.
 
 ProjectFlow 不预设用户的项目是什么。它先发现真实存在的材料，再结合工程分析与有界的大模型推理判断什么值得分析、能知道什么，并基于证据理解项目当前状态及可还原的演进过程。
 
 Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns that raw development evidence into durable Change Batches, evidence-backed Project Facts, and long-lived Project Memory.
+
+## V3.7.1 Adaptive Execution and Technical-debt Closure
+
+- The refresh chain is Discover → Scout → Plan → Execute → Validate → Synthesize. The Scout can request only capability names; it cannot emit shell commands.
+- FILESYSTEM and existing SCIP results are reused. DOC_READER, MANIFEST, AGENT_RESULT, GIT_HISTORY, GIT_TAG and WORKTREE run through one bounded provider with fixed command arguments, allow-listed evidence IDs, time/item/character limits and cancellation checks.
+- A second Model Gateway request is conditional: it runs only when execution produced new high-value evidence. Empty and blank inputs use 0 model requests; ordinary semantic work uses 1; evidence-enriched synthesis uses at most 2.
+- `BudgetAwareContextPacker` allocates category budgets before serialization, preserves complete valid JSON, redacts sensitive content, and records selected/dropped counts, characters and truncation reasons.
+- Evidence selection keeps category and module diversity under a global cap instead of allowing one large documentation or source cluster to crowd out manifests, tests, CI, migrations and operational evidence.
+- Historical Coverage is a weighted, inspectable read model over Git metadata, ProjectFact linkage, tags, historical documents, Agent results, structural snapshots and optional remote evidence. Many commits alone never imply mature history coverage.
+- File inspection and shallow evidence sampling reuse signature-keyed in-process caches. Changed-small-set refreshes reopen changed files while retaining unchanged inspection results.
+- SCIP producer invocation remains deferred: ProjectFlow never auto-downloads an indexer, silently invokes a project build, or changes a user's runtime. Existing safe SCIP consumption and deterministic fallback remain the production boundary.
+- V3.7.1 is still not the final Project Life Reconstruction product or final UI. Timeline and evolution appear only where historical evidence supports them. Real Provider semantic quality remains explicitly unverified when no safe user-owned key is supplied.
 
 ## V3.7 Universal Evidence Intelligence and Adaptive Analysis
 

@@ -8,4 +8,4 @@ V3.3.8 keeps real DeepSeek optional because it consumes external quota. The work
 
 The PostgreSQL job intentionally fails when Docker is unavailable; it never silently substitutes H2. The optional real DeepSeek job runs only through workflow_dispatch with run_real_model enabled. Missing DEEPSEEK_API_KEY produces an explicit SKIPPED message.
 
-`browser-e2e` starts the backend, frontend, and a deterministic OpenAI-compatible test server. All four core tests are blocking. `postgres-integration` runs the full PostgreSQL 16 workflow tests; it is not a repository CRUD substitute.
+`browser-e2e` starts the backend, frontend, and a deterministic OpenAI-compatible test server. All eight current core tests are blocking. `postgres-integration` runs the full PostgreSQL 16 workflow tests; it is not a repository CRUD substitute.

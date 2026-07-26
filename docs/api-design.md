@@ -324,3 +324,24 @@ Accepting a Project Change writes confirmed facts to `ProjectMemory`, records fi
 | --- | --- | --- |
 | GET | `/health` | Lightweight API health check |
 | GET | `/actuator/health` | Spring Boot actuator health |
+
+## V3.7.1 Understanding Diagnostics
+
+The existing understanding routes and ownership checks are unchanged:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/projects/{projectId}/understanding/refresh` | Create or reuse the persisted explicit refresh job |
+| GET | `/projects/{projectId}/understanding` | Read the last persisted understanding snapshot only |
+| GET | `/projects/{projectId}/structure-index` | Read the last persisted structure index only |
+| GET | `/projects/{projectId}/evolution-bridges` | Read evidence-backed derived bridges only |
+
+V3.7.1 adds compatible optional JSON fields inside the understanding snapshot:
+
+- `sourceMap.diversityMetrics`: selected categories, quota drops, duplicate compression, category coverage, current/history counts and sample-cache hits.
+- `analysisExecution`: requested, executed and reused capabilities, evidence, per-capability diagnostics, cache identity, duration and budget state.
+- `contextPacking`: global/category character use, selected/dropped item counts, truncation reasons and complete-JSON validation.
+- `historicalCoverage.breakdown`: seven coverage dimensions, bounded Git sample state and per-period counts/confidence.
+- `analysisMetrics.inventoryFilesRead`, `inventoryCacheHits`, `sampleCacheHits`: current refresh I/O diagnostics.
+
+Old V3.7 snapshot JSON may omit these fields and remains readable. The next explicit refresh safely reconstructs current derived diagnostics. No schema migration or bulk Fact rewrite is required.
