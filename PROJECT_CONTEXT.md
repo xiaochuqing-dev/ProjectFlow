@@ -1,6 +1,6 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-07-26
+Last updated: 2026-07-27
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
@@ -21,7 +21,7 @@ Current direction:
 V3.7 focus:
 
 - V3.7.2 calibrates Semantic Scout and Final Synthesis with a ProjectFlow-only 18-case internal evaluation harness. Fixed and real Provider results are local/CI artifacts; hallucination, accuracy, repeatability, cost and model-comparison metrics never enter product APIs, snapshots, databases or UI.
-- The successful real-Provider pilot found Tool Selection, Dynamic View and repeatability below the final gates. Semantic Scout/Final Synthesis v3 is implemented, but its final run is blocked by the only Provider returning HTTP 402; quality remains NOT PASSED and V3.8 is not approved until an equivalent rerun passes.
+- The funded GLM `glm-5.2` / OpenAI Responses revalidation completed the unchanged 38-run set. It remains NOT PASSED: 19 bounded transport timeouts, Tool recall 0.1667, Dynamic View recall 0.0941 and Repeatability 0.4130. Real `ProjectUnderstandingService.refresh()` acceptance passed 2/8 core cases. The earlier DeepSeek pilot/HTTP 402 history is retained; V3.8 remains blocked.
 - `HighValueEvidenceGate` triggers a second call only for validated substantive deep content, history anchors, current worktree details or conflict/currentness evidence. The persisted decision contains trigger/skipped reasons and evidence IDs.
 - Final Synthesis failures use `FAILED_DEGRADED`: Stage 1, validated tool evidence, trust diagnostics and a current limited profile survive timeout, cancellation, invalid schema and Provider errors.
 - Analysis execution cache identity includes source/content/structure revisions, requested capabilities, deep-read targets, Provider version, execution/semantic budgets, strategy version and relevant source signatures.

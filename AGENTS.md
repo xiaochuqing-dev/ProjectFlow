@@ -9,7 +9,7 @@ V3.7.2 Real Model Quality / Integration Boundary 规则（后续 Agent 必须遵
 - 当前源码不能独自证明历史；README、历史文档与源码冲突时保留证据、unknown/currentness/conflict，不得替用户裁决。
 - Tool cache identity 必须覆盖 source/content/structure revision、capability、deep-read target、Provider version、execution/semantic budget、strategy version 和相关 source signatures。
 - 外部集成只通过 Evidence Source Adapter、Intelligence Provider Adapter、Projection Adapter；ExternalEvidenceEnvelope 必须 project-bound、bounded、revisioned、redacted、raw-payload-free，且不得自行晋升为事实。
-- Semantic Scout / Final Synthesis 当前 Prompt version 为 v3。校准前真实 pilot 暴露了 Tool/View/Repeatability 缺口，最终 v3 又因唯一 Provider HTTP 402 未完成；在同一 Ground Truth 上重跑并达到全部门槛前，V3.7.2 质量状态必须保持 NOT PASSED，不得进入 V3.8。
+- Semantic Scout / Final Synthesis 当前 Prompt version 为 v3。2026-07-27 使用 GLM `glm-5.2` / OpenAI Responses 完成原样 38-run 重验，但 19 次有界传输超时，Tool recall 0.1667、Dynamic View recall 0.0941、Repeatability 0.4130，真实 `ProjectUnderstandingService.refresh()` 核心场景仅 2/8 通过；质量状态继续保持 NOT PASSED，不得进入 V3.8。原 DeepSeek pilot 与 HTTP 402 历史不得删除。
 - ProjectFlow 只拥有项目事实、当前解释、历史覆盖、证据支持的演进及其展示；不得扩张为 Coding Agent、Agent Manager、Provider Switcher、Token Dashboard、模型排行榜、GitHub/GitLab/Obsidian/Hermes 替代品、通用 RAG/Workflow、Parser/SCIP Producer、Updater 或工具控制中心。
 
 V3.7.1 Adaptive Execution / Technical-debt Closure 规则（仍然有效）：

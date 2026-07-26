@@ -1,0 +1,35 @@
+{
+  "taskGoal": "使用用户提供的 GLM glm-5.2 与 OpenAI Responses 兼容接口，原样重验 ProjectFlow V3.7.2 的 18-case 真实模型质量和 ProjectUnderstandingService 端到端生产链路，并按固定门槛完成报告、CI、PR 与 master 收口。",
+  "actualChanges": [
+    "真实模型评测入口新增通用 OpenAI-compatible Provider 环境变量支持，同时保留旧 DeepSeek 兼容入口；新增最小 Provider 健康检查，验证 Model Gateway、Responses 协议、结构化 JSON 和 Schema。",
+    "新增 8 个隔离场景的真实 ProjectUnderstandingService.refresh() 验收，实际经过 Evidence Discovery、Planner、Capability Provider、HighValueEvidenceGate、Final Synthesis 和快照持久化回读，不使用固定 Tool Evidence 字符串。",
+    "可选真实模型 CI Job 已改为 GLM glm-5.2 与 OPENAI_RESPONSES 配置，Key 仅从 GitHub Secret 注入，YAML、源码、报告和工件不包含 Key。",
+    "完整 38-run 真实评测和 8-case 生产链验收均已执行；固定质量门槛未修改，最终状态保持 NOT PASSED，V3.8 继续阻断，并给出最小 V3.7.3 修复范围。",
+    "补齐 Provider audit、最终重验、端到端验收、模型评测、产品验收、项目上下文和 CI 文档，同时保留原 DeepSeek pilot 与 HTTP 402 历史。"
+  ],
+  "keyFiles": [
+    "backend/src/test/java/com/projectflow/eval/ProjectFlowRealModelEvalIT.java",
+    "backend/src/test/java/com/projectflow/eval/ProjectFlowRealProviderProbeIT.java",
+    "backend/src/test/java/com/projectflow/eval/ProjectUnderstandingRealModelIT.java",
+    ".github/workflows/quality-gates.yml",
+    "docs/projectflow-v3.7.2-final-revalidation-audit.md",
+    "docs/projectflow-v3.7.2-final-revalidation.md",
+    "docs/projectflow-v3.7.2-end-to-end-model-acceptance.md",
+    "docs/projectflow-v3.7.3-minimal-scope-proposal.md"
+  ],
+  "verification": {
+    "build": "Frontend contracts 50/50、lint、production build 通过；Start-ProjectFlow.bat -NoBrowser 使用当前工作树完成重建，前后端健康检查通过并生成 logs/last-embedded-build.json。",
+    "tests": "Backend/H2 366 项通过，Playwright 8/8、Hermes 5/5、Obsidian 18/18 通过；本机无可用 Docker，PostgreSQL 16 Testcontainers 未通过本地启动，必须由 GitHub CI PostgreSQL 阻断门禁补验。",
+    "manualCheck": "GLM Provider 最小结构化探针通过。完整真实模型评测执行 38 runs，其中 19 次有界超时，failure rate 0.5000；真实 refresh 端到端 2/8 通过。Key 仅存在测试进程环境，源码与脱敏工件扫描未发现泄漏，原 Prompt、Ground Truth、门槛和指标公式均未修改。"
+  },
+  "unfinished": [
+    "V3.7.2 真实模型质量门禁未通过，V3.8 不得开始；最小 V3.7.3 仅处理 Provider 超时场景、Tool Selection、Dynamic View、Repeatability 和生产/评测 Prompt parity。",
+    "本地 PostgreSQL Testcontainers 因 Docker 不可用未完成，合并前必须由 GitHub CI 的 PostgreSQL 16 门禁证明通过。",
+    "前端依赖审计仍有 3 个 high advisory；当前自动修复建议会产生破坏性版本变化，因此未在本轮扩大范围处理。"
+  ],
+  "sedimentCandidates": [
+    "可复用能力：通过通用 OpenAI-compatible 环境配置让同一真实模型 Eval Harness 安全切换 Provider，同时保留协议、模型、超时和输出预算诊断。",
+    "可复用经验：Provider 健康探针通过不代表批量质量通过；必须分别记录单请求可用性、长请求超时边界和成功样本的语义指标。",
+    "可复用能力：端到端模型验收应实际运行生产 Service、Capability Provider 与持久化回读，并将逻辑模型阶段和物理修复请求分开计数。"
+  ]
+}

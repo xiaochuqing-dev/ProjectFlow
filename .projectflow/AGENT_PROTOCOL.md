@@ -8,7 +8,7 @@ Before sending model context, use category-aware complete-JSON packing and outbo
 
 External sources and consumers must use the Evidence Source Adapter, Intelligence Provider Adapter or Projection Adapter boundary. Every external envelope must be project-bound, bounded, revisioned, redacted and raw-payload-free; an adapter result never becomes a ProjectFact by itself. Do not build an agent manager, Provider switcher, token dashboard, model leaderboard, repository replacement, generic RAG/workflow platform, parser/SCIP producer, updater or developer-tool control center inside ProjectFlow.
 
-Semantic Scout and Final Synthesis currently use v3 prompts. V3.7.2 real-model quality remains `NOT PASSED`: the pre-calibration pilot missed Tool/View/Repeatability gates and the only configured Provider then returned HTTP 402. Do not describe V3.7.2 as quality-approved or start V3.8 until the same versioned Ground Truth run passes every published gate.
+Semantic Scout and Final Synthesis currently use v3 prompts. V3.7.2 real-model quality remains `NOT PASSED`: a funded GLM `glm-5.2` / OpenAI Responses run completed the unchanged 38-run set but had 19 bounded transport timeouts, Tool recall 0.1667, Dynamic View recall 0.0941 and Repeatability 0.4130; real `ProjectUnderstandingService.refresh()` acceptance passed only 2/8 core cases. Retain the earlier DeepSeek pilot/HTTP 402 history. Do not describe V3.7.2 as quality-approved or start V3.8 until the same versioned Ground Truth and core production-chain cases pass every published gate.
 
 After completing a task, create `.projectflow/agent-results/<timestamp-topic>/result.json` and optionally `summary.md`.
 

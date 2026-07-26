@@ -160,6 +160,16 @@ AM. Known risks？
 
 唯一真实 Provider 当前 HTTP 402；v3 无最终真实 aggregate；pilot 稳定性/工具/视图未达门槛；本地 Provider Key 仍是数据库兼容存储；前端依赖审计报告 3 个既有 high severity；Stage token 新字段待下一次真实批次填充。
 
+## 2026-07-27 final funded-provider addendum
+
+The previous DeepSeek 402 history remains valid historical evidence. A new funded GLM `glm-5.2` Provider using `OPENAI_RESPONSES` passed the focused probe and completed the full 38-run evaluation.
+
+Final aggregate: 19 failures, failure rate 0.5000, Critical Evidence Recall 0.3636, Evidence Precision 1.0000, Unsupported Claim Rate 0.0000, Shape F1/exact 0.4691/0.1842, Tool precision/recall 0.2222/0.1667, unnecessary-tool rate 0.7778, Dynamic View precision/recall 0.1026/0.0941, Conflict Detection 0.1111, Repeatability 0.4130 and no positive Stage 2 gain. Total usage was 62742 tokens across 45 bounded physical requests.
+
+The eight-case real `ProjectUnderstandingService.refresh()` acceptance passed strange document and small script. The strange-document flow actually executed `DOC_READER`, used real Tool Evidence, completed Final Synthesis with valid Evidence IDs and persisted/read back the snapshot. Frontend, backend, fullstack, no Git, Agent Result and ProjectFlow itself timed out in Stage 1.
+
+Updated decision: `V3.7.2 REAL MODEL QUALITY GATE = NOT PASSED`; `V3.8 ENTRY = BLOCKED`. No Prompt, Ground Truth, metric formula or threshold changed. No Tag or Release was created. Full final questions and GitHub backfill are maintained in `docs/projectflow-v3.7.2-final-revalidation.md`.
+
 AN. 下一阶段建议？
 
 先补充/轮换可用测试额度，在相同 Provider/model/prompt/Ground Truth 上重跑 v3，满足全部门槛后再决定 V3.8 Evidence-backed Evolution Reconstruction；不先做 Adapter PoC 或新产品面。

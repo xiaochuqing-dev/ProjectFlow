@@ -10,7 +10,7 @@ The test-only dataset contains 18 ProjectFlow cases: empty directory, blank text
 
 Ground Truth is a stage-specific human label set. Each case declares bounded Stage 1 context, optional separately supplied Tool Evidence, multi-label project shapes, must-find evidence IDs, must-not claims, expected and forbidden capability names, expected and forbidden dynamic views, unknowns, conflicts, history mode and deep-read targets. It is not derived from the model and is not a general benchmark.
 
-## Provider and versions
+## Original pilot Provider and versions
 
 - Provider: DeepSeek
 - Protocol: OPENAI_CHAT_COMPLETIONS
@@ -131,3 +131,38 @@ The failure is an external balance/quota condition, but the final calibrated v3 
 | Secret leak | 0 | source/artifact scans | PASS |
 
 Final decision: NOT PASSED. V3.7.2 code and boundaries are implemented, but real-model quality acceptance must be rerun with a funded or otherwise available Provider before ProjectFlow enters V3.8. This report deliberately does not convert a quota failure or a pre-calibration pilot into PASS.
+
+## Funded GLM final revalidation
+
+Revalidation date: 2026-07-27.
+
+- Provider: GLM
+- Model: `glm-5.2`
+- Protocol: `OPENAI_RESPONSES`
+- Prompt: `semantic-scout-v3 + final-synthesis-v3`
+- Ground Truth, 18 cases, ten important repetitions, metric formulas and release thresholds: unchanged
+- Key: process-only generic real-Provider environment variable; no source, log, report or artifact persistence
+
+The one-request ProjectFlow Model Gateway probe passed. The complete 38-run batch then finished with 19 bounded transport timeouts and the following aggregate:
+
+| Metric | GLM result | Gate | Result |
+|---|---:|---:|---|
+| Failure rate | 0.5000 | <= 0.05 | FAIL |
+| Critical Evidence Recall | 0.3636 | >= 0.85 | FAIL |
+| Evidence Precision | 1.0000 | recorded | INFO |
+| Unsupported Claim Rate | 0.0000 | <= 0.05 | PASS |
+| Shape F1 / exact | 0.4691 / 0.1842 | recorded | INFO |
+| Tool precision / recall | 0.2222 / 0.1667 | recall >= 0.80 | FAIL |
+| Unnecessary Tool Rate | 0.7778 | <= 0.15 | FAIL |
+| Dynamic View precision / recall | 0.1026 / 0.0941 | recall >= 0.90 | FAIL |
+| Conflict Detection | 0.1111 | recorded | INFO |
+| Repeatability | 0.4130 | >= 0.80 | FAIL |
+| Stage 2 evidence / unsupported / view gain | 0 / 0 / 0 | one positive | FAIL |
+| Must-not violations | 0 | 0 | PASS |
+| Degradation success | 1.0000 | 1.0000 | PASS |
+
+The run used 45 physical requests and 62742 total tokens. Stage 1 input/output tokens were 11394/41214; Stage 2 input/output tokens were 2346/7788. Average run latency was 65213.79 ms. Logical model stages remained 0/1/2; physical recovery was bounded to a maximum of three requests per run.
+
+All 19 failures were OpenAI SDK transport timeouts, not 401, 402 or 429. The existing V3.7.2 real-eval constructor capped each request wait at 45 seconds, so the explicitly supplied 120-second test Provider configuration was not fully honored. Successful outputs still failed the Tool and Dynamic View gates, so timeout parity is necessary but not sufficient.
+
+Final funded-provider decision remains `NOT PASSED`; V3.8 entry remains blocked. The original DeepSeek pilot and HTTP 402 attempt above are retained as historical evidence and are not overwritten by the GLM result.
