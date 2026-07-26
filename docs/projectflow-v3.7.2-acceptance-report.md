@@ -178,15 +178,15 @@ PR #5。
 
 AR. PR merge SHA？
 
-PENDING。
+`13f59169a66342d7ebc152bd3de9257792fbf017`。
 
 AS. final master SHA？
 
-PENDING。
+最终功能 master SHA 为 `13f59169a66342d7ebc152bd3de9257792fbf017`；本报告回填提交是仅文档后继，不改变功能验收基线。
 
 AT. final CI run IDs/status？
 
-PENDING。
+PR head push `30201675174` PASS；PR `30201676234` PASS；最终功能 master `30201767848` PASS。blocking jobs 全部通过，optional-real-deepseek 因未配置 CI Secret 按条件跳过。
 
 AU. 是否创建 Tag？
 
