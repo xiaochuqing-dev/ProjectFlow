@@ -334,10 +334,10 @@ class ModelGatewayServiceTest {
                 "usage", Map.of("prompt_tokens", 100, "completion_tokens", 5000, "total_tokens", 5100)
             ));
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            cancelled.set(true);
             exchange.sendResponseHeaders(200, bytes.length);
             exchange.getResponseBody().write(bytes);
             exchange.close();
-            cancelled.set(true);
         });
         server.start();
         return server;
