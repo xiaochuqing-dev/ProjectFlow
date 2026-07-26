@@ -1,4 +1,4 @@
-name: ProjectFlow V3.7 Quality Gates
+name: ProjectFlow V3.7.1 Quality Gates
 
 on:
   push:

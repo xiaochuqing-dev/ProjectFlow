@@ -60,6 +60,40 @@ class HistoricalCoverageServiceTest {
         assertThat(result.evolutionPreview().mode()).isEqualTo("CURRENT_STATE_ONLY");
     }
 
+    @Test
+    void thousandCommitsWithoutFactsOrTagsReportsOnlyMetadataCoverage() {
+        LocalCommandExecutor commands = (directory, command, timeout) -> {
+            if (command.contains("--max-parents=0")) {
+                return new LocalCommandExecutor.CommandResult(0, "2024-01-01T00:00:00Z", false);
+            }
+            if (command.contains("show")) {
+                return new LocalCommandExecutor.CommandResult(0, "2026-07-01T00:00:00Z", false);
+            }
+            if (command.contains("tag")) {
+                return new LocalCommandExecutor.CommandResult(0, "", false);
+            }
+            return new LocalCommandExecutor.CommandResult(0, "2026-07\n".repeat(1000), false);
+        };
+        ProjectFactCommitRefRepository refs = mock(ProjectFactCommitRefRepository.class);
+        UUID projectId = UUID.randomUUID();
+        when(refs.countDistinctCommitShaByProjectId(projectId)).thenReturn(0L);
+        when(refs.countByTimelineMonths(projectId, List.of("2026-07"))).thenReturn(List.of());
+        HistoricalCoverageService service = new HistoricalCoverageService(commands, refs);
+
+        var result = service.analyze(projectId, root, intake(true, 1000), emptySourceMap());
+
+        assertThat(result.coverage().overallCoverage()).isEqualTo(0.25);
+        assertThat(result.coverage().breakdown().gitMetadataCoverage()).isEqualTo(1);
+        assertThat(result.coverage().breakdown().factCoverage()).isZero();
+        assertThat(result.coverage().breakdown().tagAnchorCoverage()).isZero();
+        assertThat(result.coverage().breakdown().periods()).singleElement()
+            .satisfies(period -> {
+                assertThat(period.commitCount()).isEqualTo(1000);
+                assertThat(period.confidence()).isEqualTo(0.25);
+                assertThat(period.limitation()).contains("只有 Git 元数据");
+            });
+    }
+
     private void git(String... arguments) throws Exception {
         List<String> command = new java.util.ArrayList<>();
         command.add("git");
@@ -94,6 +128,6 @@ class HistoricalCoverageServiceTest {
     }
 
     private static EvidenceSourceMapResponse emptySourceMap() {
-        return new EvidenceSourceMapResponse(1, 0, 0, 0, 1, Map.of(), List.of(), List.of());
+        return new EvidenceSourceMapResponse(1, 0, 0, 0, 1, Map.of(), List.of(), List.of(), null);
     }
 }

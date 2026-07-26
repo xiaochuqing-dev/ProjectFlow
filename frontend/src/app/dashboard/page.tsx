@@ -608,7 +608,7 @@ export default function DashboardPage() {
           </Button>
         </Link>
       }
-      eyebrow="ProjectFlow V3.7.0"
+      eyebrow="ProjectFlow V3.7.1"
       title="工作台"
     >
       <PageContainer>

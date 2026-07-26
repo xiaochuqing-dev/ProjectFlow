@@ -10,14 +10,18 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.function.BiConsumer;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.dto.ProjectUnderstandingDtos.AdaptiveAnalysisPlanResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.AnalysisExecutionResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.ContextPackingDiagnostics;
 import com.projectflow.dto.ProjectUnderstandingDtos.DynamicProjectProfileResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.EvidenceSourceMapResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.EvolutionPreviewResponse;
@@ -46,13 +50,16 @@ import com.projectflow.repository.ProjectRepository;
 import com.projectflow.repository.ProjectStructureIndexRepository;
 import com.projectflow.repository.ProjectUnderstandingSnapshotRepository;
 import com.projectflow.service.HistoricalCoverageService.HistoricalAnalysis;
+import com.projectflow.service.AnalysisExecutionCoordinator.ExecutionOutcome;
+import com.projectflow.service.FinalProfileSynthesisService.SynthesisResult;
 import com.projectflow.service.ProjectEvidenceDiscoveryService.DiscoveryResult;
+import com.projectflow.service.RepositoryIntakeService.ScanResult;
 import com.projectflow.service.SemanticScoutService.ScoutResult;
 import com.projectflow.support.AppException;
 
 @Service
 public class ProjectUnderstandingService {
-    private static final String MODEL_ANALYSIS_VERSION = "understanding-v3";
+    private static final String MODEL_ANALYSIS_VERSION = "understanding-v4";
 
     private final ProjectRepository projectRepository;
     private final ProjectMemoryRepository memoryRepository;
@@ -67,6 +74,8 @@ public class ProjectUnderstandingService {
     private final HistoricalCoverageService historicalCoverageService;
     private final AdaptiveAnalysisPlanner analysisPlanner;
     private final SemanticScoutService semanticScoutService;
+    private final AnalysisExecutionCoordinator executionCoordinator;
+    private final FinalProfileSynthesisService finalSynthesisService;
     private final DynamicProjectProfileSynthesizer profileSynthesizer;
     private final ObjectMapper objectMapper;
 
@@ -84,6 +93,8 @@ public class ProjectUnderstandingService {
         HistoricalCoverageService historicalCoverageService,
         AdaptiveAnalysisPlanner analysisPlanner,
         SemanticScoutService semanticScoutService,
+        AnalysisExecutionCoordinator executionCoordinator,
+        FinalProfileSynthesisService finalSynthesisService,
         DynamicProjectProfileSynthesizer profileSynthesizer,
         ObjectMapper objectMapper
     ) {
@@ -100,6 +111,8 @@ public class ProjectUnderstandingService {
         this.historicalCoverageService = historicalCoverageService;
         this.analysisPlanner = analysisPlanner;
         this.semanticScoutService = semanticScoutService;
+        this.executionCoordinator = executionCoordinator;
+        this.finalSynthesisService = finalSynthesisService;
         this.profileSynthesizer = profileSynthesizer;
         this.objectMapper = objectMapper;
     }
@@ -203,6 +216,70 @@ public class ProjectUnderstandingService {
             provider != null
         );
         long planTimeMs = elapsedMs(planStarted);
+        boolean semanticEligible = provider != null
+            && analysisPlanner.shouldUseSemanticModel(scan.intake(), discovery.sourceMap());
+        if (!semanticEligible) {
+            progress.accept("CAPABILITY_EXECUTION", "正在按分析计划执行固定参数工程能力");
+            long executionStarted = System.nanoTime();
+            ExecutionOutcome execution = executionCoordinator.execute(
+                root,
+                scan.intake(),
+                index,
+                discovery.sourceMap(),
+                plan
+            );
+            toolTimeMs += elapsedMs(executionStarted);
+            long synthesisStarted = System.nanoTime();
+            DynamicProjectProfileResponse deterministicProfile = profileSynthesizer.synthesize(
+                project,
+                scan.intake(),
+                index,
+                execution.sourceMap(),
+                historical.coverage(),
+                deterministicScout,
+                plan,
+                null,
+                execution.allowedEvidence()
+            );
+            long deterministicSynthesisMs = elapsedMs(synthesisStarted);
+            ProjectUnderstandingSnapshotResponse deterministic = deterministicSnapshot(
+                project,
+                scan.intake(),
+                index,
+                plan,
+                execution.sourceMap(),
+                deterministicScout,
+                deterministicProfile,
+                historical.coverage(),
+                historical.evolutionPreview(),
+                execution.response(),
+                null
+            );
+            progress.accept("PERSIST_UNDERSTANDING", "正在保存确定性项目理解");
+            UnderstandingAnalysisMetrics metrics = metrics(
+                execution.sourceMap(),
+                discovery.documentCount(),
+                historical,
+                index,
+                plan,
+                execution.response(),
+                List.of(),
+                scan,
+                scanTimeMs,
+                0,
+                planTimeMs,
+                toolTimeMs,
+                deterministicSynthesisMs,
+                elapsedMs(totalStarted),
+                false
+            );
+            ProjectUnderstandingSnapshotResponse saved = persistSnapshot(
+                projectId,
+                withAnalysisMetrics(deterministic, metrics)
+            );
+            return new RefreshOutcome(saved, false, false);
+        }
+
         long synthesisStarted = System.nanoTime();
         DynamicProjectProfileResponse deterministicProfile = profileSynthesizer.synthesize(
             project,
@@ -225,33 +302,10 @@ public class ProjectUnderstandingService {
             deterministicScout,
             deterministicProfile,
             historical.coverage(),
-            historical.evolutionPreview()
+            historical.evolutionPreview(),
+            null,
+            null
         );
-
-        boolean semanticEligible = provider != null
-            && analysisPlanner.shouldUseSemanticModel(scan.intake(), discovery.sourceMap());
-        if (!semanticEligible) {
-            progress.accept("PERSIST_UNDERSTANDING", "正在保存确定性项目理解");
-            UnderstandingAnalysisMetrics metrics = metrics(
-                discovery,
-                historical,
-                index,
-                plan,
-                null,
-                scanTimeMs,
-                0,
-                planTimeMs,
-                toolTimeMs,
-                deterministicSynthesisMs,
-                elapsedMs(totalStarted),
-                false
-            );
-            ProjectUnderstandingSnapshotResponse saved = persistSnapshot(
-                projectId,
-                withAnalysisMetrics(deterministic, metrics)
-            );
-            return new RefreshOutcome(saved, false, false);
-        }
 
         progress.accept("SEMANTIC_SCOUT", "正在对压缩候选做一次语义分诊与项目形态判断");
         try {
@@ -273,37 +327,80 @@ public class ProjectUnderstandingService {
                 true
             );
             planTimeMs += elapsedMs(semanticPlanStarted);
+            progress.accept("CAPABILITY_EXECUTION", "正在按 Scout 与 Planner 选择执行固定参数工程能力");
+            long executionStarted = System.nanoTime();
+            ExecutionOutcome execution = executionCoordinator.execute(
+                root,
+                scan.intake(),
+                index,
+                discovery.sourceMap(),
+                semanticPlan
+            );
+            toolTimeMs += elapsedMs(executionStarted);
+            JsonNode finalRoot = semantic.root();
+            ModelGatewayService.ModelCallDiagnostics finalDiagnostics = semantic.diagnostics();
+            ContextPackingDiagnostics contextPacking = semantic.contextPacking();
+            boolean invalidEvidenceFiltered = semantic.invalidEvidenceFiltered();
+            long finalModelTimeMs = 0;
+            List<ModelGatewayService.ModelCallDiagnostics> modelDiagnostics = new ArrayList<>();
+            modelDiagnostics.add(semantic.diagnostics());
+            if (execution.highValueEvidenceProduced() && semanticPlan.maxModelRequests() >= 2) {
+                progress.accept("FINAL_SYNTHESIS", "新增工具证据已通过校验，正在进行第二阶段最终归纳");
+                SynthesisResult finalSynthesis = finalSynthesisService.synthesize(
+                    provider,
+                    project,
+                    scan.intake(),
+                    index,
+                    historical.coverage(),
+                    semantic.scout(),
+                    semanticPlan,
+                    semantic.root(),
+                    execution
+                );
+                finalRoot = finalSynthesis.root();
+                finalDiagnostics = finalSynthesis.diagnostics();
+                contextPacking = finalSynthesis.contextPacking();
+                invalidEvidenceFiltered |= finalSynthesis.invalidEvidenceFiltered();
+                finalModelTimeMs = finalSynthesis.durationMs();
+                modelDiagnostics.add(finalSynthesis.diagnostics());
+            }
             progress.accept("DYNAMIC_PROFILE", "正在校验证据并生成适用视图与动态项目档案");
             long semanticSynthesisStarted = System.nanoTime();
             DynamicProjectProfileResponse semanticProfile = profileSynthesizer.synthesize(
                 project,
                 scan.intake(),
                 index,
-                discovery.sourceMap(),
+                execution.sourceMap(),
                 historical.coverage(),
                 semantic.scout(),
                 semanticPlan,
-                semantic.root(),
-                semantic.allowedEvidence()
+                finalRoot,
+                execution.allowedEvidence()
             );
-            long synthesisTimeMs = deterministicSynthesisMs + elapsedMs(semanticSynthesisStarted);
+            long synthesisTimeMs = deterministicSynthesisMs + finalModelTimeMs + elapsedMs(semanticSynthesisStarted);
             ProjectUnderstandingSnapshotResponse enriched = mergeModel(
                 deterministic,
                 semantic.scout(),
                 semanticPlan,
                 semanticProfile,
                 index,
-                diagnostics(semantic.diagnostics()),
-                semantic.invalidEvidenceFiltered()
+                execution.sourceMap(),
+                execution.response(),
+                contextPacking,
+                diagnostics(finalDiagnostics),
+                invalidEvidenceFiltered
             );
             UnderstandingAnalysisMetrics metrics = metrics(
-                discovery,
+                execution.sourceMap(),
+                discovery.documentCount(),
                 historical,
                 index,
                 semanticPlan,
-                semantic.diagnostics(),
+                execution.response(),
+                modelDiagnostics,
+                scan,
                 scanTimeMs,
-                semantic.durationMs(),
+                semantic.durationMs() + finalModelTimeMs,
                 planTimeMs,
                 toolTimeMs,
                 synthesisTimeMs,
@@ -316,6 +413,9 @@ public class ProjectUnderstandingService {
                 withAnalysisMetrics(enriched, metrics)
             );
             return new RefreshOutcome(saved, false, true);
+        } catch (CancellationException exception) {
+            preservePreviousAsStale(current);
+            throw exception;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             preservePreviousAsStale(current);
@@ -374,7 +474,9 @@ public class ProjectUnderstandingService {
         SemanticScoutResponse semanticScout,
         DynamicProjectProfileResponse dynamicProfile,
         HistoricalCoverageResponse historicalCoverage,
-        EvolutionPreviewResponse evolutionPreview
+        EvolutionPreviewResponse evolutionPreview,
+        AnalysisExecutionResponse analysisExecution,
+        ContextPackingDiagnostics contextPacking
     ) {
         Instant now = Instant.now();
         List<String> baseRefs = index.evidence().stream().map(StructureEvidence::id).limit(5).toList();
@@ -479,6 +581,8 @@ public class ProjectUnderstandingService {
             dynamicProfile,
             historicalCoverage,
             evolutionPreview,
+            analysisExecution,
+            contextPacking,
             null
         );
     }
@@ -489,6 +593,9 @@ public class ProjectUnderstandingService {
         AdaptiveAnalysisPlanResponse plan,
         DynamicProjectProfileResponse dynamicProfile,
         ProjectStructureIndexResponse index,
+        EvidenceSourceMapResponse sourceMap,
+        AnalysisExecutionResponse analysisExecution,
+        ContextPackingDiagnostics contextPacking,
         ModelCallDiagnosticsResponse diagnostics,
         boolean invalidEvidenceFiltered
     ) {
@@ -569,11 +676,13 @@ public class ProjectUnderstandingService {
             base.modelAnalysisVersion(),
             "CURRENT",
             diagnostics,
-            base.sourceMap(),
+            sourceMap,
             semanticScout,
             dynamicProfile,
             base.historicalCoverage(),
             base.evolutionPreview(),
+            analysisExecution,
+            contextPacking,
             base.analysisMetrics()
         );
     }
@@ -893,7 +1002,8 @@ public class ProjectUnderstandingService {
             metrics.discoveredEvidenceCount(), metrics.candidateEvidenceCount(), metrics.scoutEvidenceCount(),
             metrics.deepReadCount(), metrics.skippedCount(), 0, 0, 0, 0, 0,
             metrics.files(), metrics.loc(), metrics.docs(), metrics.commits(), metrics.tags(),
-            0, 0, 0, 0, 0, 0, true, metrics.historicalCoverage(), metrics.structureCoverage()
+            0, 0, 0, 0, 0, 0, true, metrics.historicalCoverage(), metrics.structureCoverage(),
+            0, 0, metrics.sampleCacheHits()
         ));
     }
 
@@ -928,7 +1038,8 @@ public class ProjectUnderstandingService {
             value.evidenceCoverage(), quality, value.unknowns(), value.intake(), value.analysisPlan(),
             value.analyzedAt(), value.sourceRevision(), value.structureIndexVersion(), value.modelAnalysisVersion(),
             currentStatus, value.diagnostics(), value.sourceMap(), value.semanticScout(), value.dynamicProfile(),
-            value.historicalCoverage(), value.evolutionPreview(), value.analysisMetrics()
+            value.historicalCoverage(), value.evolutionPreview(), value.analysisExecution(), value.contextPacking(),
+            value.analysisMetrics()
         );
     }
 
@@ -942,16 +1053,19 @@ public class ProjectUnderstandingService {
             value.evidenceCoverage(), value.quality(), value.unknowns(), value.intake(), value.analysisPlan(),
             value.analyzedAt(), value.sourceRevision(), value.structureIndexVersion(), value.modelAnalysisVersion(),
             value.currentStatus(), value.diagnostics(), value.sourceMap(), value.semanticScout(), value.dynamicProfile(),
-            value.historicalCoverage(), value.evolutionPreview(), metrics
+            value.historicalCoverage(), value.evolutionPreview(), value.analysisExecution(), value.contextPacking(), metrics
         );
     }
 
     private static UnderstandingAnalysisMetrics metrics(
-        DiscoveryResult discovery,
+        EvidenceSourceMapResponse sourceMap,
+        long documentCount,
         HistoricalAnalysis historical,
         ProjectStructureIndexResponse index,
         AdaptiveAnalysisPlanResponse plan,
-        ModelGatewayService.ModelCallDiagnostics diagnostics,
+        AnalysisExecutionResponse execution,
+        List<ModelGatewayService.ModelCallDiagnostics> diagnostics,
+        ScanResult scan,
         long scanTimeMs,
         long scoutTimeMs,
         long planTimeMs,
@@ -960,20 +1074,23 @@ public class ProjectUnderstandingService {
         long totalTimeMs,
         boolean cacheHit
     ) {
+        List<ModelGatewayService.ModelCallDiagnostics> calls = diagnostics == null
+            ? List.of()
+            : diagnostics.stream().filter(java.util.Objects::nonNull).toList();
         return new UnderstandingAnalysisMetrics(
-            discovery.sourceMap().discoveredEvidenceCount(),
-            discovery.sourceMap().candidateEvidenceCount(),
-            discovery.sourceMap().scoutEvidenceCount(),
-            discovery.sourceMap().deepReadCount(),
-            discovery.sourceMap().skippedCount(),
-            plan.toolsToInvoke().size(),
-            diagnostics == null ? 0 : diagnostics.requestCount(),
-            diagnostics == null ? 0 : diagnostics.promptTokens(),
-            diagnostics == null ? 0 : diagnostics.completionTokens(),
-            diagnostics == null ? 0 : diagnostics.totalTokens(),
+            sourceMap.discoveredEvidenceCount(),
+            sourceMap.candidateEvidenceCount(),
+            sourceMap.scoutEvidenceCount(),
+            sourceMap.deepReadCount(),
+            sourceMap.skippedCount(),
+            execution == null ? 0 : execution.executedCapabilities().size(),
+            calls.stream().mapToInt(value -> Math.max(1, value.requestCount())).sum(),
+            calls.stream().mapToInt(ModelGatewayService.ModelCallDiagnostics::promptTokens).sum(),
+            calls.stream().mapToInt(ModelGatewayService.ModelCallDiagnostics::completionTokens).sum(),
+            calls.stream().mapToInt(ModelGatewayService.ModelCallDiagnostics::totalTokens).sum(),
             index.metrics().fileCount(),
             index.metrics().estimatedLoc(),
-            discovery.documentCount(),
+            documentCount,
             historical.coverage().gitCommitCount(),
             historical.coverage().tagCount(),
             scanTimeMs,
@@ -984,7 +1101,10 @@ public class ProjectUnderstandingService {
             totalTimeMs,
             cacheHit,
             historical.coverage().overallCoverage(),
-            index.coverage().overall()
+            index.coverage().overall(),
+            scan.ioMetrics().filesRead(),
+            scan.ioMetrics().cacheHits(),
+            sourceMap.diversityMetrics() == null ? 0 : sourceMap.diversityMetrics().sampleCacheHitCount()
         );
     }
 

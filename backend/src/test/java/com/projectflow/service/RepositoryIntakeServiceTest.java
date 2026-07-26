@@ -127,4 +127,40 @@ class RepositoryIntakeServiceTest {
         assertThat(workspace.intake().monorepo()).isTrue();
         assertThat(workspace.intake().scale()).isEqualTo("MONOREPO");
     }
+
+    @Test
+    void changedSmallSetReusesMetadataScopedInspectionCache() throws Exception {
+        Files.writeString(root.resolve("one.java"), "class One {}\n");
+        Files.writeString(root.resolve("two.java"), "class Two {}\n");
+
+        var cold = service.scan(root);
+        var warm = service.scan(root);
+        Files.writeString(root.resolve("two.java"), "class TwoChanged {}\n");
+        var changed = service.scan(root);
+
+        assertThat(cold.ioMetrics().filesRead()).isEqualTo(2);
+        assertThat(warm.ioMetrics().filesRead()).isZero();
+        assertThat(warm.ioMetrics().cacheHits()).isEqualTo(2);
+        assertThat(changed.ioMetrics().filesRead()).isEqualTo(1);
+        assertThat(changed.ioMetrics().cacheHits()).isEqualTo(1);
+    }
+
+    @Test
+    void largeFallbackOpensOnlyBoundedSourceContentAndKeepsMetadataInventory() throws Exception {
+        ReflectionTestUtils.setField(service, "maxSourceContentSamples", 2);
+        for (int index = 0; index < 5; index++) {
+            Files.writeString(root.resolve("Source" + index + ".java"), "class Source" + index + " {}\n");
+        }
+
+        var cold = service.scan(root);
+        var warm = service.scan(root);
+
+        assertThat(cold.intake().fileCount()).isEqualTo(5);
+        assertThat(cold.intake().sourceFileCount()).isEqualTo(5);
+        assertThat(cold.intake().estimatedLoc()).isPositive();
+        assertThat(cold.ioMetrics().filesRead()).isEqualTo(2);
+        assertThat(cold.intake().warnings()).anyMatch(item -> item.contains("metadata 估算 LOC"));
+        assertThat(warm.ioMetrics().filesRead()).isZero();
+        assertThat(warm.ioMetrics().cacheHits()).isEqualTo(5);
+    }
 }

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -21,9 +22,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
 import com.projectflow.entity.ProjectMemory;
@@ -99,15 +102,22 @@ class ProjectUnderstandingServiceTest {
         ReflectionTestUtils.setField(intake, "smallLoc", 20L);
         ReflectionTestUtils.setField(intake, "mediumLoc", 50L);
         ReflectionTestUtils.setField(intake, "largeLoc", 100L);
-        ProjectEvidenceDiscoveryService evidenceDiscovery = new ProjectEvidenceDiscoveryService();
+        SensitiveContentRedactor redactor = new SensitiveContentRedactor();
+        ProjectEvidenceDiscoveryService evidenceDiscovery = new ProjectEvidenceDiscoveryService(redactor);
         ReflectionTestUtils.setField(evidenceDiscovery, "maxCandidates", 100);
         ReflectionTestUtils.setField(evidenceDiscovery, "maxScoutEvidence", 40);
         ReflectionTestUtils.setField(evidenceDiscovery, "maxSampleChars", 1600);
         ReflectionTestUtils.setField(evidenceDiscovery, "maxSampleBytes", 8192);
         AnalysisToolRegistry toolRegistry = new AnalysisToolRegistry();
         AdaptiveAnalysisPlanner planner = new AdaptiveAnalysisPlanner(toolRegistry);
-        SemanticScoutService semanticScout = new SemanticScoutService(gateway, mapper);
+        BudgetAwareContextPacker contextPacker = new BudgetAwareContextPacker(mapper, redactor);
+        ReflectionTestUtils.setField(contextPacker, "maxChars", 48_000);
+        SemanticScoutService semanticScout = new SemanticScoutService(gateway, contextPacker);
         ReflectionTestUtils.setField(semanticScout, "maxModelPromptChars", 48_000);
+        BoundedLocalAnalysisCapabilityProvider localProvider = new BoundedLocalAnalysisCapabilityProvider(commands, redactor);
+        AnalysisExecutionCoordinator executionCoordinator = new AnalysisExecutionCoordinator(List.of(localProvider), redactor);
+        FinalProfileSynthesisService finalSynthesis = new FinalProfileSynthesisService(gateway, contextPacker);
+        ReflectionTestUtils.setField(finalSynthesis, "maxModelPromptChars", 48_000);
         service = new ProjectUnderstandingService(
             projects,
             memories,
@@ -125,6 +135,8 @@ class ProjectUnderstandingServiceTest {
             new HistoricalCoverageService(commands, mock(ProjectFactCommitRefRepository.class)),
             planner,
             semanticScout,
+            executionCoordinator,
+            finalSynthesis,
             new DynamicProjectProfileSynthesizer(),
             mapper
         );
@@ -145,6 +157,38 @@ class ProjectUnderstandingServiceTest {
         assertThat(second.cacheHit()).isTrue();
         assertThat(second.snapshot().quality().cacheHit()).isTrue();
         verify(gateway, never()).callStructured(any(), any(), any(ModelTaskType.class));
+    }
+
+    @Test
+    void readsV37SnapshotWithoutNewDerivedDiagnostics() throws Exception {
+        Files.createDirectories(root.resolve("src"));
+        Files.writeString(root.resolve("src/main.java"), "class Main {}\n");
+        service.refresh(userId, projectId);
+
+        ProjectUnderstandingSnapshot stored = storedSnapshot.get();
+        ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
+        ObjectNode legacyJson = (ObjectNode) mapper.readTree(stored.getSnapshotJson());
+        legacyJson.remove("analysisExecution");
+        legacyJson.remove("contextPacking");
+        ((ObjectNode) legacyJson.path("sourceMap")).remove("diversityMetrics");
+        ((ObjectNode) legacyJson.path("historicalCoverage")).remove("breakdown");
+        stored.replace(
+            stored.getSourceRevision(),
+            stored.getStructureHash(),
+            stored.getStructureIndexVersion(),
+            "understanding-v3",
+            stored.getSemanticStatus(),
+            mapper.writeValueAsString(legacyJson),
+            stored.getAnalyzedAt()
+        );
+
+        var legacy = service.get(userId, projectId);
+
+        assertThat(legacy.identity()).isNotNull();
+        assertThat(legacy.analysisExecution()).isNull();
+        assertThat(legacy.contextPacking()).isNull();
+        assertThat(legacy.sourceMap().diversityMetrics()).isNull();
+        assertThat(legacy.historicalCoverage().breakdown()).isNull();
     }
 
     @Test
@@ -189,6 +233,20 @@ class ProjectUnderstandingServiceTest {
         assertThat(outcome.snapshot().classification()).isEqualTo("UNKNOWN_NON_CODE");
         assertThat(outcome.snapshot().sourceMap().scoutEvidenceCount()).isEqualTo(1);
         assertThat(outcome.snapshot().analysisPlan().toolsToInvoke()).contains("DOC_READER").doesNotContain("DROP_DATABASE");
+        assertThat(outcome.snapshot().analysisPlan().semanticMode()).isEqualTo("TWO_STAGE_CONDITIONAL");
+        assertThat(outcome.snapshot().analysisExecution().executedCapabilities()).contains("DOC_READER");
+        assertThat(outcome.snapshot().analysisExecution().evidence()).isNotEmpty();
+        assertThat(outcome.snapshot().sourceMap().deepReadCount()).isPositive();
+        assertThat(outcome.snapshot().analysisMetrics().modelRequestCount()).isEqualTo(2);
+        assertThat(outcome.snapshot().contextPacking().validJson()).isTrue();
+        ArgumentCaptor<String> prompts = ArgumentCaptor.forClass(String.class);
+        verify(gateway, times(2)).callStructured(
+            any(),
+            prompts.capture(),
+            eq(ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT)
+        );
+        assertThat(prompts.getAllValues().get(1))
+            .contains("\"toolResults\"", "这里记录真实故障原因和决定。");
         assertThat(outcome.snapshot().dynamicProfile().sections())
             .extracting(section -> section.type())
             .contains("DOCUMENT_OVERVIEW")
@@ -304,6 +362,8 @@ class ProjectUnderstandingServiceTest {
         var outcome = service.refresh(userId, projectId);
 
         assertThat(outcome.snapshot().identity().summary()).contains("Demo");
+        assertThat(outcome.snapshot().analysisPlan().semanticMode()).isEqualTo("ONE_PASS_SCOUT_AND_SYNTHESIS");
+        assertThat(outcome.snapshot().analysisMetrics().modelRequestCount()).isEqualTo(1);
         assertThat(outcome.snapshot().identity().claims()).allMatch(claim -> !"伪造判断".equals(claim.text()));
         assertThat(outcome.snapshot().quality().limitations()).contains("模型返回的未知证据引用已过滤");
     }

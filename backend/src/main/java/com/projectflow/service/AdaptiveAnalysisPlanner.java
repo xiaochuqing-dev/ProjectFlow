@@ -80,7 +80,8 @@ public class AdaptiveAnalysisPlanner {
                 source.semanticRole(),
                 source.importance(),
                 source.currentness(),
-                "SAMPLED_BOUNDED".equals(source.deepReadStatus()),
+                isDocumentCategory(source.category())
+                    && ("HIGH".equals(source.importance()) || "UNKNOWN_DOCUMENT".equals(source.category())),
                 false,
                 "确定性 Discovery 候选，最终语义角色保持可替换",
                 source.confidence()
@@ -116,16 +117,29 @@ public class AdaptiveAnalysisPlanner {
         if ("EMPTY".equals(intake.classification())) semanticMode = "SKIPPED_EMPTY";
         else if (!shouldUseSemanticModel(intake, sourceMap)) semanticMode = "SKIPPED_NO_SUBSTANTIVE_EVIDENCE";
         else if (!providerConfigured) semanticMode = "UNAVAILABLE";
-        else semanticMode = "ONE_PASS_SCOUT_AND_SYNTHESIS";
+        else semanticMode = "PENDING_EXECUTION_DECISION";
 
         List<String> defaultTools = toolRegistry.defaults(intake, index, sourceMap, history);
+        List<String> requestedTools = new ArrayList<>(
+            scout == null ? List.of() : scout.recommendedToolCalls()
+        );
+        if (scout != null && scout.evidenceSourceAssessments().stream()
+            .anyMatch(EvidenceSourceAssessment::shouldDeepRead)) {
+            requestedTools.add("DOC_READER");
+        }
         List<String> tools = toolRegistry.validateRequested(
-            scout == null ? List.of() : scout.recommendedToolCalls(),
+            requestedTools,
             defaultTools,
             intake,
             index,
             sourceMap
         );
+        boolean secondStageEligible = semanticEligible && tools.stream().anyMatch(Set.of(
+            "DOC_READER", "GIT_HISTORY", "GIT_TAG", "WORKTREE", "MANIFEST", "AGENT_RESULT"
+        )::contains);
+        if ("PENDING_EXECUTION_DECISION".equals(semanticMode)) {
+            semanticMode = secondStageEligible ? "TWO_STAGE_CONDITIONAL" : "ONE_PASS_SCOUT_AND_SYNTHESIS";
+        }
         List<String> dimensions = scout == null || scout.applicableDimensions().isEmpty()
             ? defaultDimensions(intake, history.historyAvailable())
             : boundedDistinct(scout.applicableDimensions(), 20);
@@ -140,7 +154,10 @@ public class AdaptiveAnalysisPlanner {
         }
 
         List<String> reasons = new ArrayList<>();
-        reasons.add("先使用确定性 Evidence Discovery 和结构索引，再让模型在 evidence ID 边界内做一次 Scout 与归纳");
+        reasons.add("Evidence Discovery 与结构索引先建立边界，Scout 只输出 capability intent，再由工程 Provider 执行固定参数工具");
+        if (secondStageEligible) {
+            reasons.add("只有工具产生新的高价值 Evidence 时才进行第二阶段 Final Synthesis；没有新增证据仍保持一次模型调用");
+        }
         reasons.add(hierarchical ? "规模较大，只发送压缩模块、重要节点和少量来源样本" : "规模可控，仍执行固定上限的来源采样");
         if (!intake.git().available()) reasons.add("没有 Git 时只理解当前状态，不生成虚假 Timeline");
         if (intake.sourceFileCount() == 0 && sourceMap.scoutEvidenceCount() > 0) {
@@ -150,6 +167,7 @@ public class AdaptiveAnalysisPlanner {
         budgets.put("scoutInputTokens", semanticEligible ? 8_000 : 0);
         budgets.put("plannerInputTokens", 0);
         budgets.put("deepReadChars", semanticEligible ? 32_000 : 0);
+        budgets.put("synthesisInputTokens", secondStageEligible ? 10_000 : 0);
         budgets.put("synthesisOutputTokens", semanticEligible ? 5_000 : 0);
         budgets.put("evolutionCandidateWindows", history.historyAvailable() ? 15 : 0);
 
@@ -169,11 +187,23 @@ public class AdaptiveAnalysisPlanner {
             .map(ProjectEvidenceSourceResponse::id)
             .limit(30)
             .toList();
+        Set<String> requestedDeepReads = scout == null ? Set.of() : scout.evidenceSourceAssessments().stream()
+            .filter(EvidenceSourceAssessment::shouldDeepRead)
+            .map(EvidenceSourceAssessment::evidenceId)
+            .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        if (requestedDeepReads.isEmpty()) {
+            requestedDeepReads = sourceMap.sources().stream()
+                .filter(source -> isDocumentCategory(source.category()))
+                .filter(source -> "HIGH".equals(source.importance()) || "UNKNOWN_DOCUMENT".equals(source.category()))
+                .map(ProjectEvidenceSourceResponse::id)
+                .limit(8)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        }
+        Set<String> deepReadIds = Set.copyOf(requestedDeepReads);
         List<String> deepReadTargets = sourceMap.sources().stream()
-            .filter(source -> "SAMPLED_BOUNDED".equals(source.deepReadStatus()))
-            .map(ProjectEvidenceSourceResponse::locator)
-            .filter(locator -> locator != null && !locator.isBlank())
-            .limit(30)
+            .filter(source -> deepReadIds.contains(source.id()))
+            .map(ProjectEvidenceSourceResponse::id)
+            .limit(10)
             .toList();
         List<String> expectedOutputs = new ArrayList<>();
         if (!"EMPTY".equals(intake.classification())) expectedOutputs.add("dynamicProjectProfile");
@@ -185,9 +215,9 @@ public class AdaptiveAnalysisPlanner {
             deterministicCapabilities,
             index.indexerSource(),
             semanticMode,
-            semanticEligible ? 1 : 0,
+            semanticEligible ? (secondStageEligible ? 2 : 1) : 0,
             semanticEligible ? 12_000 : 0,
-            semanticEligible ? 20_000 : 0,
+            semanticEligible ? (secondStageEligible ? 28_000 : 20_000) : 0,
             semanticEligible ? 600_000L : 120_000L,
             hierarchical,
             history.availability(),
@@ -258,6 +288,13 @@ public class AdaptiveAnalysisPlanner {
             .limit(8)
             .toList();
         return refs.isEmpty() ? List.of("intake:scan") : refs;
+    }
+
+    private static boolean isDocumentCategory(String category) {
+        return Set.of(
+            "DOC", "README", "ADR", "PRODUCT_CONTEXT", "AGENT_CONTEXT",
+            "AGENT_RESULT", "CHANGELOG", "UNKNOWN_DOCUMENT"
+        ).contains(category);
     }
 
     private static List<String> boundedDistinct(List<String> values, int limit) {

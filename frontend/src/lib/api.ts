@@ -1287,6 +1287,16 @@ export type ProjectEvidenceSource = {
   evidenceRefs: string[];
 };
 
+export type EvidenceDiversityMetrics = {
+  selectedByCategory: Record<string, number>;
+  quotaDropCount: number;
+  duplicateCompressionCount: number;
+  categoryCoverage: number;
+  currentEvidenceCount: number;
+  historicalEvidenceCount: number;
+  sampleCacheHitCount: number;
+};
+
 export type EvidenceSourceMap = {
   discoveredEvidenceCount: number;
   candidateEvidenceCount: number;
@@ -1296,6 +1306,7 @@ export type EvidenceSourceMap = {
   categoryCounts: Record<string, number>;
   sources: ProjectEvidenceSource[];
   warnings: string[];
+  diversityMetrics: EvidenceDiversityMetrics | null;
 };
 
 export type SemanticScout = {
@@ -1347,6 +1358,29 @@ export type DynamicProjectProfile = {
   unknowns: string[];
 };
 
+export type HistoricalCoverageBreakdown = {
+  gitMetadataCoverage: number;
+  factCoverage: number;
+  tagAnchorCoverage: number;
+  documentHistoryCoverage: number;
+  agentEvidenceCoverage: number;
+  structuralSnapshotCoverage: number;
+  remoteCollaborationCoverage: number;
+  sampledCommitCount: number;
+  commitSampleTruncated: boolean;
+  periods: Array<{
+    period: string;
+    commitCount: number;
+    factLinkedCommitCount: number;
+    tagAnchorCount: number;
+    documentEvidenceCount: number;
+    agentEvidenceCount: number;
+    confidence: number;
+    sampled: boolean;
+    limitation: string;
+  }>;
+};
+
 export type HistoricalCoverage = {
   historyAvailable: boolean;
   availability: string;
@@ -1363,6 +1397,37 @@ export type HistoricalCoverage = {
   confidenceByPeriod: Record<string, string>;
   overallCoverage: number;
   limitations: string[];
+  breakdown: HistoricalCoverageBreakdown | null;
+};
+
+export type AnalysisExecution = {
+  resultVersion: string;
+  cacheKey: string;
+  sourceRevision: string;
+  requestedCapabilities: string[];
+  executedCapabilities: string[];
+  reusedCapabilities: string[];
+  evidence: Array<{
+    id: string;
+    capability: string;
+    category: string;
+    sourceType: string;
+    summary: string;
+    evidenceRefs: string[];
+  }>;
+  diagnostics: Array<{
+    capability: string;
+    status: string;
+    durationMs: number;
+    selectedItemCount: number;
+    producedEvidenceCount: number;
+    consumedChars: number;
+    message: string;
+  }>;
+  durationMs: number;
+  budgetExhausted: boolean;
+  producedAt: string;
+  invalidationReason: string;
 };
 
 export type RepositoryIntake = {
@@ -1393,6 +1458,16 @@ export type RepositoryIntake = {
   sourceRevision: string;
   contentHash: string;
   warnings: string[];
+};
+
+export type ContextPackingDiagnostics = {
+  maxChars: number;
+  totalChars: number;
+  selectedItems: Record<string, number>;
+  droppedItems: Record<string, number>;
+  charsBySection: Record<string, number>;
+  truncationReasons: string[];
+  validJson: boolean;
 };
 
 export type ProjectUnderstandingSnapshot = {
@@ -1466,6 +1541,8 @@ export type ProjectUnderstandingSnapshot = {
     anchors: string[];
     limitations: string[];
   } | null;
+  analysisExecution: AnalysisExecution | null;
+  contextPacking: ContextPackingDiagnostics | null;
   analysisMetrics: {
     discoveredEvidenceCount: number;
     candidateEvidenceCount: number;
@@ -1491,6 +1568,9 @@ export type ProjectUnderstandingSnapshot = {
     cacheHit: boolean;
     historicalCoverage: number;
     structureCoverage: number;
+    inventoryFilesRead: number;
+    inventoryCacheHits: number;
+    sampleCacheHits: number;
   } | null;
 };
 

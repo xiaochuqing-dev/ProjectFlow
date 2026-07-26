@@ -37,18 +37,7 @@ public class AnalysisToolRegistry {
     ) {
         LinkedHashSet<String> result = new LinkedHashSet<>();
         result.add("FILESYSTEM");
-        if (!intake.manifestFiles().isEmpty()) result.add("MANIFEST");
         if (index.indexerSource().toUpperCase(Locale.ROOT).contains("SCIP")) result.add("SCIP");
-        if (history.historyAvailable() && intake.git().available()) {
-            result.add("GIT_HISTORY");
-            result.add("WORKTREE");
-            if (history.tagCount() > 0) result.add("GIT_TAG");
-        }
-        if (sourceMap.categoryCounts().entrySet().stream()
-            .anyMatch(entry -> isDocumentCategory(entry.getKey()) && entry.getValue() > 0)) {
-            result.add("DOC_READER");
-        }
-        if (sourceMap.categoryCounts().getOrDefault("AGENT_RESULT", 0L) > 0) result.add("AGENT_RESULT");
         return List.copyOf(result);
     }
 

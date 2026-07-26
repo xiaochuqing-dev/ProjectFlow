@@ -231,6 +231,8 @@ function UnderstandingView({
                 <Metric label="有界深读" value={sourceMap.deepReadCount} />
                 <Metric label="跳过去噪" value={sourceMap.skippedCount} />
                 <Metric label="文档 / 代码" value={`${snapshot.analysisMetrics?.docs ?? 0} / ${snapshot.intake.sourceFileCount}`} />
+                {sourceMap.diversityMetrics ? <Metric label="来源类别覆盖" value={percent(sourceMap.diversityMetrics.categoryCoverage)} /> : null}
+                {sourceMap.diversityMetrics ? <Metric label="样本缓存命中" value={sourceMap.diversityMetrics.sampleCacheHitCount} /> : null}
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 {Object.entries(sourceMap.categoryCounts).filter(([, count]) => count > 0).slice(0, 12).map(([category, count]) => (
@@ -241,11 +243,20 @@ function UnderstandingView({
           ) : <p className="mt-3 text-sm text-muted">这是 V3.6 兼容快照，刷新后会生成 Evidence Source Map。</p>}
         </div>
         <div className="rounded-card border border-line bg-white p-5 shadow-card">
-          <h2 className="font-semibold text-slate-950">自适应分析计划</h2>
+          <h2 className="font-semibold text-slate-950">自适应分析计划 · 执行与校验</h2>
           <p className="mt-3 text-sm leading-6 text-slate-700">{snapshot.analysisPlan.planReasons[0] ?? "按现有证据选择分析能力。"}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {(snapshot.analysisPlan.toolsToInvoke ?? []).map((tool) => <Badge key={tool} label={tool} tone="slate" />)}
           </div>
+          {snapshot.analysisExecution ? (
+            <div className="mt-4 space-y-2 border-t border-line pt-4 text-xs leading-5 text-muted">
+              <p>已执行：{snapshot.analysisExecution.executedCapabilities.join("、") || "无"} · 复用：{snapshot.analysisExecution.reusedCapabilities.join("、") || "无"} · 新证据 {snapshot.analysisExecution.evidence.length}</p>
+              {snapshot.analysisExecution.diagnostics.filter((item) => item.status !== "SUCCEEDED" && item.status !== "REUSED").slice(0, 4).map((item) => (
+                <p key={`${item.capability}-${item.status}`}>{item.capability}：{executionStatusLabel(item.status)}，{item.message}</p>
+              ))}
+            </div>
+          ) : <p className="mt-4 text-xs text-muted">旧快照没有执行诊断；刷新后会显示 Planner 的真实执行结果。</p>}
+          {snapshot.contextPacking ? <p className="mt-2 text-xs text-muted">上下文打包 {snapshot.contextPacking.totalChars}/{snapshot.contextPacking.maxChars} chars · JSON {snapshot.contextPacking.validJson ? "完整" : "无效"}</p> : null}
           <p className="mt-3 text-xs leading-5 text-muted">适用维度：{(snapshot.analysisPlan.applicableDimensions ?? []).join("、") || "无"} · 模型请求上限 {snapshot.analysisPlan.maxModelRequests}</p>
         </div>
       </section>
@@ -271,6 +282,17 @@ function UnderstandingView({
         <h2 className="flex items-center gap-2 font-semibold text-slate-950"><GitBranch className="h-4 w-4" />Historical Coverage</h2>
         <p className="mt-3 text-sm text-slate-700">{history ? historySummary(history) : snapshot.intake.git.available ? `Git ${snapshot.intake.git.branch}，${snapshot.intake.git.commitCount} 次提交。` : "没有 Git：当前结构仍可理解，但历史演进不可用。"}</p>
         {history ? <div className="mt-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-4"><Metric label="整体覆盖" value={percent(history.overallCoverage)} /><Metric label="事实覆盖提交" value={`${history.coveredCommitCount}/${history.gitCommitCount}`} /><Metric label="Tag" value={history.tagCount} /><Metric label="证据周期" value={history.coveredPeriods.length} /></div> : null}
+        {history?.breakdown ? (
+          <>
+            <div className="mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+              <Metric label="Git 元数据" value={percent(history.breakdown.gitMetadataCoverage)} />
+              <Metric label="ProjectFact" value={percent(history.breakdown.factCoverage)} />
+              <Metric label="Tag 锚点" value={percent(history.breakdown.tagAnchorCoverage)} />
+              <Metric label="文档 / Agent" value={`${percent(history.breakdown.documentHistoryCoverage)} / ${percent(history.breakdown.agentEvidenceCoverage)}`} />
+            </div>
+            {history.breakdown.periods.length ? <p className="mt-3 text-xs leading-5 text-muted">历史维度置信度：{history.breakdown.periods.slice(0, 6).map((item) => `${item.period} ${percent(item.confidence)}`).join(" · ")}{history.breakdown.commitSampleTruncated ? " · 仅显示有界提交样本" : ""}</p> : null}
+          </>
+        ) : null}
         <p className="mt-2 text-xs text-muted">分析时间 {new Date(snapshot.analyzedAt).toLocaleString("zh-CN")} · 指标来源 {snapshot.intake.metricsSource}</p>
       </section>
 
@@ -339,7 +361,11 @@ function percent(value: number) { return `${Math.round(value * 100)}%`; }
 function confidenceLabel(value: string) { return value === "HIGH" ? "高" : value === "LOW" ? "低" : "中"; }
 function statusLabel(value: string) { return value === "OBSERVED" ? "已观察" : value === "EXPLAINED" ? "用户说明" : "模型推断"; }
 function semanticLabel(value: string) {
-  const labels: Record<string, string> = { ONE_PASS_SCOUT_AND_SYNTHESIS: "一次 Scout + 归纳", UNAVAILABLE: "模型不可用", SKIPPED_EMPTY: "空目录跳过", SKIPPED_NO_SUBSTANTIVE_EVIDENCE: "无实质内容跳过" };
+  const labels: Record<string, string> = { TWO_STAGE_CONDITIONAL: "按新证据决定二阶段", ONE_PASS_SCOUT_AND_SYNTHESIS: "一次 Scout + 归纳", UNAVAILABLE: "模型不可用", SKIPPED_EMPTY: "空目录跳过", SKIPPED_NO_SUBSTANTIVE_EVIDENCE: "无实质内容跳过" };
+  return labels[value] ?? value;
+}
+function executionStatusLabel(value: string) {
+  const labels: Record<string, string> = { NO_EVIDENCE: "没有新增证据", UNAVAILABLE: "不可用", FAILED: "执行失败并降级", SKIPPED_BUDGET: "预算跳过" };
   return labels[value] ?? value;
 }
 function classificationLabel(value: string) {
