@@ -104,7 +104,7 @@ AF. Next phase: choose a safe real-model semantic-quality acceptance phase or Ev
 
 AG. Implementation commit: `c40b5ec8f75ff107b4a7bde5982789d813bd1d4f`
 
-AH. Documentation commit: pending
+AH. Documentation commit: `9eb89b25f83f8a2e4326f9fc6503baaa81b1c6a4`
 
 AI. Pull request: pending
 
