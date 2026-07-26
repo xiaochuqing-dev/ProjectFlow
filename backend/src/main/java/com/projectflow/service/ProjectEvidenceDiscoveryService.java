@@ -9,16 +9,19 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.projectflow.dto.ProjectUnderstandingDtos.EvidenceSourceMapResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.EvidenceDiversityMetrics;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectEvidenceSourceResponse;
 import com.projectflow.service.RepositoryIntakeService.ScanResult;
 import com.projectflow.service.RepositoryIntakeService.ScannedFile;
@@ -31,10 +34,15 @@ public class ProjectEvidenceDiscoveryService {
     private static final Set<String> CONFIG_EXTENSIONS = Set.of(
         "json", "yaml", "yml", "toml", "xml", "properties", "ini", "conf"
     );
-    private static final List<String> SENSITIVE_MARKERS = List.of(
-        "api_key", "apikey", "authorization", "password", "passwd", "secret", "access_token",
-        "refresh_token", "private_key", "client_secret", "credential"
+    private static final List<String> GUARANTEED_CATEGORIES = List.of(
+        "MANIFEST", "CI_CD", "TEST", "MIGRATION", "INFRA", "PRODUCT_CONTEXT",
+        "AGENT_CONTEXT", "AGENT_RESULT", "README", "UNKNOWN_DOCUMENT", "ADR",
+        "CHANGELOG", "CONFIG", "BUILD", "LICENSE"
     );
+    private static final int MAX_SAMPLE_CACHE_ROOTS = 8;
+
+    private final SensitiveContentRedactor redactor;
+    private final Map<Path, Map<String, CachedSample>> sampleCaches = new ConcurrentHashMap<>();
 
     @Value("${projectflow.understanding.max-evidence-candidates:500}")
     private int maxCandidates;
@@ -47,6 +55,10 @@ public class ProjectEvidenceDiscoveryService {
 
     @Value("${projectflow.understanding.max-evidence-sample-bytes:8192}")
     private int maxSampleBytes;
+
+    public ProjectEvidenceDiscoveryService(SensitiveContentRedactor redactor) {
+        this.redactor = redactor;
+    }
 
     public DiscoveryResult discover(ScanResult scan) {
         Map<String, Long> categoryCounts = new LinkedHashMap<>();
@@ -64,6 +76,13 @@ public class ProjectEvidenceDiscoveryService {
         );
 
         int candidateCount = candidates.size();
+        int mappedLimit = Math.min(Math.max(1, maxCandidates), candidates.size());
+        Selection mappedSelection = selectDiverse(candidates, mappedLimit);
+        int scoutLimit = Math.min(Math.max(0, maxScoutEvidence), mappedSelection.items().size());
+        Selection scoutSelection = selectDiverse(mappedSelection.items(), scoutLimit);
+        Set<String> scoutPaths = scoutSelection.items().stream()
+            .map(candidate -> candidate.file().path())
+            .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
         List<ProjectEvidenceSourceResponse> sources = new ArrayList<>();
         List<PromptEvidence> promptEvidence = new ArrayList<>();
         sources.add(new ProjectEvidenceSourceResponse(
@@ -96,12 +115,14 @@ public class ProjectEvidenceDiscoveryService {
             ));
         }
 
-        int mappedLimit = Math.min(Math.max(1, maxCandidates), candidates.size());
-        int scoutLimit = Math.min(Math.max(0, maxScoutEvidence), mappedLimit);
-        for (int index = 0; index < mappedLimit; index++) {
-            Candidate candidate = candidates.get(index);
+        int sampleCacheHits = 0;
+        for (Candidate candidate : mappedSelection.items()) {
             String id = evidenceId(candidate.file().path());
-            String sample = index < scoutLimit ? readSample(scan.root(), candidate.file()) : "";
+            SampleRead sampleRead = scoutPaths.contains(candidate.file().path())
+                ? readSample(scan, candidate.file())
+                : new SampleRead("", false);
+            String sample = sampleRead.value();
+            if (sampleRead.cacheHit()) sampleCacheHits++;
             boolean sampled = !sample.isBlank();
             ProjectEvidenceSourceResponse source = new ProjectEvidenceSourceResponse(
                 id,
@@ -128,6 +149,8 @@ public class ProjectEvidenceDiscoveryService {
                 ));
             }
         }
+        Map<String, CachedSample> rootCache = sampleCaches.get(scan.root().toAbsolutePath().normalize());
+        if (rootCache != null) rootCache.keySet().retainAll(scan.inventorySignatures().keySet());
 
         long discovered = scan.intake().fileCount() + (scan.intake().git().available() ? 1 : 0);
         long skipped = Math.max(0, scan.intake().fileCount() - candidateCount);
@@ -135,18 +158,43 @@ public class ProjectEvidenceDiscoveryService {
         if (scan.fileDetailsTruncated()) {
             warnings.add("Evidence Discovery 只使用有界文件详情，未展开的文件保留为未知。");
         }
-        if (candidateCount > mappedLimit) {
+        if (candidateCount > mappedSelection.items().size()) {
             warnings.add("候选来源超过安全上限，Source Map 只保留高价值和多类型有界样本。");
         }
+        if (mappedSelection.duplicateCount() + scoutSelection.duplicateCount() > 0) {
+            warnings.add("相同类别、文件名和规模的重复候选已压缩，避免同类材料挤占上下文。");
+        }
+        Map<String, Integer> selectedByCategory = new LinkedHashMap<>();
+        mappedSelection.items().forEach(candidate -> selectedByCategory.merge(candidate.category(), 1, Integer::sum));
+        long currentEvidence = mappedSelection.items().stream()
+            .filter(candidate -> !Set.of("CHANGELOG", "AGENT_RESULT", "ADR").contains(candidate.category()))
+            .count();
+        long historicalEvidence = mappedSelection.items().stream()
+            .filter(candidate -> Set.of("CHANGELOG", "AGENT_RESULT", "ADR").contains(candidate.category()))
+            .count();
+        long candidateCategoryCount = candidates.stream().map(Candidate::category).distinct().count();
+        double categoryCoverage = candidateCategoryCount == 0
+            ? 1
+            : round((double) selectedByCategory.size() / candidateCategoryCount);
+        EvidenceDiversityMetrics diversity = new EvidenceDiversityMetrics(
+            Map.copyOf(selectedByCategory),
+            Math.max(0, candidateCount - mappedSelection.items().size()),
+            mappedSelection.duplicateCount() + scoutSelection.duplicateCount(),
+            categoryCoverage,
+            Math.toIntExact(currentEvidence),
+            Math.toIntExact(historicalEvidence),
+            sampleCacheHits
+        );
         EvidenceSourceMapResponse sourceMap = new EvidenceSourceMapResponse(
             discovered,
             candidateCount,
             promptEvidence.size(),
-            promptEvidence.size(),
+            0,
             skipped,
             Map.copyOf(categoryCounts),
             List.copyOf(sources),
-            List.copyOf(warnings)
+            List.copyOf(warnings),
+            diversity
         );
         long documentCount = categoryCounts.entrySet().stream()
             .filter(entry -> isDocumentCategory(entry.getKey()))
@@ -155,16 +203,33 @@ public class ProjectEvidenceDiscoveryService {
         return new DiscoveryResult(sourceMap, List.copyOf(promptEvidence), documentCount);
     }
 
-    private String readSample(Path root, ScannedFile file) {
-        if (file.binary() || file.generated() || file.bytes() <= 0) return "";
+    private SampleRead readSample(ScanResult scan, ScannedFile file) {
+        if (file.binary() || file.generated() || file.bytes() <= 0 || redactor.isSensitivePath(file.path())) {
+            return new SampleRead("", false);
+        }
+        Path root = scan.root().toAbsolutePath().normalize();
+        if (sampleCaches.size() >= MAX_SAMPLE_CACHE_ROOTS && !sampleCaches.containsKey(root)) {
+            sampleCaches.keySet().stream().findFirst().ifPresent(sampleCaches::remove);
+        }
+        Map<String, CachedSample> cache = sampleCaches.computeIfAbsent(root, ignored -> new ConcurrentHashMap<>());
+        String signature = scan.inventorySignatures().getOrDefault(file.path(), file.bytes() + ":unknown");
+        CachedSample cached = cache.get(file.path());
+        if (cached != null && cached.signature().equals(signature)) {
+            return new SampleRead(cached.value(), true);
+        }
         Path target = root.resolve(file.path()).normalize();
-        if (!target.startsWith(root.normalize())) return "";
+        if (!target.startsWith(root)) return new SampleRead("", false);
         try (var input = Files.newInputStream(target)) {
             byte[] bytes = input.readNBytes(Math.max(256, maxSampleBytes));
+            for (byte value : bytes) {
+                if (value == 0) return new SampleRead("", false);
+            }
             String text = new String(bytes, StandardCharsets.UTF_8);
-            return sanitizeSample(text);
+            String value = sanitizeSample(text);
+            cache.put(file.path(), new CachedSample(signature, value));
+            return new SampleRead(value, false);
         } catch (IOException ignored) {
-            return "";
+            return new SampleRead("", false);
         }
     }
 
@@ -174,10 +239,7 @@ public class ProjectEvidenceDiscoveryService {
         for (String rawLine : value.lines().toList()) {
             String line = rawLine.strip();
             if (line.isBlank()) continue;
-            String lower = line.toLowerCase(Locale.ROOT);
-            if (SENSITIVE_MARKERS.stream().anyMatch(lower::contains)) {
-                line = "[已隐藏可能的敏感字段]";
-            }
+            line = redactor.redact(line);
             int remaining = Math.max(0, maxSampleChars - length);
             if (remaining == 0 || kept.size() >= 16) break;
             line = line.length() <= remaining ? line : line.substring(0, remaining);
@@ -185,6 +247,75 @@ public class ProjectEvidenceDiscoveryService {
             length += line.length() + 1;
         }
         return String.join("\n", kept);
+    }
+
+    private static Selection selectDiverse(List<Candidate> input, int limit) {
+        if (limit <= 0 || input.isEmpty()) return new Selection(List.of(), 0);
+        List<Candidate> deduplicated = new ArrayList<>();
+        Set<String> duplicateKeys = new LinkedHashSet<>();
+        int duplicates = 0;
+        for (Candidate candidate : input) {
+            String name = candidate.file().path().substring(candidate.file().path().lastIndexOf('/') + 1)
+                .toLowerCase(Locale.ROOT);
+            String key = candidate.category() + ":" + name + ":" + candidate.file().bytes();
+            if (!Set.of("MANIFEST", "CI_CD", "MIGRATION").contains(candidate.category())
+                && !duplicateKeys.add(key)) {
+                duplicates++;
+                continue;
+            }
+            duplicateKeys.add(key);
+            deduplicated.add(candidate);
+        }
+
+        List<Candidate> selected = new ArrayList<>();
+        Map<String, Integer> categoryCounts = new LinkedHashMap<>();
+        Map<String, Integer> moduleCounts = new LinkedHashMap<>();
+        for (String category : GUARANTEED_CATEGORIES) {
+            deduplicated.stream()
+                .filter(candidate -> category.equals(candidate.category()))
+                .filter(candidate -> !selected.contains(candidate))
+                .findFirst()
+                .ifPresent(candidate -> addSelected(selected, categoryCounts, moduleCounts, candidate));
+            if (selected.size() >= limit) return new Selection(List.copyOf(selected), duplicates);
+        }
+
+        int categoryCap = Math.max(2, limit / 4);
+        int moduleCap = Math.max(3, limit / 3);
+        for (Candidate candidate : deduplicated) {
+            if (selected.contains(candidate)) continue;
+            if (categoryCounts.getOrDefault(candidate.category(), 0) >= categoryCap) continue;
+            if (moduleCounts.getOrDefault(module(candidate.file().path()), 0) >= moduleCap) continue;
+            addSelected(selected, categoryCounts, moduleCounts, candidate);
+            if (selected.size() >= limit) break;
+        }
+        if (selected.size() < limit) {
+            for (Candidate candidate : deduplicated) {
+                if (selected.contains(candidate)) continue;
+                addSelected(selected, categoryCounts, moduleCounts, candidate);
+                if (selected.size() >= limit) break;
+            }
+        }
+        return new Selection(List.copyOf(selected), duplicates);
+    }
+
+    private static void addSelected(
+        List<Candidate> selected,
+        Map<String, Integer> categories,
+        Map<String, Integer> modules,
+        Candidate candidate
+    ) {
+        selected.add(candidate);
+        categories.merge(candidate.category(), 1, Integer::sum);
+        modules.merge(module(candidate.file().path()), 1, Integer::sum);
+    }
+
+    private static String module(String path) {
+        int slash = path.indexOf('/');
+        return slash < 0 ? "." : path.substring(0, slash);
+    }
+
+    private static double round(double value) {
+        return Math.round(Math.max(0, Math.min(1, value)) * 1000.0) / 1000.0;
     }
 
     private static String summary(Candidate candidate, String sample) {
@@ -316,6 +447,15 @@ public class ProjectEvidenceDiscoveryService {
     }
 
     private record Candidate(ScannedFile file, String category, String sourceType, int score) {
+    }
+
+    private record Selection(List<Candidate> items, int duplicateCount) {
+    }
+
+    private record SampleRead(String value, boolean cacheHit) {
+    }
+
+    private record CachedSample(String signature, String value) {
     }
 
     public record PromptEvidence(

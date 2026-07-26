@@ -4,9 +4,9 @@
 
 An explicit `PROJECT_UNDERSTANDING_REFRESH` job now follows:
 
-`Repository Intake → Evidence Discovery → Structure Index → Historical Coverage → Semantic Scout → Capability-validated Plan → Dynamic Profile → persisted read model`.
+`Repository Intake → Evidence Discovery → Structure Index → Historical Coverage → Semantic Scout → Capability-validated Plan → Execute → Validate → conditional Final Synthesis → Dynamic Profile → persisted read model`.
 
-`ProjectEvidenceDiscoveryService` reuses the bounded V3.5 inventory and adds relative, typed source candidates plus redacted UTF-8 samples. It does not become a parser or content database. `SemanticScoutService` reuses the existing `PROJECT_UNDERSTANDING_SNAPSHOT` Model Gateway task for one combined Scout/profile response; there is no second client or per-file model loop. Unknown evidence IDs are filtered before output.
+`ProjectEvidenceDiscoveryService` reuses the bounded V3.5 inventory and adds relative, typed source candidates plus redacted UTF-8 samples. It does not become a parser or content database. `SemanticScoutService` reuses the existing `PROJECT_UNDERSTANDING_SNAPSHOT` Model Gateway task for the first bounded Scout/profile response. V3.7.1 may reuse the same gateway task once more only after executed tools produce new high-value evidence; there is no second client or per-file model loop. Unknown evidence IDs are filtered before output.
 
 `AdaptiveAnalysisPlanner` owns deterministic guardrails and combines them with bounded Scout suggestions. `AnalysisToolRegistry` is the allow-list between model intent and engineering providers; the model never constructs a shell command. Existing filesystem/manifest, SCIP consumer, Git CLI, Agent result and document-reader boundaries remain the implementations.
 
@@ -306,6 +306,26 @@ sequenceDiagram
 - AI API keys are backend-only environment variables.
 - Real `.env` files are ignored by Git.
 - Parse errors and AI errors return safe messages without leaking secrets.
+
+## V3.7.1 Adaptive Execution Boundary
+
+The explicit refresh job owns the only executable understanding path:
+
+1. Repository Intake and Evidence Discovery collect bounded metadata and safe samples.
+2. Semantic Scout receives packed evidence IDs and proposes semantic roles, dimensions and capability names.
+3. Adaptive Analysis Planner validates those names through `AnalysisToolRegistry`.
+4. `AnalysisExecutionCoordinator` reuses FILESYSTEM/SCIP output and delegates executable capabilities to `AnalysisCapabilityProvider`.
+5. Providers use fixed command arrays, safe relative paths, allow-listed evidence IDs, item/character/time budgets and cancellation checks.
+6. Produced Tool Result evidence is redacted and reference-validated before it joins the Source Map.
+7. `FinalProfileSynthesisService` may issue one second Model Gateway request only when execution produced new high-value evidence.
+
+GET understanding, structure and evolution endpoints remain persistence-only reads. Execution output is replaceable snapshot data and never becomes ProjectFact, Timeline, Capability or Evolution truth.
+
+`BudgetAwareContextPacker` builds the model input as a JSON tree under category budgets and a global character ceiling. It drops or truncates complete tree items before final serialization, verifies the final JSON, and records selected/dropped counts and reasons. It does not substring serialized JSON.
+
+Inspection and sample caches are process-local, root-scoped and keyed by bounded file metadata signatures plus relevant scanner configuration. Cache loss only causes a safe rebuild. Cache content is not a new fact source and sensitive paths never enter content caches.
+
+Historical Coverage is a derived weighted view over seven independent dimensions: Git metadata, ProjectFact linkage, Tag anchors, historical documents, Agent evidence, structural snapshots and optional remote collaboration. Per-period confidence and sampling limits remain visible.
 
 ## V3.4.2 fact-native capability layer
 

@@ -1,8 +1,10 @@
-# ProjectFlow V3.7 Agent Protocol
+# ProjectFlow V3.7.1 Agent Protocol
 
 Before starting substantial work, read `PROJECT_CONTEXT.md` and the task-relevant source files. ProjectFlow follows: rules collect evidence, models interpret within bounded evidence, rules validate, normal objective facts are recorded automatically, and only exceptions require user attention.
 
-For project-understanding work, preserve the V3.7 boundary: discover real evidence before choosing analysis dimensions; keep Evidence, Semantic Scout, Analysis Plan, Dynamic Profile and Historical Coverage replaceable and separate from ProjectFact; use only registered tool capabilities; filter unknown evidence IDs; and do not invent absent project shapes, architecture, history or UI sections. Empty/blank/unchanged inputs should remain zero-model where possible.
+For project-understanding work, preserve the V3.7.1 boundary: Discover real evidence before choosing dimensions; let Scout request only capability names and evidence IDs; validate the plan through the registry; Execute only bounded providers with fixed commands and safe relative paths; Validate every produced evidence reference; run Final Synthesis only when new high-value evidence exists. Evidence, Scout, Plan, Execution, Dynamic Profile and Historical Coverage remain replaceable and separate from ProjectFact. Empty/blank/unchanged inputs remain zero-model where possible; all eligible flows are capped at 0/1/2 model requests.
+
+Before sending model context, use category-aware complete-JSON packing and outbound secret redaction. Do not slice serialized JSON, persist complete deep-read documents, read sensitive-file content, accept model-built commands, or imply history maturity from commit count alone. A failed capability degrades to deterministic evidence and diagnostics. A failed refresh retains the prior successful understanding. External SCIP producers remain opt-in and deferred until a separate sandboxed PoC proves no silent download, build, runtime or machine mutation.
 
 After completing a task, create `.projectflow/agent-results/<timestamp-topic>/result.json` and optionally `summary.md`.
 

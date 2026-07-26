@@ -54,3 +54,16 @@ test("V3.7 response and page expose adaptive evidence views", () => {
   assert.match(page, /Historical Coverage/);
   assert.match(page, /当前目录没有可分析内容，不生成架构、能力或时间线/);
 });
+
+test("V3.7.1 exposes executed capability, packing, diversity and honest history diagnostics", () => {
+  assert.match(api, /export type AnalysisExecution/);
+  assert.match(api, /export type ContextPackingDiagnostics/);
+  assert.match(api, /export type EvidenceDiversityMetrics/);
+  assert.match(api, /diversityMetrics: EvidenceDiversityMetrics/);
+  assert.match(api, /export type HistoricalCoverageBreakdown/);
+  assert.match(api, /breakdown: HistoricalCoverageBreakdown/);
+  assert.match(page, /执行与校验/);
+  assert.match(page, /上下文打包/);
+  assert.match(page, /来源类别覆盖/);
+  assert.match(page, /历史维度置信度/);
+});

@@ -1,5 +1,6 @@
 package com.projectflow.service;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,10 +51,12 @@ public class RepositoryIntakeService {
     private static final Pattern GRADLE_INCLUDED_PROJECT = Pattern.compile(
         "(?m)^\\s*include(?:Build)?\\s*(?:\\(|\\s)[^\\r\\n]*['\"]"
     );
+    private static final int MAX_INSPECTION_CACHE_ROOTS = 8;
 
     private final LocalCommandExecutor commandExecutor;
     private final SccCodeMetricsAdapter sccAdapter;
     private final ObjectMapper objectMapper;
+    private final Map<Path, Map<String, CachedFileInspection>> inspectionCaches = new ConcurrentHashMap<>();
 
     @Value("${projectflow.understanding.max-files:250000}")
     private int maxFiles;
@@ -65,6 +69,12 @@ public class RepositoryIntakeService {
 
     @Value("${projectflow.understanding.max-total-read-bytes:536870912}")
     private long maxTotalReadBytes;
+
+    @Value("${projectflow.understanding.max-source-sample-bytes:65536}")
+    private long maxSourceSampleBytes;
+
+    @Value("${projectflow.understanding.max-source-content-samples:1500}")
+    private int maxSourceContentSamples;
 
     @Value("${projectflow.understanding.small-loc:20000}")
     private long smallLoc;
@@ -87,6 +97,11 @@ public class RepositoryIntakeService {
 
     public ScanResult scan(Path root) {
         ModelCancellationContext.throwIfCancelled();
+        Path normalizedRoot = root.toAbsolutePath().normalize();
+        if (inspectionCaches.size() >= MAX_INSPECTION_CACHE_ROOTS && !inspectionCaches.containsKey(normalizedRoot)) {
+            inspectionCaches.keySet().stream().findFirst().ifPresent(inspectionCaches::remove);
+        }
+        inspectionCaches.computeIfAbsent(normalizedRoot, ignored -> new ConcurrentHashMap<>());
         ScanAccumulator accumulator = new ScanAccumulator(digest());
         try {
             Files.walkFileTree(root, new SimpleFileVisitor<>() {
@@ -166,12 +181,17 @@ public class RepositoryIntakeService {
         if (accumulator.partialContentFiles > 0) {
             accumulator.warn("部分大文件只读取了有界前缀，代码行与内容指纹覆盖率已相应降低。");
         }
+        if (accumulator.metadataOnlySourceFiles > 0) {
+            accumulator.warn("大仓库只打开有界数量的源码内容，其余源码按 metadata 估算 LOC；精确指标可由 scc 提供。");
+        }
         if (accumulator.ignoredDirectories > 0) {
             accumulator.warn("generated/vendor/build 目录已按安全策略跳过，不会进入模型上下文。");
         }
         if (!git.available() && accumulator.sourceFileCount > 0) {
             accumulator.warn("未检测到 Git；可以理解当前结构，但历史演进不可用。");
         }
+        Map<String, CachedFileInspection> rootCache = inspectionCaches.get(normalizedRoot);
+        if (rootCache != null) rootCache.keySet().retainAll(accumulator.inventorySignatures.keySet());
 
         RepositoryIntakeResponse intake = new RepositoryIntakeResponse(
             classification,
@@ -204,7 +224,8 @@ public class RepositoryIntakeService {
             accumulator.moduleSignals(),
             immutableSignals(accumulator.engineeringSignals),
             List.copyOf(accumulator.workspaceSignals),
-            List.copyOf(accumulator.entryCandidates)
+            List.copyOf(accumulator.entryCandidates),
+            new ScanIoMetrics(accumulator.openedFiles, accumulator.cacheHitFiles, accumulator.contentBytesRead)
         );
     }
 
@@ -267,16 +288,52 @@ public class RepositoryIntakeService {
         String language = language(relative);
         boolean source = language != null;
         long remainingBudget = Math.max(0, maxTotalReadBytes - accumulator.contentBytesRead);
-        FileInspection inspection = inspectContent(
-            file,
-            attributes.size(),
-            source,
-            manifest,
-            sensitive,
-            Math.min(maxFileReadBytes, remainingBudget)
+        String signature = inventorySignature(attributes);
+        String inspectionKey = signature + ":" + source + ":" + manifest + ":" + sensitive + ":" + maxFileReadBytes
+            + ":" + effectiveSourceSampleBytes() + ":" + effectiveSourceContentSamples();
+        Map<String, CachedFileInspection> rootCache = inspectionCaches.computeIfAbsent(
+            root.toAbsolutePath().normalize(),
+            ignored -> new ConcurrentHashMap<>()
         );
-        accumulator.contentBytesRead += inspection.bytesRead();
+        CachedFileInspection cached = rootCache.get(relative);
+        FileInspection inspection;
+        if (cached != null && cached.key().equals(inspectionKey)) {
+            inspection = cached.inspection();
+            accumulator.cacheHitFiles++;
+        } else {
+            boolean boundedSourceMetadata = source
+                && !manifest
+                && !sensitive
+                && accumulator.sourceContentSamples >= effectiveSourceContentSamples();
+            boolean ordinaryMetadata = !source && !manifest;
+            if (boundedSourceMetadata) {
+                inspection = metadataOnlySourceInspection(attributes.size(), language, accumulator);
+            } else if (ordinaryMetadata) {
+                inspection = metadataOnlyOtherInspection(knownBinary(lower));
+            } else {
+                inspection = inspectContent(
+                    file,
+                    attributes.size(),
+                    source,
+                    manifest,
+                    sensitive,
+                    Math.min(maxFileReadBytes, remainingBudget)
+                );
+            }
+            rootCache.put(relative, new CachedFileInspection(inspectionKey, inspection));
+            if (!boundedSourceMetadata && !ordinaryMetadata && !sensitive && remainingBudget > 0) {
+                accumulator.openedFiles++;
+                accumulator.contentBytesRead += inspection.bytesRead();
+                if (source && !manifest) accumulator.sourceContentSamples++;
+            }
+        }
         if (inspection.partial()) accumulator.partialContentFiles++;
+        if (inspection.metadataOnly()) accumulator.metadataOnlySourceFiles++;
+        if (source && !inspection.metadataOnly() && !inspection.binary()
+            && attributes.size() > 0 && inspection.lines() > 0) {
+            accumulator.sampledSourceBytes.merge(language, attributes.size(), Long::sum);
+            accumulator.sampledSourceLines.merge(language, inspection.lines(), Long::sum);
+        }
 
         accumulator.fileCount++;
         accumulator.inventorySignatures.put(relative, inventorySignature(attributes));
@@ -308,7 +365,7 @@ public class RepositoryIntakeService {
 
         if (manifest && !sensitive && accumulator.manifests.size() < 200) {
             accumulator.manifests.add(relative);
-            inspectWorkspaceManifest(file, relative, accumulator);
+            inspectWorkspaceManifest(inspection.boundedText(), relative, accumulator);
         }
         collectEngineeringSignals(relative, lower, manifest, accumulator);
         if (looksLikeEntryPoint(relative, lower) && !sensitive && accumulator.entryCandidates.size() < 200) {
@@ -337,16 +394,22 @@ public class RepositoryIntakeService {
         long readLimit
     ) {
         if (sensitive) {
-            return new FileInspection(false, 0, "sensitive-metadata-only", 0, false);
+            return new FileInspection(false, 0, "sensitive-metadata-only", 0, false, "", false);
         }
-        if (readLimit <= 0) return new FileInspection(false, 0, "read-budget-exhausted", 0, true);
+        if (readLimit <= 0) {
+            return new FileInspection(false, 0, "read-budget-exhausted", 0, true, "", false);
+        }
         MessageDigest fileDigest = digest();
+        ByteArrayOutputStream boundedText = manifest ? new ByteArrayOutputStream() : null;
         long lines = 0;
         long bytesRead = 0;
         boolean binary = false;
         boolean sawContent = false;
         boolean endedWithNewline = false;
-        boolean fullRead = source || manifest || size <= 1_048_576;
+        long effectiveReadLimit = source && !manifest
+            ? Math.min(readLimit, effectiveSourceSampleBytes())
+            : Math.min(readLimit, 65_536);
+        boolean fullRead = size <= effectiveReadLimit;
         try (InputStream input = Files.newInputStream(file)) {
             byte[] buffer = new byte[8192];
             int read;
@@ -360,6 +423,9 @@ public class RepositoryIntakeService {
                     first = false;
                 }
                 fileDigest.update(buffer, 0, read);
+                if (boundedText != null) {
+                    boundedText.write(buffer, 0, read);
+                }
                 bytesRead += read;
                 sawContent = true;
                 endedWithNewline = buffer[read - 1] == '\n';
@@ -370,29 +436,64 @@ public class RepositoryIntakeService {
                         }
                     }
                 }
-                if (binary || (!fullRead && bytesRead >= 8192)) {
+                if (binary || (!fullRead && bytesRead >= effectiveReadLimit)) {
                     break;
                 }
-                if (bytesRead >= readLimit) {
+                if (bytesRead >= effectiveReadLimit) {
                     break;
                 }
             }
         } catch (IOException exception) {
-            return new FileInspection(false, 0, "unreadable", bytesRead, true);
+            return new FileInspection(false, 0, "unreadable", bytesRead, true, "", false);
         }
         if (source && sawContent && !binary && !endedWithNewline) {
             lines++;
         }
-        return new FileInspection(binary, lines, hex(fileDigest.digest()), bytesRead, bytesRead < size);
+        boolean partial = bytesRead < size;
+        if (source && partial && !binary && bytesRead > 0 && lines > 0) {
+            lines = Math.max(lines, Math.round((double) lines * size / bytesRead));
+        }
+        String text = boundedText == null || binary
+            ? ""
+            : boundedText.toString(StandardCharsets.UTF_8);
+        return new FileInspection(binary, lines, hex(fileDigest.digest()), bytesRead, partial, text, false);
     }
 
-    private void inspectWorkspaceManifest(Path file, String relative, ScanAccumulator accumulator) {
+    private long effectiveSourceSampleBytes() {
+        return maxSourceSampleBytes > 0 ? maxSourceSampleBytes : 65_536;
+    }
+
+    private int effectiveSourceContentSamples() {
+        return maxSourceContentSamples > 0 ? maxSourceContentSamples : 1_500;
+    }
+
+    private static FileInspection metadataOnlySourceInspection(
+        long size,
+        String language,
+        ScanAccumulator accumulator
+    ) {
+        long sampledBytes = accumulator.sampledSourceBytes.getOrDefault(language, 0L);
+        long sampledLines = accumulator.sampledSourceLines.getOrDefault(language, 0L);
+        if (sampledBytes <= 0 || sampledLines <= 0) {
+            sampledBytes = accumulator.sampledSourceBytes.values().stream().mapToLong(Long::longValue).sum();
+            sampledLines = accumulator.sampledSourceLines.values().stream().mapToLong(Long::longValue).sum();
+        }
+        double observedBytesPerLine = sampledBytes > 0 && sampledLines > 0
+            ? (double) sampledBytes / sampledLines
+            : 44;
+        double bytesPerLine = Math.max(12, Math.min(160, observedBytesPerLine * 0.6 + 44 * 0.4));
+        long estimatedLines = size <= 0 ? 0 : Math.max(1, Math.round(size / bytesPerLine));
+        return new FileInspection(false, estimatedLines, "metadata-estimate", 0, false, "", true);
+    }
+
+    private static FileInspection metadataOnlyOtherInspection(boolean binary) {
+        return new FileInspection(binary, 0, "metadata-only", 0, false, "", false);
+    }
+
+    private void inspectWorkspaceManifest(String text, String relative, ScanAccumulator accumulator) {
         try {
-            if (Files.size(file) > 262_144) {
-                return;
-            }
-            String text = Files.readString(file, StandardCharsets.UTF_8);
-            String lowerName = file.getFileName().toString().toLowerCase(Locale.ROOT);
+            if (text == null || text.isBlank()) return;
+            String lowerName = Path.of(relative).getFileName().toString().toLowerCase(Locale.ROOT);
             if ("package.json".equals(lowerName)) {
                 JsonNode json = objectMapper.readTree(text);
                 JsonNode workspaces = json.path("workspaces");
@@ -603,6 +704,11 @@ public class RepositoryIntakeService {
             || lower.endsWith(".designer.cs") || lower.endsWith(".g.cs");
     }
 
+    private static boolean knownBinary(String lower) {
+        return lower.matches(".*\\.(?:png|jpe?g|gif|webp|ico|bmp|tiff?|pdf|zip|gz|tgz|7z|rar|jar|war|class"
+            + "|exe|dll|so|dylib|woff2?|ttf|otf|mp3|wav|mp4|mov|avi|sqlite|db|bin)$");
+    }
+
     private static boolean isSensitive(String lower) {
         String fileName = lower.substring(lower.lastIndexOf('/') + 1);
         return (fileName.startsWith(".env") && !fileName.equals(".env.example"))
@@ -694,8 +800,12 @@ public class RepositoryIntakeService {
         Map<String, ModuleSignal> modules,
         Map<String, List<String>> engineeringSignals,
         List<String> workspaceSignals,
-        List<String> entryCandidates
+        List<String> entryCandidates,
+        ScanIoMetrics ioMetrics
     ) {
+    }
+
+    public record ScanIoMetrics(int filesRead, int cacheHits, long bytesRead) {
     }
 
     public record ScannedFile(
@@ -719,7 +829,18 @@ public class RepositoryIntakeService {
     ) {
     }
 
-    private record FileInspection(boolean binary, long lines, String contentHash, long bytesRead, boolean partial) {
+    private record FileInspection(
+        boolean binary,
+        long lines,
+        String contentHash,
+        long bytesRead,
+        boolean partial,
+        String boundedText,
+        boolean metadataOnly
+    ) {
+    }
+
+    private record CachedFileInspection(String key, FileInspection inspection) {
     }
 
     private static final class ModuleAccumulator {
@@ -742,10 +863,16 @@ public class RepositoryIntakeService {
         long ignoredDirectories;
         long contentBytesRead;
         long partialContentFiles;
+        long metadataOnlySourceFiles;
+        int sourceContentSamples;
+        int openedFiles;
+        int cacheHitFiles;
         int nestedRepositories;
         boolean monorepo;
         boolean truncated;
         final Map<String, Long> languageLines = new HashMap<>();
+        final Map<String, Long> sampledSourceBytes = new HashMap<>();
+        final Map<String, Long> sampledSourceLines = new HashMap<>();
         final List<String> manifests = new ArrayList<>();
         final List<String> warnings = new ArrayList<>();
         final List<ScannedFile> fileDetails = new ArrayList<>();

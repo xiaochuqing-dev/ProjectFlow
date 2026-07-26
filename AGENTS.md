@@ -1,5 +1,16 @@
-<!-- PROJECTFLOW V3.7.0 CONTEXT START -->
-ProjectFlow 当前版本为 V3.7.0。后续 Agent 必须按“任意真实输入 -> 有界 Evidence Discovery -> Evidence Source Map -> Semantic Scout -> 自适应分析计划 -> 成熟工具取证 -> Dynamic Project Profile -> Historical Coverage -> 证据支持的演进 -> ProjectFact / Timeline / Capability / Gateway 消费”理解产品。
+<!-- PROJECTFLOW V3.7.1 CONTEXT START -->
+ProjectFlow 当前版本为 V3.7.1。后续 Agent 必须按“任意真实输入 -> 有界 Evidence Discovery -> Evidence Source Map -> Semantic Scout -> 自适应分析计划 -> 注册 Capability 执行 -> Evidence 校验 -> 条件 Final Synthesis -> Dynamic Project Profile -> Historical Coverage -> 证据支持的演进 -> ProjectFact / Timeline / Capability / Gateway 消费”理解产品。
+
+V3.7.1 Adaptive Execution / Technical-debt Closure 规则（后续 Agent 必须遵守）：
+- Scout 和模型只能请求 capability name 与 evidence ID，不能拼命令、参数、绝对路径或任意文件读取；执行只通过 registry 校验后的 Provider。
+- FILESYSTEM 和 SCIP 复用既有结果；DOC_READER、MANIFEST、AGENT_RESULT、GIT_HISTORY、GIT_TAG、WORKTREE 使用固定参数、有界 item/字符/超时、取消与失败回退。
+- 模型调用总数只能是 0、1 或 2。只有 Execute 产生新的高价值 Evidence 时才允许第二次 Final Synthesis；不得把所有输入强制升级为两次模型调用。
+- 模型上下文必须先按 project intake、manifest、document、structure、Git/history、unknown/conflict、tool result 分配预算，再生成完整 JSON；禁止序列化后 substring。
+- Discovery 必须保留来源类别与模块多样性、压缩重复候选并暴露 cache/read/drop diagnostics；大类不能挤掉测试、CI、migration、infra 等稀缺证据。
+- Historical Coverage 必须拆分 Git metadata、Fact、Tag、document history、Agent result、structural snapshot 和 remote collaboration；提交很多但 0 Fact/0 Tag 不得判为高覆盖。
+- 敏感文件只做 metadata；进入模型、持久化诊断或工具摘要前必须脱敏。完整文档、patch、绝对路径、prompt、raw response、reasoning、Key 和 Authorization 不得持久化。
+- SCIP producer 不得自动下载、静默构建项目、安装全局运行时或修改用户机器。未完成安全 PoC 时保持生产延期和明确 diagnostics。
+- GET understanding/structure/evolution 继续只读持久化结果；执行链只在显式刷新持久化 Job 中运行，不写回 ProjectFact、Timeline、Capability 或已有 Evolution。
 
 V3.7 Universal Evidence Intelligence / Adaptive Analysis 规则（后续 Agent 必须遵守）：
 - 不预设项目一定有源码、Git、README、前端、后端、数据库、架构或完整历史；没有证据的视图可以不出现。
@@ -212,7 +223,7 @@ V3.3.3 仍有效的关键决策：
 - 需要模型理解的入口（分析新变化、分析项目能力）必须有模型配置前置检查；未配置模型时不生成低质量本地模板结果，明确提示去配置模型。
 - 规则负责证据事实，模型负责灵活理解；正常客观事实自动记录，用户只处理主观编辑和异常关注项。
 <!-- PROJECTFLOW V3.6.0 CONTEXT END -->
-<!-- PROJECTFLOW V3.7.0 CONTEXT END -->
+<!-- PROJECTFLOW V3.7.1 CONTEXT END -->
 
 # ProjectFlow Local Rules
 

@@ -268,7 +268,19 @@ public final class ProjectUnderstandingDtos {
         long skippedCount,
         Map<String, Long> categoryCounts,
         List<ProjectEvidenceSourceResponse> sources,
-        List<String> warnings
+        List<String> warnings,
+        EvidenceDiversityMetrics diversityMetrics
+    ) {
+    }
+
+    public record EvidenceDiversityMetrics(
+        Map<String, Integer> selectedByCategory,
+        int quotaDropCount,
+        int duplicateCompressionCount,
+        double categoryCoverage,
+        int currentEvidenceCount,
+        int historicalEvidenceCount,
+        int sampleCacheHitCount
     ) {
     }
 
@@ -345,7 +357,83 @@ public final class ProjectUnderstandingDtos {
         List<String> gapPeriods,
         Map<String, String> confidenceByPeriod,
         double overallCoverage,
-        List<String> limitations
+        List<String> limitations,
+        HistoricalCoverageBreakdown breakdown
+    ) {
+    }
+
+    public record HistoricalCoverageBreakdown(
+        double gitMetadataCoverage,
+        double factCoverage,
+        double tagAnchorCoverage,
+        double documentHistoryCoverage,
+        double agentEvidenceCoverage,
+        double structuralSnapshotCoverage,
+        double remoteCollaborationCoverage,
+        int sampledCommitCount,
+        boolean commitSampleTruncated,
+        List<HistoricalPeriodCoverage> periods
+    ) {
+    }
+
+    public record HistoricalPeriodCoverage(
+        String period,
+        long commitCount,
+        long factLinkedCommitCount,
+        int tagAnchorCount,
+        int documentEvidenceCount,
+        int agentEvidenceCount,
+        double confidence,
+        boolean sampled,
+        String limitation
+    ) {
+    }
+
+    public record AnalysisToolEvidenceResponse(
+        String id,
+        String capability,
+        String category,
+        String sourceType,
+        String summary,
+        List<String> evidenceRefs
+    ) {
+    }
+
+    public record AnalysisExecutionDiagnostic(
+        String capability,
+        String status,
+        long durationMs,
+        int selectedItemCount,
+        int producedEvidenceCount,
+        int consumedChars,
+        String message
+    ) {
+    }
+
+    public record AnalysisExecutionResponse(
+        String resultVersion,
+        String cacheKey,
+        String sourceRevision,
+        List<String> requestedCapabilities,
+        List<String> executedCapabilities,
+        List<String> reusedCapabilities,
+        List<AnalysisToolEvidenceResponse> evidence,
+        List<AnalysisExecutionDiagnostic> diagnostics,
+        long durationMs,
+        boolean budgetExhausted,
+        Instant producedAt,
+        String invalidationReason
+    ) {
+    }
+
+    public record ContextPackingDiagnostics(
+        int maxChars,
+        int totalChars,
+        Map<String, Integer> selectedItems,
+        Map<String, Integer> droppedItems,
+        Map<String, Integer> charsBySection,
+        List<String> truncationReasons,
+        boolean validJson
     ) {
     }
 
@@ -382,7 +470,10 @@ public final class ProjectUnderstandingDtos {
         long totalTimeMs,
         boolean cacheHit,
         double historicalCoverage,
-        double structureCoverage
+        double structureCoverage,
+        int inventoryFilesRead,
+        int inventoryCacheHits,
+        int sampleCacheHits
     ) {
     }
 
@@ -448,6 +539,8 @@ public final class ProjectUnderstandingDtos {
         DynamicProjectProfileResponse dynamicProfile,
         HistoricalCoverageResponse historicalCoverage,
         EvolutionPreviewResponse evolutionPreview,
+        AnalysisExecutionResponse analysisExecution,
+        ContextPackingDiagnostics contextPacking,
         UnderstandingAnalysisMetrics analysisMetrics
     ) {
     }
