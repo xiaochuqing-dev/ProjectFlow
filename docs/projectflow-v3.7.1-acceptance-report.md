@@ -29,14 +29,14 @@ The release also replaces serialized-string truncation with complete-JSON contex
 | TypeScript/production build | passed |
 | Playwright | first full run 7/8; the only retry-job timing failure passed an isolated rerun; GitHub full run remains blocking |
 | Hermes / Obsidian | 5/5 and 18/18 passed |
-| PostgreSQL 16 Testcontainers | pending GitHub Actions |
+| PostgreSQL 16 Testcontainers | PASS in GitHub Actions run `30188046183` |
 | Real-repository benchmark | five real repositories passed with 0 model requests; see product acceptance |
 | Root launcher | `Start-ProjectFlow.bat -NoBrowser` rebuilt V3.7.1, started backend/frontend, passed health checks and wrote `logs/last-embedded-build.json` |
 | Real Provider | SKIPPED: no safe user-owned key was supplied |
 
 ## Required acceptance answers
 
-A. Current master final version: pending merge; the release target and working version are V3.7.1.
+A. Current master version: V3.7.1. The final functional SHA is `bb00ee36dcda1186fb832c0ba67890f3d3c84c42`.
 
 B. V3.7 PR final status: PR #3 is MERGED at `bda4017d066d7a858058beb6af0f0a307697396d`.
 
@@ -86,15 +86,15 @@ X. Real Provider status: explicitly SKIPPED because no safe user-owned key was s
 
 Y. Backend tests: 346 passed, 0 failure/error; the one skipped test requires an explicit real-repository path and was separately run against all five repositories.
 
-Z. PostgreSQL: local Docker daemon was unavailable; H2 passed and PostgreSQL 16 Testcontainers remains a blocking GitHub Actions gate.
+Z. PostgreSQL: local Docker daemon was unavailable; PostgreSQL 16 Testcontainers passed on the final functional master run `30188046183`.
 
 AA. Frontend: TypeScript, production build and 49 contracts passed.
 
-AB. Playwright: first full run passed 7/8; its only retry-job timing failure passed an isolated rerun 1/1. The GitHub full 8-test run remains the release authority.
+AB. Playwright: the first local full run passed 7/8 and its only retry-job timing failure passed an isolated rerun 1/1. The release-authority GitHub browser job passed on PR runs `30187839851` and `30187841240`, and on final functional master run `30188046183`.
 
 AC. Hermes/Obsidian: 5 MCP tests and 18 projection tests passed.
 
-AD. Product Acceptance: local behavior and launcher are PASS with one disclosed Playwright timing retry; complete GitHub CI remains the final release gate.
+AD. Product Acceptance: PASS. Local behavior and launcher passed; the final functional master run passed all blocking GitHub CI jobs.
 
 AE. Known risks: process-local cache rebuild after restart; LOC is an estimate without scc; redaction is not a full security scanner; Git history is sampled metadata; no real-model quality claim; no automatic SCIP production.
 
@@ -108,11 +108,11 @@ AH. Documentation commit: `9eb89b25f83f8a2e4326f9fc6503baaa81b1c6a4`
 
 AI. Pull request: #4, `https://github.com/xiaochuqing-dev/ProjectFlow/pull/4`
 
-AJ. PR merge SHA: pending
+AJ. PR merge SHA: `34357c9731313e2e020ba2c361977d19d72d5365`
 
-AK. Final master SHA: pending
+AK. Final functional master SHA: `bb00ee36dcda1186fb832c0ba67890f3d3c84c42`. The acceptance-report publication commit is its documentation-only successor.
 
-AL. Final CI run IDs/status: pending
+AL. Final CI run IDs/status: PR-head push `30187839851` PASS; PR `30187841240` PASS; final functional master `30188046183` PASS. The real DeepSeek job was explicitly SKIPPED because no safe user-owned key was supplied; every blocking job passed.
 
 ## Known limits
 

@@ -22,13 +22,12 @@
   ],
   "verification": {
     "build": "Frontend production build and Start-ProjectFlow.bat -NoBrowser passed for V3.7.1; launcher health evidence written to logs/last-embedded-build.json.",
-    "tests": "Backend 346 passed with one explicit-path benchmark skipped and separately executed on five real repositories; frontend contracts 49 passed; Hermes 5 passed; Obsidian 18 passed; Playwright first full run 7/8 and the sole timing failure passed isolated rerun; PostgreSQL remains a blocking GitHub CI gate.",
+    "tests": "Backend 346 passed with one explicit-path benchmark skipped and separately executed on five real repositories; frontend contracts 49 passed; Hermes 5 passed; Obsidian 18 passed; PR and final functional master CI passed backend/H2, PostgreSQL 16 Testcontainers, frontend, Playwright, sensitive-content, Hermes and Obsidian blocking jobs.",
     "manualCheck": "Five real repositories were inspected with bounded 0-model benchmarks; Docker was unavailable locally; no safe real Provider key was supplied, so real semantic quality is explicitly SKIPPED."
   },
   "unfinished": [
     "Real Provider semantic-quality acceptance requires a user-owned safe key in a separate controlled run.",
-    "Automatic SCIP producer invocation remains deferred until an opt-in sandboxed PoC proves runtime, build, network and side-effect safety.",
-    "Final PR merge and master CI evidence are written into the acceptance report during publication."
+    "Automatic SCIP producer invocation remains deferred until an opt-in sandboxed PoC proves runtime, build, network and side-effect safety."
   ],
   "sedimentCandidates": [
     "可复用能力：以 capability registry 隔离模型意图与固定参数工程执行，并用 evidence ID 校验 Tool Result。",
