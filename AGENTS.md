@@ -1,7 +1,18 @@
-<!-- PROJECTFLOW V3.7.1 CONTEXT START -->
-ProjectFlow 当前版本为 V3.7.1。后续 Agent 必须按“任意真实输入 -> 有界 Evidence Discovery -> Evidence Source Map -> Semantic Scout -> 自适应分析计划 -> 注册 Capability 执行 -> Evidence 校验 -> 条件 Final Synthesis -> Dynamic Project Profile -> Historical Coverage -> 证据支持的演进 -> ProjectFact / Timeline / Capability / Gateway 消费”理解产品。
+<!-- PROJECTFLOW V3.7.2 CONTEXT START -->
+ProjectFlow 当前版本为 V3.7.2。后续 Agent 必须按“任意真实输入 -> 有界 Evidence Discovery -> Evidence Source Map -> Semantic Scout -> 自适应分析计划 -> 注册 Capability 执行 -> High-value Evidence Gate -> 条件 Final Synthesis / 当前结果降级 -> Dynamic Project Profile -> Historical Coverage -> 证据支持的演进 -> ProjectFact / Timeline / Capability / Gateway 消费”理解产品。
 
-V3.7.1 Adaptive Execution / Technical-debt Closure 规则（后续 Agent 必须遵守）：
+V3.7.2 Real Model Quality / Integration Boundary 规则（后续 Agent 必须遵守）：
+- 内部 Eval 只属于测试、CI artifact 和阶段报告；hallucination、accuracy、repeatability、cost、model score 不得进入产品 API、Snapshot、数据库或 UI。
+- 空目录、空白文本继续 0 模型；普通语义路径 1 次；只有可审计 High-value Evidence Gate 通过才允许第二次。门控必须暴露 trigger/skipped reasons 与 evidence IDs，不能用“有任意工具文本”代替高价值判断。
+- Final Synthesis timeout、取消、Schema 或 Provider 失败必须保留 Stage 1、已校验工具证据和当前降级档案，状态为 FAILED_DEGRADED；不得回滚成旧快照。
+- Agent Result 只作 PROCESS_EVIDENCE，不自动成为 ProjectFact；token、耗时、request count、模型名只作 PROCESS_METADATA，不能证明能力、质量、成熟度或完成结果。
+- 当前源码不能独自证明历史；README、历史文档与源码冲突时保留证据、unknown/currentness/conflict，不得替用户裁决。
+- Tool cache identity 必须覆盖 source/content/structure revision、capability、deep-read target、Provider version、execution/semantic budget、strategy version 和相关 source signatures。
+- 外部集成只通过 Evidence Source Adapter、Intelligence Provider Adapter、Projection Adapter；ExternalEvidenceEnvelope 必须 project-bound、bounded、revisioned、redacted、raw-payload-free，且不得自行晋升为事实。
+- Semantic Scout / Final Synthesis 当前 Prompt version 为 v3。校准前真实 pilot 暴露了 Tool/View/Repeatability 缺口，最终 v3 又因唯一 Provider HTTP 402 未完成；在同一 Ground Truth 上重跑并达到全部门槛前，V3.7.2 质量状态必须保持 NOT PASSED，不得进入 V3.8。
+- ProjectFlow 只拥有项目事实、当前解释、历史覆盖、证据支持的演进及其展示；不得扩张为 Coding Agent、Agent Manager、Provider Switcher、Token Dashboard、模型排行榜、GitHub/GitLab/Obsidian/Hermes 替代品、通用 RAG/Workflow、Parser/SCIP Producer、Updater 或工具控制中心。
+
+V3.7.1 Adaptive Execution / Technical-debt Closure 规则（仍然有效）：
 - Scout 和模型只能请求 capability name 与 evidence ID，不能拼命令、参数、绝对路径或任意文件读取；执行只通过 registry 校验后的 Provider。
 - FILESYSTEM 和 SCIP 复用既有结果；DOC_READER、MANIFEST、AGENT_RESULT、GIT_HISTORY、GIT_TAG、WORKTREE 使用固定参数、有界 item/字符/超时、取消与失败回退。
 - 模型调用总数只能是 0、1 或 2。只有 Execute 产生新的高价值 Evidence 时才允许第二次 Final Synthesis；不得把所有输入强制升级为两次模型调用。
@@ -223,7 +234,7 @@ V3.3.3 仍有效的关键决策：
 - 需要模型理解的入口（分析新变化、分析项目能力）必须有模型配置前置检查；未配置模型时不生成低质量本地模板结果，明确提示去配置模型。
 - 规则负责证据事实，模型负责灵活理解；正常客观事实自动记录，用户只处理主观编辑和异常关注项。
 <!-- PROJECTFLOW V3.6.0 CONTEXT END -->
-<!-- PROJECTFLOW V3.7.1 CONTEXT END -->
+<!-- PROJECTFLOW V3.7.2 CONTEXT END -->
 
 # ProjectFlow Local Rules
 

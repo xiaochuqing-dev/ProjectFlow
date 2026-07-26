@@ -43,7 +43,9 @@ class RealDeepSeekIT {
             new RealCase(ModelTaskType.CAPABILITY_INTERPRETATION,
                 "只返回 JSON：{\"summary\":\"统一模型网关\",\"problem\":\"避免参数漂移\",\"value\":\"提高可靠性\",\"readme\":\"统一模型入口\",\"resume\":\"完成模型网关治理\",\"interview\":\"说明动态预算\"}"),
             new RealCase(ModelTaskType.PROJECT_CAPABILITY_ANALYSIS,
-                "只返回 JSON：{\"capabilities\":[{\"name\":\"模型可靠性治理\",\"summary\":\"统一参数与恢复策略\",\"sourceIndexes\":[\"S1\"]}]}")
+                "只返回 JSON：{\"capabilities\":[{\"name\":\"模型可靠性治理\",\"summary\":\"统一参数与恢复策略\",\"sourceIndexes\":[\"S1\"]}]}"),
+            new RealCase(ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS,
+                "只返回 JSON：{\"dynamicProfile\":{\"summary\":\"最终归纳\",\"sections\":[]},\"unknowns\":[]}")
         );
         for (RealCase testCase : cases) {
             var response = gateway.callStructured(provider, testCase.prompt(), testCase.task());

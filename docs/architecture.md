@@ -303,9 +303,29 @@ sequenceDiagram
 - Passwords are stored only as BCrypt hashes.
 - JWT secret must come from environment variables.
 - Every project-owned resource is filtered by authenticated user ownership.
-- AI API keys are backend-only environment variables.
+- AI API keys remain backend-only. Environment injection is preferred for automation; local Provider configuration currently stores keys in the local application database for compatibility and never returns them through DTOs.
 - Real `.env` files are ignored by Git.
 - Parse errors and AI errors return safe messages without leaking secrets.
+
+## V3.7.2 Quality and Integration Boundary
+
+The internal evaluation harness is test-only code under `backend/src/test`. Its 18-case ground truth, observations, metric calculations and JSON/Markdown writer have no controller, entity, repository or frontend route. Default artifacts live under Maven `target`; committed reports contain only aggregate, scoped results.
+
+Semantic Scout remains `PROJECT_UNDERSTANDING_SNAPSHOT`. Final Synthesis is now the separately registered `PROJECT_UNDERSTANDING_FINAL_SYNTHESIS` task because its contract contains only `dynamicProfile` and `unknowns`; this avoids schema-repair calls caused by reusing the Scout schema while retaining one Model Gateway and the same 0/1/2 logical-stage ceiling.
+
+`HighValueEvidenceGate` replaces the V3.7.1 “any tool prompt exists” shortcut. It rejects missing, short, duplicate, clean-worktree metadata and unrecognized semantic output, and accepts only validated substantive deep content, history anchors, changed-worktree detail or conflict/currentness evidence. `AnalysisExecutionResponse.secondStageDecision` exposes the deterministic decision without exposing eval scores.
+
+If the conditional Final Synthesis call fails, `ProjectUnderstandingService` retains the Stage 1 root, merged Source Map, validated Tool Evidence, current Dynamic Profile and bounded diagnostics. The snapshot remains `CURRENT` with `finalSynthesisStatus=FAILED_DEGRADED`; failures before Stage 1 still use the prior stale/deterministic behavior.
+
+Analysis execution cache identity now hashes source/content/structure revisions, canonical capabilities, deep-read targets, Provider versions, execution and semantic budgets, strategy version, and relevant Source Map signatures. There is still no persistent tool-result cache in V3.7.2.
+
+Three narrow contracts define future integrations:
+
+- Evidence Source Adapter normalizes bounded external material into `ExternalEvidenceEnvelope`.
+- Intelligence Provider Adapter consumes normalized envelopes and returns evidence-linked interpretation without owning facts.
+- Projection Adapter writes/exports an existing ProjectFlow view without becoming a source of truth.
+
+Every external envelope is project-bound, source-revisioned, relative-locator-only, redacted and `rawPayloadStored=false`. Validation rejects unsafe locators, missing bindings and duplicates. No concrete external product PoC is shipped because the contracts and validator prove the boundary without adding network, auth or storage scope.
 
 ## V3.7.1 Adaptive Execution Boundary
 
@@ -317,7 +337,7 @@ The explicit refresh job owns the only executable understanding path:
 4. `AnalysisExecutionCoordinator` reuses FILESYSTEM/SCIP output and delegates executable capabilities to `AnalysisCapabilityProvider`.
 5. Providers use fixed command arrays, safe relative paths, allow-listed evidence IDs, item/character/time budgets and cancellation checks.
 6. Produced Tool Result evidence is redacted and reference-validated before it joins the Source Map.
-7. `FinalProfileSynthesisService` may issue one second Model Gateway request only when execution produced new high-value evidence.
+7. `FinalProfileSynthesisService` may issue one second Model Gateway request only when the deterministic high-value evidence gate triggers.
 
 GET understanding, structure and evolution endpoints remain persistence-only reads. Execution output is replaceable snapshot data and never becomes ProjectFact, Timeline, Capability or Evolution truth.
 

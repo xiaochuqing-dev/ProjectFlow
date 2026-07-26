@@ -25,6 +25,7 @@ import com.projectflow.dto.ProjectUnderstandingDtos.EvidenceSourceMapResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectEvidenceSourceResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectStructureIndexResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.RepositoryIntakeResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.SecondStageDecisionResponse;
 import com.projectflow.service.AnalysisCapabilityProvider.CapabilityRequest;
 import com.projectflow.service.AnalysisCapabilityProvider.CapabilityResult;
 import com.projectflow.service.AnalysisCapabilityProvider.ExecutionBudget;
@@ -32,7 +33,7 @@ import com.projectflow.service.ProjectEvidenceDiscoveryService.PromptEvidence;
 
 @Service
 public class AnalysisExecutionCoordinator {
-    private static final String RESULT_VERSION = "analysis-execution-v1";
+    private static final String RESULT_VERSION = "analysis-execution-v2";
     private static final int MAX_EXECUTED_CAPABILITIES = 8;
     private static final int MAX_TOTAL_RESULT_CHARS = 80_000;
     private static final Set<String> REUSED_CAPABILITIES = Set.of("FILESYSTEM", "SCIP");
@@ -160,9 +161,15 @@ public class AnalysisExecutionCoordinator {
         }
 
         EvidenceSourceMapResponse mergedSourceMap = mergeSourceMap(sourceMap, evidence);
+        SecondStageDecisionResponse secondStageDecision = HighValueEvidenceGate.decide(
+            plan,
+            evidence,
+            promptEvidence,
+            sourceMap
+        );
         AnalysisExecutionResponse response = new AnalysisExecutionResponse(
             RESULT_VERSION,
-            cacheKey(intake.sourceRevision(), requested),
+            cacheKey(intake, index, sourceMap, plan, requested),
             intake.sourceRevision(),
             requested,
             List.copyOf(executed),
@@ -172,14 +179,15 @@ public class AnalysisExecutionCoordinator {
             elapsedMs(started),
             budgetExhausted,
             Instant.now(),
-            ""
+            "",
+            secondStageDecision
         );
         return new ExecutionOutcome(
             response,
             mergedSourceMap,
             List.copyOf(promptEvidence),
             Set.copyOf(allowed),
-            !promptEvidence.isEmpty()
+            secondStageDecision.secondStageTriggered()
         );
     }
 
@@ -280,10 +288,93 @@ public class AnalysisExecutionCoordinator {
         );
     }
 
-    private static String cacheKey(String revision, List<String> capabilities) {
+    private String cacheKey(
+        RepositoryIntakeResponse intake,
+        ProjectStructureIndexResponse index,
+        EvidenceSourceMapResponse sourceMap,
+        AdaptiveAnalysisPlanResponse plan,
+        List<String> capabilities
+    ) {
         try {
-            String input = revision + ":" + String.join(",", capabilities);
+            List<String> canonicalCapabilities = capabilities.stream().sorted().toList();
+            List<String> providerVersions = canonicalCapabilities.stream()
+                .map(capability -> capability + "=" + providersVersion(capability))
+                .toList();
+            List<String> budgets = canonicalCapabilities.stream()
+                .map(capability -> capability + "=" + canonicalBudget(budget(capability, MAX_TOTAL_RESULT_CHARS)))
+                .toList();
+            List<String> sourceSignatures = (sourceMap == null || sourceMap.sources() == null
+                ? java.util.stream.Stream.<ProjectEvidenceSourceResponse>empty()
+                : sourceMap.sources().stream())
+                .map(source -> String.join("|",
+                    source.id(),
+                    source.category(),
+                    source.sourceType(),
+                    safeRelative(source.locator()),
+                    source.currentness(),
+                    source.deepReadStatus(),
+                    digest(source.summary()),
+                    String.join(",", source.evidenceRefs() == null ? List.of() : source.evidenceRefs().stream().sorted().toList())
+                ))
+                .sorted()
+                .toList();
+            String input = String.join("\n",
+                "strategy=" + RESULT_VERSION,
+                "sourceRevision=" + intake.sourceRevision(),
+                "contentHash=" + intake.contentHash(),
+                "structureVersion=" + index.indexVersion(),
+                "structureHash=" + index.contentHash(),
+                "capabilities=" + String.join(",", canonicalCapabilities),
+                "deepReadTargets=" + String.join(",", safeList(plan.deepReadTargets()).stream().sorted().toList()),
+                "semanticMode=" + plan.semanticMode(),
+                "maxModelRequests=" + plan.maxModelRequests(),
+                "maxModelInputTokens=" + plan.maxModelInputTokens(),
+                "maxModelTotalTokens=" + plan.maxModelTotalTokens(),
+                "maxDurationMs=" + plan.maxDurationMs(),
+                "historicalStrategy=" + plan.historicalStrategy(),
+                "structureStrategy=" + plan.structureStrategy(),
+                "providerVersions=" + String.join(",", providerVersions),
+                "budgets=" + String.join(",", budgets),
+                "semanticBudgets=" + safeMap(plan.semanticBudgets()).entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .map(entry -> entry.getKey() + "=" + entry.getValue())
+                    .reduce((left, right) -> left + "," + right)
+                    .orElse(""),
+                "sourceSignatures=" + String.join(";", sourceSignatures)
+            );
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(input.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("当前 Java 环境不支持 SHA-256", exception);
+        }
+    }
+
+    private String providersVersion(String capability) {
+        if (REUSED_CAPABILITIES.contains(capability)) return "reused-current-run-v1";
+        return providers.stream()
+            .filter(provider -> provider.supports(capability))
+            .findFirst()
+            .map(AnalysisCapabilityProvider::providerVersion)
+            .orElse("unavailable");
+    }
+
+    private static String canonicalBudget(ExecutionBudget value) {
+        return value.maxItems() + ":" + value.maxCharsPerItem() + ":" + value.maxTotalChars() + ":" + value.timeoutMs();
+    }
+
+    private static List<String> safeList(List<String> values) {
+        return values == null ? List.of() : values;
+    }
+
+    private static Map<String, Integer> safeMap(Map<String, Integer> values) {
+        return values == null ? Map.of() : values;
+    }
+
+    private static String digest(String value) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(
+                (value == null ? "" : value).getBytes(StandardCharsets.UTF_8)
+            );
             return HexFormat.of().formatHex(digest);
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("当前 Java 环境不支持 SHA-256", exception);

@@ -1,0 +1,41 @@
+{
+  "taskGoal": "设计并完成 ProjectFlow V3.7.2 真实模型质量语义校准与集成边界锁定，在不扩张产品面的前提下完成工程门禁、报告和 GitHub 收口。",
+  "actualChanges": [
+    "新增仅位于测试边界的 18-case Ground Truth、固定/真实 Provider Eval Harness、Unsupported Claim、Evidence、Shape、Tool、View、Conflict、Repeatability、Stage Gain、Token、Latency 与安全失败分类。",
+    "Semantic Scout 和 Final Synthesis 升级为 v3 Prompt：原子多标签 shape、逐 evidence assessment、明确 unknown/currentness/conflict、PROCESS_EVIDENCE/PROCESS_METADATA 隔离、信息缺口驱动工具与保守 deep read。",
+    "Final Synthesis 使用独立 ModelTaskType Schema；High-value Evidence Gate 只接受经过验证的新增深读、历史、工作树或冲突证据，并持久化触发/跳过原因。",
+    "Final Synthesis 的 Provider、timeout、schema、cancel 和 interruption 失败保留 Stage 1、已校验 Tool Evidence、Source Map 与当前 Dynamic Profile，并公开 FAILED_DEGRADED 状态。",
+    "工具执行 cache identity 补齐 source/content/structure revision、capability、deep-read target、Provider version、执行/模型预算、策略与 Source Map 签名，不虚构持久 cache。",
+    "新增 EvidenceSourceAdapter、IntelligenceProviderAdapter、ProjectionAdapter、ExternalEvidenceEnvelope 与无持久化 validator，拒绝 raw payload、绝对路径、缺项目绑定和重复来源。",
+    "完成 V3.7.2 版本、CI、README、Context、架构/API、开源调研、ADR、Product Acceptance、Model Evaluation 和 A-AV Acceptance Report。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/HighValueEvidenceGate.java",
+    "backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java",
+    "backend/src/main/java/com/projectflow/service/AnalysisExecutionCoordinator.java",
+    "backend/src/main/java/com/projectflow/service/SemanticScoutService.java",
+    "backend/src/main/java/com/projectflow/service/FinalProfileSynthesisService.java",
+    "backend/src/test/java/com/projectflow/eval/ProjectFlowRealModelEvalIT.java",
+    "backend/src/test/resources/projectflow-eval/ground-truth.json",
+    "backend/src/main/java/com/projectflow/integration/ExternalEvidenceEnvelopeValidator.java",
+    "frontend/src/app/project-intelligence/understanding/page.tsx",
+    "docs/projectflow-v3.7.2-model-evaluation.md",
+    "docs/projectflow-v3.7.2-acceptance-report.md"
+  ],
+  "verification": {
+    "build": "Frontend contracts 50/50、TypeScript/lint、production build、Playwright 8/8 通过；Start-ProjectFlow.bat -NoBrowser 完成依赖重建、前后端 HTTP 200 和 logs/last-embedded-build.json 证据。",
+    "tests": "Backend Surefire 365 项零失败；PostgreSQL 16 Testcontainers 3/3；Hermes 5 项；Obsidian 18 项；Eval、High-value Gate、Final degradation、cache key、Adapter envelope 和产品指标隔离测试通过。",
+    "manualCheck": "真实 DeepSeek pilot 38 次无调用失败，但 Tool/View/Repeatability 未达门槛；移除 Ground Truth 辅助后唯一 Provider 返回 HTTP 402。最终结论保持 NOT PASSED，不提交 raw artifact、Key、Prompt 或 reasoning。"
+  },
+  "unfinished": [
+    "补充或轮换可用真实模型测试额度后，在 deepseek-v4-pro、semantic-scout-v3、final-synthesis-v3 和同一 Ground Truth 上重跑完整批次；全部门槛通过前不得进入 V3.8。",
+    "本地 Provider Key 仍是数据库兼容存储，桌面产品化前必须迁移 OS secure storage。",
+    "前端 npm audit 报告 3 个既有 high severity，未在本轮用 breaking force-fix 扩大范围。"
+  ],
+  "sedimentCandidates": [
+    "可复用能力：以独立人工 Ground Truth、Prompt/code/model/revision 元数据和禁止 raw response 的工件边界做真实模型验收。",
+    "可复用能力：用确定性 High-value Evidence Gate 隔离逻辑第二阶段，把触发与跳过原因作为产品诊断而非评测分数。",
+    "可复用能力：第二阶段失败保留第一阶段与已校验证据，并用明确降级状态替代整批失败。",
+    "可复用能力：外部 Adapter 只输出项目绑定、时间角色、currentness、confidence、evidence refs 和脱敏摘要的 Envelope，不直接晋升事实。"
+  ]
+}

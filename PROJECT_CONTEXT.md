@@ -6,7 +6,7 @@ Use this file as the first read for substantial ProjectFlow work. It is a compac
 
 ## Product Position
 
-ProjectFlow V3.7.1 is a local-first universal evidence understanding and project memory system for AI-assisted developers. It does not assume a fixed project shape: it discovers the material that exists, lets a bounded Scout request registered capabilities, executes deterministic providers under fixed limits, validates evidence references, and conditionally synthesizes only the views supported by evidence. Replaceable understanding remains separate from durable Project Facts, Timeline, lifecycle Capability Map, Project Memory Gateway, Hermes reads, and Obsidian projection.
+ProjectFlow V3.7.2 is a local-first universal evidence understanding and project memory system for AI-assisted developers. It does not assume a fixed project shape: it discovers the material that exists, lets a bounded Scout request registered capabilities, executes deterministic providers under fixed limits, validates evidence references, and conditionally synthesizes only the views supported by evidence. Replaceable understanding remains separate from durable Project Facts, Timeline, lifecycle Capability Map, Project Memory Gateway, Hermes reads, and Obsidian projection.
 
 ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation. ProjectFlow V3.5.0 added the bounded intake foundation retained by V3.6.0 and V3.7.0.
 
@@ -20,6 +20,13 @@ Current direction:
 
 V3.7 focus:
 
+- V3.7.2 calibrates Semantic Scout and Final Synthesis with a ProjectFlow-only 18-case internal evaluation harness. Fixed and real Provider results are local/CI artifacts; hallucination, accuracy, repeatability, cost and model-comparison metrics never enter product APIs, snapshots, databases or UI.
+- The successful real-Provider pilot found Tool Selection, Dynamic View and repeatability below the final gates. Semantic Scout/Final Synthesis v3 is implemented, but its final run is blocked by the only Provider returning HTTP 402; quality remains NOT PASSED and V3.8 is not approved until an equivalent rerun passes.
+- `HighValueEvidenceGate` triggers a second call only for validated substantive deep content, history anchors, current worktree details or conflict/currentness evidence. The persisted decision contains trigger/skipped reasons and evidence IDs.
+- Final Synthesis failures use `FAILED_DEGRADED`: Stage 1, validated tool evidence, trust diagnostics and a current limited profile survive timeout, cancellation, invalid schema and Provider errors.
+- Analysis execution cache identity includes source/content/structure revisions, requested capabilities, deep-read targets, Provider version, execution/semantic budgets, strategy version and relevant source signatures.
+- External integrations are limited to Evidence Source, Intelligence Provider and Projection adapter contracts. `ExternalEvidenceEnvelope` is project-bound, revisioned, redacted, raw-payload-free and never promotes itself to ProjectFact.
+- ProjectFlow owns Facts, current interpretation, historical coverage, evidence-backed evolution and their presentation. It does not become an agent runtime/manager, Provider switcher, token dashboard, model leaderboard, repository replacement, generic RAG/workflow engine, parser/SCIP producer, updater or tool control center.
 - V3.7.1 completes Discover → Scout → Plan → Execute → Validate → Synthesize. `AnalysisExecutionCoordinator` executes only validated capability names; providers own fixed commands and safe file access.
 - FILESYSTEM and SCIP reuse already computed results. `BoundedLocalAnalysisCapabilityProvider` supplies bounded DOC_READER, MANIFEST, AGENT_RESULT, GIT_HISTORY, GIT_TAG and WORKTREE evidence without persisting full documents, patches, prompts or command construction from model output.
 - Semantic analysis is capped at 0/1/2 Model Gateway requests. The second `FinalProfileSynthesisService` call is conditional on newly executed high-value evidence.
@@ -58,7 +65,7 @@ V3.4.5 focus:
 - ProjectFlow alone owns retry, cancellation, concurrency, dynamic budgets, finish/usage normalization, truncation/reasoning recovery and Schema repair; SDK retry is disabled.
 - Provider protocol, endpoint override, auth mode, timeout and capability overrides are explicit. Legacy providers migrate idempotently to Chat Completions without changing keys or defaults.
 - ProjectMemorySearchService and ProjectEvidenceTraceService are focused read slices behind the unchanged Project Memory Gateway API.
-- Real-data audit findings remain traceable; generic historical facts are not silently rewritten. The next phase is Automatic Memory Maintenance; full frontend rebuilding remains later.
+- Real-data audit findings remain traceable; generic historical facts are not silently rewritten. The old “Automatic Memory Maintenance next” statement is historical and superseded; V3.8 Evidence-backed Evolution Reconstruction follows only after V3.7.2 quality acceptance.
 
 V3.4.4 focus (still applies):
 

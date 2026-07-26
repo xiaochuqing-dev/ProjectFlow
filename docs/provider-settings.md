@@ -9,3 +9,7 @@ The current built-in profiles cover DeepSeek chat, DeepSeek reasoning, standard 
 A connection test uses the same gateway and capability policy as business analysis, but only proves basic URL, model and Key availability. It does not prove long-input quality or Schema compliance.
 
 Keys are never returned to the frontend. Blank edits retain the existing key and explicit clearing is required. Diagnostics never include keys, Authorization, full prompts, raw responses, or reasoning text.
+
+V3.7.2 distinguishes logical ProjectFlow model stages from transport/recovery requests. Empty/blank inputs use 0 logical calls, ordinary Semantic Scout work uses 1, and Final Synthesis uses at most 1 additional logical call after the high-value evidence gate. Transport retry, truncation recovery and schema repair remain Model Gateway diagnostics and do not authorize an extra business stage.
+
+Real-model evaluation is an internal test workflow, not a Provider comparison page. Hallucination, accuracy, repeatability, cost and model-score fields must not be added to Provider DTOs or settings UI.

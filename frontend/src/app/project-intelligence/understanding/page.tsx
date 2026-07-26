@@ -145,6 +145,7 @@ function ProjectUnderstandingContent() {
             <>
               <Badge label={classificationLabel(snapshot.classification)} tone="slate" />
               <Badge label={snapshot.currentStatus === "CURRENT" ? "当前" : "已过期"} tone={snapshot.currentStatus === "CURRENT" ? "success" : "warning"} />
+              {snapshot.finalSynthesisStatus === "FAILED_DEGRADED" ? <Badge label="最终归纳已降级" tone="warning" /> : null}
               <Badge label={`证据覆盖 ${percent(snapshot.evidenceCoverage.structureCoverage)}`} tone="slate" />
             </>
           ) : null}
@@ -195,6 +196,12 @@ function UnderstandingView({
   const sourceMap = snapshot.sourceMap;
   return (
     <div className="space-y-5">
+      {snapshot.finalSynthesisStatus === "FAILED_DEGRADED" ? (
+        <div className="flex gap-2 rounded-card border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>最终归纳未完成；当前结果已保留第一阶段理解和已校验工具证据，可按限制继续阅读。</span>
+        </div>
+      ) : null}
       <section className="grid gap-4 rounded-card border border-line bg-white p-5 shadow-card md:grid-cols-2 xl:grid-cols-4">
         <Metric label="文件 / 源码" value={`${snapshot.intake.fileCount} / ${snapshot.intake.sourceFileCount}`} />
         <Metric label="发现 / Scout 来源" value={sourceMap ? `${sourceMap.discoveredEvidenceCount} / ${sourceMap.scoutEvidenceCount}` : "旧快照"} />
@@ -251,6 +258,9 @@ function UnderstandingView({
           {snapshot.analysisExecution ? (
             <div className="mt-4 space-y-2 border-t border-line pt-4 text-xs leading-5 text-muted">
               <p>已执行：{snapshot.analysisExecution.executedCapabilities.join("、") || "无"} · 复用：{snapshot.analysisExecution.reusedCapabilities.join("、") || "无"} · 新证据 {snapshot.analysisExecution.evidence.length}</p>
+              {snapshot.analysisExecution.secondStageDecision ? (
+                <p>高价值证据门控：{snapshot.analysisExecution.secondStageDecision.secondStageTriggered ? "已触发最终归纳" : "未触发"} · 证据 {snapshot.analysisExecution.secondStageDecision.evidenceIds.length}</p>
+              ) : null}
               {snapshot.analysisExecution.diagnostics.filter((item) => item.status !== "SUCCEEDED" && item.status !== "REUSED").slice(0, 4).map((item) => (
                 <p key={`${item.capability}-${item.status}`}>{item.capability}：{executionStatusLabel(item.status)}，{item.message}</p>
               ))}

@@ -26,6 +26,7 @@ import com.projectflow.service.ProjectEvidenceDiscoveryService.PromptEvidence;
 
 @Component
 public class BoundedLocalAnalysisCapabilityProvider implements AnalysisCapabilityProvider {
+    private static final String PROVIDER_VERSION = "bounded-local-capability-v2";
     private static final Set<String> SUPPORTED = Set.of(
         "DOC_READER", "GIT_HISTORY", "GIT_TAG", "WORKTREE", "MANIFEST", "AGENT_RESULT"
     );
@@ -48,6 +49,11 @@ public class BoundedLocalAnalysisCapabilityProvider implements AnalysisCapabilit
     @Override
     public boolean supports(String capability) {
         return SUPPORTED.contains(normalized(capability));
+    }
+
+    @Override
+    public String providerVersion() {
+        return PROVIDER_VERSION;
     }
 
     @Override

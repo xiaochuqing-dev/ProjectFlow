@@ -23,6 +23,8 @@ import com.projectflow.service.ProjectEvidenceDiscoveryService.PromptEvidence;
 
 @Service
 public class FinalProfileSynthesisService {
+    public static final String PROMPT_VERSION = "final-synthesis-v3";
+
     private final ModelGatewayService modelGateway;
     private final BudgetAwareContextPacker contextPacker;
 
@@ -95,6 +97,10 @@ public class FinalProfileSynthesisService {
             必须省略。README 与代码或工作树冲突时保持 unknown/currentness warning。不得输出绝对路径、凭证、
             原始推理、下一步计划或优先级。
 
+            Agent Result 仍只是过程证据，不自动升级为 ProjectFact；token、耗时、request count、模型名等
+            PROCESS_METADATA 不能证明业务能力、质量、成熟度或完成结果。当前源码不能独自证明历史阶段。
+            新工具证据只能修正其直接支持的 claim；与第一阶段冲突时保留冲突和 currentness 限制，不得扩大推断。
+
             只返回 JSON：
             {
               "dynamicProfile":{
@@ -106,13 +112,15 @@ public class FinalProfileSynthesisService {
               },
               "unknowns":[]
             }
-            最多 12 个 Section，每个 Section 最多 10 条 claim；每条 claim 至少一个真实 evidence id。
+            保持第一阶段的原子 shape 与适用维度词汇，不创建 analysis、summary、general 一类无信息 Section。
+            最多 8 个 Section，每个 Section 最多 5 条 claim；每条 claim 至少一个真实 evidence id。
+            Prompt version: final-synthesis-v3。
             完整合法的有界上下文：
             """ + packed.json();
         ModelGatewayService.StructuredModelResponse response = modelGateway.callStructured(
             provider,
             prompt,
-            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+            ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS
         );
         JsonNode root = response.parsed().root();
         return new SynthesisResult(

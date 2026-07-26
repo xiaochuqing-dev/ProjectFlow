@@ -1428,6 +1428,12 @@ export type AnalysisExecution = {
   budgetExhausted: boolean;
   producedAt: string;
   invalidationReason: string;
+  secondStageDecision: {
+    secondStageTriggered: boolean;
+    triggerReasons: string[];
+    skippedReasons: string[];
+    evidenceIds: string[];
+  } | null;
 };
 
 export type RepositoryIntake = {
@@ -1572,6 +1578,13 @@ export type ProjectUnderstandingSnapshot = {
     inventoryCacheHits: number;
     sampleCacheHits: number;
   } | null;
+  finalSynthesisStatus:
+    | "NOT_APPLICABLE"
+    | "PENDING"
+    | "SKIPPED_NO_HIGH_VALUE_EVIDENCE"
+    | "SUCCEEDED"
+    | "FAILED_DEGRADED"
+    | null;
 };
 
 export type ProjectEvolutionBridge = {

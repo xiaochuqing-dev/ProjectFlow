@@ -14,6 +14,10 @@ import com.projectflow.service.ProjectEvidenceDiscoveryService.PromptEvidence;
 public interface AnalysisCapabilityProvider {
     boolean supports(String capability);
 
+    default String providerVersion() {
+        return "analysis-capability-provider-v1";
+    }
+
     CapabilityResult execute(CapabilityRequest request);
 
     record CapabilityRequest(
