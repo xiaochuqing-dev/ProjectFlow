@@ -59,11 +59,11 @@ GLM Provider is available and the one-request structured probe passed, but the c
 | AO. V3.8 entry | BLOCKED |
 | AP. Minimal V3.7.3 scope | Provider-timeout failing cases, Tool Selection reliability, Dynamic View applicability, Repeatability and production/eval Prompt parity |
 | AQ. Implementation SHA | `d0b0fa7dc6af241d00a9d09902b270952971f697` |
-| AR. Documentation SHA | pending PR commit |
-| AS. PR number | pending |
-| AT. PR merge SHA | pending |
-| AU. Final master SHA | pending |
-| AV. CI run IDs/status | pending |
+| AR. Documentation SHA | `48f65df724f3d8bad2a730b61742b95480bf2f1f` |
+| AS. PR number | #6 |
+| AT. PR merge SHA | `00e8294fcd89ab165c356d68b19099e8c21a9b85` |
+| AU. Final functional master SHA | `00e8294fcd89ab165c356d68b19099e8c21a9b85` |
+| AV. CI run IDs/status | PR `30211864937` PASS; functional master `30211953173` PASS |
 | AW. Tag created | NO |
 | AX. Release created | NO |
 
@@ -112,7 +112,7 @@ The run recorded 62742 total tokens. Reliable endpoint-specific real-time curren
 ## Regression and delivery gates
 
 - Backend/H2: 366 tests passed, with one benchmark skipped by its existing condition.
-- PostgreSQL 16 Testcontainers: not passed locally because this machine had no valid Docker environment; final merge remains conditional on the PostgreSQL CI job passing.
+- PostgreSQL 16 Testcontainers: not passed locally because this machine had no valid Docker environment; PR and functional-master CI both passed the PostgreSQL blocking job.
 - Frontend: contracts 50/50, lint and production build passed.
 - Playwright: 8/8 passed.
 - Hermes: 5/5 passed.
@@ -123,4 +123,6 @@ The run recorded 62742 total tokens. Reliable endpoint-specific real-time curren
 
 ## GitHub completion
 
-This section is backfilled only after commit, PR, merge and final master CI evidence exist. No Tag, GitHub Release, binary publication or V3.8 implementation is authorized by this result.
+PR #6 merged after every blocking job passed. PR run `30211864937` and functional-master run `30211953173` both passed Backend/H2, PostgreSQL 16 Testcontainers, Frontend, Playwright, sensitive-content, Hermes and Obsidian jobs. The optional real-Provider job remained skipped because this acceptance used the locally injected process-only Key and did not persist it as a repository secret.
+
+No Tag, GitHub Release, binary publication or V3.8 implementation was created. This metadata-only backfill does not change the evaluated implementation or the `NOT PASSED` quality decision.
