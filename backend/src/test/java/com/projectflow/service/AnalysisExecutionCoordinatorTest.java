@@ -14,7 +14,10 @@ import java.util.concurrent.CancellationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.projectflow.dto.ProjectUnderstandingDtos.AdaptiveAnalysisPlanResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.AnalysisExecutionResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.AnalysisToolEvidenceResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.EvidenceSourceMapResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectEvidenceSourceResponse;
@@ -155,6 +158,25 @@ class AnalysisExecutionCoordinatorTest {
         assertThat(providerChanged).isNotEqualTo(firstKey);
         assertThat(targetChanged).isNotEqualTo(firstKey);
         assertThat(budgetChanged).isNotEqualTo(firstKey);
+    }
+
+    @Test
+    void readsLegacyExecutionJsonWithoutSecondStageDecision() throws Exception {
+        AnalysisExecutionCoordinator coordinator = new AnalysisExecutionCoordinator(
+            List.of(emptyProvider("provider-v1")),
+            new SensitiveContentRedactor()
+        );
+        AnalysisExecutionResponse current = coordinator
+            .execute(root, intake(), index(), sourceMap(), plan("DOC_READER"))
+            .response();
+        ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
+        ObjectNode legacy = (ObjectNode) mapper.valueToTree(current);
+        legacy.remove("secondStageDecision");
+
+        AnalysisExecutionResponse restored = mapper.treeToValue(legacy, AnalysisExecutionResponse.class);
+
+        assertThat(restored.resultVersion()).isEqualTo(current.resultVersion());
+        assertThat(restored.secondStageDecision()).isNull();
     }
 
     private static AnalysisCapabilityProvider emptyProvider(String version) {
