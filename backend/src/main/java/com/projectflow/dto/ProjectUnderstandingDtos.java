@@ -410,6 +410,14 @@ public final class ProjectUnderstandingDtos {
     ) {
     }
 
+    public record SecondStageDecisionResponse(
+        boolean secondStageTriggered,
+        List<String> triggerReasons,
+        List<String> skippedReasons,
+        List<String> evidenceIds
+    ) {
+    }
+
     public record AnalysisExecutionResponse(
         String resultVersion,
         String cacheKey,
@@ -422,7 +430,8 @@ public final class ProjectUnderstandingDtos {
         long durationMs,
         boolean budgetExhausted,
         Instant producedAt,
-        String invalidationReason
+        String invalidationReason,
+        SecondStageDecisionResponse secondStageDecision
     ) {
     }
 
@@ -541,7 +550,8 @@ public final class ProjectUnderstandingDtos {
         EvolutionPreviewResponse evolutionPreview,
         AnalysisExecutionResponse analysisExecution,
         ContextPackingDiagnostics contextPacking,
-        UnderstandingAnalysisMetrics analysisMetrics
+        UnderstandingAnalysisMetrics analysisMetrics,
+        String finalSynthesisStatus
     ) {
     }
 }

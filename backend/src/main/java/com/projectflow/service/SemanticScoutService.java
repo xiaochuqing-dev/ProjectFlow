@@ -28,6 +28,8 @@ import com.projectflow.service.ProjectEvidenceDiscoveryService.PromptEvidence;
 
 @Service
 public class SemanticScoutService {
+    public static final String PROMPT_VERSION = "semantic-scout-v3";
+
     private final ModelGatewayService modelGateway;
     private final BudgetAwareContextPacker contextPacker;
 
@@ -154,6 +156,24 @@ public class SemanticScoutService {
             你负责：判断项目形态假设、材料语义角色、适用分析维度、已注册工具能力需求，以及动态 Profile 的有证据解释。
             工程系统负责扫描、Git、SCIP、PageRank 和工具执行；你不能编造工具结果。
 
+            语义边界：
+            1. Agent Result 只是外部过程证据，未经 ProjectFact 链路校验不能表述为已确认事实或稳定能力。
+            2. token、耗时、request count、模型名等只属于 PROCESS_METADATA，不能证明业务能力、质量、成熟度或完成结果。
+            3. 当前源码只能证明当前可观察状态；没有 Git/Fact/Tag/document history 时不得推断历史阶段、演进或发布日期。
+            4. 历史文档、README 与当前源码冲突时保留双方证据，标记 POSSIBLY_STALE/UNKNOWN，不得替用户裁决。
+            5. 缺少证据表示 unknown，不表示不存在；空目录、单脚本、纯文档不能扩张成多层架构。
+            6. recommendedToolCalls 只能请求 capability 名称，不能输出命令、参数、绝对路径或任意文件读取。
+            7. shape 使用原子、稳定标签，优先从 DOCUMENT、SCRIPT、FRONTEND、BACKEND、DESKTOP、MONOREPO、
+               CODE_PROJECT、LARGE_REPOSITORY、AGENT_RESULT_MATERIAL、PROCESS_METADATA、OTHER_MATERIAL 选择；
+               多形态分别输出，禁止拼成“FRONTEND+BACKEND”一类复合自由文本。
+            8. 对上下文提供的每个 evidence id 恰好给出一次来源评估；有实质证据时不得把 shape、来源评估和适用
+               维度全部留空。不确定时输出 UNKNOWN/unknown，不要用空数组逃避判断。
+            9. 工具只在能补充当前上下文缺少的信息时请求：DOC_READER 用于样本不足的重要文档，MANIFEST 用于
+               manifest 细节，AGENT_RESULT 用于 Agent result，GIT_HISTORY/GIT_TAG 用于真实历史，WORKTREE
+               用于未提交变化；不得因为“可能有帮助”泛化请求。
+            10. applicableDimensions 使用简短稳定的大写原子标签，避免 analysis、summary、general、hypothesis
+                这类无信息标签。shouldDeepRead 只表示需要获取尚未提供的正文，不等同于 evidence 重要。
+
             只返回 JSON：
             {
               "semanticScout":{
@@ -172,13 +192,14 @@ public class SemanticScoutService {
                 "summary":"",
                 "sections":[{"id":"","type":"","title":"","summary":"",
                   "claims":[{"text":"","confidence":"HIGH|MEDIUM|LOW","evidenceRefs":["id"]}],
-                  "confidence":"HIGH|MEDIUM|LOW","epistemicStatus":"INFERRED","displayPriority":50,
+                  "confidence":"HIGH|MEDIUM|LOW","epistemicStatus":"OBSERVED|INFERRED|UNKNOWN","displayPriority":50,
                   "applicabilityReason":""}]
               },
               "unknowns":[]
             }
-            最多 8 个 shape、80 个来源评估、20 个维度、12 个动态 Section、每个 Section 最多 10 条 claim。
+            最多 4 个 shape、40 个来源评估、12 个维度、8 个动态 Section、每个 Section 最多 5 条 claim。
             没有源码时不能生成代码架构；没有历史时不能生成 Timeline/Evolution；小脚本不能伪装成多层架构。
+            Prompt version: semantic-scout-v3。
             证据上下文：
             """ + packed.json();
         return new PromptBuild(prompt, packed.diagnostics());

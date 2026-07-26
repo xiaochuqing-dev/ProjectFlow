@@ -60,7 +60,7 @@ class AnalysisExecutionCoordinatorTest {
                     List.of(
                         new PromptEvidence(
                             "tool:doc_reader:valid", "TOOL_RESULT", "TARGETED_DEEP_READ",
-                            "docs/note.md", "摘要", "深读正文"
+                            "docs/note.md", "摘要", "深读正文".repeat(80)
                         )
                     ),
                     1,
@@ -84,6 +84,8 @@ class AnalysisExecutionCoordinatorTest {
             .contains("tool:doc_reader:valid")
             .doesNotContain("tool:doc_reader:invalid");
         assertThat(result.highValueEvidenceProduced()).isTrue();
+        assertThat(result.response().secondStageDecision().triggerReasons())
+            .anyMatch(reason -> reason.startsWith("NEW_DEEP_CONTENT"));
     }
 
     @Test
@@ -124,15 +126,68 @@ class AnalysisExecutionCoordinatorTest {
         }
     }
 
+    @Test
+    void cacheIdentityChangesWithProviderAndDeepReadStrategy() {
+        AnalysisCapabilityProvider providerV1 = emptyProvider("provider-v1");
+        AnalysisCapabilityProvider providerV2 = emptyProvider("provider-v2");
+        AnalysisExecutionCoordinator first = new AnalysisExecutionCoordinator(
+            List.of(providerV1),
+            new SensitiveContentRedactor()
+        );
+        AnalysisExecutionCoordinator second = new AnalysisExecutionCoordinator(
+            List.of(providerV2),
+            new SensitiveContentRedactor()
+        );
+
+        String firstKey = first.execute(root, intake(), index(), sourceMap(), plan("DOC_READER"))
+            .response().cacheKey();
+        String providerChanged = second.execute(root, intake(), index(), sourceMap(), plan("DOC_READER"))
+            .response().cacheKey();
+        AdaptiveAnalysisPlanResponse changedTarget = plan("DOC_READER");
+        when(changedTarget.deepReadTargets()).thenReturn(List.of("source:other"));
+        String targetChanged = first.execute(root, intake(), index(), sourceMap(), changedTarget)
+            .response().cacheKey();
+        AdaptiveAnalysisPlanResponse changedBudget = plan("DOC_READER");
+        when(changedBudget.maxModelInputTokens()).thenReturn(8_000);
+        String budgetChanged = first.execute(root, intake(), index(), sourceMap(), changedBudget)
+            .response().cacheKey();
+
+        assertThat(providerChanged).isNotEqualTo(firstKey);
+        assertThat(targetChanged).isNotEqualTo(firstKey);
+        assertThat(budgetChanged).isNotEqualTo(firstKey);
+    }
+
+    private static AnalysisCapabilityProvider emptyProvider(String version) {
+        return new AnalysisCapabilityProvider() {
+            @Override
+            public boolean supports(String capability) {
+                return "DOC_READER".equals(capability);
+            }
+
+            @Override
+            public String providerVersion() {
+                return version;
+            }
+
+            @Override
+            public CapabilityResult execute(CapabilityRequest request) {
+                return new CapabilityResult("SUCCEEDED", List.of(), List.of(), 0, 0, "无新增证据");
+            }
+        };
+    }
+
     private static RepositoryIntakeResponse intake() {
         RepositoryIntakeResponse intake = mock(RepositoryIntakeResponse.class);
         when(intake.sourceRevision()).thenReturn("revision");
+        when(intake.contentHash()).thenReturn("content-hash");
         return intake;
     }
 
     private static ProjectStructureIndexResponse index() {
         ProjectStructureIndexResponse index = mock(ProjectStructureIndexResponse.class);
         when(index.evidence()).thenReturn(List.of());
+        when(index.indexVersion()).thenReturn("index-v1");
+        when(index.contentHash()).thenReturn("structure-hash");
         return index;
     }
 
@@ -166,6 +221,8 @@ class AnalysisExecutionCoordinatorTest {
         AdaptiveAnalysisPlanResponse plan = mock(AdaptiveAnalysisPlanResponse.class);
         when(plan.toolsToInvoke()).thenReturn(List.of(tools));
         when(plan.deepReadTargets()).thenReturn(List.of("source:doc"));
+        when(plan.maxModelRequests()).thenReturn(2);
+        when(plan.semanticBudgets()).thenReturn(Map.of("SCOUT", 1000));
         return plan;
     }
 }

@@ -71,6 +71,11 @@ public enum ModelTaskType {
         List.of(), List.of("semanticScout", "dynamicProfile", "unknowns"), List.of(),
         "{\"semanticScout\":{\"projectShapeHypotheses\":[],\"evidenceSourceAssessments\":[],\"applicableDimensions\":[],\"recommendedToolCalls\":[],\"unknowns\":[],\"skipCandidates\":[],\"potentialConflicts\":[],\"currentnessWarnings\":[]},\"dynamicProfile\":{\"summary\":\"\",\"sections\":[]},\"unknowns\":[]}"
     ),
+    PROJECT_UNDERSTANDING_FINAL_SYNTHESIS(
+        "通用证据最终归纳", 4_000, 12_000, 0.1, false,
+        List.of(), List.of("dynamicProfile", "unknowns"), List.of(),
+        "{\"dynamicProfile\":{\"summary\":\"\",\"sections\":[]},\"unknowns\":[]}"
+    ),
     LEGACY_STRUCTURED(
         "兼容结构化调用", 2_048, 20_000, 0.2, false,
         List.of("items", "results"), List.of(), List.of(), "{}"

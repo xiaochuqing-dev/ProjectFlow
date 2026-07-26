@@ -1,4 +1,4 @@
-name: ProjectFlow V3.7.1 Quality Gates
+name: ProjectFlow V3.7.2 Quality Gates
 
 on:
   push:
@@ -146,7 +146,7 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: maven
-      - name: 真实 DeepSeek 全入口小输入验收
+      - name: 真实 DeepSeek 全入口与 ProjectFlow 代表集验收
         working-directory: backend
         env:
           PROJECTFLOW_RUN_REAL_MODEL: "true"
@@ -156,4 +156,12 @@ jobs:
             echo "SKIPPED: 未提供安全测试 Key"
             exit 0
           fi
-          mvn -B -Ppostgres-it -Dit.test=RealDeepSeekIT verify
+          mvn -B -Dtest=RealDeepSeekIT test
+          mvn -B -Dtest=ProjectFlowRealModelEvalIT test
+      - name: 保存内部真实模型评测工件
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: projectflow-real-model-eval
+          path: backend/target/projectflow-eval/real
+          if-no-files-found: ignore

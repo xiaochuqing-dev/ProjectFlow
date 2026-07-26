@@ -59,7 +59,7 @@ import com.projectflow.support.AppException;
 
 @Service
 public class ProjectUnderstandingService {
-    private static final String MODEL_ANALYSIS_VERSION = "understanding-v4";
+    private static final String MODEL_ANALYSIS_VERSION = "understanding-v5";
 
     private final ProjectRepository projectRepository;
     private final ProjectMemoryRepository memoryRepository;
@@ -271,7 +271,8 @@ public class ProjectUnderstandingService {
                 toolTimeMs,
                 deterministicSynthesisMs,
                 elapsedMs(totalStarted),
-                false
+                false,
+                0
             );
             ProjectUnderstandingSnapshotResponse saved = persistSnapshot(
                 projectId,
@@ -342,27 +343,46 @@ public class ProjectUnderstandingService {
             ContextPackingDiagnostics contextPacking = semantic.contextPacking();
             boolean invalidEvidenceFiltered = semantic.invalidEvidenceFiltered();
             long finalModelTimeMs = 0;
+            int logicalModelRequests = 1;
+            String finalSynthesisStatus = execution.highValueEvidenceProduced()
+                ? "PENDING"
+                : "SKIPPED_NO_HIGH_VALUE_EVIDENCE";
             List<ModelGatewayService.ModelCallDiagnostics> modelDiagnostics = new ArrayList<>();
             modelDiagnostics.add(semantic.diagnostics());
             if (execution.highValueEvidenceProduced() && semanticPlan.maxModelRequests() >= 2) {
                 progress.accept("FINAL_SYNTHESIS", "新增工具证据已通过校验，正在进行第二阶段最终归纳");
-                SynthesisResult finalSynthesis = finalSynthesisService.synthesize(
-                    provider,
-                    project,
-                    scan.intake(),
-                    index,
-                    historical.coverage(),
-                    semantic.scout(),
-                    semanticPlan,
-                    semantic.root(),
-                    execution
-                );
-                finalRoot = finalSynthesis.root();
-                finalDiagnostics = finalSynthesis.diagnostics();
-                contextPacking = finalSynthesis.contextPacking();
-                invalidEvidenceFiltered |= finalSynthesis.invalidEvidenceFiltered();
-                finalModelTimeMs = finalSynthesis.durationMs();
-                modelDiagnostics.add(finalSynthesis.diagnostics());
+                logicalModelRequests = 2;
+                long finalModelStarted = System.nanoTime();
+                try {
+                    SynthesisResult finalSynthesis = finalSynthesisService.synthesize(
+                        provider,
+                        project,
+                        scan.intake(),
+                        index,
+                        historical.coverage(),
+                        semantic.scout(),
+                        semanticPlan,
+                        semantic.root(),
+                        execution
+                    );
+                    finalRoot = finalSynthesis.root();
+                    finalDiagnostics = finalSynthesis.diagnostics();
+                    contextPacking = finalSynthesis.contextPacking();
+                    invalidEvidenceFiltered |= finalSynthesis.invalidEvidenceFiltered();
+                    finalModelTimeMs = finalSynthesis.durationMs();
+                    modelDiagnostics.add(finalSynthesis.diagnostics());
+                    finalSynthesisStatus = "SUCCEEDED";
+                } catch (Exception finalException) {
+                    finalModelTimeMs = elapsedMs(finalModelStarted);
+                    ModelGatewayService.ModelCallDiagnostics failureDiagnostics = failureDiagnostics(finalException);
+                    if (failureDiagnostics != null) modelDiagnostics.add(failureDiagnostics);
+                    if (finalException instanceof InterruptedException) Thread.interrupted();
+                    finalSynthesisStatus = "FAILED_DEGRADED";
+                    progress.accept(
+                        "FINAL_SYNTHESIS_DEGRADED",
+                        "最终归纳失败，已保留第一阶段语义、已校验工具证据和当前降级档案"
+                    );
+                }
             }
             progress.accept("DYNAMIC_PROFILE", "正在校验证据并生成适用视图与动态项目档案");
             long semanticSynthesisStarted = System.nanoTime();
@@ -388,7 +408,8 @@ public class ProjectUnderstandingService {
                 execution.response(),
                 contextPacking,
                 diagnostics(finalDiagnostics),
-                invalidEvidenceFiltered
+                invalidEvidenceFiltered,
+                finalSynthesisStatus
             );
             UnderstandingAnalysisMetrics metrics = metrics(
                 execution.sourceMap(),
@@ -405,7 +426,8 @@ public class ProjectUnderstandingService {
                 toolTimeMs,
                 synthesisTimeMs,
                 elapsedMs(totalStarted),
-                false
+                false,
+                logicalModelRequests
             );
             progress.accept("PERSIST_UNDERSTANDING", "正在校验证据并保存当前理解");
             ProjectUnderstandingSnapshotResponse saved = persistSnapshot(
@@ -583,7 +605,8 @@ public class ProjectUnderstandingService {
             evolutionPreview,
             analysisExecution,
             contextPacking,
-            null
+            null,
+            "NOT_APPLICABLE"
         );
     }
 
@@ -597,7 +620,8 @@ public class ProjectUnderstandingService {
         AnalysisExecutionResponse analysisExecution,
         ContextPackingDiagnostics contextPacking,
         ModelCallDiagnosticsResponse diagnostics,
-        boolean invalidEvidenceFiltered
+        boolean invalidEvidenceFiltered,
+        String finalSynthesisStatus
     ) {
         LinkedHashSet<String> mergedUnknowns = new LinkedHashSet<>(base.unknowns());
         mergedUnknowns.addAll(semanticScout.unknowns());
@@ -651,7 +675,10 @@ public class ProjectUnderstandingService {
             false,
             mergeLimitations(
                 base.quality().limitations(),
-                invalidEvidenceFiltered ? "模型返回的未知证据引用已过滤" : ""
+                invalidEvidenceFiltered ? "模型返回的未知证据引用已过滤" : "",
+                "FAILED_DEGRADED".equals(finalSynthesisStatus)
+                    ? "最终归纳失败；当前结果保留第一阶段语义与已校验工具证据"
+                    : ""
             )
         );
         return new ProjectUnderstandingSnapshotResponse(
@@ -683,7 +710,8 @@ public class ProjectUnderstandingService {
             base.evolutionPreview(),
             analysisExecution,
             contextPacking,
-            base.analysisMetrics()
+            base.analysisMetrics(),
+            finalSynthesisStatus
         );
     }
 
@@ -938,9 +966,13 @@ public class ProjectUnderstandingService {
             .toList();
     }
 
-    private static List<String> mergeLimitations(List<String> base, String extra) {
+    private static List<String> mergeLimitations(List<String> base, String... extras) {
         LinkedHashSet<String> values = new LinkedHashSet<>(base == null ? List.of() : base);
-        if (extra != null && !extra.isBlank()) values.add(extra);
+        if (extras != null) {
+            for (String extra : extras) {
+                if (extra != null && !extra.isBlank()) values.add(extra);
+            }
+        }
         return List.copyOf(values);
     }
 
@@ -985,6 +1017,17 @@ public class ProjectUnderstandingService {
             value.temperatureDecision(), value.maxTokenDecision(), value.retryType(), value.reasoningBudgetExhausted(),
             value.schemaMatched(), value.failureStage(), value.failureCode()
         );
+    }
+
+    private static ModelGatewayService.ModelCallDiagnostics failureDiagnostics(Throwable value) {
+        Throwable current = value;
+        while (current != null) {
+            if (current instanceof ModelGatewayService.ModelResponseFormatException formatException) {
+                return formatException.diagnostics();
+            }
+            current = current.getCause();
+        }
+        return null;
     }
 
     private static ProjectUnderstandingSnapshotResponse withCacheHit(ProjectUnderstandingSnapshotResponse value) {
@@ -1039,7 +1082,7 @@ public class ProjectUnderstandingService {
             value.analyzedAt(), value.sourceRevision(), value.structureIndexVersion(), value.modelAnalysisVersion(),
             currentStatus, value.diagnostics(), value.sourceMap(), value.semanticScout(), value.dynamicProfile(),
             value.historicalCoverage(), value.evolutionPreview(), value.analysisExecution(), value.contextPacking(),
-            value.analysisMetrics()
+            value.analysisMetrics(), value.finalSynthesisStatus()
         );
     }
 
@@ -1053,7 +1096,8 @@ public class ProjectUnderstandingService {
             value.evidenceCoverage(), value.quality(), value.unknowns(), value.intake(), value.analysisPlan(),
             value.analyzedAt(), value.sourceRevision(), value.structureIndexVersion(), value.modelAnalysisVersion(),
             value.currentStatus(), value.diagnostics(), value.sourceMap(), value.semanticScout(), value.dynamicProfile(),
-            value.historicalCoverage(), value.evolutionPreview(), value.analysisExecution(), value.contextPacking(), metrics
+            value.historicalCoverage(), value.evolutionPreview(), value.analysisExecution(), value.contextPacking(), metrics,
+            value.finalSynthesisStatus()
         );
     }
 
@@ -1072,7 +1116,8 @@ public class ProjectUnderstandingService {
         long toolTimeMs,
         long synthesisTimeMs,
         long totalTimeMs,
-        boolean cacheHit
+        boolean cacheHit,
+        int logicalModelRequests
     ) {
         List<ModelGatewayService.ModelCallDiagnostics> calls = diagnostics == null
             ? List.of()
@@ -1084,7 +1129,7 @@ public class ProjectUnderstandingService {
             sourceMap.deepReadCount(),
             sourceMap.skippedCount(),
             execution == null ? 0 : execution.executedCapabilities().size(),
-            calls.stream().mapToInt(value -> Math.max(1, value.requestCount())).sum(),
+            Math.max(logicalModelRequests, calls.stream().mapToInt(value -> Math.max(1, value.requestCount())).sum()),
             calls.stream().mapToInt(ModelGatewayService.ModelCallDiagnostics::promptTokens).sum(),
             calls.stream().mapToInt(ModelGatewayService.ModelCallDiagnostics::completionTokens).sum(),
             calls.stream().mapToInt(ModelGatewayService.ModelCallDiagnostics::totalTokens).sum(),

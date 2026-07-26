@@ -11,17 +11,23 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -153,6 +159,7 @@ class ProjectUnderstandingServiceTest {
         assertThat(first.modelUsed()).isFalse();
         assertThat(first.snapshot().classification()).isEqualTo("CODE_NO_GIT");
         assertThat(first.snapshot().quality().semanticStatus()).isEqualTo("MODEL_UNAVAILABLE");
+        assertThat(first.snapshot().finalSynthesisStatus()).isEqualTo("NOT_APPLICABLE");
         assertThat(first.snapshot().evidenceCoverage().observedClaims()).isPositive();
         assertThat(second.cacheHit()).isTrue();
         assertThat(second.snapshot().quality().cacheHit()).isTrue();
@@ -170,6 +177,7 @@ class ProjectUnderstandingServiceTest {
         ObjectNode legacyJson = (ObjectNode) mapper.readTree(stored.getSnapshotJson());
         legacyJson.remove("analysisExecution");
         legacyJson.remove("contextPacking");
+        legacyJson.remove("finalSynthesisStatus");
         ((ObjectNode) legacyJson.path("sourceMap")).remove("diversityMetrics");
         ((ObjectNode) legacyJson.path("historicalCoverage")).remove("breakdown");
         stored.replace(
@@ -187,6 +195,7 @@ class ProjectUnderstandingServiceTest {
         assertThat(legacy.identity()).isNotNull();
         assertThat(legacy.analysisExecution()).isNull();
         assertThat(legacy.contextPacking()).isNull();
+        assertThat(legacy.finalSynthesisStatus()).isNull();
         assertThat(legacy.sourceMap().diversityMetrics()).isNull();
         assertThat(legacy.historicalCoverage().breakdown()).isNull();
     }
@@ -208,7 +217,10 @@ class ProjectUnderstandingServiceTest {
     @Test
     void nonEmptyTextUsesBoundedSemanticScoutButEmptyTextDoesNot() throws Exception {
         providers.set(List.of(provider()));
-        Files.writeString(root.resolve("fuck-this-bug.md"), "# 事故复盘\n这里记录真实故障原因和决定。\n");
+        Files.writeString(
+            root.resolve("fuck-this-bug.md"),
+            "# 事故复盘\n这里记录真实故障原因、证据边界、回滚条件和决定。\n".repeat(20)
+        );
         String content = """
             {
               "semanticScout":{
@@ -226,6 +238,11 @@ class ProjectUnderstandingServiceTest {
                 content,
                 new ModelOutputAdapter(mapper).parse(content, ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT)
             ));
+        when(gateway.callStructured(any(), any(), eq(ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS)))
+            .thenReturn(new ModelGatewayService.StructuredModelResponse(
+                content,
+                new ModelOutputAdapter(mapper).parse(content, ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS)
+            ));
 
         var outcome = service.refresh(userId, projectId);
 
@@ -238,19 +255,82 @@ class ProjectUnderstandingServiceTest {
         assertThat(outcome.snapshot().analysisExecution().evidence()).isNotEmpty();
         assertThat(outcome.snapshot().sourceMap().deepReadCount()).isPositive();
         assertThat(outcome.snapshot().analysisMetrics().modelRequestCount()).isEqualTo(2);
+        assertThat(outcome.snapshot().finalSynthesisStatus()).isEqualTo("SUCCEEDED");
+        assertThat(outcome.snapshot().analysisExecution().secondStageDecision().secondStageTriggered()).isTrue();
         assertThat(outcome.snapshot().contextPacking().validJson()).isTrue();
         ArgumentCaptor<String> prompts = ArgumentCaptor.forClass(String.class);
         verify(gateway, times(2)).callStructured(
             any(),
             prompts.capture(),
-            eq(ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT)
+            any(ModelTaskType.class)
         );
+        verify(gateway).callStructured(any(), any(), eq(ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT));
+        verify(gateway).callStructured(any(), any(), eq(ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS));
         assertThat(prompts.getAllValues().get(1))
-            .contains("\"toolResults\"", "这里记录真实故障原因和决定。");
+            .contains("\"toolResults\"", "证据边界");
         assertThat(outcome.snapshot().dynamicProfile().sections())
             .extracting(section -> section.type())
             .contains("DOCUMENT_OVERVIEW")
             .doesNotContain("CURRENT_STRUCTURE");
+    }
+
+    @ParameterizedTest(name = "final synthesis failure degrades current result: {0}")
+    @MethodSource("finalSynthesisFailures")
+    void finalSynthesisFailurePreservesStageOneAndToolEvidence(
+        String failureType,
+        Exception failure
+    ) throws Exception {
+        providers.set(List.of(provider()));
+        Files.writeString(
+            root.resolve("evidence.md"),
+            "# 当前约束\n这是一份需要深读的当前文档，包含清晰的项目形态边界、证据限制和冲突处理规则。\n".repeat(24)
+        );
+        String stageOne = """
+            {
+              "semanticScout":{
+                "projectShapeHypotheses":[],"evidenceSourceAssessments":[],
+                "applicableDimensions":["documentPurpose"],"recommendedToolCalls":["DOC_READER"],
+                "unknowns":[],"skipCandidates":[],"potentialConflicts":[],"currentnessWarnings":[]
+              },
+              "dynamicProfile":{"summary":"第一阶段文档理解","sections":[]},
+              "unknowns":[]
+            }
+            """;
+        ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
+        ModelGatewayService.StructuredModelResponse response = new ModelGatewayService.StructuredModelResponse(
+            stageOne,
+            new ModelOutputAdapter(mapper).parse(stageOne, ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT)
+        );
+        when(gateway.callStructured(any(), any(), eq(ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT)))
+            .thenReturn(response);
+        when(gateway.callStructured(any(), any(), eq(ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS)))
+            .thenThrow(failure);
+
+        var outcome = service.refresh(userId, projectId);
+
+        assertThat(outcome.snapshot().currentStatus()).isEqualTo("CURRENT");
+        assertThat(outcome.snapshot().finalSynthesisStatus()).isEqualTo("FAILED_DEGRADED");
+        assertThat(outcome.snapshot().analysisMetrics().modelRequestCount()).isEqualTo(2);
+        assertThat(outcome.snapshot().analysisExecution().evidence()).isNotEmpty();
+        assertThat(outcome.snapshot().sourceMap().sources())
+            .anyMatch(source -> source.id().startsWith("tool:"));
+        assertThat(outcome.snapshot().quality().limitations())
+            .contains("最终归纳失败；当前结果保留第一阶段语义与已校验工具证据");
+        verify(gateway).callStructured(any(), any(), eq(ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT));
+        verify(gateway).callStructured(any(), any(), eq(ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS));
+    }
+
+    private static Stream<Arguments> finalSynthesisFailures() {
+        return Stream.of(
+            Arguments.of("provider", new IOException("provider unavailable")),
+            Arguments.of("timeout", new SocketTimeoutException("timeout")),
+            Arguments.of(
+                "invalid-schema",
+                new ModelGatewayService.ModelResponseFormatException("invalid schema", null, null)
+            ),
+            Arguments.of("cancellation", new CancellationException("cancelled during final synthesis")),
+            Arguments.of("interrupted", new InterruptedException("interrupted during final synthesis"))
+        );
     }
 
     @Test
@@ -364,6 +444,7 @@ class ProjectUnderstandingServiceTest {
         assertThat(outcome.snapshot().identity().summary()).contains("Demo");
         assertThat(outcome.snapshot().analysisPlan().semanticMode()).isEqualTo("ONE_PASS_SCOUT_AND_SYNTHESIS");
         assertThat(outcome.snapshot().analysisMetrics().modelRequestCount()).isEqualTo(1);
+        assertThat(outcome.snapshot().finalSynthesisStatus()).isEqualTo("SKIPPED_NO_HIGH_VALUE_EVIDENCE");
         assertThat(outcome.snapshot().identity().claims()).allMatch(claim -> !"伪造判断".equals(claim.text()));
         assertThat(outcome.snapshot().quality().limitations()).contains("模型返回的未知证据引用已过滤");
     }
