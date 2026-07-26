@@ -61,8 +61,12 @@ projectflow:
     medium-loc: ${PROJECTFLOW_UNDERSTANDING_MEDIUM_LOC:100000}
     large-loc: ${PROJECTFLOW_UNDERSTANDING_LARGE_LOC:500000}
     max-model-prompt-chars: ${PROJECTFLOW_UNDERSTANDING_MAX_PROMPT_CHARS:48000}
+    max-evidence-candidates: ${PROJECTFLOW_UNDERSTANDING_MAX_EVIDENCE_CANDIDATES:500}
+    max-scout-evidence: ${PROJECTFLOW_UNDERSTANDING_MAX_SCOUT_EVIDENCE:80}
+    max-evidence-sample-chars: ${PROJECTFLOW_UNDERSTANDING_MAX_EVIDENCE_SAMPLE_CHARS:1600}
+    max-evidence-sample-bytes: ${PROJECTFLOW_UNDERSTANDING_MAX_EVIDENCE_SAMPLE_BYTES:8192}
     scip:
-      # V3.6 只消费官方 SCIP protobuf；语言 indexer 独立运行，缺失或失败时回退到 manifest/filesystem。
+      # 继续只消费官方 SCIP protobuf；producer 缺失或失败时回退，不在用户项目中静默安装 runtime。
       max-index-bytes: ${PROJECTFLOW_SCIP_MAX_INDEX_BYTES:268435456}
       max-documents: ${PROJECTFLOW_SCIP_MAX_DOCUMENTS:20000}
       max-symbols: ${PROJECTFLOW_SCIP_MAX_SYMBOLS:50000}

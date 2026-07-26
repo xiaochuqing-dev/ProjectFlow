@@ -1273,6 +1273,98 @@ export type UnderstandingSection = {
   claims: UnderstandingClaim[];
 };
 
+export type ProjectEvidenceSource = {
+  id: string;
+  category: string;
+  sourceType: string;
+  locator: string;
+  semanticRole: string;
+  importance: string;
+  currentness: string;
+  confidence: string;
+  deepReadStatus: string;
+  summary: string;
+  evidenceRefs: string[];
+};
+
+export type EvidenceSourceMap = {
+  discoveredEvidenceCount: number;
+  candidateEvidenceCount: number;
+  scoutEvidenceCount: number;
+  deepReadCount: number;
+  skippedCount: number;
+  categoryCounts: Record<string, number>;
+  sources: ProjectEvidenceSource[];
+  warnings: string[];
+};
+
+export type SemanticScout = {
+  projectShapeHypotheses: Array<{
+    shape: string;
+    confidence: "HIGH" | "MEDIUM" | "LOW";
+    evidenceRefs: string[];
+    reason: string;
+  }>;
+  evidenceSourceAssessments: Array<{
+    evidenceId: string;
+    semanticRole: string;
+    importance: string;
+    currentness: string;
+    shouldDeepRead: boolean;
+    shouldSkip: boolean;
+    reason: string;
+    confidence: "HIGH" | "MEDIUM" | "LOW";
+  }>;
+  applicableDimensions: string[];
+  recommendedToolCalls: string[];
+  unknowns: string[];
+  skipCandidates: string[];
+  potentialConflicts: string[];
+  currentnessWarnings: string[];
+  modelUsed: boolean;
+};
+
+export type DynamicProfileSection = {
+  id: string;
+  type: string;
+  title: string;
+  summary: string;
+  claims: UnderstandingClaim[];
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+  epistemicStatus: "OBSERVED" | "INFERRED" | "EXPLAINED";
+  displayPriority: number;
+  applicabilityReason: string;
+};
+
+export type DynamicProjectProfile = {
+  summary: string;
+  projectShapes: string[];
+  applicableViews: string[];
+  unavailableViews: string[];
+  sections: DynamicProfileSection[];
+  evidenceCoverage: number;
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+  unknowns: string[];
+};
+
+export type HistoricalCoverage = {
+  historyAvailable: boolean;
+  availability: string;
+  earliestEvidenceAt: string | null;
+  latestEvidenceAt: string | null;
+  gitCommitCount: number;
+  coveredCommitCount: number;
+  tagCount: number;
+  releaseCount: number;
+  documentHistoryEvidenceCount: number;
+  agentEvidenceCount: number;
+  coveredPeriods: string[];
+  gapPeriods: string[];
+  confidenceByPeriod: Record<string, string>;
+  overallCoverage: number;
+  limitations: string[];
+};
+
 export type RepositoryIntake = {
   classification: string;
   scale: string;
@@ -1345,6 +1437,17 @@ export type ProjectUnderstandingSnapshot = {
     expectedCoverage: number;
     unavailableCapabilities: string[];
     planReasons: string[];
+    detectedProjectShapes: string[];
+    applicableDimensions: string[];
+    skippedDimensions: string[];
+    evidencePriorities: string[];
+    toolsToInvoke: string[];
+    deepReadTargets: string[];
+    historicalStrategy: string;
+    structureStrategy: string;
+    semanticBudgets: Record<string, number>;
+    expectedOutputs: string[];
+    confidence: string;
   };
   analyzedAt: string;
   sourceRevision: string;
@@ -1352,6 +1455,43 @@ export type ProjectUnderstandingSnapshot = {
   modelAnalysisVersion: string;
   currentStatus: "CURRENT" | "STALE";
   diagnostics: ModelCallDiagnostics | null;
+  sourceMap: EvidenceSourceMap | null;
+  semanticScout: SemanticScout | null;
+  dynamicProfile: DynamicProjectProfile | null;
+  historicalCoverage: HistoricalCoverage | null;
+  evolutionPreview: {
+    mode: string;
+    strategy: string;
+    milestoneCandidateCount: number;
+    anchors: string[];
+    limitations: string[];
+  } | null;
+  analysisMetrics: {
+    discoveredEvidenceCount: number;
+    candidateEvidenceCount: number;
+    scoutEvidenceCount: number;
+    deepReadCount: number;
+    skippedCount: number;
+    toolCallCount: number;
+    modelRequestCount: number;
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    files: number;
+    loc: number;
+    docs: number;
+    commits: number;
+    tags: number;
+    scanTimeMs: number;
+    scoutTimeMs: number;
+    planTimeMs: number;
+    toolTimeMs: number;
+    synthesisTimeMs: number;
+    totalTimeMs: number;
+    cacheHit: boolean;
+    historicalCoverage: number;
+    structureCoverage: number;
+  } | null;
 };
 
 export type ProjectEvolutionBridge = {

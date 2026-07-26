@@ -1,12 +1,23 @@
 # ProjectFlow
 
-ProjectFlow V3.6.0 understands what a software project is today and builds an evidence-backed foundation for explaining how it evolved there. It accepts a bound local directory with or without Git, builds a bounded current understanding, and keeps structure intelligence, durable project facts, timeline, capability map, Hermes reads, and Obsidian projection as separate traceable layers.
+ProjectFlow V3.7.0 does not assume what a user's project is. It first discovers the material that actually exists, combines deterministic engineering analysis with bounded model reasoning to decide what is worth analyzing and what can be known, then builds an evidence-backed view of the current project and reconstructs evolution only where historical evidence supports it.
 
-ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation. ProjectFlow V3.5.0 added universal bounded project intake and current understanding. V3.6.0 reuses both foundations and adds precise SCIP structure consumption, standard graph analysis, and a minimum evidence-backed evolution bridge.
+ProjectFlow V3.4.5 established the model-protocol foundation, V3.5.0 added bounded repository intake, and V3.6.0 added precise SCIP consumption and the minimum evolution bridge. V3.7.0 reuses those layers and adds an Evidence Source Map, bounded Semantic Scout, capability-validated adaptive plan, Dynamic Project Profile, Historical Coverage, and an evidence-sized evolution strategy.
 
-ProjectFlow 自动维护项目从创建至今的长期记忆。让每一个项目记得自己是怎样成长到今天的。
+ProjectFlow 不预设用户的项目是什么。它先发现真实存在的材料，再结合工程分析与有界的大模型推理判断什么值得分析、能知道什么，并基于证据理解项目当前状态及可还原的演进过程。
 
 Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns that raw development evidence into durable Change Batches, evidence-backed Project Facts, and long-lived Project Memory.
+
+## V3.7 Universal Evidence Intelligence and Adaptive Analysis
+
+- Evidence Discovery inventories code, documents, manifests, configuration, tests, CI, migrations, Agent context/results, Git and unknown text without treating a filename as final semantics.
+- Empty directories and blank text use zero model calls. A non-empty TXT or strangely named Markdown file can enter one bounded Semantic Scout request without being forced into a software-architecture template.
+- The Scout sees only relative locators, redacted bounded samples and evidence IDs. Unknown evidence references are filtered, generated/vendor content is skipped, and credentials or absolute paths are not sent.
+- The Adaptive Analysis Plan validates requested capabilities through a registry. A model cannot construct shell commands or claim unavailable Git, SCIP, document or remote providers.
+- Dynamic Project Profile sections are evidence-driven. A project may have no Architecture, Backend, Database, Timeline or Evolution section; document and small-script inputs receive their own applicable views.
+- Historical Coverage reports Git availability, earliest/latest evidence, commit and Tag counts, ProjectFact commit coverage, covered/gap periods and limitations. Short histories stay short; no-Git projects remain current-state-only.
+- Existing Repository Intake, Structure Index V2, Model Gateway, persistent jobs, Facts, Timeline, Capability Map, Evolution Bridge, Memory Gateway, Hermes and Obsidian remain separate and reusable.
+- V3.7 keeps the current explicit-refresh lifecycle. It adds no daemon, watcher, system tray, startup task, Desktop migration, generic RAG framework, parser, Symbol protocol or vector database.
 
 ## V3.6 Deep Structural Intelligence and Evolution Bridge
 

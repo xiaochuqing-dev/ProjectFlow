@@ -1,6 +1,8 @@
-# ProjectFlow V3.6 Agent Protocol
+# ProjectFlow V3.7 Agent Protocol
 
 Before starting substantial work, read `PROJECT_CONTEXT.md` and the task-relevant source files. ProjectFlow follows: rules collect evidence, models interpret within bounded evidence, rules validate, normal objective facts are recorded automatically, and only exceptions require user attention.
+
+For project-understanding work, preserve the V3.7 boundary: discover real evidence before choosing analysis dimensions; keep Evidence, Semantic Scout, Analysis Plan, Dynamic Profile and Historical Coverage replaceable and separate from ProjectFact; use only registered tool capabilities; filter unknown evidence IDs; and do not invent absent project shapes, architecture, history or UI sections. Empty/blank/unchanged inputs should remain zero-model where possible.
 
 After completing a task, create `.projectflow/agent-results/<timestamp-topic>/result.json` and optionally `summary.md`.
 

@@ -40,18 +40,30 @@ class RepositoryIntakeBenchmarkTest {
         var manifest = new ManifestFilesystemProjectStructureIndexer();
         var scip = new ScipProjectStructureIndexer();
         var index = new CompositeProjectStructureIndexer(manifest, scip).build(scan);
+        var discovery = new ProjectEvidenceDiscoveryService();
+        ReflectionTestUtils.setField(discovery, "maxCandidates", 500);
+        ReflectionTestUtils.setField(discovery, "maxScoutEvidence", 80);
+        ReflectionTestUtils.setField(discovery, "maxSampleChars", 1600);
+        ReflectionTestUtils.setField(discovery, "maxSampleBytes", 8192);
+        var evidence = discovery.discover(scan);
         long elapsedMs = (System.nanoTime() - startedAt) / 1_000_000;
         long fingerprintStartedAt = System.nanoTime();
         String repeatFingerprint = intake.inventoryFingerprint(root);
         long fingerprintElapsedMs = (System.nanoTime() - fingerprintStartedAt) / 1_000_000;
 
         System.out.printf(
-            "PROJECTFLOW_V36_BENCHMARK classification=%s scale=%s files=%d sourceFiles=%d loc=%d modules=%d symbols=%d definitions=%d references=%d relations=%d areas=%d evidence=%d coverage=%.3f truncated=%s metrics=%s indexBytes=%d indexTimeMs=%d incrementalUpdateMs=%d memoryPeakBytes=%d cacheHit=%s unsupported=%d fingerprintElapsedMs=%d%n",
+            "PROJECTFLOW_V37_BENCHMARK classification=%s scale=%s files=%d sourceFiles=%d loc=%d docs=%d discoveredEvidence=%d candidateEvidence=%d scoutEvidence=%d deepRead=%d skipped=%d modules=%d symbols=%d definitions=%d references=%d relations=%d areas=%d structureEvidence=%d coverage=%.3f truncated=%s metrics=%s indexBytes=%d totalTimeMs=%d incrementalUpdateMs=%d memoryPeakBytes=%d cacheHit=%s unsupported=%d fingerprintElapsedMs=%d modelRequests=0 inputTokens=0 outputTokens=0 totalTokens=0%n",
             scan.intake().classification(),
             scan.intake().scale(),
             scan.intake().fileCount(),
             scan.intake().sourceFileCount(),
             scan.intake().estimatedLoc(),
+            evidence.documentCount(),
+            evidence.sourceMap().discoveredEvidenceCount(),
+            evidence.sourceMap().candidateEvidenceCount(),
+            evidence.sourceMap().scoutEvidenceCount(),
+            evidence.sourceMap().deepReadCount(),
+            evidence.sourceMap().skippedCount(),
             index.modules().size(),
             index.symbols().size(),
             index.definitions().size(),
@@ -74,6 +86,7 @@ class RepositoryIntakeBenchmarkTest {
         assertThat(scan.intake().sourceFileCount()).isPositive();
         assertThat(index.files()).hasSizeLessThanOrEqualTo(5_000);
         assertThat(index.evidence()).hasSizeLessThanOrEqualTo(700);
+        assertThat(evidence.sourceMap().scoutEvidenceCount()).isLessThanOrEqualTo(80);
         assertThat(scan.intake().fileCount()).isLessThanOrEqualTo(250_000);
         assertThat(repeatFingerprint).isEqualTo(scan.intake().contentHash());
     }

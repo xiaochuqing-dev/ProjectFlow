@@ -31,6 +31,29 @@ Error responses:
 }
 ```
 
+## V3.7 Universal Evidence Understanding
+
+The existing understanding endpoints are unchanged and still validate authenticated project ownership:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/projects/{projectId}/understanding/refresh` | Create or reuse the durable evidence discovery, Scout, plan and profile refresh job |
+| GET | `/projects/{projectId}/understanding` | Read the persisted replaceable V3.7 understanding snapshot |
+| GET | `/projects/{projectId}/structure-index` | Read the persisted Structure Index V2 |
+| GET | `/projects/{projectId}/evolution-bridges?page=0&size=20` | Read bounded evidence-backed before/change/after bridge rows |
+
+The understanding response retains V3.6 compatibility fields and adds:
+
+- `sourceMap`: discovered/candidate/scout/deep-read/skipped counts, category totals and bounded relative source summaries.
+- `semanticScout`: evidence-bound shape hypotheses, source assessments, applicable dimensions, validated tool requests, unknowns, conflicts and currentness warnings.
+- `analysisPlan`: detected shapes, applicable/skipped dimensions, evidence priorities, tools, deep-read targets, semantic budgets, structure/history strategy and expected outputs.
+- `dynamicProfile`: summary, project shapes, applicable/unavailable views and ordered evidence-bound sections.
+- `historicalCoverage`: availability, evidence range, commit/Fact/Tag counts, covered/gap periods, coverage and limitations.
+- `evolutionPreview`: current-state, early-project, milestone-window or long-history clustering strategy.
+- `analysisMetrics`: evidence, tool, model/token, repository-size, duration, cache and coverage measurements.
+
+The API never returns source samples, full documents, prompts, raw responses, reasoning, credentials or absolute paths. A stored V3.6 snapshot may have the new fields as null until the user explicitly refreshes it.
+
 ## V3.6 Project Understanding and Evolution Bridge
 
 All endpoints validate authenticated user ownership of `projectId`.

@@ -15,6 +15,7 @@ import {
   refreshProjectUnderstanding,
   retryProjectAnalysisJob,
   type ProjectAnalysisJob,
+  type DynamicProfileSection,
   type ProjectEvolutionBridge,
   type ProjectUnderstandingSnapshot,
   type UnderstandingSection,
@@ -22,7 +23,7 @@ import {
 
 export default function ProjectUnderstandingPage() {
   return (
-    <Suspense fallback={<AppShell eyebrow="V3.6 当前结构与演进" title="项目理解"><PageContainer><div className="h-1 bg-slate-950" /></PageContainer></AppShell>}>
+    <Suspense fallback={<AppShell eyebrow="V3.7 通用证据智能" title="项目理解"><PageContainer><div className="h-1 bg-slate-950" /></PageContainer></AppShell>}>
       <ProjectUnderstandingContent />
     </Suspense>
   );
@@ -122,7 +123,7 @@ function ProjectUnderstandingContent() {
   }
 
   return (
-    <AppShell eyebrow="V3.6 当前结构与演进" title={selection.selectedProject ? `${selection.selectedProject.name} · 项目理解` : "项目理解"}>
+    <AppShell eyebrow="V3.7 通用证据智能" title={selection.selectedProject ? `${selection.selectedProject.name} · 项目理解` : "项目理解"}>
       <PageContainer>
         <ProjectContextBar
           actions={(
@@ -181,7 +182,7 @@ function UnderstandingView({
   snapshot: ProjectUnderstandingSnapshot;
   bridges: ProjectEvolutionBridge[];
 }) {
-  const sections: Array<[string, UnderstandingSection]> = [
+  const legacySections: Array<[string, UnderstandingSection]> = [
     ["项目身份", snapshot.identity],
     ["技术组成", snapshot.technology],
     ["结构边界", snapshot.structure],
@@ -189,17 +190,64 @@ function UnderstandingView({
     ["能力理解", snapshot.capabilities],
     ["工程状态", snapshot.engineeringState],
   ];
+  const dynamicSections = snapshot.dynamicProfile?.sections ?? [];
+  const history = snapshot.historicalCoverage;
+  const sourceMap = snapshot.sourceMap;
   return (
     <div className="space-y-5">
       <section className="grid gap-4 rounded-card border border-line bg-white p-5 shadow-card md:grid-cols-2 xl:grid-cols-4">
         <Metric label="文件 / 源码" value={`${snapshot.intake.fileCount} / ${snapshot.intake.sourceFileCount}`} />
-        <Metric label="估算代码行" value={snapshot.intake.estimatedLoc.toLocaleString("zh-CN")} />
-        <Metric label="结构来源" value={snapshot.analysisPlan.structureProvider} />
+        <Metric label="发现 / Scout 来源" value={sourceMap ? `${sourceMap.discoveredEvidenceCount} / ${sourceMap.scoutEvidenceCount}` : "旧快照"} />
+        <Metric label="适用视图" value={snapshot.dynamicProfile?.applicableViews.length ?? legacySections.length} />
         <Metric label="语义模式" value={semanticLabel(snapshot.analysisPlan.semanticMode)} />
       </section>
 
+      {snapshot.dynamicProfile ? (
+        <section className="rounded-card border border-line bg-white p-5 shadow-card">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-semibold text-slate-950">自适应项目档案</h2>
+            {snapshot.dynamicProfile.projectShapes.map((shape) => <Badge key={shape} label={shapeLabel(shape)} tone="slate" />)}
+          </div>
+          <p className="mt-3 text-sm leading-6 text-slate-700">{snapshot.dynamicProfile.summary}</p>
+          {snapshot.dynamicProfile.unavailableViews.length ? <p className="mt-2 text-xs leading-5 text-muted">未展示：{snapshot.dynamicProfile.unavailableViews.slice(0, 4).join("；")}</p> : null}
+        </section>
+      ) : null}
+
       <section className="grid gap-4 xl:grid-cols-2">
-        {sections.map(([title, section]) => <SectionCard key={title} section={section} title={title} />)}
+        {dynamicSections.length
+          ? dynamicSections.map((section) => <DynamicSectionCard key={section.id} section={section} />)
+          : snapshot.classification === "EMPTY"
+            ? <div className="rounded-card border border-line bg-white p-5 text-sm text-muted shadow-card">当前目录没有可分析内容，不生成架构、能力或时间线。</div>
+            : legacySections.map(([title, section]) => <SectionCard key={title} section={section} title={title} />)}
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        <div className="rounded-card border border-line bg-white p-5 shadow-card">
+          <h2 className="font-semibold text-slate-950">Evidence Sources</h2>
+          {sourceMap ? (
+            <>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <Metric label="候选来源" value={sourceMap.candidateEvidenceCount} />
+                <Metric label="有界深读" value={sourceMap.deepReadCount} />
+                <Metric label="跳过去噪" value={sourceMap.skippedCount} />
+                <Metric label="文档 / 代码" value={`${snapshot.analysisMetrics?.docs ?? 0} / ${snapshot.intake.sourceFileCount}`} />
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {Object.entries(sourceMap.categoryCounts).filter(([, count]) => count > 0).slice(0, 12).map(([category, count]) => (
+                  <Badge key={category} label={`${sourceCategoryLabel(category)} ${count}`} tone="slate" />
+                ))}
+              </div>
+            </>
+          ) : <p className="mt-3 text-sm text-muted">这是 V3.6 兼容快照，刷新后会生成 Evidence Source Map。</p>}
+        </div>
+        <div className="rounded-card border border-line bg-white p-5 shadow-card">
+          <h2 className="font-semibold text-slate-950">自适应分析计划</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-700">{snapshot.analysisPlan.planReasons[0] ?? "按现有证据选择分析能力。"}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {(snapshot.analysisPlan.toolsToInvoke ?? []).map((tool) => <Badge key={tool} label={tool} tone="slate" />)}
+          </div>
+          <p className="mt-3 text-xs leading-5 text-muted">适用维度：{(snapshot.analysisPlan.applicableDimensions ?? []).join("、") || "无"} · 模型请求上限 {snapshot.analysisPlan.maxModelRequests}</p>
+        </div>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
@@ -211,7 +259,7 @@ function UnderstandingView({
             <Metric label="有证据判断" value={snapshot.evidenceCoverage.evidenceBoundClaims} />
             <Metric label="整体置信度" value={confidenceLabel(snapshot.quality.confidence)} />
           </div>
-          <p className="mt-4 text-xs leading-5 text-muted">结构索引 {snapshot.structureIndexVersion} · 语义规则 {snapshot.modelAnalysisVersion} · {snapshot.quality.modelUsed ? "模型参与" : "未调用模型"}{snapshot.quality.cacheHit ? " · 本次命中缓存" : ""}</p>
+          <p className="mt-4 text-xs leading-5 text-muted">结构索引 {snapshot.structureIndexVersion} · 语义规则 {snapshot.modelAnalysisVersion} · {snapshot.quality.modelUsed ? "模型参与" : "未调用模型"}{snapshot.quality.cacheHit ? " · 本次命中缓存" : ""}{snapshot.analysisMetrics ? ` · ${snapshot.analysisMetrics.totalTokens} tokens · ${snapshot.analysisMetrics.totalTimeMs} ms` : ""}</p>
         </div>
         <div className="rounded-card border border-line bg-white p-5 shadow-card">
           <h2 className="font-semibold text-slate-950">仍然未知</h2>
@@ -220,13 +268,15 @@ function UnderstandingView({
       </section>
 
       <section className="rounded-card border border-line bg-white p-5 shadow-card">
-        <h2 className="flex items-center gap-2 font-semibold text-slate-950"><GitBranch className="h-4 w-4" />仓库接入状态</h2>
-        <p className="mt-3 text-sm text-slate-700">{snapshot.intake.git.available ? `Git ${snapshot.intake.git.branch}，${snapshot.intake.git.commitCount} 次提交，工作区 ${snapshot.intake.git.worktreeState}` : "没有 Git：当前结构仍可理解，但历史演进明确标记为不可用。"}</p>
+        <h2 className="flex items-center gap-2 font-semibold text-slate-950"><GitBranch className="h-4 w-4" />Historical Coverage</h2>
+        <p className="mt-3 text-sm text-slate-700">{history ? historySummary(history) : snapshot.intake.git.available ? `Git ${snapshot.intake.git.branch}，${snapshot.intake.git.commitCount} 次提交。` : "没有 Git：当前结构仍可理解，但历史演进不可用。"}</p>
+        {history ? <div className="mt-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-4"><Metric label="整体覆盖" value={percent(history.overallCoverage)} /><Metric label="事实覆盖提交" value={`${history.coveredCommitCount}/${history.gitCommitCount}`} /><Metric label="Tag" value={history.tagCount} /><Metric label="证据周期" value={history.coveredPeriods.length} /></div> : null}
         <p className="mt-2 text-xs text-muted">分析时间 {new Date(snapshot.analyzedAt).toLocaleString("zh-CN")} · 指标来源 {snapshot.intake.metricsSource}</p>
       </section>
 
       <section className="rounded-card border border-line bg-white p-5 shadow-card">
         <h2 className="font-semibold text-slate-950">证据支持的项目演进</h2>
+        {snapshot.evolutionPreview ? <p className="mt-3 text-sm leading-6 text-slate-700">{snapshot.evolutionPreview.strategy} 候选里程碑 {snapshot.evolutionPreview.milestoneCandidateCount} 个。</p> : null}
         {bridges.length ? (
           <div className="mt-4 space-y-4">
             {bridges.slice(0, 5).map((bridge) => (
@@ -247,6 +297,22 @@ function UnderstandingView({
         ) : <p className="mt-3 text-sm text-muted">尚无同时具备真实 Git 提交、ProjectFact 和结构区域证据的演进桥；系统不会为填充页面编造历史。</p>}
       </section>
     </div>
+  );
+}
+
+function DynamicSectionCard({ section }: { section: DynamicProfileSection }) {
+  return (
+    <article className="rounded-card border border-line bg-white p-5 shadow-card">
+      <div className="flex flex-wrap items-center gap-2"><h2 className="font-semibold text-slate-950">{section.title}</h2><Badge label={section.type} tone="slate" /></div>
+      <p className="mt-2 text-sm leading-6 text-slate-700">{section.summary || "证据不足，保持未知。"}</p>
+      {section.applicabilityReason ? <p className="mt-2 text-xs text-muted">{section.applicabilityReason}</p> : null}
+      {section.claims.length ? <div className="mt-4 space-y-3 border-t border-line pt-4">{section.claims.map((claim) => (
+        <div key={claim.id}>
+          <div className="flex flex-wrap items-center gap-2"><Badge label={statusLabel(claim.epistemicStatus)} tone={claim.epistemicStatus === "OBSERVED" ? "success" : "slate"} /><span className="text-xs text-muted">{confidenceLabel(claim.confidence)} · {claim.evidenceRefs.length} 条证据</span></div>
+          <p className="mt-1 text-sm leading-6 text-slate-700">{claim.text}</p>
+        </div>
+      ))}</div> : null}
+    </article>
   );
 }
 
@@ -273,10 +339,23 @@ function percent(value: number) { return `${Math.round(value * 100)}%`; }
 function confidenceLabel(value: string) { return value === "HIGH" ? "高" : value === "LOW" ? "低" : "中"; }
 function statusLabel(value: string) { return value === "OBSERVED" ? "已观察" : value === "EXPLAINED" ? "用户说明" : "模型推断"; }
 function semanticLabel(value: string) {
-  const labels: Record<string, string> = { ONE_PASS_BOUNDED: "有界单次归纳", UNAVAILABLE: "模型不可用", SKIPPED_EMPTY: "空目录跳过", SKIPPED_NON_CODE: "非代码跳过" };
+  const labels: Record<string, string> = { ONE_PASS_SCOUT_AND_SYNTHESIS: "一次 Scout + 归纳", UNAVAILABLE: "模型不可用", SKIPPED_EMPTY: "空目录跳过", SKIPPED_NO_SUBSTANTIVE_EVIDENCE: "无实质内容跳过" };
   return labels[value] ?? value;
 }
 function classificationLabel(value: string) {
   const labels: Record<string, string> = { EMPTY: "空目录", UNKNOWN_NON_CODE: "未识别代码", CODE_NO_GIT: "无 Git 代码", SMALL: "小型项目", MEDIUM: "中型项目", LARGE: "大型项目", HUGE_MONOREPO: "超大 / 多工作区" };
   return labels[value] ?? value;
+}
+function shapeLabel(value: string) {
+  const labels: Record<string, string> = { EMPTY: "空目录", DOCUMENT_PROJECT: "文档型", SCRIPT_OR_SMALL_CODE: "小脚本", SOFTWARE_PROJECT: "软件项目", MONOREPO: "Monorepo" };
+  return labels[value] ?? value;
+}
+function sourceCategoryLabel(value: string) {
+  const labels: Record<string, string> = { UNKNOWN_DOCUMENT: "文档", README: "README", PRODUCT_CONTEXT: "项目上下文", AGENT_CONTEXT: "Agent 上下文", AGENT_RESULT: "Agent 结果", MANIFEST: "Manifest", CONFIG: "配置", TEST: "测试", CI_CD: "CI/CD", GIT: "Git" };
+  return labels[value] ?? value;
+}
+function historySummary(history: NonNullable<ProjectUnderstandingSnapshot["historicalCoverage"]>) {
+  if (!history.historyAvailable) return "缺少历史证据，只展示当前状态，不生成 Timeline 或 Evolution。";
+  if (history.gitCommitCount <= 5) return `只有 ${history.gitCommitCount} 次提交，按早期项目短历史展示，不生成虚假成熟阶段。`;
+  return `Git 历史 ${history.gitCommitCount} 次提交，覆盖 ${history.coveredPeriods.length} 个周期；演进深度按证据覆盖决定。`;
 }
