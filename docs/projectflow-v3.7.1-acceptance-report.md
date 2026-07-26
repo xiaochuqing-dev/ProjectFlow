@@ -106,7 +106,7 @@ AG. Implementation commit: `c40b5ec8f75ff107b4a7bde5982789d813bd1d4f`
 
 AH. Documentation commit: `9eb89b25f83f8a2e4326f9fc6503baaa81b1c6a4`
 
-AI. Pull request: pending
+AI. Pull request: #4, `https://github.com/xiaochuqing-dev/ProjectFlow/pull/4`
 
 AJ. PR merge SHA: pending
 
