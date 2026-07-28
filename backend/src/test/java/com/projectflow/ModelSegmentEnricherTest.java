@@ -28,6 +28,7 @@ import com.projectflow.entity.EvidenceConfidence;
 import com.projectflow.repository.AiProviderRepository;
 import com.projectflow.service.DevelopmentSegmentationService.ChangeAtom;
 import com.projectflow.service.DevelopmentSegmentationService.SegmentDraft;
+import com.projectflow.service.ModelFailureClassifier;
 import com.projectflow.service.ModelGatewayService;
 import com.projectflow.service.ModelSegmentEnricher;
 import com.projectflow.service.ModelOutputAdapter;
@@ -183,7 +184,8 @@ class ModelSegmentEnricherTest {
 
         assertThat(result.mode()).isEqualTo("LOCAL_RULE");
         assertThat(result.segments()).isEqualTo(fallback());
-        assertThat(result.fallbackReason()).contains("网络连接失败");
+        assertThat(result.modelStatus()).isEqualTo(ModelFailureClassifier.REQUEST_TIMEOUT);
+        assertThat(result.fallbackReason()).contains("请求超时");
         verify(modelGatewayService, times(1)).callStructured(any(), anyString(), any(com.projectflow.service.ModelTaskType.class));
     }
 

@@ -6,7 +6,7 @@ Use this file as the first read for substantial ProjectFlow work. It is a compac
 
 ## Product Position
 
-ProjectFlow V3.7.2 is a local-first universal evidence understanding and project memory system for AI-assisted developers. It does not assume a fixed project shape: it discovers the material that exists, lets a bounded Scout request registered capabilities, executes deterministic providers under fixed limits, validates evidence references, and conditionally synthesizes only the views supported by evidence. Replaceable understanding remains separate from durable Project Facts, Timeline, lifecycle Capability Map, Project Memory Gateway, Hermes reads, and Obsidian projection.
+ProjectFlow V3.7.3 is a local-first universal evidence understanding and project memory system for AI-assisted developers. It does not assume a fixed project shape: it discovers the material that exists, lets a bounded Scout request registered capabilities, executes deterministic providers under explicit connection/request/overall time semantics, validates evidence references, and conditionally synthesizes only the views supported by evidence. Replaceable understanding remains separate from durable Project Facts, Timeline, lifecycle Capability Map, Project Memory Gateway, Hermes reads, and Obsidian projection.
 
 ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation. ProjectFlow V3.5.0 added the bounded intake foundation retained by V3.6.0 and V3.7.0.
 
@@ -20,6 +20,12 @@ Current direction:
 
 V3.7 focus:
 
+- V3.7.3 introduces `AnalysisTimePolicy`: connection timeout stays short and bounded, Provider request timeout honors explicit configuration, and overall analysis deadline is AUTO/FINITE/UNLIMITED. AUTO/UNLIMITED do not impose a hidden short overall deadline; retry remains bounded and cancellation/heartbeat remain active.
+- `ProjectUnderstandingPromptBuilder` is the only Scout/Final Prompt source for production and direct Eval. Contract v1, Scout v10 and Final v5 have fixture hashes, production/eval parity tests and a type boundary that cannot accept Ground Truth. Scout context keeps all selected Evidence IDs and short summaries while limiting repeated document samples and structure projections through category/module-diverse representatives. Independent manifest, document, Git-history and Tag-anchor gaps remain separate model decisions.
+- Engineering discovery publishes objective classification and `UNKNOWN` importance; the model decides semantic importance, information gap, deep-read need and affected dimensions. Capability/View registries compute only objective eligibility and validate the model choice.
+- Long duration or Token pressure never silently removes necessary Evidence, deep reads or qualified Final Synthesis. Current quality mode is explicit `QUALITY_FIRST`.
+- OpenAI Responses `reasoning.effort` is sent only after an explicit Provider capability override: first structured requests use high and connection/recovery requests use low. Unknown or other protocol profiles omit it; the Evidence and quality gates remain unchanged.
+- V3.7.3 repeats the unchanged GLM `glm-5.2` / OpenAI Responses reliability sample, semantic sample, 38-run and eight real production-chain cases. Results and the V3.8 decision belong only to the dated acceptance reports.
 - V3.7.2 calibrates Semantic Scout and Final Synthesis with a ProjectFlow-only 18-case internal evaluation harness. Fixed and real Provider results are local/CI artifacts; hallucination, accuracy, repeatability, cost and model-comparison metrics never enter product APIs, snapshots, databases or UI.
 - The funded GLM `glm-5.2` / OpenAI Responses revalidation completed the unchanged 38-run set. It remains NOT PASSED: 19 bounded transport timeouts, Tool recall 0.1667, Dynamic View recall 0.0941 and Repeatability 0.4130. Real `ProjectUnderstandingService.refresh()` acceptance passed 2/8 core cases. The earlier DeepSeek pilot/HTTP 402 history is retained; V3.8 remains blocked.
 - `HighValueEvidenceGate` triggers a second call only for validated substantive deep content, history anchors, current worktree details or conflict/currentness evidence. The persisted decision contains trigger/skipped reasons and evidence IDs.

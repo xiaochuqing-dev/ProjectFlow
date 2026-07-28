@@ -169,7 +169,10 @@ public final class V2ProjectDtos {
         String restartRecoveryState,
         int queuePosition,
         UUID retriedFromJobId,
-        String retryReason
+        String retryReason,
+        String analysisDeadlineMode,
+        String qualityMode,
+        boolean overallDeadlineEnabled
     ) {
     }
 

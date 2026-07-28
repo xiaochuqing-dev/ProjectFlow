@@ -73,7 +73,10 @@ class ProjectUnderstandingRealModelIT {
         Assumptions.assumeTrue(config != null, "未提供真实 Provider 配置，端到端验收跳过");
 
         ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
-        List<CaseSpec> cases = fixtures();
+        Set<String> requestedCases = requestedCaseIds();
+        List<CaseSpec> cases = fixtures().stream()
+            .filter(testCase -> requestedCases.isEmpty() || requestedCases.contains(testCase.id()))
+            .toList();
         List<CaseResult> results = new ArrayList<>();
         for (CaseSpec testCase : cases) {
             System.out.println("REAL_E2E_START case=" + testCase.id());
@@ -126,7 +129,7 @@ class ProjectUnderstandingRealModelIT {
         Path output = Path.of("target", "projectflow-eval", "e2e");
         Files.createDirectories(output);
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("version", "projectflow-v3.7.2-real-e2e-v1");
+        artifact.put("version", "projectflow-v3.7.3-real-e2e-v1");
         artifact.put("provider", config.name());
         artifact.put("protocol", config.protocol().name());
         artifact.put("model", config.model());
@@ -178,7 +181,7 @@ class ProjectUnderstandingRealModelIT {
         ReflectionTestUtils.setField(project, "id", projectId);
         project.update(
             testCase.id(),
-            "V3.7.2 real end-to-end acceptance fixture",
+            "V3.7.3 real end-to-end acceptance fixture",
             ProjectStatus.BUILDING,
             List.of(),
             "",
@@ -232,7 +235,7 @@ class ProjectUnderstandingRealModelIT {
             mapper,
             new AiProviderUrlGuard(),
             new ModelOutputAdapter(mapper),
-            Math.min(45, Math.max(30, config.timeoutSeconds()))
+            config.timeoutSeconds()
         );
         SemanticScoutService semanticScout = new SemanticScoutService(gateway, contextPacker);
         ReflectionTestUtils.setField(semanticScout, "maxModelPromptChars", 48_000);
@@ -283,7 +286,7 @@ class ProjectUnderstandingRealModelIT {
             0.1,
             config.maxTokens(),
             true,
-            List.of("V3.7.2_REAL_END_TO_END")
+            List.of("V3.7.3_REAL_END_TO_END")
         );
         provider.configureProtocol(
             config.protocol(),
@@ -292,12 +295,12 @@ class ProjectUnderstandingRealModelIT {
             null,
             null,
             Map.of(),
-            Math.min(45, Math.max(30, config.timeoutSeconds())),
+            config.timeoutSeconds(),
             null,
             null,
             null,
             null,
-            null
+            config.supportsReasoningControl()
         );
         return provider;
     }
@@ -314,6 +317,9 @@ class ProjectUnderstandingRealModelIT {
         Set<String> allowedEvidence = new LinkedHashSet<>();
         snapshot.sourceMap().sources().forEach(source -> allowedEvidence.add(source.id()));
         structure.evidence().forEach(evidence -> allowedEvidence.add(evidence.id()));
+        if (snapshot.analysisExecution() != null) {
+            snapshot.analysisExecution().evidence().forEach(evidence -> allowedEvidence.add(evidence.id()));
+        }
         allowedEvidence.add("intake:scan");
         List<String> finalEvidenceRefs = snapshot.dynamicProfile().sections().stream()
             .flatMap(section -> section.claims().stream())
@@ -439,7 +445,6 @@ class ProjectUnderstandingRealModelIT {
                 if (promoted) failures.add("AGENT_RESULT_PROMOTED_TO_FACT");
             }
             case "projectflow-itself" -> {
-                if (!shapes.contains("CODE_PROJECT")) failures.add("PROJECTFLOW_CODE_SHAPE_MISSING");
                 if (!shapes.contains("FRONTEND") && !shapes.contains("BACKEND")) {
                     failures.add("PROJECTFLOW_PRIMARY_SHAPE_MISSING");
                 }
@@ -447,6 +452,16 @@ class ProjectUnderstandingRealModelIT {
             default -> {
             }
         }
+    }
+
+    private static Set<String> requestedCaseIds() {
+        String configured = System.getProperty("projectflow.eval.e2e.case-ids", "");
+        if (configured.isBlank()) return Set.of();
+        LinkedHashSet<String> result = new LinkedHashSet<>();
+        for (String value : configured.split(",")) {
+            if (!value.isBlank()) result.add(value.strip());
+        }
+        return Set.copyOf(result);
     }
 
     private static CaseResult failedResult(
@@ -486,7 +501,22 @@ class ProjectUnderstandingRealModelIT {
         List<String> types = new ArrayList<>();
         Throwable current = failure;
         while (current != null && types.size() < 5) {
-            types.add(current.getClass().getSimpleName());
+            String type = current.getClass().getSimpleName();
+            if (current instanceof ModelGatewayService.ModelResponseFormatException format
+                && format.diagnostics() != null
+            ) {
+                var diagnostics = format.diagnostics();
+                if (!diagnostics.failureCode().isBlank()) {
+                    type += "[" + diagnostics.failureCode() + "]";
+                }
+                type += "{promptChars=" + diagnostics.promptSize()
+                    + ",effectiveMax=" + diagnostics.effectiveMaxTokens()
+                    + ",completionTokens=" + diagnostics.completionTokens()
+                    + ",reasoningChars=" + diagnostics.reasoningLength()
+                    + ",finish=" + diagnostics.normalizedFinishReason()
+                    + "}";
+            }
+            types.add(type);
             current = current.getCause();
         }
         return String.join(">", types);

@@ -23,6 +23,7 @@ import com.projectflow.dto.ProjectUnderstandingDtos.AdaptiveAnalysisPlanResponse
 import com.projectflow.dto.ProjectUnderstandingDtos.AnalysisExecutionResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.ContextPackingDiagnostics;
 import com.projectflow.dto.ProjectUnderstandingDtos.DynamicProjectProfileResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.EvidenceSourceAssessment;
 import com.projectflow.dto.ProjectUnderstandingDtos.EvidenceSourceMapResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.EvolutionPreviewResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.HistoricalCoverageResponse;
@@ -372,11 +373,15 @@ public class ProjectUnderstandingService {
                     finalModelTimeMs = finalSynthesis.durationMs();
                     modelDiagnostics.add(finalSynthesis.diagnostics());
                     finalSynthesisStatus = "SUCCEEDED";
+                } catch (CancellationException | AnalysisDeadlineContext.DeadlineExceededException finalException) {
+                    throw finalException;
+                } catch (InterruptedException finalException) {
+                    Thread.currentThread().interrupt();
+                    throw finalException;
                 } catch (Exception finalException) {
                     finalModelTimeMs = elapsedMs(finalModelStarted);
                     ModelGatewayService.ModelCallDiagnostics failureDiagnostics = failureDiagnostics(finalException);
                     if (failureDiagnostics != null) modelDiagnostics.add(failureDiagnostics);
-                    if (finalException instanceof InterruptedException) Thread.interrupted();
                     finalSynthesisStatus = "FAILED_DEGRADED";
                     progress.accept(
                         "FINAL_SYNTHESIS_DEGRADED",
@@ -436,6 +441,9 @@ public class ProjectUnderstandingService {
             );
             return new RefreshOutcome(saved, false, true);
         } catch (CancellationException exception) {
+            preservePreviousAsStale(current);
+            throw exception;
+        } catch (AnalysisDeadlineContext.DeadlineExceededException exception) {
             preservePreviousAsStale(current);
             throw exception;
         } catch (InterruptedException exception) {
@@ -1078,11 +1086,75 @@ public class ProjectUnderstandingService {
         return new ProjectUnderstandingSnapshotResponse(
             id, value.projectId(), value.classification(), value.scale(), value.identity(), value.technology(),
             value.structure(), value.architecture(), value.capabilities(), value.engineeringState(),
-            value.evidenceCoverage(), quality, value.unknowns(), value.intake(), value.analysisPlan(),
+            value.evidenceCoverage(), quality, value.unknowns(), value.intake(), compatiblePlan(value.analysisPlan()),
             value.analyzedAt(), value.sourceRevision(), value.structureIndexVersion(), value.modelAnalysisVersion(),
-            currentStatus, value.diagnostics(), value.sourceMap(), value.semanticScout(), value.dynamicProfile(),
+            currentStatus, value.diagnostics(), value.sourceMap(), compatibleScout(value.semanticScout()), value.dynamicProfile(),
             value.historicalCoverage(), value.evolutionPreview(), value.analysisExecution(), value.contextPacking(),
             value.analysisMetrics(), value.finalSynthesisStatus()
+        );
+    }
+
+    private static AdaptiveAnalysisPlanResponse compatiblePlan(AdaptiveAnalysisPlanResponse value) {
+        if (value == null || (value.eligibleCapabilities() != null
+            && value.eligibleViews() != null
+            && value.toolSelectionRationales() != null)) return value;
+        return new AdaptiveAnalysisPlanResponse(
+            value.deterministicCapabilities(),
+            value.structureProvider(),
+            value.semanticMode(),
+            value.maxModelRequests(),
+            value.maxModelInputTokens(),
+            value.maxModelTotalTokens(),
+            value.maxDurationMs(),
+            value.hierarchical(),
+            value.historicalMode(),
+            value.expectedCoverage(),
+            value.unavailableCapabilities(),
+            value.planReasons(),
+            value.detectedProjectShapes(),
+            value.applicableDimensions(),
+            value.skippedDimensions(),
+            value.evidencePriorities(),
+            value.toolsToInvoke(),
+            value.deepReadTargets(),
+            value.historicalStrategy(),
+            value.structureStrategy(),
+            value.semanticBudgets(),
+            value.expectedOutputs(),
+            value.confidence(),
+            value.eligibleCapabilities() == null ? List.of() : value.eligibleCapabilities(),
+            value.eligibleViews() == null ? List.of() : value.eligibleViews(),
+            value.toolSelectionRationales() == null ? List.of() : value.toolSelectionRationales()
+        );
+    }
+
+    private static SemanticScoutResponse compatibleScout(SemanticScoutResponse value) {
+        if (value == null) return null;
+        List<EvidenceSourceAssessment> assessments = value.evidenceSourceAssessments() == null
+            ? List.of()
+            : value.evidenceSourceAssessments().stream().map(item -> new EvidenceSourceAssessment(
+                item.evidenceId(),
+                item.semanticRole(),
+                item.importance(),
+                item.currentness(),
+                item.shouldDeepRead(),
+                item.shouldSkip(),
+                item.reason(),
+                item.informationGap() == null ? "" : item.informationGap(),
+                item.affectedDimensions() == null ? List.of() : item.affectedDimensions(),
+                item.confidence()
+            )).toList();
+        return new SemanticScoutResponse(
+            value.projectShapeHypotheses() == null ? List.of() : value.projectShapeHypotheses(),
+            assessments,
+            value.applicableDimensions() == null ? List.of() : value.applicableDimensions(),
+            value.recommendedToolCalls() == null ? List.of() : value.recommendedToolCalls(),
+            value.unknowns() == null ? List.of() : value.unknowns(),
+            value.skipCandidates() == null ? List.of() : value.skipCandidates(),
+            value.potentialConflicts() == null ? List.of() : value.potentialConflicts(),
+            value.currentnessWarnings() == null ? List.of() : value.currentnessWarnings(),
+            value.toolRequests() == null ? List.of() : value.toolRequests(),
+            value.modelUsed()
         );
     }
 

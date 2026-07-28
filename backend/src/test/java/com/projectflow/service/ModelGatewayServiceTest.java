@@ -131,6 +131,33 @@ class ModelGatewayServiceTest {
     }
 
     @Test
+    void failedRetryRetainsPreviouslyValidatedPartialScout() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        HttpServer server = startPartialScoutRecoveryServer(calls);
+        try {
+            AiProvider provider = provider("http://127.0.0.1:" + server.getAddress().getPort());
+            var response = gateway.callStructured(
+                provider,
+                "分析项目",
+                ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+            );
+
+            assertThat(calls.get()).isEqualTo(2);
+            assertThat(response.parsed().partial()).isTrue();
+            assertThat(response.diagnostics().compactRetryAttempted()).isTrue();
+            assertThat(response.diagnostics().compactRetrySucceeded()).isFalse();
+            assertThat(response.diagnostics().failureCode()).isEqualTo("PARTIAL_SCOUT_RETAINED");
+            assertThat(response.diagnostics().requestCount()).isEqualTo(2);
+            assertThat(ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT.schemaMatches(
+                response.parsed().root(),
+                new ModelOutputAdapter(objectMapper)
+            )).isTrue();
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void cancellationStopsRecoveryRequestAfterFirstResponse() throws Exception {
         AtomicInteger calls = new AtomicInteger();
         java.util.concurrent.atomic.AtomicBoolean cancelled = new java.util.concurrent.atomic.AtomicBoolean();
@@ -157,6 +184,7 @@ class ModelGatewayServiceTest {
             assertThat(response.diagnostics().transportRetryCount()).isEqualTo(1);
             assertThat(response.diagnostics().retryType()).isEqualTo("TRANSPORT_RETRY");
             assertThat(response.diagnostics().requestCount()).isEqualTo(2);
+            assertThat(response.diagnostics().latencyMs()).isGreaterThanOrEqualTo(100);
         } finally {
             server.stop(0);
         }
@@ -258,6 +286,53 @@ class ModelGatewayServiceTest {
         return server;
     }
 
+    private HttpServer startPartialScoutRecoveryServer(AtomicInteger calls) throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/chat/completions", exchange -> {
+            int call = calls.incrementAndGet();
+            String content = call == 1
+                ? """
+                    {
+                      "semanticScout":{
+                        "projectShapeHypotheses":[{
+                          "shape":"BACKEND","confidence":"HIGH",
+                          "evidenceRefs":["source:manifest"],"reason":"存在服务入口"
+                        }],
+                        "evidenceSourceAssessments":[{
+                          "evidenceId":"source:manifest","semanticRole":"规范来源",
+                          "importance":"HIGH","currentness":"CURRENT",
+                          "shouldDeepRead":false,"shouldSkip":false,"reason":"定义依赖",
+                          "informationGap":"入口未知","affectedDimensions":["SERVICES"],
+                          "confidence":"HIGH"
+                        }],
+                        "applicableDimensions":["SERVICES"],
+                        "capabilityDecisions":[],
+                        "unknowns":[]
+                      },
+                      "dynamicProfile":{"summary":"未闭合
+                    """
+                : "{\"semanticScout\":";
+            String body = objectMapper.writeValueAsString(Map.of(
+                "choices", List.of(Map.of(
+                    "finish_reason", "length",
+                    "message", Map.of("content", content)
+                )),
+                "usage", Map.of(
+                    "prompt_tokens", 100,
+                    "completion_tokens", 4_000,
+                    "total_tokens", 4_100
+                )
+            ));
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        server.start();
+        return server;
+    }
+
     private HttpServer startEmptyTruncatedServer(AtomicInteger calls, AtomicInteger compactMaxTokens) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/chat/completions", exchange -> {
@@ -348,6 +423,7 @@ class ModelGatewayServiceTest {
         server.createContext("/chat/completions", exchange -> {
             int call = calls.incrementAndGet();
             if (call == 1) {
+                java.util.concurrent.locks.LockSupport.parkNanos(120_000_000L);
                 exchange.sendResponseHeaders(503, -1);
                 exchange.close();
                 return;

@@ -27,7 +27,7 @@ class ProjectFlowRealProviderProbeIT {
             mapper,
             new AiProviderUrlGuard(),
             new ModelOutputAdapter(mapper),
-            Math.min(45, Math.max(30, config.timeoutSeconds()))
+            config.timeoutSeconds()
         );
         AiProvider provider = new AiProvider(UUID.randomUUID());
         provider.update(
@@ -39,7 +39,7 @@ class ProjectFlowRealProviderProbeIT {
             0.0,
             Math.max(256, config.maxTokens()),
             false,
-            List.of("V3.7.2_REAL_PROVIDER_PROBE")
+            List.of("V3.7.3_REAL_PROVIDER_PROBE")
         );
         provider.configureProtocol(
             config.protocol(),
@@ -48,12 +48,12 @@ class ProjectFlowRealProviderProbeIT {
             null,
             null,
             java.util.Map.of(),
-            Math.min(45, Math.max(30, config.timeoutSeconds())),
+            config.timeoutSeconds(),
             null,
             null,
             null,
             null,
-            null
+            config.supportsReasoningControl()
         );
 
         var response = gateway.callStructured(

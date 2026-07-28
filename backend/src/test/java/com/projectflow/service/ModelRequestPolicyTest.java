@@ -41,6 +41,22 @@ class ModelRequestPolicyTest {
     }
 
     @Test
+    void givesReasoningResponsesEnoughSharedReasoningAndVisibleOutputBudget() {
+        AiProvider provider = provider(AiProviderType.OPENAI, "glm-5.2", 0.9, 16_000);
+        var parameters = policy.initial(
+            provider,
+            registry.resolve(provider),
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "x".repeat(2_000)
+        );
+
+        assertThat(parameters.temperatureSent()).isFalse();
+        assertThat(parameters.taskRequestedMaxTokens()).isEqualTo(16_000);
+        assertThat(parameters.effectiveMaxTokens()).isEqualTo(16_000);
+        assertThat(parameters.maxTokenDecision()).contains("reasoning 与可见 JSON 共享");
+    }
+
+    @Test
     void calculatesDifferentBudgetsByTaskAndInputScale() {
         AiProvider provider = provider("deepseek-chat", 0.2, 64_000);
         var small = policy.initial(
@@ -80,9 +96,91 @@ class ModelRequestPolicyTest {
         assertThat(schema.effectiveMaxTokens()).isNotEqualTo(truncation.effectiveMaxTokens());
     }
 
+    @Test
+    void reasoningSchemaRepairKeepsTaskUsefulCeiling() {
+        AiProvider provider = provider(AiProviderType.OPENAI, "glm-5.2", 0.9, 16_000);
+        var capabilities = registry.resolve(provider);
+        var initial = policy.initial(
+            provider,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "x".repeat(2_000)
+        );
+
+        var schema = policy.recovery(
+            initial,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "SCHEMA_REPAIR_RETRY",
+            2_000
+        );
+
+        assertThat(schema.taskRequestedMaxTokens()).isEqualTo(16_000);
+        assertThat(schema.effectiveMaxTokens()).isEqualTo(16_000);
+    }
+
+    @Test
+    void reasoningTruncationUsesBoundedProviderHeadroomForTheOnlyRecovery() {
+        AiProvider provider = provider(AiProviderType.OPENAI, "glm-5.2", 0.9, 32_000);
+        var capabilities = registry.resolve(provider);
+        var initial = policy.initial(
+            provider,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "x".repeat(48_000)
+        );
+
+        var recovery = policy.recovery(
+            initial,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "TRUNCATION_RETRY",
+            0
+        );
+
+        assertThat(initial.effectiveMaxTokens()).isEqualTo(16_000);
+        assertThat(recovery.taskRequestedMaxTokens()).isEqualTo(32_000);
+        assertThat(recovery.effectiveMaxTokens()).isEqualTo(32_000);
+        assertThat(recovery.maxTokenDecision()).contains("最多两倍预算");
+    }
+
+    @Test
+    void nonReasoningTruncationRetainsBoundedFiftyPercentIncrease() {
+        AiProvider provider = provider("deepseek-chat", 0.2, 32_000);
+        var capabilities = registry.resolve(provider);
+        var initial = policy.initial(
+            provider,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "x".repeat(48_000)
+        );
+
+        var recovery = policy.recovery(
+            initial,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "TRUNCATION_RETRY",
+            0
+        );
+
+        assertThat(initial.effectiveMaxTokens()).isEqualTo(8_428);
+        assertThat(recovery.taskRequestedMaxTokens()).isEqualTo(12_642);
+        assertThat(recovery.effectiveMaxTokens()).isEqualTo(12_642);
+        assertThat(recovery.maxTokenDecision()).contains("递增 50%");
+    }
+
     private AiProvider provider(String model, double temperature, int maxTokens) {
+        return provider(AiProviderType.DEEPSEEK, model, temperature, maxTokens);
+    }
+
+    private AiProvider provider(
+        AiProviderType type,
+        String model,
+        double temperature,
+        int maxTokens
+    ) {
         AiProvider provider = new AiProvider(UUID.randomUUID());
-        provider.update("test", "https://api.deepseek.com", "test-key", model, AiProviderType.DEEPSEEK,
+        provider.update("test", "https://api.deepseek.com", "test-key", model, type,
             temperature, maxTokens, true, List.of());
         return provider;
     }

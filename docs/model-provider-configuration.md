@@ -41,3 +41,22 @@ The optional real-model quality gate uses the existing Provider configuration or
 Before a real run, confirm Provider family, protocol, endpoint, model, auth mode, timeout, output ceiling and retry policy. Evaluation artifacts contain only normalized evidence IDs, claims, dimensions, aggregate token/latency diagnostics and failure state. They exclude the Key, Authorization, prompt, raw response and reasoning. Estimated monetary cost remains `UNAVAILABLE` unless a dated reliable price source is explicitly configured.
 
 After using a temporary or shared real-model key, revoke or rotate it according to the Provider's policy. ProjectFlow cannot determine whether an external key was exposed outside this process.
+
+## V3.7.3 runtime semantics
+
+Provider configuration contains a per-request processing timeout. It is not a connection timeout and is not the overall project-analysis duration.
+
+- Connection timeout is a separate application runtime value and stays short/bounded.
+- Provider request timeout is passed unchanged to probe, direct Eval and production Model Gateway requests.
+- Overall analysis deadline belongs to the persisted analysis job and supports AUTO/FINITE/UNLIMITED.
+- UNLIMITED never disables connection/request timeout, bounded retry, cancellation or heartbeat.
+
+Official OpenAI/Anthropic SDK adapters set connect/read/write/request independently and disable SDK retries. Model Gateway remains the single owner of retry/recovery diagnostics. Protocol compatibility does not establish ProjectFlow semantic quality; the unchanged real quality gate and production-chain acceptance decide qualification.
+
+Transport retry diagnostics aggregate wall-clock latency from the first attempt through the final attempt, including the bounded backoff. A later successful attempt must not hide time spent in the failed request.
+
+Reasoning-capable Responses models count hidden reasoning and visible JSON against one output budget. The task still starts from a bounded useful ceiling; the configured Provider ceiling must leave room for the single bounded truncation recovery. V3.7.3 GLM acceptance uses a 32k Provider ceiling: the Scout starts at 16k and the only reasoning-aware recovery may use at most 32k.
+
+Reasoning control is an explicit capability override, not a model-name guess. When an OpenAI Responses Provider has been probed and is marked supported, ProjectFlow sends standard `reasoning.effort=high` for the first structured request and `low` for the connection probe or bounded recovery. Unsupported/automatic profiles omit the field. This changes only Provider execution behavior; it does not reduce Evidence, omit a qualified Final Synthesis or relax any quality gate. Optional real-eval injection uses `PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL=true` only after a successful Provider probe.
+
+For CI or one-process local acceptance, inject `PROJECTFLOW_REAL_MODEL_API_KEY` through the environment. Never put a real value in `.env`, Maven arguments, docs, reports or Git. GLM OpenAI Responses acceptance uses the Ark coding v3 base URL and model `glm-5.2`; the value of the key remains external.

@@ -357,3 +357,30 @@ Routes and ownership rules remain unchanged. V3.7.2 adds only compatible trust f
 - `finalSynthesisStatus`: `NOT_APPLICABLE`, `PENDING`, `SKIPPED_NO_HIGH_VALUE_EVIDENCE`, `SUCCEEDED` or `FAILED_DEGRADED`
 
 These fields explain whether new evidence justified Final Synthesis and whether the current result is degraded. They are not accuracy/hallucination scores. Internal eval metrics have no controller, DTO, Snapshot field or UI route.
+
+## V3.7.3 Long-running Understanding Contract
+
+The refresh route and ownership check remain unchanged. Its request body is optional:
+
+```json
+{
+  "deadlineMode": "AUTO",
+  "maxAnalysisDurationSeconds": null,
+  "qualityMode": "QUALITY_FIRST"
+}
+```
+
+`deadlineMode` accepts `AUTO`, `FINITE` or `UNLIMITED`. FINITE uses `maxAnalysisDurationSeconds` with a 60-second minimum. AUTO and UNLIMITED have no ProjectFlow overall deadline; connection and Provider request timeout remain independently finite. Unknown values safely normalize to AUTO/QUALITY_FIRST.
+
+`ProjectAnalysisJobResponse` adds `analysisDeadlineMode`, `qualityMode` and `overallDeadlineEnabled`. Existing clients that send no body and ignore the added fields remain compatible. The route still only creates/reuses a persisted job; GET routes never run scans, Git, tools or models.
+
+Plan/Scout JSON adds compatible optional fields:
+
+- `evidenceSourceAssessments[].informationGap`
+- `evidenceSourceAssessments[].affectedDimensions`
+- `semanticScout.toolRequests[]`: capability, information gap, expected value, target Evidence IDs and insufficiency reason
+- `analysisPlan.eligibleCapabilities`
+- `analysisPlan.eligibleViews`
+- `analysisPlan.toolSelectionRationales`
+
+They expose evidence reasoning and objective availability, not benchmark scores. Unknown Evidence, unavailable Capability/View, commands, parameters and absolute paths remain invalid.

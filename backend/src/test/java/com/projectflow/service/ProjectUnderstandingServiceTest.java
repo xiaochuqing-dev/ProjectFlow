@@ -18,7 +18,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
@@ -180,6 +179,16 @@ class ProjectUnderstandingServiceTest {
         legacyJson.remove("finalSynthesisStatus");
         ((ObjectNode) legacyJson.path("sourceMap")).remove("diversityMetrics");
         ((ObjectNode) legacyJson.path("historicalCoverage")).remove("breakdown");
+        ObjectNode legacyPlan = (ObjectNode) legacyJson.path("analysisPlan");
+        legacyPlan.remove("eligibleCapabilities");
+        legacyPlan.remove("eligibleViews");
+        legacyPlan.remove("toolSelectionRationales");
+        ObjectNode legacyScout = (ObjectNode) legacyJson.path("semanticScout");
+        legacyScout.remove("toolRequests");
+        legacyScout.path("evidenceSourceAssessments").forEach(item -> {
+            ((ObjectNode) item).remove("informationGap");
+            ((ObjectNode) item).remove("affectedDimensions");
+        });
         stored.replace(
             stored.getSourceRevision(),
             stored.getStructureHash(),
@@ -198,6 +207,12 @@ class ProjectUnderstandingServiceTest {
         assertThat(legacy.finalSynthesisStatus()).isNull();
         assertThat(legacy.sourceMap().diversityMetrics()).isNull();
         assertThat(legacy.historicalCoverage().breakdown()).isNull();
+        assertThat(legacy.analysisPlan().eligibleCapabilities()).isEmpty();
+        assertThat(legacy.analysisPlan().eligibleViews()).isEmpty();
+        assertThat(legacy.analysisPlan().toolSelectionRationales()).isEmpty();
+        assertThat(legacy.semanticScout().toolRequests()).isEmpty();
+        assertThat(legacy.semanticScout().evidenceSourceAssessments())
+            .allMatch(item -> item.informationGap().isEmpty() && item.affectedDimensions().isEmpty());
     }
 
     @Test
@@ -225,7 +240,14 @@ class ProjectUnderstandingServiceTest {
             {
               "semanticScout":{
                 "projectShapeHypotheses":[],"evidenceSourceAssessments":[],
-                "applicableDimensions":["documentPurpose"],"recommendedToolCalls":["DOC_READER","DROP_DATABASE"],
+                "applicableDimensions":["DOCUMENT_OVERVIEW"],
+                "toolRequests":[{
+                  "capability":"DOC_READER",
+                  "informationGap":"需要核对正文中的事故边界",
+                  "expectedEvidenceValue":"补充可验证的故障约束和回滚条件",
+                  "targetEvidenceIds":["source:3f3bf389748a68224769"],
+                  "whyExistingEvidenceIsInsufficient":"Scout 只有短摘要，无法验证正文细节"
+                }],
                 "unknowns":[],"skipCandidates":[],"potentialConflicts":[],"currentnessWarnings":[]
               },
               "dynamicProfile":{"summary":"文档型材料","sections":[]},
@@ -289,7 +311,14 @@ class ProjectUnderstandingServiceTest {
             {
               "semanticScout":{
                 "projectShapeHypotheses":[],"evidenceSourceAssessments":[],
-                "applicableDimensions":["documentPurpose"],"recommendedToolCalls":["DOC_READER"],
+                "applicableDimensions":["DOCUMENT_OVERVIEW"],
+                "toolRequests":[{
+                  "capability":"DOC_READER",
+                  "informationGap":"需要核对当前约束正文",
+                  "expectedEvidenceValue":"补充证据限制和冲突处理细节",
+                  "targetEvidenceIds":["source:e4aaa733a7c9e7df59bb"],
+                  "whyExistingEvidenceIsInsufficient":"Scout 只有短摘要，无法验证完整边界"
+                }],
                 "unknowns":[],"skipCandidates":[],"potentialConflicts":[],"currentnessWarnings":[]
               },
               "dynamicProfile":{"summary":"第一阶段文档理解","sections":[]},
@@ -327,9 +356,7 @@ class ProjectUnderstandingServiceTest {
             Arguments.of(
                 "invalid-schema",
                 new ModelGatewayService.ModelResponseFormatException("invalid schema", null, null)
-            ),
-            Arguments.of("cancellation", new CancellationException("cancelled during final synthesis")),
-            Arguments.of("interrupted", new InterruptedException("interrupted during final synthesis"))
+            )
         );
     }
 

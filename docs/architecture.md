@@ -1,5 +1,15 @@
 # Architecture
 
+## V3.7.3 long-running and prompt-intelligence boundary
+
+`AnalysisTimePolicy` separates connection timeout, Provider request timeout, overall analysis deadline, bounded retry, cancellation/heartbeat and quality mode. AUTO/UNLIMITED bind no overall deadline; FINITE binds the explicit value. `ModelGatewayService` polls cancellation and heartbeat around official SDK calls, owns one transport retry, and keeps SDK retries disabled.
+
+`ProjectUnderstandingPromptBuilder` is shared by production Scout, production Final Synthesis and direct Eval. It accepts only bounded Evidence context, allowed Evidence IDs, objective eligible capabilities/views and validated Tool Evidence; Ground Truth is structurally outside the input. Contract v1 uses Scout v10 and Final v5. The Scout context keeps every selected source ID and short summary, but only a category-diverse subset carries a bounded sample; structure projections are similarly deduplicated across kind and top-level module before complete-JSON packing. Manifest, document, Git-history and Tag-anchor gaps are independent model decisions rather than a first-tool-wins menu.
+
+`AnalysisToolRegistry` and `AnalysisViewRegistry` decide only objective eligibility. Discovery emits `UNKNOWN` semantic importance for engineering candidates. The model decides semantic role, importance, information gaps, deep-read intent, applicable views and conflict/currentness; engineering code validates references and availability before execution or persistence.
+
+The existing chain remains `Discover → Scout → Plan → Execute → Validate → conditional Final Synthesis → Dynamic Profile`. No database schema, new dependency, second model client, per-file/per-commit model loop, Provider manager or internal-metric UI is introduced.
+
 ## V3.7 universal evidence intelligence boundary
 
 An explicit `PROJECT_UNDERSTANDING_REFRESH` job now follows:

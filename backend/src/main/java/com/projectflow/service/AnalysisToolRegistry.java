@@ -41,6 +41,20 @@ public class AnalysisToolRegistry {
         return List.copyOf(result);
     }
 
+    public List<String> eligibleCapabilities(
+        RepositoryIntakeResponse intake,
+        ProjectStructureIndexResponse index,
+        EvidenceSourceMapResponse sourceMap
+    ) {
+        LinkedHashSet<String> result = new LinkedHashSet<>();
+        for (String capability : List.of(
+            "MANIFEST", "GIT_HISTORY", "GIT_TAG", "WORKTREE", "DOC_READER", "AGENT_RESULT"
+        )) {
+            if (isAvailable(capability, intake, index, sourceMap)) result.add(capability);
+        }
+        return List.copyOf(result);
+    }
+
     public List<String> validateRequested(
         List<String> requested,
         List<String> defaults,
@@ -49,13 +63,27 @@ public class AnalysisToolRegistry {
         EvidenceSourceMapResponse sourceMap
     ) {
         LinkedHashSet<String> result = new LinkedHashSet<>(defaults);
+        Set<String> eligible = Set.copyOf(eligibleCapabilities(intake, index, sourceMap));
         if (requested == null) return List.copyOf(result);
         for (String raw : requested) {
-            String capability = raw == null ? "" : raw.strip().toUpperCase(Locale.ROOT);
+            String capability = normalizeCapability(raw);
             if (!REGISTERED_CAPABILITIES.contains(capability)) continue;
-            if (isAvailable(capability, intake, index, sourceMap)) result.add(capability);
+            if (eligible.contains(capability)) result.add(capability);
         }
         return List.copyOf(result);
+    }
+
+    public static String normalizeCapability(String value) {
+        if (value == null) return "";
+        String normalized = value.strip().toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]+", "_");
+        return switch (normalized) {
+            case "DOCREADER" -> "DOC_READER";
+            case "AGENTRESULT" -> "AGENT_RESULT";
+            case "GITHISTORY" -> "GIT_HISTORY";
+            case "GITTAG" -> "GIT_TAG";
+            case "FILE_SYSTEM" -> "FILESYSTEM";
+            default -> normalized;
+        };
     }
 
     public List<String> unavailableReasons(
@@ -93,4 +121,5 @@ public class AnalysisToolRegistry {
             "AGENT_RESULT", "CHANGELOG", "UNKNOWN_DOCUMENT"
         ).contains(category);
     }
+
 }

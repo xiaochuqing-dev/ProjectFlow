@@ -1,0 +1,19 @@
+{
+  "projectIntake": {
+    "projectName": "fixture",
+    "classification": "UNKNOWN_NON_CODE",
+    "fileCount": 1,
+    "sourceFileCount": 0
+  },
+  "documents": [
+    {
+      "id": "source:doc",
+      "category": "UNKNOWN_DOCUMENT",
+      "locator": "notes/current.md",
+      "summary": "当前约束与回滚边界的有界样本"
+    }
+  ],
+  "historicalCoverage": {
+    "historyAvailable": false
+  }
+}

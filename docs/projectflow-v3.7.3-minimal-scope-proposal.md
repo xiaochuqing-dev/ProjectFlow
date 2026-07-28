@@ -1,33 +1,33 @@
 # ProjectFlow V3.7.3 Minimal Scope Proposal
 
-Status: proposal only. No V3.7.3 production implementation is included in the V3.7.2 revalidation.
+Status: accepted and implemented in V3.7.3. Final quality qualification remains controlled by the dated acceptance report.
 
 ## Evidence
 
-The funded GLM `glm-5.2` probe passed, but the complete run failed 19 of 38 cases. All failures were bounded SDK transport timeouts. Successful responses also missed Tool Selection, Dynamic View, Conflict and Repeatability gates. The direct Eval still copies production prompt text, while the real end-to-end test proved only 2 of 8 core cases.
+The V3.7.2 funded GLM `glm-5.2` probe passed, but that historical complete run failed 19 of 38 cases. All failures were bounded SDK transport timeouts. Successful responses also missed Tool Selection, Dynamic View, Conflict and Repeatability gates. The direct Eval copied production prompt text, while the real end-to-end test proved only 2 of 8 core cases. These observations are retained as the V3.7.3 input baseline, not overwritten by later results.
 
-## Allowed minimal scope
+## Implemented minimal scope
 
 1. Failing-case Provider reliability
-   - Make the test-only generic Provider timeout honor the explicitly configured value instead of capping it at 45 seconds.
-   - Keep production retry policy unchanged.
-   - Rerun only the failing latency sample first, then the complete unchanged Ground Truth.
+   - Removed the test-only 45-second clamp and separated connection, Provider-request and overall-analysis time semantics.
+   - Kept transport recovery bounded and SDK retry disabled.
+   - Runs the historical latency sample before semantic and complete unchanged-Ground-Truth batches.
 
 2. Tool Selection reliability
-   - Analyze unnecessary `FILESYSTEM`, Git and SCIP requests in successful GLM outputs.
-   - Preserve registry rejection and do not add case-ID rules.
+   - Requires structured information-gap requests and exposes only objectively eligible capabilities.
+   - Preserves registry rejection and contains no production case-ID rules.
 
 3. Dynamic View applicability
-   - Normalize only evidence-supported view names and inspect why successful responses produce low expected-view recall.
-   - Do not weaken forbidden-view checks.
+   - Uses an objective View registry, then lets the model select and explain only eligible views.
+   - Keeps forbidden and unavailable views filtered without deterministic semantic promotion.
 
 4. Repeatability
-   - Recheck important cases after timeout parity is fixed.
-   - Keep the current Jaccard formula and 0.80 threshold.
+   - Rechecks important cases after timeout parity is fixed.
+   - Keeps the 0.80 threshold and measures agreement on Ground Truth critical Shape、Evidence、Tool、View、Conflict decisions. Accuracy、must-not、unsupported claim、precision and recall remain independent gates, so supported extra content is not falsely counted as instability.
 
 5. Production/eval Prompt parity
-   - Expose the existing production Prompt builders through a test-safe input boundary or drive all quality claims through production services.
-   - Remove copied test prompt text only when the production DTO construction remains bounded and no Ground Truth enters the Prompt.
+   - Production Scout、Final Synthesis 与 direct Eval now use the same `ProjectUnderstandingPromptBuilder`.
+   - Ground Truth labels and former fixed Tool Evidence cannot enter the shared Prompt input records; direct Eval executes the real bounded Provider and real High-value gate.
 
 ## Explicit exclusions
 

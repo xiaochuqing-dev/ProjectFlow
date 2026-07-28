@@ -1,5 +1,18 @@
+<!-- PROJECTFLOW V3.7.3 CONTEXT START -->
+ProjectFlow 当前版本为 V3.7.3。后续 Agent 必须按“任意真实输入 -> 有界 Evidence Discovery 与客观分类 -> Evidence Source Map -> 模型判断语义重要性与信息缺口 -> 客观 Tool/View Eligibility -> 注册 Capability 执行 -> High-value Evidence Gate -> 条件 Final Synthesis / 当前结果降级 -> Dynamic Project Profile -> Historical Coverage -> 证据支持的演进 -> ProjectFact / Timeline / Capability / Gateway 消费”理解产品。
+
+V3.7.3 Long-running Multi-provider Reliability / Prompt Intelligence 规则（后续 Agent 必须遵守）：
+- Connection Timeout、Provider Request Timeout、Overall Analysis Deadline 必须分离。AUTO/UNLIMITED 不设置隐藏短总体截止时间；FINITE 尊重显式用户值。坏连接仍有界、transport retry 最多一次、取消和 heartbeat 始终有效。
+- 不得为了响应速度、Token 或成本静默减少 Evidence、必要深读或满足门控的 Final Synthesis。当前质量模式是显式 QUALITY_FIRST。
+- Semantic Scout 与 Final Synthesis 的生产和 Eval Prompt 只能通过共享 `ProjectUnderstandingPromptBuilder`；Ground Truth、case ID、期望标签、评分和门槛不得进入 Prompt。
+- 工程系统只负责广泛发现、安全采样、客观来源分类、多样性、allow-list、capability/view 可用性和结果验证；不得从文件名、类型、README 身份或内部采样分数决定语义 HIGH/LOW。
+- 模型负责结合整个项目判断 Evidence 语义重要性、信息缺口、深读需要、适用视图、冲突和当前性；请求只能包含 eligible capability name 和已知 evidence ID。
+- Provider compatible 不等于 quality qualified。OPENAI_RESPONSES、OPENAI_CHAT_COMPLETIONS、ANTHROPIC_MESSAGES 共用事实和 Prompt Contract，不得按 Provider 复制业务规则。
+- 内部 Eval 继续只存在于测试、CI artifact 和阶段报告。原始 18-case Ground Truth、38-run 公式和门槛不得修改；V3.8 只有在真实 GLM、八个生产链案例、安全和 CI 全部通过后才可放行。
+- 不创建 Git Tag 或 GitHub Release，不提交 Key、raw response、reasoning、完整 Prompt、绝对路径或未脱敏项目内容。
+
 <!-- PROJECTFLOW V3.7.2 CONTEXT START -->
-ProjectFlow 当前版本为 V3.7.2。后续 Agent 必须按“任意真实输入 -> 有界 Evidence Discovery -> Evidence Source Map -> Semantic Scout -> 自适应分析计划 -> 注册 Capability 执行 -> High-value Evidence Gate -> 条件 Final Synthesis / 当前结果降级 -> Dynamic Project Profile -> Historical Coverage -> 证据支持的演进 -> ProjectFact / Timeline / Capability / Gateway 消费”理解产品。
+V3.7.2 兼容基线仍然有效。后续 Agent 必须按“任意真实输入 -> 有界 Evidence Discovery -> Evidence Source Map -> Semantic Scout -> 自适应分析计划 -> 注册 Capability 执行 -> High-value Evidence Gate -> 条件 Final Synthesis / 当前结果降级 -> Dynamic Project Profile -> Historical Coverage -> 证据支持的演进 -> ProjectFact / Timeline / Capability / Gateway 消费”理解既有链路。
 
 V3.7.2 Real Model Quality / Integration Boundary 规则（后续 Agent 必须遵守）：
 - 内部 Eval 只属于测试、CI artifact 和阶段报告；hallucination、accuracy、repeatability、cost、model score 不得进入产品 API、Snapshot、数据库或 UI。
@@ -235,6 +248,7 @@ V3.3.3 仍有效的关键决策：
 - 规则负责证据事实，模型负责灵活理解；正常客观事实自动记录，用户只处理主观编辑和异常关注项。
 <!-- PROJECTFLOW V3.6.0 CONTEXT END -->
 <!-- PROJECTFLOW V3.7.2 CONTEXT END -->
+<!-- PROJECTFLOW V3.7.3 CONTEXT END -->
 
 # ProjectFlow Local Rules
 

@@ -91,7 +91,7 @@ public class ProjectEvidenceDiscoveryService {
             "REPOSITORY_INTAKE",
             "",
             "CURRENT_PROJECT_INVENTORY",
-            "HIGH",
+            "UNKNOWN",
             "CURRENT",
             "HIGH",
             "DETERMINISTIC",
@@ -106,7 +106,7 @@ public class ProjectEvidenceDiscoveryService {
                 "LOCAL_GIT",
                 ".git",
                 "HISTORY_EVIDENCE",
-                "HIGH",
+                "UNKNOWN",
                 "CURRENT",
                 "HIGH",
                 "DETERMINISTIC",
@@ -130,7 +130,7 @@ public class ProjectEvidenceDiscoveryService {
                 candidate.sourceType(),
                 candidate.file().path(),
                 deterministicRole(candidate.category()),
-                importance(candidate.score()),
+                "UNKNOWN",
                 deterministicCurrentness(candidate.category()),
                 "MEDIUM",
                 sampled ? "SAMPLED_BOUNDED" : "METADATA_ONLY",
@@ -409,12 +409,6 @@ public class ProjectEvidenceDiscoveryService {
         if (file.keyFile()) value += 5;
         if (file.bytes() > 0 && file.bytes() <= 262_144) value += 3;
         return value;
-    }
-
-    private static String importance(int score) {
-        if (score >= 95) return "HIGH";
-        if (score >= 70) return "MEDIUM";
-        return "LOW";
     }
 
     private static boolean isDocumentCategory(String value) {

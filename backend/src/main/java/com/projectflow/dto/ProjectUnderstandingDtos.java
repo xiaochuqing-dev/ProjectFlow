@@ -11,6 +11,13 @@ public final class ProjectUnderstandingDtos {
     private ProjectUnderstandingDtos() {
     }
 
+    public record ProjectUnderstandingRefreshRequest(
+        String deadlineMode,
+        Long maxAnalysisDurationSeconds,
+        String qualityMode
+    ) {
+    }
+
     public record GitEvidenceResponse(
         boolean available,
         String branch,
@@ -241,7 +248,10 @@ public final class ProjectUnderstandingDtos {
         String structureStrategy,
         Map<String, Integer> semanticBudgets,
         List<String> expectedOutputs,
-        String confidence
+        String confidence,
+        List<String> eligibleCapabilities,
+        List<String> eligibleViews,
+        List<ToolSelectionRationale> toolSelectionRationales
     ) {
     }
 
@@ -300,7 +310,28 @@ public final class ProjectUnderstandingDtos {
         boolean shouldDeepRead,
         boolean shouldSkip,
         String reason,
+        String informationGap,
+        List<String> affectedDimensions,
         String confidence
+    ) {
+    }
+
+    public record SemanticToolRequest(
+        String capability,
+        String informationGap,
+        String expectedEvidenceValue,
+        List<String> targetEvidenceIds,
+        String whyExistingEvidenceIsInsufficient
+    ) {
+    }
+
+    public record ToolSelectionRationale(
+        String capability,
+        String informationGap,
+        String expectedEvidenceValue,
+        List<String> targetEvidenceIds,
+        String whyExistingEvidenceIsInsufficient,
+        boolean eligible
     ) {
     }
 
@@ -313,6 +344,7 @@ public final class ProjectUnderstandingDtos {
         List<String> skipCandidates,
         List<String> potentialConflicts,
         List<String> currentnessWarnings,
+        List<SemanticToolRequest> toolRequests,
         boolean modelUsed
     ) {
     }

@@ -95,4 +95,189 @@ class ModelOutputAdapterTest {
         assertThat(result.root()).singleElement()
             .satisfies(item -> assertThat(item.path("segment_title").asText()).isEqualTo("真实结果"));
     }
+
+    @Test
+    void understandingSchemasRequireCrossProviderGuardrailFieldsBeforeAcceptance() throws Exception {
+        var incompleteScout = adapter.parse(
+            "{\"semanticScout\":{\"projectShapeHypotheses\":[],\"evidenceSourceAssessments\":[],"
+                + "\"applicableDimensions\":[],\"unknowns\":[]},"
+                + "\"dynamicProfile\":{\"sections\":[]},\"unknowns\":[]}",
+            com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+        );
+        var completeScout = adapter.parse(
+            com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT.minimalSchema(),
+            com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+        );
+        var incompleteFinal = adapter.parse(
+            "{\"dynamicProfile\":{\"sections\":[]},\"unknowns\":[]}",
+            com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS
+        );
+        var completeFinal = adapter.parse(
+            com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS.minimalSchema(),
+            com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS
+        );
+
+        assertThat(com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT.schemaMatches(
+            incompleteScout.root(),
+            adapter
+        )).isFalse();
+        assertThat(com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT.schemaMatches(
+            completeScout.root(),
+            adapter
+        )).isTrue();
+        assertThat(com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS.schemaMatches(
+            incompleteFinal.root(),
+            adapter
+        )).isFalse();
+        assertThat(com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS.schemaMatches(
+            completeFinal.root(),
+            adapter
+        )).isTrue();
+    }
+
+    @Test
+    void normalizesNonAuthoritativeUnderstandingDiagnosticsWithoutSemanticRetry() throws Exception {
+        var parsed = adapter.parse(
+            """
+                {
+                  "semanticScout":{
+                    "projectShapeHypotheses":[],
+                    "evidenceSourceAssessments":[],
+                    "applicableDimensions":[],
+                    "toolRequests":[],
+                    "unknowns":["history"]
+                  },
+                  "dynamicProfile":{"summary":"","sections":[]}
+                }
+                """,
+            com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+        );
+
+        assertThat(parsed.root().path("selfCheck").isObject()).isTrue();
+        assertThat(parsed.root().path("unknowns")).isEqualTo(
+            parsed.root().path("semanticScout").path("unknowns")
+        );
+        assertThat(com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT.schemaMatches(
+            parsed.root(),
+            adapter
+        )).isTrue();
+        assertThat(parsed.repaired()).isTrue();
+    }
+
+    @Test
+    void acceptsExplicitCapabilityDecisionEncodingWithoutSemanticFill() throws Exception {
+        var parsed = adapter.parse(
+            """
+                {
+                  "semanticScout":{
+                    "projectShapeHypotheses":[],
+                    "evidenceSourceAssessments":[],
+                    "applicableDimensions":[],
+                    "capabilityDecisions":[{
+                      "capability":"MANIFEST",
+                      "decision":"REQUEST",
+                      "informationGap":"依赖未知",
+                      "expectedEvidenceValue":"确认依赖",
+                      "targetEvidenceIds":["source:manifest"],
+                      "whyExistingEvidenceIsInsufficient":"只有压缩候选"
+                    }],
+                    "unknowns":[]
+                  },
+                  "dynamicProfile":{"summary":"","sections":[]},
+                  "unknowns":[],
+                  "selfCheck":{}
+                }
+                """,
+            com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+        );
+
+        assertThat(parsed.root().path("semanticScout").path("toolRequests").isArray()).isTrue();
+        assertThat(com.projectflow.service.SemanticScoutService.normalizedToolRequestNodes(
+            parsed.root().path("semanticScout")
+        )).singleElement().satisfies(request ->
+            assertThat(request.path("capability").asText()).isEqualTo("MANIFEST")
+        );
+        assertThat(com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT.schemaMatches(
+            parsed.root(),
+            adapter
+        )).isTrue();
+        assertThat(parsed.repaired()).isTrue();
+    }
+
+    @Test
+    void wrapsFlattenedScoutWithoutInventingProfileSemantics() throws Exception {
+        var parsed = adapter.parse(
+            """
+                {
+                  "projectShapeHypotheses":[{
+                    "shape":"BACKEND",
+                    "confidence":"HIGH",
+                    "evidenceRefs":["source:manifest"],
+                    "reason":"存在服务入口"
+                  }],
+                  "evidenceSourceAssessments":[],
+                  "applicableDimensions":["SERVICES"],
+                  "capabilityDecisions":[],
+                  "toolRequests":[],
+                  "unknowns":["数据库未知"],
+                  "selfCheck":{}
+                }
+                """,
+            com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+        );
+
+        assertThat(parsed.root().path("semanticScout").path("projectShapeHypotheses"))
+            .singleElement()
+            .satisfies(shape -> assertThat(shape.path("shape").asText()).isEqualTo("BACKEND"));
+        assertThat(parsed.root().path("dynamicProfile").path("sections")).isEmpty();
+        assertThat(parsed.root().path("unknowns").path(0).asText()).isEqualTo("数据库未知");
+        assertThat(com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT.schemaMatches(
+            parsed.root(),
+            adapter
+        )).isTrue();
+        assertThat(parsed.repaired()).isTrue();
+    }
+
+    @Test
+    void recoversClosedScoutFieldsFromTruncatedSnapshotWithoutInventingClaims() throws Exception {
+        var parsed = adapter.parse(
+            """
+                {
+                  "semanticScout":{
+                    "projectShapeHypotheses":[{
+                      "shape":"BACKEND","confidence":"HIGH",
+                      "evidenceRefs":["source:manifest"],"reason":"存在服务入口"
+                    }],
+                    "evidenceSourceAssessments":[{
+                      "evidenceId":"source:manifest","semanticRole":"规范来源",
+                      "importance":"HIGH","currentness":"CURRENT",
+                      "shouldDeepRead":false,"shouldSkip":false,"reason":"定义依赖",
+                      "informationGap":"入口未知","affectedDimensions":["SERVICES"],
+                      "confidence":"HIGH"
+                    }],
+                    "applicableDimensions":["SERVICES"],
+                    "capabilityDecisions":[{
+                      "capability":"MANIFEST","decision":"REQUEST",
+                      "informationGap":"入口未知","expectedEvidenceValue":"确认入口",
+                      "targetEvidenceIds":["source:manifest"],
+                      "whyExistingEvidenceIsInsufficient":"只有压缩候选"
+                    }],
+                    "recommendedToolCalls":["MANIFEST"],
+                    "unknowns":["数据库未知"]
+                  },
+                  "dynamicProfile":{"summary":"未闭合"
+                """,
+            com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+        );
+
+        assertThat(parsed.partial()).isTrue();
+        assertThat(parsed.root().path("semanticScout").path("projectShapeHypotheses"))
+            .singleElement()
+            .satisfies(shape -> assertThat(shape.path("shape").asText()).isEqualTo("BACKEND"));
+        assertThat(parsed.root().path("dynamicProfile").path("sections")).isEmpty();
+        assertThat(com.projectflow.service.ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT.schemaMatches(
+            parsed.root(),
+            adapter
+        )).isTrue();
+    }
 }

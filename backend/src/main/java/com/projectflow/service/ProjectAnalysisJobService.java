@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
@@ -25,6 +26,7 @@ import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisJobResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectFileAnalysisResponse;
 import com.projectflow.dto.V2ProjectDtos.WorkSessionScanResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.ProjectUnderstandingRefreshRequest;
 import com.projectflow.entity.ProjectAnalysisJob;
 import com.projectflow.entity.ProjectAnalysisJobStatus;
 import com.projectflow.entity.ProjectAnalysisJobType;
@@ -46,10 +48,32 @@ public class ProjectAnalysisJobService {
     private final ProjectAnalysisJobRunner jobRunner;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
+    private final AnalysisTimePolicy analysisTimePolicy;
 
     @Value("${projectflow.jobs.global-active-limit:20}")
     private int globalActiveLimit = 20;
 
+    @Autowired
+    public ProjectAnalysisJobService(
+        ProjectAnalysisJobRepository jobRepository,
+        ProjectRepository projectRepository,
+        ProjectAnalysisJobRunner jobRunner,
+        ObjectMapper objectMapper,
+        PlatformTransactionManager transactionManager,
+        AnalysisTimePolicy analysisTimePolicy
+    ) {
+        this.jobRepository = jobRepository;
+        this.projectRepository = projectRepository;
+        this.jobRunner = jobRunner;
+        this.objectMapper = objectMapper;
+        this.analysisTimePolicy = analysisTimePolicy;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.transactionTemplate.setPropagationBehavior(
+            org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW
+        );
+    }
+
+    /** Compatibility constructor for focused tests. */
     public ProjectAnalysisJobService(
         ProjectAnalysisJobRepository jobRepository,
         ProjectRepository projectRepository,
@@ -57,13 +81,13 @@ public class ProjectAnalysisJobService {
         ObjectMapper objectMapper,
         PlatformTransactionManager transactionManager
     ) {
-        this.jobRepository = jobRepository;
-        this.projectRepository = projectRepository;
-        this.jobRunner = jobRunner;
-        this.objectMapper = objectMapper;
-        this.transactionTemplate = new TransactionTemplate(transactionManager);
-        this.transactionTemplate.setPropagationBehavior(
-            org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW
+        this(
+            jobRepository,
+            projectRepository,
+            jobRunner,
+            objectMapper,
+            transactionManager,
+            new AnalysisTimePolicy(10, 240)
         );
     }
 
@@ -106,7 +130,23 @@ public class ProjectAnalysisJobService {
     }
 
     public ProjectAnalysisJobResponse startProjectUnderstandingRefresh(UUID userId, UUID projectId) {
-        return startJob(userId, projectId, ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH, null, null, null);
+        return startProjectUnderstandingRefresh(userId, projectId, null);
+    }
+
+    public ProjectAnalysisJobResponse startProjectUnderstandingRefresh(
+        UUID userId,
+        UUID projectId,
+        ProjectUnderstandingRefreshRequest request
+    ) {
+        return startJob(
+            userId,
+            projectId,
+            ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH,
+            null,
+            null,
+            null,
+            analysisTimePolicy.resolve(request)
+        );
     }
 
     public ProjectAnalysisJobResponse cancel(UUID userId, UUID jobId) {
@@ -132,7 +172,10 @@ public class ProjectAnalysisJobService {
             previous.getJobType(),
             previous.getFilePath(),
             previous.getId(),
-            "USER_RETRY"
+            "USER_RETRY",
+            previous.getJobType() == ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH
+                ? policyFrom(previous)
+                : null
         );
     }
 
@@ -143,6 +186,18 @@ public class ProjectAnalysisJobService {
         String input,
         UUID retriedFromJobId,
         String retryReason
+    ) {
+        return startJob(userId, projectId, type, input, retriedFromJobId, retryReason, null);
+    }
+
+    private ProjectAnalysisJobResponse startJob(
+        UUID userId,
+        UUID projectId,
+        ProjectAnalysisJobType type,
+        String input,
+        UUID retriedFromJobId,
+        String retryReason,
+        AnalysisTimePolicy.RuntimePolicy runtimePolicy
     ) {
         String fingerprint = fingerprint(type, input);
         StartJobResult result = transactionTemplate.execute(status -> {
@@ -165,7 +220,11 @@ public class ProjectAnalysisJobService {
             } else if (type == ProjectAnalysisJobType.PROJECT_CAPABILITY_MAP_REFRESH) {
                 job.configureBudgets(64, 600_000, 600_000L);
             } else if (type == ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH) {
-                job.configureBudgets(3, 40_000, 600_000L);
+                AnalysisTimePolicy.RuntimePolicy effective = runtimePolicy == null
+                    ? analysisTimePolicy.automatic()
+                    : runtimePolicy;
+                job.configureBudgets(3, 40_000, effective.maxAnalysisDurationMs());
+                job.recordInputSummary(policySummary(effective));
             }
             if (retriedFromJobId != null) job.configureRetry(retriedFromJobId, retryReason);
             if (activeCount >= globalActiveLimit) {
@@ -225,11 +284,6 @@ public class ProjectAnalysisJobService {
                     job.markCancelled();
                 } else if (modelMayHaveBeenCalled(job.getStage())) {
                     job.markInterrupted(false, "服务重启时模型请求状态未知，未自动重发以避免重复计费。请确认后重新运行。");
-                } else if (job.getJobType() == ProjectAnalysisJobType.PROJECT_TIMELINE_REFRESH
-                    || job.getJobType() == ProjectAnalysisJobType.PROJECT_CAPABILITY_MAP_REFRESH
-                    || job.getJobType() == ProjectAnalysisJobType.PROJECT_FACT_HISTORY_REBUILD
-                    || job.getJobType() == ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH) {
-                    // 后台派生任务只暴露通用 job 状态和安全诊断，不把内部结果误解析为文件分析。
                 } else {
                     job.markInterrupted(true, "服务重启中断了任务，尚未产生模型费用，可以安全重新运行。");
                 }
@@ -243,7 +297,14 @@ public class ProjectAnalysisJobService {
 
     private boolean modelMayHaveBeenCalled(String stage) {
         if (stage == null) return false;
-        return stage.contains("MODEL") || stage.contains("PERSIST") || stage.contains("DATABASE");
+        return stage.contains("MODEL")
+            || stage.contains("SEMANTIC_SCOUT")
+            || stage.contains("FINAL_SYNTHESIS")
+            || stage.contains("CAPABILITY_EXECUTION")
+            || stage.contains("DYNAMIC_PROFILE")
+            || stage.contains("PERSIST_UNDERSTANDING")
+            || stage.contains("PERSIST")
+            || stage.contains("DATABASE");
     }
 
     private java.util.Optional<ProjectAnalysisJob> activeJob(UUID projectId, ProjectAnalysisJobType type, String path) {
@@ -341,6 +402,9 @@ public class ProjectAnalysisJobService {
                 throw new AppException("PROJECT_ANALYSIS_RESULT_INVALID", "分析结果无法读取，请重新运行", HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
+        AnalysisTimePolicy.RuntimePolicy runtimePolicy = job.getJobType() == ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH
+            ? policyFrom(job)
+            : null;
         return new ProjectAnalysisJobResponse(
             job.getId(),
             job.getProjectId(),
@@ -387,8 +451,62 @@ public class ProjectAnalysisJobService {
             job.getRestartRecoveryState(),
             job.getQueuePosition(),
             job.getRetriedFromJobId(),
-            job.getRetryReason()
+            job.getRetryReason(),
+            runtimePolicy == null ? null : runtimePolicy.deadlineMode().name(),
+            runtimePolicy == null ? null : runtimePolicy.qualityMode().name(),
+            runtimePolicy != null && !runtimePolicy.unlimitedOverallDuration()
         );
+    }
+
+    private String policySummary(AnalysisTimePolicy.RuntimePolicy policy) {
+        try {
+            return objectMapper.writeValueAsString(java.util.Map.of(
+                "deadlineMode", policy.deadlineMode().name(),
+                "maxAnalysisDurationMs", policy.maxAnalysisDurationMs(),
+                "connectionTimeoutSeconds", policy.connectionTimeoutSeconds(),
+                "providerRequestTimeoutSeconds", policy.providerRequestTimeoutSeconds(),
+                "maxTransportRetries", policy.maxTransportRetries(),
+                "qualityMode", policy.qualityMode().name(),
+                "hiddenQualityDowngrade", false
+            ));
+        } catch (JsonProcessingException exception) {
+            return "{\"deadlineMode\":\"AUTO\",\"qualityMode\":\"QUALITY_FIRST\",\"hiddenQualityDowngrade\":false}";
+        }
+    }
+
+    private AnalysisTimePolicy.RuntimePolicy policyFrom(ProjectAnalysisJob job) {
+        AnalysisTimePolicy.RuntimePolicy fallback = analysisTimePolicy.automatic();
+        String summary = job.getInputSummary();
+        if (summary == null || summary.isBlank()) {
+            boolean finite = AnalysisTimePolicy.hasOverallDeadline(job.getMaxDurationMs());
+            return new AnalysisTimePolicy.RuntimePolicy(
+                finite ? AnalysisTimePolicy.DeadlineMode.FINITE : AnalysisTimePolicy.DeadlineMode.AUTO,
+                job.getMaxDurationMs(),
+                fallback.connectionTimeoutSeconds(),
+                fallback.providerRequestTimeoutSeconds(),
+                fallback.maxTransportRetries(),
+                fallback.qualityMode()
+            );
+        }
+        try {
+            var root = objectMapper.readTree(summary);
+            AnalysisTimePolicy.DeadlineMode mode = AnalysisTimePolicy.DeadlineMode.valueOf(
+                root.path("deadlineMode").asText("AUTO")
+            );
+            AnalysisTimePolicy.QualityMode quality = AnalysisTimePolicy.QualityMode.valueOf(
+                root.path("qualityMode").asText("QUALITY_FIRST")
+            );
+            return new AnalysisTimePolicy.RuntimePolicy(
+                mode,
+                job.getMaxDurationMs(),
+                root.path("connectionTimeoutSeconds").asInt(fallback.connectionTimeoutSeconds()),
+                root.path("providerRequestTimeoutSeconds").asInt(fallback.providerRequestTimeoutSeconds()),
+                root.path("maxTransportRetries").asInt(fallback.maxTransportRetries()),
+                quality
+            );
+        } catch (RuntimeException | JsonProcessingException ignored) {
+            return fallback;
+        }
     }
 
     private boolean containsProjectNoise(ProjectAnalysisResponse response) {
