@@ -66,4 +66,10 @@
 
 正式 38-run 的可靠性与既定语义门槛全部通过。空目录和空白文本保持 0 模型调用；没有逐文件或逐提交模型循环；Ground Truth 未修改；没有不可用或危险 capability 请求。
 
-已知质量空间不伪装为阻断失败：Dynamic View precision、Deep Read target accuracy 和 Conflict Detection 仍有提升空间，但它们没有违反本阶段既定门槛。V3.8 的最终放行还必须同时满足 8-case 端到端、全量自动化、安全检查与 GitHub CI。
+已知质量空间不伪装为阻断失败：Dynamic View precision、Deep Read target accuracy 和 Conflict Detection 仍有提升空间，但它们没有违反本阶段既定门槛。8-case 端到端、全量自动化、安全检查、PR CI 和最终功能 master CI 也已通过。
+
+V3.7.3 MULTI-PROVIDER QUALITY GATE = PASS
+
+GLM QUALITY QUALIFIED = YES
+
+V3.8 ENTRY = APPROVED

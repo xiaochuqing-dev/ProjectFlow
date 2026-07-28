@@ -20,12 +20,10 @@
   ],
   "verification": {
     "build": "Frontend Next.js production build and root Start-ProjectFlow.bat embedded rebuild/start passed for V3.7.3.",
-    "tests": "Real GLM 38/38 and production E2E 8/8; backend 403 with 0 failures/errors and 1 external skip; frontend contracts 50/50; Playwright 8/8; Hermes 5/5; Obsidian 18/18.",
-    "manualCheck": "Verified current dirty worktree was preserved by the launcher, backend/frontend health became ready, build evidence was written, ports closed after normal stop, Ground Truth remained unchanged, and repository secret pattern scan returned zero."
+    "tests": "Real GLM 38/38 and production E2E 8/8; backend 403 with 0 failures/errors and 1 external skip; frontend contracts 50/50; Playwright 8/8; Hermes 5/5; Obsidian 18/18; PR push, PR, PostgreSQL 16 Testcontainers, browser and final functional master CI passed.",
+    "manualCheck": "Verified current dirty worktree was preserved by the launcher, backend/frontend health became ready, build evidence was written, ports closed after normal stop, Ground Truth remained unchanged, repository secret pattern scan returned zero, PR #7 merged, and final functional master SHA matched the merged commit."
   },
-  "unfinished": [
-    "GitHub PostgreSQL Testcontainers and remaining remote quality gates, PR merge evidence, final master SHA and CI run IDs still require remote execution and will be backfilled."
-  ],
+  "unfinished": [],
   "sedimentCandidates": [
     "长任务时间策略已形成可复用能力：总体时长、连接和 Provider 请求独立，UNLIMITED 仍可取消并持续心跳。",
     "模型语义决策与工程信任边界已形成可复用能力：模型选择 Evidence、Capability 和 View，工程只执行注册能力并校验证据引用。",
