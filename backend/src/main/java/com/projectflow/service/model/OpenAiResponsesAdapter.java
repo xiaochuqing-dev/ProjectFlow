@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.openai.client.OpenAIClient;
 import com.openai.errors.OpenAIServiceException;
+import com.openai.models.Reasoning;
+import com.openai.models.ReasoningEffort;
 import com.openai.models.ResponseFormatJsonObject;
 import com.openai.models.responses.Response;
 import com.openai.models.responses.ResponseCreateParams;
@@ -47,6 +49,11 @@ public class OpenAiResponsesAdapter implements ModelProtocolAdapter {
         if (request.temperature() != null) params.temperature(request.temperature());
         if (request.jsonMode()) {
             params.text(ResponseTextConfig.builder().format(ResponseFormatJsonObject.builder().build()).build());
+        }
+        if (request.reasoningEffort() != null) {
+            params.reasoning(Reasoning.builder()
+                .effort(ReasoningEffort.of(request.reasoningEffort()))
+                .build());
         }
         OpenAIClient client = OpenAiSdkSupport.clientBuilder(request, urlGuard).build();
         try {

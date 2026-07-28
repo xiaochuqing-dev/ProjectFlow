@@ -1,6 +1,7 @@
 package com.projectflow.service.model;
 
 import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.core.Timeout;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderAuthMode;
 import com.projectflow.service.AiProviderUrlGuard;
@@ -14,7 +15,12 @@ final class OpenAiSdkSupport {
         OpenAIOkHttpClient.Builder builder = OpenAIOkHttpClient.builder()
             .baseUrl(urlGuard.sdkBaseUrl(provider.getBaseUrl(), provider.getProtocol(), provider.getEndpointOverride()))
             .apiKey(key)
-            .timeout(request.timeout())
+            .timeout(Timeout.builder()
+                .connect(request.connectionTimeout())
+                .read(request.requestTimeout())
+                .write(request.requestTimeout())
+                .request(request.requestTimeout())
+                .build())
             .maxRetries(0);
         AiProviderAuthMode mode = provider.getAuthMode();
         if (mode == AiProviderAuthMode.API_KEY_HEADER) {

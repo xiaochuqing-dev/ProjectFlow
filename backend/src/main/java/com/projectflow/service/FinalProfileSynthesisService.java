@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -23,20 +24,32 @@ import com.projectflow.service.ProjectEvidenceDiscoveryService.PromptEvidence;
 
 @Service
 public class FinalProfileSynthesisService {
-    public static final String PROMPT_VERSION = "final-synthesis-v3";
+    public static final String PROMPT_VERSION = ProjectUnderstandingPromptBuilder.FINAL_PROMPT_VERSION;
 
     private final ModelGatewayService modelGateway;
     private final BudgetAwareContextPacker contextPacker;
+    private final ProjectUnderstandingPromptBuilder promptBuilder;
 
     @Value("${projectflow.understanding.max-model-prompt-chars:48000}")
     private int maxModelPromptChars;
 
+    @Autowired
+    public FinalProfileSynthesisService(
+        ModelGatewayService modelGateway,
+        BudgetAwareContextPacker contextPacker,
+        ProjectUnderstandingPromptBuilder promptBuilder
+    ) {
+        this.modelGateway = modelGateway;
+        this.contextPacker = contextPacker;
+        this.promptBuilder = promptBuilder;
+    }
+
+    /** Compatibility constructor for focused tests. */
     public FinalProfileSynthesisService(
         ModelGatewayService modelGateway,
         BudgetAwareContextPacker contextPacker
     ) {
-        this.modelGateway = modelGateway;
-        this.contextPacker = contextPacker;
+        this(modelGateway, contextPacker, new ProjectUnderstandingPromptBuilder());
     }
 
     public SynthesisResult synthesize(
@@ -88,35 +101,14 @@ public class FinalProfileSynthesisService {
             sections,
             Math.max(8_000, maxModelPromptChars - 3_000)
         );
-        String prompt = """
-            你是 ProjectFlow 的 Final Synthesis 阶段。Semantic Scout 已经完成，工程系统也已按 capability
-            allow-list 执行固定参数工具。现在只能使用给定 evidence id，把新增 Tool Evidence 与原有结构、
-            历史覆盖和 Scout 判断合成最终 Dynamic Project Profile。
-
-            不得发明未执行工具、源码关系、数据库、前后端、Release、Timeline 或成熟阶段。没有证据的 Section
-            必须省略。README 与代码或工作树冲突时保持 unknown/currentness warning。不得输出绝对路径、凭证、
-            原始推理、下一步计划或优先级。
-
-            Agent Result 仍只是过程证据，不自动升级为 ProjectFact；token、耗时、request count、模型名等
-            PROCESS_METADATA 不能证明业务能力、质量、成熟度或完成结果。当前源码不能独自证明历史阶段。
-            新工具证据只能修正其直接支持的 claim；与第一阶段冲突时保留冲突和 currentness 限制，不得扩大推断。
-
-            只返回 JSON：
-            {
-              "dynamicProfile":{
-                "summary":"",
-                "sections":[{"id":"","type":"","title":"","summary":"",
-                  "claims":[{"text":"","confidence":"HIGH|MEDIUM|LOW","evidenceRefs":["id"]}],
-                  "confidence":"HIGH|MEDIUM|LOW","epistemicStatus":"INFERRED","displayPriority":50,
-                  "applicabilityReason":""}]
-              },
-              "unknowns":[]
-            }
-            保持第一阶段的原子 shape 与适用维度词汇，不创建 analysis、summary、general 一类无信息 Section。
-            最多 8 个 Section，每个 Section 最多 5 条 claim；每条 claim 至少一个真实 evidence id。
-            Prompt version: final-synthesis-v3。
-            完整合法的有界上下文：
-            """ + packed.json();
+        String prompt = promptBuilder.buildFinalPrompt(
+            new ProjectUnderstandingPromptBuilder.FinalPromptInput(
+                packed.json(),
+                execution.allowedEvidence().stream().sorted().toList(),
+                plan.eligibleViews(),
+                execution.response().secondStageDecision().evidenceIds()
+            )
+        );
         ModelGatewayService.StructuredModelResponse response = modelGateway.callStructured(
             provider,
             prompt,

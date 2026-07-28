@@ -3,6 +3,8 @@ package com.projectflow.service;
 import java.util.List;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * 所有真实模型入口的统一注册表。任务定义只描述输出目标和预算特征，
@@ -69,12 +71,12 @@ public enum ModelTaskType {
     PROJECT_UNDERSTANDING_SNAPSHOT(
         "通用证据 Scout 与动态项目档案", 5_000, 16_000, 0.1, false,
         List.of(), List.of("semanticScout", "dynamicProfile", "unknowns"), List.of(),
-        "{\"semanticScout\":{\"projectShapeHypotheses\":[],\"evidenceSourceAssessments\":[],\"applicableDimensions\":[],\"recommendedToolCalls\":[],\"unknowns\":[],\"skipCandidates\":[],\"potentialConflicts\":[],\"currentnessWarnings\":[]},\"dynamicProfile\":{\"summary\":\"\",\"sections\":[]},\"unknowns\":[]}"
+        "{\"semanticScout\":{\"projectShapeHypotheses\":[],\"evidenceSourceAssessments\":[],\"applicableDimensions\":[],\"capabilityDecisions\":[{\"capability\":\"\",\"decision\":\"REQUEST|SKIP\",\"skipReason\":\"\",\"informationGap\":\"\",\"expectedEvidenceValue\":\"\",\"targetEvidenceIds\":[],\"whyExistingEvidenceIsInsufficient\":\"\"}],\"recommendedToolCalls\":[],\"unknowns\":[],\"skipCandidates\":[],\"potentialConflicts\":[],\"currentnessWarnings\":[]},\"dynamicProfile\":{\"summary\":\"\",\"sections\":[]},\"unknowns\":[],\"selfCheck\":{}}"
     ),
     PROJECT_UNDERSTANDING_FINAL_SYNTHESIS(
         "通用证据最终归纳", 4_000, 12_000, 0.1, false,
         List.of(), List.of("dynamicProfile", "unknowns"), List.of(),
-        "{\"dynamicProfile\":{\"summary\":\"\",\"sections\":[]},\"unknowns\":[]}"
+        "{\"dynamicProfile\":{\"summary\":\"\",\"sections\":[]},\"unknowns\":[],\"conflicts\":[],\"stageTwoChanges\":[],\"selfCheck\":{}}"
     ),
     LEGACY_STRUCTURED(
         "兼容结构化调用", 2_048, 20_000, 0.2, false,
@@ -149,7 +151,67 @@ public enum ModelTaskType {
             return !items.isEmpty() && items.stream().anyMatch(item -> matchingItemFields(item) > 0);
         }
         JsonNode normalized = normalizeObjectRoot(root);
+        if (this == PROJECT_UNDERSTANDING_SNAPSHOT) {
+            JsonNode scout = normalized.path("semanticScout");
+            JsonNode profile = normalized.path("dynamicProfile");
+            return normalized.isObject()
+                && scout.isObject()
+                && scout.path("projectShapeHypotheses").isArray()
+                && scout.path("evidenceSourceAssessments").isArray()
+                && scout.path("applicableDimensions").isArray()
+                && scout.path("toolRequests").isArray()
+                && scout.path("unknowns").isArray()
+                && profile.isObject()
+                && profile.path("sections").isArray()
+                && normalized.path("unknowns").isArray()
+                && normalized.path("selfCheck").isObject();
+        }
+        if (this == PROJECT_UNDERSTANDING_FINAL_SYNTHESIS) {
+            JsonNode profile = normalized.path("dynamicProfile");
+            return normalized.isObject()
+                && profile.isObject()
+                && profile.path("sections").isArray()
+                && normalized.path("unknowns").isArray()
+                && normalized.path("conflicts").isArray()
+                && normalized.path("stageTwoChanges").isArray()
+                && normalized.path("selfCheck").isObject();
+        }
         return requiredObjectFields.stream().allMatch(normalized::has);
+    }
+
+    public List<String> schemaGaps(JsonNode root) {
+        JsonNode normalized = normalizeObjectRoot(root);
+        if (this == PROJECT_UNDERSTANDING_SNAPSHOT) {
+            return missing(
+                normalized,
+                List.of(
+                    "semanticScout",
+                    "semanticScout.projectShapeHypotheses",
+                    "semanticScout.evidenceSourceAssessments",
+                    "semanticScout.applicableDimensions",
+                    "semanticScout.toolRequests",
+                    "semanticScout.unknowns",
+                    "dynamicProfile",
+                    "dynamicProfile.sections",
+                    "unknowns",
+                    "selfCheck"
+                )
+            );
+        }
+        if (this == PROJECT_UNDERSTANDING_FINAL_SYNTHESIS) {
+            return missing(
+                normalized,
+                List.of(
+                    "dynamicProfile",
+                    "dynamicProfile.sections",
+                    "unknowns",
+                    "conflicts",
+                    "stageTwoChanges",
+                    "selfCheck"
+                )
+            );
+        }
+        return requiredObjectFields.stream().filter(field -> !normalized.has(field)).toList();
     }
 
     public JsonNode normalizeRoot(JsonNode root) {
@@ -161,10 +223,77 @@ public enum ModelTaskType {
         JsonNode current = root;
         for (int depth = 0; depth < 3 && current != null && current.isObject(); depth++) {
             boolean matched = requiredObjectFields.stream().anyMatch(current::has);
-            if (matched || current.size() != 1) return current;
+            if (matched || current.size() != 1) return normalizeDiagnosticDefaults(current);
             current = current.elements().next();
         }
-        return current == null ? root : current;
+        return normalizeDiagnosticDefaults(current == null ? root : current);
+    }
+
+    /**
+     * Self-check is non-authoritative diagnostics: engineering validation still
+     * owns every reference and eligibility decision. Older/compatible models
+     * may omit this empty object, so adding it locally avoids a paid semantic
+     * rewrite without inventing a project claim. V8 capabilityDecisions REQUEST
+     * is an explicit model decision equivalent to toolRequests; an empty
+     * compatibility array lets the shared normalizer consume those decisions
+     * without engineering code choosing a capability.
+     */
+    private JsonNode normalizeDiagnosticDefaults(JsonNode root) {
+        if (root == null || !root.isObject()) return root;
+        if (this != PROJECT_UNDERSTANDING_SNAPSHOT
+            && this != PROJECT_UNDERSTANDING_FINAL_SYNTHESIS) {
+            return root;
+        }
+        ObjectNode candidate = (ObjectNode) root;
+        boolean changed = false;
+        if (this == PROJECT_UNDERSTANDING_SNAPSHOT
+            && !root.path("semanticScout").isObject()
+            && root.path("projectShapeHypotheses").isArray()
+            && root.path("evidenceSourceAssessments").isArray()
+            && root.path("applicableDimensions").isArray()) {
+            ObjectNode flattenedScout = candidate.deepCopy();
+            JsonNode existingProfile = flattenedScout.remove("dynamicProfile");
+            JsonNode existingSelfCheck = flattenedScout.remove("selfCheck");
+            JsonNode existingUnknowns = flattenedScout.path("unknowns").deepCopy();
+            ObjectNode wrapped = JsonNodeFactory.instance.objectNode();
+            wrapped.set("semanticScout", flattenedScout);
+            if (existingProfile != null && existingProfile.isObject()) {
+                wrapped.set("dynamicProfile", existingProfile);
+            } else {
+                ObjectNode emptyProfile = wrapped.putObject("dynamicProfile");
+                emptyProfile.put("summary", "");
+                emptyProfile.putArray("sections");
+            }
+            if (existingUnknowns.isArray()) wrapped.set("unknowns", existingUnknowns);
+            else wrapped.putArray("unknowns");
+            if (existingSelfCheck != null && existingSelfCheck.isObject()) {
+                wrapped.set("selfCheck", existingSelfCheck);
+            } else {
+                wrapped.putObject("selfCheck");
+            }
+            candidate = wrapped;
+            changed = true;
+        }
+        boolean missingSelfCheck = !candidate.path("selfCheck").isObject();
+        boolean canReuseScoutUnknowns = this == PROJECT_UNDERSTANDING_SNAPSHOT
+            && !candidate.path("unknowns").isArray()
+            && candidate.path("semanticScout").path("unknowns").isArray();
+        boolean canUseCapabilityDecisionEncoding = this == PROJECT_UNDERSTANDING_SNAPSHOT
+            && candidate.path("semanticScout").isObject()
+            && !candidate.path("semanticScout").path("toolRequests").isArray()
+            && candidate.path("semanticScout").path("capabilityDecisions").isArray();
+        if (!missingSelfCheck && !canReuseScoutUnknowns && !canUseCapabilityDecisionEncoding) {
+            return candidate;
+        }
+        ObjectNode normalized = changed ? candidate : candidate.deepCopy();
+        if (missingSelfCheck) normalized.putObject("selfCheck");
+        if (canReuseScoutUnknowns) {
+            normalized.set("unknowns", normalized.path("semanticScout").path("unknowns").deepCopy());
+        }
+        if (canUseCapabilityDecisionEncoding) {
+            ((ObjectNode) normalized.path("semanticScout")).putArray("toolRequests");
+        }
+        return normalized;
     }
 
     private int matchingItemFields(JsonNode item) {
@@ -172,5 +301,16 @@ public enum ModelTaskType {
         int matches = 0;
         for (String field : itemFields) if (item.has(field)) matches++;
         return matches;
+    }
+
+    private static List<String> missing(JsonNode root, List<String> paths) {
+        return paths.stream().filter(path -> {
+            JsonNode value = root;
+            for (String segment : path.split("\\.")) value = value.path(segment);
+            if (path.endsWith("semanticScout") || path.endsWith("dynamicProfile") || path.endsWith("selfCheck")) {
+                return !value.isObject();
+            }
+            return !value.isArray();
+        }).toList();
     }
 }

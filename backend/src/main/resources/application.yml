@@ -39,7 +39,8 @@ projectflow:
     secret: ${JWT_SECRET:replace-with-at-least-32-random-bytes}
     access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:60}
   model:
-    # V3.3.8: Provider capability 可提高 reasoning 模型建议超时；这里是普通请求的可配置基线。
+    # 建连与单次 Provider 请求独立有界；它们不充当总体项目分析时长上限。
+    connection-timeout-seconds: ${PROJECTFLOW_MODEL_CONNECTION_TIMEOUT_SECONDS:10}
     request-timeout-seconds: ${PROJECTFLOW_MODEL_TIMEOUT_SECONDS:240}
   timeline:
     # 留空时统一使用运行机器时区；部署环境可显式覆盖。
@@ -64,7 +65,7 @@ projectflow:
     large-loc: ${PROJECTFLOW_UNDERSTANDING_LARGE_LOC:500000}
     max-model-prompt-chars: ${PROJECTFLOW_UNDERSTANDING_MAX_PROMPT_CHARS:48000}
     max-evidence-candidates: ${PROJECTFLOW_UNDERSTANDING_MAX_EVIDENCE_CANDIDATES:500}
-    max-scout-evidence: ${PROJECTFLOW_UNDERSTANDING_MAX_SCOUT_EVIDENCE:80}
+    max-scout-evidence: ${PROJECTFLOW_UNDERSTANDING_MAX_SCOUT_EVIDENCE:40}
     max-evidence-sample-chars: ${PROJECTFLOW_UNDERSTANDING_MAX_EVIDENCE_SAMPLE_CHARS:1600}
     max-evidence-sample-bytes: ${PROJECTFLOW_UNDERSTANDING_MAX_EVIDENCE_SAMPLE_BYTES:8192}
     scip:

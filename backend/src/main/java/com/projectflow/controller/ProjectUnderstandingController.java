@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -14,6 +15,7 @@ import com.projectflow.dto.ApiResponse;
 import com.projectflow.dto.AuthDtos.AuthUser;
 import com.projectflow.dto.ProjectEvolutionBridgeDtos.EvolutionBridgePageResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectStructureIndexResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.ProjectUnderstandingRefreshRequest;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectUnderstandingSnapshotResponse;
 import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisJobResponse;
 import com.projectflow.service.AuthService;
@@ -44,10 +46,11 @@ public class ProjectUnderstandingController {
     @PostMapping("/understanding/refresh")
     ApiResponse<ProjectAnalysisJobResponse> refresh(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @PathVariable UUID projectId
+        @PathVariable UUID projectId,
+        @RequestBody(required = false) ProjectUnderstandingRefreshRequest request
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(jobService.startProjectUnderstandingRefresh(user.id(), projectId));
+        return ApiResponse.ok(jobService.startProjectUnderstandingRefresh(user.id(), projectId, request));
     }
 
     @GetMapping("/understanding")

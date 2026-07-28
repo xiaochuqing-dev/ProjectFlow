@@ -72,7 +72,8 @@ public class DynamicProjectProfileSynthesizer {
             allowedEvidence,
             intake,
             history,
-            scout
+            scout,
+            plan.eligibleViews()
         );
         modelSections.forEach(section -> sections.put(section.id(), section));
         List<DynamicProfileSection> ordered = sections.values().stream()
@@ -240,7 +241,8 @@ public class DynamicProjectProfileSynthesizer {
         Set<String> allowedEvidence,
         RepositoryIntakeResponse intake,
         HistoricalCoverageResponse history,
-        SemanticScoutResponse scout
+        SemanticScoutResponse scout,
+        List<String> eligibleViews
     ) {
         if (node == null || !node.isArray()) return List.of();
         List<DynamicProfileSection> result = new ArrayList<>();
@@ -248,7 +250,7 @@ public class DynamicProjectProfileSynthesizer {
         for (JsonNode item : node) {
             if (result.size() >= 12) break;
             String type = normalizedType(item.path("type").asText(""));
-            if (type.isBlank() || !isApplicable(type, intake, history, scout)) continue;
+            if (type.isBlank() || !isApplicable(type, intake, history, scout, eligibleViews)) continue;
             List<UnderstandingClaim> claims = new ArrayList<>();
             if (item.path("claims").isArray()) {
                 for (JsonNode claim : item.path("claims")) {
@@ -259,7 +261,9 @@ public class DynamicProjectProfileSynthesizer {
                         claims.add(new UnderstandingClaim(
                             "profile-model-" + (++sequence),
                             text,
-                            "INFERRED",
+                            epistemic(claim.path("epistemicStatus").asText(
+                                item.path("epistemicStatus").asText("INFERRED")
+                            )),
                             confidence(claim.path("confidence").asText("MEDIUM")),
                             refs
                         ));
@@ -287,8 +291,10 @@ public class DynamicProjectProfileSynthesizer {
         String type,
         RepositoryIntakeResponse intake,
         HistoricalCoverageResponse history,
-        SemanticScoutResponse scout
+        SemanticScoutResponse scout,
+        List<String> eligibleViews
     ) {
+        if (eligibleViews == null || !eligibleViews.contains(type)) return false;
         String lower = type.toLowerCase(Locale.ROOT);
         if (intake.sourceFileCount() == 0
             && (lower.contains("architecture") || lower.contains("symbol") || lower.contains("code"))) {
@@ -397,6 +403,15 @@ public class DynamicProjectProfileSynthesizer {
         return switch (normalized) {
             case "HIGH", "MEDIUM", "LOW" -> normalized;
             default -> "MEDIUM";
+        };
+    }
+
+    private static String epistemic(String value) {
+        String normalized = value == null ? "" : value.strip().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "CURRENT_STATE", "HISTORICAL_EVENT", "POSSIBLY_STALE", "PROCESS_EVIDENCE",
+                "PROCESS_METADATA", "USER_ASSERTION", "ENGINEERING_OBSERVATION", "INFERRED", "UNKNOWN" -> normalized;
+            default -> "INFERRED";
         };
     }
 

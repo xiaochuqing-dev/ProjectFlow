@@ -21,7 +21,7 @@ final class ProjectFlowEvalHarness {
 
     EvalRun evaluate(ProjectFlowEvalGroundTruth groundTruth, List<ProjectFlowEvalObservation> observations) {
         return new EvalRun(
-            "projectflow-v3.7.2-eval-v1",
+            "projectflow-v3.7.3-eval-v1",
             Instant.now(),
             SCOPE_NOTICE,
             groundTruth.standard(),
@@ -43,14 +43,25 @@ final class ProjectFlowEvalHarness {
     private static String markdown(EvalRun run) {
         EvalSummary value = run.summary();
         return """
-            # ProjectFlow V3.7.2 Internal Model Evaluation
+            # ProjectFlow V3.7.3 Internal Model Evaluation
 
             %s
 
             Dataset standard: %s
             Harness: %s
             Prompt versions: %s
-            Runs: %d
+
+            ## Product-level reliability
+
+            Total / successful / failed runs: %d / %d / %d
+            Timeout / schema failure / retry: %d / %d / %d
+            Average / P95 latency ms: %.2f / %.2f
+            End-to-end completion: %.4f
+            Degradation / cancellation: %d / %d
+
+            ## Conditional semantic quality
+
+            Valid structured runs: %d
             Unsupported claim rate: %.4f
             Critical evidence recall: %.4f
             Evidence precision: %.4f
@@ -61,8 +72,6 @@ final class ProjectFlowEvalHarness {
             Repeatability: %.4f
             Second-stage evidence gain: %.4f
             Requests / tokens: %d / %d
-            Average latency ms: %.2f
-            Failure / degradation success: %.4f / %.4f
             Estimated cost: %s
 
             Raw model responses, reasoning and secrets are not stored.
@@ -72,6 +81,17 @@ final class ProjectFlowEvalHarness {
             run.harnessVersion(),
             String.join(", ", run.promptVersions()),
             value.runCount(),
+            value.successfulRunCount(),
+            value.failureCount(),
+            value.timeoutCount(),
+            value.schemaFailureCount(),
+            value.retryCount(),
+            value.averageLatencyMs(),
+            value.p95LatencyMs(),
+            value.endToEndCompletionRate(),
+            value.degradedRunCount(),
+            value.cancellationCount(),
+            value.conditionalSemanticRunCount(),
             value.unsupportedClaimRate(),
             value.criticalEvidenceRecall(),
             value.evidencePrecision(),
@@ -85,9 +105,6 @@ final class ProjectFlowEvalHarness {
             value.secondStageEvidenceGain(),
             value.modelRequestCount(),
             value.totalTokens(),
-            value.averageLatencyMs(),
-            value.failureRate(),
-            value.degradationSuccessRate(),
             value.estimatedCost() == null ? "UNAVAILABLE" : value.estimatedCost().toString()
         );
     }

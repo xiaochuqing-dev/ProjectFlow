@@ -1,14 +1,32 @@
 # ProjectFlow
 
-ProjectFlow V3.7.2 does not assume what a user's project is. It discovers the material that actually exists, lets a bounded Semantic Scout request capabilities instead of commands, executes only registered deterministic providers, validates the new evidence, and conditionally performs a final synthesis. Every step remains bounded, diagnosable, evidence-linked and separate from durable Project Facts.
+ProjectFlow V3.7.3 does not assume what a user's project is. It discovers the material that actually exists, lets a bounded Semantic Scout request capabilities instead of commands, executes only registered deterministic providers, validates the new evidence, and conditionally performs a final synthesis. Every step remains diagnosable, evidence-linked and separate from durable Project Facts; long-running analysis may continue for minutes or longer without a hidden short overall deadline.
 
 ProjectFlow V3.4.5 established the model-protocol foundation, V3.5.0 added bounded repository intake, V3.6.0 added precise SCIP consumption and the minimum evolution bridge, and V3.7.0 added universal evidence discovery and adaptive planning. V3.7.1 closes the plan-to-execution gap with bounded DOC_READER, Git history, Tag, worktree, manifest and Agent-result providers, complete-JSON context packing, diversity-aware evidence selection, honest dimensional history coverage, discovery caches and outbound secret redaction.
 
 V3.7.2 validates that boundary with a ProjectFlow-only internal evaluation harness, an 18-case human ground-truth set, real Model Gateway runs, versioned semantic prompts, an auditable high-value evidence gate, current-result degradation when Final Synthesis fails, complete tool-cache identity, and three thin integration contracts. Evaluation rates and costs remain test/report artifacts and never enter product APIs, snapshots, databases or UI.
 
+V3.7.3 separates connection timeout, Provider request timeout and overall analysis deadline; AUTO/FINITE/UNLIMITED keep cancellation, heartbeat and bounded retry semantics explicit. Production and Eval share one versioned Prompt Builder. Engineering code discovers, classifies and validates Evidence, while the model decides semantic importance, information gaps and applicable views inside objective Tool/View eligibility. No time or Token setting silently reduces necessary Evidence or skips a qualified Final Synthesis.
+
 ProjectFlow 不预设用户的项目是什么。它先发现真实存在的材料，再结合工程分析与有界的大模型推理判断什么值得分析、能知道什么，并基于证据理解项目当前状态及可还原的演进过程。
 
 Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns that raw development evidence into durable Change Batches, evidence-backed Project Facts, and long-lived Project Memory.
+
+## V3.7.3 Long-running Multi-provider Reliability and Prompt Intelligence
+
+- Large-project analysis taking several minutes is normal and is not itself a failure. Analysis time is not connection timeout.
+- Connection timeout remains independently bounded; each Provider request honors its explicit configured timeout; the whole analysis uses AUTO, user-selected FINITE or UNLIMITED semantics.
+- UNLIMITED means no ProjectFlow overall-duration termination. It does not mean infinite retries, an unbounded bad connection, missing heartbeat, or disabled cancellation.
+- `QUALITY_FIRST` does not silently trade Evidence coverage, necessary deep reads or Final Synthesis for response speed, Token savings or a hidden SLA.
+- Engineering discovery keeps source/module diversity and objective availability. It does not infer HIGH/LOW semantic importance from a filename, extension, README identity or internal sampling score.
+- Semantic Scout v10 and Final Synthesis v5 share `ProjectUnderstandingPromptBuilder` across production and Eval. V10 keeps every selected Evidence ID and short summary, carries full samples only for a small cross-category set, asks the model to assess only sources that can change a decision, and treats independent manifest/document/Git/Tag gaps as non-substitutable. Ground Truth and thresholds cannot enter its type boundary.
+- Eligible Capability and View registries prevent objectively impossible requests; the model still chooses what is semantically useful and explains the information gap.
+- Provider compatible does not mean quality qualified. Differences among real models are part of the product environment, while the Evidence and Prompt contracts remain common.
+- OpenAI Responses reasoning control is capability-gated: only an explicitly probed/supported Provider receives `high` on the first structured request and `low` on the connection probe or single recovery; unknown profiles receive no private field.
+- V3.7.3 uses GLM `glm-5.2` with OpenAI Responses for the unchanged reliability, semantic and production-chain stress revalidation. The dated result and V3.8 decision are recorded in the V3.7.3 acceptance reports.
+- Internal accuracy, hallucination, benchmark and ranking metrics remain test/report artifacts and never enter the product.
+- V3.8 may start only if the unchanged quality gate, all eight production-chain cases, security gates and CI all pass.
+- V3.7.3 creates no Git Tag or GitHub Release.
 
 ## V3.7.2 Real Model Quality and Integration Boundary
 

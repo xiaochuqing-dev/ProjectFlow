@@ -27,6 +27,17 @@ class ModelFailureClassifierTest {
     }
 
     @Test
+    void classifiesTimeoutWrappedByGatewayTransport() {
+        Exception timeout = new ModelGatewayService.ModelTransportException(
+            new HttpTimeoutException("request timed out"),
+            2
+        );
+
+        assertThat(ModelFailureClassifier.classifyException(timeout))
+            .isEqualTo(ModelFailureClassifier.REQUEST_TIMEOUT);
+    }
+
+    @Test
     void classifiesConnectExceptionAsNetworkError() {
         Exception connect = new ConnectException("Connection refused");
         assertThat(ModelFailureClassifier.classifyException(connect)).isEqualTo(ModelFailureClassifier.NETWORK_ERROR);

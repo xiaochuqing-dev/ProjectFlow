@@ -54,6 +54,16 @@ class ModelCapabilityRegistryTest {
         assertThat(capabilities.supportsJsonMode()).isFalse();
     }
 
+    @Test
+    void glmFiveResponsesUsesReasoningAwareBudgetAndOmitsTemperatureByDefault() {
+        var capabilities = registry.resolve(provider(AiProviderType.OPENAI, "glm-5.2", 16_000));
+
+        assertThat(capabilities.profile()).isEqualTo("OPENAI_RESPONSES_REASONING");
+        assertThat(capabilities.supportsReasoning()).isTrue();
+        assertThat(capabilities.supportsTemperature()).isFalse();
+        assertThat(capabilities.supportsStructuredOutput()).isTrue();
+    }
+
     private AiProvider provider(AiProviderType type, String model, int maxTokens) {
         AiProvider provider = new AiProvider(UUID.randomUUID());
         provider.update("test", "https://api.deepseek.com", "test-key", model, type, 0.9, maxTokens, true, List.of());

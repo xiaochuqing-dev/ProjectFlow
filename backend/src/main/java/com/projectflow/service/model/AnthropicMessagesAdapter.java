@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+import com.anthropic.core.Timeout;
 import com.anthropic.errors.AnthropicServiceException;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
@@ -79,7 +80,13 @@ public class AnthropicMessagesAdapter implements ModelProtocolAdapter {
         AiProviderAuthMode mode = provider.getAuthMode();
         AnthropicOkHttpClient.Builder builder = AnthropicOkHttpClient.builder()
             .baseUrl(urlGuard.sdkBaseUrl(provider.getBaseUrl(), provider.getProtocol(), provider.getEndpointOverride()))
-            .timeout(request.timeout()).maxRetries(0);
+            .timeout(Timeout.builder()
+                .connect(request.connectionTimeout())
+                .read(request.requestTimeout())
+                .write(request.requestTimeout())
+                .request(request.requestTimeout())
+                .build())
+            .maxRetries(0);
         if (mode == AiProviderAuthMode.BEARER) {
             builder.authToken(key);
         } else builder.apiKey(key);

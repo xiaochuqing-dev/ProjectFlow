@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.projectflow.dto.ProjectUnderstandingDtos.AdaptiveAnalysisPlanResponse;
@@ -18,13 +19,23 @@ import com.projectflow.dto.ProjectUnderstandingDtos.ProjectShapeHypothesis;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectStructureIndexResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.RepositoryIntakeResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.SemanticScoutResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.SemanticToolRequest;
+import com.projectflow.dto.ProjectUnderstandingDtos.ToolSelectionRationale;
 
 @Service
 public class AdaptiveAnalysisPlanner {
     private final AnalysisToolRegistry toolRegistry;
+    private final AnalysisViewRegistry viewRegistry;
 
-    public AdaptiveAnalysisPlanner(AnalysisToolRegistry toolRegistry) {
+    @Autowired
+    public AdaptiveAnalysisPlanner(AnalysisToolRegistry toolRegistry, AnalysisViewRegistry viewRegistry) {
         this.toolRegistry = toolRegistry;
+        this.viewRegistry = viewRegistry;
+    }
+
+    /** Compatibility constructor for focused tests. */
+    public AdaptiveAnalysisPlanner(AnalysisToolRegistry toolRegistry) {
+        this(toolRegistry, new AnalysisViewRegistry());
     }
 
     public boolean shouldUseSemanticModel(
@@ -78,12 +89,13 @@ public class AdaptiveAnalysisPlanner {
             .map(source -> new EvidenceSourceAssessment(
                 source.id(),
                 source.semanticRole(),
-                source.importance(),
+                "UNKNOWN",
                 source.currentness(),
-                isDocumentCategory(source.category())
-                    && ("HIGH".equals(source.importance()) || "UNKNOWN_DOCUMENT".equals(source.category())),
                 false,
-                "确定性 Discovery 候选，最终语义角色保持可替换",
+                false,
+                "工程系统只建立候选和安全边界，不预判语义重要性",
+                "",
+                List.of(),
                 source.confidence()
             ))
             .toList();
@@ -91,6 +103,7 @@ public class AdaptiveAnalysisPlanner {
             List.copyOf(shapes),
             assessments,
             defaultDimensions(intake, false),
+            List.of(),
             List.of(),
             List.of(),
             List.of(),
@@ -119,14 +132,18 @@ public class AdaptiveAnalysisPlanner {
         else if (!providerConfigured) semanticMode = "UNAVAILABLE";
         else semanticMode = "PENDING_EXECUTION_DECISION";
 
+        List<String> eligibleCapabilities = toolRegistry.eligibleCapabilities(intake, index, sourceMap);
+        List<String> eligibleViews = viewRegistry.eligible(intake, index, sourceMap, history);
+        List<SemanticToolRequest> semanticRequests = scout == null || scout.toolRequests() == null
+            ? List.of()
+            : scout.toolRequests();
+        List<String> shapes = scout == null ? List.of() : scout.projectShapeHypotheses().stream()
+            .map(ProjectShapeHypothesis::shape)
+            .distinct()
+            .limit(8)
+            .toList();
         List<String> defaultTools = toolRegistry.defaults(intake, index, sourceMap, history);
-        List<String> requestedTools = new ArrayList<>(
-            scout == null ? List.of() : scout.recommendedToolCalls()
-        );
-        if (scout != null && scout.evidenceSourceAssessments().stream()
-            .anyMatch(EvidenceSourceAssessment::shouldDeepRead)) {
-            requestedTools.add("DOC_READER");
-        }
+        List<String> requestedTools = semanticRequests.stream().map(SemanticToolRequest::capability).toList();
         List<String> tools = toolRegistry.validateRequested(
             requestedTools,
             defaultTools,
@@ -140,12 +157,10 @@ public class AdaptiveAnalysisPlanner {
         if ("PENDING_EXECUTION_DECISION".equals(semanticMode)) {
             semanticMode = secondStageEligible ? "TWO_STAGE_CONDITIONAL" : "ONE_PASS_SCOUT_AND_SYNTHESIS";
         }
-        List<String> dimensions = scout == null || scout.applicableDimensions().isEmpty()
-            ? defaultDimensions(intake, history.historyAvailable())
-            : boundedDistinct(scout.applicableDimensions(), 20);
-        if (history.historyAvailable() && !dimensions.contains("evolution")) {
-            dimensions = append(dimensions, "evolution");
-        }
+        List<String> selectedDimensions = scout == null || !scout.modelUsed()
+            ? viewRegistry.validate(defaultDimensions(intake, history.historyAvailable()), eligibleViews)
+            : viewRegistry.validate(scout.applicableDimensions(), eligibleViews);
+        List<String> dimensions = List.copyOf(new LinkedHashSet<>(selectedDimensions));
         List<String> skippedDimensions = skippedDimensions(intake, index, history, dimensions);
         List<String> unavailable = new ArrayList<>(index.unsupportedAreas());
         unavailable.addAll(toolRegistry.unavailableReasons(intake, index));
@@ -177,24 +192,28 @@ public class AdaptiveAnalysisPlanner {
                 "有界目录盘点", "Evidence Source Map", "语言与 LOC 统计", "SCIP Symbol/Definition/Reference",
                 "JGraphT 重要节点排序", "关系驱动 Functional Area", "证据编号"
             );
-        List<String> shapes = scout == null ? List.of() : scout.projectShapeHypotheses().stream()
-            .map(ProjectShapeHypothesis::shape)
-            .distinct()
-            .limit(8)
-            .toList();
-        List<String> priorities = sourceMap.sources().stream()
+        List<String> priorities = (scout == null ? java.util.stream.Stream.<EvidenceSourceAssessment>empty()
+            : scout.evidenceSourceAssessments().stream())
             .filter(source -> "HIGH".equals(source.importance()))
-            .map(ProjectEvidenceSourceResponse::id)
+            .map(EvidenceSourceAssessment::evidenceId)
             .limit(30)
             .toList();
-        Set<String> requestedDeepReads = scout == null ? Set.of() : scout.evidenceSourceAssessments().stream()
-            .filter(EvidenceSourceAssessment::shouldDeepRead)
-            .map(EvidenceSourceAssessment::evidenceId)
-            .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
-        if (requestedDeepReads.isEmpty()) {
+        Set<String> requestedDeepReads = new LinkedHashSet<>();
+        semanticRequests.stream()
+            .filter(request -> "DOC_READER".equals(request.capability()))
+            .flatMap(request -> request.targetEvidenceIds().stream())
+            .forEach(requestedDeepReads::add);
+        if (scout != null) {
+            scout.evidenceSourceAssessments().stream()
+                .filter(EvidenceSourceAssessment::shouldDeepRead)
+                .map(EvidenceSourceAssessment::evidenceId)
+                .forEach(requestedDeepReads::add);
+        }
+        if (requestedDeepReads.isEmpty() && (
+            (scout == null || !scout.modelUsed()) || tools.contains("DOC_READER")
+        )) {
             requestedDeepReads = sourceMap.sources().stream()
                 .filter(source -> isDocumentCategory(source.category()))
-                .filter(source -> "HIGH".equals(source.importance()) || "UNKNOWN_DOCUMENT".equals(source.category()))
                 .map(ProjectEvidenceSourceResponse::id)
                 .limit(8)
                 .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
@@ -211,6 +230,16 @@ public class AdaptiveAnalysisPlanner {
         expectedOutputs.add("analysisPlan");
         expectedOutputs.add("historicalCoverage");
         if (history.historyAvailable()) expectedOutputs.add("evolutionPreview");
+        List<ToolSelectionRationale> toolRationales = new ArrayList<>(semanticRequests.stream()
+            .map(request -> new ToolSelectionRationale(
+                request.capability(),
+                request.informationGap(),
+                request.expectedEvidenceValue(),
+                request.targetEvidenceIds(),
+                request.whyExistingEvidenceIsInsufficient(),
+                eligibleCapabilities.contains(request.capability())
+            ))
+            .toList());
         return new AdaptiveAnalysisPlanResponse(
             deterministicCapabilities,
             index.indexerSource(),
@@ -218,7 +247,7 @@ public class AdaptiveAnalysisPlanner {
             semanticEligible ? (secondStageEligible ? 2 : 1) : 0,
             semanticEligible ? 12_000 : 0,
             semanticEligible ? (secondStageEligible ? 28_000 : 20_000) : 0,
-            semanticEligible ? 600_000L : 120_000L,
+            AnalysisTimePolicy.NO_OVERALL_DEADLINE_MS,
             hierarchical,
             history.availability(),
             Math.min(index.coverage().overall(), Math.max(intake.supportedStructureCoverage(), 0)),
@@ -234,28 +263,35 @@ public class AdaptiveAnalysisPlanner {
             index.symbols().isEmpty() ? "MANIFEST_FILESYSTEM_FALLBACK" : "PRECISE_SCIP_WITH_FALLBACK",
             Map.copyOf(budgets),
             List.copyOf(expectedOutputs),
-            scout != null && scout.modelUsed() ? "HIGH" : "MEDIUM"
+            scout != null && scout.modelUsed() ? "HIGH" : "MEDIUM",
+            eligibleCapabilities,
+            eligibleViews,
+            List.copyOf(toolRationales)
         );
     }
 
     private static List<String> defaultDimensions(RepositoryIntakeResponse intake, boolean historyAvailable) {
         List<String> values = new ArrayList<>();
         if ("EMPTY".equals(intake.classification())) return List.of();
-        values.add("identity");
+        values.add("CURRENT_STATE");
         if (intake.sourceFileCount() == 0) {
-            values.add("documentPurpose");
-            values.add("topicsAndDecisions");
+            values.add("DOCUMENT_OVERVIEW");
+            values.add("CURRENTNESS");
+            values.add("CONFLICTS");
         } else if (intake.sourceFileCount() <= 2 && intake.estimatedLoc() <= 500) {
-            values.add("purpose");
-            values.add("inputOutput");
-            values.add("dependencies");
-            values.add("usage");
+            values.add("PURPOSE");
+            values.add("INPUT_OUTPUT");
+            values.add("DEPENDENCIES");
+            values.add("USAGE");
         } else {
-            values.add("technology");
-            values.add("currentStructure");
-            values.add("engineeringState");
+            values.add("TECHNOLOGY");
+            values.add("CURRENT_STRUCTURE");
+            values.add("ENGINEERING_STATE");
         }
-        if (historyAvailable) values.add("evolution");
+        if (historyAvailable) {
+            values.add("HISTORICAL_COVERAGE");
+            values.add("EVOLUTION");
+        }
         return List.copyOf(values);
     }
 
@@ -273,8 +309,8 @@ public class AdaptiveAnalysisPlanner {
             skipped.add("preciseCallGraph：没有有效 SCIP，不能把目录邻近当代码关系");
         }
         if (!history.historyAvailable()) skipped.add("timeline：历史证据不足");
-        if (!applicable.contains("backend")) skipped.add("backend：当前证据未证明适用");
-        if (!applicable.contains("database")) skipped.add("database：当前证据未证明适用");
+        if (!applicable.contains("BACKEND")) skipped.add("backend：当前证据未证明适用");
+        if (!applicable.contains("DATA")) skipped.add("database：当前证据未证明适用");
         return List.copyOf(skipped);
     }
 
@@ -297,22 +333,4 @@ public class AdaptiveAnalysisPlanner {
         ).contains(category);
     }
 
-    private static List<String> boundedDistinct(List<String> values, int limit) {
-        LinkedHashSet<String> result = new LinkedHashSet<>();
-        for (String value : values) {
-            if (value == null) continue;
-            String bounded = value.strip();
-            if (bounded.isBlank()) continue;
-            if (bounded.length() > 80) bounded = bounded.substring(0, 80);
-            result.add(bounded);
-            if (result.size() >= limit) break;
-        }
-        return List.copyOf(result);
-    }
-
-    private static List<String> append(List<String> values, String value) {
-        List<String> result = new ArrayList<>(values);
-        result.add(value);
-        return List.copyOf(result);
-    }
 }

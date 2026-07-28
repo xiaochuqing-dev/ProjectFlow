@@ -115,6 +115,41 @@ class ProjectAnalysisJobServiceTest {
     }
 
     @Test
+    void recoveryDistinguishesPreModelCheckpointFromPostScoutStage() {
+        UUID projectId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        ProjectAnalysisJob preModel = new ProjectAnalysisJob(
+            projectId,
+            userId,
+            ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH,
+            null
+        );
+        preModel.markRunning();
+        preModel.advanceStage("EVIDENCE_DISCOVERY", "建立来源地图");
+        ProjectAnalysisJob postScout = new ProjectAnalysisJob(
+            projectId,
+            userId,
+            ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH,
+            null
+        );
+        postScout.markRunning();
+        postScout.advanceStage("CAPABILITY_EXECUTION", "执行 Scout 选择的能力");
+        when(jobRepository.findAll()).thenReturn(List.of(preModel, postScout));
+        ProjectAnalysisJobService service = new ProjectAnalysisJobService(
+            jobRepository, projectRepository, jobRunner, objectMapper, transactionManager
+        );
+
+        service.recoverInterruptedJobs();
+
+        assertThat(preModel.getStatus()).isEqualTo(ProjectAnalysisJobStatus.RETRYABLE);
+        assertThat(preModel.getRestartRecoveryState()).isEqualTo("USER_RETRY_ALLOWED");
+        assertThat(postScout.getStatus()).isEqualTo(ProjectAnalysisJobStatus.INTERRUPTED);
+        assertThat(postScout.getRestartRecoveryState()).isEqualTo("USER_CONFIRMATION_REQUIRED");
+        verify(jobRunner, never()).execute(preModel.getId());
+        verify(jobRunner, never()).execute(postScout.getId());
+    }
+
+    @Test
     void acknowledgesFailedCapabilityJobWithoutChangingItsResultHistory() {
         UUID userId = UUID.randomUUID();
         UUID projectId = UUID.randomUUID();

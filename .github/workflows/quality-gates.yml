@@ -1,4 +1,4 @@
-name: ProjectFlow V3.7.2 Quality Gates
+name: ProjectFlow V3.7.3 Quality Gates
 
 on:
   push:
@@ -131,7 +131,7 @@ jobs:
       - name: 阻止明显密钥进入仓库
         shell: bash
         run: |
-          if git grep -nEI '(sk-[A-Za-z0-9_-]{20,}|Bearer [A-Za-z0-9._-]{24,})' -- ':!*.md' ':!*.txt'; then
+          if git grep -nEI '(sk-[A-Za-z0-9_-]{20,}|ark-[A-Za-z0-9-]{20,}|Bearer [A-Za-z0-9._-]{24,})' -- ':!*.md' ':!*.txt'; then
             echo "检测到疑似密钥或 Authorization 值"
             exit 1
           fi
@@ -139,6 +139,7 @@ jobs:
   optional-real-provider:
     if: github.event_name == 'workflow_dispatch' && inputs.run_real_model
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -156,8 +157,11 @@ jobs:
           PROJECTFLOW_REAL_MODEL_NAME: "glm-5.2"
           PROJECTFLOW_REAL_MODEL_TYPE: "OPENAI"
           PROJECTFLOW_REAL_MODEL_PROTOCOL: "OPENAI_RESPONSES"
-          PROJECTFLOW_REAL_MODEL_TIMEOUT_SECONDS: "120"
-          PROJECTFLOW_REAL_MODEL_MAX_TOKENS: "16000"
+          PROJECTFLOW_REAL_MODEL_TIMEOUT_SECONDS: "600"
+          # Reasoning and visible JSON share this Provider ceiling. The Scout
+          # starts at its 16k task ceiling and may use one bounded 24k
+          # truncation recovery without reducing Evidence coverage.
+          PROJECTFLOW_REAL_MODEL_MAX_TOKENS: "32000"
         run: |
           if [ -z "$PROJECTFLOW_REAL_MODEL_API_KEY" ]; then
             echo "SKIPPED: 未提供安全测试 Key"

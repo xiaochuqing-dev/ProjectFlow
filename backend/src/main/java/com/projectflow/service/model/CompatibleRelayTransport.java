@@ -7,7 +7,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +47,7 @@ public class CompatibleRelayTransport {
         AiProvider provider = request.provider();
         URI endpoint = urlGuard.endpointUri(provider.getBaseUrl(), provider.getProtocol(), provider.getEndpointOverride());
         HttpRequest.Builder builder = HttpRequest.newBuilder(authenticatedUri(endpoint, provider))
-            .timeout(request.timeout())
+            .timeout(request.requestTimeout())
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload(request)), StandardCharsets.UTF_8));
         applyHeaders(builder, provider);
@@ -56,7 +55,7 @@ public class CompatibleRelayTransport {
         HttpResponse<String> response;
         try {
             response = HttpClient.newBuilder()
-                .connectTimeout(min(request.timeout(), Duration.ofSeconds(10)))
+                .connectTimeout(request.connectionTimeout())
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .build()
                 .send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
@@ -84,6 +83,9 @@ public class CompatibleRelayTransport {
                 body.put("input", request.userPrompt());
                 body.put("max_output_tokens", request.maxOutputTokens());
                 if (request.jsonMode()) body.put("text", Map.of("format", Map.of("type", "json_object")));
+                if (request.reasoningEffort() != null) {
+                    body.put("reasoning", Map.of("effort", request.reasoningEffort()));
+                }
             }
             case OPENAI_CHAT_COMPLETIONS -> {
                 body.put("messages", List.of(
@@ -239,7 +241,4 @@ public class CompatibleRelayTransport {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
-    private Duration min(Duration left, Duration right) {
-        return left.compareTo(right) <= 0 ? left : right;
-    }
 }

@@ -42,6 +42,7 @@ class ModelGatewayProtocolMatrixTest {
     private final AtomicInteger providerRequestCount = new AtomicInteger();
     private final AtomicReference<com.sun.net.httpserver.Headers> capturedHeaders = new AtomicReference<>();
     private final AtomicReference<String> capturedQuery = new AtomicReference<>("");
+    private final AtomicReference<com.fasterxml.jackson.databind.JsonNode> capturedBody = new AtomicReference<>();
     private ModelGatewayService gateway;
     private ModelProtocolAdapterRegistry registry;
     private String serverBase;
@@ -172,6 +173,53 @@ class ModelGatewayProtocolMatrixTest {
         assertThat(capturedHeaders.get().getFirst("x-api-key")).isNull();
     }
 
+    @Test
+    void responsesReasoningControlIsCapabilityGatedAndRecoveryUsesLowerEffort() throws Exception {
+        modelContent = ModelTaskType.PROVIDER_CONNECTION_TEST.minimalSchema();
+        AiProvider unsupported = provider(ModelProtocol.OPENAI_RESPONSES);
+        gateway.callStructured(
+            unsupported,
+            "最小兼容任务",
+            ModelTaskType.PROVIDER_CONNECTION_TEST
+        );
+        assertThat(capturedBody.get().has("reasoning")).isFalse();
+
+        modelContent = ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT.minimalSchema();
+        AiProvider controlled = provider(ModelProtocol.OPENAI_RESPONSES);
+        controlled.configureProtocol(
+            ModelProtocol.OPENAI_RESPONSES,
+            null,
+            AiProviderAuthMode.PROTOCOL_DEFAULT,
+            null,
+            null,
+            Map.of(),
+            30,
+            false,
+            false,
+            true,
+            true,
+            true
+        );
+        providerRequestCount.set(0);
+        gateway.callStructured(
+            controlled,
+            "最小兼容任务",
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+        );
+        assertThat(capturedBody.get().path("reasoning").path("effort").asText())
+            .isEqualTo("high");
+
+        providerRequestCount.set(0);
+        limitFirstRequest = true;
+        gateway.callStructured(
+            controlled,
+            "最小兼容任务",
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+        );
+        assertThat(capturedBody.get().path("reasoning").path("effort").asText())
+            .isEqualTo("low");
+    }
+
     @AfterEach
     void stopServer() {
         server.stop(0);
@@ -207,7 +255,7 @@ class ModelGatewayProtocolMatrixTest {
     private void respond(HttpExchange exchange, String body) throws IOException {
         capturedHeaders.set(exchange.getRequestHeaders());
         capturedQuery.set(exchange.getRequestURI().getRawQuery() == null ? "" : exchange.getRequestURI().getRawQuery());
-        exchange.getRequestBody().readAllBytes();
+        capturedBody.set(objectMapper.readTree(exchange.getRequestBody().readAllBytes()));
         if (transientFailureFirstRequest && providerRequestCount.get() == 1) {
             byte[] error = "{\"error\":{\"type\":\"overloaded_error\",\"message\":\"busy\"}}".getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "application/json");

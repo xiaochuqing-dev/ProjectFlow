@@ -81,9 +81,16 @@ public class ProjectAnalysisJobRunner {
         }
 
         long startedAt = System.nanoTime();
-        try (ModelCancellationContext.Scope ignored = ModelCancellationContext.bind(() ->
-            jobRepository.findById(jobId).map(ProjectAnalysisJob::isCancellationRequested).orElse(true)
-        )) {
+        try (
+            ModelCancellationContext.Scope ignored = ModelCancellationContext.bind(
+                () -> jobRepository.findById(jobId).map(ProjectAnalysisJob::isCancellationRequested).orElse(true),
+                () -> heartbeat(jobId)
+            );
+            AnalysisDeadlineContext.Scope deadline = AnalysisDeadlineContext.bind(
+                job.getStartedAt(),
+                job.getMaxDurationMs()
+            )
+        ) {
             if (!checkpoint(jobId, false)) return;
             job.markRunning();
             jobRepository.save(job);
@@ -240,6 +247,11 @@ public class ProjectAnalysisJobRunner {
                 jobRepository.save(current);
                 return;
             }
+            if (exception instanceof AnalysisDeadlineContext.DeadlineExceededException) {
+                current.markExpired("DURATION_BUDGET_EXCEEDED", "任务已达到显式总体时长上限，已停止后续请求。");
+                jobRepository.save(current);
+                return;
+            }
             LOGGER.warn("Project analysis job failed: jobId={}", jobId, exception);
             ProjectCapabilityService.CapabilityAnalysisException capabilityException =
                 exception instanceof ProjectCapabilityService.CapabilityAnalysisException value ? value : null;
@@ -311,7 +323,7 @@ public class ProjectAnalysisJobRunner {
             return false;
         }
         if (!job.hasDurationBudget(java.time.Instant.now())) {
-            job.markExpired("DURATION_BUDGET_EXCEEDED", "任务超过 10 分钟总耗时预算，已停止后续请求。");
+            job.markExpired("DURATION_BUDGET_EXCEEDED", "任务已达到显式总体时长上限，已停止后续请求。");
             jobRepository.save(job);
             return false;
         }
@@ -321,6 +333,15 @@ public class ProjectAnalysisJobRunner {
             return false;
         }
         return true;
+    }
+
+    private void heartbeat(UUID jobId) {
+        jobRepository.findById(jobId).ifPresent(job -> {
+            java.time.Instant last = job.getHeartbeatAt();
+            if (last != null && java.time.Duration.between(last, java.time.Instant.now()).toMillis() < 2_000) return;
+            job.heartbeat();
+            jobRepository.save(job);
+        });
     }
 
     private void recordJobUsage(UUID jobId, ModelCallDiagnosticsResponse diagnostics) {

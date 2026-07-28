@@ -44,4 +44,29 @@ class AnalysisToolRegistryTest {
         assertThat(defaults).containsExactly("FILESYSTEM");
         assertThat(requested).containsExactly("FILESYSTEM", "GIT_HISTORY", "DOC_READER");
     }
+
+    @Test
+    void objectivelyUnavailableCapabilitiesNeverReachTheModelEligibleSet() {
+        RepositoryIntakeResponse intake = mock(RepositoryIntakeResponse.class);
+        when(intake.git()).thenReturn(new GitEvidenceResponse(false, "", "", 0, "UNAVAILABLE", 0));
+        when(intake.manifestFiles()).thenReturn(List.of());
+        ProjectStructureIndexResponse index = mock(ProjectStructureIndexResponse.class);
+        when(index.symbols()).thenReturn(List.of());
+        EvidenceSourceMapResponse sourceMap = new EvidenceSourceMapResponse(
+            1, 1, 1, 0, 0, Map.of("README", 1L), List.of(), List.of(), null
+        );
+
+        List<String> eligible = registry.eligibleCapabilities(intake, index, sourceMap);
+        List<String> validated = registry.validateRequested(
+            List.of("GIT_HISTORY", "GIT_TAG", "SCIP", "AGENT_RESULT", "doc-reader"),
+            List.of("FILESYSTEM"),
+            intake,
+            index,
+            sourceMap
+        );
+
+        assertThat(eligible).containsExactly("DOC_READER");
+        assertThat(validated).containsExactly("FILESYSTEM", "DOC_READER");
+    }
+
 }

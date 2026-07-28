@@ -11,6 +11,52 @@ public record CanonicalModelRequest(
     int maxOutputTokens,
     Double temperature,
     boolean jsonMode,
-    Duration timeout
+    String reasoningEffort,
+    Duration connectionTimeout,
+    Duration requestTimeout
 ) {
+    public CanonicalModelRequest(
+        AiProvider provider,
+        String systemPrompt,
+        String userPrompt,
+        int maxOutputTokens,
+        Double temperature,
+        boolean jsonMode,
+        Duration connectionTimeout,
+        Duration requestTimeout
+    ) {
+        this(
+            provider,
+            systemPrompt,
+            userPrompt,
+            maxOutputTokens,
+            temperature,
+            jsonMode,
+            null,
+            connectionTimeout,
+            requestTimeout
+        );
+    }
+
+    public CanonicalModelRequest(
+        AiProvider provider,
+        String systemPrompt,
+        String userPrompt,
+        int maxOutputTokens,
+        Double temperature,
+        boolean jsonMode,
+        Duration requestTimeout
+    ) {
+        this(
+            provider,
+            systemPrompt,
+            userPrompt,
+            maxOutputTokens,
+            temperature,
+            jsonMode,
+            null,
+            requestTimeout.compareTo(Duration.ofSeconds(10)) < 0 ? requestTimeout : Duration.ofSeconds(10),
+            requestTimeout
+        );
+    }
 }

@@ -1324,6 +1324,8 @@ export type SemanticScout = {
     shouldDeepRead: boolean;
     shouldSkip: boolean;
     reason: string;
+    informationGap: string;
+    affectedDimensions: string[];
     confidence: "HIGH" | "MEDIUM" | "LOW";
   }>;
   applicableDimensions: string[];
@@ -1332,6 +1334,13 @@ export type SemanticScout = {
   skipCandidates: string[];
   potentialConflicts: string[];
   currentnessWarnings: string[];
+  toolRequests: Array<{
+    capability: string;
+    informationGap: string;
+    expectedEvidenceValue: string;
+    targetEvidenceIds: string[];
+    whyExistingEvidenceIsInsufficient: string;
+  }>;
   modelUsed: boolean;
 };
 
@@ -1529,6 +1538,16 @@ export type ProjectUnderstandingSnapshot = {
     semanticBudgets: Record<string, number>;
     expectedOutputs: string[];
     confidence: string;
+    eligibleCapabilities: string[];
+    eligibleViews: string[];
+    toolSelectionRationales: Array<{
+      capability: string;
+      informationGap: string;
+      expectedEvidenceValue: string;
+      targetEvidenceIds: string[];
+      whyExistingEvidenceIsInsufficient: string;
+      eligible: boolean;
+    }>;
   };
   analyzedAt: string;
   sourceRevision: string;
@@ -1696,6 +1715,9 @@ export type ProjectAnalysisJob = {
   maxTotalTokens: number;
   elapsedMs: number;
   maxDurationMs: number;
+  analysisDeadlineMode: "AUTO" | "FINITE" | "UNLIMITED" | null;
+  qualityMode: "QUALITY_FIRST" | null;
+  overallDeadlineEnabled: boolean;
   idempotencyKey: string | null;
   inputFingerprint: string | null;
   failureCode: string | null;
@@ -2611,12 +2633,24 @@ export function runProjectAnalysis(token: string, projectId: string): Promise<Pr
   });
 }
 
-export function refreshProjectUnderstanding(token: string, projectId: string): Promise<ProjectAnalysisJob> {
+export type ProjectUnderstandingRefreshPolicy = {
+  deadlineMode?: "AUTO" | "FINITE" | "UNLIMITED";
+  maxAnalysisDurationSeconds?: number;
+  qualityMode?: "QUALITY_FIRST";
+};
+
+export function refreshProjectUnderstanding(
+  token: string,
+  projectId: string,
+  policy?: ProjectUnderstandingRefreshPolicy,
+): Promise<ProjectAnalysisJob> {
   return requestJson<ProjectAnalysisJob>(`/projects/${projectId}/understanding/refresh`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
+      ...(policy ? { "Content-Type": "application/json" } : {}),
     },
+    body: policy ? JSON.stringify(policy) : undefined,
   });
 }
 

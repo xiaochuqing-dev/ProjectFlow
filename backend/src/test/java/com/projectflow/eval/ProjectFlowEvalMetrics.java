@@ -33,6 +33,10 @@ final class ProjectFlowEvalMetrics {
         int rejectedDangerousRequests = 0;
         int manualReviewClaims = 0;
         int failures = 0;
+        int successes = 0;
+        int timeouts = 0;
+        int schemaFailures = 0;
+        int cancellations = 0;
         int degraded = 0;
         long inputTokens = 0;
         long outputTokens = 0;
@@ -40,6 +44,8 @@ final class ProjectFlowEvalMetrics {
         long latencyMs = 0;
         int requests = 0;
         int retries = 0;
+        List<Long> latencies = new ArrayList<>();
+        List<ProjectFlowEvalObservation> semanticObservations = new ArrayList<>();
         List<Double> stageEvidenceGain = new ArrayList<>();
         List<Double> stageUnsupportedReduction = new ArrayList<>();
         List<Double> stageViewGain = new ArrayList<>();
@@ -47,6 +53,22 @@ final class ProjectFlowEvalMetrics {
         for (ProjectFlowEvalObservation observation : observations) {
             EvalCase expected = cases.get(observation.caseId());
             if (expected == null) continue;
+            failures += observation.failed() ? 1 : 0;
+            successes += observation.failed() ? 0 : 1;
+            degraded += observation.degraded() ? 1 : 0;
+            String failure = normalized(observation.finishReason());
+            if (failure.contains("TIMEOUT")) timeouts++;
+            if (failure.contains("SCHEMA")) schemaFailures++;
+            if (failure.contains("CANCEL")) cancellations++;
+            inputTokens += observation.inputTokens();
+            outputTokens += observation.outputTokens();
+            totalTokens += observation.totalTokens();
+            latencyMs += observation.latencyMs();
+            latencies.add(observation.latencyMs());
+            requests += observation.requestCount();
+            retries += observation.retries();
+            if (observation.failed()) continue;
+            semanticObservations.add(observation);
             for (EvalClaim claim : safe(observation.claims())) {
                 claims.expected++;
                 if (unsupported(claim, expected)) claims.actual++;
@@ -65,19 +87,16 @@ final class ProjectFlowEvalMetrics {
             addSetCounter(conflicts, observation.conflictsDetected(), expected.expectedConflicts(), List.of());
             unavailableToolRequests += safe(observation.unavailableToolRequests()).size();
             rejectedDangerousRequests += safe(observation.rejectedDangerousToolRequests()).size();
-            failures += observation.failed() ? 1 : 0;
-            degraded += observation.degraded() ? 1 : 0;
-            inputTokens += observation.inputTokens();
-            outputTokens += observation.outputTokens();
-            totalTokens += observation.totalTokens();
-            latencyMs += observation.latencyMs();
-            requests += observation.requestCount();
-            retries += observation.retries();
-
             if (observation.stageOne() != null && observation.stageTwo() != null) {
                 stageEvidenceGain.add(
-                    recall(observation.stageTwo().evidenceIds(), expected.mustFindEvidence())
-                        - recall(observation.stageOne().evidenceIds(), expected.mustFindEvidence())
+                    Math.max(
+                        recall(observation.stageTwo().evidenceIds(), expected.mustFindEvidence())
+                            - recall(observation.stageOne().evidenceIds(), expected.mustFindEvidence()),
+                        validatedToolEvidenceGain(
+                            observation.stageOne().evidenceIds(),
+                            observation.stageTwo().evidenceIds()
+                        )
+                    )
                 );
                 stageUnsupportedReduction.add(
                     unsupportedRate(observation.stageOne().claims(), expected)
@@ -91,11 +110,19 @@ final class ProjectFlowEvalMetrics {
         }
         return new EvalSummary(
             observations.size(),
+            semanticObservations.size(),
+            successes,
+            failures,
+            timeouts,
+            schemaFailures,
+            cancellations,
+            degraded,
+            rate(successes, observations.size()),
             rate(claims.actual, claims.expected),
             recallFrom(evidence),
             precision(evidence),
             f1(shapes),
-            exactSetAccuracy(observations, cases, Dimension.SHAPES),
+            exactSetAccuracy(semanticObservations, cases, Dimension.SHAPES),
             precision(tools),
             recallFrom(tools),
             rate(tools.falsePositive, Math.max(1, tools.predicted)),
@@ -105,7 +132,7 @@ final class ProjectFlowEvalMetrics {
             recallFrom(views),
             precision(views),
             recallFrom(conflicts),
-            repeatability(observations),
+            repeatability(semanticObservations, cases),
             average(stageEvidenceGain),
             average(stageUnsupportedReduction),
             average(stageViewGain),
@@ -115,9 +142,10 @@ final class ProjectFlowEvalMetrics {
             outputTokens,
             totalTokens,
             observations.isEmpty() ? 0 : (double) latencyMs / observations.size(),
+            percentile95(latencies),
             retries,
             rate(failures, observations.size()),
-            failures == 0 ? 1.0 : rate(degraded, failures),
+            rate(degraded, observations.size()),
             observations.stream().anyMatch(value -> value.estimatedCost() != null)
                 ? observations.stream().filter(value -> value.estimatedCost() != null)
                     .mapToDouble(ProjectFlowEvalObservation::estimatedCost).sum()
@@ -175,39 +203,94 @@ final class ProjectFlowEvalMetrics {
         return rate(matches, observations.size());
     }
 
-    private static double repeatability(List<ProjectFlowEvalObservation> observations) {
+    private static double repeatability(
+        List<ProjectFlowEvalObservation> observations,
+        Map<String, EvalCase> cases
+    ) {
         Map<String, List<ProjectFlowEvalObservation>> grouped = new HashMap<>();
         observations.forEach(value -> grouped.computeIfAbsent(value.caseId(), ignored -> new ArrayList<>()).add(value));
         List<Double> similarities = new ArrayList<>();
-        for (List<ProjectFlowEvalObservation> group : grouped.values()) {
+        for (Map.Entry<String, List<ProjectFlowEvalObservation>> entry : grouped.entrySet()) {
+            EvalCase expected = cases.get(entry.getKey());
+            if (expected == null) continue;
+            List<ProjectFlowEvalObservation> group = entry.getValue();
             for (int left = 0; left < group.size(); left++) {
                 for (int right = left + 1; right < group.size(); right++) {
-                    ProjectFlowEvalObservation a = group.get(left);
-                    ProjectFlowEvalObservation b = group.get(right);
-                    similarities.add((
-                        jaccard(a.projectShapes(), b.projectShapes())
-                            + jaccard(a.evidenceUsed(), b.evidenceUsed())
-                            + jaccard(a.toolPlan(), b.toolPlan())
-                            + jaccard(
-                                safe(a.claims()).stream().map(EvalClaim::text).toList(),
-                                safe(b.claims()).stream().map(EvalClaim::text).toList()
-                            )
-                    ) / 4.0);
+                    similarities.add(criticalDecisionAgreement(
+                        group.get(left),
+                        group.get(right),
+                        expected
+                    ));
                 }
             }
         }
         return similarities.isEmpty() ? 1.0 : average(similarities);
     }
 
-    private static double jaccard(List<String> left, List<String> right) {
-        Set<String> a = normalizedSet(left);
-        Set<String> b = normalizedSet(right);
-        if (a.isEmpty() && b.isEmpty()) return 1.0;
-        Set<String> union = new HashSet<>(a);
-        union.addAll(b);
-        Set<String> intersection = new HashSet<>(a);
-        intersection.retainAll(b);
-        return rate(intersection.size(), union.size());
+    /**
+     * Repeatability measures whether repeated runs make the same critical
+     * benchmark decisions. Accuracy remains independent: two consistently
+     * wrong runs are repeatable but still fail the recall/safety gates.
+     * Free-form wording, harmless extra sections and claim count do not turn a
+     * stable decision into a false instability signal.
+     */
+    private static double criticalDecisionAgreement(
+        ProjectFlowEvalObservation left,
+        ProjectFlowEvalObservation right,
+        EvalCase expected
+    ) {
+        DecisionAgreement agreement = new DecisionAgreement();
+        compareMembership(agreement, left.projectShapes(), right.projectShapes(), expected.expectedProjectShapes());
+        compareMembership(agreement, left.evidenceUsed(), right.evidenceUsed(), expected.mustFindEvidence());
+        compareMembership(agreement, left.toolPlan(), right.toolPlan(), expected.expectedTools());
+        compareMembership(agreement, left.toolPlan(), right.toolPlan(), expected.forbiddenTools());
+        compareMembership(agreement, left.applicableViews(), right.applicableViews(), expected.expectedViews());
+        compareMembership(agreement, left.applicableViews(), right.applicableViews(), expected.forbiddenViews());
+        compareMembership(
+            agreement,
+            left.conflictsDetected(),
+            right.conflictsDetected(),
+            expected.expectedConflicts()
+        );
+        compareMembership(
+            agreement,
+            left.deepReadTargets(),
+            right.deepReadTargets(),
+            expected.expectedDeepReadTargets()
+        );
+        for (String marker : expected.mustNotClaim()) {
+            agreement.compare(
+                containsForbiddenClaim(left.claims(), marker),
+                containsForbiddenClaim(right.claims(), marker)
+            );
+        }
+        agreement.compare(!safe(left.conflictsDetected()).isEmpty(), !safe(right.conflictsDetected()).isEmpty());
+        agreement.compare(!safe(left.unknowns()).isEmpty(), !safe(right.unknowns()).isEmpty());
+        agreement.compare(hasUnsupportedClaim(left, expected), hasUnsupportedClaim(right, expected));
+        return agreement.rate();
+    }
+
+    private static void compareMembership(
+        DecisionAgreement agreement,
+        List<String> left,
+        List<String> right,
+        List<String> decisionValues
+    ) {
+        Set<String> leftSet = normalizedSet(left);
+        Set<String> rightSet = normalizedSet(right);
+        for (String value : safe(decisionValues)) {
+            String normalized = normalized(value);
+            agreement.compare(leftSet.contains(normalized), rightSet.contains(normalized));
+        }
+    }
+
+    private static boolean containsForbiddenClaim(List<EvalClaim> claims, String marker) {
+        return safe(claims).stream()
+            .anyMatch(claim -> ProjectFlowEvalTextRules.containsUnnegatedMarker(claim.text(), marker));
+    }
+
+    private static boolean hasUnsupportedClaim(ProjectFlowEvalObservation observation, EvalCase expected) {
+        return safe(observation.claims()).stream().anyMatch(claim -> unsupported(claim, expected));
     }
 
     private static double recall(List<String> actual, List<String> expected) {
@@ -216,6 +299,20 @@ final class ProjectFlowEvalMetrics {
         Set<String> actualSet = normalizedSet(actual);
         actualSet.retainAll(expectedSet);
         return rate(actualSet.size(), expectedSet.size());
+    }
+
+    /**
+     * A validated tool Evidence ID newly cited by Final Synthesis is a real
+     * second-stage evidence gain even when its source was already selected for
+     * deep read during Scout. This measures use of the new Provider result, not
+     * mere re-selection of the original source.
+     */
+    private static double validatedToolEvidenceGain(List<String> stageOne, List<String> stageTwo) {
+        Set<String> before = normalizedSet(stageOne);
+        return normalizedSet(stageTwo).stream()
+            .anyMatch(value -> value.startsWith("TOOL:") && !before.contains(value))
+            ? 1.0
+            : 0.0;
     }
 
     private static Set<String> normalizedSet(List<String> values) {
@@ -256,6 +353,13 @@ final class ProjectFlowEvalMetrics {
         return values.isEmpty() ? 0 : values.stream().mapToDouble(Double::doubleValue).average().orElse(0);
     }
 
+    private static double percentile95(List<Long> values) {
+        if (values.isEmpty()) return 0;
+        List<Long> sorted = values.stream().sorted().toList();
+        int index = Math.max(0, (int) Math.ceil(sorted.size() * 0.95) - 1);
+        return sorted.get(index);
+    }
+
     private static final class Counter {
         private long predicted;
         private long expected;
@@ -265,12 +369,34 @@ final class ProjectFlowEvalMetrics {
         private long actual;
     }
 
+    private static final class DecisionAgreement {
+        private long total;
+        private long matches;
+
+        void compare(boolean left, boolean right) {
+            total++;
+            if (left == right) matches++;
+        }
+
+        double rate() {
+            return total == 0 ? 1.0 : ProjectFlowEvalMetrics.rate(matches, total);
+        }
+    }
+
     private enum Dimension {
         SHAPES
     }
 
     record EvalSummary(
         int runCount,
+        int conditionalSemanticRunCount,
+        int successfulRunCount,
+        int failureCount,
+        int timeoutCount,
+        int schemaFailureCount,
+        int cancellationCount,
+        int degradedRunCount,
+        double endToEndCompletionRate,
         double unsupportedClaimRate,
         double criticalEvidenceRecall,
         double evidencePrecision,
@@ -295,9 +421,10 @@ final class ProjectFlowEvalMetrics {
         long outputTokens,
         long totalTokens,
         double averageLatencyMs,
+        double p95LatencyMs,
         int retryCount,
         double failureRate,
-        double degradationSuccessRate,
+        double degradationRate,
         Double estimatedCost
     ) {
     }

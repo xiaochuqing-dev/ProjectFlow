@@ -26,10 +26,11 @@ import com.projectflow.service.model.OpenAiResponsesAdapter;
 
 @Service
 public class ModelGatewayService {
-    private static final int MAX_TRANSPORT_ATTEMPTS = 2;
+    private static final int MAX_TRANSPORT_ATTEMPTS = AnalysisTimePolicy.MAX_TRANSPORT_RETRIES + 1;
     private static final Semaphore MODEL_REQUEST_SLOTS = new Semaphore(4, true);
 
     private final Duration configuredRequestTimeout;
+    private final Duration configuredConnectionTimeout;
     private final ObjectMapper objectMapper;
     private final AiProviderUrlGuard aiProviderUrlGuard;
     private final ModelOutputAdapter outputAdapter;
@@ -45,6 +46,7 @@ public class ModelGatewayService {
         ModelCapabilityRegistry capabilityRegistry,
         ModelRequestPolicy requestPolicy,
         ModelProtocolAdapterRegistry protocolAdapters,
+        @Value("${projectflow.model.connection-timeout-seconds:10}") int connectionTimeoutSeconds,
         @Value("${projectflow.model.request-timeout-seconds:240}") int requestTimeoutSeconds
     ) {
         this.objectMapper = objectMapper;
@@ -53,7 +55,30 @@ public class ModelGatewayService {
         this.capabilityRegistry = capabilityRegistry;
         this.requestPolicy = requestPolicy;
         this.protocolAdapters = protocolAdapters;
+        this.configuredConnectionTimeout = Duration.ofSeconds(Math.max(1, Math.min(60, connectionTimeoutSeconds)));
         this.configuredRequestTimeout = Duration.ofSeconds(Math.max(30, requestTimeoutSeconds));
+    }
+
+    /** Compatibility constructor for focused tests using explicit gateway internals. */
+    public ModelGatewayService(
+        ObjectMapper objectMapper,
+        AiProviderUrlGuard aiProviderUrlGuard,
+        ModelOutputAdapter outputAdapter,
+        ModelCapabilityRegistry capabilityRegistry,
+        ModelRequestPolicy requestPolicy,
+        ModelProtocolAdapterRegistry protocolAdapters,
+        int requestTimeoutSeconds
+    ) {
+        this(
+            objectMapper,
+            aiProviderUrlGuard,
+            outputAdapter,
+            capabilityRegistry,
+            requestPolicy,
+            protocolAdapters,
+            10,
+            requestTimeoutSeconds
+        );
     }
 
     /** 保留给独立测试和兼容调用；生产入口必须传入明确的 ModelTaskType。 */
@@ -69,7 +94,7 @@ public class ModelGatewayService {
                 new OpenAiResponsesAdapter(aiProviderUrlGuard),
                 new OpenAiChatCompletionsAdapter(aiProviderUrlGuard),
                 new AnthropicMessagesAdapter(aiProviderUrlGuard)
-            )), requestTimeoutSeconds
+            )), 10, requestTimeoutSeconds
         );
     }
 
@@ -128,7 +153,9 @@ public class ModelGatewayService {
         );
         String repairPrompt = """
             上一次模型结果是可读取的 JSON，但不符合目标业务 Schema。不要重新分析事实，只把已有结果转换为下面结构。
-            只返回转换后的 JSON；缺失字段使用空字符串或空数组，不要补造证据。
+            只返回转换后的 JSON；缺失字段使用空字符串或空数组，不要补造证据。已有非空数组必须逐项保留，
+            不得为了满足结构把它们替换为空；尤其保留 Evidence ID、project shape、applicable view、claim、
+            capabilityDecisions/toolRequests、unknown、conflict、warning 和 selfCheck 的原有语义。
             目标 Schema：%s
             待转换结果：%s
             """.formatted(task.minimalSchema(), bounded(firstFailure.rawContent(), 30_000));
@@ -176,7 +203,11 @@ public class ModelGatewayService {
             """);
         try {
             StructuredModelResponse recovered = sendStructuredRequest(provider, retryPrompt, task, capabilities, retryParameters);
-            if (recovered.diagnostics().truncated() || recovered.parsed().partial()) {
+            boolean validatedPartialScout = task == ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+                && recovered.parsed().partial()
+                && task.schemaMatches(recovered.parsed().root(), outputAdapter);
+            if ((recovered.diagnostics().truncated() || recovered.parsed().partial())
+                && !validatedPartialScout) {
                 throw new ModelOutputTruncatedException(
                     "模型输出预算不足，恢复请求仍返回不完整结构",
                     null,
@@ -188,6 +219,20 @@ public class ModelGatewayService {
         } catch (IOException retryFailure) {
             ModelCallDiagnostics retryDiagnostics = retryFailure instanceof ModelResponseFormatException format
                 ? format.diagnostics() : null;
+            boolean validatedFirstPartial = partialResponse != null
+                && task == ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+                && partialResponse.parsed().partial()
+                && task.schemaMatches(partialResponse.parsed().root(), outputAdapter);
+            if (validatedFirstPartial) {
+                ModelCallDiagnostics retained = retryDiagnostics == null
+                    ? partialResponse.diagnostics().withRecovery(retryType, false)
+                    : partialResponse.diagnostics().combine(retryDiagnostics, retryType, false);
+                return new StructuredModelResponse(
+                    partialResponse.rawContent(),
+                    partialResponse.parsed(),
+                    retained.withFailure("OUTPUT_RECOVERY", "PARTIAL_SCOUT_RETAINED")
+                );
+            }
             if (retryFailure instanceof ModelOutputTruncatedException truncatedFailure && truncatedFailure.diagnostics() != null) {
                 throw truncatedFailure;
             }
@@ -213,7 +258,11 @@ public class ModelGatewayService {
         RequestParameters parameters
     ) throws IOException, InterruptedException {
         ModelCancellationContext.throwIfCancelled();
-        Duration timeout = Duration.ofSeconds(Math.max(configuredRequestTimeout.toSeconds(), parameters.timeoutSeconds()));
+        Duration timeout = AnalysisDeadlineContext.remainingOr(
+            Duration.ofSeconds(parameters.timeoutSeconds() > 0
+                ? parameters.timeoutSeconds()
+                : configuredRequestTimeout.toSeconds())
+        );
         CanonicalModelRequest request = new CanonicalModelRequest(
             provider,
             "只返回合法 JSON，不要 Markdown 代码块。所有自然语言字段必须使用简体中文；技术名、文件路径和代码标识符保留原文。",
@@ -221,22 +270,25 @@ public class ModelGatewayService {
             parameters.effectiveMaxTokens(),
             parameters.temperatureSent() ? parameters.effectiveTemperature() : null,
             capabilities.supportsJsonMode() || capabilities.supportsStructuredOutput(),
+            reasoningEffort(provider, task, capabilities, parameters),
+            configuredConnectionTimeout,
             timeout
         );
         int allowedAttempts = "NONE".equals(parameters.retryType()) ? MAX_TRANSPORT_ATTEMPTS : 1;
+        long requestSequenceStartedAt = System.nanoTime();
         for (int attempt = 1; attempt <= allowedAttempts; attempt++) {
-            long startedAt = System.nanoTime();
             try {
-                MODEL_REQUEST_SLOTS.acquire();
-                CanonicalModelResponse response;
-                try {
-                    response = protocolAdapters.require(provider.getProtocol()).execute(request);
-                } finally {
-                    MODEL_REQUEST_SLOTS.release();
-                }
+                CanonicalModelResponse response = CancellableModelRequestExecutor.execute(() -> {
+                    MODEL_REQUEST_SLOTS.acquire();
+                    try {
+                        return protocolAdapters.require(provider.getProtocol()).execute(request);
+                    } finally {
+                        MODEL_REQUEST_SLOTS.release();
+                    }
+                }, timeout);
                 return parseCanonicalResponse(
                     response, provider, task, capabilities, parameters, prompt == null ? 0 : prompt.length(),
-                    timeout.toSeconds(), elapsedMs(startedAt), attempt - 1
+                    timeout.toSeconds(), elapsedMs(requestSequenceStartedAt), attempt - 1
                 );
             } catch (IOException exception) {
                 if (exception instanceof ModelResponseFormatException) throw exception;
@@ -254,6 +306,23 @@ public class ModelGatewayService {
             }
         }
         throw new IOException("model request failed");
+    }
+
+    private static String reasoningEffort(
+        AiProvider provider,
+        ModelTaskType task,
+        ModelCapabilities capabilities,
+        RequestParameters parameters
+    ) {
+        if (!capabilities.supportsReasoningControl()
+            || provider.getProtocol() != com.projectflow.entity.ModelProtocol.OPENAI_RESPONSES) {
+            return null;
+        }
+        if (task == ModelTaskType.PROVIDER_CONNECTION_TEST
+            || !"NONE".equals(parameters.retryType())) {
+            return "low";
+        }
+        return "high";
     }
 
     private StructuredModelResponse parseCanonicalResponse(
@@ -320,7 +389,14 @@ public class ModelGatewayService {
             boolean schemaMatched = task.schemaMatches(parsed.root(), outputAdapter);
             ModelCallDiagnostics completed = diagnostics.withParsed(parsed.repaired(), parsed.partial(), parsed.recoveredItems(), schemaMatched);
             if (!schemaMatched) {
-                throw new ModelSchemaMismatchException("JSON 可读取，但不符合目标业务 Schema", content, completed.withFailure("SCHEMA_MATCH", "SCHEMA_MISMATCH"));
+                throw new ModelSchemaMismatchException(
+                    "JSON 可读取，但不符合目标业务 Schema",
+                    content,
+                    completed.withFailure(
+                        "SCHEMA_MATCH",
+                        "SCHEMA_MISMATCH:" + String.join(",", task.schemaGaps(parsed.root()))
+                    )
+                );
             }
             return new StructuredModelResponse(content, parsed, completed);
         } catch (ModelSchemaMismatchException exception) {
@@ -388,7 +464,14 @@ public class ModelGatewayService {
             boolean schemaMatched = task.schemaMatches(parsed.root(), outputAdapter);
             ModelCallDiagnostics completed = diagnostics.withParsed(parsed.repaired(), parsed.partial(), parsed.recoveredItems(), schemaMatched);
             if (!schemaMatched) {
-                throw new ModelSchemaMismatchException("JSON 可读取，但不符合目标业务 Schema", content, completed.withFailure("SCHEMA_MATCH", "SCHEMA_MISMATCH"));
+                throw new ModelSchemaMismatchException(
+                    "JSON 可读取，但不符合目标业务 Schema",
+                    content,
+                    completed.withFailure(
+                        "SCHEMA_MATCH",
+                        "SCHEMA_MISMATCH:" + String.join(",", task.schemaGaps(parsed.root()))
+                    )
+                );
             }
             return new StructuredModelResponse(content, parsed, completed);
         } catch (ModelSchemaMismatchException exception) {

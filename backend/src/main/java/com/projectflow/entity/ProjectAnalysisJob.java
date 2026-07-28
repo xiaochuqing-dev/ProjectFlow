@@ -100,7 +100,8 @@ public class ProjectAnalysisJob {
     @Column(name = "max_total_tokens")
     private Integer maxTotalTokens = 60000;
 
-    // 单个任务总耗时上限，单位：毫秒，默认 10 分钟。
+    // 单个任务总体时长策略。Long.MAX_VALUE 表示没有主动 overall deadline；
+    // connection/request timeout、重试与取消仍然保持独立有界。
     @Column(name = "max_duration_ms")
     private Long maxDurationMs = 600000L;
 
@@ -218,6 +219,10 @@ public class ProjectAnalysisJob {
         this.heartbeatAt = this.currentStepStartedAt;
     }
 
+    public void heartbeat() {
+        if (!isTerminal()) this.heartbeatAt = Instant.now();
+    }
+
     public void configureExecution(String fingerprint, String idempotencyKey, int queuePosition) {
         this.inputFingerprint = fingerprint;
         this.idempotencyKey = idempotencyKey;
@@ -297,6 +302,7 @@ public class ProjectAnalysisJob {
     }
 
     public boolean hasDurationBudget(Instant now) {
+        if (!com.projectflow.service.AnalysisTimePolicy.hasOverallDeadline(getMaxDurationMs())) return true;
         Instant base = startedAt == null ? (createdAt == null ? now : createdAt) : startedAt;
         return java.time.Duration.between(base, now).toMillis() <= getMaxDurationMs();
     }

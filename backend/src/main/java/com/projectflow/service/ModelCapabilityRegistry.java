@@ -15,7 +15,11 @@ public class ModelCapabilityRegistry {
     public ModelCapabilities resolve(AiProvider provider) {
         String model = provider.getModelName() == null ? "" : provider.getModelName().toLowerCase(Locale.ROOT);
         boolean deepSeek = provider.getType() == AiProviderType.DEEPSEEK;
-        boolean reasoning = model.contains("reasoner") || model.contains("reasoning") || model.matches(".*(^|[-_])r1($|[-_]).*");
+        boolean glm5 = model.matches("glm[-_]5(?:[._-].*)?");
+        boolean reasoning = model.contains("reasoner")
+            || model.contains("reasoning")
+            || model.matches(".*(^|[-_])r1($|[-_]).*")
+            || glm5;
         boolean knownChat = model.contains("chat");
         boolean supportsTemperature = provider.getSupportsTemperature() != null
             ? provider.getSupportsTemperature() : !reasoning;
@@ -30,7 +34,8 @@ public class ModelCapabilityRegistry {
             ? provider.getSupportsReasoningControl() : false;
         String profile = deepSeek
             ? reasoning ? "DEEPSEEK_REASONING" : knownChat ? "DEEPSEEK_CHAT" : "DEEPSEEK_STANDARD"
-            : provider.getType() == AiProviderType.OPENAI ? "OPENAI_RESPONSES_STANDARD"
+            : provider.getType() == AiProviderType.OPENAI
+                ? reasoning ? "OPENAI_RESPONSES_REASONING" : "OPENAI_RESPONSES_STANDARD"
             : provider.getType() == AiProviderType.ANTHROPIC ? "ANTHROPIC_MESSAGES_STANDARD"
             : provider.getType() == AiProviderType.OPENAI_COMPATIBLE ? "OPENAI_COMPATIBLE_STANDARD" : "CUSTOM_STANDARD";
         return new ModelCapabilities(

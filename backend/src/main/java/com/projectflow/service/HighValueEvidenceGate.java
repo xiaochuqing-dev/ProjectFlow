@@ -15,7 +15,7 @@ import com.projectflow.dto.ProjectUnderstandingDtos.EvidenceSourceMapResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.SecondStageDecisionResponse;
 import com.projectflow.service.ProjectEvidenceDiscoveryService.PromptEvidence;
 
-final class HighValueEvidenceGate {
+public final class HighValueEvidenceGate {
     private static final int MIN_SUBSTANTIVE_CHARS = 180;
     private static final Set<String> DEEP_CONTENT_CAPABILITIES = Set.of(
         "DOC_READER", "MANIFEST", "AGENT_RESULT"
@@ -28,7 +28,7 @@ final class HighValueEvidenceGate {
     private HighValueEvidenceGate() {
     }
 
-    static SecondStageDecisionResponse decide(
+    public static SecondStageDecisionResponse decide(
         AdaptiveAnalysisPlanResponse plan,
         List<AnalysisToolEvidenceResponse> evidence,
         List<PromptEvidence> promptEvidence
@@ -36,7 +36,7 @@ final class HighValueEvidenceGate {
         return decide(plan, evidence, promptEvidence, null);
     }
 
-    static SecondStageDecisionResponse decide(
+    public static SecondStageDecisionResponse decide(
         AdaptiveAnalysisPlanResponse plan,
         List<AnalysisToolEvidenceResponse> evidence,
         List<PromptEvidence> promptEvidence,

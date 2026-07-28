@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * 统一处理结构化模型输出：提取 JSON、修复轻微格式问题、展开常见外层并读取字段别名。
@@ -65,6 +67,14 @@ public class ModelOutputAdapter {
         ArrayNode recovered = recoverCompleteArrayItems(withoutFence, task);
         if (!recovered.isEmpty() && likelyTruncated(withoutFence)) {
             return new ParsedOutput(recovered, true, rawContent.length(), true, recovered.size());
+        }
+        ParsedOutput recoveredUnderstanding = recoverPartialUnderstandingSnapshot(
+            withoutFence,
+            task,
+            rawContent.length()
+        );
+        if (recoveredUnderstanding != null && likelyTruncated(withoutFence)) {
+            return recoveredUnderstanding;
         }
         if (best != null) {
             return new ParsedOutput(best.root(), best.repaired(), rawContent.length(), false, 0);
@@ -215,6 +225,88 @@ public class ModelOutputAdapter {
             }
         }
         return bestScore > 0 || task == ModelTaskType.LEGACY_STRUCTURED ? best : objectMapper.createArrayNode();
+    }
+
+    /**
+     * Recovers only already-closed Scout fields after the single output-budget
+     * retry. It never guesses a claim, view or capability: missing profile
+     * semantics stay empty and are handled by the deterministic synthesizer,
+     * while the normal evidence/eligibility validators still own acceptance.
+     */
+    private ParsedOutput recoverPartialUnderstandingSnapshot(
+        String content,
+        ModelTaskType task,
+        int rawLength
+    ) {
+        if (task != ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT) return null;
+        ArrayNode shapes = recoverNamedArray(content, "projectShapeHypotheses");
+        ArrayNode assessments = recoverNamedArray(content, "evidenceSourceAssessments");
+        ArrayNode dimensions = recoverNamedArray(content, "applicableDimensions");
+        ArrayNode decisions = recoverNamedArray(content, "capabilityDecisions");
+        ArrayNode legacyRequests = recoverNamedArray(content, "toolRequests");
+        if (shapes == null || shapes.isEmpty()
+            || assessments == null || assessments.isEmpty()
+            || dimensions == null || dimensions.isEmpty()
+            || (decisions == null && legacyRequests == null)) {
+            return null;
+        }
+
+        ObjectNode root = JsonNodeFactory.instance.objectNode();
+        ObjectNode scout = root.putObject("semanticScout");
+        scout.set("projectShapeHypotheses", shapes);
+        scout.set("evidenceSourceAssessments", assessments);
+        scout.set("applicableDimensions", dimensions);
+        if (decisions != null) scout.set("capabilityDecisions", decisions);
+        if (legacyRequests != null) scout.set("toolRequests", legacyRequests);
+        copyNamedArray(content, scout, "recommendedToolCalls");
+        copyNamedArray(content, scout, "skipCandidates");
+        copyNamedArray(content, scout, "potentialConflicts");
+        copyNamedArray(content, scout, "currentnessWarnings");
+        ArrayNode scoutUnknowns = recoverNamedArray(content, "unknowns");
+        scout.set("unknowns", scoutUnknowns == null
+            ? JsonNodeFactory.instance.arrayNode()
+            : scoutUnknowns);
+
+        ObjectNode profile = root.putObject("dynamicProfile");
+        profile.put("summary", "");
+        profile.putArray("sections");
+        root.set("unknowns", scout.path("unknowns").deepCopy());
+        root.putObject("selfCheck");
+
+        JsonNode normalized = task.normalizeRoot(root);
+        int recoveredItems = shapes.size()
+            + assessments.size()
+            + dimensions.size()
+            + (decisions == null ? 0 : decisions.size())
+            + (legacyRequests == null ? 0 : legacyRequests.size());
+        return new ParsedOutput(normalized, true, rawLength, true, recoveredItems);
+    }
+
+    private void copyNamedArray(String content, ObjectNode target, String field) {
+        ArrayNode recovered = recoverNamedArray(content, field);
+        if (recovered != null) target.set(field, recovered);
+    }
+
+    private ArrayNode recoverNamedArray(String content, String field) {
+        int fieldStart = content.indexOf("\"" + field + "\"");
+        if (fieldStart < 0) return null;
+        int colon = content.indexOf(':', fieldStart + field.length() + 2);
+        if (colon < 0) return null;
+        int arrayStart = content.indexOf('[', colon + 1);
+        if (arrayStart < 0) return null;
+        int nextObject = content.indexOf('{', colon + 1);
+        if (nextObject >= 0 && nextObject < arrayStart) return null;
+        int arrayEnd = balancedEnd(content, arrayStart);
+        if (arrayEnd > arrayStart) {
+            try {
+                JsonNode parsed = objectMapper.readTree(content.substring(arrayStart, arrayEnd + 1));
+                return parsed.isArray() ? (ArrayNode) parsed : null;
+            } catch (IOException ignored) {
+                return null;
+            }
+        }
+        ArrayNode recoveredObjects = recoverArrayAt(content, arrayStart);
+        return recoveredObjects.isEmpty() ? null : recoveredObjects;
     }
 
     private ArrayNode recoverArrayAt(String content, int arrayStart) {

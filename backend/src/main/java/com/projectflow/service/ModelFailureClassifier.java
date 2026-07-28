@@ -2,6 +2,7 @@ package com.projectflow.service;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.net.http.HttpTimeoutException;
 
 /**
@@ -51,8 +52,6 @@ public final class ModelFailureClassifier {
      */
     public static String classifyException(Exception failure) {
         if (failure == null) return UNKNOWN_CALL_FAILED;
-        if (failure instanceof HttpTimeoutException) return REQUEST_TIMEOUT;
-        if (failure instanceof ConnectException) return NETWORK_ERROR;
         if (failure instanceof ModelGatewayService.ModelHttpException) {
             return classifyHttpStatus(((ModelGatewayService.ModelHttpException) failure).statusCode());
         }
@@ -64,6 +63,13 @@ public final class ModelFailureClassifier {
         }
         if (failure instanceof ModelGatewayService.ModelEmptyContentException) return EMPTY_CONTENT;
         if (failure instanceof ModelGatewayService.ModelResponseFormatException) return JSON_PARSE_FAILED;
+        if (hasCause(failure, HttpTimeoutException.class)
+            || hasCause(failure, SocketTimeoutException.class)
+            || causeMessageContains(failure, "timeout")
+            || causeMessageContains(failure, "timed out")) {
+            return REQUEST_TIMEOUT;
+        }
+        if (hasCause(failure, ConnectException.class)) return NETWORK_ERROR;
         String message = failure.getMessage() == null ? "" : failure.getMessage().toLowerCase();
         // JSON 解析失败：网关 parseModelJson / extractJsonObject 抛出的 IOException。
         if (message.contains("json") || message.contains("not json") || message.contains("empty model content")) {
@@ -71,6 +77,23 @@ public final class ModelFailureClassifier {
         }
         if (failure instanceof IOException) return NETWORK_ERROR;
         return UNKNOWN_CALL_FAILED;
+    }
+
+    private static boolean hasCause(Throwable failure, Class<? extends Throwable> type) {
+        Throwable current = failure;
+        for (int depth = 0; current != null && depth < 12; depth++, current = current.getCause()) {
+            if (type.isInstance(current)) return true;
+        }
+        return false;
+    }
+
+    private static boolean causeMessageContains(Throwable failure, String marker) {
+        Throwable current = failure;
+        for (int depth = 0; current != null && depth < 12; depth++, current = current.getCause()) {
+            String message = current.getMessage();
+            if (message != null && message.toLowerCase().contains(marker)) return true;
+        }
+        return false;
     }
 
     /**

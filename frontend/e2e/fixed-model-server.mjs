@@ -86,7 +86,16 @@ const server = http.createServer(async (request, response) => {
           }],
           evidenceSourceAssessments: [],
           applicableDimensions: ["CURRENT_STATE", "TECHNOLOGY", "CURRENT_STRUCTURE", "ENGINEERING_STATE", "EVOLUTION"],
-          recommendedToolCalls: ["SCIP_IF_AVAILABLE", "GIT_HISTORY"],
+          capabilityDecisions: jsonArrayAfter(prompt, "Eligible Capability Set：").map((capability) => ({
+            capability,
+            decision: "SKIP",
+            skipReason: "固定 E2E 已有证据足以验证持久化理解链路。",
+            informationGap: "",
+            expectedEvidenceValue: "",
+            targetEvidenceIds: [],
+            whyExistingEvidenceIsInsufficient: "",
+          })),
+          recommendedToolCalls: [],
           unknowns: ["缺少运行时观测，动态调用关系保持未知"],
           skipCandidates: [],
           potentialConflicts: [],
@@ -111,6 +120,20 @@ const server = http.createServer(async (request, response) => {
           }],
         },
         unknowns: ["缺少语义符号图，运行时调用关系保持未知"],
+        selfCheck: {
+          invalidEvidenceRefs: [],
+          ineligibleCapabilities: [],
+          ineligibleViews: [],
+          unsupportedClaimsRemoved: true,
+          conflictsPreserved: true,
+          currentStateHistorySeparated: true,
+          agentResultNotPromoted: true,
+          processMetadataNotPromoted: true,
+          unknownsPreserved: true,
+          inapplicableArchitectureRemoved: true,
+          allEligibleCapabilitiesEvaluated: true,
+          viewToolDependenciesSatisfied: true,
+        },
       })
     : prompt.includes("ALLOWED_MONTH_KEYS_JSON=")
     ? JSON.stringify({
