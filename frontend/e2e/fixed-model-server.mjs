@@ -95,7 +95,6 @@ const server = http.createServer(async (request, response) => {
             targetEvidenceIds: [],
             whyExistingEvidenceIsInsufficient: "",
           })),
-          recommendedToolCalls: [],
           unknowns: ["缺少运行时观测，动态调用关系保持未知"],
           skipCandidates: [],
           potentialConflicts: [],

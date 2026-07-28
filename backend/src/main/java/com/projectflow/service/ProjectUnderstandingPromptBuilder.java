@@ -114,7 +114,6 @@ public class ProjectUnderstandingPromptBuilder {
                 "capabilityDecisions":[{"capability":"","decision":"REQUEST|SKIP","skipReason":"",
                   "informationGap":"","expectedEvidenceValue":"","targetEvidenceIds":["id"],
                   "whyExistingEvidenceIsInsufficient":""}],
-                "recommendedToolCalls":[],
                 "unknowns":[],"skipCandidates":[],
                 "potentialConflicts":[{"text":"","evidenceRefs":["id"]}],
                 "currentnessWarnings":[{"text":"","evidenceRefs":["id"]}]
@@ -137,9 +136,9 @@ public class ProjectUnderstandingPromptBuilder {
             }
             capabilityDecisions 必须对 Eligible Capability Set 中每项恰好输出一次。REQUEST 项必须满足完整 Tool
             request 契约；SKIP 项必须写具体 skipReason，其他请求字段可留空。不要重复输出等价 toolRequests 数组。
-            recommendedToolCalls 必须与 REQUEST capability 的去重结果一致。最多 4 个原子 shape、20 个来源评估、
-            12 个 eligible view、8 个 Section、每个 Section 5 条 claim。没有源码不生成代码架构；没有历史不生成
-            Timeline/Evolution；单脚本不生成多层架构。输出前删除无 Evidence 支持的事实性 Claim，不输出私人推理。
+            最多 4 个原子 shape、20 个来源评估、12 个 eligible view、8 个 Section、每个 Section 5 条 claim。
+            没有源码不生成代码架构；没有历史不生成 Timeline/Evolution；单脚本不生成多层架构。输出前删除无
+            Evidence 支持的事实性 Claim，不输出私人推理。
             JSON 必须紧凑：summary 最多 240 个汉字，title 最多 40 个汉字，reason、information gap、
             expected value、insufficient reason、claim、conflict、warning 和 limitation 每项最多 100 个汉字；
             Evidence ID、适用 view 和关键 Claim 数量不因压缩文字而减少。

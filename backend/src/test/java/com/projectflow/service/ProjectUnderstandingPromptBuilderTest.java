@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 class ProjectUnderstandingPromptBuilderTest {
     private static final String SCOUT_SNAPSHOT_SHA256 =
-        "e65f3ee64c8fd77d7cbc9c0dd749cc3da8c3f611b220d3bf1944c04d0448808a";
+        "0fdfe61ee230814deb86e7523d6d0ea863711b42ea2fc082139aa2776fcfc9ef";
     private static final String FINAL_SNAPSHOT_SHA256 =
         "d062ccaecfebfc0297e9a48f6f175f74a1b961add7a7997ce7beeb74954d8675";
     private final ProjectUnderstandingPromptBuilder builder = new ProjectUnderstandingPromptBuilder();
@@ -40,7 +40,7 @@ class ProjectUnderstandingPromptBuilderTest {
                 "whyExistingEvidenceIsInsufficient",
                 "\"selfCheck\""
             )
-            .doesNotContain("\"toolRequests\":[")
+            .doesNotContain("\"toolRequests\":[", "\"recommendedToolCalls\":[")
             .doesNotContain("mustFindEvidence", "expectedTools", "forbiddenTools", "expectedViews")
             .doesNotContain("UPDATE_SCOUT_SNAPSHOT", "dummy-secret-value", "C:\\Users\\");
         assertThat(sha256(prompt)).isEqualTo(SCOUT_SNAPSHOT_SHA256);
