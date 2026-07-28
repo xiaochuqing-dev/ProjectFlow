@@ -19,7 +19,7 @@
 17. Stage 2 是否有增益？YES。Evidence Gain 1.0000，View Gain 0.0476。
 18. 8 个端到端是否全部通过？YES。8/8。
 19. GLM 是否达到质量 Gate？YES。38/38，所有阻断门槛通过。
-20. V3.8 是否可以放行？PENDING。真实模型和本地门禁已通过，待 GitHub PostgreSQL/全套 CI 全绿后改为 YES。
+20. V3.8 是否可以放行？YES。真实模型、本地门禁、PR 两组 CI、PostgreSQL 16 Testcontainers 和最终功能 master CI 全部通过。
 21. 是否出现 Provider Manager / Model Leaderboard 漂移？NO。
 22. 是否创建 Tag？NO。
 23. 是否创建 Release？NO。
