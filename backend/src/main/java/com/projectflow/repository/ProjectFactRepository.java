@@ -79,7 +79,8 @@ public interface ProjectFactRepository extends JpaRepository<ProjectFact, UUID> 
           fact.origin, fact.title, fact.summary, fact.occurredFrom, fact.occurredTo,
           fact.sourceMode, fact.qualityStatus, fact.confidence, fact.recordStatus, fact.attentionReason,
           fact.commitCount, fact.agentResultCount, fact.affectedFileCount, fact.evidenceCount,
-          fact.createdAt, fact.updatedAt
+          fact.createdAt, fact.updatedAt, fact.epistemicStatus, fact.currentness, fact.revision,
+          fact.validationStatus, fact.limitations
         ) from ProjectFact fact
         where fact.projectId = :projectId
           and (:fromTime is null or coalesce(fact.occurredTo, fact.occurredFrom, fact.createdAt) >= :fromTime)

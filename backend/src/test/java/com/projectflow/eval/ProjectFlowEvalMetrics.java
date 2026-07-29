@@ -92,10 +92,7 @@ final class ProjectFlowEvalMetrics {
                     Math.max(
                         recall(observation.stageTwo().evidenceIds(), expected.mustFindEvidence())
                             - recall(observation.stageOne().evidenceIds(), expected.mustFindEvidence()),
-                        validatedToolEvidenceGain(
-                            observation.stageOne().evidenceIds(),
-                            observation.stageTwo().evidenceIds()
-                        )
+                        observation.validatedToolEvidenceCited() ? 1.0 : 0.0
                     )
                 );
                 stageUnsupportedReduction.add(
@@ -129,6 +126,7 @@ final class ProjectFlowEvalMetrics {
             unavailableToolRequests,
             rejectedDangerousRequests,
             precision(deepReads),
+            recallFrom(deepReads),
             recallFrom(views),
             precision(views),
             recallFrom(conflicts),
@@ -301,20 +299,6 @@ final class ProjectFlowEvalMetrics {
         return rate(actualSet.size(), expectedSet.size());
     }
 
-    /**
-     * A validated tool Evidence ID newly cited by Final Synthesis is a real
-     * second-stage evidence gain even when its source was already selected for
-     * deep read during Scout. This measures use of the new Provider result, not
-     * mere re-selection of the original source.
-     */
-    private static double validatedToolEvidenceGain(List<String> stageOne, List<String> stageTwo) {
-        Set<String> before = normalizedSet(stageOne);
-        return normalizedSet(stageTwo).stream()
-            .anyMatch(value -> value.startsWith("TOOL:") && !before.contains(value))
-            ? 1.0
-            : 0.0;
-    }
-
     private static Set<String> normalizedSet(List<String> values) {
         Set<String> result = new HashSet<>();
         safe(values).stream().map(ProjectFlowEvalMetrics::normalized)
@@ -408,6 +392,7 @@ final class ProjectFlowEvalMetrics {
         int unavailableToolRequestCount,
         int rejectedDangerousToolRequestCount,
         double deepReadTargetAccuracy,
+        double deepReadSufficiency,
         double dynamicViewRecall,
         double dynamicViewPrecision,
         double conflictDetectionRate,

@@ -53,7 +53,7 @@ public class ModelRequestPolicy {
             requested = Math.max(initial.taskRequestedMaxTokens() * 2, task.baseOutputTokens() * 2);
         } else {
             requested = capabilities.supportsReasoning()
-                ? initial.taskRequestedMaxTokens() * 2
+                ? capabilities.maxOutputTokens()
                 : initial.taskRequestedMaxTokens()
                     + Math.max(1_024, initial.taskRequestedMaxTokens() / 2);
         }
@@ -65,7 +65,7 @@ public class ModelRequestPolicy {
             case "SCHEMA_REPAIR_RETRY" -> "仅重编码已有语义为目标 Schema，预算按目标结构和原内容规模计算";
             case "EMPTY_AFTER_REASONING_RETRY" -> "reasoning 疑似占满共享预算，提高可见输出预算后重试";
             default -> capabilities.supportsReasoning()
-                ? "首次输出截断且 reasoning 与可见结果共享预算，在唯一恢复请求中使用最多两倍预算"
+                ? "首次输出截断且 reasoning 与可见结果共享预算，在唯一恢复请求中使用 Provider 显式配置上限"
                 : "首次输出截断，按已申请预算递增 50%，不再压缩为固定小预算";
         };
         if (effective < requested) {

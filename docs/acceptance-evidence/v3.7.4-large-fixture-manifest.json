@@ -1,0 +1,55 @@
+{
+  "version": "projectflow-v3.7.4-large-fixtures-v1",
+  "manifestSha256": "eaae1174ca3b8d8e2fbfdc931b681aea8cdc41854a07bf11cb9e407492a061f3",
+  "rawArtifactsCommitted": false,
+  "fixtures": [
+    {
+      "relativePath": "large-fixtures/large-code-80000.java",
+      "sha256": "94971c6dc2618ad6d97fdb7dea3b6d15780febea1c4598ee792c2354f2115d3c",
+      "bytes": 5257798,
+      "lineCount": 80000,
+      "expectedFactLocations": ["line:1", "line:40000", "line:79999"]
+    },
+    {
+      "relativePath": "large-fixtures/large-document-80000.md",
+      "sha256": "487f29c57b6705a5815794f8be91071d0f14fc4b40ccfbb98ac927ad782b2170",
+      "bytes": 6548886,
+      "lineCount": 80004,
+      "expectedFactLocations": [
+        "line:1",
+        "line:20000-20001",
+        "line:40000-40001",
+        "line:60000-60001",
+        "line:80002-80003"
+      ]
+    },
+    {
+      "relativePath": "large-fixtures/不知道有没有用",
+      "sha256": "ae0e77c49a2028124a7533075750d0023cd2fefa4ff741427d930e4c8af8b05e",
+      "bytes": 3678926,
+      "lineCount": 90000,
+      "expectedFactLocations": ["line:45000"]
+    },
+    {
+      "relativePath": "large-fixtures/oversized-agent-result.json",
+      "sha256": "0705a4e8dfcd9e8247687c59a79bb0879d448f4c0479c69500b8c233bbcc32d7",
+      "bytes": 3889045,
+      "lineCount": 60006,
+      "expectedFactLocations": ["line:3"]
+    },
+    {
+      "relativePath": "large-fixtures/large-structured.json",
+      "sha256": "ee1521fecc47b53a3f865dbecaaa316c07f625f514927caf189d9a46a9ea413b",
+      "bytes": 1877851,
+      "lineCount": 50002,
+      "expectedFactLocations": ["line:25001"]
+    },
+    {
+      "relativePath": "large-fixtures/large-structured.yaml",
+      "sha256": "dc45173b5f8c8fa7013c91002f4523eff63332271b79486ed26efc08dbb51e86",
+      "bytes": 1308958,
+      "lineCount": 60002,
+      "expectedFactLocations": ["line:30002"]
+    }
+  ]
+}

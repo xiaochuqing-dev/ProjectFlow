@@ -1,6 +1,12 @@
-# ProjectFlow V3.7.3 Agent Protocol
+# ProjectFlow V3.7.4 Agent Protocol
 
 Before starting substantial work, read `PROJECT_CONTEXT.md` and the task-relevant source files. ProjectFlow follows: rules collect evidence, models interpret within bounded evidence, rules validate, normal objective facts are recorded automatically, and only exceptions require user attention.
+
+V3.7.4 strong-fact rule: only project-bound `OBSERVED` and independently checked `VERIFIED` claims may be recorded as strong facts. Keep `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` and Agent `PROCESS_EVIDENCE` distinct. Never invent a historical reason from current code, infer deprecation from age, infer technical debt from model opinion, promote an Agent completion claim, or promote model consensus. Every claim retains Evidence refs, currentness, revision, validation state and limitations.
+
+For large or strangely named material, inspect bounded content rather than judging by filename. Preserve Content Map source hash, line/byte ranges, head/middle/tail or targeted samples and unread/partial disclosure. Models may request only eligible capability names and known Evidence IDs; they never receive arbitrary paths, shell parameters or unrestricted readers.
+
+Authorized Agents may use the portfolio/history/context APIs or read-only Hermes resources to continue across projects and models. Enforce user/project ownership on every read. Agent writes are candidates awaiting engineering validation and may never claim `OBSERVED` or `VERIFIED` directly. Context Packages are structured persisted memory with provenance, not free-form prompts.
 
 For project-understanding work, preserve the V3.7.3 boundary: Discover and objectively classify real evidence before choosing dimensions; let the model judge semantic importance and request only eligible capability names plus known evidence IDs; validate the plan through the registries; Execute only bounded providers with fixed commands and safe relative paths; Validate every produced evidence reference; run Final Synthesis only when the auditable high-value evidence gate triggers. Evidence, Scout, Plan, Execution, Dynamic Profile and Historical Coverage remain replaceable and separate from ProjectFact. Empty/blank/unchanged inputs remain zero-model where possible; all eligible flows are capped at 0/1/2 logical Model Gateway calls.
 
@@ -12,7 +18,7 @@ Before sending model context, use category-aware complete-JSON packing and outbo
 
 External sources and consumers must use the Evidence Source Adapter, Intelligence Provider Adapter or Projection Adapter boundary. Every external envelope must be project-bound, bounded, revisioned, redacted and raw-payload-free; an adapter result never becomes a ProjectFact by itself. Do not build an agent manager, Provider switcher, token dashboard, model leaderboard, repository replacement, generic RAG/workflow platform, parser/SCIP producer, updater or developer-tool control center inside ProjectFlow.
 
-Semantic Scout uses v10 and Final Synthesis uses v5 under contract v1. V10 retains explicit REQUEST/SKIP decisions without a duplicate Tool array, keeps all selected Evidence IDs and short summaries, limits repeated long samples through category/module-diverse representatives, asks for assessments only when a source changes a decision, and prevents one content tool from substituting for independent manifest/document/Git/Tag gaps. Engineering only normalizes explicit REQUEST encodings and still rejects incomplete or ineligible requests, so it never upgrades availability into semantic necessity. Retain the V3.7.2 GLM and earlier DeepSeek failure history. V3.7.3 quality may be marked PASS only after the unchanged 38-run, all eight real `ProjectUnderstandingService.refresh()` cases, Stage 2 gain, security gates and CI meet every published threshold. Otherwise keep V3.8 blocked.
+Semantic Scout uses v11 and Final Synthesis uses v6 under Strong Fact contract v2. Production and Eval share one builder and provider-neutral constitution. Retain the original V3.7.3 18-case/38-run thresholds; keep Calibration and frozen Holdout separate; reject Ground Truth, case IDs, repository names and model-specific fact rules. V3.8 may be approved only after Strong Fact safety, large-file middle/tail, multi-project isolation, two-model contract, Holdout, original regression, product E2E, secret scan and required CI all pass.
 
 After completing a task, create `.projectflow/agent-results/<timestamp-topic>/result.json` and optionally `summary.md`.
 

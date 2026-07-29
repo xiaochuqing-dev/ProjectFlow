@@ -144,7 +144,9 @@ public class ProjectFactService {
             fact.origin().name(), fact.title(), fact.summary(), fact.occurredFrom(), fact.occurredTo(),
             fact.sourceMode(), fact.qualityStatus(), fact.confidence().name(), fact.recordStatus().name(),
             fact.attentionReason(), fact.safeCommitCount(), fact.safeAgentResultCount(),
-            fact.safeAffectedFileCount(), fact.safeEvidenceCount(), fact.createdAt(), fact.updatedAt()
+            fact.safeAffectedFileCount(), fact.safeEvidenceCount(), fact.createdAt(), fact.updatedAt(),
+            fact.safeEpistemicStatus().name(), fact.safeCurrentness(), fact.safeRevision(),
+            fact.safeValidationStatus(), fact.safeLimitations()
         );
     }
 
@@ -154,7 +156,8 @@ public class ProjectFactService {
             fact.getOrigin().name(), fact.getTitle(), fact.getSummary(), fact.getOccurredFrom(), fact.getOccurredTo(),
             fact.getSourceMode(), fact.getQualityStatus(), fact.getConfidence().name(), fact.getRecordStatus().name(),
             fact.getAttentionReason(), fact.getCommitCount(), fact.getAgentResultCount(), fact.getAffectedFileCount(),
-            fact.getEvidenceCount(), fact.getCreatedAt(), fact.getUpdatedAt()
+            fact.getEvidenceCount(), fact.getCreatedAt(), fact.getUpdatedAt(), fact.getEpistemicStatus().name(),
+            fact.getCurrentness(), fact.getRevision(), fact.getValidationStatus(), fact.getLimitations()
         );
         return new ProjectFactDetailResponse(
             summary.id(), summary.projectId(), summary.batchId(), summary.sourceSegmentId(), summary.legacySedimentId(),
@@ -162,7 +165,11 @@ public class ProjectFactService {
             summary.sourceMode(), summary.qualityStatus(), summary.confidence(), summary.recordStatus(), summary.attentionReason(),
             summary.commitCount(), summary.agentResultCount(), summary.affectedFileCount(), summary.evidenceCount(),
             summary.createdAt(), summary.updatedAt(), fact.getMainChanges(), fact.getUserVisibleValue(), fact.getCommitRefs(),
-            fact.getCommitUrls(), fact.getAgentResultRefs(), fact.getAffectedFiles(), fact.getEvidenceRefs(), fact.getFactFingerprint()
+            fact.getCommitUrls(), fact.getAgentResultRefs(), fact.getAffectedFiles(), fact.getEvidenceRefs(), fact.getFactFingerprint(),
+            fact.getStatement(), fact.getEpistemicStatus().name(), fact.getSourceTypes(), fact.getCurrentness(),
+            fact.getRevision(), fact.getObservedAt(), fact.getEffectiveAt(), fact.getSupersededBy(),
+            fact.getLimitations(), fact.getConflictRefs(), fact.getCreatedBy(), fact.getSourceAgentId(),
+            fact.getSourceModelProvider(), fact.getValidationStatus()
         );
     }
 

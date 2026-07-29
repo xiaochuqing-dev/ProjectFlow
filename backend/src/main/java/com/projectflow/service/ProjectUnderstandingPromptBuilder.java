@@ -10,9 +10,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class ProjectUnderstandingPromptBuilder {
-    public static final String CONTRACT_VERSION = "project-understanding-prompt-contract-v1";
-    public static final String SCOUT_PROMPT_VERSION = "semantic-scout-v10";
-    public static final String FINAL_PROMPT_VERSION = "final-synthesis-v5";
+    public static final String CONTRACT_VERSION = "project-understanding-prompt-contract-v2";
+    public static final String SCOUT_PROMPT_VERSION = "semantic-scout-v11";
+    public static final String FINAL_PROMPT_VERSION = "final-synthesis-v6";
     public static final CompatibilityProfile COMPATIBILITY_PROFILE = new CompatibilityProfile(
         "multi-provider-json-v1",
         true,
@@ -60,6 +60,8 @@ public class ProjectUnderstandingPromptBuilder {
             Evidence 重要性不由文件类型、文件名、目录习惯、大小、新旧程度或常见程度决定。只有当 Evidence
             能实质性改变、支持、限制或纠正对项目当前形态、能力、冲突、未知、风险或有证据演进的理解时，
             它才具有高语义价值。不要使用数值 importance score。
+            名称奇怪、无扩展名或位于深目录不会降低正文价值；README、ARCHITECTURE、FINAL_DESIGN 等正式名称
+            也不会自动提高可信度或当前性。内容及其与其他 Evidence 的关系优先于文件名。
             documents 是全部入选来源的短目录；只有少量跨类别来源带 boundedSample。不要逐项复述目录，
             evidenceSourceAssessments 只列出会改变结论、需要深读、应跳过或存在当前性/冲突风险的关键来源。
             未单列 assessment 不等于该 Evidence 不存在，也不得据此声称它已被深读。
@@ -96,6 +98,9 @@ public class ProjectUnderstandingPromptBuilder {
             冲突文本必须同时写明冲突对象和性质，以便稳定诊断：README 版本/更新时间问题写明“README 当前性或过时”；
             README 功能声明与 manifest/源码矛盾写明“README 与 manifest/源码冲突”；历史路线与当前方向不一致写明
             “历史 roadmap/路线的当前性冲突”。不要只输出“有冲突”或只有内部代码。
+            Content Map 和 RANGE 只表示工程系统读取的行/字节范围。HEAD、MIDDLE、TAIL、HEADING、SYMBOL、MARKER、
+            CHANGED 或 QUERY 样本之外的内容保持 UNKNOWN；不得把局部范围概括为完整文件。不同范围的事实要保留
+            各自 Evidence ID、range、currentness 和 conflict，不把旧章节与尾部修订混成一个虚构结论。
 
             可引用 Evidence ID：%s
             Eligible Capability Set：%s
@@ -122,9 +127,9 @@ public class ProjectUnderstandingPromptBuilder {
                 "summary":"",
                 "sections":[{"id":"","type":"","title":"","summary":"",
                   "claims":[{"text":"","confidence":"HIGH|MEDIUM|LOW",
-                    "epistemicStatus":"CURRENT_STATE|HISTORICAL_EVENT|POSSIBLY_STALE|PROCESS_EVIDENCE|PROCESS_METADATA|USER_ASSERTION|ENGINEERING_OBSERVATION|INFERRED|UNKNOWN",
+                    "epistemicStatus":"OBSERVED|VERIFIED|DECLARED|INFERRED|CONFLICTED|UNKNOWN|PROCESS_EVIDENCE|PROCESS_METADATA|CURRENT_STATE|HISTORICAL_EVENT|POSSIBLY_STALE|USER_ASSERTION|ENGINEERING_OBSERVATION",
                     "evidenceRefs":["id"],"limitations":[],"conflictRefs":[]}],
-                  "confidence":"HIGH|MEDIUM|LOW","epistemicStatus":"OBSERVED|INFERRED|UNKNOWN",
+                  "confidence":"HIGH|MEDIUM|LOW","epistemicStatus":"OBSERVED|VERIFIED|DECLARED|INFERRED|CONFLICTED|UNKNOWN|PROCESS_EVIDENCE",
                   "displayPriority":50,"applicabilityReason":""}]
               },
               "unknowns":[],
@@ -132,7 +137,9 @@ public class ProjectUnderstandingPromptBuilder {
                 "unsupportedClaimsRemoved":true,"conflictsPreserved":true,"currentStateHistorySeparated":true,
                 "agentResultNotPromoted":true,"processMetadataNotPromoted":true,"unknownsPreserved":true,
                 "inapplicableArchitectureRemoved":true,"allEligibleCapabilitiesEvaluated":true,
-                "viewToolDependenciesSatisfied":true}
+                "viewToolDependenciesSatisfied":true,"inferenceNotPromoted":true,
+                "declaredNotPromoted":true,"modelAgreementNotTreatedAsFact":true,
+                "largeFileUnreadRangesPreserved":true,"multiProjectIsolationPreserved":true}
             }
             capabilityDecisions 必须对 Eligible Capability Set 中每项恰好输出一次。REQUEST 项必须满足完整 Tool
             request 契约；SKIP 项必须写具体 skipReason，其他请求字段可留空。不要重复输出等价 toolRequests 数组。
@@ -179,9 +186,9 @@ public class ProjectUnderstandingPromptBuilder {
                 "summary":"",
                 "sections":[{"id":"","type":"","title":"","summary":"",
                   "claims":[{"text":"","confidence":"HIGH|MEDIUM|LOW",
-                    "epistemicStatus":"CURRENT_STATE|HISTORICAL_EVENT|POSSIBLY_STALE|PROCESS_EVIDENCE|PROCESS_METADATA|USER_ASSERTION|ENGINEERING_OBSERVATION|INFERRED|UNKNOWN",
+                    "epistemicStatus":"OBSERVED|VERIFIED|DECLARED|INFERRED|CONFLICTED|UNKNOWN|PROCESS_EVIDENCE|PROCESS_METADATA|CURRENT_STATE|HISTORICAL_EVENT|POSSIBLY_STALE|USER_ASSERTION|ENGINEERING_OBSERVATION",
                     "evidenceRefs":["id"],"limitations":[],"conflictRefs":[]}],
-                  "confidence":"HIGH|MEDIUM|LOW","epistemicStatus":"OBSERVED|INFERRED|UNKNOWN",
+                  "confidence":"HIGH|MEDIUM|LOW","epistemicStatus":"OBSERVED|VERIFIED|DECLARED|INFERRED|CONFLICTED|UNKNOWN|PROCESS_EVIDENCE",
                   "displayPriority":50,"applicabilityReason":""}]
               },
               "unknowns":[],
@@ -189,7 +196,9 @@ public class ProjectUnderstandingPromptBuilder {
               "stageTwoChanges":[{"type":"ADD|CORRECT|LIMIT|CONFIRM","text":"","evidenceRefs":["tool:id"]}],
               "selfCheck":{"invalidEvidenceRefs":[],"ineligibleViews":[],"unsupportedClaimsRemoved":true,
                 "conflictsPreserved":true,"currentStateHistorySeparated":true,"agentResultNotPromoted":true,
-                "processMetadataNotPromoted":true,"unknownsPreserved":true,"inapplicableArchitectureRemoved":true}
+                "processMetadataNotPromoted":true,"unknownsPreserved":true,"inapplicableArchitectureRemoved":true,
+                "inferenceNotPromoted":true,"declaredNotPromoted":true,
+                "modelAgreementNotTreatedAsFact":true,"largeFileUnreadRangesPreserved":true}
             }
             最多 8 个 eligible Section、每个 Section 5 条 claim；每条事实性 claim 至少引用一个真实 Evidence ID。
             不输出工具请求、命令、下一步计划、优先级或私人推理。
@@ -217,10 +226,17 @@ public class ProjectUnderstandingPromptBuilder {
 
             最高原则：正确的空值优于没有证据的完整答案；事实完整性优于看起来完整。
             只依据提供的 Evidence。禁止发明源码关系、能力、数据库、历史、Release、完成状态或成熟阶段。
+            强事实只有 OBSERVED 或 VERIFIED。文档、用户或 Agent 的明确说法是 DECLARED；模型解释是 INFERRED；
+            未解决来源分歧是 CONFLICTED；证据不足是 UNKNOWN。两个模型同意不等于 VERIFIED。
             Agent Result 是 PROCESS_EVIDENCE，不自动成为 ProjectFact 或稳定能力。token、耗时、request count、
             模型名是 PROCESS_METADATA，不能证明成果、质量或成熟度。当前源码只能支持当前状态，不能反推历史。
+            “为什么当初这样设计”必须有 ADR、Issue、PR discussion、commit body、设计文档、用户说明或其他明确
+            原因文字；“已废弃”必须有 deprecated、替代、删除、迁移或关闭原因；“技术债”必须有 TODO/FIXME、
+            Open Issue、失败测试、风险、已知限制或可验证缺口。缺少这些证据时只能 DECLARED、INFERRED 或 UNKNOWN。
             README、manifest、源码和历史材料冲突时保留各方 Evidence，标记 POSSIBLY_STALE、UNKNOWN 和 conflict。
             缺少证据表示 UNKNOWN，不表示不存在。不得引用 allow-list 外 Evidence，不得选择 eligible set 外 Tool/View。
+            每项 Evidence 都属于一个 project；禁止跨项目拼接引用或把一个项目的结论写到另一个项目。
+            Agent 只能提交候选断言、Evidence link、correction、conflict 或 review request，不能直接写强事实。
             不得输出绝对路径、密钥、Authorization、原始响应、完整文档、prompt、reasoning 或 Chain-of-Thought。
             """;
     }

@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.projectflow.dto.ProjectUnderstandingDtos.AnalysisToolEvidenceResponse;
@@ -37,13 +38,24 @@ public class BoundedLocalAnalysisCapabilityProvider implements AnalysisCapabilit
 
     private final LocalCommandExecutor commandExecutor;
     private final SensitiveContentRedactor redactor;
+    private final LargeFileContentService largeFileContentService;
+
+    @Autowired
+    public BoundedLocalAnalysisCapabilityProvider(
+        LocalCommandExecutor commandExecutor,
+        SensitiveContentRedactor redactor,
+        LargeFileContentService largeFileContentService
+    ) {
+        this.commandExecutor = commandExecutor;
+        this.redactor = redactor;
+        this.largeFileContentService = largeFileContentService;
+    }
 
     public BoundedLocalAnalysisCapabilityProvider(
         LocalCommandExecutor commandExecutor,
         SensitiveContentRedactor redactor
     ) {
-        this.commandExecutor = commandExecutor;
-        this.redactor = redactor;
+        this(commandExecutor, redactor, new LargeFileContentService(redactor));
     }
 
     @Override
@@ -102,15 +114,21 @@ public class BoundedLocalAnalysisCapabilityProvider implements AnalysisCapabilit
                 request.budget().maxCharsPerItem(),
                 request.budget().maxTotalChars() - consumed
             );
-            String content = readBoundedText(target, remaining);
+            var contentMap = largeFileContentService.analyze(target, remaining);
+            String content = largeFileContentService.toPromptText(contentMap, remaining);
             if (content.isBlank()) continue;
             String id = toolEvidenceId(request.capability(), source.id());
-            String summary = boundedSummary(content, 800);
+            String summary = boundedSummary(
+                "Content Map 覆盖 " + contentMap.lineCount() + " 行、"
+                    + contentMap.samples().size() + " 个范围；partial=" + contentMap.partial()
+                    + "；unread=" + String.join(",", contentMap.unreadRanges()) + "。" + content,
+                800
+            );
             evidence.add(new AnalysisToolEvidenceResponse(
                 id,
                 normalized(request.capability()),
                 "TOOL_RESULT",
-                "TARGETED_DEEP_READ",
+                "TARGETED_RANGE_DEEP_READ",
                 summary,
                 List.of(source.id())
             ));

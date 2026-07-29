@@ -1,0 +1,37 @@
+{
+  "version": "projectflow-v3.7.4-large-fixtures-v1",
+  "generator": "tools/generate-v374-large-fixtures.ps1",
+  "rawArtifactsCommitted": false,
+  "cases": [
+    {
+      "name": "large-code-80000.java",
+      "minimumLines": 80000,
+      "signals": ["head", "middle", "tail", "symbol"]
+    },
+    {
+      "name": "large-document-80000.md",
+      "minimumLines": 80000,
+      "signals": ["heading", "old-declaration", "conflict", "tail-revision"]
+    },
+    {
+      "name": "不知道有没有用",
+      "minimumLines": 80000,
+      "signals": ["extensionless", "weird-name", "middle-fact"]
+    },
+    {
+      "name": "oversized-agent-result.json",
+      "minimumLines": 60000,
+      "signals": ["agent-result", "process-evidence", "unverified-claim"]
+    },
+    {
+      "name": "large-structured.json",
+      "minimumLines": 50000,
+      "signals": ["json", "middle-fact", "bounded-read"]
+    },
+    {
+      "name": "large-structured.yaml",
+      "minimumLines": 60000,
+      "signals": ["yaml", "tail-limitation", "bounded-read"]
+    }
+  ]
+}

@@ -15,9 +15,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 class ProjectUnderstandingPromptBuilderTest {
     private static final String SCOUT_SNAPSHOT_SHA256 =
-        "0fdfe61ee230814deb86e7523d6d0ea863711b42ea2fc082139aa2776fcfc9ef";
+        "be7282b82c9f3db4343d2b210d573cbdcae1c014db1e960cea281915dd68c619";
     private static final String FINAL_SNAPSHOT_SHA256 =
-        "d062ccaecfebfc0297e9a48f6f175f74a1b961add7a7997ce7beeb74954d8675";
+        "d368dd1d3c5825a57cc7587527fa6918ee9b6e5a9f5452519339c7bf36613cd0";
     private final ProjectUnderstandingPromptBuilder builder = new ProjectUnderstandingPromptBuilder();
 
     @Test
@@ -38,6 +38,10 @@ class ProjectUnderstandingPromptBuilderTest {
                 "\"decision\":\"REQUEST|SKIP\"",
                 "informationGap",
                 "whyExistingEvidenceIsInsufficient",
+                "强事实只有 OBSERVED 或 VERIFIED",
+                "Evidence 重要性不由文件类型、文件名",
+                "样本之外的内容保持 UNKNOWN",
+                "Agent Result 是 PROCESS_EVIDENCE",
                 "\"selfCheck\""
             )
             .doesNotContain("\"toolRequests\":[", "\"recommendedToolCalls\":[")
@@ -66,6 +70,8 @@ class ProjectUnderstandingPromptBuilderTest {
                 ProjectUnderstandingPromptBuilder.FINAL_PROMPT_VERSION,
                 "Final 不重新自由探索",
                 "Stage 1 已选 Section type 是稳定基线",
+                "强事实只有 OBSERVED 或 VERIFIED",
+                "两个模型同意不等于 VERIFIED",
                 "stageTwoChanges",
                 "tool:doc"
             )

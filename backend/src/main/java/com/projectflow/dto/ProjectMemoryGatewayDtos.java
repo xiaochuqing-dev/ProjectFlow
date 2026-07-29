@@ -31,7 +31,9 @@ public final class ProjectMemoryGatewayDtos {
         UUID factId, String title, String summary, MemoryTimeResponse time, UUID batchId,
         int commitCount, int fileCount, int agentResultCount, int evidenceCount,
         String recordStatus, String qualityStatus, String attentionReason,
-        List<UUID> relatedCapabilityIds, String truthLayer, String traceHint
+        List<UUID> relatedCapabilityIds, String truthLayer, String traceHint,
+        String epistemicStatus, String currentness, String revision,
+        String validationStatus, List<String> limitations
     ) {
     }
 

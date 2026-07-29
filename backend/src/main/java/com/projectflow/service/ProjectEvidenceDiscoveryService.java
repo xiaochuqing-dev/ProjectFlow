@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -42,6 +43,7 @@ public class ProjectEvidenceDiscoveryService {
     private static final int MAX_SAMPLE_CACHE_ROOTS = 8;
 
     private final SensitiveContentRedactor redactor;
+    private final LargeFileContentService largeFileContentService;
     private final Map<Path, Map<String, CachedSample>> sampleCaches = new ConcurrentHashMap<>();
 
     @Value("${projectflow.understanding.max-evidence-candidates:500}")
@@ -56,8 +58,20 @@ public class ProjectEvidenceDiscoveryService {
     @Value("${projectflow.understanding.max-evidence-sample-bytes:8192}")
     private int maxSampleBytes;
 
-    public ProjectEvidenceDiscoveryService(SensitiveContentRedactor redactor) {
+    @Value("${projectflow.understanding.large-file-threshold-bytes:262144}")
+    private long largeFileThresholdBytes;
+
+    @Autowired
+    public ProjectEvidenceDiscoveryService(
+        SensitiveContentRedactor redactor,
+        LargeFileContentService largeFileContentService
+    ) {
         this.redactor = redactor;
+        this.largeFileContentService = largeFileContentService;
+    }
+
+    public ProjectEvidenceDiscoveryService(SensitiveContentRedactor redactor) {
+        this(redactor, new LargeFileContentService(redactor));
     }
 
     public DiscoveryResult discover(ScanResult scan) {
@@ -219,6 +233,12 @@ public class ProjectEvidenceDiscoveryService {
         }
         Path target = root.resolve(file.path()).normalize();
         if (!target.startsWith(root)) return new SampleRead("", false);
+        if (file.bytes() >= Math.max(65_536, largeFileThresholdBytes)) {
+            var contentMap = largeFileContentService.analyze(target, Math.max(2_000, maxSampleChars * 2));
+            String value = sanitizeSample(largeFileContentService.toPromptText(contentMap, maxSampleChars));
+            cache.put(file.path(), new CachedSample(signature, value));
+            return new SampleRead(value, false);
+        }
         try (var input = Files.newInputStream(target)) {
             byte[] bytes = input.readNBytes(Math.max(256, maxSampleBytes));
             for (byte value : bytes) {
@@ -362,6 +382,7 @@ public class ProjectEvidenceDiscoveryService {
         if (DOCUMENT_EXTENSIONS.contains(extension)) {
             return name.startsWith("readme") ? "README" : "UNKNOWN_DOCUMENT";
         }
+        if (extension.isBlank() && file.bytes() > 0) return "UNKNOWN_DOCUMENT";
         if (CONFIG_EXTENSIONS.contains(extension)) return "CONFIG";
         if (name.endsWith(".lock") || name.equals("makefile") || name.endsWith(".gradle")) return "BUILD";
         return "OTHER";

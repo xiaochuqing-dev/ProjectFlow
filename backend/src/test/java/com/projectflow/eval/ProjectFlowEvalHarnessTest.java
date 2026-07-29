@@ -48,6 +48,7 @@ class ProjectFlowEvalHarnessTest {
         assertThat(run.summary().projectShapeF1()).isEqualTo(1.0);
         assertThat(run.summary().toolSelectionPrecision()).isEqualTo(1.0);
         assertThat(run.summary().toolSelectionRecall()).isEqualTo(1.0);
+        assertThat(run.summary().deepReadSufficiency()).isEqualTo(1.0);
         assertThat(run.summary().repeatability()).isEqualTo(1.0);
         assertThat(artifacts.json()).exists();
         assertThat(artifacts.markdown()).exists();
@@ -114,6 +115,7 @@ class ProjectFlowEvalHarnessTest {
             40,
             20,
             value.toolEvidence() == null ? 0 : value.toolEvidence().length(),
+            !value.expectedTools().isEmpty(),
             20,
             0,
             false,

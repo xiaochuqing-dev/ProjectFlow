@@ -1,5 +1,15 @@
 # Architecture
 
+## V3.7.4 strong-fact, content-map and shared-history boundary
+
+`StrongFactPromotionGuard` is the write-side trust boundary. Only `OBSERVED` or `VERIFIED` claims with same-project allow-listed Evidence can enter recorded ProjectFact state. Declaration, inference, conflict, unknown and Agent process evidence remain explicit non-strong states. Model consensus has no promotion authority; historical reasons, deprecation and technical debt require their own evidence classes.
+
+`LargeFileContentService` uses Java 17 NIO streaming to create a bounded lexical Content Map: encoding/binary signal, source hash, line/byte bounds, headings/symbol/marker anchors, representative head/middle/tail ranges, partial limitations and unread ranges. It is not a parser or fact source. `ProjectEvidenceDiscoveryService` and the existing bounded capability provider reuse it; SCIP remains the precise code-relation provider.
+
+`ProjectAgentHistoryService` exposes owned project catalog/search, evidence lookup, status-partitioned knowledge and a versioned bounded Context Package. `ProjectAgentCandidateService` is a separate candidate-write path that rejects strong statuses. REST and Hermes are delivery adapters over the same project-isolated semantics; GET paths do not run models or mutate facts.
+
+Production and Eval share Strong Fact contract v2, Scout v11 and Final v6. OpenAI Responses and Chat Completions remain transport adapters under one Model Gateway; no second fact standard, ranking layer or default dual-model call is introduced.
+
 ## V3.7.3 long-running and prompt-intelligence boundary
 
 `AnalysisTimePolicy` separates connection timeout, Provider request timeout, overall analysis deadline, bounded retry, cancellation/heartbeat and quality mode. AUTO/UNLIMITED bind no overall deadline; FINITE binds the explicit value. `ModelGatewayService` polls cancellation and heartbeat around official SDK calls, owns one transport retry, and keeps SDK retries disabled.

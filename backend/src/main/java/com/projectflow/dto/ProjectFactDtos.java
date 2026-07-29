@@ -29,7 +29,12 @@ public final class ProjectFactDtos {
         int affectedFileCount,
         int evidenceCount,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String epistemicStatus,
+        String currentness,
+        String revision,
+        String validationStatus,
+        List<String> limitations
     ) {
     }
 
@@ -62,7 +67,21 @@ public final class ProjectFactDtos {
         List<String> agentResultRefs,
         List<String> affectedFiles,
         List<String> evidenceRefs,
-        String factFingerprint
+        String factFingerprint,
+        String statement,
+        String epistemicStatus,
+        List<String> sourceTypes,
+        String currentness,
+        String revision,
+        Instant observedAt,
+        Instant effectiveAt,
+        UUID supersededBy,
+        List<String> limitations,
+        List<String> conflictRefs,
+        String createdBy,
+        String sourceAgentId,
+        String sourceModelProvider,
+        String validationStatus
     ) {
     }
 

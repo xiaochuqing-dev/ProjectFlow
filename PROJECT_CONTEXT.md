@@ -1,12 +1,12 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-07-27
+Last updated: 2026-07-30
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.7.3 is a local-first universal evidence understanding and project memory system for AI-assisted developers. It does not assume a fixed project shape: it discovers the material that exists, lets a bounded Scout request registered capabilities, executes deterministic providers under explicit connection/request/overall time semantics, validates evidence references, and conditionally synthesizes only the views supported by evidence. Replaceable understanding remains separate from durable Project Facts, Timeline, lifecycle Capability Map, Project Memory Gateway, Hermes reads, and Obsidian projection.
+ProjectFlow V3.7.4 is a local-first strong-fact and shared project-memory system for AI-assisted developers. It discovers ordinary and unusual materials by bounded content, maps and samples large files beyond their heads, lets a provider-neutral Scout request only registered capabilities and known Evidence IDs, validates every result, and persists only evidence-qualified facts. Replaceable understanding remains separate from durable Project Facts, Timeline, Capability Map, Agent candidates, Project Memory Gateway, Hermes reads and Obsidian projection.
 
 ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation. ProjectFlow V3.5.0 added the bounded intake foundation retained by V3.6.0 and V3.7.0.
 
@@ -17,6 +17,17 @@ Current direction:
 - Rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records normal evidence-backed facts.
 - Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
+
+V3.7.4 focus:
+
+- `ProjectFactEpistemicStatus` makes `OBSERVED` and `VERIFIED` the only strong statuses. `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` and `PROCESS_EVIDENCE` cannot enter the normal recorded-fact path.
+- Historical reasons, deprecation and technical debt need explicit evidence classes. Agent results and model agreement cannot promote a claim.
+- `LargeFileContentService` builds a bounded lexical Content Map and representative ranges with source hash, line/byte bounds, revision sensitivity, explicit unread ranges and no parser/platform reinvention.
+- Evidence Discovery keeps normal README/manifest/test/CI/migration/infra diversity and recognizes non-binary extensionless text as unknown documents; content remains more authoritative than a filename.
+- Authenticated portfolio/history APIs and Hermes MCP resources expose safe multi-project catalog, search, evidence, knowledge and versioned Context Packages. Every project read keeps ownership isolation and safe audit fields.
+- Agents may submit project-bound candidates for engineering validation but cannot directly submit `OBSERVED` or `VERIFIED`.
+- Strong Fact contract v2, Scout v11 and Final v6 are shared by production and Eval across OpenAI Responses and Chat Completions. Calibration and frozen Holdout are separate; neither labels nor case identities enter the production builder.
+- V3.7.4 does not add a model leaderboard, generic RAG, parser, Agent manager, large GUI, complete life narrative, Tag or Release.
 
 V3.7 focus:
 

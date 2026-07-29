@@ -38,6 +38,7 @@ record ProjectFlowEvalObservation(
     int stageTwoInputTokens,
     int stageTwoOutputTokens,
     int toolEvidenceChars,
+    boolean validatedToolEvidenceCited,
     long latencyMs,
     int retries,
     boolean failed,

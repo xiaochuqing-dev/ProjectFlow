@@ -11,10 +11,15 @@ record ProjectFlowEvalGroundTruth(
     List<EvalCase> cases
 ) {
     static ProjectFlowEvalGroundTruth load(ObjectMapper mapper) throws IOException {
-        try (InputStream stream = ProjectFlowEvalGroundTruth.class.getResourceAsStream(
+        String resource = System.getProperty(
+            "projectflow.eval.ground-truth-resource",
             "/projectflow-eval/ground-truth.json"
-        )) {
-            if (stream == null) throw new IOException("ground-truth.json not found");
+        ).strip();
+        if (!resource.startsWith("/projectflow-eval/") || !resource.endsWith(".json")) {
+            throw new IOException("ground truth resource must stay under /projectflow-eval/");
+        }
+        try (InputStream stream = ProjectFlowEvalGroundTruth.class.getResourceAsStream(resource)) {
+            if (stream == null) throw new IOException(resource + " not found");
             return mapper.readValue(stream, ProjectFlowEvalGroundTruth.class);
         }
     }

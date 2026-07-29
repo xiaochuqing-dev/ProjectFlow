@@ -13,7 +13,7 @@
 
     <groupId>com.projectflow</groupId>
     <artifactId>projectflow</artifactId>
-    <version>3.7.3</version>
+    <version>3.7.4</version>
     <name>ProjectFlow</name>
     <description>ProjectFlow backend API</description>
 

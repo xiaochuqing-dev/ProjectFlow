@@ -19,3 +19,5 @@ Real-model evaluation is an internal test workflow, not a Provider comparison pa
 V3.7.3 keeps three different time controls explicit. Provider Settings owns the single-request processing timeout; application runtime owns the bounded connection timeout; the analysis refresh request owns AUTO/FINITE/UNLIMITED overall duration. No setting silently replaces another. UNLIMITED overall duration still has bounded network retry, cancellation and heartbeat.
 
 Provider compatible does not mean quality qualified. All Providers use the same Evidence and Prompt Contract; dated internal real-model acceptance determines whether a Provider/model combination satisfies ProjectFlow quality. Settings must not add a model leaderboard, benchmark score, hidden quality mode or Provider-specific business prompt.
+
+V3.7.4 keeps the Strong Fact Constitution provider-neutral. A Responses or Chat profile cannot alter fact statuses, upgrade inference, trust Agent results, or relax Evidence validation. The second Provider is an acceptance profile, not a production fan-out setting; there is still one explicitly selected default Provider per task.

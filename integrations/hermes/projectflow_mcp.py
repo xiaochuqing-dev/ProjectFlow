@@ -15,7 +15,7 @@ from typing import Any
 
 
 SERVER_NAME = "projectflow-project-memory"
-SERVER_VERSION = "3.4.3"
+SERVER_VERSION = "3.7.4"
 PROTOCOL_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"}
 DEFAULT_PROTOCOL_VERSION = "2025-11-25"
 
@@ -215,6 +215,50 @@ TOOLS = [
             ["projectId"],
         ),
     ),
+    _tool(
+        "search_project_portfolio",
+        "Search facts and derived history across every project authorized to the current user while preserving projectId, source layer, epistemic status, and currentness.",
+        _schema(
+            {
+                "query": {"type": "string", "minLength": 1, "maxLength": 500},
+                "size": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20},
+            },
+            ["query"],
+        ),
+    ),
+    _tool(
+        "get_project_context_package",
+        "Read a versioned, provenance-preserving context package built only from persisted strong facts, understanding, evidence, candidates, conflicts, and unknowns.",
+        _schema(
+            {
+                "projectId": PROJECT_ID,
+                "sizeBudget": {"type": "integer", "minimum": 2000, "maximum": 32000, "default": 8000},
+            },
+            ["projectId"],
+        ),
+    ),
+    _tool(
+        "get_project_evidence",
+        "Read one persisted Evidence descriptor by ID without exposing complete files, absolute local paths, prompts, raw responses, reasoning, or credentials.",
+        _schema(
+            {
+                "projectId": PROJECT_ID,
+                "evidenceId": {"type": "string", "minLength": 1, "maxLength": 200},
+            },
+            ["projectId", "evidenceId"],
+        ),
+    ),
+    _tool(
+        "get_project_knowledge",
+        "Read bounded strong facts, declared material, inferred candidates, conflicts, unknowns, and process evidence without merging their epistemic states.",
+        _schema(
+            {
+                "projectId": PROJECT_ID,
+                "size": {"type": "integer", "minimum": 1, "maximum": 300, "default": 100},
+            },
+            ["projectId"],
+        ),
+    ),
 ]
 
 
@@ -284,7 +328,12 @@ def _project(arguments: dict[str, Any]) -> str:
 
 def call_tool(client: ProjectFlowClient, name: str, arguments: dict[str, Any]) -> Any:
     if name == "list_projects":
-        return client.get("/api/project-memory/projects")
+        return client.get("/api/project-memory/portfolio")
+    if name == "search_project_portfolio":
+        return client.get("/api/project-memory/portfolio/search", {
+            "query": _argument(arguments, "query", ""),
+            "size": _argument(arguments, "size", 20),
+        })
     project = _project(arguments)
     base = f"/api/projects/{project}/project-memory"
     if name == "get_project_snapshot":
@@ -333,7 +382,48 @@ def call_tool(client: ProjectFlowClient, name: str, arguments: dict[str, Any]) -
         return client.get(base + f"/facts/{fact}/trace", {"detailLevel": _argument(arguments, "detailLevel", "compact")})
     if name == "get_project_brief":
         return client.get(base + "/brief", {"sizeBudget": _argument(arguments, "sizeBudget", 6000)})
+    if name == "get_project_context_package":
+        return client.get(base + "/context-package", {"sizeBudget": _argument(arguments, "sizeBudget", 8000)})
+    if name == "get_project_evidence":
+        evidence_id = urllib.parse.quote(str(_argument(arguments, "evidenceId", "")).strip(), safe="")
+        if not evidence_id:
+            raise AdapterError("MCP_ARGUMENT_INVALID", "evidenceId is required.")
+        return client.get(base + f"/evidence/{evidence_id}")
+    if name == "get_project_knowledge":
+        return client.get(base + "/knowledge", {"size": _argument(arguments, "size", 100)})
     raise AdapterError("MCP_TOOL_NOT_FOUND", f"Unknown ProjectFlow tool: {name}")
+
+
+def list_resources(client: ProjectFlowClient) -> dict[str, Any]:
+    catalog = client.get("/api/project-memory/portfolio")
+    resources = []
+    for item in catalog.get("items", []) if isinstance(catalog, dict) else []:
+        project_id = str(item.get("projectId", "")).strip()
+        if not project_id:
+            continue
+        resources.append({
+            "uri": f"projectflow://projects/{project_id}/context",
+            "name": str(item.get("name") or project_id),
+            "description": "Versioned ProjectFlow context package with separated strong facts, candidates, conflicts, unknowns, and provenance.",
+            "mimeType": "application/json",
+        })
+    return {"resources": resources}
+
+
+def read_resource(client: ProjectFlowClient, uri: str) -> dict[str, Any]:
+    parsed = urllib.parse.urlparse(uri)
+    parts = [part for part in parsed.path.split("/") if part]
+    if parsed.scheme != "projectflow" or parsed.netloc != "projects" or len(parts) != 2 or parts[1] != "context":
+        raise AdapterError("MCP_RESOURCE_INVALID", "Unsupported ProjectFlow resource URI.")
+    project_id = urllib.parse.quote(parts[0], safe="")
+    payload = client.get(f"/api/projects/{project_id}/project-memory/context-package", {"sizeBudget": 8000})
+    return {
+        "contents": [{
+            "uri": uri,
+            "mimeType": "application/json",
+            "text": json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+        }]
+    }
 
 
 def _tool_result(payload: Any, *, is_error: bool = False) -> dict[str, Any]:
@@ -354,14 +444,27 @@ def handle(message: dict[str, Any], client: ProjectFlowClient) -> dict[str, Any]
         protocol = requested if requested in PROTOCOL_VERSIONS else DEFAULT_PROTOCOL_VERSION
         return _response(request_id, {
             "protocolVersion": protocol,
-            "capabilities": {"tools": {"listChanged": False}},
+            "capabilities": {
+                "tools": {"listChanged": False},
+                "resources": {"subscribe": False, "listChanged": False},
+            },
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
-            "instructions": "Use list_projects when needed, then prefer compact read-only Project Memory tools. Project Facts are factual sources; Timeline and Capabilities are derived from facts.",
+            "instructions": "Use list_projects when needed, then prefer compact read-only Project Memory tools or projectflow:// project context resources. Only OBSERVED/VERIFIED records are strong facts; candidates, conflicts, unknowns, Timeline and Capabilities keep distinct source layers.",
         })
     if method == "ping":
         return _response(request_id, {})
     if method == "tools/list":
         return _response(request_id, {"tools": TOOLS})
+    if method == "resources/list":
+        try:
+            return _response(request_id, list_resources(client))
+        except AdapterError as error:
+            return _error(request_id, -32002, error.message)
+    if method == "resources/read":
+        try:
+            return _response(request_id, read_resource(client, str((message.get("params") or {}).get("uri", ""))))
+        except AdapterError as error:
+            return _error(request_id, -32002, error.message)
     if method == "tools/call":
         params = message.get("params") or {}
         try:

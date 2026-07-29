@@ -303,7 +303,8 @@ public class ProjectTimelineService {
             fact.getOrigin().name(), fact.getTitle(), fact.getSummary(), fact.getOccurredFrom(), fact.getOccurredTo(),
             fact.getSourceMode(), fact.getQualityStatus(), fact.getConfidence().name(), fact.getRecordStatus().name(),
             fact.getAttentionReason(), fact.getCommitCount(), fact.getAgentResultCount(), fact.getAffectedFileCount(),
-            fact.getEvidenceCount(), fact.getCreatedAt(), fact.getUpdatedAt()
+            fact.getEvidenceCount(), fact.getCreatedAt(), fact.getUpdatedAt(), fact.getEpistemicStatus().name(),
+            fact.getCurrentness(), fact.getRevision(), fact.getValidationStatus(), fact.getLimitations()
         );
     }
 

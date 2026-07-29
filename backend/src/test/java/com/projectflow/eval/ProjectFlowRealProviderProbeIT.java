@@ -52,7 +52,7 @@ class ProjectFlowRealProviderProbeIT {
             null,
             null,
             null,
-            null,
+            config.supportsReasoning(),
             config.supportsReasoningControl()
         );
 

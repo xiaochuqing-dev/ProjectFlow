@@ -53,8 +53,28 @@ class Handler(BaseHTTPRequestHandler):
             if "22222222-2222-2222-2222-222222222222" in parsed.path:
                 self._json(404, {"error": {"code": "PROJECT_NOT_FOUND", "message": "项目不存在"}})
                 return
-            if parsed.path == "/api/project-memory/projects":
-                data = {"items": [{"projectId": PROJECT_ID, "name": "ProjectFlow"}], "total": 1}
+            if parsed.path == "/api/project-memory/portfolio":
+                data = {
+                    "items": [{
+                        "projectId": PROJECT_ID, "name": "ProjectFlow", "latestRevision": "git:abc",
+                        "strongFactCount": 42, "unknownCount": 1, "conflictCount": 0,
+                    }],
+                    "total": 1,
+                }
+            elif parsed.path == "/api/project-memory/portfolio/search":
+                query = parse_qs(parsed.query)
+                data = {
+                    "query": query.get("query", [""])[0],
+                    "items": [{"projectId": PROJECT_ID, "entityType": "FACT", "status": "OBSERVED"}],
+                    "searchedProjectCount": 1,
+                    "truncated": False,
+                }
+            elif parsed.path.endswith("/context-package"):
+                data = {
+                    "packageVersion": "projectflow-agent-context-v1", "projectId": PROJECT_ID,
+                    "currentStrongFacts": [{"itemId": "fact:1", "epistemicStatus": "OBSERVED"}],
+                    "unknowns": [], "conflicts": [], "provenance": ["fact:1"],
+                }
             elif parsed.path.endswith("/snapshot"):
                 data = {"project": {"projectId": PROJECT_ID, "name": "ProjectFlow"}, "factCount": 42}
             elif parsed.path.endswith("/search"):
@@ -144,7 +164,7 @@ class McpProcess:
         self.close()
 
 
-class ProjectFlowMcpTest(unittest.TestCase):
+class MCPProjectHistoryTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
@@ -171,15 +191,28 @@ class ProjectFlowMcpTest(unittest.TestCase):
             self.assertEqual("2025-11-25", initialized["result"]["protocolVersion"])
             tools = mcp.request("tools/list")["result"]["tools"]
         print(f"MCP_METRIC startup_and_discovery_ms={(time.perf_counter() - started) * 1000:.1f} tools={len(tools)}")
-        self.assertEqual(9, len(tools))
+        self.assertEqual(13, len(tools))
         self.assertEqual([
             "list_projects", "get_project_snapshot", "search_project_memory", "get_recent_changes",
             "get_project_timeline", "list_project_capabilities", "get_capability_evolution",
-            "trace_project_fact", "get_project_brief",
+            "trace_project_fact", "get_project_brief", "search_project_portfolio",
+            "get_project_context_package", "get_project_evidence", "get_project_knowledge",
         ], [tool["name"] for tool in tools])
         self.assertTrue(all(len(tool["description"]) > 70 for tool in tools))
         self.assertTrue(all(tool["annotations"]["readOnlyHint"] for tool in tools))
         self.assertFalse(any(any(word in tool["name"] for word in ("create", "update", "delete", "merge", "run_shell")) for tool in tools))
+
+    def test_project_context_resources_are_listed_and_read_with_provenance(self) -> None:
+        with McpProcess(self.base_url, PROJECTFLOW_ACCESS_TOKEN="example-token") as mcp:
+            resources = mcp.request("resources/list")["result"]["resources"]
+            self.assertEqual(1, len(resources))
+            uri = resources[0]["uri"]
+            self.assertEqual(f"projectflow://projects/{PROJECT_ID}/context", uri)
+            result = mcp.request("resources/read", {"uri": uri})["result"]
+        content = json.loads(result["contents"][0]["text"])
+        self.assertEqual("projectflow-agent-context-v1", content["packageVersion"])
+        self.assertEqual("OBSERVED", content["currentStrongFacts"][0]["epistemicStatus"])
+        self.assertEqual(["fact:1"], content["provenance"])
 
     def test_tool_call_forwards_auth_pagination_and_is_idempotent(self) -> None:
         with McpProcess(self.base_url, PROJECTFLOW_ACCESS_TOKEN="example-token") as mcp:
