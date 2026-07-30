@@ -5,9 +5,9 @@
 A. latest master SHA：`5c7fb75cae5f23d933d352634a6c97a0c2f6aece`（开发起点，V3.7.3 acceptance backfill）。
 B. functional baseline SHA：`5c7fb75cae5f23d933d352634a6c97a0c2f6aece`。
 C. version：`3.7.4`。
-D. PR number：待实际创建后回填。
+D. PR number：PR #9。
 E. implementation SHA：`23d419ef453417f1ab2f0b653b2560b0987755ae`；冻结提交 `dd87476f479f7909830250d012800f48511c0da8`。
-F. documentation SHA：待本报告提交后回填。
+F. documentation SHA：`ebb63b1a4e86183157687b6f43910e2c2862e13e`。
 G. merge SHA：待实际合并后回填。
 H. final master SHA：待实际合并并核验后回填。
 I. final CI run IDs/status：待实际 CI 后回填；本地 Docker 不可用，PostgreSQL 必须以 GitHub CI 为准。
