@@ -129,7 +129,7 @@ class ProjectUnderstandingRealModelIT {
         Path output = Path.of("target", "projectflow-eval", "e2e");
         Files.createDirectories(output);
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("version", "projectflow-v3.7.3-real-e2e-v1");
+        artifact.put("version", "projectflow-v3.7.4-real-e2e-v1");
         artifact.put("provider", config.name());
         artifact.put("protocol", config.protocol().name());
         artifact.put("model", config.model());
@@ -181,7 +181,7 @@ class ProjectUnderstandingRealModelIT {
         ReflectionTestUtils.setField(project, "id", projectId);
         project.update(
             testCase.id(),
-            "V3.7.3 real end-to-end acceptance fixture",
+            "V3.7.4 real end-to-end acceptance fixture",
             ProjectStatus.BUILDING,
             List.of(),
             "",
@@ -286,7 +286,7 @@ class ProjectUnderstandingRealModelIT {
             0.1,
             config.maxTokens(),
             true,
-            List.of("V3.7.3_REAL_END_TO_END")
+            List.of("V3.7.4_REAL_END_TO_END")
         );
         provider.configureProtocol(
             config.protocol(),
@@ -299,7 +299,7 @@ class ProjectUnderstandingRealModelIT {
             null,
             null,
             null,
-            null,
+            config.supportsReasoning(),
             config.supportsReasoningControl()
         );
         return provider;
@@ -447,6 +447,48 @@ class ProjectUnderstandingRealModelIT {
             case "projectflow-itself" -> {
                 if (!shapes.contains("FRONTEND") && !shapes.contains("BACKEND")) {
                     failures.add("PROJECTFLOW_PRIMARY_SHAPE_MISSING");
+                }
+            }
+            case "normal-git-project" -> {
+                if (!snapshot.historicalCoverage().historyAvailable()) failures.add("NORMAL_GIT_HISTORY_MISSING");
+                if (snapshot.sourceMap().sources().stream().noneMatch(source -> "TEST".equals(source.category()))) {
+                    failures.add("NORMAL_GIT_TEST_EVIDENCE_MISSING");
+                }
+            }
+            case "stale-readme" -> {
+                boolean staleAware = snapshot.sourceMap().sources().stream()
+                    .anyMatch(source -> "README".equals(source.category()));
+                if (!staleAware) failures.add("STALE_README_NOT_DISCOVERED");
+            }
+            case "agent-result-conflict" -> {
+                boolean promoted = snapshot.dynamicProfile().sections().stream()
+                    .flatMap(section -> section.claims().stream())
+                    .anyMatch(claim -> "VERIFIED".equals(claim.epistemicStatus()));
+                if (promoted) failures.add("UNVERIFIED_AGENT_CLAIM_PROMOTED");
+            }
+            case "weird-extensionless" -> {
+                if (snapshot.sourceMap().sources().stream()
+                    .noneMatch(source -> "UNKNOWN_DOCUMENT".equals(source.category()))) {
+                    failures.add("EXTENSIONLESS_DOCUMENT_MISSING");
+                }
+            }
+            case "large-middle", "large-tail-revision" -> {
+                boolean mapped = snapshot.sourceMap().sources().stream()
+                    .anyMatch(source -> source.summary().contains("CONTENT_MAP"));
+                if (!mapped) failures.add("LARGE_FILE_CONTENT_MAP_MISSING");
+            }
+            case "conflicting-final-docs" -> {
+                if (snapshot.sourceMap().sources().stream()
+                    .filter(source -> "DOC".equals(source.category())).count() < 2) {
+                    failures.add("CONFLICTING_DOCUMENTS_NOT_DISCOVERED");
+                }
+            }
+            case "multi-language-monorepo" -> {
+                if (!shapes.contains("MONOREPO")) failures.add("MONOREPO_SHAPE_MISSING");
+            }
+            case "documentation-project" -> {
+                if (!shapes.contains("DOCUMENT") && !shapes.contains("DOCUMENT_PROJECT")) {
+                    failures.add("DOCUMENT_PROJECT_SHAPE_MISSING");
                 }
             }
             default -> {
@@ -606,9 +648,116 @@ class ProjectUnderstandingRealModelIT {
                     """
                 );
             }),
+            new CaseSpec("normal-git-project", false, root -> {
+                Files.createDirectories(root.resolve("src/test/java/demo"));
+                Files.createDirectories(root.resolve(".github/workflows"));
+                Files.writeString(root.resolve("README.md"), "# Orders API\n当前 Java 服务。\n");
+                Files.writeString(
+                    root.resolve("pom.xml"),
+                    "<project><modelVersion>4.0.0</modelVersion><groupId>demo</groupId>"
+                        + "<artifactId>orders</artifactId><version>1</version></project>"
+                );
+                Files.writeString(root.resolve("src/test/java/demo/OrdersTest.java"), "class OrdersTest {}\n");
+                Files.writeString(root.resolve(".github/workflows/ci.yml"), "steps:\n  - run: mvn test\n");
+                initializeGit(root);
+            }),
+            new CaseSpec("stale-readme", false, root -> {
+                Files.createDirectories(root.resolve("src"));
+                Files.writeString(root.resolve("README.md"), "# Current API\n默认监听 8080。\n");
+                Files.writeString(root.resolve("src/server.ts"), "export const port = 9090;\n");
+                Files.writeString(root.resolve("package.json"), "{\"scripts\":{\"test\":\"node --test\"}}\n");
+            }),
+            new CaseSpec("agent-result-conflict", false, root -> {
+                Files.createDirectories(root.resolve(".projectflow/agent-results/conflict"));
+                Files.createDirectories(root.resolve("reports"));
+                Files.writeString(
+                    root.resolve(".projectflow/agent-results/conflict/result.json"),
+                    "{\"taskGoal\":\"迁移\",\"actualChanges\":[{\"summary\":\"迁移完成\"}],"
+                        + "\"verification\":{\"tests\":\"passed\"}}"
+                );
+                Files.writeString(root.resolve("reports/ci.txt"), "migration-test: FAILED\n");
+            }),
+            new CaseSpec("weird-extensionless", false, root -> Files.writeString(
+                root.resolve("不知道有没有用"),
+                "导入失败时必须保留原始 ProjectFact，只回滚可重建的派生索引。\n".repeat(80)
+            )),
+            new CaseSpec("large-middle", false, root -> writeLargeFixture(
+                root.resolve("HugeService.java"),
+                80_000,
+                40_000,
+                "// CURRENT FACT: writes use idempotency keys backed by commit and file evidence.",
+                -1,
+                ""
+            )),
+            new CaseSpec("large-tail-revision", false, root -> writeLargeFixture(
+                root.resolve("huge-spec.md"),
+                80_020,
+                1,
+                "# Old statement\nThe current transport uses polling.",
+                80_015,
+                "# 2026-07 explicit revision\nCURRENT: event push replaces the earlier polling statement."
+            )),
+            new CaseSpec("conflicting-final-docs", false, root -> {
+                Files.createDirectories(root.resolve("docs"));
+                Files.writeString(root.resolve("docs/final-v2.md"), "# Final\nDefault database: SQLite.\n");
+                Files.writeString(root.resolve("docs/final-really.md"), "# Final\nDefault database: PostgreSQL.\n");
+            }),
+            new CaseSpec("multi-language-monorepo", false, root -> {
+                Files.createDirectories(root.resolve("apps/web/src"));
+                Files.createDirectories(root.resolve("services/api/src"));
+                Files.writeString(root.resolve("pnpm-workspace.yaml"), "packages:\n  - apps/*\n  - services/*\n");
+                Files.writeString(root.resolve("apps/web/package.json"), "{\"dependencies\":{\"react\":\"19.2.0\"}}\n");
+                Files.writeString(root.resolve("apps/web/src/App.tsx"), "export const App=()=> <main />;\n");
+                Files.writeString(root.resolve("services/api/go.mod"), "module example/api\n\ngo 1.24\n");
+                Files.writeString(root.resolve("services/api/src/main.go"), "package main\nfunc main() {}\n");
+            }),
+            new CaseSpec("documentation-project", false, root -> {
+                Files.createDirectories(root.resolve("research"));
+                Files.writeString(root.resolve("research/evidence-notes.md"), "# Evidence study\nNo implementation is claimed.\n");
+                Files.writeString(root.resolve("bibliography.txt"), "MCP Specification 2025-11-25\n");
+            }),
             new CaseSpec("projectflow-itself", true, root -> {
             })
         );
+    }
+
+    private static void writeLargeFixture(
+        Path path,
+        int lines,
+        int firstMarkerLine,
+        String firstMarker,
+        int secondMarkerLine,
+        String secondMarker
+    ) throws Exception {
+        StringBuilder content = new StringBuilder(lines * 36);
+        for (int line = 1; line <= lines; line++) {
+            if (line == firstMarkerLine) content.append(firstMarker);
+            else if (line == secondMarkerLine) content.append(secondMarker);
+            else content.append("line ").append(line).append(" repeated neutral fixture content");
+            content.append('\n');
+        }
+        Files.writeString(path, content);
+    }
+
+    private static void initializeGit(Path root) throws Exception {
+        runGit(root, "init", "-q");
+        runGit(root, "config", "user.email", "projectflow-eval@example.invalid");
+        runGit(root, "config", "user.name", "ProjectFlow Eval");
+        runGit(root, "add", ".");
+        runGit(root, "commit", "-q", "-m", "initial verified project fixture");
+    }
+
+    private static void runGit(Path root, String... arguments) throws Exception {
+        List<String> command = new ArrayList<>();
+        command.add("git");
+        command.addAll(List.of(arguments));
+        Process process = new ProcessBuilder(command)
+            .directory(root.toFile())
+            .redirectErrorStream(true)
+            .start();
+        if (process.waitFor() != 0) {
+            throw new IllegalStateException("git fixture command failed");
+        }
     }
 
     private static long elapsedMs(long started) {

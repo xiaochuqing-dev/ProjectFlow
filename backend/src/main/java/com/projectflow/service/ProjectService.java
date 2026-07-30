@@ -19,6 +19,7 @@ import com.projectflow.repository.ImportRecordRepository;
 import com.projectflow.repository.ModelUsageRecordRepository;
 import com.projectflow.repository.ProjectAnalysisJobRepository;
 import com.projectflow.repository.ProjectAnalysisRecordRepository;
+import com.projectflow.repository.ProjectAgentCandidateRepository;
 import com.projectflow.repository.ProjectChangeRepository;
 import com.projectflow.repository.ProjectEvolutionRecordRepository;
 import com.projectflow.repository.ProjectEvolutionBridgeRepository;
@@ -58,6 +59,7 @@ public class ProjectService {
     private final ProjectMemoryReadAuditRepository memoryReadAuditRepository;
     private final ProjectStructureIndexRepository structureIndexRepository;
     private final ProjectUnderstandingSnapshotRepository understandingSnapshotRepository;
+    private final ProjectAgentCandidateRepository agentCandidateRepository;
 
     public ProjectService(
         ProjectRepository projectRepository,
@@ -81,7 +83,8 @@ public class ProjectService {
         ModelUsageRecordRepository modelUsageRecordRepository,
         ProjectMemoryReadAuditRepository memoryReadAuditRepository,
         ProjectStructureIndexRepository structureIndexRepository,
-        ProjectUnderstandingSnapshotRepository understandingSnapshotRepository
+        ProjectUnderstandingSnapshotRepository understandingSnapshotRepository,
+        ProjectAgentCandidateRepository agentCandidateRepository
     ) {
         this.projectRepository = projectRepository;
         this.materialRepository = materialRepository;
@@ -105,6 +108,7 @@ public class ProjectService {
         this.memoryReadAuditRepository = memoryReadAuditRepository;
         this.structureIndexRepository = structureIndexRepository;
         this.understandingSnapshotRepository = understandingSnapshotRepository;
+        this.agentCandidateRepository = agentCandidateRepository;
     }
 
     @Transactional
@@ -145,6 +149,7 @@ public class ProjectService {
         analysisRecordRepository.deleteByProjectId(id);
         modelUsageRecordRepository.deleteByProjectId(id);
         memoryReadAuditRepository.deleteByProjectId(id);
+        agentCandidateRepository.deleteByProjectId(id);
         understandingSnapshotRepository.deleteByProjectId(id);
         structureIndexRepository.deleteByProjectId(id);
         evolutionBridgeRepository.deleteByProjectId(id);

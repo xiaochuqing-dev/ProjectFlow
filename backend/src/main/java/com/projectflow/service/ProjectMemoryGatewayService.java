@@ -359,7 +359,9 @@ public class ProjectMemoryGatewayService {
                 ), fact.batchId(), fact.commitCount(), fact.affectedFileCount(), fact.agentResultCount(), fact.evidenceCount(),
                 fact.recordStatus(), fact.qualityStatus(), text(fact.attentionReason(), detailed),
                 related.getOrDefault(fact.id(), List.of()), FACT_TRUTH,
-                "/api/projects/" + projectId + "/project-memory/facts/" + fact.id() + "/trace"
+                "/api/projects/" + projectId + "/project-memory/facts/" + fact.id() + "/trace",
+                fact.epistemicStatus(), fact.currentness(), fact.revision(), fact.validationStatus(),
+                limit(fact.limitations(), detailed ? 20 : 5)
             );
         }).toList();
         return new MemoryFactPageResponse(

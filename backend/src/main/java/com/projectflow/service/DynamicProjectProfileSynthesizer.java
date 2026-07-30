@@ -409,8 +409,9 @@ public class DynamicProjectProfileSynthesizer {
     private static String epistemic(String value) {
         String normalized = value == null ? "" : value.strip().toUpperCase(Locale.ROOT);
         return switch (normalized) {
-            case "CURRENT_STATE", "HISTORICAL_EVENT", "POSSIBLY_STALE", "PROCESS_EVIDENCE",
-                "PROCESS_METADATA", "USER_ASSERTION", "ENGINEERING_OBSERVATION", "INFERRED", "UNKNOWN" -> normalized;
+            case "OBSERVED", "VERIFIED", "DECLARED", "INFERRED", "CONFLICTED", "UNKNOWN",
+                "CURRENT_STATE", "HISTORICAL_EVENT", "POSSIBLY_STALE", "PROCESS_EVIDENCE",
+                "PROCESS_METADATA", "USER_ASSERTION", "ENGINEERING_OBSERVATION" -> normalized;
             default -> "INFERRED";
         };
     }

@@ -48,6 +48,7 @@ public class ProjectFactIngestionService {
     private final ProjectFactCursorRepository cursorRepository;
     private final TimelinePeriodResolver timelinePeriodResolver;
     private final ApplicationEventPublisher eventPublisher;
+    private final StrongFactPromotionGuard promotionGuard;
 
     public ProjectFactIngestionService(
         ChangeBatchRepository batchRepository,
@@ -58,7 +59,8 @@ public class ProjectFactIngestionService {
         ProjectFactFileRefRepository fileRefRepository,
         ProjectFactCursorRepository cursorRepository,
         TimelinePeriodResolver timelinePeriodResolver,
-        ApplicationEventPublisher eventPublisher
+        ApplicationEventPublisher eventPublisher,
+        StrongFactPromotionGuard promotionGuard
     ) {
         this.batchRepository = batchRepository;
         this.segmentRepository = segmentRepository;
@@ -69,6 +71,7 @@ public class ProjectFactIngestionService {
         this.cursorRepository = cursorRepository;
         this.timelinePeriodResolver = timelinePeriodResolver;
         this.eventPublisher = eventPublisher;
+        this.promotionGuard = promotionGuard;
     }
 
     /**
@@ -153,7 +156,7 @@ public class ProjectFactIngestionService {
             return existing;
         }
 
-        Classification classification = classify(segment);
+        StrongFactPromotionGuard.Decision classification = promotionGuard.classify(segment);
         Instant occurredFrom = segment.getOccurredFrom();
         Instant occurredTo = segment.getOccurredTo();
         List<String> reasons = new ArrayList<>(classification.reasons());
@@ -163,7 +166,7 @@ public class ProjectFactIngestionService {
             reasons.add("无法从提交或 Agent result 确定发生时间，已回退到分析批次时间");
         }
         ProjectFactRecordStatus status = reasons.isEmpty()
-            ? ProjectFactRecordStatus.RECORDED
+            ? classification.recordStatus()
             : ProjectFactRecordStatus.NEEDS_ATTENTION;
         ProjectFact fact = new ProjectFact(segment.getProjectId(), segment.getBatchId(), segment.getId(), origin, fingerprint);
         fact.updateContent(
@@ -173,47 +176,31 @@ public class ProjectFactIngestionService {
             sourceMode(segment), segment.getQualityStatus(), segment.getConfidence(), status,
             String.join("；", new LinkedHashSet<>(reasons))
         );
+        String revision = segment.getIncludedCommitRefs().stream().filter(value -> !value.isBlank())
+            .reduce((left, right) -> right)
+            .orElse(batch.getHeadCommitSha());
+        fact.applyKnowledgeContract(
+            classification.epistemicStatus(),
+            classification.sourceTypes(),
+            origin == ProjectFactOrigin.HISTORY_BACKFILL ? "HISTORICAL" : "CURRENT",
+            revision,
+            batch.getScanStartedAt(),
+            occurredFrom,
+            reasons,
+            List.of(),
+            "MODEL".equals(segment.getGenerationMode())
+                ? "MODEL_ASSISTED_ENGINEERING_VALIDATION"
+                : "ENGINEERING_VALIDATION",
+            "",
+            segment.getModelProvider(),
+            reasons.isEmpty() ? classification.validationStatus() : "PENDING_VALIDATION"
+        );
         ensureTimelineAssignment(fact);
         fact = factRepository.save(fact);
         ensureCommitRefs(fact);
         ensureAgentResultRefs(fact);
         ensureFileRefs(fact);
         return fact;
-    }
-
-    private Classification classify(DevelopmentSegment segment) {
-        List<String> reasons = new ArrayList<>();
-        if (segment.getTitle().isBlank() || segment.getPlainSummary().isBlank()) {
-            reasons.add("标题或摘要不完整");
-        }
-        List<String> evidence = segment.getEvidenceRefs().stream()
-            .filter(this::isRecognizedEvidence)
-            .toList();
-        if (evidence.isEmpty()) {
-            reasons.add("没有有效证据引用，不能作为普通已记录事实");
-        }
-        boolean hasCodeEvidence = evidence.stream().anyMatch(value -> value.startsWith("commit:") || value.startsWith("file:"));
-        boolean agentOnly = !segment.getIncludedAgentResultRefs().isEmpty()
-            && segment.getIncludedCommitRefs().isEmpty()
-            && !hasCodeEvidence;
-        if (agentOnly) {
-            reasons.add("只有 Agent result，缺少提交或代码变化证据");
-        }
-        if (!"PASS".equals(segment.getQualityStatus())) {
-            reasons.add(segment.getQualityReason().isBlank()
-                ? "分析质量状态为 " + segment.getQualityStatus()
-                : segment.getQualityReason());
-        }
-        return new Classification(reasons);
-    }
-
-    private boolean isRecognizedEvidence(String value) {
-        if (value == null || value.isBlank()) return false;
-        String normalized = value.trim();
-        if (normalized.startsWith("commit:")) return normalized.length() > "commit:".length();
-        if (normalized.startsWith("file:")) return normalized.length() > "file:".length();
-        if (normalized.startsWith("agent-result:")) return normalized.length() > "agent-result:".length();
-        return false;
     }
 
     private String sourceMode(DevelopmentSegment segment) {
@@ -305,6 +292,4 @@ public class ProjectFactIngestionService {
     public record IngestionResult(UUID batchId, int factCount, int attentionCount, Instant occurredFrom, Instant occurredTo) {
     }
 
-    private record Classification(List<String> reasons) {
-    }
 }

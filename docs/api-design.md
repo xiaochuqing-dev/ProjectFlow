@@ -33,6 +33,22 @@ Error responses:
 
 ## V3.7 Universal Evidence Understanding
 
+## V3.7.4 Agent history and candidate boundary
+
+All endpoints require normal authentication and preserve not-found ownership semantics.
+
+| Purpose | Method and path |
+| --- | --- |
+| Authorized project catalog | `GET /api/project-memory/portfolio` |
+| Bounded cross-project search | `GET /api/project-memory/portfolio/search?query=&size=` |
+| Project evidence by safe ID | `GET /api/projects/{projectId}/project-memory/evidence/{evidenceId}` |
+| Status-partitioned knowledge | `GET /api/projects/{projectId}/project-memory/knowledge?size=` |
+| Versioned Context Package | `GET /api/projects/{projectId}/project-memory/context-package?sizeBudget=` |
+| Submit validation candidate | `POST /api/projects/{projectId}/agent-candidates` |
+| List validation candidates | `GET /api/projects/{projectId}/agent-candidates?page=&size=` |
+
+Context Packages contain bounded strong facts, declarations, inference candidates, conflicts, unknowns, provenance, revision and limitations. They exclude prompts, raw model responses, reasoning, credentials and absolute paths. Agent candidate submission accepts only `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` or `PROCESS_EVIDENCE`; direct `OBSERVED`/`VERIFIED` writes are rejected.
+
 The existing understanding endpoints are unchanged and still validate authenticated project ownership:
 
 | Method | Path | Purpose |

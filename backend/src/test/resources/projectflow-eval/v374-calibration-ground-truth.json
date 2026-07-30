@@ -1,0 +1,173 @@
+{
+  "standard": "ProjectFlow V3.7.4 calibration set; human-authored before formal holdout; not a universal benchmark",
+  "cases": [
+    {
+      "id": "cal-frontend", "source": "fixture://cal/frontend", "important": false,
+      "context": "source:package 与 source:ui 显示 React 浏览器界面；没有本地服务端、数据库或发布证据。",
+      "toolEvidence": "", "expectedProjectShapes": ["FRONTEND"], "mustFindEvidence": ["source:package", "source:ui"],
+      "mustNotClaim": ["local backend", "local database", "deployed"], "expectedTools": [], "forbiddenTools": ["GIT_HISTORY"],
+      "expectedViews": ["FRONTEND", "DEPENDENCIES"], "forbiddenViews": ["DATABASE", "TIMELINE"], "expectedUnknowns": ["deployment status"],
+      "expectedConflicts": [], "expectedHistoryMode": "UNAVAILABLE", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-backend", "source": "fixture://cal/backend", "important": false,
+      "context": "source:pom 与 source:controller 显示 Java HTTP 服务及单元测试；没有前端和生产部署证据。",
+      "toolEvidence": "", "expectedProjectShapes": ["BACKEND"], "mustFindEvidence": ["source:pom", "source:controller"],
+      "mustNotClaim": ["frontend", "production deployed"], "expectedTools": [], "forbiddenTools": [],
+      "expectedViews": ["BACKEND", "ENGINEERING_STATE"], "forbiddenViews": ["FRONTEND"], "expectedUnknowns": ["production deployment"],
+      "expectedConflicts": [], "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-fullstack", "source": "fixture://cal/fullstack", "important": false,
+      "context": "source:web-package、source:api-pom 与 source:contract 分别显示 React 前端、Java API 和二者共享接口。",
+      "toolEvidence": "", "expectedProjectShapes": ["FRONTEND", "BACKEND"], "mustFindEvidence": ["source:web-package", "source:api-pom"],
+      "mustNotClaim": ["production deployed"], "expectedTools": [], "forbiddenTools": [],
+      "expectedViews": ["FRONTEND", "BACKEND"], "forbiddenViews": [], "expectedUnknowns": ["deployment status"],
+      "expectedConflicts": [], "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-cli", "source": "fixture://cal/cli", "important": false,
+      "context": "source:manifest 与 source:main 显示 Rust 命令行程序，提供 import 和 validate 子命令；没有服务端证据。",
+      "toolEvidence": "", "expectedProjectShapes": ["CODE_PROJECT"], "mustFindEvidence": ["source:manifest", "source:main"],
+      "mustNotClaim": ["web service", "database"], "expectedTools": [], "forbiddenTools": [],
+      "expectedViews": ["USAGE", "DEPENDENCIES"], "forbiddenViews": ["DATABASE"], "expectedUnknowns": ["distribution status"],
+      "expectedConflicts": [], "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-scripts", "source": "fixture://cal/scripts", "important": false,
+      "context": "source:scripts-index 显示多个独立 Python 与 PowerShell 维护脚本，没有统一应用入口。",
+      "toolEvidence": "", "expectedProjectShapes": ["SCRIPT"], "mustFindEvidence": ["source:scripts-index"],
+      "mustNotClaim": ["single application architecture", "production service"], "expectedTools": [], "forbiddenTools": ["SCIP"],
+      "expectedViews": ["PURPOSE", "USAGE"], "forbiddenViews": ["DATABASE"], "expectedUnknowns": ["shared lifecycle"],
+      "expectedConflicts": [], "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-notebook", "source": "fixture://cal/notebook", "important": false,
+      "context": "source:notebook-metadata 显示探索性数据分析；source:data-readme 因 intake 正文预算未采样，复现条件和输出状态未知。",
+      "toolEvidence": "", "expectedProjectShapes": ["OTHER_MATERIAL"], "mustFindEvidence": ["source:notebook-metadata", "source:data-readme"],
+      "mustNotClaim": ["reproducible pipeline", "production model"], "expectedTools": ["DOC_READER"], "forbiddenTools": ["SCIP"],
+      "expectedViews": ["DOCUMENT_OVERVIEW"], "forbiddenViews": ["DEPLOYMENT"], "expectedUnknowns": ["reproducibility"],
+      "expectedConflicts": [], "expectedHistoryMode": "UNAVAILABLE", "expectedDeepReadTargets": ["source:data-readme"]
+    },
+    {
+      "id": "cal-desktop", "source": "fixture://cal/desktop", "important": false,
+      "context": "source:desktop-manifest 与 source:window 显示本地桌面应用；没有安装器、自动更新或发布证据。",
+      "toolEvidence": "", "expectedProjectShapes": ["DESKTOP"], "mustFindEvidence": ["source:desktop-manifest", "source:window"],
+      "mustNotClaim": ["installer complete", "auto update", "released"], "expectedTools": [], "forbiddenTools": [],
+      "expectedViews": ["ARCHITECTURE", "USAGE"], "forbiddenViews": ["TIMELINE"], "expectedUnknowns": ["distribution status"],
+      "expectedConflicts": [], "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-monorepo", "source": "fixture://cal/monorepo", "important": false,
+      "context": "source:workspace、source:java-module、source:ts-module 显示多语言 workspace；模块间运行关系未被精确索引。",
+      "toolEvidence": "", "expectedProjectShapes": ["MONOREPO"], "mustFindEvidence": ["source:workspace"],
+      "mustNotClaim": ["precise cross-language call graph"], "expectedTools": [], "forbiddenTools": [],
+      "expectedViews": ["ARCHITECTURE", "DEPENDENCIES"], "forbiddenViews": [], "expectedUnknowns": ["cross-module runtime relations"],
+      "expectedConflicts": [], "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-infrastructure", "source": "fixture://cal/infra", "important": false,
+      "context": "source:terraform 与 source:workflow 显示基础设施声明和 CI 校验；没有真实云端应用状态证据。",
+      "toolEvidence": "", "expectedProjectShapes": ["CODE_PROJECT"], "mustFindEvidence": ["source:terraform", "source:workflow"],
+      "mustNotClaim": ["currently deployed", "cloud resources exist"], "expectedTools": [], "forbiddenTools": [],
+      "expectedViews": ["CURRENT_STATE", "ENGINEERING_STATE"], "forbiddenViews": [], "expectedUnknowns": ["remote deployment state"],
+      "expectedConflicts": [], "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-doc-research", "source": "fixture://cal/research", "important": false,
+      "context": "source:paper-notes 与 source:bibliography 是研究和设计材料；source:paper-notes 正文未进入 intake 样本，没有源码、测试或实现状态证据。",
+      "toolEvidence": "", "expectedProjectShapes": ["DOCUMENT"], "mustFindEvidence": ["source:paper-notes"],
+      "mustNotClaim": ["implemented", "tested", "deployed"], "expectedTools": [], "forbiddenTools": ["SCIP"],
+      "expectedViews": ["DOCUMENT_OVERVIEW"], "forbiddenViews": ["BACKEND", "DATABASE"], "expectedUnknowns": ["implementation status"],
+      "expectedConflicts": [], "expectedHistoryMode": "UNAVAILABLE", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-agent-driven", "source": "fixture://cal/agent", "important": false,
+      "context": "source:agent-result 是 Agent 过程材料，正文和 verification 字段未进入 intake 样本；源码和提交均未提供。",
+      "toolEvidence": "", "expectedProjectShapes": ["AGENT_RESULT_MATERIAL"], "mustFindEvidence": ["source:agent-result"],
+      "mustNotClaim": ["fix completed", "verified", "ProjectFact"], "expectedTools": ["AGENT_RESULT"], "forbiddenTools": [],
+      "expectedViews": ["PROCESS_EVIDENCE"], "forbiddenViews": ["EVOLUTION"], "expectedUnknowns": ["implementation status", "test status"],
+      "expectedConflicts": [], "expectedHistoryMode": "UNAVAILABLE", "expectedDeepReadTargets": ["source:agent-result"]
+    },
+    {
+      "id": "cal-legacy", "source": "fixture://cal/legacy", "important": false,
+      "context": "source:old-build 与 source:current-code 显示旧式构建和当前代码共存；没有证据说明旧构建已废弃。",
+      "toolEvidence": "", "expectedProjectShapes": ["CODE_PROJECT"], "mustFindEvidence": ["source:old-build", "source:current-code"],
+      "mustNotClaim": ["deprecated", "replaced", "technical debt"], "expectedTools": [], "forbiddenTools": [],
+      "expectedViews": ["ARCHITECTURE"], "forbiddenViews": [], "expectedUnknowns": ["old build currentness"],
+      "expectedConflicts": [], "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-unfinished", "source": "fixture://cal/unfinished", "important": false,
+      "context": "source:roadmap 是未采样正文的计划文档，source:code 只有接口占位；完成、测试和发布状态未知。",
+      "toolEvidence": "", "expectedProjectShapes": ["CODE_PROJECT"], "mustFindEvidence": ["source:roadmap", "source:code"],
+      "mustNotClaim": ["feature completed", "verified", "released"], "expectedTools": ["DOC_READER"], "forbiddenTools": [],
+      "expectedViews": ["CURRENT_STATE"], "forbiddenViews": ["EVOLUTION"], "expectedUnknowns": ["completion status"],
+      "expectedConflicts": [], "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": ["source:roadmap"]
+    },
+    {
+      "id": "cal-no-git", "source": "fixture://cal/no-git", "important": false,
+      "context": "source:readme 与 source:script 提供当前状态，目录没有 .git。",
+      "toolEvidence": "", "expectedProjectShapes": ["SCRIPT"], "mustFindEvidence": ["source:script"],
+      "mustNotClaim": ["historical reason", "timeline", "evolution"], "expectedTools": [], "forbiddenTools": ["GIT_HISTORY", "GIT_TAG"],
+      "expectedViews": ["CURRENT_STATE"], "forbiddenViews": ["TIMELINE", "EVOLUTION"], "expectedUnknowns": ["history"],
+      "expectedConflicts": [], "expectedHistoryMode": "UNAVAILABLE", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-chaotic", "source": "fixture://cal/chaotic", "important": false,
+      "context": "source:mixed-index 显示代码、截图、导出表和临时笔记混合；只有 source:working-script 是可执行文本证据。",
+      "toolEvidence": "", "expectedProjectShapes": ["OTHER_MATERIAL"], "mustFindEvidence": ["source:working-script"],
+      "mustNotClaim": ["single coherent architecture", "all files relevant"], "expectedTools": [], "forbiddenTools": [],
+      "expectedViews": ["CURRENT_STATE"], "forbiddenViews": ["TIMELINE"], "expectedUnknowns": ["material relationships"],
+      "expectedConflicts": [], "expectedHistoryMode": "UNAVAILABLE", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-long-file", "source": "fixture://cal/long-file", "important": false,
+      "context": "source:long-file 的 Content Map 为 80000 行，中部存在 current-fact marker；对应 RANGE 正文尚未读取，UNREAD_RANGES 25-79976。",
+      "toolEvidence": "", "expectedProjectShapes": ["CODE_PROJECT"], "mustFindEvidence": ["source:long-file"],
+      "mustNotClaim": ["all ranges read", "design reason"], "expectedTools": ["DOC_READER"], "forbiddenTools": [],
+      "expectedViews": ["CURRENT_STATE"], "forbiddenViews": [], "expectedUnknowns": ["unread ranges"],
+      "expectedConflicts": [], "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": ["source:long-file"]
+    },
+    {
+      "id": "cal-conflicting-docs", "source": "fixture://cal/conflict", "important": false,
+      "context": "source:guide-a 声明默认 SQLite，source:guide-b 声明默认 PostgreSQL；没有当前性或实现证据解决冲突。",
+      "toolEvidence": "", "expectedProjectShapes": ["DOCUMENT"], "mustFindEvidence": ["source:guide-a", "source:guide-b"],
+      "mustNotClaim": ["SQLite is current", "PostgreSQL is current"], "expectedTools": [], "forbiddenTools": [],
+      "expectedViews": ["DOCUMENT_OVERVIEW"], "forbiddenViews": [], "expectedUnknowns": ["current database"], "expectedConflicts": ["DATABASE_DEFAULT_CONFLICT"],
+      "expectedHistoryMode": "UNAVAILABLE", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-portfolio", "source": "fixture://cal/portfolio", "important": false,
+      "context": "source:portfolio-catalog 列出三个已授权项目的安全摘要；每个事实都带 projectId 和 evidenceRef，另一个未授权项目不在目录中。",
+      "toolEvidence": "", "expectedProjectShapes": ["OTHER_MATERIAL"], "mustFindEvidence": ["source:portfolio-catalog"],
+      "mustNotClaim": ["unauthorized project", "cross-project merged fact"], "expectedTools": [], "forbiddenTools": [],
+      "expectedViews": ["CURRENT_STATE"], "forbiddenViews": [], "expectedUnknowns": ["unauthorized projects"], "expectedConflicts": [],
+      "expectedHistoryMode": "PERSISTED_FACTS", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-stale-readme", "source": "fixture://cal/stale-readme", "important": false,
+      "context": "source:readme 声明默认端口 8080，source:runtime-config 明确当前端口 9090；README 当前性未知，运行配置是当前源码证据。",
+      "toolEvidence": "", "expectedProjectShapes": ["BACKEND"], "mustFindEvidence": ["source:readme", "source:runtime-config"],
+      "mustNotClaim": ["8080 is current", "historical reason"], "expectedTools": [], "forbiddenTools": [],
+      "expectedViews": ["BACKEND", "CURRENT_STATE"], "forbiddenViews": ["TIMELINE"], "expectedUnknowns": ["reason for change"],
+      "expectedConflicts": ["README_SOURCE_CONFLICT"], "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "cal-large-tail", "source": "fixture://cal/large-tail", "important": false,
+      "context": "source:long-spec Content Map 为 80020 行，HEAD 与 TAIL 都有 currentness marker；对应 RANGE 正文尚未读取，UNREAD_RANGES 已披露。",
+      "toolEvidence": "", "expectedProjectShapes": ["DOCUMENT"], "mustFindEvidence": ["source:long-spec"],
+      "mustNotClaim": ["polling is current", "all ranges read", "replacement reason"], "expectedTools": ["DOC_READER"], "forbiddenTools": [],
+      "expectedViews": ["DOCUMENT_OVERVIEW"], "forbiddenViews": [], "expectedUnknowns": ["replacement reason", "unread ranges"],
+      "expectedConflicts": [], "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": ["source:long-spec"]
+    },
+    {
+      "id": "cal-weird-important", "source": "fixture://cal/weird-name", "important": false,
+      "context": "source:odd-note 指向无扩展名文件“这啥玩意”；文件通过文本探测入选，但正文因 intake 预算未采样。",
+      "toolEvidence": "", "expectedProjectShapes": ["DOCUMENT"], "mustFindEvidence": ["source:odd-note"],
+      "mustNotClaim": ["irrelevant", "implementation verified"], "expectedTools": ["DOC_READER"], "forbiddenTools": [],
+      "expectedViews": ["DOCUMENT_OVERVIEW"], "forbiddenViews": [], "expectedUnknowns": ["implementation status"],
+      "expectedConflicts": [], "expectedHistoryMode": "UNAVAILABLE", "expectedDeepReadTargets": ["source:odd-note"]
+    }
+  ]
+}

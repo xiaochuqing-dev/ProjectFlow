@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.projectflow.entity.ProjectFact;
+import com.projectflow.entity.ProjectFactEpistemicStatus;
 import com.projectflow.entity.ProjectFactRecordStatus;
 import com.projectflow.repository.ProjectFactRepository;
 
@@ -46,6 +47,20 @@ public class ProjectFactAttentionReclassificationService {
             if (fact.getRecordStatus() != ProjectFactRecordStatus.NEEDS_ATTENTION) continue;
             before++;
             if (canRecover(fact)) {
+                fact.applyKnowledgeContract(
+                    ProjectFactEpistemicStatus.OBSERVED,
+                    List.of("LOCAL_GIT_COMMIT", "PROJECT_FILE"),
+                    fact.getCurrentness(),
+                    fact.getCommitRefs().isEmpty() ? fact.getRevision() : fact.getCommitRefs().get(fact.getCommitRefs().size() - 1),
+                    fact.getObservedAt(),
+                    fact.getEffectiveAt(),
+                    List.of(),
+                    fact.getConflictRefs(),
+                    "LEGACY_ENGINEERING_RECLASSIFICATION",
+                    "",
+                    fact.getSourceModelProvider(),
+                    "VALIDATED"
+                );
                 fact.reclassify(ProjectFactRecordStatus.RECORDED, "");
                 factRepository.save(fact);
                 changed++;
@@ -60,7 +75,7 @@ public class ProjectFactAttentionReclassificationService {
     static boolean canRecover(ProjectFact fact) {
         if (fact == null || fact.getSourceSegmentId() == null || fact.getBatchId() == null) return false;
         if (!"PASS".equalsIgnoreCase(fact.getQualityStatus())) return false;
-        boolean primaryEvidence = fact.getCommitCount() > 0 || fact.getAgentResultCount() > 0;
+        boolean primaryEvidence = fact.getCommitCount() > 0;
         boolean supportingEvidence = fact.getAffectedFileCount() > 0 && fact.getEvidenceCount() > 0;
         if (!primaryEvidence || !supportingEvidence) return false;
         String remainingReason = fact.getAttentionReason().replace(FALLBACK_TIME_REASON, "")

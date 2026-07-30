@@ -121,7 +121,7 @@ class ModelRequestPolicyTest {
 
     @Test
     void reasoningTruncationUsesBoundedProviderHeadroomForTheOnlyRecovery() {
-        AiProvider provider = provider(AiProviderType.OPENAI, "glm-5.2", 0.9, 32_000);
+        AiProvider provider = provider(AiProviderType.OPENAI, "glm-5.2", 0.9, 65_536);
         var capabilities = registry.resolve(provider);
         var initial = policy.initial(
             provider,
@@ -139,9 +139,9 @@ class ModelRequestPolicyTest {
         );
 
         assertThat(initial.effectiveMaxTokens()).isEqualTo(16_000);
-        assertThat(recovery.taskRequestedMaxTokens()).isEqualTo(32_000);
-        assertThat(recovery.effectiveMaxTokens()).isEqualTo(32_000);
-        assertThat(recovery.maxTokenDecision()).contains("最多两倍预算");
+        assertThat(recovery.taskRequestedMaxTokens()).isEqualTo(65_536);
+        assertThat(recovery.effectiveMaxTokens()).isEqualTo(65_536);
+        assertThat(recovery.maxTokenDecision()).contains("Provider");
     }
 
     @Test

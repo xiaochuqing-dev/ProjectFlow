@@ -1,0 +1,62 @@
+{
+  "version": "3.7.4",
+  "frozenAt": "2026-07-30T07:11:40+08:00",
+  "implementationCommit": "23d419ef453417f1ab2f0b653b2560b0987755ae",
+  "implementationTree": "a1133c8e964bc5638b52c15772af6a2eba57af77",
+  "promptContractVersion": "project-understanding-prompt-contract-v2",
+  "scoutPromptVersion": "semantic-scout-v11",
+  "finalPromptVersion": "final-synthesis-v6",
+  "holdoutRunBeforeFreeze": false,
+  "files": [
+    {
+      "path": "backend/src/main/java/com/projectflow/service/ProjectUnderstandingPromptBuilder.java",
+      "sha256": "464C0EC138B5A29601C059E2E47E37C2E47EC5B841A81C52579696E9A87D95EB"
+    },
+    {
+      "path": "backend/src/test/resources/projectflow-eval/v374-calibration-ground-truth.json",
+      "sha256": "2034C83BAE71B6A3D7CBEF415FD5A69D74B81BA75C4406913E9BF597A8111D58"
+    },
+    {
+      "path": "backend/src/test/resources/projectflow-eval/v374-holdout-ground-truth.json",
+      "sha256": "00F9F32C4D4E8C1184021F36558F9226C54DAA863A2558436974C94E624D23A5"
+    },
+    {
+      "path": "backend/src/test/resources/projectflow-eval/v374-calibration-capability-evidence.json",
+      "sha256": "96CEE9DA74F74528F3F3899A2C53D2B5329D665C92863B6882F5B60EA83D432B"
+    },
+    {
+      "path": "backend/src/test/resources/projectflow-eval/v374-holdout-capability-evidence.json",
+      "sha256": "83EC4EBFE67B319C73BC6EFBE5F0837BAE971F0BEE0D9FCD5CABD4FEC3975BEF"
+    },
+    {
+      "path": "backend/src/test/java/com/projectflow/eval/ProjectFlowRealModelEvalIT.java",
+      "sha256": "7F152941CBE60E77B4BBABAF9F746C0E4BAD056E3D9806CDA5B592C2782E15BF"
+    },
+    {
+      "path": "backend/src/test/java/com/projectflow/eval/ProjectFlowEvalMetrics.java",
+      "sha256": "8FD8E0205ACE0E00AE5B6548D36CA74B7C05A3B25681F58BB9AACAAEA8BDD87C"
+    }
+  ],
+  "providers": [
+    {
+      "role": "main",
+      "provider": "Volcano Ark Coding",
+      "model": "glm-5.2",
+      "protocol": "OPENAI_RESPONSES",
+      "maxOutputTokens": 65536,
+      "requestTimeoutSeconds": 600,
+      "supportsReasoning": true,
+      "supportsReasoningControl": false
+    },
+    {
+      "role": "compatibility",
+      "provider": "DeepSeek official",
+      "model": "deepseek-v4-pro",
+      "protocol": "OPENAI_CHAT_COMPLETIONS",
+      "maxOutputTokens": 32000,
+      "requestTimeoutSeconds": 600,
+      "supportsReasoning": true,
+      "supportsReasoningControl": false
+    }
+  ]
+}

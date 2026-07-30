@@ -58,6 +58,7 @@ class ProjectFlowEvalMetricsTest {
         assertThat(summary.unsupportedClaimRate()).isEqualTo(0.5);
         assertThat(summary.criticalEvidenceRecall()).isEqualTo(1.0);
         assertThat(summary.toolSelectionRecall()).isEqualTo(1.0);
+        assertThat(summary.deepReadSufficiency()).isEqualTo(1.0);
         assertThat(summary.repeatability()).isBetween(0.5, 1.0);
         assertThat(summary.secondStageEvidenceGain()).isPositive();
         assertThat(summary.secondStageUnsupportedClaimReduction()).isPositive();
@@ -244,6 +245,7 @@ class ProjectFlowEvalMetricsTest {
             40,
             20,
             100,
+            stageTwo != null,
             20,
             0,
             false,

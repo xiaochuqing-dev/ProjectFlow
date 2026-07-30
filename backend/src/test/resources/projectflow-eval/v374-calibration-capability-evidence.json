@@ -1,0 +1,8 @@
+{
+  "cal-notebook": "source:data-readme\nThis notebook is exploratory. Input data was sampled manually. No reproducible environment, published output, or production model is declared.",
+  "cal-agent-driven": "source:agent-result\nclaim: cache repair completed\nverification: not_run\ncommit: unavailable\nsource diff: unavailable",
+  "cal-unfinished": "source:roadmap\nThe import preview remains planned. source:code is an interface placeholder only. No completion, test, or release evidence is present.",
+  "cal-long-file": "source:long-file\nRANGE MIDDLE 39988-40012\nline 40000: CURRENT FACT: writes use idempotency keys.\nThis range does not contain a design-reason statement.\nUNREAD_RANGES 25-39987;40013-79976",
+  "cal-large-tail": "source:long-spec\nRANGE HEAD 1-24: default transport is polling.\nRANGE TAIL 79997-80020: 2026-07 REVISION: event push replaces the earlier polling default.\nNo replacement reason is stated.\nUNREAD_RANGES 25-79996",
+  "cal-weird-important": "source:odd-note\n取消导入时必须保留原始事实，只删除可重建索引。本文没有实现或测试证据。"
+}

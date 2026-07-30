@@ -30,6 +30,7 @@ import com.projectflow.entity.EvidenceConfidence;
 import com.projectflow.entity.ProjectFact;
 import com.projectflow.entity.ProjectFactAgentResultRef;
 import com.projectflow.entity.ProjectFactCommitRef;
+import com.projectflow.entity.ProjectFactEpistemicStatus;
 import com.projectflow.entity.ProjectFactOrigin;
 import com.projectflow.entity.ProjectFactRecordStatus;
 import com.projectflow.entity.ProjectSediment;
@@ -150,7 +151,7 @@ public class ProjectFactMigrationService {
         Instant occurredTo = sourceBatch != null && sourceBatch.getFactOccurredTo() != null
             ? sourceBatch.getFactOccurredTo() : occurredFrom;
         List<String> evidence = sediment.getEvidenceRefs();
-        boolean reliableEvidence = evidence.stream().anyMatch(this::isReliableEvidence);
+        boolean reliableEvidence = evidence.stream().anyMatch(this::isReliableEngineeringEvidence);
         ProjectFact fact = new ProjectFact(
             sediment.getProjectId(), batchId, null, ProjectFactOrigin.LEGACY_SEDIMENT_MIGRATION, fingerprint
         );
@@ -158,7 +159,14 @@ public class ProjectFactMigrationService {
             .map(value -> value.substring(7)).toList();
         List<String> agents = evidence.stream().filter(value -> value != null && value.startsWith("agent-result:"))
             .toList();
-        String attention = reliableEvidence ? "" : "旧版沉淀缺少可验证提交、文件或 Agent result 证据";
+        boolean agentOnly = !evidence.isEmpty() && evidence.stream()
+            .filter(java.util.Objects::nonNull)
+            .allMatch(value -> value.startsWith("agent-result:"));
+        String attention = reliableEvidence
+            ? ""
+            : agentOnly
+                ? "旧版 Agent Result 只有过程声明，缺少独立工程验证"
+                : "旧版沉淀缺少可验证提交或文件证据";
         fact.updateContent(
             sediment.getTitle(), sediment.getSummary(),
             sediment.getProblemSolved().isBlank() ? List.of() : List.of(sediment.getProblemSolved()),
@@ -167,6 +175,30 @@ public class ProjectFactMigrationService {
             reliableEvidence ? EvidenceConfidence.MEDIUM : EvidenceConfidence.LOW,
             reliableEvidence ? ProjectFactRecordStatus.RECORDED : ProjectFactRecordStatus.NEEDS_ATTENTION,
             attention
+        );
+        List<String> sourceTypes = new ArrayList<>();
+        if (!commits.isEmpty()) sourceTypes.add("LOCAL_GIT_COMMIT");
+        if (evidence.stream().anyMatch(value -> value != null && value.startsWith("file:"))) {
+            sourceTypes.add("PROJECT_FILE");
+        }
+        if (!agents.isEmpty()) sourceTypes.add("AGENT_RESULT");
+        fact.applyKnowledgeContract(
+            reliableEvidence
+                ? ProjectFactEpistemicStatus.OBSERVED
+                : agentOnly
+                    ? ProjectFactEpistemicStatus.PROCESS_EVIDENCE
+                    : ProjectFactEpistemicStatus.UNKNOWN,
+            sourceTypes,
+            "HISTORICAL",
+            commits.isEmpty() ? "" : commits.get(commits.size() - 1),
+            sediment.getCreatedAt(),
+            occurredFrom,
+            attention.isBlank() ? List.of() : List.of(attention),
+            List.of(),
+            "LEGACY_MIGRATION",
+            "",
+            "",
+            reliableEvidence ? "VALIDATED" : "PENDING_VALIDATION"
         );
         fact.linkLegacySediment(sediment.getId());
         TimelinePeriodResolver.Assignment assignment = timelinePeriodResolver.assign(fact);
@@ -185,9 +217,9 @@ public class ProjectFactMigrationService {
         }
     }
 
-    private boolean isReliableEvidence(String value) {
+    private boolean isReliableEngineeringEvidence(String value) {
         if (value == null || value.isBlank()) return false;
-        if (value.startsWith("file:") || value.startsWith("agent-result:")) return true;
+        if (value.startsWith("file:")) return true;
         return value.startsWith("commit:") && !normalizeCommit(value.substring(7)).isBlank();
     }
 

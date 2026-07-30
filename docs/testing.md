@@ -1,5 +1,13 @@
 # Testing
 
+## V3.7.4 strong-fact and generalization gates
+
+Blocking deterministic coverage includes strong status promotion, declaration/inference isolation, Agent-result boundaries, explicit historical reason/deprecation/technical-debt evidence, Evidence allow-lists, extensionless content discovery, Content Map head/middle/tail/marker ranges, tail-sensitive revisions, cross-chunk merge, project ownership, portfolio isolation, Agent candidates, Context Packages, MCP history/resources, provider-neutral prompt contracts and Ground Truth leakage.
+
+The original V3.7.3 18-case/38-run set remains unchanged. V3.7.4 adds a separate Calibration resource and frozen Holdout resource. Production and all direct Eval prompts use the same builder; set identity, expected labels, forbidden claims and scoring thresholds remain outside its input type. Formal Holdout records code, prompt, Ground Truth and Provider hashes before its first run and preserves failures.
+
+Giant fixtures are generated locally with `tools/generate-v374-large-fixtures.ps1`; raw files stay outside Git. The committed specification and manifest identify hashes, sizes, line counts and expected fact locations. Both real Providers must pass the same Strong Fact contract; Provider-specific prompts or fact rules are forbidden.
+
 ## V3.4.1 timeline gates
 
 Timeline acceptance includes 60 focused backend cases for time boundaries, ownership, deterministic statistics, coverage, invalid IDs, chunk synthesis, refresh/failure/cancel/retry semantics and history interaction; 15 frontend contracts; Playwright A-H business flows; and a real synthetic performance gate with 100 batches, 5000 facts, 36 months, 300 themes and a 230-fact month. Full backend/H2, PostgreSQL Testcontainers, production build, all Playwright flows, copied and current file-backed H2, desktop BAT, sensitive scan, push and current CI remain release gates. Actual results belong only in the V3.4.1 report.
@@ -94,3 +102,9 @@ Gateway tests must prove ownership, occurrence-time filtering, 7/17 occurrence w
 ## V3.4.4 Obsidian projection gates
 
 The Python suite uses real temporary Vault directories and a real CLI-to-HTTP Gateway boundary. It verifies complete CORE output, no-op zero writes, scoped incremental updates, 7/17 occurrence analyzed 8/20 remaining in July, frontmatter/user-content preservation, managed-block conflicts, move/rename/merge, collision/path controls, interruption, corrupt-manifest recovery, profile archive idempotency and local-only transport. The scale fixture projects 5000 facts, 36 months, 100 capabilities and 1000 evolutions while measuring first-sync time, bytes, files and no-op writes. Release gates also include the current H2 safe-copy Vault inspection, full backend/H2, PostgreSQL 16, MCP, frontend contracts/lint/build, Playwright, sensitive scan, desktop startup and CI. Only the V3.4.4 report may claim actual status.
+
+## V3.7.4 real-provider gates
+
+Real-provider evaluation can select a separate Calibration or frozen Holdout resource with `projectflow.eval.ground-truth-resource`, restrict case IDs and write an isolated sanitized result directory. Production and evaluation share the same prompt builder and gateway.
+
+Provider capabilities are explicit inputs. `PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING=true` is used for a reasoning model whose name is not covered by the generic heuristic; the key remains process-only. Expected shapes and views are validated against production prompt and registry vocabulary before a formal run. An Evidence reference is valid only when it belongs to the current case allow-list. The older “evidence precision” metric measures selection specificity and is diagnostic; it is not used as an invalid-reference count.

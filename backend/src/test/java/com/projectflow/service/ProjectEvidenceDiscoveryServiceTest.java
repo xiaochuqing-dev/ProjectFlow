@@ -21,6 +21,8 @@ class ProjectEvidenceDiscoveryServiceTest {
     void strangeNamedDocumentIsSampledAndSensitiveContentIsRedacted() throws Exception {
         Files.writeString(root.resolve("fuck-this-bug.md"), "# 线上事故复盘\n决定保留兼容路径。\n");
         Files.writeString(root.resolve("notes.txt"), "API_KEY=must-not-leak\n普通说明\n");
+        Files.writeString(root.resolve("不知道有没有用"), "数据库迁移已经由 Flyway 脚本验证，文件名不代表语义。\n");
+        Files.writeString(root.resolve("frontend.md"), "实际内容：这是后端事务边界说明，不是前端模块清单。\n");
         Files.writeString(root.resolve("empty.txt"), "");
         Files.writeString(root.resolve(".env"), "SECRET=must-not-leak\n");
 
@@ -50,13 +52,17 @@ class ProjectEvidenceDiscoveryServiceTest {
 
         assertThat(result.promptEvidence())
             .extracting(ProjectEvidenceDiscoveryService.PromptEvidence::locator)
-            .contains("fuck-this-bug.md", "notes.txt")
+            .contains("fuck-this-bug.md", "notes.txt", "不知道有没有用", "frontend.md")
             .doesNotContain(".env", "empty.txt");
         assertThat(result.promptEvidence())
             .extracting(ProjectEvidenceDiscoveryService.PromptEvidence::boundedSample)
             .noneMatch(sample -> sample.contains("must-not-leak"))
             .anyMatch(sample -> sample.contains(SensitiveContentRedactor.REDACTED));
-        assertThat(result.sourceMap().categoryCounts()).containsEntry("UNKNOWN_DOCUMENT", 3L);
+        assertThat(result.promptEvidence())
+            .filteredOn(item -> "frontend.md".equals(item.locator()))
+            .singleElement()
+            .satisfies(item -> assertThat(item.boundedSample()).contains("后端事务边界"));
+        assertThat(result.sourceMap().categoryCounts()).containsEntry("UNKNOWN_DOCUMENT", 5L);
     }
 
     @Test

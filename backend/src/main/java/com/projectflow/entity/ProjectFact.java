@@ -59,6 +59,52 @@ public class ProjectFact {
     @Column(columnDefinition = "text")
     private String summary = "";
 
+    @Column(name = "fact_statement", columnDefinition = "text")
+    private String statement = "";
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "epistemic_status", length = 30)
+    private ProjectFactEpistemicStatus epistemicStatus = ProjectFactEpistemicStatus.UNKNOWN;
+
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "source_types", columnDefinition = "text")
+    private List<String> sourceTypes = new ArrayList<>();
+
+    @Column(length = 30)
+    private String currentness = "UNKNOWN";
+
+    @Column(length = 180)
+    private String revision = "";
+
+    @Column(name = "observed_at")
+    private Instant observedAt;
+
+    @Column(name = "effective_at")
+    private Instant effectiveAt;
+
+    @Column(name = "superseded_by")
+    private UUID supersededBy;
+
+    @Convert(converter = StringListConverter.class)
+    @Column(columnDefinition = "text")
+    private List<String> limitations = new ArrayList<>();
+
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "conflict_refs", columnDefinition = "text")
+    private List<String> conflictRefs = new ArrayList<>();
+
+    @Column(name = "created_by", length = 80)
+    private String createdBy = "ENGINEERING_VALIDATION";
+
+    @Column(name = "source_agent_id", length = 160)
+    private String sourceAgentId = "";
+
+    @Column(name = "source_model_provider", length = 160)
+    private String sourceModelProvider = "";
+
+    @Column(name = "validation_status", length = 40)
+    private String validationStatus = "PENDING_VALIDATION";
+
     @Convert(converter = StringListConverter.class)
     @Column(name = "main_changes", columnDefinition = "text")
     private List<String> mainChanges = new ArrayList<>();
@@ -170,6 +216,17 @@ public class ProjectFact {
         if (origin == null) origin = ProjectFactOrigin.INCREMENTAL_SCAN;
         if (recordStatus == null) recordStatus = ProjectFactRecordStatus.NEEDS_ATTENTION;
         if (confidence == null) confidence = EvidenceConfidence.LOW;
+        if (epistemicStatus == null) {
+            epistemicStatus = recordStatus == ProjectFactRecordStatus.RECORDED
+                ? ProjectFactEpistemicStatus.OBSERVED
+                : ProjectFactEpistemicStatus.UNKNOWN;
+        }
+        if (statement == null || statement.isBlank()) statement = safe(summary);
+        if (observedAt == null) observedAt = occurredTo == null ? occurredFrom : occurredTo;
+        if (effectiveAt == null) effectiveAt = occurredFrom;
+        if (validationStatus == null || validationStatus.isBlank()) {
+            validationStatus = recordStatus == ProjectFactRecordStatus.RECORDED ? "VALIDATED" : "PENDING_VALIDATION";
+        }
         updatedAt = now;
     }
 
@@ -198,6 +255,7 @@ public class ProjectFact {
     ) {
         this.title = safe(title);
         this.summary = safe(summary);
+        this.statement = safe(summary).isBlank() ? safe(title) : safe(summary);
         this.mainChanges = copy(mainChanges);
         this.userVisibleValue = safe(userVisibleValue);
         this.occurredFrom = occurredFrom;
@@ -216,6 +274,50 @@ public class ProjectFact {
         this.confidence = confidence == null ? EvidenceConfidence.LOW : confidence;
         this.recordStatus = recordStatus == null ? ProjectFactRecordStatus.NEEDS_ATTENTION : recordStatus;
         this.attentionReason = safe(attentionReason);
+        if (this.epistemicStatus == null || this.epistemicStatus == ProjectFactEpistemicStatus.UNKNOWN) {
+            this.epistemicStatus = this.recordStatus == ProjectFactRecordStatus.RECORDED
+                ? ProjectFactEpistemicStatus.OBSERVED
+                : ProjectFactEpistemicStatus.UNKNOWN;
+        }
+        this.validationStatus = this.recordStatus == ProjectFactRecordStatus.RECORDED
+            ? "VALIDATED"
+            : "PENDING_VALIDATION";
+        this.observedAt = this.occurredTo == null ? this.occurredFrom : this.occurredTo;
+        this.effectiveAt = this.occurredFrom;
+    }
+
+    public void applyKnowledgeContract(
+        ProjectFactEpistemicStatus epistemicStatus,
+        List<String> sourceTypes,
+        String currentness,
+        String revision,
+        Instant observedAt,
+        Instant effectiveAt,
+        List<String> limitations,
+        List<String> conflictRefs,
+        String createdBy,
+        String sourceAgentId,
+        String sourceModelProvider,
+        String validationStatus
+    ) {
+        ProjectFactEpistemicStatus safeStatus = epistemicStatus == null
+            ? ProjectFactEpistemicStatus.UNKNOWN
+            : epistemicStatus;
+        if (getRecordStatus() == ProjectFactRecordStatus.RECORDED && !safeStatus.isStrongFact()) {
+            throw new IllegalArgumentException("RECORDED facts require OBSERVED or VERIFIED epistemic status");
+        }
+        this.epistemicStatus = safeStatus;
+        this.sourceTypes = copy(sourceTypes);
+        this.currentness = fallback(currentness, "UNKNOWN");
+        this.revision = safe(revision);
+        this.observedAt = observedAt == null ? this.observedAt : observedAt;
+        this.effectiveAt = effectiveAt == null ? this.effectiveAt : effectiveAt;
+        this.limitations = copy(limitations);
+        this.conflictRefs = copy(conflictRefs);
+        this.createdBy = fallback(createdBy, "ENGINEERING_VALIDATION");
+        this.sourceAgentId = safe(sourceAgentId);
+        this.sourceModelProvider = safe(sourceModelProvider);
+        this.validationStatus = fallback(validationStatus, "PENDING_VALIDATION");
     }
 
     public void linkLegacySediment(UUID sedimentId) {
@@ -231,7 +333,11 @@ public class ProjectFact {
 
     /** V3.4.2 只重新评级既有证据，不改写事实内容、来源、时间、指纹或游标。 */
     public void reclassify(ProjectFactRecordStatus status, String reason) {
-        this.recordStatus = status == null ? ProjectFactRecordStatus.NEEDS_ATTENTION : status;
+        ProjectFactRecordStatus safeStatus = status == null ? ProjectFactRecordStatus.NEEDS_ATTENTION : status;
+        if (safeStatus == ProjectFactRecordStatus.RECORDED && !getEpistemicStatus().isStrongFact()) {
+            throw new IllegalArgumentException("RECORDED facts require OBSERVED or VERIFIED epistemic status");
+        }
+        this.recordStatus = safeStatus;
         this.attentionReason = safe(reason);
     }
 
@@ -243,6 +349,28 @@ public class ProjectFact {
     public ProjectFactOrigin getOrigin() { return origin == null ? ProjectFactOrigin.INCREMENTAL_SCAN : origin; }
     public String getTitle() { return safe(title); }
     public String getSummary() { return safe(summary); }
+    public String getStatement() { return safe(statement).isBlank() ? getSummary() : safe(statement); }
+    public ProjectFactEpistemicStatus getEpistemicStatus() {
+        if (epistemicStatus != null) return epistemicStatus;
+        return getRecordStatus() == ProjectFactRecordStatus.RECORDED
+            ? ProjectFactEpistemicStatus.OBSERVED
+            : ProjectFactEpistemicStatus.UNKNOWN;
+    }
+    public List<String> getSourceTypes() { return immutable(sourceTypes); }
+    public String getCurrentness() { return fallback(currentness, "UNKNOWN"); }
+    public String getRevision() { return safe(revision); }
+    public Instant getObservedAt() { return observedAt == null ? getOccurredTo() : observedAt; }
+    public Instant getEffectiveAt() { return effectiveAt == null ? getOccurredFrom() : effectiveAt; }
+    public UUID getSupersededBy() { return supersededBy; }
+    public List<String> getLimitations() { return immutable(limitations); }
+    public List<String> getConflictRefs() { return immutable(conflictRefs); }
+    public String getCreatedBy() { return fallback(createdBy, "ENGINEERING_VALIDATION"); }
+    public String getSourceAgentId() { return safe(sourceAgentId); }
+    public String getSourceModelProvider() { return safe(sourceModelProvider); }
+    public String getValidationStatus() {
+        return fallback(validationStatus, getRecordStatus() == ProjectFactRecordStatus.RECORDED
+            ? "VALIDATED" : "PENDING_VALIDATION");
+    }
     public List<String> getMainChanges() { return immutable(mainChanges); }
     public String getUserVisibleValue() { return safe(userVisibleValue); }
     public Instant getOccurredFrom() { return occurredFrom; }

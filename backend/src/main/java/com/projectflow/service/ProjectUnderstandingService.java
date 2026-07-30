@@ -60,7 +60,7 @@ import com.projectflow.support.AppException;
 
 @Service
 public class ProjectUnderstandingService {
-    private static final String MODEL_ANALYSIS_VERSION = "understanding-v5";
+    private static final String MODEL_ANALYSIS_VERSION = "understanding-v6";
 
     private final ProjectRepository projectRepository;
     private final ProjectMemoryRepository memoryRepository;

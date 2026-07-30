@@ -60,6 +60,14 @@ public class AnalysisViewRegistry {
         return List.copyOf(result);
     }
 
+    public static Set<String> registered() {
+        LinkedHashSet<String> result = new LinkedHashSet<>();
+        result.addAll(CODE_VIEWS);
+        result.addAll(MATERIAL_VIEWS);
+        result.addAll(HISTORY_VIEWS);
+        return Set.copyOf(result);
+    }
+
     public static String normalize(String value) {
         if (value == null) return "";
         String normalized = value.strip().toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]+", "_");

@@ -21,7 +21,7 @@ final class ProjectFlowEvalHarness {
 
     EvalRun evaluate(ProjectFlowEvalGroundTruth groundTruth, List<ProjectFlowEvalObservation> observations) {
         return new EvalRun(
-            "projectflow-v3.7.3-eval-v1",
+            "projectflow-v3.7.4-eval-v1",
             Instant.now(),
             SCOPE_NOTICE,
             groundTruth.standard(),
@@ -43,7 +43,7 @@ final class ProjectFlowEvalHarness {
     private static String markdown(EvalRun run) {
         EvalSummary value = run.summary();
         return """
-            # ProjectFlow V3.7.3 Internal Model Evaluation
+            # ProjectFlow V3.7.4 Internal Model Evaluation
 
             %s
 
@@ -67,6 +67,7 @@ final class ProjectFlowEvalHarness {
             Evidence precision: %.4f
             Project shape F1: %.4f
             Tool precision / recall: %.4f / %.4f
+            Deep-read precision / sufficiency: %.4f / %.4f
             Dynamic view precision / recall: %.4f / %.4f
             Conflict detection: %.4f
             Repeatability: %.4f
@@ -98,6 +99,8 @@ final class ProjectFlowEvalHarness {
             value.projectShapeF1(),
             value.toolSelectionPrecision(),
             value.toolSelectionRecall(),
+            value.deepReadTargetAccuracy(),
+            value.deepReadSufficiency(),
             value.dynamicViewPrecision(),
             value.dynamicViewRecall(),
             value.conflictDetectionRate(),

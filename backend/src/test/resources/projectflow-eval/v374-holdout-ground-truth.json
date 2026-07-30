@@ -1,0 +1,69 @@
+{
+  "standard": "ProjectFlow V3.7.4 frozen holdout set; labels fixed before formal run; not a universal benchmark",
+  "cases": [
+    {
+      "id": "holdout-go-service", "source": "fixture://holdout/go-service", "important": false,
+      "context": "source:gomod、source:handler 与 source:handler-test 显示 Go HTTP 服务和对应测试；没有数据库或部署证据。",
+      "toolEvidence": "", "expectedProjectShapes": ["BACKEND"], "mustFindEvidence": ["source:gomod", "source:handler"],
+      "mustNotClaim": ["database", "deployed"], "expectedTools": [], "forbiddenTools": [], "expectedViews": ["BACKEND", "ENGINEERING_STATE"],
+      "forbiddenViews": ["DATABASE"], "expectedUnknowns": ["deployment status"], "expectedConflicts": [], "expectedHistoryMode": "CURRENT_ONLY",
+      "expectedDeepReadTargets": []
+    },
+    {
+      "id": "holdout-mobile-docs", "source": "fixture://holdout/mobile-docs", "important": false,
+      "context": "source:product-notes 是未采样正文的移动产品研究文档；目录没有移动源码、构建或测试证据。",
+      "toolEvidence": "", "expectedProjectShapes": ["DOCUMENT"], "mustFindEvidence": ["source:product-notes"],
+      "mustNotClaim": ["mobile app implemented", "tested", "released"], "expectedTools": [], "forbiddenTools": ["SCIP"],
+      "expectedViews": ["DOCUMENT_OVERVIEW"], "forbiddenViews": ["ARCHITECTURE"], "expectedUnknowns": ["implementation status"], "expectedConflicts": [],
+      "expectedHistoryMode": "UNAVAILABLE", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "holdout-tail-revision", "source": "fixture://holdout/tail-revision", "important": false,
+      "context": "source:huge-spec Content Map 为 80020 行，HEAD 与 TAIL 都有 currentness marker；对应 RANGE 正文尚未读取，仍有未读区域。",
+      "toolEvidence": "", "expectedProjectShapes": ["DOCUMENT"], "mustFindEvidence": ["source:huge-spec"],
+      "mustNotClaim": ["polling is current", "all ranges read", "reason for replacement"], "expectedTools": ["DOC_READER"], "forbiddenTools": [],
+      "expectedViews": ["DOCUMENT_OVERVIEW"], "forbiddenViews": [], "expectedUnknowns": ["unread ranges", "replacement reason"], "expectedConflicts": [],
+      "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": ["source:huge-spec"]
+    },
+    {
+      "id": "holdout-weird-extensionless", "source": "fixture://holdout/weird", "important": false,
+      "context": "source:extensionless 的文件名没有扩展名且名为稍后再说；文本探测已入选，但正文因 intake 预算未采样。",
+      "toolEvidence": "", "expectedProjectShapes": ["DOCUMENT"], "mustFindEvidence": ["source:extensionless"],
+      "mustNotClaim": ["irrelevant file", "implementation verified"], "expectedTools": ["DOC_READER"], "forbiddenTools": [],
+      "expectedViews": ["DOCUMENT_OVERVIEW"], "forbiddenViews": [], "expectedUnknowns": ["implementation status"], "expectedConflicts": [],
+      "expectedHistoryMode": "UNAVAILABLE", "expectedDeepReadTargets": ["source:extensionless"]
+    },
+    {
+      "id": "holdout-agent-conflict", "source": "fixture://holdout/agent-conflict", "important": false,
+      "context": "source:agent-result 的正文和 verification 字段未进入 intake 样本，source:ci 明确迁移测试失败；Agent 输出只能作为过程证据。",
+      "toolEvidence": "", "expectedProjectShapes": ["AGENT_RESULT_MATERIAL"], "mustFindEvidence": ["source:agent-result", "source:ci"],
+      "mustNotClaim": ["migration completed", "verified"], "expectedTools": ["AGENT_RESULT"], "forbiddenTools": [],
+      "expectedViews": ["PROCESS_EVIDENCE", "CONFLICTS"], "forbiddenViews": ["EVOLUTION"], "expectedUnknowns": ["final migration state"],
+      "expectedConflicts": ["AGENT_VERIFICATION_CONFLICT"], "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": ["source:agent-result"]
+    },
+    {
+      "id": "holdout-reason-unknown", "source": "fixture://holdout/reason", "important": false,
+      "context": "source:current-code 显示事件存储实现，Git 只有一次导入提交，没有 ADR、issue、commit message 或用户确认解释选择原因。",
+      "toolEvidence": "", "expectedProjectShapes": ["BACKEND"], "mustFindEvidence": ["source:current-code"],
+      "mustNotClaim": ["chosen because", "design reason", "technical debt"], "expectedTools": ["GIT_HISTORY"], "forbiddenTools": [],
+      "expectedViews": ["BACKEND"], "forbiddenViews": ["EVOLUTION"], "expectedUnknowns": ["historical design reason"], "expectedConflicts": [],
+      "expectedHistoryMode": "SHALLOW", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "holdout-yaml-ops", "source": "fixture://holdout/yaml-ops", "important": false,
+      "context": "source:compose 与 source:healthcheck 显示本地容器编排和健康检查；没有远程集群或生产运行状态证据。",
+      "toolEvidence": "", "expectedProjectShapes": ["CODE_PROJECT"], "mustFindEvidence": ["source:compose", "source:healthcheck"],
+      "mustNotClaim": ["production cluster", "currently running"], "expectedTools": [], "forbiddenTools": [],
+      "expectedViews": ["CURRENT_STATE", "ENGINEERING_STATE"], "forbiddenViews": ["TIMELINE"], "expectedUnknowns": ["runtime state"], "expectedConflicts": [],
+      "expectedHistoryMode": "CURRENT_ONLY", "expectedDeepReadTargets": []
+    },
+    {
+      "id": "holdout-portfolio-isolation", "source": "fixture://holdout/portfolio", "important": false,
+      "context": "source:authorized-context 仅含项目 P1 与 P2 的持久化事实和来源；同名项目 P3 未授权且未出现在输入中。",
+      "toolEvidence": "", "expectedProjectShapes": ["OTHER_MATERIAL"], "mustFindEvidence": ["source:authorized-context"],
+      "mustNotClaim": ["P3", "cross-project merged fact"], "expectedTools": [], "forbiddenTools": [],
+      "expectedViews": ["CURRENT_STATE"], "forbiddenViews": [], "expectedUnknowns": ["unauthorized projects"], "expectedConflicts": [],
+      "expectedHistoryMode": "PERSISTED_FACTS", "expectedDeepReadTargets": []
+    }
+  ]
+}

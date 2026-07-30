@@ -159,9 +159,9 @@ jobs:
           PROJECTFLOW_REAL_MODEL_PROTOCOL: "OPENAI_RESPONSES"
           PROJECTFLOW_REAL_MODEL_TIMEOUT_SECONDS: "600"
           # Reasoning and visible JSON share this Provider ceiling. The Scout
-          # starts at its 16k task ceiling and may use one bounded 24k
-          # truncation recovery without reducing Evidence coverage.
-          PROJECTFLOW_REAL_MODEL_MAX_TOKENS: "32000"
+          # starts at its 16k task ceiling; only a detected truncation can use
+          # the explicitly configured GLM 5.2 recovery headroom.
+          PROJECTFLOW_REAL_MODEL_MAX_TOKENS: "65536"
         run: |
           if [ -z "$PROJECTFLOW_REAL_MODEL_API_KEY" ]; then
             echo "SKIPPED: 未提供安全测试 Key"

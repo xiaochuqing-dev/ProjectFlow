@@ -1,5 +1,14 @@
-<!-- PROJECTFLOW V3.7.3 CONTEXT START -->
-ProjectFlow 当前版本为 V3.7.3。后续 Agent 必须按“任意真实输入 -> 有界 Evidence Discovery 与客观分类 -> Evidence Source Map -> 模型判断语义重要性与信息缺口 -> 客观 Tool/View Eligibility -> 注册 Capability 执行 -> High-value Evidence Gate -> 条件 Final Synthesis / 当前结果降级 -> Dynamic Project Profile -> Historical Coverage -> 证据支持的演进 -> ProjectFact / Timeline / Capability / Gateway 消费”理解产品。
+<!-- PROJECTFLOW V3.7.4 CONTEXT START -->
+ProjectFlow 当前版本为 V3.7.4。后续 Agent 必须按“真实项目材料 -> 内容优先的有界 Evidence Discovery -> 大文件 Content Map/Range Evidence -> Provider-neutral Scout -> 注册 Capability -> Evidence 校验 -> OBSERVED/VERIFIED 强事实或 DECLARED/INFERRED/CONFLICTED/UNKNOWN/PROCESS_EVIDENCE 分层 -> 持久化项目记忆 -> 授权 Agent 跨项目读取同一历史”理解产品。
+
+V3.7.4 Strong Fact / Real-project / Shared History 规则（后续 Agent 必须遵守）：
+- 只有 OBSERVED 和 VERIFIED 可进入强事实主链；DECLARED、INFERRED、CONFLICTED、UNKNOWN、Agent PROCESS_EVIDENCE 和模型共识不得晋升。
+- 历史设计原因、废弃状态和技术债必须有明确 Evidence；当前源码、时间先后、文件名、README 身份或模型意见都不够。
+- 普通 README/Manifest/Test/CI 主路径与奇怪命名、无扩展名文本、大文件中部/尾部同等按有界内容发现；必须披露未读范围和 Partial Coverage。
+- 模型只能请求 eligible capability 与已知 Evidence ID；工程系统执行固定 Provider、校验引用、隔离项目和脱敏。
+- Agent 可列出全部授权项目并读取事实、历史、Evidence、Unknown/Conflict 和 Context Package；每次读取必须校验 userId/projectId。Agent 只能提交待工程验证候选，不能直接写强事实。
+- 生产与 Eval 共用 Strong Fact contract v2、Scout v11、Final v6；Calibration 与冻结 Holdout 分离，不得 case/path/repository/model 特判。
+- 不提交 Key、Authorization、raw response、reasoning、完整 Prompt、绝对路径或巨型 Raw Artifact；不建设模型排行榜、通用 RAG、Agent Manager、大型 GUI、Tag 或 Release。
 
 V3.7.3 Long-running Multi-provider Reliability / Prompt Intelligence 规则（后续 Agent 必须遵守）：
 - Connection Timeout、Provider Request Timeout、Overall Analysis Deadline 必须分离。AUTO/UNLIMITED 不设置隐藏短总体截止时间；FINITE 尊重显式用户值。坏连接仍有界、transport retry 最多一次、取消和 heartbeat 始终有效。

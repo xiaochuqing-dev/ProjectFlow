@@ -80,7 +80,7 @@ class ProjectFlowRealModelEvalIT {
             0.1,
             config.maxTokens(),
             false,
-            List.of("V3.7.3_REAL_EVAL")
+            List.of("V3.7.4_REAL_EVAL")
         );
         provider.configureProtocol(
             config.protocol(),
@@ -93,7 +93,7 @@ class ProjectFlowRealModelEvalIT {
             null,
             null,
             null,
-            null,
+            config.supportsReasoning(),
             config.supportsReasoningControl()
         );
 
@@ -144,7 +144,9 @@ class ProjectFlowRealModelEvalIT {
         }
         ProjectFlowEvalHarness harness = new ProjectFlowEvalHarness(mapper);
         var evalRun = harness.evaluate(groundTruth, observations);
-        Path output = Path.of("target", "projectflow-eval", "real");
+        String outputName = System.getProperty("projectflow.eval.output-name", "real")
+            .replaceAll("[^A-Za-z0-9._-]", "_");
+        Path output = Path.of("target", "projectflow-eval", outputName);
         harness.writeArtifacts(evalRun, output);
         System.out.println("REAL_EVAL_AGGREGATE " + mapper.writeValueAsString(evalRun.summary()));
 
@@ -172,6 +174,21 @@ class ProjectFlowRealModelEvalIT {
                 .isEmpty();
             assertThat(evalRun.summary().modelRequestCount()).isPositive();
         }
+        if (Boolean.getBoolean("projectflow.eval.enforce-v374-contract")) {
+            assertThat(evalRun.summary().failureRate()).isLessThanOrEqualTo(0.05);
+            assertThat(evalRun.summary().unsupportedClaimRate()).isZero();
+            assertThat(evalRun.summary().criticalEvidenceRecall()).isGreaterThanOrEqualTo(0.90);
+            assertThat(evalRun.summary().deepReadSufficiency()).isGreaterThanOrEqualTo(0.80);
+            if (selectedCases.stream().anyMatch(value -> !value.expectedConflicts().isEmpty())) {
+                assertThat(evalRun.summary().conflictDetectionRate()).isGreaterThanOrEqualTo(0.80);
+            }
+            assertThat(invalidEvidenceRefs(observations, groundTruth))
+                .as("V3.7.4 Evidence 引用必须来自当前案例 allow-list")
+                .isEmpty();
+            assertThat(observations.stream()
+                .flatMap(value -> value.mustNotClaimViolations().stream())
+                .toList()).as("V3.7.4 强事实边界不得出现禁止声明").isEmpty();
+        }
     }
 
     private static ProjectFlowEvalObservation runCase(
@@ -189,6 +206,7 @@ class ProjectFlowRealModelEvalIT {
         long started = System.nanoTime();
         try {
             ObjectiveEligibility eligibility = objectiveEligibility(testCase);
+            Set<String> allowedSourceEvidence = Set.copyOf(evidenceIds(testCase.context()));
             var response = gateway.callStructured(
                 provider,
                 buildScoutPrompt(mapper, promptBuilder, testCase),
@@ -206,15 +224,21 @@ class ProjectFlowRealModelEvalIT {
             List<String> deepReads = new ArrayList<>();
             for (JsonNode assessment : array(scout.path("evidenceSourceAssessments"))) {
                 String id = assessment.path("evidenceId").asText("").strip();
-                if (!id.isBlank() && (
+                if (allowedSourceEvidence.contains(id) && (
                     assessment.path("shouldDeepRead").asBoolean(false)
                         || "HIGH".equalsIgnoreCase(assessment.path("importance").asText(""))
                 )) {
                     selectedEvidence.add(id);
                 }
-                if (!id.isBlank() && assessment.path("shouldDeepRead").asBoolean(false)) deepReads.add(id);
+                if (allowedSourceEvidence.contains(id)
+                    && assessment.path("shouldDeepRead").asBoolean(false)) {
+                    deepReads.add(id);
+                }
             }
-            List<EvalClaim> claims = claims(profile.path("sections"));
+            List<EvalClaim> claims = filterClaimEvidence(
+                claims(profile.path("sections")),
+                allowedSourceEvidence
+            );
             claims.stream().flatMap(value -> value.evidenceRefs().stream()).forEach(selectedEvidence::add);
             List<JsonNode> toolRequestNodes = SemanticScoutService.normalizedToolRequestNodes(scout);
             List<String> tools = toolRequestNodes.stream()
@@ -277,6 +301,7 @@ class ProjectFlowRealModelEvalIT {
             int retries = Math.max(0, response.diagnostics().requestCount() - 1);
             String finishReason = response.diagnostics().finishReason();
             boolean degraded = false;
+            boolean validatedToolEvidenceCited = false;
             if (capabilityEvidence != null) {
                 long finalStarted = System.nanoTime();
                 try {
@@ -294,7 +319,13 @@ class ProjectFlowRealModelEvalIT {
                     );
                     printSafeStageDiagnostics(testCase.id(), "FINAL", finalResponse.diagnostics());
                     JsonNode finalRoot = finalResponse.parsed().root();
-                    List<EvalClaim> finalClaims = claims(finalRoot.path("dynamicProfile").path("sections"));
+                    Set<String> allowedFinalEvidence = Set.copyOf(finalAllowedEvidence);
+                    List<EvalClaim> finalClaims = capabilityEvidence.traceClaimsToSources(
+                        filterClaimEvidence(
+                            claims(finalRoot.path("dynamicProfile").path("sections")),
+                            allowedFinalEvidence
+                        )
+                    );
                     // The production plan keeps its applicable-dimension
                     // decision across Final; sections are a rendering subset.
                     List<String> finalViews = new ArrayList<>(stageOne.applicableViews());
@@ -304,8 +335,14 @@ class ProjectFlowRealModelEvalIT {
                     ));
                     List<String> finalEvidence = new ArrayList<>();
                     finalClaims.stream().flatMap(value -> value.evidenceRefs().stream()).forEach(finalEvidence::add);
-                    finalEvidence.addAll(evidenceRefs(finalRoot.path("conflicts")));
-                    finalEvidence.addAll(evidenceRefs(finalRoot.path("stageTwoChanges")));
+                    finalEvidence.addAll(evidenceRefs(finalRoot.path("conflicts")).stream()
+                        .filter(allowedFinalEvidence::contains)
+                        .toList());
+                    finalEvidence.addAll(evidenceRefs(finalRoot.path("stageTwoChanges")).stream()
+                        .filter(allowedFinalEvidence::contains)
+                        .toList());
+                    Set<String> toolEvidenceIds = Set.copyOf(capabilityEvidence.toolEvidenceIds());
+                    validatedToolEvidenceCited = finalEvidence.stream().anyMatch(toolEvidenceIds::contains);
                     List<String> tracedFinalEvidence = capabilityEvidence.traceToSources(finalEvidence);
                     stageTwo = new StageResult(distinct(tracedFinalEvidence), finalClaims, distinct(finalViews));
                     if (!finalClaims.isEmpty()) claims = finalClaims;
@@ -344,7 +381,7 @@ class ProjectFlowRealModelEvalIT {
                 testCase.id(),
                 testCase.id() + "-real-" + run,
                 PROMPT_VERSION,
-                "3.7.3",
+                "3.7.4",
                 testCase.source(),
                 run,
                 config.name(),
@@ -375,6 +412,7 @@ class ProjectFlowRealModelEvalIT {
                 stageTwoInputTokens,
                 stageTwoOutputTokens,
                 capabilityEvidence == null ? 0 : capabilityEvidence.contentChars(),
+                validatedToolEvidenceCited,
                 latencyMs,
                 retries,
                 false,
@@ -399,7 +437,7 @@ class ProjectFlowRealModelEvalIT {
             testCase.id(),
             testCase.id() + "-deterministic-" + run,
             PROMPT_VERSION,
-            "3.7.3",
+            "3.7.4",
             testCase.source(),
             run,
             config.name(),
@@ -428,17 +466,18 @@ class ProjectFlowRealModelEvalIT {
             List.of(),
             null,
             null,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
+            0, // requestCount
+            0, // inputTokens
+            0, // outputTokens
+            0, // totalTokens
+            0, // stageOneInputTokens
+            0, // stageOneOutputTokens
+            0, // stageTwoInputTokens
+            0, // stageTwoOutputTokens
+            0, // toolEvidenceChars
+            false, // validatedToolEvidenceCited
+            0, // latencyMs
+            0, // retries
             false,
             false,
             "NOT_CALLED",
@@ -641,9 +680,12 @@ class ProjectFlowRealModelEvalIT {
     }
 
     private static String capabilityFixtureContent(ObjectMapper mapper, String caseId) throws Exception {
-        try (InputStream input = ProjectFlowRealModelEvalIT.class.getResourceAsStream(
+        String resource = System.getProperty(
+            "projectflow.eval.capability-evidence-resource",
             "/projectflow-eval/capability-evidence.json"
-        )) {
+        ).strip();
+        if (!resource.startsWith("/projectflow-eval/") || !resource.endsWith(".json")) return "";
+        try (InputStream input = ProjectFlowRealModelEvalIT.class.getResourceAsStream(resource)) {
             if (input == null) return "";
             return mapper.readTree(input).path(caseId).asText("");
         }
@@ -688,6 +730,12 @@ class ProjectFlowRealModelEvalIT {
             "文档",
             "readme",
             "roadmap",
+            "content map",
+            "range ",
+            "unread_ranges",
+            "无扩展名",
+            "文件",
+            "portfolio",
             "项目上下文",
             "历史路线",
             "adaptive execution"
@@ -718,6 +766,12 @@ class ProjectFlowRealModelEvalIT {
             "文档",
             "readme",
             "roadmap",
+            "content map",
+            "range ",
+            "unread_ranges",
+            "无扩展名",
+            "文件",
+            "portfolio",
             "agent result",
             "token=",
             "process"
@@ -802,11 +856,21 @@ class ProjectFlowRealModelEvalIT {
         return List.copyOf(result);
     }
 
-    private static List<String> normalizedConflictLabels(JsonNode values) {
+    static List<String> normalizedConflictLabels(JsonNode values) {
         List<String> result = new ArrayList<>();
         for (String value : objectTexts(values, "text")) {
             String normalized = value.toUpperCase(Locale.ROOT);
-            if (normalized.contains("README")
+            if (normalized.contains("SQLITE") && normalized.contains("POSTGRESQL")) {
+                result.add("DATABASE_DEFAULT_CONFLICT");
+            } else if ((normalized.contains("AGENT") || normalized.contains("迁移"))
+                && (normalized.contains("CI") || normalized.contains("VERIFICATION"))
+                && (normalized.contains("失败") || normalized.contains("FAILED"))) {
+                result.add("AGENT_VERIFICATION_CONFLICT");
+            } else if (normalized.contains("README")
+                && (normalized.contains("冲突")
+                    || (normalized.contains("8080") && normalized.contains("9090")))) {
+                result.add("README_SOURCE_CONFLICT");
+            } else if (normalized.contains("README")
                 && (normalized.contains("过时") || normalized.contains("STALE") || normalized.contains("CURRENT"))) {
                 result.add("README_CURRENTNESS");
             } else if (normalized.contains("README")
@@ -948,7 +1012,7 @@ class ProjectFlowRealModelEvalIT {
             testCase.id(),
             testCase.id() + "-real-" + run,
             PROMPT_VERSION,
-            "3.7.3",
+            "3.7.4",
             testCase.source(),
             run,
             config.name(),
@@ -979,6 +1043,7 @@ class ProjectFlowRealModelEvalIT {
             0,
             0,
             0,
+            false,
             accounting.latencyMs(),
             accounting.retries(),
             true,
@@ -1112,6 +1177,7 @@ class ProjectFlowRealModelEvalIT {
             ),
             integerEnvironment("PROJECTFLOW_REAL_MODEL_TIMEOUT_SECONDS", 120),
             integerEnvironment("PROJECTFLOW_REAL_MODEL_MAX_TOKENS", 16_000),
+            nullableBooleanEnvironment("PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING"),
             booleanEnvironment("PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL", false)
         );
     }
@@ -1138,6 +1204,12 @@ class ProjectFlowRealModelEvalIT {
         return Boolean.parseBoolean(value.strip());
     }
 
+    private static Boolean nullableBooleanEnvironment(String name) {
+        String value = System.getenv(name);
+        if (value == null || value.isBlank()) return null;
+        return Boolean.valueOf(value.strip());
+    }
+
     private static <T extends Enum<T>> T enumEnvironment(String name, Class<T> type, T fallback) {
         String value = System.getenv(name);
         if (value == null || value.isBlank()) return fallback;
@@ -1154,6 +1226,7 @@ class ProjectFlowRealModelEvalIT {
             var statement = connection.prepareStatement("""
                 select name, base_url, api_key, model_name, type, protocol,
                        coalesce(request_timeout_seconds, 120), max_tokens,
+                       supports_reasoning,
                        coalesce(supports_reasoning_control, false)
                 from ai_providers
                 where default_enabled = true
@@ -1172,7 +1245,8 @@ class ProjectFlowRealModelEvalIT {
                 ModelProtocol.valueOf(result.getString(6)),
                 Math.max(60, result.getInt(7)),
                 Math.max(4_000, result.getInt(8)),
-                result.getBoolean(9)
+                (Boolean) result.getObject(9),
+                result.getBoolean(10)
             );
         }
     }
@@ -1206,6 +1280,47 @@ class ProjectFlowRealModelEvalIT {
         return actual.stream().filter(expectedSet::contains).distinct().toList();
     }
 
+    static List<EvalClaim> filterClaimEvidence(
+        List<EvalClaim> claims,
+        Set<String> allowedEvidence
+    ) {
+        return claims.stream().map(value -> new EvalClaim(
+            value.text(),
+            value.claimType(),
+            value.epistemicStatus(),
+            value.evidenceRefs().stream()
+                .filter(allowedEvidence::contains)
+                .distinct()
+                .toList(),
+            value.manualReviewRequired(),
+            value.manuallyUnsupported()
+        )).toList();
+    }
+
+    private static List<String> invalidEvidenceRefs(
+        List<ProjectFlowEvalObservation> observations,
+        ProjectFlowEvalGroundTruth groundTruth
+    ) {
+        Map<String, Set<String>> allowedByCase = groundTruth.cases().stream().collect(
+            java.util.stream.Collectors.toMap(
+                EvalCase::id,
+                value -> Set.copyOf(evidenceIds(value.context()))
+            )
+        );
+        List<String> invalid = new ArrayList<>();
+        for (ProjectFlowEvalObservation observation : observations) {
+            Set<String> allowed = allowedByCase.getOrDefault(observation.caseId(), Set.of());
+            observation.evidenceUsed().stream()
+                .filter(value -> !allowed.contains(value))
+                .forEach(value -> invalid.add(observation.caseId() + ":" + value));
+            observation.claims().stream()
+                .flatMap(value -> value.evidenceRefs().stream())
+                .filter(value -> !allowed.contains(value))
+                .forEach(value -> invalid.add(observation.caseId() + ":" + value));
+        }
+        return distinct(invalid);
+    }
+
     record ProviderConfig(
         String name,
         String baseUrl,
@@ -1215,6 +1330,7 @@ class ProjectFlowRealModelEvalIT {
         ModelProtocol protocol,
         int timeoutSeconds,
         int maxTokens,
+        Boolean supportsReasoning,
         boolean supportsReasoningControl
     ) {
     }
@@ -1256,10 +1372,22 @@ class ProjectFlowRealModelEvalIT {
         private List<String> traceToSources(List<String> evidenceRefs) {
             LinkedHashSet<String> traced = new LinkedHashSet<>();
             for (String evidenceRef : evidenceRefs) {
-                traced.add(evidenceRef);
-                traced.addAll(sourceRefsByTool.getOrDefault(evidenceRef, List.of()));
+                List<String> sourceRefs = sourceRefsByTool.get(evidenceRef);
+                if (sourceRefs == null || sourceRefs.isEmpty()) traced.add(evidenceRef);
+                else traced.addAll(sourceRefs);
             }
             return List.copyOf(traced);
+        }
+
+        private List<EvalClaim> traceClaimsToSources(List<EvalClaim> claims) {
+            return claims.stream().map(value -> new EvalClaim(
+                value.text(),
+                value.claimType(),
+                value.epistemicStatus(),
+                traceToSources(value.evidenceRefs()),
+                value.manualReviewRequired(),
+                value.manuallyUnsupported()
+            )).toList();
         }
     }
 }

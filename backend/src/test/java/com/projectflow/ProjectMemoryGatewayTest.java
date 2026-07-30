@@ -50,6 +50,7 @@ import com.projectflow.repository.ProjectCapabilityEvolutionRepository;
 import com.projectflow.repository.ProjectCapabilityFactRepository;
 import com.projectflow.repository.ProjectCapabilityMapStateRepository;
 import com.projectflow.repository.ProjectCapabilityRepository;
+import com.projectflow.repository.ProjectAgentCandidateRepository;
 import com.projectflow.repository.ProjectFactAgentResultRefRepository;
 import com.projectflow.repository.ProjectFactCommitRefRepository;
 import com.projectflow.repository.ProjectFactFileRefRepository;
@@ -61,6 +62,7 @@ import com.projectflow.repository.ProjectTimelineSummaryRepository;
 import com.projectflow.repository.ProjectTimelineThemeFactRepository;
 import com.projectflow.repository.ProjectTimelineThemeRepository;
 import com.projectflow.service.ProjectFactMigrationService;
+import com.projectflow.service.ProjectAgentHistoryService;
 import com.projectflow.service.ProjectMemoryGatewayService;
 import com.projectflow.service.TimelinePeriodResolver;
 import com.projectflow.support.AppException;
@@ -89,8 +91,10 @@ class ProjectMemoryGatewayTest {
     @Autowired ProjectTimelineThemeRepository themeRepository;
     @Autowired ProjectTimelineThemeFactRepository themeFactRepository;
     @Autowired ProjectMemoryReadAuditRepository auditRepository;
+    @Autowired ProjectAgentCandidateRepository candidateRepository;
     @Autowired ProjectSedimentRepository sedimentRepository;
     @Autowired ProjectMemoryGatewayService gateway;
+    @Autowired ProjectAgentHistoryService agentHistory;
     @Autowired ProjectFactMigrationService migrationService;
     @Autowired TimelinePeriodResolver resolver;
     @Autowired MockMvc mockMvc;
@@ -212,6 +216,91 @@ class ProjectMemoryGatewayTest {
             .isInstanceOf(AppException.class);
         assertThatThrownBy(() -> gateway.traceFact(owner.userId(), otherProject.getId(), fact.getId(), "compact"))
             .isInstanceOf(AppException.class);
+    }
+
+    @Test
+    void agentCandidateCannotWriteStrongFactOrReferenceAnotherProject() throws Exception {
+        long factsBefore = factRepository
+            .findTop200ByProjectIdOrderByOccurredToDescCreatedAtDesc(project.getId()).size();
+
+        mockMvc.perform(post("/api/projects/" + project.getId() + "/agent-candidates")
+                .header("Authorization", "Bearer " + owner.token())
+                .header("X-ProjectFlow-Caller", "agent-contract-test")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "candidateType":"ASSERTION",
+                      "assertion":"Agent 认为事务边界需要复核",
+                      "epistemicStatus":"INFERRED",
+                      "evidenceRefs":["fact:%s"],
+                      "currentness":"CURRENT",
+                      "sourceRevision":"test-revision"
+                    }
+                    """.formatted(fact.getId())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.epistemicStatus").value("INFERRED"))
+            .andExpect(jsonPath("$.data.validationStatus").value("PENDING_ENGINEERING_VALIDATION"));
+
+        mockMvc.perform(post("/api/projects/" + project.getId() + "/agent-candidates")
+                .header("Authorization", "Bearer " + owner.token())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "candidateType":"ASSERTION",
+                      "assertion":"Agent 不能直接声明强事实",
+                      "epistemicStatus":"VERIFIED",
+                      "evidenceRefs":["fact:%s"]
+                    }
+                    """.formatted(fact.getId())))
+            .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/projects/" + project.getId() + "/agent-candidates")
+                .header("Authorization", "Bearer " + owner.token())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "candidateType":"ASSERTION",
+                      "assertion":"未知项目证据必须被拒绝",
+                      "epistemicStatus":"UNKNOWN",
+                      "evidenceRefs":["fact:%s"]
+                    }
+                    """.formatted(UUID.randomUUID())))
+            .andExpect(status().isBadRequest());
+
+        assertThat(candidateRepository.findTop100ByProjectIdOrderByCreatedAtDesc(project.getId()))
+            .singleElement();
+        assertThat(factRepository.findTop200ByProjectIdOrderByOccurredToDescCreatedAtDesc(project.getId()))
+            .hasSize((int) factsBefore);
+    }
+
+    @Test
+    void projectCatalogAndContextPackageStayOwnedBoundedAndAudited() throws Exception {
+        var catalog = agentHistory.catalog(owner.userId());
+        assertThat(catalog.items()).extracting(item -> item.projectId())
+            .containsExactly(project.getId())
+            .doesNotContain(otherProject.getId());
+
+        var context = agentHistory.contextPackage(owner.userId(), project.getId(), 2_000);
+        assertThat(context.packageVersion()).isEqualTo("projectflow-agent-context-v1");
+        assertThat(context.actualCharacters()).isLessThanOrEqualTo(context.sizeBudget());
+        assertThat(context.currentStrongFacts()).singleElement()
+            .satisfies(item -> assertThat(item.epistemicStatus()).isEqualTo("OBSERVED"));
+        assertThat(objectMapper.valueToTree(context).toString())
+            .doesNotContain("C:/private", "rawResponse", "reasoning", "Authorization");
+
+        mockMvc.perform(get("/api/projects/" + project.getId() + "/project-memory/context-package")
+                .header("Authorization", "Bearer " + owner.token())
+                .header("X-ProjectFlow-Caller", "agent-context-test")
+                .queryParam("sizeBudget", "2000"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.packageVersion").value("projectflow-agent-context-v1"));
+
+        mockMvc.perform(get("/api/projects/" + otherProject.getId() + "/project-memory/context-package")
+                .header("Authorization", "Bearer " + owner.token()))
+            .andExpect(status().isNotFound());
+
+        assertThat(auditRepository.findTop50ByProjectIdOrderByOccurredAtDesc(project.getId()))
+            .anySatisfy(audit -> assertThat(audit.getOperationName()).isEqualTo("get_project_context_package"));
     }
 
     @Test

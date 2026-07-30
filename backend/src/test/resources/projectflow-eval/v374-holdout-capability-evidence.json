@@ -1,0 +1,5 @@
+{
+  "holdout-tail-revision": "source:huge-spec\nRANGE HEAD 1-24: polling is the default.\nRANGE TAIL 79997-80020: 2026-07 REVISION: event push replaces the earlier polling default.\nThe reason for replacement is not recorded.\nUNREAD_RANGES 25-79996",
+  "holdout-weird-extensionless": "source:extensionless\n导入失败时保留原始事实，只回滚可重建的派生索引。正文不包含实现验证。",
+  "holdout-agent-conflict": "source:agent-result\nclaim: migration completed\nverification: claimed_pass\nsource:ci reports migration-test: FAILED\nNo later successful verification is available."
+}
