@@ -11,10 +11,10 @@
     "backend/src/main/java/com/projectflow/service/LargeFileContentService.java",
     "backend/src/main/java/com/projectflow/service/ProjectEvidenceDiscoveryService.java",
     "backend/src/main/java/com/projectflow/service/ProjectUnderstandingPromptBuilder.java",
-    "backend/src/main/java/com/projectflow/service/AgentProjectContextService.java",
-    "backend/src/main/java/com/projectflow/service/AgentFactCandidateService.java",
-    "backend/src/main/java/com/projectflow/web/AgentProjectContextController.java",
-    "hermes/src/index.js",
+    "backend/src/main/java/com/projectflow/service/ProjectAgentHistoryService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectAgentCandidateService.java",
+    "backend/src/main/java/com/projectflow/controller/ProjectAgentHistoryController.java",
+    "integrations/hermes/projectflow_mcp.py",
     "docs/projectflow-v3.7.4-strong-fact-contract.md",
     "docs/projectflow-v3.7.4-holdout-evaluation.md",
     "docs/projectflow-v3.7.4-product-acceptance.md",
@@ -23,14 +23,12 @@
   ],
   "verification": {
     "build": "Backend/H2 432 tests with 0 failures, 0 errors and 1 skip; frontend lint, 50/50 contracts and production build passed; root Start-ProjectFlow.bat rebuilt the current V3.7.4 tree and returned frontend/backend HTTP 200.",
-    "tests": "Large-file, Strong Fact, cross-project isolation, candidate boundary and Context Package deterministic tests passed; Playwright 8/8, Hermes 6/6 with 13 tools, Obsidian 18/18. GLM Calibration 21/21 and original regression 38/38; DeepSeek Calibration 21/21. Frozen Holdout: GLM completed 8/8 with one disclosed degradation, DeepSeek critical recall 0.8182 and conflict 0, therefore failed the gate. GLM product E2E completed 8/8 checks with one disclosed Final fallback.",
-    "manualCheck": "Freeze and Ground Truth hashes were preserved, model keys were process-only and cleared, raw responses/reasoning were not stored, local archive contains 42 hashed files, giant fixtures were not added to GitHub, Docker daemon was unavailable so local PostgreSQL was not claimed as passed, Tag and Release were not created."
+    "tests": "Large-file, Strong Fact, cross-project isolation, candidate boundary and Context Package deterministic tests passed; Playwright 8/8, Hermes 6/6 with 13 tools, Obsidian 18/18. GLM Calibration 21/21 and original regression 38/38; DeepSeek Calibration 21/21. Frozen Holdout: GLM completed 8/8 with one disclosed degradation, DeepSeek critical recall 0.8182 and conflict 0, therefore failed the gate. GLM product E2E completed 8/8 checks with one disclosed Final fallback. PR final push/pull_request and functional master CI all passed, including PostgreSQL 16 Testcontainers.",
+    "manualCheck": "Freeze and Ground Truth hashes were preserved, model keys were process-only and cleared, raw responses/reasoning were not stored, local archive contains hashed evidence, giant fixtures were not added to GitHub, PR #9 merged at the verified functional master SHA, Tag and Release were not created."
   },
   "unfinished": [
     "DeepSeek frozen Holdout did not meet the 0.90 critical Evidence recall, deep-read and conflict gates.",
-    "DeepSeek product E2E could not continue because the official API returned HTTP 402 after Holdout.",
-    "Local PostgreSQL Testcontainers was not run because Docker Desktop daemon was unavailable; GitHub CI remains required.",
-    "GitHub PR, required CI, merge, final master verification and final metadata backfill are pending at the time this result was first written."
+    "DeepSeek product E2E could not continue because the official API returned HTTP 402 after Holdout."
   ],
   "sedimentCandidates": [
     "强事实状态、证据引用与 promotion guard 可作为跨项目的模型事实安全边界复用。",

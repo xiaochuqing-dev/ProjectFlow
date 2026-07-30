@@ -2,15 +2,15 @@
 
 本报告以实际结果为准。当前实现可交付，但最终泛化 Gate 失败；不允许进入 V3.8，不创建 Tag 或 Release。
 
-A. latest master SHA：`5c7fb75cae5f23d933d352634a6c97a0c2f6aece`（开发起点，V3.7.3 acceptance backfill）。
+A. latest master SHA：`d0766403c25d382cd6cdd38e332ebb6c811022bc`（V3.7.4 功能合并 master；本报告回填是后继）。
 B. functional baseline SHA：`5c7fb75cae5f23d933d352634a6c97a0c2f6aece`。
 C. version：`3.7.4`。
 D. PR number：PR #9。
-E. implementation SHA：`23d419ef453417f1ab2f0b653b2560b0987755ae`；冻结提交 `dd87476f479f7909830250d012800f48511c0da8`。
+E. implementation SHA：`23d419ef453417f1ab2f0b653b2560b0987755ae`；冻结提交 `dd87476f479f7909830250d012800f48511c0da8`；Linux 快照可移植性修复 `d1c1c8c72897c923ded2ff5bbb39455768da0efc`。
 F. documentation SHA：`ebb63b1d3c6132e0e702c51c3d7b59a815ca6ea1`。
-G. merge SHA：待实际合并后回填。
-H. final master SHA：待实际合并并核验后回填。
-I. final CI run IDs/status：待实际 CI 后回填；本地 Docker 不可用，PostgreSQL 必须以 GitHub CI 为准。
+G. merge SHA：PR #9 merge `d0766403c25d382cd6cdd38e332ebb6c811022bc`。
+H. final master SHA：最终功能 master 为 `d0766403c25d382cd6cdd38e332ebb6c811022bc`；本报告回填是仅版本标识/证据后继。
+I. final CI run IDs/status：PR 最终 head push `30504177687` PASS；pull_request `30504179642` PASS；功能 master `30504320753` PASS。初始 Run `30503945116`/`30503947001` 因测试 fixture 的 CRLF/LF 快照差异失败，`d1c1c8c` 仅在测试输入边界统一 LF 后三组最终 Run 均通过。optional-real-provider 因 CI 无真实 Key 按条件跳过。
 J. Model A provider/model/protocol：Volcano Ark Coding / `glm-5.2` / `OPENAI_RESPONSES`。
 K. Model B provider/model/protocol：DeepSeek official / `deepseek-v4-pro` / `OPENAI_CHAT_COMPLETIONS`。
 L. API keys handling：通过遮蔽输入仅注入测试进程，退出后清理；未持久化、未记录、未提交。
@@ -51,17 +51,17 @@ AT. Model B product E2E：未完成。Holdout 后官方账户返回 HTTP 402，6
 AU. long-running/cancel：长任务心跳、取消、有限请求边界和唯一恢复测试通过；GLM 最长单用例 964,466 ms。
 AV. persistence/readback：GLM E2E 8/8 snapshot readback；跨 Agent/模型读取同一持久化状态测试通过。
 AW. Backend/H2：432 tests，failures 0，errors 0，skipped 1，BUILD SUCCESS。
-AX. PostgreSQL：本地 Docker Desktop daemon 不可用，未运行；必须等待 GitHub PostgreSQL 16 Testcontainers，不能写 PASS。
+AX. PostgreSQL：本地 Docker Desktop daemon 不可用；PR 两个最终 Run 与功能 master Run 的 PostgreSQL 16 Testcontainers 均 PASS。
 AY. Frontend：lint PASS；contract tests 50/50；Next production build PASS。
 AZ. Playwright：8/8 PASS。
 BA. Hermes：6/6 PASS，13 tools；startup 161.6 ms，concurrent 298.4 ms，tool 150.9 ms。
 BB. Obsidian：18/18 PASS；5,000 facts / 36 months / 100 capabilities / 1,000 evolutions；first sync 450.1 ms，177 writes，no-op 0 writes。
-BC. secret scan：实现提交前为 0；文档提交前与最终 master 将再次扫描。
+BC. secret scan：本地提交前为 0；PR 最终 head 和功能 master 的 sensitive-content 均 PASS。
 BD. local archive path：用户本机 `ProjectFlow-Acceptance-Archive/V3.7.4`；绝对路径不提交。
-BE. archive hash：`hashes.sha256` 覆盖 42 个归档文件，其 SHA-256 为 `35437DC16C9BA1C4B61E6B4E831E3669881AE40063DF76C23A28F902B1B5A414`。
+BE. archive hash：`hashes.sha256` 覆盖 42 个归档文件，其 SHA-256 为 `E9FA44B6B45BFA9F9A18ABC8ED86A91422D8725B4EA25157ED976868B99993CE`。
 BF. GitHub evidence index：`docs/acceptance-evidence/v3.7.4-evidence-index.md`。
-BG. known risks：DeepSeek Holdout 未达标；DeepSeek 账户 HTTP 402；GLM Schema/reasoning 长尾与 fallback；本地未跑 PostgreSQL；npm audit 报告既有 3 个 high。
-BH. unfinished items：双模型 Holdout 达标、DeepSeek 产品 E2E、PostgreSQL CI、PR/merge/final master 元数据。前三项阻断 V3.8，但不通过伪重跑掩盖。
+BG. known risks：DeepSeek Holdout 未达标；DeepSeek 账户 HTTP 402；GLM Schema/reasoning 长尾与 fallback；本地 Docker 不可用但 GitHub PostgreSQL 已通过；npm audit 报告既有 3 个 high；GitHub 提示 actions/checkout@v4、setup-python@v5 的 Node 20 runtime 已弃用并暂由 Node 24 强制运行。
+BH. unfinished items：双模型 Holdout 共同达标与 DeepSeek 产品 E2E 未完成，二者阻断 V3.8；不通过伪重跑掩盖。
 BI. Foundation Generalization Gate：`PROJECT UNDERSTANDING FOUNDATION = NOT STABLE`；`STRONG FACT SAFETY GATE = NOT PASSED`；`REAL PROJECT GENERALIZATION GATE = NOT PASSED`。
 BJ. V3.8 entry decision：`V3.8 EVOLUTION RECONSTRUCTION = BLOCKED`。
 BK. Tag：NO。
