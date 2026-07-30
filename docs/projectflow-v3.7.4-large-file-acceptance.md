@@ -25,4 +25,6 @@ The local archive contains six raw fixtures from 1.3 MB to 6.5 MB, including 80,
 | Unread/partial ranges disclosed | PASS |
 | Secret redaction before prompt text | PASS |
 
-The generator, fixture specification, hashes, sizes, line counts and expected locations are committed. Sanitized model observations and final recall values are recorded only after the formal two-model and Holdout runs.
+The generator, fixture specification, hashes, sizes, line counts and expected locations are committed. Raw fixtures remain in the local archive and are not uploaded to GitHub.
+
+In the frozen Holdout, GLM cited the 80,020-line tail revision and achieved Critical Evidence Recall 0.9091 plus Deep-read Sufficiency 1.0000, but its Final Synthesis failed Schema validation and used the disclosed fallback. DeepSeek completed structurally but achieved Critical Evidence Recall 0.8182 and Deep-read Sufficiency 0.6667. The deterministic middle/tail/read-range boundary is accepted; the two-model semantic generalization gate is not.

@@ -1,0 +1,41 @@
+{
+  "taskGoal": "完成 ProjectFlow V3.7.4 真实项目泛化、强事实内容理解和多 Agent 共通历史基础，并以两个真实模型、冻结 Holdout、原回归、产品 E2E、全套本地门禁和 GitHub CI 如实验收。",
+  "actualChanges": [
+    "建立 Strong Fact Contract v2 与 OBSERVED、VERIFIED、DECLARED、INFERRED、CONFLICTED、UNKNOWN 状态边界，禁止模型共识、Agent Result、历史原因、废弃推断和技术债推断非法升级。",
+    "新增有界 LargeFileContentService 和 Content Map，覆盖奇怪文件名、无扩展名文本、8 万行中部/尾部、revision、未读范围和敏感内容脱敏，并复用于 Discovery 与注册 Capability。",
+    "新增授权多项目列表、历史读取、跨项目搜索、状态分区知识、Evidence 读取、Agent candidate 和版本化 Context Package；所有读写维持所有权、预算、来源和强事实写入边界。",
+    "Hermes 扩展为 13 个只读工具/资源；README、PROJECT_CONTEXT、Agent Protocol、Architecture、API、CI、模型配置和 V3.7.4 ADR/验收文档已同步。",
+    "两个真实模型完成 Calibration 和冻结 Holdout；GLM 完成原始 8 项产品 E2E，DeepSeek 因 Holdout 未达门槛且后续账户 HTTP 402 未完成产品 E2E。最终 Foundation Gate 如实标记 NOT STABLE，V3.8 BLOCKED。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/LargeFileContentService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectEvidenceDiscoveryService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectUnderstandingPromptBuilder.java",
+    "backend/src/main/java/com/projectflow/service/AgentProjectContextService.java",
+    "backend/src/main/java/com/projectflow/service/AgentFactCandidateService.java",
+    "backend/src/main/java/com/projectflow/web/AgentProjectContextController.java",
+    "hermes/src/index.js",
+    "docs/projectflow-v3.7.4-strong-fact-contract.md",
+    "docs/projectflow-v3.7.4-holdout-evaluation.md",
+    "docs/projectflow-v3.7.4-product-acceptance.md",
+    "docs/projectflow-v3.7.4-acceptance-report.md",
+    "docs/acceptance-evidence/v3.7.4-evidence-index.md"
+  ],
+  "verification": {
+    "build": "Backend/H2 432 tests with 0 failures, 0 errors and 1 skip; frontend lint, 50/50 contracts and production build passed; root Start-ProjectFlow.bat rebuilt the current V3.7.4 tree and returned frontend/backend HTTP 200.",
+    "tests": "Large-file, Strong Fact, cross-project isolation, candidate boundary and Context Package deterministic tests passed; Playwright 8/8, Hermes 6/6 with 13 tools, Obsidian 18/18. GLM Calibration 21/21 and original regression 38/38; DeepSeek Calibration 21/21. Frozen Holdout: GLM completed 8/8 with one disclosed degradation, DeepSeek critical recall 0.8182 and conflict 0, therefore failed the gate. GLM product E2E completed 8/8 checks with one disclosed Final fallback.",
+    "manualCheck": "Freeze and Ground Truth hashes were preserved, model keys were process-only and cleared, raw responses/reasoning were not stored, local archive contains 42 hashed files, giant fixtures were not added to GitHub, Docker daemon was unavailable so local PostgreSQL was not claimed as passed, Tag and Release were not created."
+  },
+  "unfinished": [
+    "DeepSeek frozen Holdout did not meet the 0.90 critical Evidence recall, deep-read and conflict gates.",
+    "DeepSeek product E2E could not continue because the official API returned HTTP 402 after Holdout.",
+    "Local PostgreSQL Testcontainers was not run because Docker Desktop daemon was unavailable; GitHub CI remains required.",
+    "GitHub PR, required CI, merge, final master verification and final metadata backfill are pending at the time this result was first written."
+  ],
+  "sedimentCandidates": [
+    "强事实状态、证据引用与 promotion guard 可作为跨项目的模型事实安全边界复用。",
+    "大文件 Content Map、定向 range read、未读范围披露和 source revision 校验可作为通用有界内容理解方案复用。",
+    "多 Agent 通过授权 Context Package 和 candidate flow 共享持久化项目历史，同时禁止直接写强事实的模式可复用。",
+    "Calibration、冻结 Holdout、原回归和产品 E2E 分层验收且保留首轮失败，可作为真实模型质量门禁流程复用。"
+  ]
+}

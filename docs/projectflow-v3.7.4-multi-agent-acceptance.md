@@ -21,6 +21,6 @@ Agents cannot write ProjectFact directly through this surface. The candidate end
 | Read audit without private query/Evidence text | PASS |
 | Agent/model switch continuity over persisted state | PASS |
 
-Hermes subprocess acceptance passed 6 tests and discovered 13 read-only tools. Project context resources were listed/read with provenance; six concurrent reads completed with a measured maximum concurrency of six. Startup/discovery was 121.0 ms, concurrent reads 231.1 ms and a paged tool call 129.4 ms. Remote backend defaults, timeout, backend errors and credential leakage remained guarded.
+Hermes subprocess acceptance passed 6 tests and discovered 13 read-only tools. Project context resources were listed/read with provenance; six concurrent reads completed with a measured maximum concurrency of six. Startup/discovery was 161.6 ms, concurrent reads 298.4 ms and a paged tool call 150.9 ms. Remote backend defaults, timeout, backend errors and credential leakage remained guarded.
 
-Obsidian remains an unchanged projection consumer. Its 18-test suite passed, including 5,000 facts, 36 months, 100 capabilities, 1,000 evolutions, atomic writes, no-op zero writes and traversal/symlink protection.
+Obsidian remains an unchanged projection consumer. Its 18-test suite passed, including 5,000 facts, 36 months, 100 capabilities, 1,000 evolutions, atomic writes, no-op zero writes and traversal/symlink protection. First sync completed in 450.1 ms with 177 writes; the unchanged rerun performed zero writes.
