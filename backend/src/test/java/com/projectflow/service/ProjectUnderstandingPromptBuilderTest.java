@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 class ProjectUnderstandingPromptBuilderTest {
     private static final String SCOUT_SNAPSHOT_SHA256 =
-        "be7282b82c9f3db4343d2b210d573cbdcae1c014db1e960cea281915dd68c619";
+        "de00a65b1a3d0b22f04073b9bb8fcc09236649aa49a3cfdfb0e3205053d0101d";
     private static final String FINAL_SNAPSHOT_SHA256 =
         "d368dd1d3c5825a57cc7587527fa6918ee9b6e5a9f5452519339c7bf36613cd0";
     private final ProjectUnderstandingPromptBuilder builder = new ProjectUnderstandingPromptBuilder();
@@ -138,7 +138,9 @@ class ProjectUnderstandingPromptBuilderTest {
             "/projectflow-prompt/scout-fixture.json"
         )) {
             if (input == null) throw new IllegalStateException("prompt fixture missing");
-            return new String(input.readAllBytes(), StandardCharsets.UTF_8);
+            return new String(input.readAllBytes(), StandardCharsets.UTF_8)
+                .replace("\r\n", "\n")
+                .replace('\r', '\n');
         }
     }
 
