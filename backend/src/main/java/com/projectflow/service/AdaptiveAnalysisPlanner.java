@@ -19,6 +19,7 @@ import com.projectflow.dto.ProjectUnderstandingDtos.ProjectShapeHypothesis;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectStructureIndexResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.RepositoryIntakeResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.SemanticScoutResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.SemanticContractDiagnostics;
 import com.projectflow.dto.ProjectUnderstandingDtos.SemanticToolRequest;
 import com.projectflow.dto.ProjectUnderstandingDtos.ToolSelectionRationale;
 
@@ -109,7 +110,8 @@ public class AdaptiveAnalysisPlanner {
             List.of(),
             List.of(),
             List.of(),
-            false
+            false,
+            new SemanticContractDiagnostics("NOT_APPLICABLE", List.of(), List.of(), List.of(), List.of())
         );
     }
 

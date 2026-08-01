@@ -17,6 +17,7 @@ import com.projectflow.dto.ApiResponse;
 import com.projectflow.dto.AuthDtos.AuthUser;
 import com.projectflow.service.AuthService;
 import com.projectflow.service.ProjectAgentCandidateService;
+import com.projectflow.service.ProjectMemoryAuditService;
 
 import jakarta.validation.Valid;
 
@@ -24,13 +25,16 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/projects/{projectId}/agent-candidates")
 public class ProjectAgentCandidateController {
     private final ProjectAgentCandidateService candidateService;
+    private final ProjectMemoryAuditService auditService;
     private final AuthService authService;
 
     public ProjectAgentCandidateController(
         ProjectAgentCandidateService candidateService,
+        ProjectMemoryAuditService auditService,
         AuthService authService
     ) {
         this.candidateService = candidateService;
+        this.auditService = auditService;
         this.authService = authService;
     }
 
@@ -45,6 +49,34 @@ public class ProjectAgentCandidateController {
         return ApiResponse.ok(candidateService.submit(user.id(), projectId, request, caller));
     }
 
+    @PostMapping("/work-results")
+    ApiResponse<AgentWorkResultResponse> submitWorkResult(
+        @RequestHeader(value = "Authorization", required = false) String authorization,
+        @RequestHeader(value = "X-ProjectFlow-Caller", required = false) String caller,
+        @PathVariable UUID projectId,
+        @Valid @RequestBody SubmitAgentWorkResultRequest request
+    ) {
+        AuthUser user = authService.currentUser(authorization);
+        long started = System.nanoTime();
+        try {
+            AgentWorkResultResponse result = candidateService.submitWorkResult(
+                user.id(), projectId, request, caller
+            );
+            auditService.record(
+                user.id(), projectId, "submit_agent_work_result", result.candidates().size(),
+                elapsedMs(started), "SUCCESS", caller, "", "AGENT_CANDIDATE",
+                "changedFiles=" + result.changedFiles().size() + ",validation=" + result.validationStatus()
+            );
+            return ApiResponse.ok(result);
+        } catch (RuntimeException exception) {
+            auditService.record(
+                user.id(), projectId, "submit_agent_work_result", 0, elapsedMs(started),
+                "ERROR", caller, "", "AGENT_CANDIDATE", "workResult=true"
+            );
+            throw exception;
+        }
+    }
+
     @GetMapping
     ApiResponse<AgentCandidatePageResponse> list(
         @RequestHeader(value = "Authorization", required = false) String authorization,
@@ -54,5 +86,9 @@ public class ProjectAgentCandidateController {
     ) {
         AuthUser user = authService.currentUser(authorization);
         return ApiResponse.ok(candidateService.list(user.id(), projectId, page, size));
+    }
+
+    private static long elapsedMs(long started) {
+        return Math.max(0, (System.nanoTime() - started) / 1_000_000);
     }
 }

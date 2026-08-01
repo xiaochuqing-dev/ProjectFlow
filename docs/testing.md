@@ -1,5 +1,13 @@
 # Testing
 
+## V3.7.5 constitution, Context Package and two-model gates
+
+Blocking deterministic coverage now includes the seven epistemic states, model/attention/phase/fallback non-promotion, declaration and process-evidence boundaries, conflict/UNKNOWN preservation, currentness, bounded Dynamic Profile claims, complete small-set Evidence Ledgers, exact eligible-capability decisions, semantic-contract degradation, Context Package v2 relevance/ranges/revision/package identity, candidate-only work-result writes, five local revalidation actions, project isolation and Timeline non-authority.
+
+The V3.7.4 Calibration and frozen Holdout labels remain unchanged. V3.7.5 formally freezes code SHA, Prompt/fixture/Ground Truth hashes, thresholds and Provider profile before one Holdout per model. Product E2E uses `ProjectUnderstandingRealModelIT` only after that Provider's Holdout passes and writes to a Provider-specific `projectflow.eval.output-name`. Raw prompts, responses, reasoning and keys are never artifacts.
+
+Real-project gap checks are deterministic and 0-model unless the coverage matrix proves a semantic gap. A repository that changes during the scan must be reported as volatile/partial rather than treated as a stable fingerprint. Actual model, real-project, CI and regression results belong in the V3.7.5 acceptance evidence and report.
+
 ## V3.7.4 strong-fact and generalization gates
 
 Blocking deterministic coverage includes strong status promotion, declaration/inference isolation, Agent-result boundaries, explicit historical reason/deprecation/technical-debt evidence, Evidence allow-lists, extensionless content discovery, Content Map head/middle/tail/marker ranges, tail-sensitive revisions, cross-chunk merge, project ownership, portfolio isolation, Agent candidates, Context Packages, MCP history/resources, provider-neutral prompt contracts and Ground Truth leakage.

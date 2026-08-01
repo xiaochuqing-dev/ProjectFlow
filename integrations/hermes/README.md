@@ -2,7 +2,9 @@
 
 This repository-local stdio adapter is a read-only consumer of the loopback ProjectFlow API. It does not become a fact source, run models, persist Agent answers, or accept remote backend URLs.
 
-V3.7.4 exposes 13 tools covering authorized projects, snapshots, recent changes, search, Timeline, Capabilities, Evolution, fact trace, brief, portfolio search, Evidence, knowledge and the versioned Context Package. It also exposes `projectflow://projects/{projectId}/context` resources for authorized projects.
+V3.7.5 retains 13 read-only tools covering authorized projects, snapshots, recent changes, search, Timeline, Capabilities, Evolution, fact trace, brief, portfolio search, Evidence, knowledge and Context Package v2. It also exposes `projectflow://projects/{projectId}/context` resources for authorized projects.
+
+The context tool forwards optional task description, scope, revision preference, Evidence depth and size budget. ProjectFlow returns the deterministic package revision, selected source ranges, currentness, conflicts, unknowns, limitations and unread scope; Hermes does not add model interpretation or factual authority.
 
 Strong facts are only persisted `OBSERVED` or `VERIFIED` records. Declarations, inference, conflicts, unknowns, Timeline, Capabilities and Agent process evidence keep their source layers. The adapter never upgrades status or merges same-named facts across projects.
 

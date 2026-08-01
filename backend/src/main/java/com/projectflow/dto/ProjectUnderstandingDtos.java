@@ -345,7 +345,17 @@ public final class ProjectUnderstandingDtos {
         List<String> potentialConflicts,
         List<String> currentnessWarnings,
         List<SemanticToolRequest> toolRequests,
-        boolean modelUsed
+        boolean modelUsed,
+        SemanticContractDiagnostics contractDiagnostics
+    ) {
+    }
+
+    public record SemanticContractDiagnostics(
+        String status,
+        List<String> assessedEvidenceIds,
+        List<String> unassessedEvidenceIds,
+        List<String> unevaluatedCapabilities,
+        List<String> gaps
     ) {
     }
 

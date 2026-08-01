@@ -169,6 +169,8 @@ class ProjectMemoryGatewayTest {
         assertThat(july.period().facts().items()).singleElement();
         assertThat(july.period().summary().status()).isEqualTo("FAILED");
         assertThat(july.period().summary().summary()).contains("七月");
+        assertThat(july.period().summary().epistemicStatus()).isEqualTo("INFERRED");
+        assertThat(july.period().summary().authority()).isEqualTo("NON_AUTHORITATIVE");
         assertThat(july.period().facts().items().get(0).time().eventAt()).isEqualTo(OCCURRED);
     }
 
@@ -281,7 +283,7 @@ class ProjectMemoryGatewayTest {
             .doesNotContain(otherProject.getId());
 
         var context = agentHistory.contextPackage(owner.userId(), project.getId(), 2_000);
-        assertThat(context.packageVersion()).isEqualTo("projectflow-agent-context-v1");
+        assertThat(context.packageVersion()).isEqualTo("projectflow-agent-context-v2");
         assertThat(context.actualCharacters()).isLessThanOrEqualTo(context.sizeBudget());
         assertThat(context.currentStrongFacts()).singleElement()
             .satisfies(item -> assertThat(item.epistemicStatus()).isEqualTo("OBSERVED"));
@@ -293,7 +295,7 @@ class ProjectMemoryGatewayTest {
                 .header("X-ProjectFlow-Caller", "agent-context-test")
                 .queryParam("sizeBudget", "2000"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.packageVersion").value("projectflow-agent-context-v1"));
+            .andExpect(jsonPath("$.data.packageVersion").value("projectflow-agent-context-v2"));
 
         mockMvc.perform(get("/api/projects/" + otherProject.getId() + "/project-memory/context-package")
                 .header("Authorization", "Bearer " + owner.token()))

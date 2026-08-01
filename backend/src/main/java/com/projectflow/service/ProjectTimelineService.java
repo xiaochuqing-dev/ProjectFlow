@@ -286,7 +286,7 @@ public class ProjectTimelineService {
             value.getId(), value.getGranularity().name(), value.getPeriodKey(), value.getStatus().name(),
             value.getSummary(), value.getSourceFactCount(), value.getCoveredFactCount(), stale(value),
             value.getGenerationVersion(), value.getAnalysisJobId(), value.getErrorCode(), value.getErrorSummary(),
-            value.getGeneratedAt(), value.getUpdatedAt()
+            value.getGeneratedAt(), value.getUpdatedAt(), "INFERRED", "NON_AUTHORITATIVE"
         );
     }
 

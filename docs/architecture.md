@@ -1,5 +1,15 @@
 # Architecture
 
+## V3.7.5 product-constitution and Agent-context boundary
+
+`docs/projectflow-v3.7.5-product-constitution.md` is the single authoritative product contract. `ProjectFactEpistemicStatus` carries seven states across entities, DTOs, prompts and consumers. Only project-bound `OBSERVED` and independently checked `VERIFIED` claims may enter the strong-fact path; declarations, model inferences, conflicts, unknowns and Agent process evidence retain their own authority.
+
+`ProjectUnderstandingPromptBuilder` is still the only production/Eval semantic boundary. Prompt contract v3, Semantic Scout v12 and Final Synthesis v7 require a complete Evidence Ledger for small source sets, one REQUEST/SKIP decision for every objectively eligible capability, known Evidence IDs only and bounded profile claims. Missing ledger or capability decisions are surfaced through semantic-contract diagnostics and `FAILED_DEGRADED`; Provider adapters cannot relax the contract.
+
+`ProjectAgentHistoryService` now builds Context Package v2 from persisted project state without a model call. Task, scope, revision preference, Evidence depth and size budget drive deterministic ranking; the response preserves ranges, source revision/currentness, conflicts, unknowns, limitations, unread scope and a stable package revision. `ProjectAgentCandidateService` accepts candidate-only Agent work results, safely re-reads changed project files and binds hashes while keeping commands, tests and completion claims as process evidence.
+
+`ProjectAgentRevalidationService` exposes five bounded local actions: verify a Fact, refresh Evidence, re-read a range, validate currentness and resolve a package against the latest revision. It uses fixed Git commands and project-contained reads, never runs project understanding and never mutates `ProjectFact`. Timeline summaries are explicitly `INFERRED` and `NON_AUTHORITATIVE`; V3.8 phase, maturity, importance and milestone authority remain out of scope. V3.7.5 adds no schema and no third-party dependency.
+
 ## V3.7.4 strong-fact, content-map and shared-history boundary
 
 `StrongFactPromotionGuard` is the write-side trust boundary. Only `OBSERVED` or `VERIFIED` claims with same-project allow-listed Evidence can enter recorded ProjectFact state. Declaration, inference, conflict, unknown and Agent process evidence remain explicit non-strong states. Model consensus has no promotion authority; historical reasons, deprecation and technical debt require their own evidence classes.

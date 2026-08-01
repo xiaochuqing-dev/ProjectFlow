@@ -1,6 +1,6 @@
 # Third-party notices
 
-ProjectFlow V3.7.2 continues to use the following V3.6 libraries. Real-model evaluation, semantic calibration, high-value gating, current-result degradation and adapter contracts add no third-party runtime dependency and copy no community source code.
+ProjectFlow V3.7.5 continues to use the following V3.6 libraries. Product-constitution enforcement, Prompt contract v3, Context Package v2, candidate work-result writes, local revalidation and V3.7.5 evaluation changes add no third-party runtime or test dependency and copy no community source code.
 
 ## SCIP Java Protocol
 

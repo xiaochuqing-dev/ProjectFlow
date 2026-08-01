@@ -15,7 +15,7 @@ from typing import Any
 
 
 SERVER_NAME = "projectflow-project-memory"
-SERVER_VERSION = "3.7.4"
+SERVER_VERSION = "3.7.5"
 PROTOCOL_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"}
 DEFAULT_PROTOCOL_VERSION = "2025-11-25"
 
@@ -228,11 +228,23 @@ TOOLS = [
     ),
     _tool(
         "get_project_context_package",
-        "Read a versioned, provenance-preserving context package built only from persisted strong facts, understanding, evidence, candidates, conflicts, and unknowns.",
+        "Read a task-relevant, revision-aware, provenance-preserving context package from persisted strong facts, declarations, inferences, evidence, ranges, conflicts, unknowns, coverage, and trust guidance without calling a model.",
         _schema(
             {
                 "projectId": PROJECT_ID,
-                "sizeBudget": {"type": "integer", "minimum": 2000, "maximum": 32000, "default": 8000},
+                "taskDescription": {"type": "string", "maxLength": 1000},
+                "scope": {
+                    "type": "array", "maxItems": 20,
+                    "items": {"type": "string", "maxLength": 200},
+                },
+                "revisionPreference": {
+                    "type": "string", "enum": ["CURRENT_SNAPSHOT", "LATEST_AVAILABLE", "ANY_PERSISTED"],
+                    "default": "CURRENT_SNAPSHOT",
+                },
+                "evidenceDepth": {
+                    "type": "string", "enum": ["COMPACT", "STANDARD", "DEEP"], "default": "STANDARD",
+                },
+                "sizeBudget": {"type": "integer", "minimum": 4000, "maximum": 32000, "default": 8000},
             },
             ["projectId"],
         ),
@@ -383,7 +395,13 @@ def call_tool(client: ProjectFlowClient, name: str, arguments: dict[str, Any]) -
     if name == "get_project_brief":
         return client.get(base + "/brief", {"sizeBudget": _argument(arguments, "sizeBudget", 6000)})
     if name == "get_project_context_package":
-        return client.get(base + "/context-package", {"sizeBudget": _argument(arguments, "sizeBudget", 8000)})
+        return client.get(base + "/context-package", {
+            "taskDescription": _argument(arguments, "taskDescription"),
+            "scope": _argument(arguments, "scope"),
+            "revisionPreference": _argument(arguments, "revisionPreference", "CURRENT_SNAPSHOT"),
+            "evidenceDepth": _argument(arguments, "evidenceDepth", "STANDARD"),
+            "sizeBudget": _argument(arguments, "sizeBudget", 8000),
+        })
     if name == "get_project_evidence":
         evidence_id = urllib.parse.quote(str(_argument(arguments, "evidenceId", "")).strip(), safe="")
         if not evidence_id:

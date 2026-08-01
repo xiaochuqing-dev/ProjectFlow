@@ -59,7 +59,8 @@ class AdaptiveAnalysisPlannerTest {
             List.of(),
             List.of(),
             List.of(),
-            true
+            true,
+            null
         );
 
         var plan = new AdaptiveAnalysisPlanner(new AnalysisToolRegistry(), new AnalysisViewRegistry())

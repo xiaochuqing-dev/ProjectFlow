@@ -80,7 +80,7 @@ class ProjectFlowRealModelEvalIT {
             0.1,
             config.maxTokens(),
             false,
-            List.of("V3.7.4_REAL_EVAL")
+            List.of("V3.7.5_REAL_EVAL")
         );
         provider.configureProtocol(
             config.protocol(),
@@ -183,11 +183,11 @@ class ProjectFlowRealModelEvalIT {
                 assertThat(evalRun.summary().conflictDetectionRate()).isGreaterThanOrEqualTo(0.80);
             }
             assertThat(invalidEvidenceRefs(observations, groundTruth))
-                .as("V3.7.4 Evidence 引用必须来自当前案例 allow-list")
+                .as("V3.7.5 Evidence 引用必须来自当前案例 allow-list")
                 .isEmpty();
             assertThat(observations.stream()
                 .flatMap(value -> value.mustNotClaimViolations().stream())
-                .toList()).as("V3.7.4 强事实边界不得出现禁止声明").isEmpty();
+                .toList()).as("V3.7.5 强事实边界不得出现禁止声明").isEmpty();
         }
     }
 
@@ -381,7 +381,7 @@ class ProjectFlowRealModelEvalIT {
                 testCase.id(),
                 testCase.id() + "-real-" + run,
                 PROMPT_VERSION,
-                "3.7.4",
+                "3.7.5",
                 testCase.source(),
                 run,
                 config.name(),
@@ -437,7 +437,7 @@ class ProjectFlowRealModelEvalIT {
             testCase.id(),
             testCase.id() + "-deterministic-" + run,
             PROMPT_VERSION,
-            "3.7.4",
+            "3.7.5",
             testCase.source(),
             run,
             config.name(),
@@ -491,8 +491,27 @@ class ProjectFlowRealModelEvalIT {
     private static String boundedEvalContext(ObjectMapper mapper, EvalCase value) throws Exception {
         var context = mapper.createObjectNode();
         context.put("source", value.source());
-        context.put("evaluationContext", value.context());
+        var ledger = context.putObject("evidenceLedger");
+        List<String> ids = evidenceIds(value.context());
+        ledger.put("coverageMode", ids.size() <= 12 ? "COMPLETE_SMALL_SET" : "BOUNDED_DIVERSE");
+        ledger.put("sourceCount", ids.size());
+        var items = ledger.putArray("items");
+        for (String id : ids) {
+            var item = items.addObject();
+            item.put("id", id);
+            item.put("category", "EVAL_SOURCE");
+            item.put("summary", evidenceSentence(value.context(), id));
+        }
+        context.put("boundedProjectContext", value.context());
         return mapper.writeValueAsString(context);
+    }
+
+    private static String evidenceSentence(String context, String evidenceId) {
+        if (context == null || context.isBlank()) return "";
+        for (String sentence : context.split("(?<=[。；;])\\s*")) {
+            if (sentence.contains(evidenceId)) return sentence.strip();
+        }
+        return context.length() <= 500 ? context.strip() : context.substring(0, 500).strip();
     }
 
     static String buildScoutPrompt(
@@ -1012,7 +1031,7 @@ class ProjectFlowRealModelEvalIT {
             testCase.id(),
             testCase.id() + "-real-" + run,
             PROMPT_VERSION,
-            "3.7.4",
+            "3.7.5",
             testCase.source(),
             run,
             config.name(),

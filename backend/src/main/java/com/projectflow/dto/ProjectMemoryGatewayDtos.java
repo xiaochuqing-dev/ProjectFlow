@@ -78,7 +78,8 @@ public final class ProjectMemoryGatewayDtos {
 
     public record MemoryTimelineSummaryResponse(
         String status, String summary, int sourceFactCount, int coveredFactCount,
-        boolean stale, int generationVersion, Instant generatedAt, String notice
+        boolean stale, int generationVersion, Instant generatedAt, String notice,
+        String epistemicStatus, String authority
     ) {
     }
 

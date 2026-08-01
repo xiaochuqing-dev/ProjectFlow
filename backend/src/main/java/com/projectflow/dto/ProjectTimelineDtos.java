@@ -62,7 +62,9 @@ public final class ProjectTimelineDtos {
         String errorCode,
         String errorSummary,
         Instant generatedAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String epistemicStatus,
+        String authority
     ) {
     }
 

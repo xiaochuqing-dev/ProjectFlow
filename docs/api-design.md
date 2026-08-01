@@ -33,7 +33,7 @@ Error responses:
 
 ## V3.7 Universal Evidence Understanding
 
-## V3.7.4 Agent history and candidate boundary
+## V3.7.5 Agent context, candidate and revalidation boundary
 
 All endpoints require normal authentication and preserve not-found ownership semantics.
 
@@ -43,11 +43,15 @@ All endpoints require normal authentication and preserve not-found ownership sem
 | Bounded cross-project search | `GET /api/project-memory/portfolio/search?query=&size=` |
 | Project evidence by safe ID | `GET /api/projects/{projectId}/project-memory/evidence/{evidenceId}` |
 | Status-partitioned knowledge | `GET /api/projects/{projectId}/project-memory/knowledge?size=` |
-| Versioned Context Package | `GET /api/projects/{projectId}/project-memory/context-package?sizeBudget=` |
+| Task-relevant Context Package v2 | `GET /api/projects/{projectId}/project-memory/context-package?taskDescription=&scope=&revisionPreference=&evidenceDepth=&sizeBudget=` |
 | Submit validation candidate | `POST /api/projects/{projectId}/agent-candidates` |
+| Submit bounded Agent work-result candidates | `POST /api/projects/{projectId}/agent-candidates/work-results` |
 | List validation candidates | `GET /api/projects/{projectId}/agent-candidates?page=&size=` |
+| Run one bounded local revalidation action | `POST /api/projects/{projectId}/project-memory/revalidate` |
 
-Context Packages contain bounded strong facts, declarations, inference candidates, conflicts, unknowns, provenance, revision and limitations. They exclude prompts, raw model responses, reasoning, credentials and absolute paths. Agent candidate submission accepts only `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` or `PROCESS_EVIDENCE`; direct `OBSERVED`/`VERIFIED` writes are rejected.
+Context Package v2 contains task/scope metadata, deterministic package revision, current strong facts, declarations, inference candidates, conflicts, unknowns, provenance, safe ranges, revision/currentness, limitations and unread scope. It excludes prompts, raw model responses, reasoning, credentials and absolute paths. Agent candidate submission accepts only `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` or `PROCESS_EVIDENCE`; direct `OBSERVED`/`VERIFIED` writes are rejected before persistence.
+
+Work-result submission accepts changed relative files, behavior claims, commands/tests, Evidence refs, conflicts and UNKNOWN-resolution candidates. Engineering code re-resolves the project root, rejects path escape and sensitive content, performs bounded re-reads and binds source hashes; Agent claims remain candidates. Revalidation accepts only `VERIFY_FACT`, `REFRESH_EVIDENCE`, `REREAD_RANGE`, `VALIDATE_CURRENTNESS` or `RESOLVE_PACKAGE_LATEST`. It returns validation/currentness diagnostics and never mutates facts or triggers a model.
 
 The existing understanding endpoints are unchanged and still validate authenticated project ownership:
 

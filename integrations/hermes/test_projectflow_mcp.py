@@ -71,7 +71,8 @@ class Handler(BaseHTTPRequestHandler):
                 }
             elif parsed.path.endswith("/context-package"):
                 data = {
-                    "packageVersion": "projectflow-agent-context-v1", "projectId": PROJECT_ID,
+                    "packageVersion": "projectflow-agent-context-v2", "packageRevision": "sha256:context",
+                    "projectId": PROJECT_ID,
                     "currentStrongFacts": [{"itemId": "fact:1", "epistemicStatus": "OBSERVED"}],
                     "unknowns": [], "conflicts": [], "provenance": ["fact:1"],
                 }
@@ -210,7 +211,7 @@ class MCPProjectHistoryTest(unittest.TestCase):
             self.assertEqual(f"projectflow://projects/{PROJECT_ID}/context", uri)
             result = mcp.request("resources/read", {"uri": uri})["result"]
         content = json.loads(result["contents"][0]["text"])
-        self.assertEqual("projectflow-agent-context-v1", content["packageVersion"])
+        self.assertEqual("projectflow-agent-context-v2", content["packageVersion"])
         self.assertEqual("OBSERVED", content["currentStrongFacts"][0]["epistemicStatus"])
         self.assertEqual(["fact:1"], content["provenance"])
 
@@ -234,6 +235,25 @@ class MCPProjectHistoryTest(unittest.TestCase):
         self.assertEqual("Bearer example-token", request["authorization"])
         self.assertEqual("hermes-stdio", request["caller"])
         self.assertEqual(["FACT,CAPABILITY"], request["query"]["entityTypes"])
+
+    def test_context_package_forwards_task_scope_revision_and_depth(self) -> None:
+        with McpProcess(self.base_url) as mcp:
+            result = mcp.request("tools/call", {"name": "get_project_context_package", "arguments": {
+                "projectId": PROJECT_ID,
+                "taskDescription": "improve mail retry",
+                "scope": ["backend/mail", "docs/spec.md"],
+                "revisionPreference": "LATEST_AVAILABLE",
+                "evidenceDepth": "DEEP",
+                "sizeBudget": 12000,
+            }})["result"]
+        self.assertFalse(result["isError"])
+        self.assertEqual("projectflow-agent-context-v2", result["structuredContent"]["packageVersion"])
+        with State.lock:
+            request = State.requests[-1]
+        self.assertEqual(["improve mail retry"], request["query"]["taskDescription"])
+        self.assertEqual(["backend/mail", "docs/spec.md"], request["query"]["scope"])
+        self.assertEqual(["LATEST_AVAILABLE"], request["query"]["revisionPreference"])
+        self.assertEqual(["DEEP"], request["query"]["evidenceDepth"])
 
     def test_backend_unavailable_and_cross_project_errors_are_machine_readable(self) -> None:
         sock = socket.socket()

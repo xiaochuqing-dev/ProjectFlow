@@ -120,10 +120,15 @@ public class ProjectAgentCandidate {
     public String getValidationStatus() { return bounded(validationStatus, 50, "PENDING_ENGINEERING_VALIDATION"); }
     public Instant getCreatedAt() { return createdAt; }
 
+    public void markValidationStatus(String value) {
+        this.validationStatus = bounded(value, 50, "PENDING_ENGINEERING_VALIDATION");
+    }
+
     private static String normalizeType(String value) {
         String normalized = bounded(value, 40, "ASSERTION").toUpperCase(Locale.ROOT);
         return switch (normalized) {
-            case "ASSERTION", "EVIDENCE_LINK", "CORRECTION", "CONFLICT_REPORT", "USER_REVIEW_REQUEST" -> normalized;
+            case "ASSERTION", "EVIDENCE_LINK", "CORRECTION", "CONFLICT_REPORT", "USER_REVIEW_REQUEST",
+                "WORK_RESULT", "TEST_RESULT", "UNKNOWN_RESOLUTION" -> normalized;
             default -> throw new IllegalArgumentException("Unsupported candidate type");
         };
     }

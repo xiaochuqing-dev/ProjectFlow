@@ -21,6 +21,7 @@ import com.projectflow.dto.ProjectUnderstandingDtos.ProjectShapeHypothesis;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectStructureIndexResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.RepositoryIntakeResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.SemanticScoutResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.SemanticContractDiagnostics;
 import com.projectflow.dto.ProjectUnderstandingDtos.SemanticToolRequest;
 import com.projectflow.dto.ProjectUnderstandingDtos.StructureEvidence;
 import com.projectflow.entity.AiProvider;
@@ -136,7 +137,12 @@ public class SemanticScoutService {
             "tagCount", history.tagCount(),
             "historicalCoverage", history.overallCoverage()
         ));
-        sections.put("documents", compactPromptEvidence(discovery.promptEvidence()));
+        List<Map<String, Object>> evidenceItems = compactPromptEvidence(discovery.promptEvidence());
+        sections.put("evidenceLedger", Map.of(
+            "coverageMode", evidenceItems.size() <= 12 ? "COMPLETE_SMALL_SET" : "BOUNDED_DIVERSE",
+            "sourceCount", evidenceItems.size(),
+            "items", evidenceItems
+        ));
         Map<String, Object> structure = new LinkedHashMap<>();
         structure.put("modules", index.modules().stream()
             .limit(12)
@@ -407,17 +413,104 @@ public class SemanticScoutService {
             }
         }
         List<String> recommended = toolRequests.stream().map(SemanticToolRequest::capability).distinct().toList();
+        List<String> applicableDimensions = viewRegistry.validate(
+            texts(node.path("applicableDimensions"), 20, 80),
+            eligibleViews
+        );
+        SemanticContractDiagnostics contract = contractDiagnostics(
+            node,
+            allowedEvidence,
+            eligibleCapabilities,
+            shapes,
+            assessments,
+            toolRequests,
+            applicableDimensions
+        );
         return new SemanticScoutResponse(
             List.copyOf(shapes),
             List.copyOf(assessments),
-            viewRegistry.validate(texts(node.path("applicableDimensions"), 20, 80), eligibleViews),
+            applicableDimensions,
             recommended,
             texts(node.path("unknowns"), 20, 300),
             texts(node.path("skipCandidates"), 40, 100).stream().filter(allowedEvidence::contains).toList(),
             guardedTexts(node.path("potentialConflicts"), allowedEvidence, 20),
             guardedTexts(node.path("currentnessWarnings"), allowedEvidence, 20),
             List.copyOf(toolRequests),
-            true
+            true,
+            contract
+        );
+    }
+
+    public static SemanticContractDiagnostics contractDiagnostics(
+        JsonNode scoutNode,
+        Set<String> allowedEvidence,
+        List<String> eligibleCapabilities,
+        List<ProjectShapeHypothesis> shapes,
+        List<EvidenceSourceAssessment> assessments,
+        List<SemanticToolRequest> toolRequests,
+        List<String> applicableDimensions
+    ) {
+        Set<String> sourceIds = allowedEvidence == null ? Set.of() : allowedEvidence.stream()
+            .filter(value -> value.startsWith("source:"))
+            .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        Map<String, Integer> assessmentCounts = new LinkedHashMap<>();
+        if (assessments != null) {
+            assessments.stream().map(EvidenceSourceAssessment::evidenceId)
+                .filter(sourceIds::contains).forEach(value -> assessmentCounts.merge(value, 1, Integer::sum));
+        }
+        List<String> assessed = List.copyOf(assessmentCounts.keySet());
+        List<String> unassessed = sourceIds.size() <= 12
+            ? sourceIds.stream().filter(value -> !assessed.contains(value)).toList()
+            : List.of();
+        Map<String, Integer> decisions = new LinkedHashMap<>();
+        Set<String> requestDecisions = new LinkedHashSet<>();
+        if (scoutNode != null && scoutNode.path("capabilityDecisions").isArray()) {
+            for (JsonNode item : scoutNode.path("capabilityDecisions")) {
+                String capability = AnalysisToolRegistry.normalizeCapability(
+                    item.path("capability").asText("")
+                );
+                String decision = item.path("decision").asText("").strip().toUpperCase(Locale.ROOT);
+                if (eligibleCapabilities.contains(capability) && Set.of("REQUEST", "SKIP").contains(decision)) {
+                    decisions.merge(capability, 1, Integer::sum);
+                    if ("REQUEST".equals(decision)) requestDecisions.add(capability);
+                }
+            }
+        }
+        List<String> unevaluated = eligibleCapabilities.stream()
+            .filter(value -> decisions.getOrDefault(value, 0) != 1)
+            .toList();
+        List<String> gaps = new ArrayList<>();
+        if (!sourceIds.isEmpty() && (shapes == null || shapes.isEmpty())) {
+            gaps.add("NON_EMPTY_EVIDENCE_WITHOUT_PROJECT_SHAPE");
+        }
+        if (!unassessed.isEmpty()) gaps.add("SMALL_EVIDENCE_SET_NOT_FULLY_ASSESSED");
+        if (sourceIds.size() <= 12 && assessmentCounts.values().stream().anyMatch(count -> count != 1)) {
+            gaps.add("SMALL_EVIDENCE_SET_ASSESSED_MORE_THAN_ONCE");
+        }
+        if (!unevaluated.isEmpty()) gaps.add("ELIGIBLE_CAPABILITY_NOT_EVALUATED_EXACTLY_ONCE");
+        Set<String> requested = toolRequests == null ? Set.of() : toolRequests.stream()
+            .map(SemanticToolRequest::capability)
+            .collect(java.util.stream.Collectors.toSet());
+        if (!requested.equals(requestDecisions)) gaps.add("CAPABILITY_DECISION_REQUEST_MISMATCH");
+        List<String> dimensions = applicableDimensions == null ? List.of() : applicableDimensions;
+        if (dimensions.stream().anyMatch(Set.of(
+            "HISTORICAL_COVERAGE", "LIMITED_HISTORY", "MILESTONE_WINDOWS", "EVOLUTION"
+        )::contains)
+            && eligibleCapabilities.contains("GIT_HISTORY")
+            && !requested.contains("GIT_HISTORY")) {
+            gaps.add("HISTORY_VIEW_WITHOUT_GIT_HISTORY_REQUEST");
+        }
+        if (dimensions.contains("PROCESS_EVIDENCE")
+            && eligibleCapabilities.contains("AGENT_RESULT")
+            && !requested.contains("AGENT_RESULT")) {
+            gaps.add("PROCESS_EVIDENCE_VIEW_WITHOUT_AGENT_RESULT_REQUEST");
+        }
+        return new SemanticContractDiagnostics(
+            gaps.isEmpty() ? "PASSED" : "FAILED_DEGRADED",
+            List.copyOf(assessed),
+            List.copyOf(unassessed),
+            List.copyOf(unevaluated),
+            List.copyOf(new LinkedHashSet<>(gaps))
         );
     }
 

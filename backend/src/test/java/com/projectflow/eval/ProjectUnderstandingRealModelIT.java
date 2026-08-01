@@ -126,10 +126,12 @@ class ProjectUnderstandingRealModelIT {
             }
         }
 
-        Path output = Path.of("target", "projectflow-eval", "e2e");
+        String outputName = System.getProperty("projectflow.eval.output-name", "e2e")
+            .replaceAll("[^A-Za-z0-9._-]", "_");
+        Path output = Path.of("target", "projectflow-eval", outputName);
         Files.createDirectories(output);
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("version", "projectflow-v3.7.4-real-e2e-v1");
+        artifact.put("version", "projectflow-v3.7.5-real-e2e-v1");
         artifact.put("provider", config.name());
         artifact.put("protocol", config.protocol().name());
         artifact.put("model", config.model());
@@ -181,7 +183,7 @@ class ProjectUnderstandingRealModelIT {
         ReflectionTestUtils.setField(project, "id", projectId);
         project.update(
             testCase.id(),
-            "V3.7.4 real end-to-end acceptance fixture",
+            "V3.7.5 real end-to-end acceptance fixture",
             ProjectStatus.BUILDING,
             List.of(),
             "",
@@ -286,7 +288,7 @@ class ProjectUnderstandingRealModelIT {
             0.1,
             config.maxTokens(),
             true,
-            List.of("V3.7.4_REAL_END_TO_END")
+            List.of("V3.7.5_REAL_END_TO_END")
         );
         provider.configureProtocol(
             config.protocol(),

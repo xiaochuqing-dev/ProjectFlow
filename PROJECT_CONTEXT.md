@@ -1,12 +1,12 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-07-30
+Last updated: 2026-08-01
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.7.4 is a local-first strong-fact and shared project-memory system for AI-assisted developers. It discovers ordinary and unusual materials by bounded content, maps and samples large files beyond their heads, lets a provider-neutral Scout request only registered capabilities and known Evidence IDs, validates every result, and persists only evidence-qualified facts. Replaceable understanding remains separate from durable Project Facts, Timeline, Capability Map, Agent candidates, Project Memory Gateway, Hermes reads and Obsidian projection.
+ProjectFlow V3.7.5 is a local-first strong-fact and shared project-memory system for anyone who uses a computer to conduct a project. It discovers ordinary and unusual materials by bounded content, maps and samples large files beyond their heads, lets a provider-neutral Scout request only registered capabilities and known Evidence IDs, validates every result, and persists only evidence-qualified facts. Replaceable understanding remains separate from durable Project Facts, Timeline, Capability Map, Agent candidates, Project Memory Gateway, Hermes reads and Obsidian projection.
 
 ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation. ProjectFlow V3.5.0 added the bounded intake foundation retained by V3.6.0 and V3.7.0.
 
@@ -17,6 +17,16 @@ Current direction:
 - Rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records normal evidence-backed facts.
 - Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
+
+V3.7.5 focus:
+
+- `docs/projectflow-v3.7.5-product-constitution.md` is the single authoritative product constitution. The seven epistemic states are shared by entities, DTOs, Prompt, API, Agent contract and tests.
+- Prompt contract v3, Semantic Scout v12 and Final Synthesis v7 use a complete small-set Evidence Ledger, exact Capability decisions, bounded Claim counts and explicit semantic-contract degradation. Production and Eval remain identical at the semantic boundary.
+- Agent Context Package v2 accepts task, scope, revision preference, Evidence depth and budget; ranks persisted facts/evidence/ranges deterministically; retains conflicts, unknowns, limitations and unread scope; and exposes a stable SHA-256 package revision without a model call.
+- Agent Work Result Candidate Write re-reads non-sensitive changed files inside the bound project, binds source hashes, keeps commands/tests as process evidence and rejects direct strong-fact status before persistence.
+- Local revalidation verifies a Fact, refreshes Evidence, re-reads a range, validates currentness or resolves a package against the latest local revision using fixed commands and bounded reads. It does not rerun project understanding or mutate facts.
+- Timeline summaries explicitly expose `INFERRED` and `NON_AUTHORITATIVE`. V3.8 project-life work remains limited to source-backed event semantics; no automatic importance, phase, maturity or milestone authority is introduced.
+- V3.7.5 creates no Tag or Release and does not build a final GUI, Agent manager, model leaderboard or generic RAG layer.
 
 V3.7.4 focus:
 

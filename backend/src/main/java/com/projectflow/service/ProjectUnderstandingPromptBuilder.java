@@ -10,9 +10,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class ProjectUnderstandingPromptBuilder {
-    public static final String CONTRACT_VERSION = "project-understanding-prompt-contract-v2";
-    public static final String SCOUT_PROMPT_VERSION = "semantic-scout-v11";
-    public static final String FINAL_PROMPT_VERSION = "final-synthesis-v6";
+    public static final String CONTRACT_VERSION = "project-understanding-prompt-contract-v3";
+    public static final String SCOUT_PROMPT_VERSION = "semantic-scout-v12";
+    public static final String FINAL_PROMPT_VERSION = "final-synthesis-v7";
     public static final CompatibilityProfile COMPATIBILITY_PROFILE = new CompatibilityProfile(
         "multi-provider-json-v1",
         true,
@@ -32,6 +32,16 @@ public class ProjectUnderstandingPromptBuilder {
             1. 先确认输入中客观存在的材料和 Evidence ID。
             2. 再判断这些 Evidence 能支持、限制或纠正什么，保留 UNKNOWN、冲突与当前性风险。
             3. 最后只从 eligible views 中选择对用户有价值的视图，并只从 eligible capabilities 中选择工具。
+
+            Evidence 覆盖门禁：
+            - Evidence Ledger 的 coverageMode=COMPLETE_SMALL_SET 时，每个 `source:` Evidence ID 必须在
+              evidenceSourceAssessments 中恰好出现一次；即使结论只是 LOW、SKIP 或 UNKNOWN，也不能整项漏掉。
+            - 非空小证据集不得返回空 shape、空 assessment 和空 Profile。无法归类时使用 OTHER_MATERIAL，
+              并把无法判断的语义写入 UNKNOWN；不要用“信息不足”作为忽略输入的理由。
+            - 先逐项处置 Evidence，再比较来源关系。Agent/用户/README 的完成声明与测试、CI 或运行结果不一致时，
+              必须保留双方 Evidence 并输出 CONFLICTED；过程声明不能覆盖失败验证。
+            - capabilityDecisions 必须覆盖每个 Eligible Capability，且每项恰好一次。依赖某项能力的 view 已被选择时，
+              不能把该能力静默省略；要么完整 REQUEST，要么删除该 view 并明确 UNKNOWN。
 
             project shape 使用稳定原子标签，只能从 DOCUMENT、SCRIPT、FRONTEND、BACKEND、DESKTOP、MONOREPO、
             CODE_PROJECT、LARGE_REPOSITORY、AGENT_RESULT_MATERIAL、PROCESS_METADATA、OTHER_MATERIAL、
@@ -62,9 +72,10 @@ public class ProjectUnderstandingPromptBuilder {
             它才具有高语义价值。不要使用数值 importance score。
             名称奇怪、无扩展名或位于深目录不会降低正文价值；README、ARCHITECTURE、FINAL_DESIGN 等正式名称
             也不会自动提高可信度或当前性。内容及其与其他 Evidence 的关系优先于文件名。
-            documents 是全部入选来源的短目录；只有少量跨类别来源带 boundedSample。不要逐项复述目录，
-            evidenceSourceAssessments 只列出会改变结论、需要深读、应跳过或存在当前性/冲突风险的关键来源。
-            未单列 assessment 不等于该 Evidence 不存在，也不得据此声称它已被深读。
+            Evidence Ledger 是全部入选来源的短目录；只有少量跨类别来源带 boundedSample。不要逐项复述目录，
+            coverageMode=BOUNDED_DIVERSE 时，evidenceSourceAssessments 只列出会改变结论、需要深读、应跳过或存在
+            当前性/冲突风险的关键来源；未单列 assessment 不等于该 Evidence 不存在，也不得据此声称它已被深读。
+            coverageMode=COMPLETE_SMALL_SET 时仍必须逐项 assessment，不能套用上述省略规则。
 
             Tool 选择必须由明确 information gap 驱动。每个 REQUEST capabilityDecision 必须包含 capability、
             informationGap、expectedEvidenceValue、targetEvidenceIds 和 whyExistingEvidenceIsInsufficient。正文已经充分提供时
@@ -123,27 +134,25 @@ public class ProjectUnderstandingPromptBuilder {
                 "potentialConflicts":[{"text":"","evidenceRefs":["id"]}],
                 "currentnessWarnings":[{"text":"","evidenceRefs":["id"]}]
               },
-              "dynamicProfile":{
+                "dynamicProfile":{
                 "summary":"",
                 "sections":[{"id":"","type":"","title":"","summary":"",
                   "claims":[{"text":"","confidence":"HIGH|MEDIUM|LOW",
-                    "epistemicStatus":"OBSERVED|VERIFIED|DECLARED|INFERRED|CONFLICTED|UNKNOWN|PROCESS_EVIDENCE|PROCESS_METADATA|CURRENT_STATE|HISTORICAL_EVENT|POSSIBLY_STALE|USER_ASSERTION|ENGINEERING_OBSERVATION",
+                    "epistemicStatus":"OBSERVED|VERIFIED|DECLARED|INFERRED|CONFLICTED|UNKNOWN|PROCESS_EVIDENCE",
+                    "semanticRole":"CURRENT_STATE|HISTORICAL_EVENT|PROCESS_METADATA|USER_ASSERTION|MODEL_SUMMARY|OTHER",
                     "evidenceRefs":["id"],"limitations":[],"conflictRefs":[]}],
                   "confidence":"HIGH|MEDIUM|LOW","epistemicStatus":"OBSERVED|VERIFIED|DECLARED|INFERRED|CONFLICTED|UNKNOWN|PROCESS_EVIDENCE",
                   "displayPriority":50,"applicabilityReason":""}]
               },
               "unknowns":[],
-              "selfCheck":{"invalidEvidenceRefs":[],"ineligibleCapabilities":[],"ineligibleViews":[],
-                "unsupportedClaimsRemoved":true,"conflictsPreserved":true,"currentStateHistorySeparated":true,
-                "agentResultNotPromoted":true,"processMetadataNotPromoted":true,"unknownsPreserved":true,
-                "inapplicableArchitectureRemoved":true,"allEligibleCapabilitiesEvaluated":true,
-                "viewToolDependenciesSatisfied":true,"inferenceNotPromoted":true,
-                "declaredNotPromoted":true,"modelAgreementNotTreatedAsFact":true,
-                "largeFileUnreadRangesPreserved":true,"multiProjectIsolationPreserved":true}
+              "selfCheck":{"unsupportedClaimsRemoved":true,"conflictsPreserved":true,
+                "unknownsPreserved":true,"smallEvidenceSetFullyAssessed":true,
+                "allEligibleCapabilitiesEvaluated":true,"viewToolDependenciesSatisfied":true}
             }
             capabilityDecisions 必须对 Eligible Capability Set 中每项恰好输出一次。REQUEST 项必须满足完整 Tool
             request 契约；SKIP 项必须写具体 skipReason，其他请求字段可留空。不要重复输出等价 toolRequests 数组。
-            最多 4 个原子 shape、20 个来源评估、12 个 eligible view、8 个 Section、每个 Section 5 条 claim。
+            最多 4 个原子 shape、20 个来源评估、12 个 eligible view、8 个 Section、每个 Section 4 条 claim，
+            全部 Section 合计最多 16 条 claim。相同事实只出现一次，不跨 Section 改写重复。
             没有源码不生成代码架构；没有历史不生成 Timeline/Evolution；单脚本不生成多层架构。输出前删除无
             Evidence 支持的事实性 Claim，不输出私人推理。
             JSON 必须紧凑：summary 最多 240 个汉字，title 最多 40 个汉字，reason、information gap、
@@ -175,6 +184,9 @@ public class ProjectUnderstandingPromptBuilder {
             unknown 或 conflict 中必须能看到它造成的具体变化。
             Stage 1 已选 Section type 是稳定基线；只有 Tool Evidence 直接证明某个 Section 不适用或新增核心维度时
             才增删该 type，其余 type 原样保留。不要仅为换一种表达而扩张或收缩视图集合。
+            Final 只保留对用户结论有必要的最小差异：不要逐句重写 Stage 1，不要为每个未知项建立一个 Section，
+            不要在多个 Section 重复同一事实。全部 Section 合计最多 12 条 claim；每个 Section 最多 3 条 claim；
+            unknowns、conflicts、stageTwoChanges 各最多 6 条。新增工具证据没有改变结论时，用一条 CONFIRM 即可。
 
             可引用 Evidence ID：%s
             Eligible View Set：%s
@@ -186,7 +198,8 @@ public class ProjectUnderstandingPromptBuilder {
                 "summary":"",
                 "sections":[{"id":"","type":"","title":"","summary":"",
                   "claims":[{"text":"","confidence":"HIGH|MEDIUM|LOW",
-                    "epistemicStatus":"OBSERVED|VERIFIED|DECLARED|INFERRED|CONFLICTED|UNKNOWN|PROCESS_EVIDENCE|PROCESS_METADATA|CURRENT_STATE|HISTORICAL_EVENT|POSSIBLY_STALE|USER_ASSERTION|ENGINEERING_OBSERVATION",
+                    "epistemicStatus":"OBSERVED|VERIFIED|DECLARED|INFERRED|CONFLICTED|UNKNOWN|PROCESS_EVIDENCE",
+                    "semanticRole":"CURRENT_STATE|HISTORICAL_EVENT|PROCESS_METADATA|USER_ASSERTION|MODEL_SUMMARY|OTHER",
                     "evidenceRefs":["id"],"limitations":[],"conflictRefs":[]}],
                   "confidence":"HIGH|MEDIUM|LOW","epistemicStatus":"OBSERVED|VERIFIED|DECLARED|INFERRED|CONFLICTED|UNKNOWN|PROCESS_EVIDENCE",
                   "displayPriority":50,"applicabilityReason":""}]
@@ -194,13 +207,10 @@ public class ProjectUnderstandingPromptBuilder {
               "unknowns":[],
               "conflicts":[{"text":"","evidenceRefs":["id"]}],
               "stageTwoChanges":[{"type":"ADD|CORRECT|LIMIT|CONFIRM","text":"","evidenceRefs":["tool:id"]}],
-              "selfCheck":{"invalidEvidenceRefs":[],"ineligibleViews":[],"unsupportedClaimsRemoved":true,
-                "conflictsPreserved":true,"currentStateHistorySeparated":true,"agentResultNotPromoted":true,
-                "processMetadataNotPromoted":true,"unknownsPreserved":true,"inapplicableArchitectureRemoved":true,
-                "inferenceNotPromoted":true,"declaredNotPromoted":true,
-                "modelAgreementNotTreatedAsFact":true,"largeFileUnreadRangesPreserved":true}
+              "selfCheck":{"unsupportedClaimsRemoved":true,"conflictsPreserved":true,
+                "unknownsPreserved":true,"toolEvidenceChangesAccountedFor":true}
             }
-            最多 8 个 eligible Section、每个 Section 5 条 claim；每条事实性 claim 至少引用一个真实 Evidence ID。
+            只输出有实际内容的 eligible Section；每条事实性 claim 至少引用一个真实 Evidence ID。
             不输出工具请求、命令、下一步计划、优先级或私人推理。
             Prompt contract: %s
             Prompt version: %s
@@ -230,6 +240,8 @@ public class ProjectUnderstandingPromptBuilder {
             未解决来源分歧是 CONFLICTED；证据不足是 UNKNOWN。两个模型同意不等于 VERIFIED。
             Agent Result 是 PROCESS_EVIDENCE，不自动成为 ProjectFact 或稳定能力。token、耗时、request count、
             模型名是 PROCESS_METADATA，不能证明成果、质量或成熟度。当前源码只能支持当前状态，不能反推历史。
+            用户定义的里程碑和阶段是 DECLARED；模型提出的阶段、重点或里程碑只能是 INFERRED/MODEL_SUMMARY，
+            不能删除、折叠掉或改变原始事件的事实身份。README 与 Obsidian 笔记默认也是 DECLARED。
             “为什么当初这样设计”必须有 ADR、Issue、PR discussion、commit body、设计文档、用户说明或其他明确
             原因文字；“已废弃”必须有 deprecated、替代、删除、迁移或关闭原因；“技术债”必须有 TODO/FIXME、
             Open Issue、失败测试、风险、已知限制或可验证缺口。缺少这些证据时只能 DECLARED、INFERRED 或 UNKNOWN。

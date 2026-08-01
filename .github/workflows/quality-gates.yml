@@ -1,4 +1,4 @@
-name: ProjectFlow V3.7.4 Quality Gates
+name: ProjectFlow V3.7.5 Quality Gates
 
 on:
   push:
@@ -175,5 +175,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: projectflow-real-model-eval
-          path: backend/target/projectflow-eval/real
+          path: backend/target/projectflow-eval
           if-no-files-found: ignore
