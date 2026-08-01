@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ProjectUnderstandingPromptBuilder {
     public static final String CONTRACT_VERSION = "project-understanding-prompt-contract-v3";
-    public static final String SCOUT_PROMPT_VERSION = "semantic-scout-v12";
+    public static final String SCOUT_PROMPT_VERSION = "semantic-scout-v13";
     public static final String FINAL_PROMPT_VERSION = "final-synthesis-v7";
     public static final CompatibilityProfile COMPATIBILITY_PROFILE = new CompatibilityProfile(
         "multi-provider-json-v1",
@@ -103,6 +103,9 @@ public class ProjectUnderstandingPromptBuilder {
               `tool:manifest` 时，必须同时给出 MANIFEST request。
             - applicableDimensions 含 HISTORICAL_COVERAGE、LIMITED_HISTORY、MILESTONE_WINDOWS 或 EVOLUTION 时，
               必须请求相应 eligible 的 GIT_HISTORY；MILESTONE_WINDOWS 且 GIT_TAG eligible 时还必须请求 GIT_TAG。
+            - projectShapeHypotheses 含 AGENT_RESULT_MATERIAL 或 applicableDimensions 含 PROCESS_EVIDENCE，且
+              AGENT_RESULT eligible、当前上下文没有 `tool:agent_result` 时，必须请求 AGENT_RESULT。intake 摘要、
+              bounded sample 或 Agent 自报 verification 都不等于已完成工程复验，不能据此 SKIP。
             每项 request 仍必须有真实 information gap 和 target Evidence；若该维度不值得验证，应删除维度或把相关
             结论保留为 UNKNOWN，而不是保留维度却省略所需 request。
 

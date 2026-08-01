@@ -93,7 +93,13 @@ class ModelGatewayProtocolMatrixTest {
             outputLimited = true;
             org.assertj.core.api.Assertions.assertThatThrownBy(
                 () -> gateway.callStructured(provider(protocol), "最小兼容任务", ModelTaskType.PROVIDER_CONNECTION_TEST)
-            ).isInstanceOf(ModelGatewayService.ModelOutputTruncatedException.class);
+            ).isInstanceOf(ModelGatewayService.ModelOutputTruncatedException.class)
+                .satisfies(failure -> {
+                    var truncated = (ModelGatewayService.ModelOutputTruncatedException) failure;
+                    assertThat(truncated.diagnostics().requestCount()).isEqualTo(2);
+                    assertThat(truncated.diagnostics().compactRetryAttempted()).isTrue();
+                    assertThat(truncated.diagnostics().compactRetrySucceeded()).isFalse();
+                });
             assertThat(providerRequestCount.get()).isEqualTo(2);
             outputLimited = false;
         }
@@ -174,7 +180,7 @@ class ModelGatewayProtocolMatrixTest {
     }
 
     @Test
-    void responsesReasoningControlIsCapabilityGatedAndRecoveryUsesLowerEffort() throws Exception {
+    void reasoningControlIsCapabilityGatedAndUsesProtocolSafeEffort() throws Exception {
         modelContent = ModelTaskType.PROVIDER_CONNECTION_TEST.minimalSchema();
         AiProvider unsupported = provider(ModelProtocol.OPENAI_RESPONSES);
         gateway.callStructured(
@@ -217,7 +223,32 @@ class ModelGatewayProtocolMatrixTest {
             ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
         );
         assertThat(capturedBody.get().path("reasoning").path("effort").asText())
-            .isEqualTo("low");
+            .isEqualTo("high");
+
+        modelContent = ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT.minimalSchema();
+        AiProvider chatControlled = provider(ModelProtocol.OPENAI_CHAT_COMPLETIONS);
+        chatControlled.configureProtocol(
+            ModelProtocol.OPENAI_CHAT_COMPLETIONS,
+            null,
+            AiProviderAuthMode.PROTOCOL_DEFAULT,
+            null,
+            null,
+            Map.of(),
+            30,
+            false,
+            false,
+            false,
+            true,
+            true
+        );
+        providerRequestCount.set(0);
+        gateway.callStructured(
+            chatControlled,
+            "最小兼容任务",
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+        );
+        assertThat(capturedBody.get().path("reasoning_effort").asText()).isEqualTo("high");
+        assertThat(capturedBody.get().has("temperature")).isFalse();
     }
 
     @AfterEach

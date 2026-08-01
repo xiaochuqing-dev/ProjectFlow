@@ -3,12 +3,14 @@ package com.projectflow.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
+import com.projectflow.entity.ModelProtocol;
 
 class ModelRequestPolicyTest {
     private final ModelCapabilityRegistry registry = new ModelCapabilityRegistry();
@@ -142,6 +144,46 @@ class ModelRequestPolicyTest {
         assertThat(recovery.taskRequestedMaxTokens()).isEqualTo(65_536);
         assertThat(recovery.effectiveMaxTokens()).isEqualTo(65_536);
         assertThat(recovery.maxTokenDecision()).contains("Provider");
+    }
+
+    @Test
+    void chatHighReasoningRecoveryUsesExplicitProviderCeiling() {
+        AiProvider provider = provider(AiProviderType.DEEPSEEK, "deepseek-v4-flash", 0.1, 65_536);
+        provider.configureProtocol(
+            ModelProtocol.OPENAI_CHAT_COMPLETIONS,
+            null,
+            null,
+            null,
+            null,
+            Map.of(),
+            600,
+            false,
+            false,
+            false,
+            true,
+            true
+        );
+        var capabilities = registry.resolve(provider);
+        var initial = policy.initial(
+            provider,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "x".repeat(48_000)
+        );
+
+        var recovery = policy.recovery(
+            initial,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "EMPTY_AFTER_REASONING_RETRY",
+            0
+        );
+
+        assertThat(initial.effectiveMaxTokens()).isEqualTo(65_536);
+        assertThat(recovery.taskRequestedMaxTokens()).isEqualTo(65_536);
+        assertThat(recovery.effectiveMaxTokens()).isEqualTo(65_536);
+        assertThat(recovery.maxTokenDecision()).contains("Chat high reasoning");
+        assertThat(recovery.maxTokenDecision()).contains("保持 high");
     }
 
     @Test

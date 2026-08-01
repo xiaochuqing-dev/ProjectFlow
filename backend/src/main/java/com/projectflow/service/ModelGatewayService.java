@@ -211,7 +211,7 @@ public class ModelGatewayService {
                 throw new ModelOutputTruncatedException(
                     "模型输出预算不足，恢复请求仍返回不完整结构",
                     null,
-                    recovered.diagnostics().combine(firstDiagnostics, retryType, false)
+                    recovered.diagnostics()
                         .withFailure("OUTPUT_RECOVERY", "OUTPUT_BUDGET_EXHAUSTED")
                 );
             }
@@ -234,7 +234,17 @@ public class ModelGatewayService {
                 );
             }
             if (retryFailure instanceof ModelOutputTruncatedException truncatedFailure && truncatedFailure.diagnostics() != null) {
-                throw truncatedFailure;
+                ModelCallDiagnostics failedDiagnostics = truncatedFailure.diagnostics()
+                    .combine(firstDiagnostics, retryType, false)
+                    .withFailure(
+                        "OUTPUT_RECOVERY",
+                        reasoningExhausted ? "REASONING_EXHAUSTED_OUTPUT" : "OUTPUT_BUDGET_EXHAUSTED"
+                    );
+                throw new ModelOutputTruncatedException(
+                    "模型输出预算不足，恢复请求仍未得到可用结构",
+                    truncatedFailure,
+                    failedDiagnostics
+                );
             }
             ModelCallDiagnostics failedDiagnostics = retryDiagnostics == null
                 ? firstDiagnostics.withRecovery(retryType, false)
@@ -314,15 +324,14 @@ public class ModelGatewayService {
         ModelCapabilities capabilities,
         RequestParameters parameters
     ) {
-        if (!capabilities.supportsReasoningControl()
-            || provider.getProtocol() != com.projectflow.entity.ModelProtocol.OPENAI_RESPONSES) {
+        if (!capabilities.supportsReasoningControl()) {
             return null;
         }
-        if (task == ModelTaskType.PROVIDER_CONNECTION_TEST
-            || !"NONE".equals(parameters.retryType())) {
-            return "low";
-        }
-        return "high";
+        return switch (provider.getProtocol()) {
+            case OPENAI_RESPONSES -> task == ModelTaskType.PROVIDER_CONNECTION_TEST ? "low" : "high";
+            case OPENAI_CHAT_COMPLETIONS -> "high";
+            case ANTHROPIC_MESSAGES -> null;
+        };
     }
 
     private StructuredModelResponse parseCanonicalResponse(
