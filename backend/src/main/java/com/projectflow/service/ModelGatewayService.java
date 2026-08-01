@@ -328,7 +328,7 @@ public class ModelGatewayService {
             return null;
         }
         return switch (provider.getProtocol()) {
-            case OPENAI_RESPONSES -> task == ModelTaskType.PROVIDER_CONNECTION_TEST ? "low" : "high";
+            case OPENAI_RESPONSES -> "high";
             case OPENAI_CHAT_COMPLETIONS -> "high";
             case ANTHROPIC_MESSAGES -> null;
         };

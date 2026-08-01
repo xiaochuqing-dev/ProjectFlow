@@ -1,6 +1,6 @@
 # ProjectFlow V3.7.5 Existing Coverage Matrix
 
-This matrix prevents repeated real-model spending. `Rerun` means the V3.7.5 Prompt, Evidence ordering, Promotion or Agent Context changes materially affect the row.
+This matrix prevents duplicate work that adds no new Evidence. Time and Token are not treated as quality defects; `Rerun` means the V3.7.5 Prompt, Evidence ordering, Promotion or Agent Context changes materially affect the row.
 
 | Capability | Status | Coverage type | Source artifact | Last verified revision | Rerun | Reason |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -22,7 +22,7 @@ This matrix prevents repeated real-model spending. `Rerun` means the V3.7.5 Prom
 | Duplicate suppression | Covered | deterministic | discovery/cache and cross-chunk tests | V3.7.4 | No | Algorithm unchanged |
 | Secret redaction | Covered | deterministic + CI | redactor/security tests; sensitive-content job | V3.7.5 worktree | Yes, completed locally | New task/work-result inputs |
 | Partial coverage | Covered | deterministic | Content Map and Context Package tests | V3.7.5 worktree | Yes, completed | New disclosure fields |
-| Conflict | Partial pending model | deterministic + real model | Semantic diagnostics; frozen Holdout | V3.7.5 worktree | Yes | Prior DeepSeek miss |
+| Conflict | Covered | deterministic + two-model Holdout | Semantic diagnostics; V3.7.5 frozen runs | Freeze 2 | Completed | Both final Holdouts detected applicable conflict; rate 1.0000 |
 | Unknown | Covered | deterministic + real model | inference/unknown tests; Holdout | V3.7.5 worktree | Minimal | Prompt changed |
 | Strong Fact promotion | Covered | deterministic | FactPromotionGuardTest and related tests | V3.7.5 worktree | Yes, completed | Seven-state contract changed |
 | Model consensus boundary | Covered | deterministic | TwoModelContractTest; Prompt snapshot | V3.7.5 worktree | Yes, completed | Contract v3 |
@@ -36,9 +36,9 @@ This matrix prevents repeated real-model spending. `Rerun` means the V3.7.5 Prom
 | Restart | Covered | deterministic/product | job and Hermes restart tests | V3.7.5 worktree | Minimal | Core unchanged |
 | Cancellation | Covered | deterministic + Playwright | Gateway/job tests; Playwright | V3.7.5 worktree | Minimal, completed | Prompt still bounded |
 | Persistence/readback | Covered | H2 + product E2E | full backend; Project Understanding E2E | V3.7.5 worktree | Yes for real models | Product chain required |
-| GLM | Pending V3.7.5 qualification | real model | V3.7.4 saved artifacts | V3.7.4 | Yes | Prompt v12/v7 changed |
-| DeepSeek | Pending V3.7.5 qualification | real model | V3.7.4 failed Holdout | V3.7.4 | Yes | Blocking prior miss |
-| Product E2E | Partial pending models | fixed + real model | Playwright; V3.7.4 GLM E2E | V3.7.5 worktree | Yes | Both real models required |
+| GLM | Qualified for frozen V3.7.5 scope | real Holdout + product E2E | V3.7.5 safe model-run summary | Freeze 1 | Completed | Holdout 8/8; E2E 8/8; one disclosed Final degradation |
+| DeepSeek | Qualified for frozen V3.7.5 scope | preserved failed run + Freeze-2 Holdout + product E2E | V3.7.5 safe model-run summary | Freeze 2 | Completed | First run failed 5/8; explicit JSON Mode refreeze passed 8/8 without lowering high reasoning |
+| Product E2E | Covered for both profiles | fixed + real product persistence/readback | Playwright; GLM and DeepSeek E2E artifacts | Freeze 2 | Completed | Both 8/8; invalid Evidence refs 0 |
 | PostgreSQL | Covered in prior CI; local unavailable | Testcontainers CI | Run 30504805160 and prior PR runs | 78e57ff | Yes in PR CI | Docker unavailable locally |
 | Frontend | Covered | deterministic build | lint, 50 contracts, Next build | V3.7.5 worktree | Yes, completed | DTO compatibility |
 | Playwright | Covered | product E2E fixed model | 8 browser tests | V3.7.5 worktree | Yes, completed | Existing GUI compatibility |

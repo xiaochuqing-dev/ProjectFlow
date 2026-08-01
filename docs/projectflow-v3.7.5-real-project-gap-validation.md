@@ -2,9 +2,9 @@
 
 ## Selection boundary
 
-The Existing Coverage Matrix already covers No-Git, unusual names, extensionless text, Chinese paths, large-file middle/tail, 80k-line code and oversized documents. Repeating those cases with real models would add no information. V3.7.5 therefore selected only three local projects with materially different evidence structures instead of filling the suggested six-to-eight count.
+The Existing Coverage Matrix already covers No-Git, unusual names, extensionless text, Chinese paths, large-file middle/tail, 80k-line code and oversized documents. Repeating those cases with real models would add no information. V3.7.5 therefore selected only three local projects with materially different evidence structures instead of filling the suggested six-to-eight count. This is evidence-value control, not a time/Token quality shortcut.
 
-| Project | New evidence structure | Planned model requests / Token | Two models | Product E2E |
+| Project | New evidence structure | Necessary model work | Two models | Product E2E |
 | --- | --- | --- | --- | --- |
 | Agent mail bridge | code, human documentation, configuration, runtime data and sensitive metadata in one live project | 0 / 0 | No | No |
 | Agent Eyes | Python desktop code plus configuration and generated/build-oriented material | 0 / 0 | No | No |

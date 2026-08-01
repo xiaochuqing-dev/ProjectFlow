@@ -46,6 +46,14 @@ Models receive known Evidence IDs and eligible Capability/View names. They canno
 
 Production and Eval use one provider-neutral semantic contract. Provider adapters may differ technically, but fact states, Ground Truth, thresholds, Promotion rules and fallback meaning cannot differ by model.
 
+## Quality-first model execution
+
+- Model elapsed time, Token usage, request count and monetary cost are process diagnostics. They are not product-quality defects and cannot lower a semantic score, suppress Evidence, skip a qualified deep read or reduce reasoning effort.
+- When a Provider explicitly supports reasoning control, ProjectFlow uses `high` for connection, semantic and recovery requests. It does not switch to `low` to save time or Token.
+- A reasoning-capable task may use the user-configured Provider output ceiling from the first request. The ceiling is a loose safety boundary, not a consumption target or an instruction to stop thinking early.
+- Connection timeout, Provider request timeout, overall analysis deadline, cancellation, heartbeat and bounded retry remain separate safety controls. They prevent runaway or duplicate execution without treating normal long-running analysis as failure.
+- ProjectFlow avoids only requests that add no new Evidence or diagnostic value. It does not trade necessary model thought for cheaper or faster completion.
+
 ## Open-world and dynamic views
 
 ProjectFlow does not fill a fixed project template. Architecture, backend, database, timeline, evolution or capability views appear only when applicable Evidence exists. A small or non-code project may legitimately have very few views.

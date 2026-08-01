@@ -20,15 +20,17 @@ The saved observations showed four general weaknesses:
 3. Every eligible capability must have exactly one `REQUEST` or `SKIP` decision. REQUEST decisions must carry the information gap, expected Evidence value, target Evidence IDs and why existing Evidence is insufficient.
 4. `SemanticContractDiagnostics` validates the small-set ledger, duplicate/missing assessments, exact Capability decisions and view-to-tool dependencies.
 5. A contract gap is `FAILED_DEGRADED`. It is added to persisted limitations and unknowns instead of being silently treated as semantic success.
-6. Scout v12 and Final v7 use the same seven fact states and a separate semantic role. Model `VERIFIED` output is normalized without granting authority.
+6. Scout v13 and Final v7 use the same seven fact states and a separate semantic role. V13 requires an eligible AGENT_RESULT read when process-evidence/Agent-result dimensions are selected without existing tool evidence. Model `VERIFIED` output is normalized without granting authority.
 7. Scout output is capped at 16 claims, Final at 12 claims and three claims per section. Final records only meaningful changes from Stage 1.
 8. Production and direct Eval continue to use the same `ProjectUnderstandingPromptBuilder`. No model name, case ID, repository name, path or expected answer branch is allowed.
 9. The V3.7.4 Holdout Ground Truth and thresholds remain unchanged.
+10. `QUALITY_FIRST` treats elapsed time, Token usage, request count and cost as diagnostics rather than quality defects. Reasoning-capable requests use the configured Provider ceiling from the first attempt; explicitly supported Responses and Chat controls remain high for connection, semantic and recovery requests.
 
 ## Consequences
 
 - A weak model may still choose a poor interpretation, but it cannot silently ignore a complete small Evidence set or Capability decision without an observable degraded status.
 - Provider-specific JSON or reasoning recovery remains in the Model Gateway adapter; product semantics do not fork.
+- Explicit JSON Mode constrains only final structure. It cannot reduce Evidence, time allowance or reasoning effort.
 - Output is smaller and easier to repair, while unknowns and conflicts remain explicit.
 - Evaluation and product behavior stay comparable because the fix is in the shared builder and parser path.
 - A failed formal Holdout remains evidence. Any later run must use a new freeze and preserve the old artifact.

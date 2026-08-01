@@ -4,7 +4,7 @@ ProjectFlow 当前版本为 V3.7.5。后续 Agent 必须按“开放世界项目
 V3.7.5 Cross-model Strong-fact / Product Constitution / Agent Context 规则（后续 Agent 必须遵守）：
 - 产品宪法唯一权威来源是 `docs/projectflow-v3.7.5-product-constitution.md`。只有 project-bound `OBSERVED` 和独立工程验证的 `VERIFIED` 可进入强事实主链；`DECLARED`、`INFERRED`、`CONFLICTED`、`UNKNOWN`、`PROCESS_EVIDENCE` 永不因模型、Agent 或共识晋升。
 - Scout 使用 Evidence Ledger。小证据集必须逐项处置；每个 eligible capability 必须恰好 REQUEST 或 SKIP 一次。契约缺口写入 `SemanticContractDiagnostics` 并以 `FAILED_DEGRADED` 对外披露，不能静默成功。
-- 生产与 Eval 共用 Prompt contract v3、Semantic Scout v12、Final Synthesis v7。Ground Truth、case ID、文件名答案、阈值和模型名不得进入 Prompt 或业务特判；V3.7.4 Frozen Holdout 答案保持冻结。
+- 生产与 Eval 共用 Prompt contract v3、Semantic Scout v13、Final Synthesis v7。Ground Truth、case ID、文件名答案、阈值和模型名不得进入 Prompt 或业务特判；V3.7.4 Frozen Holdout 答案保持冻结。
 - Context Package v2 必须任务相关、revision-aware、project-isolated、可追溯，保留冲突、UNKNOWN、unread scope、limitations、range 和确定性 package revision。GET 不调用模型。
 - Agent Work Result 只能写 Candidate。changed file 可由工程层有界复读并绑定 hash；Agent 的行为、命令和测试声明仍是 `PROCESS_EVIDENCE`，提交 `OBSERVED`/`VERIFIED` 必须在任何写入前被拒绝。
 - 局部复验只允许 `VERIFY_FACT`、`REFRESH_EVIDENCE`、`REREAD_RANGE`、`VALIDATE_CURRENTNESS`、`RESOLVE_PACKAGE_LATEST`，复用固定 Git 命令和有界项目内文件读取，不重跑整个项目，不修改 ProjectFact。
@@ -14,6 +14,7 @@ V3.7.5 Cross-model Strong-fact / Product Constitution / Agent Context 规则（�
 V3.7.3 Long-running Multi-provider Reliability / Prompt Intelligence 规则（后续 Agent 必须遵守）：
 - Connection Timeout、Provider Request Timeout、Overall Analysis Deadline 必须分离。AUTO/UNLIMITED 不设置隐藏短总体截止时间；FINITE 尊重显式用户值。坏连接仍有界、transport retry 最多一次、取消和 heartbeat 始终有效。
 - 不得为了响应速度、Token 或成本静默减少 Evidence、必要深读或满足门控的 Final Synthesis。当前质量模式是显式 QUALITY_FIRST。
+- 耗时、Token、请求数与费用只作过程诊断，不得作为质量缺点、降档理由或自动减少思考的依据。显式支持 reasoning control 的 Responses/Chat Provider 在连接、语义与恢复请求均使用 high；reasoning 任务首次请求即可使用用户配置的宽松 Provider 上限，上限不是消耗目标。
 - Semantic Scout 与 Final Synthesis 的生产和 Eval Prompt 只能通过共享 `ProjectUnderstandingPromptBuilder`；Ground Truth、case ID、期望标签、评分和门槛不得进入 Prompt。
 - 工程系统只负责广泛发现、安全采样、客观来源分类、多样性、allow-list、capability/view 可用性和结果验证；不得从文件名、类型、README 身份或内部采样分数决定语义 HIGH/LOW。
 - 模型负责结合整个项目判断 Evidence 语义重要性、信息缺口、深读需要、适用视图、冲突和当前性；请求只能包含 eligible capability name 和已知 evidence ID。

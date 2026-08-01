@@ -122,7 +122,7 @@ class ModelRequestPolicyTest {
     }
 
     @Test
-    void reasoningTruncationUsesBoundedProviderHeadroomForTheOnlyRecovery() {
+    void reasoningUsesBoundedProviderHeadroomFromTheFirstRequestAndRecovery() {
         AiProvider provider = provider(AiProviderType.OPENAI, "glm-5.2", 0.9, 65_536);
         var capabilities = registry.resolve(provider);
         var initial = policy.initial(
@@ -140,7 +140,10 @@ class ModelRequestPolicyTest {
             0
         );
 
-        assertThat(initial.effectiveMaxTokens()).isEqualTo(16_000);
+        assertThat(initial.taskRequestedMaxTokens()).isEqualTo(65_536);
+        assertThat(initial.effectiveMaxTokens()).isEqualTo(65_536);
+        assertThat(initial.maxTokenDecision()).contains("QUALITY_FIRST");
+        assertThat(initial.maxTokenDecision()).contains("耗时和 Token 只作诊断");
         assertThat(recovery.taskRequestedMaxTokens()).isEqualTo(65_536);
         assertThat(recovery.effectiveMaxTokens()).isEqualTo(65_536);
         assertThat(recovery.maxTokenDecision()).contains("Provider");

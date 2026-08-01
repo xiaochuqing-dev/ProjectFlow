@@ -1,0 +1,562 @@
+{
+  "version": "projectflow-v3.7.5-model-run-summary-v1",
+  "generatedDate": "2026-08-01",
+  "safetyNotice": "Contains normalized run metadata, aggregate metrics, safe case status and SHA-256 only. No API key, Authorization value, prompt, raw response, reasoning, claim text, full document or absolute path is included.",
+  "qualityInterpretation": "Elapsed time, Token usage, request count and cost are process diagnostics, not quality defects. Qualified profiles kept high reasoning and loose provider ceilings; these fields did not lower gates or suppress Evidence.",
+  "prompt": {
+    "contractVersion": "project-understanding-prompt-contract-v3",
+    "scoutVersion": "semantic-scout-v13",
+    "finalVersion": "final-synthesis-v7",
+    "scoutSnapshotSha256": "806AA0110390095F8961FB8ABEFC96422DCB576B617261153F7393DF0569777D",
+    "finalSnapshotSha256": "14574307A878B46B2B99689E993522B9C01DEE9EE594C4616988D1302687C136"
+  },
+  "freezes": [
+    {
+      "id": "v3.7.5-freeze-1",
+      "path": "docs/acceptance-evidence/v3.7.5-freeze.json",
+      "sha256": "8EB8E1D5B8C15C09FBEBB30B30FFE7E6D0389BA7D2226E10AEDDEA1023D0E601"
+    },
+    {
+      "id": "v3.7.5-freeze-2-deepseek-json-mode",
+      "path": "docs/acceptance-evidence/v3.7.5-freeze-2.json",
+      "sha256": "5107B639D0BF7C4D1052305AAA8767AA662B66DDFC43AB85E0CBE08827BD3590"
+    }
+  ],
+  "runs": [
+    {
+      "runId": "v375-formal-holdout-glm-20260801-b59a9ef",
+      "kind": "FROZEN_HOLDOUT",
+      "freezeId": "v3.7.5-freeze-1",
+      "provider": "Volcano Ark Coding",
+      "model": "glm-5.2",
+      "protocol": "OPENAI_RESPONSES",
+      "artifactSha256": "C4D4339630AEE3C7A4E4505B064996CF3FC31634B75B322363EC53AA664DD20B",
+      "result": {
+        "runCount": 8,
+        "successfulRunCount": 8,
+        "failureCount": 0,
+        "schemaFailureCount": 0,
+        "degradedRunCount": 0,
+        "criticalEvidenceRecall": 1,
+        "evidencePrecision": 0.9166666667,
+        "toolSelectionPrecision": 0.75,
+        "toolSelectionRecall": 0.75,
+        "deepReadSufficiency": 1,
+        "dynamicViewRecall": 0.2727272727,
+        "conflictDetectionRate": 1,
+        "unsupportedClaimRate": 0,
+        "modelRequestCount": 11,
+        "totalTokens": 93000,
+        "averageLatencyMs": 81361.125,
+        "p95LatencyMs": 177001,
+        "retryCount": 0
+      },
+      "cases": [
+        {
+          "caseId": "holdout-go-service",
+          "status": "SUCCEEDED",
+          "requestCount": 1,
+          "totalTokens": 10044,
+          "latencyMs": 71662,
+          "retries": 0,
+          "degraded": false
+        },
+        {
+          "caseId": "holdout-mobile-docs",
+          "status": "SUCCEEDED",
+          "requestCount": 1,
+          "totalTokens": 5252,
+          "latencyMs": 23033,
+          "retries": 0,
+          "degraded": false
+        },
+        {
+          "caseId": "holdout-tail-revision",
+          "status": "SUCCEEDED",
+          "requestCount": 2,
+          "totalTokens": 22896,
+          "latencyMs": 177001,
+          "retries": 0,
+          "degraded": false
+        },
+        {
+          "caseId": "holdout-weird-extensionless",
+          "status": "SUCCEEDED",
+          "requestCount": 2,
+          "totalTokens": 20458,
+          "latencyMs": 158894,
+          "retries": 0,
+          "degraded": false
+        },
+        {
+          "caseId": "holdout-agent-conflict",
+          "status": "SUCCEEDED",
+          "requestCount": 2,
+          "totalTokens": 15582,
+          "latencyMs": 115208,
+          "retries": 0,
+          "degraded": false
+        },
+        {
+          "caseId": "holdout-reason-unknown",
+          "status": "SUCCEEDED",
+          "requestCount": 1,
+          "totalTokens": 5025,
+          "latencyMs": 20786,
+          "retries": 0,
+          "degraded": false
+        },
+        {
+          "caseId": "holdout-yaml-ops",
+          "status": "SUCCEEDED",
+          "requestCount": 1,
+          "totalTokens": 6993,
+          "latencyMs": 43738,
+          "retries": 0,
+          "degraded": false
+        },
+        {
+          "caseId": "holdout-portfolio-isolation",
+          "status": "SUCCEEDED",
+          "requestCount": 1,
+          "totalTokens": 6750,
+          "latencyMs": 40567,
+          "retries": 0,
+          "degraded": false
+        }
+      ]
+    },
+    {
+      "runId": "v375-formal-holdout-deepseek-flash-20260801-b59a9ef",
+      "kind": "PRESERVED_FAILED_FROZEN_HOLDOUT",
+      "freezeId": "v3.7.5-freeze-1",
+      "provider": "DeepSeek official",
+      "model": "deepseek-v4-flash",
+      "protocol": "OPENAI_CHAT_COMPLETIONS",
+      "artifactSha256": "D5B29C07351E2B66A16E222E7C30E82C3958F3BDCC0185F06BA968C3178A0793",
+      "result": {
+        "runCount": 8,
+        "successfulRunCount": 3,
+        "failureCount": 5,
+        "schemaFailureCount": 0,
+        "degradedRunCount": 5,
+        "criticalEvidenceRecall": 1,
+        "deepReadSufficiency": 1,
+        "conflictDetectionRate": 1,
+        "unsupportedClaimRate": 0,
+        "modelRequestCount": 15,
+        "totalTokens": 102379,
+        "averageLatencyMs": 55652,
+        "p95LatencyMs": 159457,
+        "retryCount": 6,
+        "failureRate": 0.625,
+        "failureCode": "REASONING_EXHAUSTED_OUTPUT"
+      },
+      "cases": [
+        {
+          "caseId": "holdout-go-service",
+          "status": "FAILED",
+          "requestCount": 2,
+          "totalTokens": 10595,
+          "latencyMs": 23012,
+          "retries": 1,
+          "degraded": true,
+          "failureCode": "REASONING_EXHAUSTED_OUTPUT"
+        },
+        {
+          "caseId": "holdout-mobile-docs",
+          "status": "SUCCEEDED",
+          "requestCount": 2,
+          "totalTokens": 25053,
+          "latencyMs": 159457,
+          "retries": 1,
+          "degraded": false,
+          "failureCode": null
+        },
+        {
+          "caseId": "holdout-tail-revision",
+          "status": "FAILED",
+          "requestCount": 2,
+          "totalTokens": 10293,
+          "latencyMs": 38688,
+          "retries": 1,
+          "degraded": true,
+          "failureCode": "REASONING_EXHAUSTED_OUTPUT"
+        },
+        {
+          "caseId": "holdout-weird-extensionless",
+          "status": "SUCCEEDED",
+          "requestCount": 2,
+          "totalTokens": 12628,
+          "latencyMs": 59516,
+          "retries": 0,
+          "degraded": false,
+          "failureCode": null
+        },
+        {
+          "caseId": "holdout-agent-conflict",
+          "status": "FAILED",
+          "requestCount": 2,
+          "totalTokens": 11280,
+          "latencyMs": 30177,
+          "retries": 1,
+          "degraded": true,
+          "failureCode": "REASONING_EXHAUSTED_OUTPUT"
+        },
+        {
+          "caseId": "holdout-reason-unknown",
+          "status": "SUCCEEDED",
+          "requestCount": 1,
+          "totalTokens": 12463,
+          "latencyMs": 86849,
+          "retries": 0,
+          "degraded": false,
+          "failureCode": null
+        },
+        {
+          "caseId": "holdout-yaml-ops",
+          "status": "FAILED",
+          "requestCount": 2,
+          "totalTokens": 9953,
+          "latencyMs": 20280,
+          "retries": 1,
+          "degraded": true,
+          "failureCode": "REASONING_EXHAUSTED_OUTPUT"
+        },
+        {
+          "caseId": "holdout-portfolio-isolation",
+          "status": "FAILED",
+          "requestCount": 2,
+          "totalTokens": 10114,
+          "latencyMs": 27237,
+          "retries": 1,
+          "degraded": true,
+          "failureCode": "REASONING_EXHAUSTED_OUTPUT"
+        }
+      ]
+    },
+    {
+      "runId": "v375-formal-holdout-deepseek-flash-freeze2-20260801",
+      "kind": "FROZEN_HOLDOUT",
+      "freezeId": "v3.7.5-freeze-2-deepseek-json-mode",
+      "provider": "DeepSeek official",
+      "model": "deepseek-v4-flash",
+      "protocol": "OPENAI_CHAT_COMPLETIONS",
+      "jsonMode": true,
+      "artifactSha256": "4C80B23CB183A3B733A5B74947CE314C3D1B40A3FB24F6ED80429EB867F91C8E",
+      "result": {
+        "runCount": 8,
+        "successfulRunCount": 8,
+        "failureCount": 0,
+        "schemaFailureCount": 0,
+        "degradedRunCount": 0,
+        "criticalEvidenceRecall": 1,
+        "evidencePrecision": 0.9166666667,
+        "toolSelectionPrecision": 0.8,
+        "toolSelectionRecall": 1,
+        "deepReadSufficiency": 1,
+        "dynamicViewRecall": 0.2727272727,
+        "conflictDetectionRate": 1,
+        "unsupportedClaimRate": 0,
+        "modelRequestCount": 15,
+        "totalTokens": 143652,
+        "averageLatencyMs": 111005.125,
+        "p95LatencyMs": 178373,
+        "retryCount": 4
+      },
+      "cases": [
+        {
+          "caseId": "holdout-go-service",
+          "status": "SUCCEEDED",
+          "requestCount": 1,
+          "totalTokens": 24956,
+          "latencyMs": 178373,
+          "retries": 0,
+          "degraded": false
+        },
+        {
+          "caseId": "holdout-mobile-docs",
+          "status": "SUCCEEDED",
+          "requestCount": 2,
+          "totalTokens": 18383,
+          "latencyMs": 109843,
+          "retries": 1,
+          "degraded": false
+        },
+        {
+          "caseId": "holdout-tail-revision",
+          "status": "SUCCEEDED",
+          "requestCount": 2,
+          "totalTokens": 17395,
+          "latencyMs": 106330,
+          "retries": 0,
+          "degraded": false
+        },
+        {
+          "caseId": "holdout-weird-extensionless",
+          "status": "SUCCEEDED",
+          "requestCount": 3,
+          "totalTokens": 23063,
+          "latencyMs": 133401,
+          "retries": 1,
+          "degraded": false
+        },
+        {
+          "caseId": "holdout-agent-conflict",
+          "status": "SUCCEEDED",
+          "requestCount": 2,
+          "totalTokens": 19089,
+          "latencyMs": 130813,
+          "retries": 0,
+          "degraded": false
+        },
+        {
+          "caseId": "holdout-reason-unknown",
+          "status": "SUCCEEDED",
+          "requestCount": 2,
+          "totalTokens": 18077,
+          "latencyMs": 105424,
+          "retries": 1,
+          "degraded": false
+        },
+        {
+          "caseId": "holdout-yaml-ops",
+          "status": "SUCCEEDED",
+          "requestCount": 1,
+          "totalTokens": 8985,
+          "latencyMs": 48914,
+          "retries": 0,
+          "degraded": false
+        },
+        {
+          "caseId": "holdout-portfolio-isolation",
+          "status": "SUCCEEDED",
+          "requestCount": 2,
+          "totalTokens": 13704,
+          "latencyMs": 74943,
+          "retries": 1,
+          "degraded": false
+        }
+      ]
+    },
+    {
+      "runId": "v375-product-e2e-glm-20260801-b59a9ef",
+      "kind": "PRODUCT_E2E",
+      "freezeId": "v3.7.5-freeze-1",
+      "provider": "Volcano Ark Coding",
+      "model": "glm-5.2",
+      "protocol": "OPENAI_RESPONSES",
+      "artifactSha256": "C3506835B69596CD16C6037CA84E7A04FFB886C44BE5F3E11915FACC1C1DD7FC",
+      "result": {
+        "caseCount": 8,
+        "passedCount": 8,
+        "logicalModelRequests": 16,
+        "physicalModelRequests": 17,
+        "totalTokens": 265679,
+        "totalLatencyMs": 1842025,
+        "degradedCaseCount": 1,
+        "invalidEvidenceReferenceCount": 0
+      },
+      "cases": [
+        {
+          "caseId": "strange-important-document",
+          "passed": true,
+          "finalSynthesisStatus": "FAILED_DEGRADED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 3,
+          "totalTokens": 32012,
+          "latencyMs": 213282,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        },
+        {
+          "caseId": "small-script",
+          "passed": true,
+          "finalSynthesisStatus": "SUCCEEDED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 2,
+          "totalTokens": 20744,
+          "latencyMs": 124863,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        },
+        {
+          "caseId": "frontend-only",
+          "passed": true,
+          "finalSynthesisStatus": "SUCCEEDED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 2,
+          "totalTokens": 29318,
+          "latencyMs": 220669,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        },
+        {
+          "caseId": "backend-only",
+          "passed": true,
+          "finalSynthesisStatus": "SUCCEEDED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 2,
+          "totalTokens": 39210,
+          "latencyMs": 309980,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        },
+        {
+          "caseId": "fullstack",
+          "passed": true,
+          "finalSynthesisStatus": "SUCCEEDED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 2,
+          "totalTokens": 32720,
+          "latencyMs": 221364,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        },
+        {
+          "caseId": "no-git",
+          "passed": true,
+          "finalSynthesisStatus": "SUCCEEDED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 2,
+          "totalTokens": 29894,
+          "latencyMs": 229573,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        },
+        {
+          "caseId": "agent-result",
+          "passed": true,
+          "finalSynthesisStatus": "SUCCEEDED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 2,
+          "totalTokens": 20838,
+          "latencyMs": 119155,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        },
+        {
+          "caseId": "projectflow-itself",
+          "passed": true,
+          "finalSynthesisStatus": "SUCCEEDED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 2,
+          "totalTokens": 60943,
+          "latencyMs": 403139,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        }
+      ]
+    },
+    {
+      "runId": "v375-product-e2e-deepseek-flash-freeze2-20260801",
+      "kind": "PRODUCT_E2E",
+      "freezeId": "v3.7.5-freeze-2-deepseek-json-mode",
+      "provider": "DeepSeek official",
+      "model": "deepseek-v4-flash",
+      "protocol": "OPENAI_CHAT_COMPLETIONS",
+      "jsonMode": true,
+      "artifactSha256": "5566979980A593D7FF5441B0F75A3BA3993BC10C8E7461BFCEC0AE8AD041975C",
+      "result": {
+        "caseCount": 8,
+        "passedCount": 8,
+        "logicalModelRequests": 15,
+        "physicalModelRequests": 22,
+        "totalTokens": 299575,
+        "totalLatencyMs": 1699770,
+        "degradedCaseCount": 0,
+        "invalidEvidenceReferenceCount": 0
+      },
+      "cases": [
+        {
+          "caseId": "strange-important-document",
+          "passed": true,
+          "finalSynthesisStatus": "SUCCEEDED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 4,
+          "totalTokens": 35861,
+          "latencyMs": 294515,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        },
+        {
+          "caseId": "small-script",
+          "passed": true,
+          "finalSynthesisStatus": "SUCCEEDED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 3,
+          "totalTokens": 34643,
+          "latencyMs": 184383,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        },
+        {
+          "caseId": "frontend-only",
+          "passed": true,
+          "finalSynthesisStatus": "SUCCEEDED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 4,
+          "totalTokens": 52609,
+          "latencyMs": 333329,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        },
+        {
+          "caseId": "backend-only",
+          "passed": true,
+          "finalSynthesisStatus": "SUCCEEDED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 3,
+          "totalTokens": 45335,
+          "latencyMs": 226616,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        },
+        {
+          "caseId": "fullstack",
+          "passed": true,
+          "finalSynthesisStatus": "SUCCEEDED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 3,
+          "totalTokens": 50928,
+          "latencyMs": 268648,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        },
+        {
+          "caseId": "no-git",
+          "passed": true,
+          "finalSynthesisStatus": "SKIPPED_NO_HIGH_VALUE_EVIDENCE",
+          "logicalModelRequests": 1,
+          "physicalModelRequests": 1,
+          "totalTokens": 15244,
+          "latencyMs": 84337,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        },
+        {
+          "caseId": "agent-result",
+          "passed": true,
+          "finalSynthesisStatus": "SUCCEEDED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 2,
+          "totalTokens": 15394,
+          "latencyMs": 66954,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        },
+        {
+          "caseId": "projectflow-itself",
+          "passed": true,
+          "finalSynthesisStatus": "SUCCEEDED",
+          "logicalModelRequests": 2,
+          "physicalModelRequests": 2,
+          "totalTokens": 49561,
+          "latencyMs": 240988,
+          "invalidEvidenceReferenceCount": 0,
+          "snapshotReadback": true
+        }
+      ]
+    }
+  ]
+}

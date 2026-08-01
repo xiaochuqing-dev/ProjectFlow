@@ -12,21 +12,14 @@ public class ModelRequestPolicy {
         int inputChars = prompt == null ? 0 : prompt.length();
         int scaleTokens = Math.max(0, inputChars / (task.collectionOutput() ? 9 : 14));
         int taskRequested = Math.min(task.maximumUsefulOutputTokens(), task.baseOutputTokens() + scaleTokens);
-        boolean qualitySemanticReasoning = capabilities.supportsReasoning()
-            && capabilities.supportsReasoningControl()
-            && task.maximumUsefulOutputTokens()
-                > ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST.maximumUsefulOutputTokens();
-        if (qualitySemanticReasoning) {
+        boolean qualityFirstReasoning = capabilities.supportsReasoning();
+        if (qualityFirstReasoning) {
             // max_tokens is a ceiling, not a consumption target. Explicit
-            // QUALITY_FIRST profiles may use the user's bounded Provider
-            // allowance instead of crowding thinking and visible JSON into an
-            // ordinary-output estimate.
+            // QUALITY_FIRST reasoning profiles use the user's bounded Provider
+            // allowance from the first request instead of crowding thinking and
+            // visible JSON into an ordinary-output estimate. Usage and latency
+            // remain diagnostics and never trigger a lower reasoning tier.
             taskRequested = capabilities.maxOutputTokens();
-        } else if (capabilities.supportsReasoning()) {
-            // Responses providers commonly count hidden reasoning and visible JSON
-            // against one max-output budget. Reserve the task's bounded useful
-            // ceiling so valid visible output is not crowded out by reasoning.
-            taskRequested = task.maximumUsefulOutputTokens();
         }
         int effective = Math.min(capabilities.maxOutputTokens(), Math.max(256, taskRequested));
         boolean sendTemperature = capabilities.supportsTemperature();
@@ -36,10 +29,8 @@ public class ModelRequestPolicy {
             : "当前模型能力档案不支持 temperature，请求中省略该字段";
         String maxTokenReason = effective < taskRequested
             ? "任务按输入规模申请 " + taskRequested + "，受 Provider 配置能力上限 " + capabilities.maxOutputTokens() + " 约束"
-            : qualitySemanticReasoning
-                ? "显式 QUALITY_FIRST reasoning 任务使用用户配置的 Provider 有界上限；上限不是 Token 消耗目标"
-            : capabilities.supportsReasoning()
-                ? "reasoning 与可见 JSON 共享输出预算，使用任务有界有效上限，未使用固定 4000/2000 上限"
+            : qualityFirstReasoning
+                ? "reasoning 与可见 JSON 共享输出空间；显式 QUALITY_FIRST 任务首次请求即使用用户配置的 Provider 宽松有界上限；上限不是 Token 消耗目标，耗时和 Token 只作诊断"
                 : "按任务类型、输入规模和预期结构动态计算，未使用固定 4000/2000 上限";
         if (capabilities.supportsReasoningControl()
             && "OPENAI_RESPONSES".equals(capabilities.providerResponseShape())) {

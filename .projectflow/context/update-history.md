@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.7.5 跨模型强事实闭环与产品宪法固化 - 2026-08-01
+
+产品宪法成为七种事实状态、Strong Fact Promotion、Agent Candidate、Timeline 权威和外部投影的唯一语义来源。Semantic Scout v13 补齐小证据集、Capability 决策及 Agent Result 深读契约；Context Package v2、Candidate Work Result 与五类局部复验向人和 Agent 提供同一套可追溯项目状态。GLM `glm-5.2` 与 DeepSeek `deepseek-v4-flash` 在冻结 Holdout 和产品 E2E 中完成双模型闭环，首次 DeepSeek 失败与 GLM 降级仍被保留。QUALITY_FIRST 明确耗时和模型用量只作诊断，显式 reasoning profile 的连接、语义和恢复均保持 high，并从首次请求使用用户配置的宽松 Provider 上限。最终 GitHub PR、PostgreSQL CI、合并和 master 元数据仍以 Acceptance Report 为准。
+
 ## ProjectFlow V3.4.5 Backend Intelligence Foundation - 2026-07-20
 
 完成真实 ProjectFact/Timeline/Capability/Gateway/Hermes/Obsidian 价值审计；保留 ProjectFact 唯一事实来源。Model Gateway V2 使用官方 OpenAI 与 Anthropic Java SDK 支持 Responses、Chat Completions、Messages，统一 canonical response、finish/usage、动态预算、单一 retry ownership 与分型恢复。Provider 新增协议、端点、认证、超时、能力覆盖和两阶段兼容性档案，旧配置幂等迁移。Project Memory Gateway 保持 API 稳定，跨层搜索和事实证据追踪拆为独立只读服务。下一阶段是 Automatic Memory Maintenance，完整前端重建继续延后。

@@ -70,7 +70,7 @@ The understanding response retains V3.6 compatibility fields and adds:
 - `dynamicProfile`: summary, project shapes, applicable/unavailable views and ordered evidence-bound sections.
 - `historicalCoverage`: availability, evidence range, commit/Fact/Tag counts, covered/gap periods, coverage and limitations.
 - `evolutionPreview`: current-state, early-project, milestone-window or long-history clustering strategy.
-- `analysisMetrics`: evidence, tool, model/token, repository-size, duration, cache and coverage measurements.
+- `analysisMetrics`: evidence, tool, model/token, repository-size, duration, cache and coverage measurements. Token, request and duration values are process diagnostics only; clients must not present them as quality defects or use them to infer a lower reasoning tier.
 
 The API never returns source samples, full documents, prompts, raw responses, reasoning, credentials or absolute paths. A stored V3.6 snapshot may have the new fields as null until the user explicitly refreshes it.
 

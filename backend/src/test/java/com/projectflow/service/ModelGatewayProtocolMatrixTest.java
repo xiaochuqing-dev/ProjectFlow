@@ -206,7 +206,19 @@ class ModelGatewayProtocolMatrixTest {
             true,
             true
         );
+        modelContent = ModelTaskType.PROVIDER_CONNECTION_TEST.minimalSchema();
         providerRequestCount.set(0);
+        gateway.callStructured(
+            controlled,
+            "最小兼容任务",
+            ModelTaskType.PROVIDER_CONNECTION_TEST
+        );
+        assertThat(capturedBody.get().path("reasoning").path("effort").asText())
+            .isEqualTo("high");
+        assertThat(capturedBody.get().path("max_output_tokens").asInt()).isEqualTo(20_000);
+
+        providerRequestCount.set(0);
+        modelContent = ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT.minimalSchema();
         gateway.callStructured(
             controlled,
             "最小兼容任务",
