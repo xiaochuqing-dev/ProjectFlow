@@ -5,7 +5,8 @@
     "将生产与 Eval 的 Semantic Scout 固化为 v13，补强 Agent Result/PROCESS_EVIDENCE 维度所需的注册能力读取，同时保留 Ground Truth 隔离、已知 Evidence ID、严格 Capability 决策和失败降级契约。",
     "保留 DeepSeek 首次正式失败，并通过仅约束最终结构的显式 JSON Mode Freeze 2 完成 GLM 与 DeepSeek 的冻结 Holdout 和产品持久化回读验收；安全汇总只记录哈希、聚合指标和案例状态。",
     "完成产品宪法、Agent Context Contract、Provider、架构、API、CI、Hermes、Obsidian、覆盖矩阵、模型资格和验收报告的一致性更新；未写入凭据、原始模型输出、reasoning 或绝对路径。",
-    "创建 Draft PR #11，并完成分支与 PR 两套 GitHub 质量门禁；后端、前端、Playwright、Hermes、Obsidian、敏感扫描和 PostgreSQL 16 Testcontainers 均通过。"
+    "创建 PR #11，并完成分支与 PR 两套 GitHub 质量门禁；后端、前端、Playwright、Hermes、Obsidian、敏感扫描和 PostgreSQL 16 Testcontainers 均通过。",
+    "将功能 PR 合并为 master 提交 2d54d91，并验证 master Run 30702083514 全绿；Foundation Gate 与受产品宪法约束的 V3.8 Entry 已有客观通过证据。"
   ],
   "keyFiles": [
     "backend/src/main/java/com/projectflow/service/ModelGatewayService.java",
@@ -21,13 +22,10 @@
   ],
   "verification": {
     "build": "Frontend TypeScript and production build passed; Start-ProjectFlow.bat rebuilt the current working tree, reached frontend/backend health, and stopped with ports released.",
-    "tests": "Backend/H2 453 tests passed with 2 credential-gated real Provider tests skipped; frontend contracts 50/50; Playwright 8/8; Hermes 7/7 with 13 tools; Obsidian 18/18; sensitive-content scan passed.",
-    "manualCheck": "Verified five formal model artifact hashes, both freeze hashes, safe JSON parse, no committed credential pattern, no Tag/Release, and disclosed the existing three high dependency findings without applying a destructive downgrade."
+    "tests": "Backend/H2 453 tests passed with 2 credential-gated real Provider tests skipped; frontend contracts 50/50; Playwright 8/8; Hermes 7/7 with 13 tools; Obsidian 18/18; sensitive-content scan passed; final PR and functional master GitHub gates including PostgreSQL 16 Testcontainers passed.",
+    "manualCheck": "Verified five formal model artifact hashes, both freeze hashes, safe JSON parse, PR #11 merge commit, final master CI, no committed credential pattern, no Tag/Release, and disclosed the existing three high dependency findings without applying a destructive downgrade."
   },
-  "unfinished": [
-    "Merge Draft PR #11, pass final master CI, and backfill merge/master/CI metadata.",
-    "V3.8 Entry remains pending until the final master closure is complete."
-  ],
+  "unfinished": [],
   "sedimentCandidates": [
     "Quality-first reasoning policy: model elapsed time and usage are diagnostics, while explicit reasoning profiles keep high effort and use a loose Provider ceiling from the first request.",
     "Cross-model acceptance pattern: preserve the first formal failure, refreeze only an evidenced technical capability, keep semantic inputs and thresholds unchanged, and archive only safe normalized evidence."
