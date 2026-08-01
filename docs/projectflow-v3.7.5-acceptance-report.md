@@ -2,7 +2,7 @@
 
 Report date: 2026-08-01
 
-Current verdict: PARTIAL pending GitHub PR CI, PostgreSQL Testcontainers, merge and final master backfill. Local engineering and both frozen real-model gates pass. V3.8 Entry remains pending until the external closure completes.
+Current verdict: PARTIAL pending merge, master CI and final metadata backfill. Local engineering, both frozen real-model gates, branch CI, pull-request CI and PostgreSQL 16 Testcontainers pass. V3.8 Entry remains pending until the final master closure completes.
 
 A. Version: `3.7.5`.
 
@@ -10,11 +10,11 @@ B. Baseline master: `78e57ffdcc6d0bac952de6ca48b58cb08a60def5`.
 
 C. Working branch: `codex/v3.7.5-cross-model-closure`.
 
-D. Final functional master SHA: PENDING.
+D. Final functional master SHA: PENDING MERGE.
 
-E. PR / merge commit: PENDING.
+E. PR / merge commit: Draft PR `#11`; merge commit PENDING.
 
-F. Final CI: PENDING. The prior pushed implementation baseline `cca156c15462462af232352267836a3df0650768` passed GitHub Run `30694430873`; final report/quality-policy commits still require fresh push and PR gates.
+F. Final CI: branch push Run `30701738449` PASS and pull-request Run `30701772038` PASS at `3e445c3fb8305b1ca6b4eb2d68ec6a2aaafc7ffd`; final master CI remains PENDING. The prior pushed implementation baseline `cca156c15462462af232352267836a3df0650768` also passed Run `30694430873`.
 
 G. Product constitution: `docs/projectflow-v3.7.5-product-constitution.md` is authoritative. Strong facts require project-bound `OBSERVED` or independently checked `VERIFIED`; `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` and `PROCESS_EVIDENCE` never promote through model, Agent, fallback or consensus.
 
@@ -32,7 +32,7 @@ M. Structured output/fallback: DeepSeek explicit JSON Mode constrains final stru
 
 N. Context Package and Agent boundary: Context Package v2 is task/scope/revision/depth/budget aware, deterministic and model-free; it preserves source ranges, currentness, conflicts, unknowns, limitations and unread scope. Candidate Work Result re-reads safe changed files, binds hashes and rejects direct `OBSERVED`/`VERIFIED` before persistence. Local revalidation uses only registered bounded actions and never mutates ProjectFact.
 
-O. Existing Coverage Matrix: complete and updated with deterministic, real-model, product E2E and pending PostgreSQL/final CI status.
+O. Existing Coverage Matrix: complete and updated with deterministic, real-model, product E2E, PostgreSQL 16 and current GitHub CI evidence.
 
 P. Real-project gap validation: three materially different local evidence structures were scanned with bounded deterministic discovery. Two stable projects passed repeat fingerprints; one live project correctly exposed source mutation/currentness. No redundant real-model request was used where engineering evidence already decided the gap.
 
@@ -40,15 +40,15 @@ Q. Open-source reuse: no dependency or copied third-party code was added. Existi
 
 R. Local verification: backend/H2 453 tests, 0 failures, 0 errors, 2 skipped real-Provider tests; frontend TypeScript PASS, contracts 50/50, build PASS; Playwright 8/8; Hermes 7/7 and 13 tools; Obsidian 18/18; sensitive scan PASS; embedded launcher build/health/stop PASS.
 
-S. PostgreSQL: local Docker Desktop daemon was unavailable. PostgreSQL 16 Testcontainers remains a blocking PR CI gate and cannot be substituted by H2.
+S. PostgreSQL: local Docker Desktop daemon was unavailable. PostgreSQL 16 Testcontainers passed in branch Run `30701738449` and pull-request Run `30701772038`; H2 was not used as a substitute.
 
 T. Dependency audit: three existing high findings remain. The automated fix would destructively downgrade Next to 9.3.3 and was not applied without a compatible upgrade path.
 
 U. Credentials/artifacts: keys existed only in model-test processes. GitHub receives only freeze manifests, safe aggregate/case metadata and SHA-256 references. It receives no Key, Authorization, prompt, raw response, reasoning, full document, patch or absolute path.
 
-V. Foundation Gate: PENDING FINAL GITHUB CLOSURE.
+V. Foundation Gate: PENDING MERGE AND FINAL MASTER CLOSURE.
 
-W. V3.8 Entry: PENDING FINAL GITHUB CLOSURE.
+W. V3.8 Entry: PENDING MERGE AND FINAL MASTER CLOSURE.
 
 X. Tag: NO.
 

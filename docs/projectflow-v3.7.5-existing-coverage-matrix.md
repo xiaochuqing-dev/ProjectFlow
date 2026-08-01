@@ -30,7 +30,7 @@ This matrix prevents duplicate work that adds no new Evidence. Time and Token ar
 | Authorization isolation | Covered | product H2 | MultiProjectAuthorization and API tests | V3.7.5 worktree | Yes, completed | New endpoints |
 | Candidate write | Covered | unit + product H2 | AgentWorkResultWriteTest; API contract test | V3.7.5 worktree | Yes, completed | New batch flow |
 | Direct strong-fact rejection | Covered | unit + product H2 | Candidate and API contract tests | V3.7.5 worktree | Yes, completed | Reject-before-write |
-| Context Package | Covered deterministic; model qualification pending | unit + product H2 + Hermes | AgentContextPackageTest; API/Hermes tests | V3.7.5 worktree | Yes, completed locally | v2 contract |
+| Context Package | Covered | unit + product H2 + Hermes | AgentContextPackageTest; API/Hermes tests | 3e445c3 | Yes, completed | v2 contract and PR gates passed |
 | Model switch continuity | Covered | deterministic | persisted Context Package contract | V3.7.5 worktree | Yes, completed | No model call |
 | Agent switch continuity | Covered | deterministic + Hermes | package revision and resource tests | V3.7.5 worktree | Yes, completed | Persisted source |
 | Restart | Covered | deterministic/product | job and Hermes restart tests | V3.7.5 worktree | Minimal | Core unchanged |
@@ -39,7 +39,7 @@ This matrix prevents duplicate work that adds no new Evidence. Time and Token ar
 | GLM | Qualified for frozen V3.7.5 scope | real Holdout + product E2E | V3.7.5 safe model-run summary | Freeze 1 | Completed | Holdout 8/8; E2E 8/8; one disclosed Final degradation |
 | DeepSeek | Qualified for frozen V3.7.5 scope | preserved failed run + Freeze-2 Holdout + product E2E | V3.7.5 safe model-run summary | Freeze 2 | Completed | First run failed 5/8; explicit JSON Mode refreeze passed 8/8 without lowering high reasoning |
 | Product E2E | Covered for both profiles | fixed + real product persistence/readback | Playwright; GLM and DeepSeek E2E artifacts | Freeze 2 | Completed | Both 8/8; invalid Evidence refs 0 |
-| PostgreSQL | Covered in prior CI; local unavailable | Testcontainers CI | Run 30504805160 and prior PR runs | 78e57ff | Yes in PR CI | Docker unavailable locally |
+| PostgreSQL | Covered; local unavailable | PostgreSQL 16 Testcontainers CI | branch Run 30701738449; PR Run 30701772038 | 3e445c3 | Completed | Both current runs passed; Docker unavailable locally |
 | Frontend | Covered | deterministic build | lint, 50 contracts, Next build | V3.7.5 worktree | Yes, completed | DTO compatibility |
 | Playwright | Covered | product E2E fixed model | 8 browser tests | V3.7.5 worktree | Yes, completed | Existing GUI compatibility |
 | Hermes | Covered | subprocess integration | 7 tests, 13 tools | V3.7.5 worktree | Yes, completed | New Context parameters |

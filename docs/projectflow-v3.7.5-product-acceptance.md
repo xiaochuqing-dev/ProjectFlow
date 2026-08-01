@@ -1,6 +1,6 @@
 # ProjectFlow V3.7.5 Product Acceptance
 
-Current status: LOCAL GATES PASSED; FINAL GITHUB CLOSURE PENDING
+Current status: LOCAL AND PR GATES PASSED; MERGE AND FINAL MASTER CLOSURE PENDING
 
 ## Product contract
 
@@ -41,11 +41,11 @@ Elapsed time, Token usage, request count and cost are process diagnostics. They 
 | Obsidian | 18/18 PASS |
 | Sensitive-content scan | PASS |
 | Embedded launcher | Build, frontend/backend health and normal stop PASS |
-| PostgreSQL Testcontainers | Local Docker unavailable; required PR CI gate pending |
+| PostgreSQL Testcontainers | PASS in branch Run 30701738449 and pull-request Run 30701772038 |
 | Dependency audit | Existing 3 high findings; automated fix would destructively downgrade Next and was not applied |
 
 ## Remaining external closure
 
-Final PASS requires the branch and pull-request quality gates, PostgreSQL Testcontainers, merge to master, final master verification and acceptance metadata backfill. Until those complete, Foundation Gate and V3.8 Entry remain pending rather than being textually promoted.
+Final PASS now requires merge to master, final master verification and acceptance metadata backfill. Branch and pull-request gates, including PostgreSQL 16 Testcontainers, have passed. Until the remaining closure completes, Foundation Gate and V3.8 Entry remain pending rather than being textually promoted.
 
 No Tag and no GitHub Release are permitted for V3.7.5.
