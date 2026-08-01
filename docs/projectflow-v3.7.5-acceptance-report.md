@@ -2,7 +2,7 @@
 
 Report date: 2026-08-01
 
-Current verdict: PARTIAL pending merge, master CI and final metadata backfill. Local engineering, both frozen real-model gates, branch CI, pull-request CI and PostgreSQL 16 Testcontainers pass. V3.8 Entry remains pending until the final master closure completes.
+Current verdict: PASS. Local engineering, both frozen real-model gates, branch CI, pull-request CI, merge and final functional master CI all pass, including PostgreSQL 16 Testcontainers. V3.8 Entry is approved under the bounded V3.7.5 constitution and evidence scope.
 
 A. Version: `3.7.5`.
 
@@ -10,11 +10,11 @@ B. Baseline master: `78e57ffdcc6d0bac952de6ca48b58cb08a60def5`.
 
 C. Working branch: `codex/v3.7.5-cross-model-closure`.
 
-D. Final functional master SHA: PENDING MERGE.
+D. Final functional master SHA: `2d54d91d67b89190ab8b2ac3f5a92345dd61cd9c`.
 
-E. PR / merge commit: Draft PR `#11`; merge commit PENDING.
+E. PR / merge commit: PR `#11`; merge commit `2d54d91d67b89190ab8b2ac3f5a92345dd61cd9c`.
 
-F. Final CI: branch push Run `30701738449` PASS and pull-request Run `30701772038` PASS at `3e445c3fb8305b1ca6b4eb2d68ec6a2aaafc7ffd`; final master CI remains PENDING. The prior pushed implementation baseline `cca156c15462462af232352267836a3df0650768` also passed Run `30694430873`.
+F. Final CI: final feature-head push Run `30701956764` PASS, pull-request Run `30701958206` PASS at `798d4cb7e9c1507b25347fb61e5b5a4a089bcf3c`, and functional master Run `30702083514` PASS at `2d54d91d67b89190ab8b2ac3f5a92345dd61cd9c`. The earlier implementation runs `30694430873`, `30701738449` and `30701772038` also passed.
 
 G. Product constitution: `docs/projectflow-v3.7.5-product-constitution.md` is authoritative. Strong facts require project-bound `OBSERVED` or independently checked `VERIFIED`; `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` and `PROCESS_EVIDENCE` never promote through model, Agent, fallback or consensus.
 
@@ -46,9 +46,9 @@ T. Dependency audit: three existing high findings remain. The automated fix woul
 
 U. Credentials/artifacts: keys existed only in model-test processes. GitHub receives only freeze manifests, safe aggregate/case metadata and SHA-256 references. It receives no Key, Authorization, prompt, raw response, reasoning, full document, patch or absolute path.
 
-V. Foundation Gate: PENDING MERGE AND FINAL MASTER CLOSURE.
+V. Foundation Gate: PASS.
 
-W. V3.8 Entry: PENDING MERGE AND FINAL MASTER CLOSURE.
+W. V3.8 Entry: PASS for Evidence-backed Evolution Reconstruction under the locked constitution; this does not authorize automatic phase, importance, maturity or milestone truth.
 
 X. Tag: NO.
 

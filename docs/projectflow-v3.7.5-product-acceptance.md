@@ -1,6 +1,6 @@
 # ProjectFlow V3.7.5 Product Acceptance
 
-Current status: LOCAL AND PR GATES PASSED; MERGE AND FINAL MASTER CLOSURE PENDING
+Current status: PASS
 
 ## Product contract
 
@@ -44,8 +44,10 @@ Elapsed time, Token usage, request count and cost are process diagnostics. They 
 | PostgreSQL Testcontainers | PASS in branch Run 30701738449 and pull-request Run 30701772038 |
 | Dependency audit | Existing 3 high findings; automated fix would destructively downgrade Next and was not applied |
 
-## Remaining external closure
+## Final closure
 
-Final PASS now requires merge to master, final master verification and acceptance metadata backfill. Branch and pull-request gates, including PostgreSQL 16 Testcontainers, have passed. Until the remaining closure completes, Foundation Gate and V3.8 Entry remain pending rather than being textually promoted.
+PR #11 merged as `2d54d91d67b89190ab8b2ac3f5a92345dd61cd9c`. Final feature-head push Run `30701956764`, pull-request Run `30701958206` and functional master Run `30702083514` all passed, including PostgreSQL 16 Testcontainers. Foundation Gate and the bounded V3.8 Entry are PASS.
+
+V3.8 remains constrained to evidence-backed evolution reconstruction. It does not gain authority to infer phase, importance, maturity, milestone or historical reason as fact without the required evidence class.
 
 No Tag and no GitHub Release are permitted for V3.7.5.
