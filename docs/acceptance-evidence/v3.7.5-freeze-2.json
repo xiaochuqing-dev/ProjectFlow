@@ -1,0 +1,72 @@
+{
+  "version": "3.7.5",
+  "freezeId": "v3.7.5-freeze-2-deepseek-json-mode",
+  "frozenAt": "2026-08-01T19:13:59+08:00",
+  "scope": "DeepSeek compatibility profile refreeze after the preserved first formal failure; semantic implementation, Prompt, Ground Truth, capability fixtures, thresholds and GLM request semantics are unchanged",
+  "semanticImplementationCommit": "b59a9ef129c0e4b30db98b5092f548eae972df7c",
+  "evaluationHarnessCommit": "4ac9884f5d99a23974f16952f559412dd7f50df3",
+  "evaluationHarnessTree": "038f2031f2fad852b8d51b8f8eb7a8cbed005e4b",
+  "supersedes": "docs/acceptance-evidence/v3.7.5-freeze.json",
+  "preservedFailedFormalRun": {
+    "runId": "v375-formal-holdout-deepseek-flash-20260801-b59a9ef",
+    "resultSha256": "D5B29C07351E2B66A16E222E7C30E82C3958F3BDCC0185F06BA968C3178A0793",
+    "failureRate": 0.625,
+    "failureCode": "REASONING_EXHAUSTED_OUTPUT"
+  },
+  "diagnosticJustification": "The official endpoint accepted explicit JSON Mode. Two previously failing representative cases then completed with high reasoning, zero recovery and zero degradation. JSON Mode constrains only the final response format; it does not reduce reasoning effort, time allowance or Evidence.",
+  "qualityMode": "QUALITY_FIRST",
+  "promptContractVersion": "project-understanding-prompt-contract-v3",
+  "scoutPromptVersion": "semantic-scout-v13",
+  "finalPromptVersion": "final-synthesis-v7",
+  "scoutPromptSnapshotSha256": "806AA0110390095F8961FB8ABEFC96422DCB576B617261153F7393DF0569777D",
+  "finalPromptSnapshotSha256": "14574307A878B46B2B99689E993522B9C01DEE9EE594C4616988D1302687C136",
+  "holdoutRunBeforeFreeze": false,
+  "unchangedFrozenInputs": {
+    "holdoutGroundTruthSha256": "00F9F32C4D4E8C1184021F36558F9226C54DAA863A2558436974C94E624D23A5",
+    "holdoutCapabilityEvidenceSha256": "83EC4EBFE67B319C73BC6EFBE5F0837BAE971F0BEE0D9FCD5CABD4FEC3975BEF",
+    "metricsSha256": "AB6BC45214C0504D20BFCF6E9FC45EBF6B675270D6B03A1F0FB0424E0CFE265A",
+    "thresholds": {
+      "failureRateMax": 0.05,
+      "unsupportedClaimRateMax": 0.0,
+      "criticalEvidenceRecallMin": 0.9,
+      "deepReadSufficiencyMin": 0.8,
+      "conflictDetectionMinWhenApplicable": 0.8,
+      "invalidEvidenceReferenceCountMax": 0,
+      "strongFactPromotionViolationCountMax": 0
+    }
+  },
+  "harnessFiles": [
+    {
+      "path": "backend/src/test/java/com/projectflow/eval/ProjectFlowRealModelEvalIT.java",
+      "sha256": "F010A1C0AF6BD9B3288B6BADE6CF284851D1B0DAC54706F7A6A9D61AB73126E2"
+    },
+    {
+      "path": "backend/src/test/java/com/projectflow/eval/ProjectFlowRealProviderProbeIT.java",
+      "sha256": "3FE24199F2BFC04048ADEE747C58D162F4A6DD731EF1F3707D1220A2EF0D7E45"
+    },
+    {
+      "path": "backend/src/test/java/com/projectflow/eval/ProjectUnderstandingRealModelIT.java",
+      "sha256": "59829EE9B2B3E5F0931857F68F3AB0CA4DFF5934265D7E4BB040900D214C7868"
+    },
+    {
+      "path": "backend/src/test/java/com/projectflow/eval/ProjectFlowRuntimeParityTest.java",
+      "sha256": "88C9694CF3B2652EFBCB639CC68D8530896E24022A1151DCD3013F75543E2F79"
+    }
+  ],
+  "provider": {
+    "role": "compatibility",
+    "profileSha256": "13E18D93D51320E7802D05104D2C4944F22924D8EF5E9A9186D9F4379693B3F1",
+    "provider": "DeepSeek official",
+    "endpoint": "https://api.deepseek.com",
+    "model": "deepseek-v4-flash",
+    "protocol": "OPENAI_CHAT_COMPLETIONS",
+    "contextWindow": "PROVIDER_MANAGED_NOT_ASSERTED",
+    "maxOutputTokens": 65536,
+    "requestTimeoutSeconds": 600,
+    "supportsJsonMode": true,
+    "supportsReasoning": true,
+    "supportsReasoningControl": true,
+    "semanticReasoningEffort": "high",
+    "recoveryReasoningEffort": "high"
+  }
+}

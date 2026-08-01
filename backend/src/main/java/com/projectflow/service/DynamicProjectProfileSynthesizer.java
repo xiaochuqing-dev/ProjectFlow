@@ -23,6 +23,7 @@ import com.projectflow.dto.ProjectUnderstandingDtos.ProjectStructureIndexRespons
 import com.projectflow.dto.ProjectUnderstandingDtos.RepositoryIntakeResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.SemanticScoutResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.UnderstandingClaim;
+import com.projectflow.entity.ProjectFactEpistemicStatus;
 import com.projectflow.entity.ProjectSpace;
 
 @Service
@@ -67,13 +68,16 @@ public class DynamicProjectProfileSynthesizer {
         deterministicSections(project, intake, index, sourceMap, history).forEach(
             section -> sections.put(section.id(), section)
         );
+        boolean finalStage = modelRoot != null
+            && (modelRoot.path("stageTwoChanges").isArray() || modelRoot.path("conflicts").isArray());
         List<DynamicProfileSection> modelSections = parseModelSections(
             modelRoot == null ? null : modelRoot.path("dynamicProfile").path("sections"),
             allowedEvidence,
             intake,
             history,
             scout,
-            plan.eligibleViews()
+            plan.eligibleViews(),
+            finalStage
         );
         modelSections.forEach(section -> sections.put(section.id(), section));
         List<DynamicProfileSection> ordered = sections.values().stream()
@@ -242,19 +246,23 @@ public class DynamicProjectProfileSynthesizer {
         RepositoryIntakeResponse intake,
         HistoricalCoverageResponse history,
         SemanticScoutResponse scout,
-        List<String> eligibleViews
+        List<String> eligibleViews,
+        boolean finalStage
     ) {
         if (node == null || !node.isArray()) return List.of();
         List<DynamicProfileSection> result = new ArrayList<>();
         int sequence = 0;
+        int totalClaims = 0;
+        int maxClaims = finalStage ? 12 : 16;
+        int maxClaimsPerSection = finalStage ? 3 : 4;
         for (JsonNode item : node) {
-            if (result.size() >= 12) break;
+            if (result.size() >= 12 || totalClaims >= maxClaims) break;
             String type = normalizedType(item.path("type").asText(""));
             if (type.isBlank() || !isApplicable(type, intake, history, scout, eligibleViews)) continue;
             List<UnderstandingClaim> claims = new ArrayList<>();
             if (item.path("claims").isArray()) {
                 for (JsonNode claim : item.path("claims")) {
-                    if (claims.size() >= 10) break;
+                    if (claims.size() >= maxClaimsPerSection || totalClaims + claims.size() >= maxClaims) break;
                     String text = bounded(claim.path("text").asText("").strip(), 600);
                     List<String> refs = validRefs(claim.path("evidenceRefs"), allowedEvidence, 12);
                     if (!text.isBlank() && !refs.isEmpty()) {
@@ -271,6 +279,7 @@ public class DynamicProjectProfileSynthesizer {
                 }
             }
             if (claims.isEmpty()) continue;
+            totalClaims += claims.size();
             String id = normalizedId(item.path("id").asText(""), type, result.size());
             result.add(new DynamicProfileSection(
                 id,
@@ -407,13 +416,7 @@ public class DynamicProjectProfileSynthesizer {
     }
 
     private static String epistemic(String value) {
-        String normalized = value == null ? "" : value.strip().toUpperCase(Locale.ROOT);
-        return switch (normalized) {
-            case "OBSERVED", "VERIFIED", "DECLARED", "INFERRED", "CONFLICTED", "UNKNOWN",
-                "CURRENT_STATE", "HISTORICAL_EVENT", "POSSIBLY_STALE", "PROCESS_EVIDENCE",
-                "PROCESS_METADATA", "USER_ASSERTION", "ENGINEERING_OBSERVATION" -> normalized;
-            default -> "INFERRED";
-        };
+        return ProjectFactEpistemicStatus.fromAnalysisLabel(value).name();
     }
 
     private static String bounded(String value, int max) {

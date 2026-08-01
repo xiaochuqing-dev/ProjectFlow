@@ -30,6 +30,7 @@ import com.projectflow.dto.ProjectUnderstandingDtos.HistoricalCoverageResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectStructureIndexResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectUnderstandingSnapshotResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.RepositoryIntakeResponse;
+import com.projectflow.dto.ProjectUnderstandingDtos.SemanticContractDiagnostics;
 import com.projectflow.dto.ProjectUnderstandingDtos.SemanticScoutResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.StructureEvidence;
 import com.projectflow.dto.ProjectUnderstandingDtos.StructureDelta;
@@ -635,6 +636,12 @@ public class ProjectUnderstandingService {
         mergedUnknowns.addAll(semanticScout.unknowns());
         mergedUnknowns.addAll(semanticScout.potentialConflicts());
         mergedUnknowns.addAll(semanticScout.currentnessWarnings());
+        if (semanticScout.contractDiagnostics() != null
+            && "FAILED_DEGRADED".equals(semanticScout.contractDiagnostics().status())) {
+            semanticScout.contractDiagnostics().gaps().stream()
+                .map(gap -> "语义契约覆盖缺口：" + gap)
+                .forEach(mergedUnknowns::add);
+        }
         mergedUnknowns.addAll(dynamicProfile.unknowns());
         List<String> unknowns = List.copyOf(mergedUnknowns);
         UnderstandingSection identity = legacySection(
@@ -677,13 +684,21 @@ public class ProjectUnderstandingService {
         );
         allClaims.addAll(profileClaims(dynamicProfile));
         UnderstandingQuality quality = new UnderstandingQuality(
-            "SUCCEEDED",
+            semanticScout.contractDiagnostics() != null
+                && "FAILED_DEGRADED".equals(semanticScout.contractDiagnostics().status())
+                    ? "FAILED_DEGRADED"
+                    : "SUCCEEDED",
             allClaims.isEmpty() ? "LOW" : confidence(index),
             true,
             false,
             mergeLimitations(
                 base.quality().limitations(),
                 invalidEvidenceFiltered ? "模型返回的未知证据引用已过滤" : "",
+                semanticScout.contractDiagnostics() != null
+                    && "FAILED_DEGRADED".equals(semanticScout.contractDiagnostics().status())
+                        ? "Semantic Scout 未完整履行 Evidence/Capability 契约："
+                            + String.join("、", semanticScout.contractDiagnostics().gaps())
+                        : "",
                 "FAILED_DEGRADED".equals(finalSynthesisStatus)
                     ? "最终归纳失败；当前结果保留第一阶段语义与已校验工具证据"
                     : ""
@@ -1154,7 +1169,13 @@ public class ProjectUnderstandingService {
             value.potentialConflicts() == null ? List.of() : value.potentialConflicts(),
             value.currentnessWarnings() == null ? List.of() : value.currentnessWarnings(),
             value.toolRequests() == null ? List.of() : value.toolRequests(),
-            value.modelUsed()
+            value.modelUsed(),
+            value.contractDiagnostics() == null
+                ? new SemanticContractDiagnostics(
+                    "LEGACY_NOT_RECORDED", List.of(), List.of(), List.of(),
+                    List.of("旧快照未记录 Semantic Contract Diagnostics")
+                )
+                : value.contractDiagnostics()
         );
     }
 

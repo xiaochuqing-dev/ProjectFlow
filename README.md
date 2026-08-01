@@ -1,6 +1,6 @@
 # ProjectFlow
 
-ProjectFlow V3.7.4 is a strong-fact and long-term project-memory layer, not a one-shot Agent summarizer. It records what evidence supports, keeps missing knowledge as `UNKNOWN`, and separates `OBSERVED`/`VERIFIED` facts from `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` and Agent `PROCESS_EVIDENCE`. Current code never invents a historical reason; an Agent result never proves completion; agreement between models never upgrades a claim.
+ProjectFlow V3.7.5 is a strong-fact and long-term project-memory layer, not a one-shot Agent summarizer. It works from whatever project material actually exists, keeps missing knowledge as `UNKNOWN`, and separates `OBSERVED`/`VERIFIED` facts from `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` and `PROCESS_EVIDENCE`. Current code never invents a historical reason; an Agent result never proves completion; agreement between models never upgrades a claim.
 
 ProjectFlow V3.4.5 established the model-protocol foundation, V3.5.0 added bounded repository intake, V3.6.0 added precise SCIP consumption and the minimum evolution bridge, and V3.7.0 added universal evidence discovery and adaptive planning. V3.7.1 closes the plan-to-execution gap with bounded DOC_READER, Git history, Tag, worktree, manifest and Agent-result providers, complete-JSON context packing, diversity-aware evidence selection, honest dimensional history coverage, discovery caches and outbound secret redaction.
 
@@ -8,22 +8,24 @@ V3.7.2 validates that boundary with a ProjectFlow-only internal evaluation harne
 
 V3.7.3 separates connection timeout, Provider request timeout and overall analysis deadline; AUTO/FINITE/UNLIMITED keep cancellation, heartbeat and bounded retry semantics explicit. Production and Eval share one versioned Prompt Builder. Engineering code discovers, classifies and validates Evidence, while the model decides semantic importance, information gaps and applicable views inside objective Tool/View eligibility. No time or Token setting silently reduces necessary Evidence or skips a qualified Final Synthesis.
 
-V3.7.4 strengthens normal Git/README/manifest/test/CI project paths while keeping open-world inputs: content outranks filenames, extensionless text remains discoverable, and large files use a bounded Content Map with head/middle/tail/section/marker ranges plus explicit unread ranges. Java Core builds the map and executes only allow-listed reads; models share one provider-neutral Strong Fact Constitution.
+V3.7.4 strengthened content-first discovery, large-file ranges and shared Agent history. V3.7.5 locks the product constitution into code and tests, makes small Evidence sets and Capability decisions auditable across models, and upgrades Agent Context Package to a task-relevant, revision-aware contract with bounded local revalidation and candidate-only work-result writes.
 
 Authorized Agents can list all loaded projects, query bounded cross-project history, read evidence/knowledge/context packages, and continue from the same durable memory after an Agent or model switch. Reads remain project-isolated and audited. Agents may submit only validated candidates; they cannot directly write strong facts. Hermes exposes the same boundary through read-only MCP tools and project context resources.
 
-V3.7.4 supports multiple Model Gateway protocols without building a model leaderboard or calling two models for every request. Quality-first means no hidden Token or time degradation. This phase establishes the factual foundation; it does not build a complete project-life narrative, expose internal quality metrics in the product, create a Git Tag, or create a GitHub Release.
+V3.7.5 supports multiple Model Gateway protocols without building a model leaderboard or calling two models for every request. Quality-first means no hidden Token or time degradation. This phase establishes the factual foundation and V3.8 entry contract; it does not build a complete project-life narrative, expose internal quality metrics in the product, create a Git Tag, or create a GitHub Release.
 
-## V3.7.4 Strong Fact and Shared History Foundation
+## V3.7.5 Cross-model Strong Fact and Agent Context Closure
 
-- Strong facts require `OBSERVED` or `VERIFIED` plus valid project-bound Evidence; declarations, inference, conflict, unknown and process evidence stay outside the strong-fact write path.
+- The authoritative constitution is `docs/projectflow-v3.7.5-product-constitution.md`; strong facts require `OBSERVED` or independently checked `VERIFIED` plus valid project-bound Evidence.
 - Historical reasons, deprecation and technical debt require explicit supporting Evidence. Current structure or model opinion is insufficient.
 - Content Map performs bounded streaming discovery and range sampling for ordinary and 80,000-line text/code inputs, preserves source hashes and revisions, and discloses unread or partial ranges.
 - Normal projects retain README, manifest, source, test, CI, migration and infrastructure diversity; strange names and unknown text extensions are judged by bounded content signals.
-- Portfolio, knowledge, evidence and versioned Context Package APIs are authenticated, bounded, provenance-carrying and read-only.
-- Agent candidate writes accept assertions, evidence links, corrections, conflicts and review requests, but reject `OBSERVED`/`VERIFIED` promotion.
-- Production and evaluation use Strong Fact contract v2, Semantic Scout v11 and Final Synthesis v6 through the same `ProjectUnderstandingPromptBuilder`.
-- Real-provider, calibration, regression, holdout and product E2E results belong only to dated V3.7.4 acceptance reports; they are not universal accuracy promises.
+- Portfolio, knowledge, evidence and Context Package v2 APIs are authenticated, task-relevant, bounded, provenance-carrying and read-only.
+- Agent Work Results accept changed files, behavior claims, commands, tests, refs, conflicts and UNKNOWN-resolution candidates; they re-read safe project files but never promote Agent claims.
+- Local revalidation supports Fact verification, Evidence refresh, bounded range reads, currentness checks and latest-package resolution without a model call or fact mutation.
+- Production and evaluation use Prompt contract v3, Semantic Scout v13 and Final Synthesis v7 through the same `ProjectUnderstandingPromptBuilder`.
+- Real-provider, calibration, regression, holdout and product E2E results belong only to dated acceptance reports; they are not universal accuracy promises.
+- The V3.7.5 frozen result is GLM Holdout 8/8 and product E2E 8/8; DeepSeek Freeze-2 Holdout 8/8 and product E2E 8/8. The first DeepSeek formal failure and the GLM E2E degradation remain disclosed in the model-qualification report.
 
 ProjectFlow 不预设用户的项目是什么。它先发现真实存在的材料，再结合工程分析与有界的大模型推理判断什么值得分析、能知道什么，并基于证据理解项目当前状态及可还原的演进过程。
 
@@ -34,12 +36,12 @@ Git and GitHub retain commits, diffs, files, and branches. ProjectFlow turns tha
 - Large-project analysis taking several minutes is normal and is not itself a failure. Analysis time is not connection timeout.
 - Connection timeout remains independently bounded; each Provider request honors its explicit configured timeout; the whole analysis uses AUTO, user-selected FINITE or UNLIMITED semantics.
 - UNLIMITED means no ProjectFlow overall-duration termination. It does not mean infinite retries, an unbounded bad connection, missing heartbeat, or disabled cancellation.
-- `QUALITY_FIRST` does not silently trade Evidence coverage, necessary deep reads or Final Synthesis for response speed, Token savings or a hidden SLA.
+- `QUALITY_FIRST` does not silently trade Evidence coverage, necessary deep reads, Final Synthesis or reasoning effort for response speed, Token savings or a hidden SLA. Elapsed time, Token usage, requests and cost are diagnostics, not quality defects.
 - Engineering discovery keeps source/module diversity and objective availability. It does not infer HIGH/LOW semantic importance from a filename, extension, README identity or internal sampling score.
 - Semantic Scout v10 and Final Synthesis v5 share `ProjectUnderstandingPromptBuilder` across production and Eval. V10 keeps every selected Evidence ID and short summary, carries full samples only for a small cross-category set, asks the model to assess only sources that can change a decision, and treats independent manifest/document/Git/Tag gaps as non-substitutable. Ground Truth and thresholds cannot enter its type boundary.
 - Eligible Capability and View registries prevent objectively impossible requests; the model still chooses what is semantically useful and explains the information gap.
 - Provider compatible does not mean quality qualified. Differences among real models are part of the product environment, while the Evidence and Prompt contracts remain common.
-- OpenAI Responses reasoning control is capability-gated: only an explicitly probed/supported Provider receives `high` on the first structured request and `low` on the connection probe or single recovery; unknown profiles receive no private field.
+- V3.7.5 reasoning control is capability-gated: explicitly probed/supported OpenAI Responses and Chat profiles receive `high` on connection, semantic and recovery requests. Reasoning-capable tasks may use the configured Provider ceiling from the first request; the ceiling is a loose safety boundary, not a Token target. Unknown profiles receive no unsupported field.
 - V3.7.3 uses GLM `glm-5.2` with OpenAI Responses for the unchanged reliability, semantic and production-chain stress revalidation. The dated result and V3.8 decision are recorded in the V3.7.3 acceptance reports.
 - Internal accuracy, hallucination, benchmark and ranking metrics remain test/report artifacts and never enter the product.
 - V3.8 may start only if the unchanged quality gate, all eight production-chain cases, security gates and CI all pass.
@@ -113,7 +115,7 @@ ProjectFlow does not become a coding agent, agent manager, Provider switcher, to
 - ProjectFact remains the only factual source. Timeline, Capability and Evolution results are explicitly derived and keep stable entity IDs and evidence links.
 - Recent/history reads use when work actually occurred, not when it was analyzed, recorded or synchronized. Failed derived refreshes retain deterministic facts and the last successful view.
 - Every endpoint is project-owned, compact by default, paged/bounded, model-free on GET and safely audited without storing full private queries.
-- `integrations/hermes/projectflow_mcp.py` exposes nine narrow, idempotent, non-destructive stdio tools. It accepts only a loopback ProjectFlow backend in this release and contains no generic REST or write tool.
+- `integrations/hermes/projectflow_mcp.py` exposes thirteen narrow, idempotent, non-destructive stdio tools, including portfolio search, Context Package v2, Evidence and knowledge reads. It accepts only a loopback ProjectFlow backend in this release and contains no generic REST or write tool.
 - Hermes is a consumer, never a fact source. Local stdio is the primary integration mode; remote access remains disabled by default and requires a separately secured future design.
 
 ## V3.4.4 Obsidian Projection and Sync
@@ -195,7 +197,7 @@ ProjectFlow does not become a coding agent, agent manager, Provider switcher, to
 - Recommendations have high, medium, reference-only, or not-recommended strength. Strong visual recommendations require model output, sufficient evidence, and more than title similarity.
 - Confirmed sediments persist affected files and source batch IDs, immediately enter `PENDING_ANALYSIS`, and show their last capability-analysis job. The capability analysis input is now confirmed project sediment rather than raw development segments.
 - Capability analysis records the input sediment snapshot, marks sediments only after successful persistence, preserves the previous successful cards on failure, and shows new, updated, and pending sediment counts.
-- Empty content combined with `finish_reason=length`, exhausted completion tokens, or a reasoning field is classified as exhausted output and triggers one lower-budget compact retry. Reasoning text is never stored or returned; only presence and length are diagnosed.
+- Empty content combined with `finish_reason=length`, exhausted completion tokens, or a reasoning field is classified as exhausted output and triggers one bounded recovery. Reasoning-capable profiles keep high effort and may reuse the configured Provider ceiling; reasoning text is never stored or returned, and only presence/length/usage diagnostics are retained.
 - Git, file, Agent-result, project-analysis, file-analysis, capability-interpretation, and capability-card model waits no longer run inside method-level database transactions.
 
 ## V3.3.5 Reliable Model Results, Clear Confirmation, and Provider Management

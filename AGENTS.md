@@ -1,18 +1,20 @@
-<!-- PROJECTFLOW V3.7.4 CONTEXT START -->
-ProjectFlow 当前版本为 V3.7.4。后续 Agent 必须按“真实项目材料 -> 内容优先的有界 Evidence Discovery -> 大文件 Content Map/Range Evidence -> Provider-neutral Scout -> 注册 Capability -> Evidence 校验 -> OBSERVED/VERIFIED 强事实或 DECLARED/INFERRED/CONFLICTED/UNKNOWN/PROCESS_EVIDENCE 分层 -> 持久化项目记忆 -> 授权 Agent 跨项目读取同一历史”理解产品。
+<!-- PROJECTFLOW V3.7.5 CONTEXT START -->
+ProjectFlow 当前版本为 V3.7.5。后续 Agent 必须按“开放世界项目材料 -> 有界 Evidence Discovery 与 Content Map -> Provider-neutral Semantic Scout -> 注册 Capability 执行与引用校验 -> 七种事实状态严格分层 -> ProjectFact 唯一事实源 -> 任务相关 Agent Context Package -> Candidate Write 与局部复验 -> Timeline/Capability/Evolution/Projection 只读消费”理解产品。
 
-V3.7.4 Strong Fact / Real-project / Shared History 规则（后续 Agent 必须遵守）：
-- 只有 OBSERVED 和 VERIFIED 可进入强事实主链；DECLARED、INFERRED、CONFLICTED、UNKNOWN、Agent PROCESS_EVIDENCE 和模型共识不得晋升。
-- 历史设计原因、废弃状态和技术债必须有明确 Evidence；当前源码、时间先后、文件名、README 身份或模型意见都不够。
-- 普通 README/Manifest/Test/CI 主路径与奇怪命名、无扩展名文本、大文件中部/尾部同等按有界内容发现；必须披露未读范围和 Partial Coverage。
-- 模型只能请求 eligible capability 与已知 Evidence ID；工程系统执行固定 Provider、校验引用、隔离项目和脱敏。
-- Agent 可列出全部授权项目并读取事实、历史、Evidence、Unknown/Conflict 和 Context Package；每次读取必须校验 userId/projectId。Agent 只能提交待工程验证候选，不能直接写强事实。
-- 生产与 Eval 共用 Strong Fact contract v2、Scout v11、Final v6；Calibration 与冻结 Holdout 分离，不得 case/path/repository/model 特判。
-- 不提交 Key、Authorization、raw response、reasoning、完整 Prompt、绝对路径或巨型 Raw Artifact；不建设模型排行榜、通用 RAG、Agent Manager、大型 GUI、Tag 或 Release。
+V3.7.5 Cross-model Strong-fact / Product Constitution / Agent Context 规则（后续 Agent 必须遵守）：
+- 产品宪法唯一权威来源是 `docs/projectflow-v3.7.5-product-constitution.md`。只有 project-bound `OBSERVED` 和独立工程验证的 `VERIFIED` 可进入强事实主链；`DECLARED`、`INFERRED`、`CONFLICTED`、`UNKNOWN`、`PROCESS_EVIDENCE` 永不因模型、Agent 或共识晋升。
+- Scout 使用 Evidence Ledger。小证据集必须逐项处置；每个 eligible capability 必须恰好 REQUEST 或 SKIP 一次。契约缺口写入 `SemanticContractDiagnostics` 并以 `FAILED_DEGRADED` 对外披露，不能静默成功。
+- 生产与 Eval 共用 Prompt contract v3、Semantic Scout v13、Final Synthesis v7。Ground Truth、case ID、文件名答案、阈值和模型名不得进入 Prompt 或业务特判；V3.7.4 Frozen Holdout 答案保持冻结。
+- Context Package v2 必须任务相关、revision-aware、project-isolated、可追溯，保留冲突、UNKNOWN、unread scope、limitations、range 和确定性 package revision。GET 不调用模型。
+- Agent Work Result 只能写 Candidate。changed file 可由工程层有界复读并绑定 hash；Agent 的行为、命令和测试声明仍是 `PROCESS_EVIDENCE`，提交 `OBSERVED`/`VERIFIED` 必须在任何写入前被拒绝。
+- 局部复验只允许 `VERIFY_FACT`、`REFRESH_EVIDENCE`、`REREAD_RANGE`、`VALIDATE_CURRENTNESS`、`RESOLVE_PACKAGE_LATEST`，复用固定 Git 命令和有界项目内文件读取，不重跑整个项目，不修改 ProjectFact。
+- Timeline 模型摘要是 `INFERRED` 且 `NON_AUTHORITATIVE`。用户阶段/里程碑是 `DECLARED`，模型阶段/重点是 `INFERRED`；原始事件不能因评分、折叠或摘要被删除。
+- 不持久化或返回 Key、Authorization、raw response、reasoning、完整 Prompt、完整文档、patch 或绝对路径；敏感文件只读 metadata。不得建设模型排行榜、通用 RAG、Agent Manager、最终 GUI、Tag 或 Release。
 
 V3.7.3 Long-running Multi-provider Reliability / Prompt Intelligence 规则（后续 Agent 必须遵守）：
 - Connection Timeout、Provider Request Timeout、Overall Analysis Deadline 必须分离。AUTO/UNLIMITED 不设置隐藏短总体截止时间；FINITE 尊重显式用户值。坏连接仍有界、transport retry 最多一次、取消和 heartbeat 始终有效。
 - 不得为了响应速度、Token 或成本静默减少 Evidence、必要深读或满足门控的 Final Synthesis。当前质量模式是显式 QUALITY_FIRST。
+- 耗时、Token、请求数与费用只作过程诊断，不得作为质量缺点、降档理由或自动减少思考的依据。显式支持 reasoning control 的 Responses/Chat Provider 在连接、语义与恢复请求均使用 high；reasoning 任务首次请求即可使用用户配置的宽松 Provider 上限，上限不是消耗目标。
 - Semantic Scout 与 Final Synthesis 的生产和 Eval Prompt 只能通过共享 `ProjectUnderstandingPromptBuilder`；Ground Truth、case ID、期望标签、评分和门槛不得进入 Prompt。
 - 工程系统只负责广泛发现、安全采样、客观来源分类、多样性、allow-list、capability/view 可用性和结果验证；不得从文件名、类型、README 身份或内部采样分数决定语义 HIGH/LOW。
 - 模型负责结合整个项目判断 Evidence 语义重要性、信息缺口、深读需要、适用视图、冲突和当前性；请求只能包含 eligible capability name 和已知 evidence ID。

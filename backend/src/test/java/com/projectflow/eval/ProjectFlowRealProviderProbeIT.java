@@ -39,7 +39,7 @@ class ProjectFlowRealProviderProbeIT {
             0.0,
             Math.max(256, config.maxTokens()),
             false,
-            List.of("V3.7.3_REAL_PROVIDER_PROBE")
+            List.of("V3.7.5_REAL_PROVIDER_PROBE")
         );
         provider.configureProtocol(
             config.protocol(),
@@ -50,7 +50,7 @@ class ProjectFlowRealProviderProbeIT {
             java.util.Map.of(),
             config.timeoutSeconds(),
             null,
-            null,
+            config.supportsJsonMode(),
             null,
             config.supportsReasoning(),
             config.supportsReasoningControl()

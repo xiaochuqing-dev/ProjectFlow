@@ -4,6 +4,8 @@
 
 Obsidian is a curated long-term knowledge projection of ProjectFlow, not a database mirror and not a source of truth. The projection reads Snapshot, Timeline, Capability, Evolution and Fact semantics only through Project Memory Gateway. It never calls a model and never writes back ProjectFact, Timeline, Capability or Evolution.
 
+V3.7.5 does not change the projection storage format. Only `OBSERVED` and independently validated `VERIFIED` are strong facts. `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` and `PROCESS_EVIDENCE` retain their authority metadata; Timeline model summaries are `INFERRED` and `NON_AUTHORITATIVE`. Agent candidates, work-result bodies, Context Package task text, model Token/latency diagnostics and reasoning-control settings are not projected as facts or quality judgments.
+
 ## Repository-local command
 
 Start ProjectFlow locally, create or select an existing test Vault, then run the PowerShell wrapper from the repository root:

@@ -39,6 +39,13 @@ public class StrongFactPromotionGuard {
         "TODO_MARKER", "FIXME_MARKER", "OPEN_ISSUE", "TEST_FAILURE",
         "RISK_DOCUMENT", "KNOWN_LIMITATION", "VERIFIABLE_CODE_GAP", "USER_DECLARATION"
     );
+    private static final Set<String> DECLARATION_SOURCES = Set.of(
+        "README_DECLARATION", "OBSIDIAN_DECLARATION", "USER_DECLARATION",
+        "USER_MILESTONE", "USER_PHASE", "PROJECT_INTENT"
+    );
+    private static final Set<String> MODEL_ONLY_SOURCES = Set.of(
+        "MODEL_SUMMARY", "MODEL_ATTENTION", "MODEL_PHASE_SUGGESTION"
+    );
 
     public Decision classify(DevelopmentSegment segment) {
         List<String> reasons = new ArrayList<>();
@@ -70,6 +77,15 @@ public class StrongFactPromotionGuard {
         if (agentOnly || (!segment.getIncludedAgentResultRefs().isEmpty() && !engineering)) {
             epistemic = ProjectFactEpistemicStatus.PROCESS_EVIDENCE;
             reasons.add("Agent Result 是过程证据，缺少独立工程验证");
+        } else if (sourceTypes.stream().anyMatch(MODEL_ONLY_SOURCES::contains)) {
+            epistemic = ProjectFactEpistemicStatus.INFERRED;
+            reasons.add("模型摘要、关注建议或阶段建议没有强事实权限");
+        } else if (sourceTypes.contains("FALLBACK_RESULT")) {
+            epistemic = ProjectFactEpistemicStatus.UNKNOWN;
+            reasons.add("fallback/degraded 结果必须重新验证，不能升级为强事实");
+        } else if (sourceTypes.stream().anyMatch(DECLARATION_SOURCES::contains)) {
+            epistemic = ProjectFactEpistemicStatus.DECLARED;
+            reasons.add("README、Obsidian、用户里程碑或阶段属于声明，不是工程验证");
         } else if (INFERENCE.matcher(statement).find()) {
             epistemic = ProjectFactEpistemicStatus.INFERRED;
             reasons.add("包含推断表达，不能升级为强事实");
@@ -143,6 +159,15 @@ public class StrongFactPromotionGuard {
             case "risk-doc" -> "RISK_DOCUMENT";
             case "known-limit" -> "KNOWN_LIMITATION";
             case "code-gap" -> "VERIFIABLE_CODE_GAP";
+            case "readme" -> "README_DECLARATION";
+            case "obsidian-note" -> "OBSIDIAN_DECLARATION";
+            case "user-milestone" -> "USER_MILESTONE";
+            case "user-phase" -> "USER_PHASE";
+            case "project-intent" -> "PROJECT_INTENT";
+            case "model-summary" -> "MODEL_SUMMARY";
+            case "model-attention" -> "MODEL_ATTENTION";
+            case "model-phase" -> "MODEL_PHASE_SUGGESTION";
+            case "fallback" -> "FALLBACK_RESULT";
             default -> null;
         };
         return sourceType == null ? null : new EvidenceRef(value, sourceType);

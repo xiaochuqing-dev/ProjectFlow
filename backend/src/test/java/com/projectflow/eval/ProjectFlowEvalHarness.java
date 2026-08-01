@@ -21,7 +21,7 @@ final class ProjectFlowEvalHarness {
 
     EvalRun evaluate(ProjectFlowEvalGroundTruth groundTruth, List<ProjectFlowEvalObservation> observations) {
         return new EvalRun(
-            "projectflow-v3.7.4-eval-v1",
+            "projectflow-v3.7.5-eval-v1",
             Instant.now(),
             SCOPE_NOTICE,
             groundTruth.standard(),
@@ -43,7 +43,7 @@ final class ProjectFlowEvalHarness {
     private static String markdown(EvalRun run) {
         EvalSummary value = run.summary();
         return """
-            # ProjectFlow V3.7.4 Internal Model Evaluation
+            # ProjectFlow V3.7.5 Internal Model Evaluation
 
             %s
 

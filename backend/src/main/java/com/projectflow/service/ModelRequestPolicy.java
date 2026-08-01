@@ -12,11 +12,14 @@ public class ModelRequestPolicy {
         int inputChars = prompt == null ? 0 : prompt.length();
         int scaleTokens = Math.max(0, inputChars / (task.collectionOutput() ? 9 : 14));
         int taskRequested = Math.min(task.maximumUsefulOutputTokens(), task.baseOutputTokens() + scaleTokens);
-        if (capabilities.supportsReasoning()) {
-            // Responses providers commonly count hidden reasoning and visible JSON
-            // against one max-output budget. Reserve the task's bounded useful
-            // ceiling so valid visible output is not crowded out by reasoning.
-            taskRequested = task.maximumUsefulOutputTokens();
+        boolean qualityFirstReasoning = capabilities.supportsReasoning();
+        if (qualityFirstReasoning) {
+            // max_tokens is a ceiling, not a consumption target. Explicit
+            // QUALITY_FIRST reasoning profiles use the user's bounded Provider
+            // allowance from the first request instead of crowding thinking and
+            // visible JSON into an ordinary-output estimate. Usage and latency
+            // remain diagnostics and never trigger a lower reasoning tier.
+            taskRequested = capabilities.maxOutputTokens();
         }
         int effective = Math.min(capabilities.maxOutputTokens(), Math.max(256, taskRequested));
         boolean sendTemperature = capabilities.supportsTemperature();
@@ -26,12 +29,15 @@ public class ModelRequestPolicy {
             : "当前模型能力档案不支持 temperature，请求中省略该字段";
         String maxTokenReason = effective < taskRequested
             ? "任务按输入规模申请 " + taskRequested + "，受 Provider 配置能力上限 " + capabilities.maxOutputTokens() + " 约束"
-            : capabilities.supportsReasoning()
-                ? "reasoning 与可见 JSON 共享输出预算，使用任务有界有效上限，未使用固定 4000/2000 上限"
+            : qualityFirstReasoning
+                ? "reasoning 与可见 JSON 共享输出空间；显式 QUALITY_FIRST 任务首次请求即使用用户配置的 Provider 宽松有界上限；上限不是 Token 消耗目标，耗时和 Token 只作诊断"
                 : "按任务类型、输入规模和预期结构动态计算，未使用固定 4000/2000 上限";
         if (capabilities.supportsReasoningControl()
             && "OPENAI_RESPONSES".equals(capabilities.providerResponseShape())) {
             maxTokenReason += "；Provider 显式支持 reasoning control，首次结构化请求使用 high";
+        } else if (capabilities.supportsReasoningControl()
+            && "OPENAI_CHAT_COMPLETIONS".equals(capabilities.providerResponseShape())) {
+            maxTokenReason += "；Provider 显式支持 Chat reasoning_effort，结构化请求使用 high";
         }
         return new RequestParameters(
             taskRequested, effective, provider.getTemperature(), task.recommendedTemperature(), effectiveTemperature,
@@ -50,7 +56,10 @@ public class ModelRequestPolicy {
         if ("SCHEMA_REPAIR_RETRY".equals(retryType)) {
             requested = Math.max(1_024, task.baseOutputTokens() / 2 + Math.max(0, previousContentLength) / 12);
         } else if ("EMPTY_AFTER_REASONING_RETRY".equals(retryType)) {
-            requested = Math.max(initial.taskRequestedMaxTokens() * 2, task.baseOutputTokens() * 2);
+            requested = capabilities.supportsReasoningControl()
+                && "OPENAI_CHAT_COMPLETIONS".equals(capabilities.providerResponseShape())
+                    ? capabilities.maxOutputTokens()
+                    : Math.max(initial.taskRequestedMaxTokens() * 2, task.baseOutputTokens() * 2);
         } else {
             requested = capabilities.supportsReasoning()
                 ? capabilities.maxOutputTokens()
@@ -63,7 +72,10 @@ public class ModelRequestPolicy {
         int effective = Math.min(capabilities.maxOutputTokens(), requested);
         String reason = switch (retryType) {
             case "SCHEMA_REPAIR_RETRY" -> "仅重编码已有语义为目标 Schema，预算按目标结构和原内容规模计算";
-            case "EMPTY_AFTER_REASONING_RETRY" -> "reasoning 疑似占满共享预算，提高可见输出预算后重试";
+            case "EMPTY_AFTER_REASONING_RETRY" -> capabilities.supportsReasoningControl()
+                && "OPENAI_CHAT_COMPLETIONS".equals(capabilities.providerResponseShape())
+                    ? "Chat high reasoning 疑似占满共享预算，唯一恢复请求使用 Provider 明确上限"
+                    : "reasoning 疑似占满共享预算，提高可见输出预算后重试";
             default -> capabilities.supportsReasoning()
                 ? "首次输出截断且 reasoning 与可见结果共享预算，在唯一恢复请求中使用 Provider 显式配置上限"
                 : "首次输出截断，按已申请预算递增 50%，不再压缩为固定小预算";
@@ -73,7 +85,10 @@ public class ModelRequestPolicy {
         }
         if (capabilities.supportsReasoningControl()
             && "OPENAI_RESPONSES".equals(capabilities.providerResponseShape())) {
-            reason += "；恢复请求使用 low reasoning effort，避免再次挤占可见 JSON";
+            reason += "；语义恢复请求保持 high，不以耗时或 Token 为由降低思考档次";
+        } else if (capabilities.supportsReasoningControl()
+            && "OPENAI_CHAT_COMPLETIONS".equals(capabilities.providerResponseShape())) {
+            reason += "；Chat reasoning_effort 保持 high，优先完整语义判断";
         }
         return new RequestParameters(
             requested, effective, initial.configuredTemperature(), initial.recommendedTemperature(),

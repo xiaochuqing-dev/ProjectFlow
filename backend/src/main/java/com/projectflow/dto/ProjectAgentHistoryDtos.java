@@ -78,6 +78,7 @@ public final class ProjectAgentHistoryDtos {
         String statement,
         String epistemicStatus,
         String currentness,
+        String sourceRevision,
         String validationStatus,
         List<String> evidenceRefs,
         List<String> limitations,
@@ -100,11 +101,16 @@ public final class ProjectAgentHistoryDtos {
 
     public record AgentContextPackageResponse(
         String packageVersion,
+        String packageRevision,
         UUID projectId,
         String projectName,
         String projectStatus,
         String sourceRevision,
         Instant generatedAt,
+        String taskDescription,
+        List<String> requestedScope,
+        String revisionPreference,
+        String requestedEvidenceDepth,
         List<AgentKnowledgeItem> currentStrongFacts,
         List<AgentKnowledgeItem> declaredMaterial,
         List<AgentKnowledgeItem> inferredCandidates,
@@ -112,12 +118,63 @@ public final class ProjectAgentHistoryDtos {
         List<AgentKnowledgeItem> unknowns,
         List<AgentEvidenceResponse> keyEvidence,
         List<AgentKnowledgeItem> latestVerifiedChanges,
+        List<AgentKnowledgeItem> relevantHistoricalRecords,
+        List<AgentSourceRangeResponse> relatedRanges,
+        AgentTrustGuidanceResponse trustGuidance,
         String historicalCoverage,
+        AgentCoverageDisclosureResponse coverageDisclosure,
+        List<String> unreadScope,
         List<String> limitations,
+        List<String> suggestedDeepReadTargets,
         List<String> provenance,
+        AgentContextGenerationMetadata generationMetadata,
         int sizeBudget,
         int actualCharacters,
         boolean truncated
+    ) {
+    }
+
+    public record AgentSourceRangeResponse(
+        String evidenceId,
+        String locator,
+        String rangeKind,
+        long startLine,
+        long endLine,
+        long startByte,
+        long endByte,
+        String sourceRevision,
+        String currentness,
+        String validationHint
+    ) {
+    }
+
+    public record AgentTrustGuidanceResponse(
+        List<String> generallyReusableItemIds,
+        List<String> quickVerifyItemIds,
+        List<String> mustRevalidateItemIds,
+        List<String> rules
+    ) {
+    }
+
+    public record AgentCoverageDisclosureResponse(
+        String mode,
+        int matchedKnowledgeCount,
+        int availableKnowledgeCount,
+        int matchedEvidenceCount,
+        int availableEvidenceCount,
+        int matchedRangeCount,
+        boolean partial,
+        String semanticContractStatus
+    ) {
+    }
+
+    public record AgentContextGenerationMetadata(
+        String retrievalMode,
+        boolean modelCalled,
+        String packageRevisionAlgorithm,
+        String revisionValidation,
+        String evidenceDepth,
+        Instant generatedAt
     ) {
     }
 }

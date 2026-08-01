@@ -15,9 +15,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 class ProjectUnderstandingPromptBuilderTest {
     private static final String SCOUT_SNAPSHOT_SHA256 =
-        "de00a65b1a3d0b22f04073b9bb8fcc09236649aa49a3cfdfb0e3205053d0101d";
+        "806aa0110390095f8961fb8abefc96422dcb576b617261153f7393df0569777d";
     private static final String FINAL_SNAPSHOT_SHA256 =
-        "d368dd1d3c5825a57cc7587527fa6918ee9b6e5a9f5452519339c7bf36613cd0";
+        "14574307a878b46b2b99689e993522b9c01dee9ee594c4616988d1302687c136";
     private final ProjectUnderstandingPromptBuilder builder = new ProjectUnderstandingPromptBuilder();
 
     @Test

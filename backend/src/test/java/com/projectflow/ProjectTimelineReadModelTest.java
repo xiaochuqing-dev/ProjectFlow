@@ -169,6 +169,8 @@ class ProjectTimelineReadModelTest {
         var detail = timelineService.period(userId, project.getId(), TimelineGranularity.MONTH, "2026-07", 0, 20);
         assertThat(detail.currentSummary().stale()).isTrue();
         assertThat(detail.currentSummary().summary()).isEqualTo("旧版本摘要仍可读取");
+        assertThat(detail.currentSummary().epistemicStatus()).isEqualTo("INFERRED");
+        assertThat(detail.currentSummary().authority()).isEqualTo("NON_AUTHORITATIVE");
         assertThat(detail.themes()).extracting(item -> item.title()).containsExactly("已有演进主题");
         assertThat(detail.facts().totalElements()).isEqualTo(3);
     }

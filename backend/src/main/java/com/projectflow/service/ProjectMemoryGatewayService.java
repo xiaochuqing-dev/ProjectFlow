@@ -457,7 +457,8 @@ public class ProjectMemoryGatewayService {
         MemoryTimelineSummaryResponse summary = new MemoryTimelineSummaryResponse(
             source.summaryStatus(), text(source.summaryPreview(), false), Math.toIntExact(source.stats().factCount()),
             "READY".equals(source.summaryStatus()) ? Math.toIntExact(source.stats().factCount()) : 0,
-            source.summaryStale(), 0, null, summaryNotice(source.summaryStatus(), source.summaryPreview())
+            source.summaryStale(), 0, null, summaryNotice(source.summaryStatus(), source.summaryPreview()),
+            "INFERRED", "NON_AUTHORITATIVE"
         );
         return new MemoryTimelinePeriodResponse(
             source.periodKey(), source.periodStart(), source.periodEnd(), source.stats(), summary, source.themeCount()
@@ -468,13 +469,13 @@ public class ProjectMemoryGatewayService {
         if (source == null) {
             return new MemoryTimelineSummaryResponse(
                 "NOT_GENERATED", "", 0, 0, false, 0, null,
-                "尚无自动摘要，事实和确定性统计仍可读取"
+                "尚无自动摘要，事实和确定性统计仍可读取", "INFERRED", "NON_AUTHORITATIVE"
             );
         }
         return new MemoryTimelineSummaryResponse(
             source.status(), text(source.summary(), true), source.sourceFactCount(), source.coveredFactCount(),
             source.stale(), source.generationVersion(), source.generatedAt(),
-            summaryNotice(source.status(), source.summary())
+            summaryNotice(source.status(), source.summary()), source.epistemicStatus(), source.authority()
         );
     }
 
@@ -482,14 +483,14 @@ public class ProjectMemoryGatewayService {
         if (source == null) {
             return new MemoryTimelineSummaryResponse(
                 "NOT_GENERATED", "", 0, 0, false, 0, null,
-                "尚无自动摘要，事实和确定性统计仍可读取"
+                "尚无自动摘要，事实和确定性统计仍可读取", "INFERRED", "NON_AUTHORITATIVE"
             );
         }
         boolean stale = source.hasGeneratedContent() && source.getStatus() != com.projectflow.entity.ProjectTimelineSummaryStatus.READY;
         return new MemoryTimelineSummaryResponse(
             source.getStatus().name(), text(source.getSummary(), true), source.getSourceFactCount(), source.getCoveredFactCount(),
             stale, source.getGenerationVersion(), source.getGeneratedAt(),
-            summaryNotice(source.getStatus().name(), source.getSummary())
+            summaryNotice(source.getStatus().name(), source.getSummary()), "INFERRED", "NON_AUTHORITATIVE"
         );
     }
 

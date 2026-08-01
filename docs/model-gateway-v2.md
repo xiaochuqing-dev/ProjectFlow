@@ -41,10 +41,12 @@ Provider testing performs a bounded `{\"ok\":true}` transport/protocol/Schema ta
 ## Retry and diagnostics ownership
 
 - A normal task allows at most two ProjectFlow transport attempts and retries only transient I/O or 429/5xx.
-- A recovery call allows one transport attempt, preventing multiplied cost.
+- A recovery call allows one transport attempt, preventing duplicate requests with no new diagnostic value.
 - Schema mismatch receives one targeted re-encoding call.
 - Truncation and empty-after-reasoning keep separate recovery types and dynamic budgets.
 - 401/403, invalid configuration, cancellation and persistence failures are not blindly retried.
 - Diagnostics include protocol, raw/normalized finish, effective parameters, latency, usage source, request/transport counts, recovery and Schema/failure state. They omit prompt, response, reasoning and secrets.
+
+V3.7.5 `QUALITY_FIRST` treats latency, usage, request count and cost as process diagnostics rather than quality defects. Reasoning-capable tasks may use the configured Provider ceiling from the first request. Explicitly supported Responses and Chat reasoning controls use high for connection, semantic and recovery calls; no low-effort branch is used to optimize these diagnostics.
 
 The deterministic matrix runs every active `ModelTaskType` through all three protocol endpoints and separately proves output-limit, second-incomplete failure, Schema repair, reasoning recovery and transient retry contracts. Real-Provider tests remain optional and bounded by available keys.

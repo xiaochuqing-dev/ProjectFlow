@@ -1,0 +1,108 @@
+{
+  "version": "3.7.5",
+  "frozenAt": "2026-08-01T18:43:29+08:00",
+  "implementationCommit": "b59a9ef129c0e4b30db98b5092f548eae972df7c",
+  "implementationTree": "cdcd0c8ad466b9a5b3c878bfdb9dcb4c6f3aa49f",
+  "qualityMode": "QUALITY_FIRST",
+  "promptContractVersion": "project-understanding-prompt-contract-v3",
+  "scoutPromptVersion": "semantic-scout-v13",
+  "finalPromptVersion": "final-synthesis-v7",
+  "scoutPromptSnapshotSha256": "806AA0110390095F8961FB8ABEFC96422DCB576B617261153F7393DF0569777D",
+  "finalPromptSnapshotSha256": "14574307A878B46B2B99689E993522B9C01DEE9EE594C4616988D1302687C136",
+  "holdoutRunBeforeFreeze": false,
+  "datasetPolicy": "V3.7.4 frozen Calibration/Holdout Ground Truth, capability fixtures and thresholds remain unchanged",
+  "reasoningPolicy": "Semantic and recovery requests keep high reasoning effort when the Provider explicitly supports reasoning control. Time and Token usage are process diagnostics, not quality defects. Provider max output is a bounded ceiling, not a consumption target.",
+  "retryPolicy": {
+    "transportRetries": 1,
+    "structuredRecoveryAttemptsPerStage": 1,
+    "schemaRepairAddsNoNewSemantics": true,
+    "failedFinalKeepsStageOneAsFailedDegraded": true
+  },
+  "thresholds": {
+    "failureRateMax": 0.05,
+    "unsupportedClaimRateMax": 0.0,
+    "criticalEvidenceRecallMin": 0.9,
+    "deepReadSufficiencyMin": 0.8,
+    "conflictDetectionMinWhenApplicable": 0.8,
+    "invalidEvidenceReferenceCountMax": 0,
+    "strongFactPromotionViolationCountMax": 0
+  },
+  "files": [
+    {
+      "path": "backend/src/main/java/com/projectflow/service/ProjectUnderstandingPromptBuilder.java",
+      "sha256": "1340095D60A64B64ED755485EDB3150519E31C018866DC69CA12F43108BCD446"
+    },
+    {
+      "path": "backend/src/main/java/com/projectflow/service/ModelGatewayService.java",
+      "sha256": "1DADA72BFBF3814C61F30DE82534B3D17DCFDAE5A158C3F224F201B5DFF70602"
+    },
+    {
+      "path": "backend/src/main/java/com/projectflow/service/ModelRequestPolicy.java",
+      "sha256": "32670223CEB152CB4E8030E977DF7C33E62EF1EB3FDFF9AB6D3F95D95CA7BC76"
+    },
+    {
+      "path": "backend/src/main/java/com/projectflow/service/model/OpenAiChatCompletionsAdapter.java",
+      "sha256": "5BEA344880326C41E8DA411847BA4A648AFE1E17287809A798AFA45E3ADEA0FF"
+    },
+    {
+      "path": "backend/src/main/java/com/projectflow/service/model/OpenAiResponsesAdapter.java",
+      "sha256": "8C4A2B6C9793557C33B0ADD1F5D97F4FF92884CBC23A7A28CBD8CB8EE0BF95B2"
+    },
+    {
+      "path": "backend/src/test/resources/projectflow-eval/v374-calibration-ground-truth.json",
+      "sha256": "2034C83BAE71B6A3D7CBEF415FD5A69D74B81BA75C4406913E9BF597A8111D58"
+    },
+    {
+      "path": "backend/src/test/resources/projectflow-eval/v374-holdout-ground-truth.json",
+      "sha256": "00F9F32C4D4E8C1184021F36558F9226C54DAA863A2558436974C94E624D23A5"
+    },
+    {
+      "path": "backend/src/test/resources/projectflow-eval/v374-calibration-capability-evidence.json",
+      "sha256": "96CEE9DA74F74528F3F3899A2C53D2B5329D665C92863B6882F5B60EA83D432B"
+    },
+    {
+      "path": "backend/src/test/resources/projectflow-eval/v374-holdout-capability-evidence.json",
+      "sha256": "83EC4EBFE67B319C73BC6EFBE5F0837BAE971F0BEE0D9FCD5CABD4FEC3975BEF"
+    },
+    {
+      "path": "backend/src/test/java/com/projectflow/eval/ProjectFlowRealModelEvalIT.java",
+      "sha256": "8A8AEB3F921B627227D117158C85DAF7DFEEF5196D6D4FE93F2A5DD9E7E921F5"
+    },
+    {
+      "path": "backend/src/test/java/com/projectflow/eval/ProjectFlowEvalMetrics.java",
+      "sha256": "AB6BC45214C0504D20BFCF6E9FC45EBF6B675270D6B03A1F0FB0424E0CFE265A"
+    }
+  ],
+  "providers": [
+    {
+      "role": "main",
+      "profileSha256": "AFAC5B7BDFFF12436D8753E40C890CD25A588053E92D889DFD6BCB9CDB1BC614",
+      "provider": "Volcano Ark Coding",
+      "endpoint": "https://ark.cn-beijing.volces.com/api/coding/v3",
+      "model": "glm-5.2",
+      "protocol": "OPENAI_RESPONSES",
+      "contextWindow": "PROVIDER_MANAGED_NOT_ASSERTED",
+      "maxOutputTokens": 65536,
+      "requestTimeoutSeconds": 600,
+      "supportsReasoning": true,
+      "supportsReasoningControl": true,
+      "semanticReasoningEffort": "high",
+      "recoveryReasoningEffort": "high"
+    },
+    {
+      "role": "compatibility",
+      "profileSha256": "ABD132855C60982EC816CC1BADAFBC35869A55ED2E9DEDAA11704A4033C886EC",
+      "provider": "DeepSeek official",
+      "endpoint": "https://api.deepseek.com",
+      "model": "deepseek-v4-flash",
+      "protocol": "OPENAI_CHAT_COMPLETIONS",
+      "contextWindow": "PROVIDER_MANAGED_NOT_ASSERTED",
+      "maxOutputTokens": 65536,
+      "requestTimeoutSeconds": 600,
+      "supportsReasoning": true,
+      "supportsReasoningControl": true,
+      "semanticReasoningEffort": "high",
+      "recoveryReasoningEffort": "high"
+    }
+  ]
+}

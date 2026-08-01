@@ -1,12 +1,12 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-07-30
+Last updated: 2026-08-01
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.7.4 is a local-first strong-fact and shared project-memory system for AI-assisted developers. It discovers ordinary and unusual materials by bounded content, maps and samples large files beyond their heads, lets a provider-neutral Scout request only registered capabilities and known Evidence IDs, validates every result, and persists only evidence-qualified facts. Replaceable understanding remains separate from durable Project Facts, Timeline, Capability Map, Agent candidates, Project Memory Gateway, Hermes reads and Obsidian projection.
+ProjectFlow V3.7.5 is a local-first strong-fact and shared project-memory system for anyone who uses a computer to conduct a project. It discovers ordinary and unusual materials by bounded content, maps and samples large files beyond their heads, lets a provider-neutral Scout request only registered capabilities and known Evidence IDs, validates every result, and persists only evidence-qualified facts. Replaceable understanding remains separate from durable Project Facts, Timeline, Capability Map, Agent candidates, Project Memory Gateway, Hermes reads and Obsidian projection.
 
 ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation. ProjectFlow V3.5.0 added the bounded intake foundation retained by V3.6.0 and V3.7.0.
 
@@ -17,6 +17,16 @@ Current direction:
 - Rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records normal evidence-backed facts.
 - Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
+
+V3.7.5 focus:
+
+- `docs/projectflow-v3.7.5-product-constitution.md` is the single authoritative product constitution. The seven epistemic states are shared by entities, DTOs, Prompt, API, Agent contract and tests.
+- Prompt contract v3, Semantic Scout v13 and Final Synthesis v7 use a complete small-set Evidence Ledger, exact Capability decisions, bounded Claim counts, required Agent-result deep reads for process-evidence dimensions and explicit semantic-contract degradation. Production and Eval remain identical at the semantic boundary.
+- Agent Context Package v2 accepts task, scope, revision preference, Evidence depth and budget; ranks persisted facts/evidence/ranges deterministically; retains conflicts, unknowns, limitations and unread scope; and exposes a stable SHA-256 package revision without a model call.
+- Agent Work Result Candidate Write re-reads non-sensitive changed files inside the bound project, binds source hashes, keeps commands/tests as process evidence and rejects direct strong-fact status before persistence.
+- Local revalidation verifies a Fact, refreshes Evidence, re-reads a range, validates currentness or resolves a package against the latest local revision using fixed commands and bounded reads. It does not rerun project understanding or mutate facts.
+- Timeline summaries explicitly expose `INFERRED` and `NON_AUTHORITATIVE`. V3.8 project-life work remains limited to source-backed event semantics; no automatic importance, phase, maturity or milestone authority is introduced.
+- V3.7.5 creates no Tag or Release and does not build a final GUI, Agent manager, model leaderboard or generic RAG layer.
 
 V3.7.4 focus:
 
@@ -34,8 +44,8 @@ V3.7 focus:
 - V3.7.3 introduces `AnalysisTimePolicy`: connection timeout stays short and bounded, Provider request timeout honors explicit configuration, and overall analysis deadline is AUTO/FINITE/UNLIMITED. AUTO/UNLIMITED do not impose a hidden short overall deadline; retry remains bounded and cancellation/heartbeat remain active.
 - `ProjectUnderstandingPromptBuilder` is the only Scout/Final Prompt source for production and direct Eval. Contract v1, Scout v10 and Final v5 have fixture hashes, production/eval parity tests and a type boundary that cannot accept Ground Truth. Scout context keeps all selected Evidence IDs and short summaries while limiting repeated document samples and structure projections through category/module-diverse representatives. Independent manifest, document, Git-history and Tag-anchor gaps remain separate model decisions.
 - Engineering discovery publishes objective classification and `UNKNOWN` importance; the model decides semantic importance, information gap, deep-read need and affected dimensions. Capability/View registries compute only objective eligibility and validate the model choice.
-- Long duration or Token pressure never silently removes necessary Evidence, deep reads or qualified Final Synthesis. Current quality mode is explicit `QUALITY_FIRST`.
-- OpenAI Responses `reasoning.effort` is sent only after an explicit Provider capability override: first structured requests use high and connection/recovery requests use low. Unknown or other protocol profiles omit it; the Evidence and quality gates remain unchanged.
+- Long duration or Token pressure never silently removes necessary Evidence, deep reads or qualified Final Synthesis. Elapsed time, Token usage, request count and cost are process diagnostics rather than quality defects. Current quality mode is explicit `QUALITY_FIRST`.
+- Reasoning control is capability-gated rather than guessed from model names. Explicitly supported OpenAI Responses and Chat profiles use high for connection, semantic and recovery requests. Reasoning-capable tasks may use the user-configured Provider output ceiling from the first request; it is a loose safety boundary, not a consumption target. Unknown profiles omit unsupported fields without lowering the Evidence or quality gates.
 - V3.7.3 repeats the unchanged GLM `glm-5.2` / OpenAI Responses reliability sample, semantic sample, 38-run and eight real production-chain cases. Results and the V3.8 decision belong only to the dated acceptance reports.
 - V3.7.2 calibrates Semantic Scout and Final Synthesis with a ProjectFlow-only 18-case internal evaluation harness. Fixed and real Provider results are local/CI artifacts; hallucination, accuracy, repeatability, cost and model-comparison metrics never enter product APIs, snapshots, databases or UI.
 - The funded GLM `glm-5.2` / OpenAI Responses revalidation completed the unchanged 38-run set. It remains NOT PASSED: 19 bounded transport timeouts, Tool recall 0.1667, Dynamic View recall 0.0941 and Repeatability 0.4130. Real `ProjectUnderstandingService.refresh()` acceptance passed 2/8 core cases. The earlier DeepSeek pilot/HTTP 402 history is retained; V3.8 remains blocked.
@@ -159,7 +169,7 @@ V3.3.6 compatibility focus:
 - Local fact and Agent-result drafts remain visible but never automatically enter the formal suggestion flow.
 - Confirmed sediments persist source batches and affected files, enter pending capability analysis, and are the direct input to capability analysis.
 - Capability analysis records input sediment IDs and updates their analysis state only after successful card persistence.
-- Empty truncated model output triggers a lower-budget compact retry, reasoning text is not retained, and external waits do not hold method-level database transactions.
+- Empty truncated model output triggers one bounded recovery. Reasoning-capable profiles keep high effort and the configured Provider ceiling; reasoning text is not retained, and external waits do not hold method-level database transactions.
 
 V3.3.5 focus (still applies):
 
@@ -478,9 +488,11 @@ Agent result requirements:
 - Do not commit local secrets or real `.env`.
 - For current docs or API/library behavior, use Context7 first.
 
-## Token-Saving Rule
+## Context-efficiency Rule
 
-For large tasks, first read this file, then read only:
+For large tasks, first read this file, then read only the material that can change the decision. This avoids duplicate context with no new information; it must not reduce necessary reasoning, Evidence, verification time or model quality.
+
+Read in this order:
 
 1. The latest relevant stage report in `docs/`.
 2. The target frontend route/component or backend controller/service.

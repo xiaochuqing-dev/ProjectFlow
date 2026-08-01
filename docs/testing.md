@@ -1,5 +1,15 @@
 # Testing
 
+## V3.7.5 constitution, Context Package and two-model gates
+
+Blocking deterministic coverage now includes the seven epistemic states, model/attention/phase/fallback non-promotion, declaration and process-evidence boundaries, conflict/UNKNOWN preservation, currentness, bounded Dynamic Profile claims, complete small-set Evidence Ledgers, exact eligible-capability decisions, semantic-contract degradation, Context Package v2 relevance/ranges/revision/package identity, candidate-only work-result writes, five local revalidation actions, project isolation and Timeline non-authority.
+
+The V3.7.4 Calibration and frozen Holdout labels remain unchanged. V3.7.5 formally freezes code SHA, Prompt/fixture/Ground Truth hashes, thresholds and Provider profile before one Holdout per model. Product E2E uses `ProjectUnderstandingRealModelIT` only after that Provider's Holdout passes and writes to a Provider-specific `projectflow.eval.output-name`. Raw prompts, responses, reasoning and keys are never artifacts.
+
+V3.7.5 uses Prompt contract v3, Semantic Scout v13 and Final Synthesis v7. Real GLM and DeepSeek profiles use high reasoning and loose configured Provider ceilings; time, Token and request counts are recorded only as diagnostics and never reduce a gate. The committed `docs/acceptance-evidence/v3.7.5-model-run-summary.json` contains safe aggregate and case-level fields plus source hashes, not model content.
+
+Real-project gap checks are deterministic and 0-model unless the coverage matrix proves a semantic gap. A repository that changes during the scan must be reported as volatile/partial rather than treated as a stable fingerprint. Actual model, real-project, CI and regression results belong in the V3.7.5 acceptance evidence and report.
+
 ## V3.7.4 strong-fact and generalization gates
 
 Blocking deterministic coverage includes strong status promotion, declaration/inference isolation, Agent-result boundaries, explicit historical reason/deprecation/technical-debt evidence, Evidence allow-lists, extensionless content discovery, Content Map head/middle/tail/marker ranges, tail-sensitive revisions, cross-chunk merge, project ownership, portfolio isolation, Agent candidates, Context Packages, MCP history/resources, provider-neutral prompt contracts and Ground Truth leakage.
@@ -97,7 +107,7 @@ Focused backend cases cover 42-fact reclassification, exact classification, unkn
 
 ## V3.4.3 Gateway and MCP gates
 
-Gateway tests must prove ownership, occurrence-time filtering, 7/17 occurrence with 8/20 analysis remaining in July, stale Timeline/Capability fallback, explicit source/derived search layers, chronological evolution, safe fact trace, pagination, bounded output and query-text-free audit. The scale fixture is 5000 facts over 36 months, 100 capabilities, 1000 evolutions and 10000 relations; it measures P50/P95, query count and response bytes for all nine business reads. The MCP subprocess suite verifies nine-tool discovery/calls, read-only annotations, auth forwarding, compact pagination, concurrent read, restart, timeout, unavailable backend, remote rejection and no credential leak. Full H2, PostgreSQL, frontend contracts/lint/build, Playwright, sensitive scan, real repository startup and CI remain blocking; actual observations belong in the V3.4.3 report.
+Gateway tests must prove ownership, occurrence-time filtering, 7/17 occurrence with 8/20 analysis remaining in July, stale Timeline/Capability fallback, explicit source/derived search layers, chronological evolution, safe fact trace, pagination, bounded output and query-text-free audit. The scale fixture is 5000 facts over 36 months, 100 capabilities, 1000 evolutions and 10000 relations; it measures P50/P95, query count and response bytes for the Gateway reads. The MCP subprocess suite verifies thirteen-tool discovery/calls, read-only annotations, Context Package parameters, auth forwarding, compact pagination, concurrent read, restart, timeout, unavailable backend, remote rejection and no credential leak. Full H2, PostgreSQL, frontend contracts/lint/build, Playwright, sensitive scan, real repository startup and CI remain blocking; actual observations belong in the dated acceptance report.
 
 ## V3.4.4 Obsidian projection gates
 

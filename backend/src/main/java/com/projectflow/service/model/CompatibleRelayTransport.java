@@ -94,6 +94,9 @@ public class CompatibleRelayTransport {
                 ));
                 body.put("max_tokens", request.maxOutputTokens());
                 if (request.jsonMode()) body.put("response_format", Map.of("type", "json_object"));
+                if (request.reasoningEffort() != null) {
+                    body.put("reasoning_effort", request.reasoningEffort());
+                }
             }
             case ANTHROPIC_MESSAGES -> {
                 body.put("system", request.systemPrompt());

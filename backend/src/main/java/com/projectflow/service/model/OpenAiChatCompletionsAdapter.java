@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.openai.client.OpenAIClient;
 import com.openai.errors.OpenAIServiceException;
+import com.openai.models.ReasoningEffort;
 import com.openai.models.ResponseFormatJsonObject;
 import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
@@ -47,6 +48,9 @@ public class OpenAiChatCompletionsAdapter implements ModelProtocolAdapter {
             .maxTokens(request.maxOutputTokens());
         if (request.temperature() != null) params.temperature(request.temperature());
         if (request.jsonMode()) params.responseFormat(ResponseFormatJsonObject.builder().build());
+        if (request.reasoningEffort() != null) {
+            params.reasoningEffort(ReasoningEffort.of(request.reasoningEffort()));
+        }
         OpenAIClient client = OpenAiSdkSupport.clientBuilder(request, urlGuard).build();
         try {
             ChatCompletion response = client.chat().completions().create(params.build());

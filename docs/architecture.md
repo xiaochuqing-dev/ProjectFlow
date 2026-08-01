@@ -1,5 +1,17 @@
 # Architecture
 
+## V3.7.5 product-constitution and Agent-context boundary
+
+`docs/projectflow-v3.7.5-product-constitution.md` is the single authoritative product contract. `ProjectFactEpistemicStatus` carries seven states across entities, DTOs, prompts and consumers. Only project-bound `OBSERVED` and independently checked `VERIFIED` claims may enter the strong-fact path; declarations, model inferences, conflicts, unknowns and Agent process evidence retain their own authority.
+
+`ProjectUnderstandingPromptBuilder` is still the only production/Eval semantic boundary. Prompt contract v3, Semantic Scout v13 and Final Synthesis v7 require a complete Evidence Ledger for small source sets, one REQUEST/SKIP decision for every objectively eligible capability, required Agent-result reads for applicable process-evidence dimensions, known Evidence IDs only and bounded profile claims. Missing ledger or capability decisions are surfaced through semantic-contract diagnostics and `FAILED_DEGRADED`; Provider adapters cannot relax the contract.
+
+`ModelRequestPolicy` treats reasoning time and Token use as process diagnostics, not quality defects. A reasoning-capable request uses the configured Provider output ceiling from its first attempt; explicitly supported Responses and Chat reasoning controls remain `high` for connection, semantic and recovery requests. Provider timeout, cancellation, heartbeat and bounded retry remain loose safety controls and never authorize silent Evidence or reasoning reduction.
+
+`ProjectAgentHistoryService` now builds Context Package v2 from persisted project state without a model call. Task, scope, revision preference, Evidence depth and size budget drive deterministic ranking; the response preserves ranges, source revision/currentness, conflicts, unknowns, limitations, unread scope and a stable package revision. `ProjectAgentCandidateService` accepts candidate-only Agent work results, safely re-reads changed project files and binds hashes while keeping commands, tests and completion claims as process evidence.
+
+`ProjectAgentRevalidationService` exposes five bounded local actions: verify a Fact, refresh Evidence, re-read a range, validate currentness and resolve a package against the latest revision. It uses fixed Git commands and project-contained reads, never runs project understanding and never mutates `ProjectFact`. Timeline summaries are explicitly `INFERRED` and `NON_AUTHORITATIVE`; V3.8 phase, maturity, importance and milestone authority remain out of scope. V3.7.5 adds no schema and no third-party dependency.
+
 ## V3.7.4 strong-fact, content-map and shared-history boundary
 
 `StrongFactPromotionGuard` is the write-side trust boundary. Only `OBSERVED` or `VERIFIED` claims with same-project allow-listed Evidence can enter recorded ProjectFact state. Declaration, inference, conflict, unknown and Agent process evidence remain explicit non-strong states. Model consensus has no promotion authority; historical reasons, deprecation and technical debt require their own evidence classes.
@@ -373,7 +385,7 @@ The durable flow is ProjectFact truth → Timeline temporal read model → Proje
 
 ## V3.4.3 Project Memory Gateway and Hermes
 
-Project Memory Gateway is an additive read-only business layer over Facts, Timeline, Capabilities and Evolutions. It normalizes snapshot, occurrence-time recent changes, cross-layer search, timeline, capability/evolution, fact trace and budgeted brief semantics while retaining explicit SOURCE versus DERIVED labels. The local stdio MCP adapter maps nine narrow tools to this Gateway. Neither the adapter nor GET endpoints invoke models or write project memory. Remote MCP remains a separate secured boundary.
+Project Memory Gateway is an additive read-only business layer over Facts, Timeline, Capabilities and Evolutions. It normalizes snapshot, occurrence-time recent changes, cross-layer search, timeline, capability/evolution, fact trace, budgeted brief, portfolio, Evidence, knowledge and Context Package semantics while retaining explicit SOURCE versus DERIVED labels. The local stdio MCP adapter maps thirteen narrow tools to this Gateway. Neither the adapter nor GET endpoints invoke models or write project memory. Remote MCP remains a separate secured boundary.
 
 ## V3.4.4 Obsidian projection boundary
 

@@ -1,4 +1,4 @@
-name: ProjectFlow V3.7.4 Quality Gates
+name: ProjectFlow V3.7.5 Quality Gates
 
 on:
   push:
@@ -158,10 +158,13 @@ jobs:
           PROJECTFLOW_REAL_MODEL_TYPE: "OPENAI"
           PROJECTFLOW_REAL_MODEL_PROTOCOL: "OPENAI_RESPONSES"
           PROJECTFLOW_REAL_MODEL_TIMEOUT_SECONDS: "600"
-          # Reasoning and visible JSON share this Provider ceiling. The Scout
-          # starts at its 16k task ceiling; only a detected truncation can use
-          # the explicitly configured GLM 5.2 recovery headroom.
+          # QUALITY_FIRST: reasoning and visible JSON share this loose Provider
+          # ceiling from the first request. The ceiling is not a Token target;
+          # elapsed time and usage remain diagnostics and never lower effort.
           PROJECTFLOW_REAL_MODEL_MAX_TOKENS: "65536"
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE: "true"
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING: "true"
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL: "true"
         run: |
           if [ -z "$PROJECTFLOW_REAL_MODEL_API_KEY" ]; then
             echo "SKIPPED: 未提供安全测试 Key"
@@ -175,5 +178,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: projectflow-real-model-eval
-          path: backend/target/projectflow-eval/real
+          path: backend/target/projectflow-eval
           if-no-files-found: ignore

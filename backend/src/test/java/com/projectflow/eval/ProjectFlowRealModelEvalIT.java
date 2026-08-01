@@ -80,7 +80,7 @@ class ProjectFlowRealModelEvalIT {
             0.1,
             config.maxTokens(),
             false,
-            List.of("V3.7.4_REAL_EVAL")
+            List.of("V3.7.5_REAL_EVAL")
         );
         provider.configureProtocol(
             config.protocol(),
@@ -91,7 +91,7 @@ class ProjectFlowRealModelEvalIT {
             java.util.Map.of(),
             config.timeoutSeconds(),
             null,
-            null,
+            config.supportsJsonMode(),
             null,
             config.supportsReasoning(),
             config.supportsReasoningControl()
@@ -183,11 +183,11 @@ class ProjectFlowRealModelEvalIT {
                 assertThat(evalRun.summary().conflictDetectionRate()).isGreaterThanOrEqualTo(0.80);
             }
             assertThat(invalidEvidenceRefs(observations, groundTruth))
-                .as("V3.7.4 Evidence 引用必须来自当前案例 allow-list")
+                .as("V3.7.5 Evidence 引用必须来自当前案例 allow-list")
                 .isEmpty();
             assertThat(observations.stream()
                 .flatMap(value -> value.mustNotClaimViolations().stream())
-                .toList()).as("V3.7.4 强事实边界不得出现禁止声明").isEmpty();
+                .toList()).as("V3.7.5 强事实边界不得出现禁止声明").isEmpty();
         }
     }
 
@@ -381,7 +381,7 @@ class ProjectFlowRealModelEvalIT {
                 testCase.id(),
                 testCase.id() + "-real-" + run,
                 PROMPT_VERSION,
-                "3.7.4",
+                "3.7.5",
                 testCase.source(),
                 run,
                 config.name(),
@@ -437,7 +437,7 @@ class ProjectFlowRealModelEvalIT {
             testCase.id(),
             testCase.id() + "-deterministic-" + run,
             PROMPT_VERSION,
-            "3.7.4",
+            "3.7.5",
             testCase.source(),
             run,
             config.name(),
@@ -491,8 +491,27 @@ class ProjectFlowRealModelEvalIT {
     private static String boundedEvalContext(ObjectMapper mapper, EvalCase value) throws Exception {
         var context = mapper.createObjectNode();
         context.put("source", value.source());
-        context.put("evaluationContext", value.context());
+        var ledger = context.putObject("evidenceLedger");
+        List<String> ids = evidenceIds(value.context());
+        ledger.put("coverageMode", ids.size() <= 12 ? "COMPLETE_SMALL_SET" : "BOUNDED_DIVERSE");
+        ledger.put("sourceCount", ids.size());
+        var items = ledger.putArray("items");
+        for (String id : ids) {
+            var item = items.addObject();
+            item.put("id", id);
+            item.put("category", "EVAL_SOURCE");
+            item.put("summary", evidenceSentence(value.context(), id));
+        }
+        context.put("boundedProjectContext", value.context());
         return mapper.writeValueAsString(context);
+    }
+
+    private static String evidenceSentence(String context, String evidenceId) {
+        if (context == null || context.isBlank()) return "";
+        for (String sentence : context.split("(?<=[。；;])\\s*")) {
+            if (sentence.contains(evidenceId)) return sentence.strip();
+        }
+        return context.length() <= 500 ? context.strip() : context.substring(0, 500).strip();
     }
 
     static String buildScoutPrompt(
@@ -1012,7 +1031,7 @@ class ProjectFlowRealModelEvalIT {
             testCase.id(),
             testCase.id() + "-real-" + run,
             PROMPT_VERSION,
-            "3.7.4",
+            "3.7.5",
             testCase.source(),
             run,
             config.name(),
@@ -1177,6 +1196,7 @@ class ProjectFlowRealModelEvalIT {
             ),
             integerEnvironment("PROJECTFLOW_REAL_MODEL_TIMEOUT_SECONDS", 120),
             integerEnvironment("PROJECTFLOW_REAL_MODEL_MAX_TOKENS", 16_000),
+            booleanEnvironment("PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE", false),
             nullableBooleanEnvironment("PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING"),
             booleanEnvironment("PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL", false)
         );
@@ -1226,6 +1246,7 @@ class ProjectFlowRealModelEvalIT {
             var statement = connection.prepareStatement("""
                 select name, base_url, api_key, model_name, type, protocol,
                        coalesce(request_timeout_seconds, 120), max_tokens,
+                       coalesce(supports_json_mode, false),
                        supports_reasoning,
                        coalesce(supports_reasoning_control, false)
                 from ai_providers
@@ -1245,8 +1266,9 @@ class ProjectFlowRealModelEvalIT {
                 ModelProtocol.valueOf(result.getString(6)),
                 Math.max(60, result.getInt(7)),
                 Math.max(4_000, result.getInt(8)),
-                (Boolean) result.getObject(9),
-                result.getBoolean(10)
+                result.getBoolean(9),
+                (Boolean) result.getObject(10),
+                result.getBoolean(11)
             );
         }
     }
@@ -1330,6 +1352,7 @@ class ProjectFlowRealModelEvalIT {
         ModelProtocol protocol,
         int timeoutSeconds,
         int maxTokens,
+        boolean supportsJsonMode,
         Boolean supportsReasoning,
         boolean supportsReasoningControl
     ) {

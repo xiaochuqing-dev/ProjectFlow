@@ -1,12 +1,12 @@
 # Provider Settings
 
-Provider Max Tokens is a capability/user ceiling, not a value sent by every task. ProjectFlow calculates a task request from entrypoint, input size, expected structure and reasoning behavior, then applies the Provider ceiling. Diagnostics show all three values and the decision reason.
+Provider Max Tokens is a capability/user ceiling, not a consumption target. Non-reasoning tasks still calculate a task request from entrypoint, input size and expected structure. Reasoning-capable tasks may use the configured Provider ceiling from the first request so hidden thinking and visible JSON are not crowded into an ordinary-output estimate. Diagnostics show the decision without treating higher use as lower quality.
 
 Configured Temperature is not globally capped. Diagnostics also show the task recommendation and final value. Reasoning or other capability profiles that do not support Temperature omit the field completely. JSON mode is sent only when the Provider/model capability profile declares support.
 
 The current built-in profiles cover DeepSeek chat, DeepSeek reasoning, standard OpenAI-compatible, and conservative custom compatibility. Unknown Providers do not receive private parameters.
 
-Reasoning control remains a tri-state capability override. ProjectFlow sends `reasoning.effort` only for an explicitly supported OpenAI Responses profile: `high` for the first structured analysis and `low` for the connection probe or single recovery request. Automatic, unsupported, Chat and Anthropic profiles omit it rather than guessing a private field.
+Reasoning control remains a tri-state capability override. ProjectFlow sends high effort only for explicitly supported OpenAI Responses or Chat profiles, including connection, semantic and recovery requests. It never selects low to save time or Token. Automatic, unsupported and Anthropic profiles omit unsupported fields rather than guessing a private parameter.
 
 A connection test uses the same gateway and capability policy as business analysis, but only proves basic URL, model and Key availability. It does not prove long-input quality or Schema compliance.
 
@@ -20,4 +20,4 @@ V3.7.3 keeps three different time controls explicit. Provider Settings owns the 
 
 Provider compatible does not mean quality qualified. All Providers use the same Evidence and Prompt Contract; dated internal real-model acceptance determines whether a Provider/model combination satisfies ProjectFlow quality. Settings must not add a model leaderboard, benchmark score, hidden quality mode or Provider-specific business prompt.
 
-V3.7.4 keeps the Strong Fact Constitution provider-neutral. A Responses or Chat profile cannot alter fact statuses, upgrade inference, trust Agent results, or relax Evidence validation. The second Provider is an acceptance profile, not a production fan-out setting; there is still one explicitly selected default Provider per task.
+V3.7.5 keeps the product constitution provider-neutral. Prompt contract v3, Semantic Scout v13 and Final Synthesis v7 are shared across Responses and Chat profiles. A Provider cannot alter the seven fact statuses, upgrade inference, trust Agent results, skip eligible-capability decisions or relax Evidence validation. The qualified profiles are GLM `glm-5.2` and DeepSeek `deepseek-v4-flash`; the second Provider is an acceptance profile, not a production fan-out setting, and there is still one explicitly selected default Provider per task.
