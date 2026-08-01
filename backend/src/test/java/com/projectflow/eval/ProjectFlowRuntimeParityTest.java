@@ -32,6 +32,24 @@ class ProjectFlowRuntimeParityTest {
     }
 
     @Test
+    void realProviderPathsPreserveExplicitJsonModeCapability() throws Exception {
+        List<Path> sources = List.of(
+            Path.of("src/test/java/com/projectflow/eval/ProjectFlowRealProviderProbeIT.java"),
+            Path.of("src/test/java/com/projectflow/eval/ProjectFlowRealModelEvalIT.java"),
+            Path.of("src/test/java/com/projectflow/eval/ProjectUnderstandingRealModelIT.java")
+        );
+
+        for (Path source : sources) {
+            assertThat(Files.readString(source))
+                .as(source.toString())
+                .contains("config.supportsJsonMode()");
+        }
+        assertThat(Files.readString(
+            Path.of("src/test/java/com/projectflow/eval/ProjectFlowRealModelEvalIT.java")
+        )).contains("PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE");
+    }
+
+    @Test
     void directEvalExecutesBoundedProviderWithoutGroundTruthToolEvidence() throws Exception {
         String content = Files.readString(
             Path.of("src/test/java/com/projectflow/eval/ProjectFlowRealModelEvalIT.java")

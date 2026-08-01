@@ -91,7 +91,7 @@ class ProjectFlowRealModelEvalIT {
             java.util.Map.of(),
             config.timeoutSeconds(),
             null,
-            null,
+            config.supportsJsonMode(),
             null,
             config.supportsReasoning(),
             config.supportsReasoningControl()
@@ -1196,6 +1196,7 @@ class ProjectFlowRealModelEvalIT {
             ),
             integerEnvironment("PROJECTFLOW_REAL_MODEL_TIMEOUT_SECONDS", 120),
             integerEnvironment("PROJECTFLOW_REAL_MODEL_MAX_TOKENS", 16_000),
+            booleanEnvironment("PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE", false),
             nullableBooleanEnvironment("PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING"),
             booleanEnvironment("PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL", false)
         );
@@ -1245,6 +1246,7 @@ class ProjectFlowRealModelEvalIT {
             var statement = connection.prepareStatement("""
                 select name, base_url, api_key, model_name, type, protocol,
                        coalesce(request_timeout_seconds, 120), max_tokens,
+                       coalesce(supports_json_mode, false),
                        supports_reasoning,
                        coalesce(supports_reasoning_control, false)
                 from ai_providers
@@ -1264,8 +1266,9 @@ class ProjectFlowRealModelEvalIT {
                 ModelProtocol.valueOf(result.getString(6)),
                 Math.max(60, result.getInt(7)),
                 Math.max(4_000, result.getInt(8)),
-                (Boolean) result.getObject(9),
-                result.getBoolean(10)
+                result.getBoolean(9),
+                (Boolean) result.getObject(10),
+                result.getBoolean(11)
             );
         }
     }
@@ -1349,6 +1352,7 @@ class ProjectFlowRealModelEvalIT {
         ModelProtocol protocol,
         int timeoutSeconds,
         int maxTokens,
+        boolean supportsJsonMode,
         Boolean supportsReasoning,
         boolean supportsReasoningControl
     ) {

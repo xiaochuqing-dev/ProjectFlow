@@ -299,7 +299,7 @@ class ProjectUnderstandingRealModelIT {
             Map.of(),
             config.timeoutSeconds(),
             null,
-            null,
+            config.supportsJsonMode(),
             null,
             config.supportsReasoning(),
             config.supportsReasoningControl()
