@@ -684,6 +684,16 @@ class ProjectHistoryReconstructionTest {
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
         assertThat(readService.overview(userId, project.getId()).diagnostics().get("modelRejectedUnsupportedClaimCount"))
             .isEqualTo(1);
+
+        when(modelGateway.callStructured(any(), any(), any())).thenReturn(modelResponse("""
+            {"stories":[{"storyId":"%s","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","reason":"","reasonEvidenceRefs":[],"conflicts":[],"unknowns":[]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。","storyRefs":%s}]}
+            """.formatted(story.id(), chapter.id(), json(chapter.storyRefs()))));
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+        var normalizedUnknown = readService.stories(
+            userId, project.getId(), null, false, null, null, 0, 20
+        ).items().get(0);
+        assertThat(normalizedUnknown.reason()).isBlank();
+        assertThat(normalizedUnknown.unknowns()).anyMatch(value -> value.contains("UNKNOWN"));
     }
 
     @Test

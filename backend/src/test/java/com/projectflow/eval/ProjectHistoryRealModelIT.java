@@ -137,6 +137,7 @@ class ProjectHistoryRealModelIT {
         int invalidEvidenceRefs = 0;
         int chapterMembershipMismatches = 0;
         int reasonWithoutEvidence = 0;
+        int missingReasonUnknown = 0;
         int emptyReadableSummaries = 0;
         int unsupportedClaims = 0;
 
@@ -153,9 +154,10 @@ class ProjectHistoryRealModelIT {
                 invalidEvidenceRefs += refs.stream().filter(ref -> !eligible.contains(ref)).count();
                 String reason = text(story, "reason");
                 if (!reason.isBlank() && refs.isEmpty()) reasonWithoutEvidence++;
-                if (eligible.isEmpty() && (!reason.isBlank() || !strings(story.path("unknowns")).stream()
-                    .anyMatch(value -> value.contains("原因") && (value.contains("未知") || value.contains("没有") || value.contains("缺少"))))) {
-                    reasonWithoutEvidence++;
+                boolean reasonUnknownDisclosed = strings(story.path("unknowns")).stream()
+                    .anyMatch(value -> value.contains("原因") && (value.contains("未知") || value.contains("没有") || value.contains("缺少")));
+                if (eligible.isEmpty() && reason.isBlank() && !reasonUnknownDisclosed) {
+                    missingReasonUnknown++;
                 }
                 String title = text(story, "humanTitle");
                 String summary = text(story, "oneSentenceSummary");
@@ -193,8 +195,8 @@ class ProjectHistoryRealModelIT {
 
         return new Qualification(
             rootSchemaViolations, entitySchemaViolations, missingEntities, duplicateEntities, unknownEntities,
-            invalidEvidenceRefs, chapterMembershipMismatches, reasonWithoutEvidence, emptyReadableSummaries,
-            unsupportedClaims, returnedStoryIds.size(), returnedChapterIds.size()
+            invalidEvidenceRefs, chapterMembershipMismatches, reasonWithoutEvidence, missingReasonUnknown,
+            emptyReadableSummaries, unsupportedClaims, returnedStoryIds.size(), returnedChapterIds.size()
         );
     }
 
@@ -214,7 +216,7 @@ class ProjectHistoryRealModelIT {
         Files.createDirectories(output);
 
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("version", "projectflow-v3.8.0-history-real-model-v1");
+        artifact.put("version", "projectflow-v3.8.0-history-real-model-v2");
         artifact.put("generatedAt", Instant.now().toString());
         artifact.put("promptVersion", ProjectHistoryPromptBuilder.PROMPT_VERSION);
         artifact.put("provider", Map.of(
@@ -285,6 +287,7 @@ class ProjectHistoryRealModelIT {
         int invalidEvidenceRefCount,
         int chapterMembershipMismatchCount,
         int reasonWithoutEvidenceCount,
+        int missingReasonUnknownCount,
         int emptyReadableSummaryCount,
         int unsupportedClaimCount,
         int returnedStoryCount,
