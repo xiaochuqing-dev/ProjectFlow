@@ -15,7 +15,7 @@ from typing import Any
 
 
 SERVER_NAME = "projectflow-project-memory"
-SERVER_VERSION = "3.7.5"
+SERVER_VERSION = "3.8.0"
 PROTOCOL_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"}
 DEFAULT_PROTOCOL_VERSION = "2025-11-25"
 
@@ -97,6 +97,7 @@ DETAIL = {"type": "string", "enum": ["compact", "detailed"], "default": "compact
 PAGE = {"type": "integer", "minimum": 0, "default": 0}
 SIZE = {"type": "integer", "minimum": 1, "maximum": 100, "default": 10}
 TIME = {"type": "string", "format": "date-time", "description": "Inclusive real occurrence-time boundary in ISO-8601."}
+EVENT_ID = {"type": "string", "format": "uuid", "description": "Project History event UUID returned by list_project_history_events."}
 
 
 def _tool(name: str, description: str, input_schema: dict[str, Any]) -> dict[str, Any]:
@@ -121,8 +122,69 @@ TOOLS = [
     ),
     _tool(
         "get_project_snapshot",
-        "Get a compact current project snapshot: fact coverage, real change time, latest period, representative capabilities, recent evolutions, freshness, and warnings. Use for overview questions.",
+        "Get a compact current project snapshot led by what happened in Project History, then fact coverage, optional capabilities, freshness, and warnings. Use for overview questions.",
         _schema({"projectId": PROJECT_ID}, ["projectId"]),
+    ),
+    _tool(
+        "get_project_history_overview",
+        "Read the persisted Project History overview: earliest confirmed state, current state, recent changes, dynamic chapter summaries, conflicts, unknowns, coverage, and currentness. GET never scans Git or calls a model.",
+        _schema({"projectId": PROJECT_ID}, ["projectId"]),
+    ),
+    _tool(
+        "list_project_history_chapters",
+        "List paged dynamic Project History chapters with real time ranges, readable summaries, story counts, raw-event counts, authority, coverage, and limitations. Chapters are derived groupings rather than milestones.",
+        _schema({"projectId": PROJECT_ID, "page": PAGE, "size": SIZE}, ["projectId"]),
+    ),
+    _tool(
+        "list_project_change_stories",
+        "List paged evidence-bound change stories with before, change, after, later outcome, conflicts, unknowns, authority, and raw-event references. Supports subject, time, and attention filters.",
+        _schema(
+            {
+                "projectId": PROJECT_ID,
+                "subject": {"type": "string", "maxLength": 200},
+                "attentionOnly": {"type": "boolean", "default": False},
+                "from": TIME,
+                "until": TIME,
+                "page": PAGE,
+                "size": SIZE,
+            },
+            ["projectId"],
+        ),
+    ),
+    _tool(
+        "list_project_evolution_threads",
+        "List paged evolution threads that connect repeated creation, modification, removal, restoration, replacement, split, merge, revert, and reapply transitions for a stable project subject.",
+        _schema(
+            {"projectId": PROJECT_ID, "subject": {"type": "string", "maxLength": 200}, "page": PAGE, "size": SIZE},
+            ["projectId"],
+        ),
+    ),
+    _tool(
+        "list_project_history_events",
+        "List paged normalized raw history events without dropping stale or invalidated records. Filter by source, category, transition, authority, epistemic status, rewrite state, subject, attention, or occurrence time.",
+        _schema(
+            {
+                "projectId": PROJECT_ID,
+                "sourceType": {"type": "string", "enum": ["GIT", "GITHUB", "FILESYSTEM", "PROJECT_FACT", "AGENT_RESULT", "DOCUMENT", "USER", "EXTERNAL"]},
+                "category": {"type": "string", "enum": ["COMMIT", "MERGE", "PULL_REQUEST", "ISSUE", "TAG", "FILE_CHANGE", "DOCUMENT_VERSION", "AGENT_RESULT", "VALIDATION", "USER_DECLARATION", "PROJECT_FACT", "EXTERNAL"]},
+                "transition": {"type": "string", "enum": ["CREATED", "MODIFIED", "REMOVED", "RESTORED", "RENAMED", "MOVED", "REPLACED", "SPLIT", "MERGED", "REVERTED", "REAPPLIED", "UNKNOWN_TRANSITION"]},
+                "authority": {"type": "string", "enum": ["SOURCE_BACKED", "FACTUAL_SOURCE", "DECLARED", "PROCESS_EVIDENCE", "INFERRED_NON_AUTHORITATIVE", "UNKNOWN"]},
+                "epistemicStatus": {"type": "string", "enum": ["OBSERVED", "VERIFIED", "DECLARED", "INFERRED", "CONFLICTED", "UNKNOWN", "PROCESS_EVIDENCE"]},
+                "rewriteState": {"type": "string", "enum": ["CURRENT", "STALE", "INVALIDATED"]},
+                "subject": {"type": "string", "maxLength": 200},
+                "attentionOnly": {"type": "boolean", "default": False},
+                "from": TIME,
+                "until": TIME,
+                "page": PAGE,
+                "size": SIZE,
+            },
+            ["projectId"],
+        ),
+    ),
+    _tool(
+        "get_project_history_evidence",
+        "Read the bounded evidence drill-down for one Project History event, preserving currentness, revision, validation, coverage, limitations, and safe deep links without exposing private paths or raw payloads.",
+        _schema({"projectId": PROJECT_ID, "eventId": EVENT_ID}, ["projectId", "eventId"]),
     ),
     _tool(
         "search_project_memory",
@@ -209,7 +271,7 @@ TOOLS = [
     ),
     _tool(
         "get_project_brief",
-        "Build a tightly budgeted project memory context pack for an agent task: positioning, lifecycle, latest meaningful changes, capabilities, evolutions, historical periods, attention, and coverage.",
+        "Build a tightly budgeted project brief led by what happened, earliest and current confirmed state, recent change stories and chapters, then facts and optional capabilities with explicit coverage warnings.",
         _schema(
             {"projectId": PROJECT_ID, "sizeBudget": {"type": "integer", "minimum": 2000, "maximum": 12000, "default": 6000}},
             ["projectId"],
@@ -350,6 +412,42 @@ def call_tool(client: ProjectFlowClient, name: str, arguments: dict[str, Any]) -
     base = f"/api/projects/{project}/project-memory"
     if name == "get_project_snapshot":
         return client.get(base + "/snapshot")
+    if name == "get_project_history_overview":
+        return client.get(base + "/history/overview")
+    if name == "list_project_history_chapters":
+        return client.get(base + "/history/chapters", {
+            "page": _argument(arguments, "page", 0), "size": _argument(arguments, "size", 10),
+        })
+    if name == "list_project_change_stories":
+        return client.get(base + "/history/stories", {
+            "subject": _argument(arguments, "subject"),
+            "attentionOnly": str(bool(_argument(arguments, "attentionOnly", False))).lower(),
+            "from": _argument(arguments, "from"), "to": _argument(arguments, "until"),
+            "page": _argument(arguments, "page", 0), "size": _argument(arguments, "size", 10),
+        })
+    if name == "list_project_evolution_threads":
+        return client.get(base + "/history/threads", {
+            "subject": _argument(arguments, "subject"),
+            "page": _argument(arguments, "page", 0), "size": _argument(arguments, "size", 10),
+        })
+    if name == "list_project_history_events":
+        return client.get(base + "/history/events", {
+            "sourceType": _argument(arguments, "sourceType"),
+            "category": _argument(arguments, "category"),
+            "transition": _argument(arguments, "transition"),
+            "authority": _argument(arguments, "authority"),
+            "epistemicStatus": _argument(arguments, "epistemicStatus"),
+            "rewriteState": _argument(arguments, "rewriteState"),
+            "subject": _argument(arguments, "subject"),
+            "attentionOnly": str(bool(_argument(arguments, "attentionOnly", False))).lower(),
+            "from": _argument(arguments, "from"), "to": _argument(arguments, "until"),
+            "page": _argument(arguments, "page", 0), "size": _argument(arguments, "size", 10),
+        })
+    if name == "get_project_history_evidence":
+        event_id = urllib.parse.quote(str(_argument(arguments, "eventId", "")).strip(), safe="")
+        if not event_id:
+            raise AdapterError("MCP_ARGUMENT_INVALID", "eventId is required.")
+        return client.get(base + f"/history/events/{event_id}/evidence")
     if name == "search_project_memory":
         entity_types = _argument(arguments, "entityTypes")
         return client.get(base + "/search", {
@@ -467,7 +565,7 @@ def handle(message: dict[str, Any], client: ProjectFlowClient) -> dict[str, Any]
                 "resources": {"subscribe": False, "listChanged": False},
             },
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
-            "instructions": "Use list_projects when needed, then prefer compact read-only Project Memory tools or projectflow:// project context resources. Only OBSERVED/VERIFIED records are strong facts; candidates, conflicts, unknowns, Timeline and Capabilities keep distinct source layers.",
+            "instructions": "Use list_projects when needed, then start with Project History for what happened and drill down to stories, threads, raw events, and Evidence. Only OBSERVED/VERIFIED records are strong facts; chapters, stories, Timeline, Capabilities, candidates, conflicts, and unknowns keep distinct source layers.",
         })
     if method == "ping":
         return _response(request_id, {})
