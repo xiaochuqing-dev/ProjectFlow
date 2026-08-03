@@ -6,6 +6,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.projectflow.entity.ProjectAnalysisJob;
 import com.projectflow.entity.ProjectAnalysisJobStatus;
@@ -28,6 +30,19 @@ public interface ProjectAnalysisJobRepository extends JpaRepository<ProjectAnaly
         ProjectAnalysisJobType jobType,
         String inputFingerprint,
         List<ProjectAnalysisJobStatus> statuses
+    );
+
+    @Query("""
+        select job from ProjectAnalysisJob job
+        where job.projectId = :projectId
+          and job.jobType = :jobType
+          and job.status in :statuses
+        order by job.createdAt desc
+        """)
+    List<ProjectAnalysisJob> findActiveByProjectIdAndJobType(
+        @Param("projectId") UUID projectId,
+        @Param("jobType") ProjectAnalysisJobType jobType,
+        @Param("statuses") List<ProjectAnalysisJobStatus> statuses
     );
 
     Optional<DashboardJobView> findFirstByProjectIdAndJobTypeAndStatusInOrderByCreatedAtDesc(

@@ -1,0 +1,918 @@
+package com.projectflow;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.projectflow.entity.AiProvider;
+import com.projectflow.entity.AiProviderType;
+import com.projectflow.entity.EvidenceConfidence;
+import com.projectflow.entity.ProjectFact;
+import com.projectflow.entity.ProjectFactEpistemicStatus;
+import com.projectflow.entity.ProjectFactOrigin;
+import com.projectflow.entity.ProjectFactRecordStatus;
+import com.projectflow.entity.ProjectHistoryEvent.RewriteState;
+import com.projectflow.entity.ProjectHistorySnapshot;
+import com.projectflow.entity.ProjectMemory;
+import com.projectflow.entity.ProjectSpace;
+import com.projectflow.entity.ProjectStatus;
+import com.projectflow.repository.AiProviderRepository;
+import com.projectflow.repository.ProjectFactRepository;
+import com.projectflow.repository.ProjectHistoryEventRepository;
+import com.projectflow.repository.ProjectHistorySnapshotRepository;
+import com.projectflow.repository.ProjectMemoryRepository;
+import com.projectflow.repository.ProjectRepository;
+import com.projectflow.service.ModelGatewayService;
+import com.projectflow.service.ModelOutputAdapter;
+import com.projectflow.service.ModelTaskType;
+import com.projectflow.service.ProjectHistoryReadService;
+import com.projectflow.service.ProjectHistoryReconstructionService;
+import com.projectflow.support.AppException;
+
+@SpringBootTest
+@ActiveProfiles("test")
+@Transactional
+class ProjectHistoryReconstructionTest {
+    @Autowired ProjectRepository projectRepository;
+    @Autowired ProjectMemoryRepository memoryRepository;
+    @Autowired ProjectHistoryEventRepository eventRepository;
+    @Autowired ProjectHistorySnapshotRepository snapshotRepository;
+    @Autowired ProjectFactRepository factRepository;
+    @Autowired AiProviderRepository providerRepository;
+    @Autowired ProjectHistoryReconstructionService reconstructionService;
+    @Autowired ProjectHistoryReadService readService;
+    @Autowired ModelOutputAdapter outputAdapter;
+    @Autowired ObjectMapper objectMapper;
+    @MockitoBean ModelGatewayService modelGateway;
+
+    @TempDir Path temporaryRoot;
+
+    @Test
+    void rebuildsSourceEventsStoriesAndCreatedModifiedRemovedRestoredThread() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("chain");
+        Files.createDirectories(repository);
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Path auth = repository.resolve("src/AuthService.java");
+        Files.createDirectories(auth.getParent());
+        Files.writeString(auth, "class AuthService {}\n", StandardCharsets.UTF_8);
+        commitAt(repository, "add authentication entry", Instant.parse("2024-01-01T00:00:00Z"));
+        Files.writeString(auth, "class AuthService { boolean emailFallback; }\n", StandardCharsets.UTF_8);
+        commitAt(repository, "support email fallback", Instant.parse("2024-01-02T00:00:00Z"));
+        Files.delete(auth);
+        commitAt(repository, "remove obsolete authentication entry", Instant.parse("2024-01-03T00:00:00Z"));
+        Files.writeString(auth, "class AuthService { boolean restored; }\n", StandardCharsets.UTF_8);
+        commitAt(repository, "restore authentication entry", Instant.parse("2024-01-04T00:00:00Z"));
+        Files.move(auth, auth.resolveSibling("AuthGateway.java"));
+        commitAt(repository, "rename authentication boundary", Instant.parse("2024-01-05T00:00:00Z"));
+
+        ProjectSpace project = project(userId, "History Chain", repository);
+        var result = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        assertThat(result.cacheHit()).isFalse();
+        ProjectHistorySnapshot snapshot = snapshotRepository.findByProjectId(project.getId()).orElseThrow();
+        assertThat(snapshot.getStatus()).isEqualTo(ProjectHistorySnapshot.Status.READY);
+        assertThat(snapshot.getSourceEventCount()).isGreaterThanOrEqualTo(10);
+        assertThat(eventRepository.countByProjectIdAndRewriteState(project.getId(), RewriteState.CURRENT))
+            .isEqualTo(snapshot.getSourceEventCount());
+
+        var threads = readService.threads(userId, project.getId(), "auth", 0, 20);
+        assertThat(threads.items()).hasSize(1);
+        assertThat(threads.items().get(0).transitions())
+            .contains("CREATED", "MODIFIED", "REMOVED", "RESTORED", "RENAMED");
+        assertThat(threads.items().get(0).storyRefs()).hasSizeGreaterThanOrEqualTo(3);
+
+        var stories = readService.stories(userId, project.getId(), "auth", false, null, null, 0, 20);
+        assertThat(stories.items()).allSatisfy(story -> {
+            assertThat(story.humanTitle()).doesNotContain("优化了系统", "修改了相关文件");
+            assertThat(story.reason()).isBlank();
+            assertThat(story.reasonEvidenceRefs()).isEmpty();
+            assertThat(story.eventRefs()).isNotEmpty();
+            assertThat(story.evidenceRefs()).isNotEmpty();
+        });
+        assertThat(readService.events(
+            userId, project.getId(), null, "FILE_CHANGE", "RESTORED", null, null, "CURRENT",
+            "auth", false, null, null, 0, 20
+        ).items()).hasSize(1);
+        assertThat(readService.overview(userId, project.getId()).overview().recentChanges()).isNotEmpty();
+
+        var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(cached.cacheHit()).isTrue();
+        assertThat(snapshotRepository.findByProjectId(project.getId()).orElseThrow().getSourceEventCount())
+            .isEqualTo(snapshot.getSourceEventCount());
+    }
+
+    @Test
+    void splitsOneGenericCommitAcrossIndependentSubjectsAndKeepsOwnershipIsolation() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID otherUserId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("split");
+        Files.createDirectories(repository);
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Files.createDirectories(repository.resolve("src"));
+        Files.writeString(repository.resolve("src/AuthService.java"), "class AuthService {}\n");
+        Files.writeString(repository.resolve("src/ExportService.java"), "class ExportService {}\n");
+        Files.writeString(repository.resolve("src/CacheService.java"), "class CacheService {}\n");
+        commit(repository, "update");
+        ProjectSpace project = project(userId, "Three Changes", repository);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        var stories = readService.stories(userId, project.getId(), null, false, null, null, 0, 20);
+        assertThat(stories.items().stream().map(item -> item.primarySubjectKey()).toList())
+            .contains("auth", "export", "cache");
+        assertThat(stories.items().stream().map(item -> item.primarySubjectKey()).distinct().count()).isGreaterThanOrEqualTo(3);
+
+        assertThatThrownBy(() -> readService.overview(otherUserId, project.getId()))
+            .isInstanceOf(AppException.class)
+            .hasMessageContaining("项目不存在");
+    }
+
+    @Test
+    void reconstructsCurrentStateOnlyForDocumentProjectWithoutGitAndKeepsSensitiveContentUnread() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path projectRoot = temporaryRoot.resolve("documents");
+        Files.createDirectories(projectRoot.resolve("materials"));
+        Files.createDirectories(projectRoot.resolve("analysis"));
+        Files.createDirectories(projectRoot.resolve("site"));
+        Files.writeString(projectRoot.resolve("materials/chapter-one.md"), "公开章节内容\n", StandardCharsets.UTF_8);
+        Files.write(projectRoot.resolve("materials/deck.pptx"), new byte[] {1, 2, 3, 4});
+        Files.writeString(projectRoot.resolve("analysis/results.csv"), "metric,value\ncoverage,0.8\n", StandardCharsets.UTF_8);
+        Files.writeString(projectRoot.resolve("site/index.html"), "<main>Project result</main>\n", StandardCharsets.UTF_8);
+        Files.writeString(projectRoot.resolve(".env"), "API_TOKEN=should-never-be-read\n", StandardCharsets.UTF_8);
+        ProjectSpace project = project(userId, "Document History", projectRoot);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var overview = readService.overview(userId, project.getId());
+        assertThat(overview.status()).isEqualTo("DEGRADED");
+        assertThat(overview.coverage().currentness()).isEqualTo("CURRENT_STATE_ONLY");
+        assertThat(overview.coverage().sourceCounts()).containsKeys("DOCUMENT", "FILESYSTEM");
+        assertThat(readService.events(
+            userId, project.getId(), "DOCUMENT", null, null, null, null, "CURRENT",
+            null, false, null, null, 0, 20
+        ).items()).hasSize(3);
+        assertThat(readService.events(
+            userId, project.getId(), "FILESYSTEM", null, null, null, null, "CURRENT",
+            "site", false, null, null, 0, 20
+        ).items()).hasSize(1);
+        var sensitive = readService.events(
+            userId, project.getId(), null, null, null, null, null, "CURRENT",
+            "sensitive-material", false, null, null, 0, 20
+        ).items();
+        assertThat(sensitive).hasSize(1);
+        assertThat(sensitive.get(0).safeSourceLabel()).isEqualTo("检测到敏感材料元数据");
+        assertThat(sensitive.get(0).safeSourceLabel()).doesNotContain("should-never-be-read", projectRoot.toString());
+        assertThat(readService.stories(userId, project.getId(), "sensitive-material", false, null, null, 0, 20).items())
+            .isEmpty();
+    }
+
+    @Test
+    void keepsDependencyAndSensitiveEventsRawOnlyAndOutOfModelContract() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("raw-only");
+        Files.createDirectories(repository);
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        ProjectSpace project = project(userId, "Raw Only History", repository);
+        Files.writeString(repository.resolve("package-lock.json"), "{\"lockfileVersion\":3}\n", StandardCharsets.UTF_8);
+        Files.writeString(repository.resolve(".env"), "API_TOKEN=never-read\n", StandardCharsets.UTF_8);
+        Files.createDirectories(repository.resolve(".projectflow/context"));
+        Files.writeString(repository.resolve(".projectflow/context/generated.md"), "managed projection metadata\n", StandardCharsets.UTF_8);
+        Path managedProjection = repository.resolve("KnowledgeBase/ProjectFlowHistory");
+        Files.createDirectories(managedProjection);
+        Files.writeString(
+            managedProjection.resolve(".projectflow-manifest.json"),
+            objectMapper.writeValueAsString(Map.of("projectId", project.getId().toString(), "files", Map.of())) + "\n",
+            StandardCharsets.UTF_8
+        );
+        Files.writeString(managedProjection.resolve("项目概览.md"), "generated Obsidian projection\n", StandardCharsets.UTF_8);
+        commit(repository, "update");
+        provider(userId);
+        AtomicInteger calls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            calls.incrementAndGet();
+            return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var overview = readService.overview(userId, project.getId());
+        var rawEvents = readService.events(
+            userId, project.getId(), null, null, null, null, null, "CURRENT",
+            null, false, null, null, 0, 20
+        ).items();
+        assertThat(overview.sourceEventCount()).isGreaterThanOrEqualTo(3);
+        assertThat(((Number) overview.diagnostics().get("rawOnlyEventCount")).intValue())
+            .as("raw events: %s", rawEvents)
+            .isGreaterThanOrEqualTo(5);
+        assertThat(readService.events(
+            userId, project.getId(), null, null, null, null, null, "CURRENT",
+            "projectflow-metadata", false, null, null, 0, 20
+        ).items()).anySatisfy(item -> assertThat(item.affectedPaths())
+            .anyMatch(path -> path.startsWith("KnowledgeBase/ProjectFlowHistory/")));
+        assertThat(readService.stories(userId, project.getId(), null, false, null, null, 0, 20).items()).isEmpty();
+        assertThat(calls.get()).isZero();
+        assertThat(ModelTaskType.PROJECT_HISTORY_SYNTHESIS.minimalSchema())
+            .doesNotContain("beforeState", "change\"", "afterState", "laterOutcome");
+    }
+
+    @Test
+    void keepsRawOnlyTailChangesOutOfIncrementalStoriesAndModelInput() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("incremental-raw-only");
+        Files.createDirectories(repository.resolve("src"));
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Files.writeString(repository.resolve("src/AuthService.java"), "class AuthService {}\n");
+        commitAt(repository, "add authentication", Instant.parse("2024-01-01T00:00:00Z"));
+        ProjectSpace project = project(userId, "Incremental Raw Only", repository);
+        provider(userId);
+        AtomicInteger calls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            calls.incrementAndGet();
+            return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        List<String> originalStories = readService.stories(userId, project.getId(), null, false, null, null, 0, 100)
+            .items().stream().map(item -> item.id()).toList();
+        assertThat(calls.get()).isEqualTo(1);
+
+        Files.writeString(repository.resolve("package-lock.json"), "{\"lockfileVersion\":3}\n");
+        commitAt(repository, "update", Instant.parse("2025-01-01T00:00:00Z"));
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        assertThat(readService.stories(userId, project.getId(), null, false, null, null, 0, 100)
+            .items().stream().map(item -> item.id()).toList()).containsExactlyElementsOf(originalStories);
+        assertThat(calls.get()).isEqualTo(1);
+        assertThat(((Number) readService.overview(userId, project.getId()).diagnostics().get("rawOnlyEventCount")).intValue())
+            .isGreaterThanOrEqualTo(2);
+    }
+
+    @Test
+    void sanitizesAbsolutePathsFromProjectFactsBeforePersistencePromptAndReadApi() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("absolute-paths");
+        Files.createDirectories(repository.resolve("src"));
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Files.writeString(repository.resolve("src/AuthService.java"), "class AuthService {}\n");
+        commit(repository, "add authentication");
+        ProjectSpace project = project(userId, "Absolute Path Safety", repository);
+        String windowsPath = "C:\\Users\\private-user\\secret\\evidence.txt";
+        String unixPath = "/home/private-user/secret/evidence.txt";
+        ProjectFact fact = new ProjectFact(
+            project.getId(), null, null, ProjectFactOrigin.INCREMENTAL_SCAN, "1".repeat(64)
+        );
+        fact.updateContent(
+            "记录认证结果", "来源事实确认认证结果已形成。", List.of("形成认证结果"), "认证结果可追溯。",
+            Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-01-01T00:00:00Z"),
+            List.of(), List.of(), List.of(), List.of(windowsPath, unixPath),
+            List.of("file:" + windowsPath, "document:" + unixPath), "LOCAL_RULE", "PASS",
+            EvidenceConfidence.HIGH, ProjectFactRecordStatus.RECORDED, ""
+        );
+        fact.applyKnowledgeContract(
+            ProjectFactEpistemicStatus.OBSERVED, List.of("FILESYSTEM"), "CURRENT", "fact-revision",
+            Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-01-01T00:00:00Z"),
+            List.of("原始材料位于 " + windowsPath, "历史材料位于 " + unixPath), List.of(),
+            "ENGINEERING_VALIDATION", "", "", "VALIDATED"
+        );
+        factRepository.saveAndFlush(fact);
+        provider(userId);
+        AtomicReference<String> capturedPrompt = new AtomicReference<>();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(1, String.class);
+            capturedPrompt.set(prompt);
+            return modelResponse(historyModelResponse(prompt));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        assertThat(capturedPrompt.get()).doesNotContain(windowsPath, unixPath, "C:\\Users\\private-user", "/home/private-user");
+        assertThat(capturedPrompt.get()).contains("ABSOLUTE_PATH_REDACTED");
+        String apiJson = objectMapper.writeValueAsString(readService.events(
+            userId, project.getId(), "PROJECT_FACT", null, null, null, null, "CURRENT",
+            null, false, null, null, 0, 20
+        ));
+        assertThat(apiJson).doesNotContain(windowsPath, unixPath, "C:\\\\Users", "/home/private-user")
+            .contains("ABSOLUTE_PATH_REDACTED");
+    }
+
+    @Test
+    void keepsUnchangedWorktreeEventIdentityStableWhenAnotherFileChanges() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("worktree-revision");
+        Files.createDirectories(repository.resolve("src"));
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Path first = repository.resolve("src/First.java");
+        Path second = repository.resolve("src/Second.java");
+        Files.writeString(first, "class First {}\n");
+        Files.writeString(second, "class Second {}\n");
+        commit(repository, "add two project elements");
+        ProjectSpace project = project(userId, "Worktree Identity", repository);
+
+        Files.writeString(first, "class First { int value = 1; }\n");
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        String firstKey = readService.events(
+            userId, project.getId(), "FILESYSTEM", null, null, null, null, "CURRENT",
+            "first", false, null, null, 0, 20
+        ).items().stream().filter(item -> item.affectedPaths().contains("src/First.java")).findFirst().orElseThrow().stableEventKey();
+
+        Files.writeString(second, "class Second { int value = 2; }\n");
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        String unchangedFirstKey = readService.events(
+            userId, project.getId(), "FILESYSTEM", null, null, null, null, "CURRENT",
+            "first", false, null, null, 0, 20
+        ).items().stream().filter(item -> item.affectedPaths().contains("src/First.java")).findFirst().orElseThrow().stableEventKey();
+
+        assertThat(unchangedFirstKey).isEqualTo(firstKey);
+    }
+
+    @Test
+    void keepsCommitAndBoundaryFileEventTogetherInsideOneChangeStory() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("same-commit-grouping");
+        Files.createDirectories(repository.resolve("src"));
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Path auth = repository.resolve("src/AuthService.java");
+        Files.writeString(auth, "class AuthService {}\n");
+        commitAt(repository, "add authentication", Instant.parse("2024-01-01T00:00:00Z"));
+        Files.delete(auth);
+        commitAt(repository, "remove authentication", Instant.parse("2024-02-01T00:00:00Z"));
+        ProjectSpace project = project(userId, "Same Commit Grouping", repository);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var removedStories = readService.stories(userId, project.getId(), "auth", false, null, null, 0, 20).items().stream()
+            .filter(item -> item.humanTitle().startsWith("移除"))
+            .toList();
+        assertThat(removedStories).hasSize(1);
+        assertThat(removedStories.get(0).rawEventCount()).isGreaterThanOrEqualTo(2);
+        assertThat(readService.story(userId, project.getId(), removedStories.get(0).id()).events().stream()
+            .map(item -> item.category()).toList()).contains("COMMIT", "FILE_CHANGE");
+    }
+
+    @Test
+    void groupsMultipleCommitsForOneSubjectIntoOneBoundedChangeStory() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("multi-commit-story");
+        Files.createDirectories(repository.resolve("src"));
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Path export = repository.resolve("src/ExportService.java");
+        Files.writeString(export, "class ExportService {}\n");
+        commitAt(repository, "start export result", Instant.parse("2025-01-01T00:00:00Z"));
+        Files.writeString(export, "class ExportService { boolean markdown; }\n");
+        commitAt(repository, "add markdown output", Instant.parse("2025-01-03T00:00:00Z"));
+        Files.writeString(export, "class ExportService { boolean markdown; boolean pdf; }\n");
+        commitAt(repository, "finish pdf output", Instant.parse("2025-01-05T00:00:00Z"));
+        ProjectSpace project = project(userId, "Multi Commit Story", repository);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var stories = readService.stories(userId, project.getId(), "export", false, null, null, 0, 20).items();
+        assertThat(stories).hasSize(1);
+        assertThat(stories.get(0).rawEventCount()).isGreaterThanOrEqualTo(6);
+        assertThat(stories.get(0).occurredFrom()).isEqualTo(Instant.parse("2025-01-01T00:00:00Z"));
+        assertThat(stories.get(0).occurredTo()).isEqualTo(Instant.parse("2025-01-05T00:00:00Z"));
+    }
+
+    @Test
+    void foldsLargeCrossAreaImportIntoReadableAreaStoriesInsteadOfFileNameStories() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("large-cross-area-import");
+        Files.createDirectories(repository);
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        git(repository, "config", "core.autocrlf", "false");
+        for (int index = 1; index <= 18; index++) {
+            Path backendFile = repository.resolve("backend/src/BackendModule%02d.java".formatted(index));
+            Path frontendFile = repository.resolve("frontend/src/FeaturePage%02d.tsx".formatted(index));
+            Path documentFile = repository.resolve("docs/guide-%02d.md".formatted(index));
+            Files.createDirectories(backendFile.getParent());
+            Files.createDirectories(frontendFile.getParent());
+            Files.createDirectories(documentFile.getParent());
+            Files.writeString(backendFile, "class BackendModule%02d {}\n".formatted(index));
+            Files.writeString(
+                frontendFile,
+                "export default function FeaturePage%02d() { return null }\n".formatted(index)
+            );
+            Files.writeString(documentFile, "# Guide %02d\n".formatted(index));
+        }
+        commitAt(repository, "import project history workspace", Instant.parse("2025-03-01T00:00:00Z"));
+        ProjectSpace project = project(userId, "Large Cross Area Import", repository);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var stories = readService.stories(userId, project.getId(), null, false, null, null, 0, 100);
+        assertThat(stories.totalElements())
+            .as("stories=%s", stories.items().stream()
+                .map(item -> item.primarySubjectKey() + ":" + item.humanTitle()).toList())
+            .isLessThanOrEqualTo(12);
+        assertThat(stories.items()).extracting(item -> item.primarySubjectKey())
+            .contains("project-area-backend", "project-area-frontend", "project-area-docs");
+        assertThat(stories.items()).extracting(item -> item.humanTitle())
+            .noneMatch(title -> title.matches(".*(BackendModule|FeaturePage|guide-\\d+).*"));
+        assertThat(stories.items()).extracting(item -> item.humanTitle())
+            .anyMatch(title -> title.contains("后端区域"))
+            .anyMatch(title -> title.contains("前端区域"))
+            .anyMatch(title -> title.contains("文档区域"));
+    }
+
+    @Test
+    void rejectsReversedTimeRangesAndSafelyBoundsExtremeSnapshotPages() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("read-bounds");
+        Files.createDirectories(repository);
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Files.writeString(repository.resolve("README.md"), "history\n", StandardCharsets.UTF_8);
+        commit(repository, "add readable history");
+        ProjectSpace project = project(userId, "Read Bounds", repository);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        Instant from = Instant.parse("2025-02-01T00:00:00Z");
+        Instant to = Instant.parse("2025-01-01T00:00:00Z");
+
+        assertThatThrownBy(() -> readService.stories(userId, project.getId(), null, false, from, to, 0, 20))
+            .isInstanceOf(AppException.class).hasMessageContaining("起始时间");
+        assertThatThrownBy(() -> readService.events(
+            userId, project.getId(), null, null, null, null, null, null,
+            null, false, from, to, 0, 20
+        )).isInstanceOf(AppException.class).hasMessageContaining("起始时间");
+        assertThat(readService.chapters(userId, project.getId(), Integer.MAX_VALUE, 100).items()).isEmpty();
+    }
+
+    @Test
+    void reusesUnaffectedStoriesWhenOnlyASeparatedTailWindowChanges() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("incremental");
+        Files.createDirectories(repository.resolve("src"));
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Path auth = repository.resolve("src/AuthService.java");
+        Files.writeString(auth, "class AuthService {}\n");
+        commitAt(repository, "add authentication", Instant.parse("2024-01-01T00:00:00Z"));
+        Files.writeString(auth, "class AuthService { boolean email; }\n");
+        commitAt(repository, "add email fallback", Instant.parse("2024-03-01T00:00:00Z"));
+        ProjectSpace project = project(userId, "Incremental History", repository);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        Files.writeString(auth, "class AuthService { boolean email; boolean oauth; }\n");
+        commitAt(repository, "add oauth path", Instant.parse("2025-01-01T00:00:00Z"));
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var diagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(diagnostics.get("reconstructionMode")).isEqualTo("INCREMENTAL_OVERLAP_WINDOW");
+        assertThat(((Number) diagnostics.get("reusedStoryCount")).intValue()).isGreaterThanOrEqualTo(2);
+        assertThat(((Number) diagnostics.get("recomputedStoryCount")).intValue()).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    void invalidatesEventsRemovedByHistoryRewriteWithoutDeletingTheirEvidence() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("rewrite");
+        Files.createDirectories(repository.resolve("src"));
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Path auth = repository.resolve("src/AuthService.java");
+        Files.writeString(auth, "class AuthService {}\n");
+        commitAt(repository, "add authentication", Instant.parse("2024-01-01T00:00:00Z"));
+        Files.writeString(auth, "class AuthService { boolean legacy; }\n");
+        commitAt(repository, "add legacy path", Instant.parse("2024-02-01T00:00:00Z"));
+        ProjectSpace project = project(userId, "Rewrite History", repository);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        long before = eventRepository.countByProjectIdAndRewriteState(project.getId(), RewriteState.CURRENT);
+
+        git(repository, "reset", "--hard", "HEAD~1");
+        Files.writeString(auth, "class AuthService { boolean replacement; }\n");
+        commitAt(repository, "replace legacy path", Instant.parse("2024-03-01T00:00:00Z"));
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var overview = readService.overview(userId, project.getId());
+        assertThat(((Number) overview.diagnostics().get("invalidatedEventCount")).intValue()).isGreaterThan(0);
+        assertThat(overview.diagnostics().get("rewriteMode")).isEqualTo("PARTIAL_REWRITE");
+        assertThat(eventRepository.countByProjectIdAndRewriteState(project.getId(), RewriteState.INVALIDATED)).isGreaterThan(0);
+        assertThat(eventRepository.findByProjectId(project.getId()).size()).isGreaterThan((int) before);
+
+        int cumulativeInvalidated = ((Number) overview.diagnostics().get("invalidatedEventCount")).intValue();
+        Files.writeString(auth, "class AuthService { boolean replacement; boolean stable; }\n");
+        commitAt(repository, "continue replacement path", Instant.parse("2024-04-01T00:00:00Z"));
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        var afterAppend = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(((Number) afterAppend.get("invalidatedEventCount")).intValue()).isEqualTo(cumulativeInvalidated);
+        assertThat(((Number) afterAppend.get("newlyInvalidatedEventCount")).intValue()).isZero();
+    }
+
+    @Test
+    void rebindingProjectPathInvalidatesOldSourceEventsAndKeepsNewHistoryIsolated() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path firstRepository = temporaryRoot.resolve("rebind-first");
+        Path secondRepository = temporaryRoot.resolve("rebind-second");
+        for (Path repository : List.of(firstRepository, secondRepository)) {
+            Files.createDirectories(repository);
+            git(repository, "init", "-b", "master");
+            git(repository, "config", "user.email", "history@example.com");
+            git(repository, "config", "user.name", "History Fixture");
+        }
+        Files.writeString(firstRepository.resolve("FirstHistory.md"), "first history\n");
+        commitAt(firstRepository, "record first project history", Instant.parse("2024-01-01T00:00:00Z"));
+        Files.writeString(secondRepository.resolve("SecondHistory.md"), "second history\n");
+        commitAt(secondRepository, "record second project history", Instant.parse("2025-01-01T00:00:00Z"));
+        ProjectSpace project = project(userId, "Rebound History", firstRepository);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        int firstCurrentCount = (int) eventRepository.countByProjectIdAndRewriteState(project.getId(), RewriteState.CURRENT);
+        ProjectMemory memory = memoryRepository.findByProjectId(project.getId()).orElseThrow();
+        memory.rememberLocalProjectPath(secondRepository.toAbsolutePath().normalize().toString());
+        memoryRepository.saveAndFlush(memory);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var current = readService.events(
+            userId, project.getId(), "GIT", null, null, null, null, "CURRENT",
+            null, false, null, null, 0, 100
+        ).items();
+        assertThat(current).anyMatch(item -> item.safeSourceLabel().contains("second project history"));
+        assertThat(current).noneMatch(item -> item.safeSourceLabel().contains("first project history"));
+        assertThat(eventRepository.countByProjectIdAndRewriteState(project.getId(), RewriteState.INVALIDATED))
+            .isGreaterThanOrEqualTo(firstCurrentCount);
+        assertThat(readService.overview(userId, project.getId()).diagnostics().get("rewriteMode"))
+            .isEqualTo("PARTIAL_REWRITE");
+    }
+
+    @Test
+    void recognizesLinkedGitWorktreeWhereDotGitIsAFile() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("main-repository");
+        Files.createDirectories(repository);
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Files.writeString(repository.resolve("README.md"), "history\n");
+        commit(repository, "add project history");
+        Path worktree = temporaryRoot.resolve("linked-worktree");
+        git(repository, "worktree", "add", "-b", "history-linked", worktree.toString());
+        assertThat(Files.isRegularFile(worktree.resolve(".git"))).isTrue();
+        ProjectSpace project = project(userId, "Linked Worktree", worktree);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var coverage = readService.overview(userId, project.getId()).coverage();
+        assertThat(coverage.complete()).isTrue();
+        assertThat(coverage.sourceCounts().getOrDefault("GIT", 0)).isGreaterThan(0);
+    }
+
+    @Test
+    void marksShallowGitHistoryAsIncompleteInsteadOfTreatingFetchedWindowAsFullHistory() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path source = temporaryRoot.resolve("shallow-source");
+        Files.createDirectories(source);
+        git(source, "init", "-b", "master");
+        git(source, "config", "user.email", "history@example.com");
+        git(source, "config", "user.name", "History Fixture");
+        Files.writeString(source.resolve("first.md"), "first\n");
+        commitAt(source, "add first history", Instant.parse("2024-01-01T00:00:00Z"));
+        Files.writeString(source.resolve("second.md"), "second\n");
+        commitAt(source, "add second history", Instant.parse("2024-02-01T00:00:00Z"));
+        Path shallow = temporaryRoot.resolve("shallow-clone");
+        git(temporaryRoot, "clone", "--depth=1", source.toUri().toString(), shallow.toString());
+        ProjectSpace project = project(userId, "Shallow History", shallow);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var coverage = readService.overview(userId, project.getId()).coverage();
+        assertThat(coverage.complete()).isFalse();
+        assertThat(coverage.gaps()).anyMatch(value -> value.contains("浅克隆"));
+        assertThat(readService.events(
+            userId, project.getId(), "GIT", "COMMIT", null, null, null, "CURRENT",
+            null, false, null, null, 0, 20
+        ).totalElements()).isEqualTo(1);
+    }
+
+    @Test
+    void rejectsIllegalEvidenceUnknownIdsAndInventedConflictsWithoutPollutingSnapshot() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("model-guard");
+        Files.createDirectories(repository.resolve("src"));
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Files.writeString(repository.resolve("src/AuthService.java"), "class AuthService {}\n");
+        commit(repository, "introduce authentication entry");
+        ProjectSpace project = project(userId, "Model Guard", repository);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        var story = readService.stories(userId, project.getId(), null, false, null, null, 0, 20).items().get(0);
+        var chapter = readService.chapters(userId, project.getId(), 0, 20).items().get(0);
+        provider(userId);
+
+        when(modelGateway.callStructured(any(), any(), any())).thenReturn(modelResponse("""
+            {"stories":[{"storyId":"%s","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","reason":"因为另一个项目要求复用","reasonEvidenceRefs":["fact:%s"],"conflicts":[],"unknowns":[]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。","storyRefs":%s}]}
+            """.formatted(story.id(), UUID.randomUUID(), chapter.id(), json(chapter.storyRefs()))));
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+        var invalidEvidence = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(invalidEvidence.get("invalidEvidenceRefCount")).isEqualTo(0);
+        assertThat(invalidEvidence.get("modelRejectedInvalidEvidenceRefCount")).isEqualTo(1);
+        assertThat(readService.stories(userId, project.getId(), null, false, null, null, 0, 20).items().get(0).reason()).isBlank();
+
+        when(modelGateway.callStructured(any(), any(), any())).thenReturn(modelResponse("""
+            {"stories":[{"storyId":"story-from-another-project","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","reason":"","reasonEvidenceRefs":[],"conflicts":[],"unknowns":["原因未知"]}],"chapters":[]}
+            """));
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+        var crossProject = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(crossProject.get("crossProjectRefCount")).isEqualTo(0);
+        assertThat(crossProject.get("modelRejectedCrossProjectRefCount")).isEqualTo(1);
+
+        when(modelGateway.callStructured(any(), any(), any())).thenReturn(modelResponse("""
+            {"stories":[{"storyId":"%s","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","reason":"","reasonEvidenceRefs":[],"conflicts":["模型编造的来源冲突"],"unknowns":["原因未知"]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。","storyRefs":%s}]}
+            """.formatted(story.id(), chapter.id(), json(chapter.storyRefs()))));
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+        var unsupported = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(unsupported.get("unsupportedStrongFactCount")).isEqualTo(0);
+        assertThat(unsupported.get("modelRejectedUnsupportedClaimCount")).isEqualTo(1);
+        assertThat(readService.stories(userId, project.getId(), null, false, null, null, 0, 20).items().get(0).conflicts()).isEmpty();
+
+        when(modelGateway.callStructured(any(), any(), any())).thenReturn(modelResponse("""
+            {"stories":[{"storyId":"%s","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","beforeState":"模型试图改写工程状态","reason":"","reasonEvidenceRefs":[],"conflicts":[],"unknowns":["原因未知"]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。","storyRefs":%s}]}
+            """.formatted(story.id(), chapter.id(), json(chapter.storyRefs()))));
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+        assertThat(readService.overview(userId, project.getId()).diagnostics().get("modelRejectedUnsupportedClaimCount"))
+            .isEqualTo(1);
+
+        when(modelGateway.callStructured(any(), any(), any())).thenReturn(modelResponse("""
+            {"stories":[{"storyId":"%s","humanTitle":"完成关键里程碑并成功交付项目","oneSentenceSummary":"项目已成功完成并达到成熟度要求。","reason":"","reasonEvidenceRefs":[],"conflicts":[],"unknowns":["原因未知"]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。","storyRefs":%s}]}
+            """.formatted(story.id(), chapter.id(), json(chapter.storyRefs()))));
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+        assertThat(readService.overview(userId, project.getId()).diagnostics().get("modelRejectedUnsupportedClaimCount"))
+            .isEqualTo(1);
+    }
+
+    @Test
+    void reconstructsRenameMoveSplitMergeRevertReapplyMergeCommitsAndMixedMessages() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("complex-history");
+        Files.createDirectories(repository.resolve("src"));
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+
+        Path report = repository.resolve("src/Report.java");
+        Files.writeString(report, "class Report { String combined; }\n", StandardCharsets.UTF_8);
+        commit(repository, "新增报告入口");
+
+        Files.delete(report);
+        Files.writeString(repository.resolve("src/ReportPartA.java"), "class ReportPartA { String sectionA; }\n", StandardCharsets.UTF_8);
+        Files.writeString(repository.resolve("src/ReportPartB.java"), "class ReportPartB { String sectionB; }\n", StandardCharsets.UTF_8);
+        commit(repository, "split report into independent sections");
+
+        Files.delete(repository.resolve("src/ReportPartA.java"));
+        Files.delete(repository.resolve("src/ReportPartB.java"));
+        Files.writeString(report, "class Report { String mergedResult; }\n", StandardCharsets.UTF_8);
+        commit(repository, "merge report sections into one result");
+
+        Path renamed = repository.resolve("src/ReportRenamed.java");
+        git(repository, "mv", "src/Report.java", "src/ReportRenamed.java");
+        commit(repository, "rename report boundary");
+        Files.createDirectories(repository.resolve("archive"));
+        Path moved = repository.resolve("archive/ReportRenamed.java");
+        git(repository, "mv", "src/ReportRenamed.java", "archive/ReportRenamed.java");
+        commit(repository, "move report boundary");
+
+        Files.writeString(moved, "class ReportRenamed { String temporary; }\n", StandardCharsets.UTF_8);
+        commit(repository, "update");
+        git(repository, "revert", "--no-edit", "HEAD");
+        Files.writeString(moved, "class ReportRenamed { String reapplied; }\n", StandardCharsets.UTF_8);
+        commit(repository, "reapply report after revert");
+
+        git(repository, "checkout", "-b", "feature-guide");
+        Files.createDirectories(repository.resolve("docs"));
+        Files.writeString(repository.resolve("docs/Guide.md"), "# Guide\n", StandardCharsets.UTF_8);
+        commit(repository, "document guide for issue #41");
+        git(repository, "checkout", "master");
+        Files.writeString(repository.resolve("src/CacheService.java"), "class CacheService {}\n", StandardCharsets.UTF_8);
+        commit(repository, "fix");
+        git(repository, "merge", "--no-ff", "feature-guide", "-m", "Merge pull request #42 for guide");
+
+        git(repository, "checkout", "-b", "feature-export");
+        Files.writeString(repository.resolve("src/ExportService.java"), "class ExportService {}\n", StandardCharsets.UTF_8);
+        commit(repository, "增加导出结果");
+        git(repository, "checkout", "master");
+        Files.writeString(repository.resolve("src/CacheService.java"), "class CacheService { boolean enabled; }\n", StandardCharsets.UTF_8);
+        commit(repository, "update");
+        git(repository, "merge", "--no-ff", "feature-export", "-m", "Merge pull request #43 for export");
+        git(repository, "commit", "--allow-empty", "--allow-empty-message", "-m", "");
+
+        ProjectSpace project = project(userId, "Complex History", repository);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var events = readService.events(
+            userId, project.getId(), null, null, null, null, null, "CURRENT",
+            null, false, null, null, 0, 100
+        );
+        assertThat(events.totalElements()).isEqualTo(readService.overview(userId, project.getId()).sourceEventCount());
+        assertThat(events.items().stream().map(item -> item.transition()).toList())
+            .contains("SPLIT", "MERGED", "RENAMED", "MOVED", "REVERTED", "REAPPLIED");
+        assertThat(events.items().stream().filter(item -> item.category().equals("MERGE")).count()).isGreaterThanOrEqualTo(2);
+        assertThat(events.items().stream().filter(item -> item.sourceType().equals("GITHUB")).count()).isGreaterThanOrEqualTo(3);
+        var reportThreads = readService.threads(userId, project.getId(), "report", 0, 50).items();
+        assertThat(reportThreads).hasSize(1);
+        assertThat(reportThreads.get(0).transitions())
+            .contains("SPLIT", "MERGED", "RENAMED", "MOVED", "REVERTED", "REAPPLIED");
+        assertThat(reportThreads.get(0).storyRefs()).hasSizeGreaterThanOrEqualTo(5);
+    }
+
+    @Test
+    void keepsMoreThanOneThousandEventsAcrossThreeHundredCommitsAndCapsModelAtOneBoundedBatch() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("large-history");
+        Files.createDirectories(repository);
+        git(repository, "init", "-b", "master");
+        fastImport(repository, 340);
+        ProjectSpace project = project(userId, "Large History", repository);
+        provider(userId);
+
+        AtomicInteger calls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            calls.incrementAndGet();
+            return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var overview = readService.overview(userId, project.getId());
+        assertThat(calls.get()).as("history diagnostics: %s", overview.diagnostics()).isEqualTo(1);
+        assertThat(overview.sourceEventCount()).isGreaterThan(1_000);
+        assertThat(overview.coverage().complete()).isTrue();
+        assertThat(((Number) overview.diagnostics().get("boundedDeterministicStoryCount")).intValue()).isGreaterThan(0);
+        assertThat(overview.diagnostics().get("eventConservation")).isEqualTo(true);
+        assertThat(readService.events(
+            userId, project.getId(), null, null, null, null, null, "CURRENT",
+            null, false, null, null, 0, 100
+        ).totalElements()).isEqualTo(overview.sourceEventCount());
+        assertThat(readService.chapters(userId, project.getId(), 0, 100).totalElements()).isGreaterThanOrEqualTo(3);
+        assertThat(readService.stories(userId, project.getId(), null, false, null, null, 0, 100).totalElements())
+            .isGreaterThanOrEqualTo(40);
+    }
+
+    private ProjectSpace project(UUID userId, String name, Path root) {
+        ProjectSpace project = new ProjectSpace(userId);
+        project.update(name, "History fixture", ProjectStatus.BUILDING, List.of("Java"), "https://github.com/example/history", LocalDate.now(), null);
+        project = projectRepository.saveAndFlush(project);
+        ProjectMemory memory = new ProjectMemory(project.getId());
+        memory.update("", "", "", "", "", "", "", "", "");
+        memory.rememberLocalProjectPath(root.toAbsolutePath().normalize().toString());
+        memoryRepository.saveAndFlush(memory);
+        return project;
+    }
+
+    private void provider(UUID userId) {
+        AiProvider provider = new AiProvider(userId);
+        provider.update(
+            "history-fixed", "http://127.0.0.1", "test-key", "fixed", AiProviderType.OPENAI_COMPATIBLE,
+            0.1, 8_000, true, List.of()
+        );
+        providerRepository.saveAndFlush(provider);
+    }
+
+    private ModelGatewayService.StructuredModelResponse modelResponse(String content) throws Exception {
+        return new ModelGatewayService.StructuredModelResponse(content, outputAdapter.parse(content));
+    }
+
+    private String json(Object value) throws Exception {
+        return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(value);
+    }
+
+    private String historyModelResponse(String prompt) throws Exception {
+        String storiesMarker = "\nSTORIES_JSON=";
+        String chaptersMarker = "\nCHAPTERS_JSON=";
+        int storiesStart = prompt.indexOf(storiesMarker);
+        int chaptersStart = prompt.indexOf(chaptersMarker, storiesStart + storiesMarker.length());
+        assertThat(storiesStart).isGreaterThanOrEqualTo(0);
+        assertThat(chaptersStart).isGreaterThan(storiesStart);
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode stories = mapper.readTree(prompt.substring(storiesStart + storiesMarker.length(), chaptersStart));
+        JsonNode chapters = mapper.readTree(prompt.substring(chaptersStart + chaptersMarker.length()));
+        List<Map<String, Object>> storyOutput = new ArrayList<>();
+        for (JsonNode story : stories) {
+            String subject = story.path("subject").asText("项目内容");
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("storyId", story.path("storyId").asText());
+            item.put("humanTitle", "调整“" + subject + "”并形成可追溯结果");
+            item.put("oneSentenceSummary", "围绕“" + subject + "”的来源事件已按时间归纳为可追溯变化。");
+            item.put("reason", "");
+            item.put("reasonEvidenceRefs", List.of());
+            item.put("conflicts", List.of());
+            item.put("unknowns", List.of("原因未知"));
+            storyOutput.add(item);
+        }
+        List<Map<String, Object>> chapterOutput = new ArrayList<>();
+        for (JsonNode chapter : chapters) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("chapterId", chapter.path("chapterId").asText());
+            item.put("title", "整理项目变化并形成可读时间区间");
+            item.put("summary", "这一时间区间按真实发生顺序汇总有证据支持的变化故事。");
+            item.put("storyRefs", mapper.convertValue(chapter.path("storyRefs"), List.class));
+            chapterOutput.add(item);
+        }
+        return mapper.writeValueAsString(Map.of("stories", storyOutput, "chapters", chapterOutput));
+    }
+
+    private void fastImport(Path root, int commits) throws Exception {
+        long firstEpochSecond = Instant.parse("2024-01-01T00:00:00Z").getEpochSecond();
+        StringBuilder stream = new StringBuilder();
+        for (int index = 1; index <= commits; index++) {
+            long occurredAt = firstEpochSecond + index * 3_600L;
+            String message = switch (index % 3) {
+                case 0 -> "update";
+                case 1 -> "调整认证与导出流程 " + index;
+                default -> "refine cache and export flow " + index;
+            };
+            stream.append("commit refs/heads/master\n")
+                .append("mark :").append(index).append('\n')
+                .append("author History Fixture <history@example.com> ").append(occurredAt).append(" +0000\n")
+                .append("committer History Fixture <history@example.com> ").append(occurredAt).append(" +0000\n")
+                .append("data <<PFMSG\n").append(message).append("\nPFMSG\n");
+            if (index > 1) stream.append("from :").append(index - 1).append('\n');
+            for (String subject : List.of("AuthService", "ExportService", "CacheService")) {
+                stream.append("M 100644 inline src/").append(subject).append(".java\n")
+                    .append("data <<PFDATA\nclass ").append(subject).append(" { int version = ")
+                    .append(index).append("; }\nPFDATA\n");
+            }
+            stream.append('\n');
+        }
+        stream.append("done\n");
+        Process process = new ProcessBuilder("git", "fast-import", "--quiet")
+            .directory(root.toFile()).redirectErrorStream(true).start();
+        try (var output = process.getOutputStream()) {
+            output.write(stream.toString().getBytes(StandardCharsets.UTF_8));
+        }
+        String commandOutput = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        if (process.waitFor() != 0) throw new AssertionError("git fast-import failed: " + commandOutput);
+        git(root, "reset", "--hard", "master");
+    }
+
+    private void commit(Path root, String message) throws Exception {
+        git(root, "add", "-A");
+        git(root, "commit", "-m", message);
+    }
+
+    private void commitAt(Path root, String message, Instant occurredAt) throws Exception {
+        git(root, "add", "-A");
+        List<String> command = new ArrayList<>(List.of("git", "commit", "-m", message));
+        ProcessBuilder builder = new ProcessBuilder(command).directory(root.toFile()).redirectErrorStream(true);
+        builder.environment().put("GIT_AUTHOR_DATE", occurredAt.toString());
+        builder.environment().put("GIT_COMMITTER_DATE", occurredAt.toString());
+        Process process = builder.start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        if (process.waitFor() != 0) throw new AssertionError(String.join(" ", command) + " failed: " + output);
+    }
+
+    private String git(Path root, String... args) throws Exception {
+        List<String> command = new ArrayList<>();
+        command.add("git");
+        command.addAll(List.of(args));
+        Process process = new ProcessBuilder(command).directory(root.toFile()).redirectErrorStream(true).start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        if (process.waitFor() != 0) throw new AssertionError(String.join(" ", command) + " failed: " + output);
+        return output;
+    }
+}

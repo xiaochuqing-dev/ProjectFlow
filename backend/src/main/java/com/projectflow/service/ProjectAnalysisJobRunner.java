@@ -38,6 +38,7 @@ public class ProjectAnalysisJobRunner {
     private final ProjectCapabilityService projectCapabilityService;
     private final ProjectFactHistoryService projectFactHistoryService;
     private final ProjectTimelineSummaryService projectTimelineSummaryService;
+    private final ProjectHistoryReconstructionService projectHistoryReconstructionService;
     private final ProjectCapabilityMapService projectCapabilityMapService;
     private final ProjectUnderstandingService projectUnderstandingService;
     private final ObjectMapper objectMapper;
@@ -53,6 +54,7 @@ public class ProjectAnalysisJobRunner {
         ProjectCapabilityService projectCapabilityService,
         ProjectFactHistoryService projectFactHistoryService,
         ProjectTimelineSummaryService projectTimelineSummaryService,
+        ProjectHistoryReconstructionService projectHistoryReconstructionService,
         ProjectCapabilityMapService projectCapabilityMapService,
         ProjectUnderstandingService projectUnderstandingService,
         ObjectMapper objectMapper,
@@ -67,6 +69,7 @@ public class ProjectAnalysisJobRunner {
         this.projectCapabilityService = projectCapabilityService;
         this.projectFactHistoryService = projectFactHistoryService;
         this.projectTimelineSummaryService = projectTimelineSummaryService;
+        this.projectHistoryReconstructionService = projectHistoryReconstructionService;
         this.projectCapabilityMapService = projectCapabilityMapService;
         this.projectUnderstandingService = projectUnderstandingService;
         this.objectMapper = objectMapper;
@@ -152,6 +155,26 @@ public class ProjectAnalysisJobRunner {
                 if (!checkpoint(jobId, false)) return;
                 markSucceeded(jobId, outcome.resultJson(), null);
                 eventPublisher.publishEvent(new ProjectTimelineRefreshRequestedEvent(job.getUserId(), job.getProjectId()));
+            } else if (job.getJobType() == ProjectAnalysisJobType.PROJECT_HISTORY_REFRESH) {
+                if (!checkpoint(jobId, false)) return;
+                jobRepository.findById(jobId).ifPresent(current -> {
+                    current.advanceStage("HISTORY_SOURCE_DISCOVERY", "正在有界读取来源事件并重建项目历程");
+                    jobRepository.save(current);
+                });
+                var outcome = projectHistoryReconstructionService.refresh(
+                    job.getUserId(), job.getProjectId(), job.getId(), Boolean.parseBoolean(job.getFilePath()),
+                    (stage, message) -> jobRepository.findById(jobId).ifPresent(current -> {
+                        current.advanceStage(stage, message);
+                        jobRepository.save(current);
+                    })
+                );
+                recordTimelineUsage(jobId, outcome.diagnostics());
+                if (!checkpoint(jobId, false)) return;
+                if (outcome.degraded()) {
+                    markSucceededWithWarnings(jobId, outcome.resultJson(), "项目历程已生成，但存在明确的来源缺口或模型降级。 ");
+                } else {
+                    markSucceeded(jobId, outcome.resultJson(), null);
+                }
             } else if (job.getJobType() == ProjectAnalysisJobType.PROJECT_CAPABILITY_MAP_REFRESH) {
                 if (!checkpoint(jobId, true)) return;
                 jobRepository.findById(jobId).ifPresent(current -> {
@@ -484,6 +507,7 @@ public class ProjectAnalysisJobRunner {
             case WORK_SESSION_SCAN -> "WORK_SESSION_SCAN";
             case PROJECT_FACT_HISTORY_REBUILD -> "PROJECT_FACT_HISTORY_REBUILD";
             case PROJECT_TIMELINE_REFRESH -> "PROJECT_TIMELINE_REFRESH";
+            case PROJECT_HISTORY_REFRESH -> "PROJECT_HISTORY_REFRESH";
             case PROJECT_CAPABILITY_MAP_REFRESH -> "PROJECT_CAPABILITY_MAP_REFRESH";
             case PROJECT_UNDERSTANDING_REFRESH -> "PROJECT_UNDERSTANDING_REFRESH";
             case CAPABILITY_CARD_ANALYSIS -> "CAPABILITY_CARD_ANALYSIS";

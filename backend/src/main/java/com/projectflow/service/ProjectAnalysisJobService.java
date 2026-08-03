@@ -124,6 +124,13 @@ public class ProjectAnalysisJobService {
         return startJob(userId, projectId, ProjectAnalysisJobType.PROJECT_TIMELINE_REFRESH, normalizedScope, null, null);
     }
 
+    public ProjectAnalysisJobResponse startProjectHistoryRefresh(UUID userId, UUID projectId, boolean force) {
+        return startJob(
+            userId, projectId, ProjectAnalysisJobType.PROJECT_HISTORY_REFRESH,
+            Boolean.toString(force), null, null
+        );
+    }
+
     public ProjectAnalysisJobResponse startCapabilityMapRefresh(UUID userId, UUID projectId, String scope) {
         String normalizedScope = scope == null ? "" : scope.trim();
         return startJob(userId, projectId, ProjectAnalysisJobType.PROJECT_CAPABILITY_MAP_REFRESH, normalizedScope, null, null);
@@ -202,6 +209,12 @@ public class ProjectAnalysisJobService {
         String fingerprint = fingerprint(type, input);
         StartJobResult result = transactionTemplate.execute(status -> {
             findOwnedProjectForUpdate(userId, projectId);
+            if (type == ProjectAnalysisJobType.PROJECT_HISTORY_REFRESH) {
+                java.util.Optional<ProjectAnalysisJob> activeHistory = jobRepository
+                    .findActiveByProjectIdAndJobType(projectId, type, ACTIVE_STATUSES)
+                    .stream().findFirst();
+                if (activeHistory.isPresent()) return new StartJobResult(activeHistory.get(), false);
+            }
             java.util.Optional<ProjectAnalysisJob> active = jobRepository
                 .findFirstByProjectIdAndJobTypeAndInputFingerprintAndStatusInOrderByCreatedAtDesc(
                     projectId, type, fingerprint, ACTIVE_STATUSES
@@ -217,6 +230,8 @@ public class ProjectAnalysisJobService {
             job.configureExecution(fingerprint, type + ":" + fingerprint, (int) activeCount);
             if (type == ProjectAnalysisJobType.PROJECT_TIMELINE_REFRESH) {
                 job.configureBudgets(48, 400_000, 600_000L);
+            } else if (type == ProjectAnalysisJobType.PROJECT_HISTORY_REFRESH) {
+                job.configureBudgets(1, 120_000, 600_000L);
             } else if (type == ProjectAnalysisJobType.PROJECT_CAPABILITY_MAP_REFRESH) {
                 job.configureBudgets(64, 600_000, 600_000L);
             } else if (type == ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH) {
@@ -388,6 +403,7 @@ public class ProjectAnalysisJobService {
                     );
                 } else if (job.getJobType() == ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH
                     || job.getJobType() == ProjectAnalysisJobType.PROJECT_TIMELINE_REFRESH
+                    || job.getJobType() == ProjectAnalysisJobType.PROJECT_HISTORY_REFRESH
                     || job.getJobType() == ProjectAnalysisJobType.PROJECT_CAPABILITY_MAP_REFRESH
                     || job.getJobType() == ProjectAnalysisJobType.PROJECT_FACT_HISTORY_REBUILD) {
                     // 这些任务的业务结果由各自的持久化只读接口提供，job 只承载生命周期和安全诊断。

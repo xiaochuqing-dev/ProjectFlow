@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.projectflow.dto.ProjectHistoryDtos.HistoryOverviewResponse;
 import com.projectflow.dto.ProjectTimelineDtos.HistoryCoverageResponse;
 import com.projectflow.dto.ProjectTimelineDtos.TimelineStatsResponse;
 
@@ -151,7 +152,7 @@ public final class ProjectMemoryGatewayDtos {
     }
 
     public record MemoryHealthResponse(
-        String historyStatus, String timelineStatus, String capabilityMapStatus,
+        String historyStatus, String projectHistoryStatus, String timelineStatus, String capabilityMapStatus,
         boolean capabilityMapStale, Instant latestRealChangeAt,
         Instant latestAnalysisAt, Instant generatedAt, List<String> warnings
     ) {
@@ -159,6 +160,7 @@ public final class ProjectMemoryGatewayDtos {
 
     public record ProjectSnapshotResponse(
         MemoryProjectResponse project, String branch, String currentVersion,
+        HistoryOverviewResponse projectHistory,
         long factCount, long recordedFactCount, long attentionFactCount,
         long coveredCommitCount, long totalCommitCount,
         Instant earliestFactAt, Instant latestFactAt, String recentChangeSummary,

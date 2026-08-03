@@ -56,4 +56,18 @@ class SensitiveContentRedactorTest {
         assertThat(redactor.redact(value))
             .isEqualTo("password=" + SensitiveContentRedactor.REDACTED);
     }
+
+    @Test
+    void redactsWindowsUnixAndPrefixedAbsolutePathsWithoutBreakingUris() {
+        String input = "cwd=C:\\Users\\demo\\private\\result.json root=/home/demo/private/result.json "
+            + "evidence=file:/var/tmp/project/result.json "
+            + "https=https://github.com/example/project/commit/abc "
+            + "obsidian=obsidian://open?vault=Knowledge&file=ProjectFlow%2FOverview.md";
+
+        assertThat(redactor.redactOutboundText(input))
+            .doesNotContain("C:\\Users\\demo", "/home/demo", "/var/tmp")
+            .contains(SensitiveContentRedactor.PATH_REDACTED)
+            .contains("https://github.com/example/project/commit/abc")
+            .contains("obsidian://open?vault=Knowledge&file=ProjectFlow%2FOverview.md");
+    }
 }

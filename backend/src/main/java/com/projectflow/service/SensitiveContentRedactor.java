@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class SensitiveContentRedactor {
     public static final String REDACTED = "[REDACTED_SECRET]";
+    public static final String PATH_REDACTED = "[ABSOLUTE_PATH_REDACTED]";
 
     private static final List<Pattern> SECRET_PATTERNS = List.of(
         Pattern.compile("(?s)-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----.*?-----END (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----"),
@@ -33,6 +34,12 @@ public class SensitiveContentRedactor {
         "(?<![A-Za-z0-9])[A-Za-z0-9_+/=-]{40,160}(?![A-Za-z0-9])"
     );
     private static final Pattern HEX_DIGEST = Pattern.compile("(?i)[a-f0-9]{40}|[a-f0-9]{64}");
+    private static final Pattern WINDOWS_ABSOLUTE_PATH = Pattern.compile(
+        "(?i)(?:(?<![a-z0-9+.-])[a-z]:[\\\\/]|\\\\\\\\)[^\\s\"'<>|]+"
+    );
+    private static final Pattern UNIX_ABSOLUTE_PATH = Pattern.compile(
+        "(?i)(?<![a-z0-9+.-])(?<!https:)(?<!http:)(?<!obsidian:)(?<!/)/(?:[^\\s\"'<>|/?#]+/)*[^\\s\"'<>|/?#,;]+"
+    );
 
     public String redact(String value) {
         if (value == null || value.isEmpty()) return "";
@@ -47,6 +54,18 @@ public class SensitiveContentRedactor {
 
     public boolean containsSensitive(String value) {
         return !redact(value).equals(value == null ? "" : value);
+    }
+
+    /** Removes machine-local absolute paths while preserving HTTPS and Obsidian URIs. */
+    public String redactAbsolutePaths(String value) {
+        if (value == null || value.isEmpty()) return "";
+        String result = WINDOWS_ABSOLUTE_PATH.matcher(value).replaceAll(PATH_REDACTED);
+        return UNIX_ABSOLUTE_PATH.matcher(result).replaceAll(PATH_REDACTED);
+    }
+
+    /** Shared outbound boundary for credentials and machine-local absolute paths. */
+    public String redactOutboundText(String value) {
+        return redactAbsolutePaths(redact(value));
     }
 
     public boolean isSensitivePath(String relativePath) {

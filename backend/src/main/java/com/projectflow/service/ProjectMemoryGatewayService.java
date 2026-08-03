@@ -27,6 +27,13 @@ import com.projectflow.dto.ProjectFactDtos.FactMemoryOverviewResponse;
 import com.projectflow.dto.ProjectFactDtos.ProjectFactHistoryStateResponse;
 import com.projectflow.dto.ProjectFactDtos.ProjectFactPageResponse;
 import com.projectflow.dto.ProjectFactDtos.ProjectFactSummaryResponse;
+import com.projectflow.dto.ProjectHistoryDtos.EvolutionThreadPageResponse;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryChapterPageResponse;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryEvidenceResponse;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryEventPageResponse;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryOverviewContent;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryOverviewResponse;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryStoryPageResponse;
 import com.projectflow.dto.ProjectTimelineDtos.TimelineLifecycleResponse;
 import com.projectflow.dto.ProjectTimelineDtos.TimelinePeriodDetailResponse;
 import com.projectflow.dto.ProjectTimelineDtos.TimelinePeriodPageResponse;
@@ -79,6 +86,7 @@ public class ProjectMemoryGatewayService {
     private final ProjectTimelineService timelineService;
     private final ProjectEvidenceTraceService evidenceTraceService;
     private final ProjectMemorySearchService memorySearchService;
+    private final ProjectHistoryReadService historyReadService;
 
     public ProjectMemoryGatewayService(
         ProjectRepository projectRepository,
@@ -94,7 +102,8 @@ public class ProjectMemoryGatewayService {
         ProjectFactService factService,
         ProjectTimelineService timelineService,
         ProjectEvidenceTraceService evidenceTraceService,
-        ProjectMemorySearchService memorySearchService
+        ProjectMemorySearchService memorySearchService,
+        ProjectHistoryReadService historyReadService
     ) {
         this.projectRepository = projectRepository;
         this.factRepository = factRepository;
@@ -110,6 +119,7 @@ public class ProjectMemoryGatewayService {
         this.timelineService = timelineService;
         this.evidenceTraceService = evidenceTraceService;
         this.memorySearchService = memorySearchService;
+        this.historyReadService = historyReadService;
     }
 
     @Transactional(readOnly = true)
@@ -124,6 +134,7 @@ public class ProjectMemoryGatewayService {
         ProjectSpace owned = ownedProject(userId, projectId);
         FactMemoryOverviewResponse facts = factService.overview(userId, projectId);
         ProjectFactHistoryStateResponse history = factService.historyState(userId, projectId);
+        HistoryOverviewResponse projectHistory = compactHistory(historyReadService.overview(userId, projectId));
         var timelineOverview = timelineService.overview(userId, projectId);
         ProjectCapabilityMapState capabilityState = capabilityStateRepository.findByProjectId(projectId).orElse(null);
         long activeCapabilityCount = capabilityRepository.countByProjectIdAndStatus(projectId, ProjectCapabilityStatus.ACTIVE);
@@ -157,6 +168,14 @@ public class ProjectMemoryGatewayService {
 
         List<String> warnings = new ArrayList<>();
         if (history.remainingCommitCount() > 0) warnings.add("Git 历史仍有未覆盖提交");
+        switch (projectHistory.status()) {
+            case "NOT_INITIALIZED" -> warnings.add("项目历程尚未显式刷新");
+            case "RUNNING" -> warnings.add("项目历程正在刷新，当前读取结果可能尚未生成");
+            case "STALE" -> warnings.add("项目历程来源已变化，当前返回上次成功快照");
+            case "DEGRADED" -> warnings.add("项目历程存在来源缺口、失败保留或模型降级，当前结果仍可追溯");
+            case "FAILED" -> warnings.add("项目历程刷新失败且没有可用成功快照");
+            default -> { }
+        }
         if (facts.attentionFactCount() > 0) warnings.add("部分事实需要关注");
         if (timelineOverview.dirtyPeriodCount() > 0) warnings.add("部分时间段摘要正在刷新或暂不可用，事实统计仍可读取");
         if (stale) warnings.add("能力地图正在刷新或最近刷新失败，当前返回上次成功结果");
@@ -166,12 +185,12 @@ public class ProjectMemoryGatewayService {
         Instant analyzedAt = latestBatch == null ? null
             : firstNonNull(latestBatch.getScanFinishedAt(), latestBatch.getScanStartedAt());
         MemoryHealthResponse health = new MemoryHealthResponse(
-            history.status(), timelineOverview.latestSummaryStatus(),
+            history.status(), projectHistory.status(), timelineOverview.latestSummaryStatus(),
             capabilityState == null ? ProjectCapabilityMapStatus.NOT_INITIALIZED.name() : capabilityState.getStatus().name(),
             stale, facts.latestOccurredAt(), analyzedAt, Instant.now(), List.copyOf(warnings)
         );
         return new ProjectSnapshotResponse(
-            project(owned), latestBatch == null ? "" : latestBatch.getBranchName(), "",
+            project(owned), latestBatch == null ? "" : latestBatch.getBranchName(), "", projectHistory,
             facts.totalFactCount(), facts.recordedFactCount(), facts.attentionFactCount(),
             facts.coveredCommitCount(), facts.totalCommitCount(), facts.earliestOccurredAt(), facts.latestOccurredAt(),
             recentSummary, recent, latestPeriod, lifecycleSummary, activeCapabilityCount,
@@ -289,6 +308,59 @@ public class ProjectMemoryGatewayService {
     }
 
     @Transactional(readOnly = true)
+    public HistoryOverviewResponse historyOverview(UUID userId, UUID projectId) {
+        return historyReadService.overview(userId, projectId);
+    }
+
+    @Transactional(readOnly = true)
+    public HistoryChapterPageResponse historyChapters(UUID userId, UUID projectId, int page, int size) {
+        return historyReadService.chapters(userId, projectId, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public HistoryStoryPageResponse historyStories(
+        UUID userId, UUID projectId, String subject, boolean attentionOnly,
+        Instant from, Instant to, int page, int size
+    ) {
+        return historyReadService.stories(userId, projectId, subject, attentionOnly, from, to, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public EvolutionThreadPageResponse historyThreads(
+        UUID userId, UUID projectId, String subject, int page, int size
+    ) {
+        return historyReadService.threads(userId, projectId, subject, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public HistoryEventPageResponse historyEvents(
+        UUID userId,
+        UUID projectId,
+        String sourceType,
+        String category,
+        String transition,
+        String authority,
+        String epistemicStatus,
+        String rewriteState,
+        String subject,
+        boolean attentionOnly,
+        Instant from,
+        Instant to,
+        int page,
+        int size
+    ) {
+        return historyReadService.events(
+            userId, projectId, sourceType, category, transition, authority, epistemicStatus, rewriteState,
+            subject, attentionOnly, from, to, page, size
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public HistoryEvidenceResponse historyEvidence(UUID userId, UUID projectId, UUID eventId) {
+        return historyReadService.evidence(userId, projectId, eventId);
+    }
+
+    @Transactional(readOnly = true)
     public MemoryBriefResponse brief(UUID userId, UUID projectId, int sizeBudget) {
         ProjectSnapshotResponse snapshot = snapshot(userId, projectId);
         int budget = Math.max(2_000, Math.min(12_000, sizeBudget <= 0 ? 6_000 : sizeBudget));
@@ -300,6 +372,26 @@ public class ProjectMemoryGatewayService {
         StringBuilder text = new StringBuilder();
         text.append("项目：").append(snapshot.project().name()).append('\n');
         if (!snapshot.project().summary().isBlank()) text.append("定位：").append(snapshot.project().summary()).append('\n');
+        HistoryOverviewResponse projectHistory = snapshot.projectHistory();
+        if (projectHistory != null && projectHistory.overview() != null) {
+            HistoryOverviewContent overview = projectHistory.overview();
+            text.append("项目历程：").append(projectHistory.status()).append('，')
+                .append(projectHistory.sourceEventCount()).append(" 条来源事件").append('\n');
+            if (!overview.earliestConfirmedState().isBlank()) {
+                text.append("最早可确认状态：").append(overview.earliestConfirmedState()).append('\n');
+            }
+            if (!overview.currentState().isBlank()) {
+                text.append("当前状态：").append(overview.currentState()).append('\n');
+            }
+            if (!overview.recentChanges().isEmpty()) {
+                text.append("近期发生：").append(String.join("；", overview.recentChanges())).append('\n');
+            }
+            if (!overview.chapters().isEmpty()) {
+                text.append("时间篇章：").append(overview.chapters().stream()
+                    .map(item -> item.title() + "（" + item.storyCount() + " 个故事）")
+                    .collect(Collectors.joining("；"))).append('\n');
+            }
+        }
         text.append("事实：").append(snapshot.factCount()).append(" 条，真实变化范围 ")
             .append(snapshot.earliestFactAt()).append(" 至 ").append(snapshot.latestFactAt()).append('\n');
         if (snapshot.lifecycleSummary() != null && !snapshot.lifecycleSummary().summary().isBlank()) {
@@ -332,6 +424,22 @@ public class ProjectMemoryGatewayService {
         if (truncated) context = context.substring(0, Math.max(0, budget - 1)) + "…";
         return new MemoryBriefResponse(
             projectId, context, budget, context.length(), truncated, snapshot.health().warnings(), Instant.now()
+        );
+    }
+
+    private HistoryOverviewResponse compactHistory(HistoryOverviewResponse source) {
+        if (source == null || source.overview() == null) return source;
+        HistoryOverviewContent overview = source.overview();
+        HistoryOverviewContent compact = new HistoryOverviewContent(
+            text(overview.earliestConfirmedState(), false), text(overview.currentState(), false),
+            limit(overview.chapters(), 8), limit(overview.recentChanges(), 5),
+            limit(overview.conflicts(), 5), limit(overview.unknowns(), 10)
+        );
+        return new HistoryOverviewResponse(
+            source.projectId(), source.status(), source.projectRevision(), source.sourceEventCount(),
+            source.earliestEventAt(), source.latestEventAt(), source.strategyVersion(), source.promptVersion(),
+            compact, source.coverage(), Map.of(), source.analysisJobId(), source.generatedAt(),
+            source.latestSuccessfulAt(), source.updatedAt(), source.errorCode(), source.errorSummary()
         );
     }
 
