@@ -125,6 +125,16 @@ class ProjectAnalysisJobRetryIdempotencyTest {
     }
 
     @Test
+    void projectHistoryRefreshReusesActiveJobAcrossForceVariants() {
+        var ordinary = service.startProjectHistoryRefresh(userId, project.getId(), false);
+        var forced = service.startProjectHistoryRefresh(userId, project.getId(), true);
+
+        assertThat(forced.id()).isEqualTo(ordinary.id());
+        assertThat(jobRepository.count()).isEqualTo(1);
+        verify(jobRunner, times(1)).execute(ordinary.id());
+    }
+
+    @Test
     void tenConcurrentRetriesCreateOnlyOneEquivalentActiveJob() throws Exception {
         ProjectAnalysisJob failed = failedJob(ProjectAnalysisJobType.PROJECT, null);
         int attempts = 10;

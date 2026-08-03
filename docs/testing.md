@@ -1,5 +1,17 @@
 # Testing
 
+## V3.8.0 project-history gates
+
+The deterministic suite freezes 24 required history shapes in `history-ground-truth.json` and binds every case to executable tests. Coverage includes small and 300+ Commit repositories, 1000+ raw events, create/modify/delete/restore/replace, rename/move/split/merge, one-to-many and many-to-one grouping, revert/reapply, merge-heavy history, weak or conflicting messages, multilingual commits, PR/Issue rationale, Agent/test claims, document/PPT/data/frontend/no-Git inputs, incomplete/rebound/rewritten history and sensitive material.
+
+Hard invariants are zero invalid Evidence refs, zero cross-project refs, zero unsupported strong-fact claims, zero known chronology or lifecycle errors, zero raw-event loss, zero user-content overwrite and zero secret/absolute-path leak. Refresh/cache/retry/cancel/failure tests also prove GET is model-free, active jobs are idempotent and failed refresh preserves the prior successful snapshot.
+
+`ProjectHistoryDogfoodAcceptanceTest` reconstructs ProjectFlow through fixed V3.7.5 SHA `fd5ce827`, fetches only that reachable history, normalizes checkout timestamps and uses a fixed project identity. Two separate JVM runs must produce identical safe acceptance JSON. The artifact distinguishes full counts from 100-item display samples.
+
+`ProjectHistoryProductAcceptanceTest` exports at least three chapters, ten stories and two create→modify→delete→restore threads from a synthetic public fixture. `ProjectHistoryPromptBuilderTest` proves production/eval parity and complete-JSON packing. `ProjectHistoryRealModelIT` runs the same Prompt through a configured real Provider and stores only aggregate contract/usage diagnostics.
+
+Hermes tests cover 19 read-only tools and forwarded filters. Obsidian tests use a real temporary Vault, official and Advanced URI fallback, stable reverse links, user moves, frontmatter/managed-block preservation, no-op sync, conflict/recovery and legacy Capability compatibility. Frontend contracts validate stable history deep links and the minimal preview hierarchy.
+
 ## V3.7.5 constitution, Context Package and two-model gates
 
 Blocking deterministic coverage now includes the seven epistemic states, model/attention/phase/fallback non-promotion, declaration and process-evidence boundaries, conflict/UNKNOWN preservation, currentness, bounded Dynamic Profile claims, complete small-set Evidence Ledgers, exact eligible-capability decisions, semantic-contract degradation, Context Package v2 relevance/ranges/revision/package identity, candidate-only work-result writes, five local revalidation actions, project isolation and Timeline non-authority.

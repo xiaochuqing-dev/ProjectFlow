@@ -1,6 +1,8 @@
 # Third-party notices
 
-ProjectFlow V3.7.5 continues to use the following V3.6 libraries. Product-constitution enforcement, Prompt contract v3, Context Package v2, candidate work-result writes, local revalidation and V3.7.5 evaluation changes add no third-party runtime or test dependency and copy no community source code.
+ProjectFlow V3.8.0 continues to use the following existing libraries. Project History event normalization, reconstruction, read APIs, developer preview, Hermes tools and Obsidian projection add no third-party runtime or test dependency and copy no community source code.
+
+V3.8.0 researched GitHub Activity, GitLab CE, Forgejo/Gitea, GitButler, Gource, OpenProject, release-please, Changesets, git-cliff, Changie and Obsidian workflows as product and acceptance references only. GitButler's FSL-1.1-MIT terms and the GPL scope of Gource/OpenProject make direct reuse inappropriate; the other projects solve adjacent release, Git or knowledge-work problems rather than ProjectFlow's strong-fact history layer. The adoption/rejection record is in the V3.8.0 open-source research documents.
 
 ## SCIP Java Protocol
 

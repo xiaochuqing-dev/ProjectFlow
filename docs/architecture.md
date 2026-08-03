@@ -1,5 +1,17 @@
 # Architecture
 
+## V3.8.0 project-history reconstruction
+
+V3.8.0 adds one source-event inventory and one replaceable history snapshot without changing ProjectFact authority.
+
+The write path is explicit refresh only: `PROJECT_HISTORY_REFRESH` job → bounded `ProjectHistorySourceCollector` → event upsert/rewrite reconciliation → deterministic story/thread/chapter reconstruction → optional one-call wording synthesis → engineering validation → atomic snapshot persistence. Git, filesystem, document, ProjectFact, Agent Result and optional GitHub envelopes retain separate source, authority and epistemic metadata.
+
+`ProjectHistoryReconstructionService` owns membership, chronology, transition and Evidence. `ProjectHistoryPromptBuilder` packs complete JSON for at most 40 stories and 500 source events; `PROJECT_HISTORY_SYNTHESIS` can only return allow-listed story/chapter IDs and wording fields. Unknown IDs, changed chapter membership, ineligible reason Evidence, extra fields and milestone/maturity/success claims are rejected. Model failure keeps deterministic output; refresh failure keeps the prior successful snapshot.
+
+The read path is `ProjectHistoryReadService` only. Controller, Project Memory Gateway, Hermes, Obsidian and the developer preview read persisted rows/JSON and never trigger source collection or a model. `ProjectHistoryEvent` rows remain pageable even when a snapshot is stale. Git rewrite sets removed rows to STALE or INVALIDATED rather than deleting them.
+
+The presentation hierarchy is Overview → Dynamic Chapter → Change Story → Evolution Thread → Raw Event → Evidence. Capability and fixed Timeline remain compatibility or optional views rather than the universal hierarchy.
+
 ## V3.7.5 product-constitution and Agent-context boundary
 
 `docs/projectflow-v3.7.5-product-constitution.md` is the single authoritative product contract. `ProjectFactEpistemicStatus` carries seven states across entities, DTOs, prompts and consumers. Only project-bound `OBSERVED` and independently checked `VERIFIED` claims may enter the strong-fact path; declarations, model inferences, conflicts, unknowns and Agent process evidence retain their own authority.

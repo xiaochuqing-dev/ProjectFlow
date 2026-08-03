@@ -233,7 +233,7 @@ public class ProjectEvidenceDiscoveryService {
         }
         Path target = root.resolve(file.path()).normalize();
         if (!target.startsWith(root)) return new SampleRead("", false);
-        if (file.bytes() >= Math.max(65_536, largeFileThresholdBytes)) {
+        if (isLargeFile(file)) {
             var contentMap = largeFileContentService.analyze(target, Math.max(2_000, maxSampleChars * 2));
             String value = sanitizeSample(largeFileContentService.toPromptText(contentMap, maxSampleChars));
             cache.put(file.path(), new CachedSample(signature, value));
@@ -347,9 +347,10 @@ public class ProjectEvidenceDiscoveryService {
         return candidate.sourceType() + " 候选；有界内容信号：" + first;
     }
 
-    private static boolean isCandidate(ScannedFile file, String category) {
+    private boolean isCandidate(ScannedFile file, String category) {
         if (file.binary() || file.generated()) return false;
         if (file.manifest() || file.keyFile()) return true;
+        if (isLargeFile(file)) return true;
         return isDocumentCategory(category)
             || Set.of("CONFIG", "BUILD", "TEST", "CI_CD", "INFRA", "MIGRATION", "LICENSE").contains(category);
     }
@@ -418,7 +419,7 @@ public class ProjectEvidenceDiscoveryService {
         };
     }
 
-    private static int score(ScannedFile file, String category) {
+    private int score(ScannedFile file, String category) {
         int value = switch (category) {
             case "PRODUCT_CONTEXT", "AGENT_CONTEXT", "AGENT_RESULT", "ADR" -> 100;
             case "README", "MANIFEST", "CHANGELOG" -> 95;
@@ -428,8 +429,13 @@ public class ProjectEvidenceDiscoveryService {
             default -> 40;
         };
         if (file.keyFile()) value += 5;
+        if (isLargeFile(file)) value += 100;
         if (file.bytes() > 0 && file.bytes() <= 262_144) value += 3;
         return value;
+    }
+
+    private boolean isLargeFile(ScannedFile file) {
+        return file.bytes() >= Math.max(65_536, largeFileThresholdBytes);
     }
 
     private static boolean isDocumentCategory(String value) {

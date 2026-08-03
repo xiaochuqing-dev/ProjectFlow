@@ -24,6 +24,8 @@ import com.projectflow.repository.ProjectChangeRepository;
 import com.projectflow.repository.ProjectEvolutionRecordRepository;
 import com.projectflow.repository.ProjectEvolutionBridgeRepository;
 import com.projectflow.repository.ProjectFactSourceRepository;
+import com.projectflow.repository.ProjectHistoryEventRepository;
+import com.projectflow.repository.ProjectHistorySnapshotRepository;
 import com.projectflow.repository.ProjectMaterialRepository;
 import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectMemoryReadAuditRepository;
@@ -60,6 +62,8 @@ public class ProjectService {
     private final ProjectStructureIndexRepository structureIndexRepository;
     private final ProjectUnderstandingSnapshotRepository understandingSnapshotRepository;
     private final ProjectAgentCandidateRepository agentCandidateRepository;
+    private final ProjectHistoryEventRepository historyEventRepository;
+    private final ProjectHistorySnapshotRepository historySnapshotRepository;
 
     public ProjectService(
         ProjectRepository projectRepository,
@@ -84,7 +88,9 @@ public class ProjectService {
         ProjectMemoryReadAuditRepository memoryReadAuditRepository,
         ProjectStructureIndexRepository structureIndexRepository,
         ProjectUnderstandingSnapshotRepository understandingSnapshotRepository,
-        ProjectAgentCandidateRepository agentCandidateRepository
+        ProjectAgentCandidateRepository agentCandidateRepository,
+        ProjectHistoryEventRepository historyEventRepository,
+        ProjectHistorySnapshotRepository historySnapshotRepository
     ) {
         this.projectRepository = projectRepository;
         this.materialRepository = materialRepository;
@@ -109,6 +115,8 @@ public class ProjectService {
         this.structureIndexRepository = structureIndexRepository;
         this.understandingSnapshotRepository = understandingSnapshotRepository;
         this.agentCandidateRepository = agentCandidateRepository;
+        this.historyEventRepository = historyEventRepository;
+        this.historySnapshotRepository = historySnapshotRepository;
     }
 
     @Transactional
@@ -150,6 +158,8 @@ public class ProjectService {
         modelUsageRecordRepository.deleteByProjectId(id);
         memoryReadAuditRepository.deleteByProjectId(id);
         agentCandidateRepository.deleteByProjectId(id);
+        historyEventRepository.deleteByProjectId(id);
+        historySnapshotRepository.deleteByProjectId(id);
         understandingSnapshotRepository.deleteByProjectId(id);
         structureIndexRepository.deleteByProjectId(id);
         evolutionBridgeRepository.deleteByProjectId(id);

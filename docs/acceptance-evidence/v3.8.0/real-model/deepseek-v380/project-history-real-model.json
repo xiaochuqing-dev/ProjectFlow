@@ -1,0 +1,45 @@
+{
+  "version" : "projectflow-v3.8.0-history-real-model-v1",
+  "generatedAt" : "2026-08-03T10:27:27.422143100Z",
+  "promptVersion" : "project-history-synthesis-v2",
+  "provider" : {
+    "name" : "DeepSeek",
+    "protocol" : "OPENAI_CHAT_COMPLETIONS",
+    "model" : "deepseek-v4-pro"
+  },
+  "input" : {
+    "chapterCount" : 1,
+    "storyCount" : 2,
+    "promptCharacterCount" : 2032
+  },
+  "contract" : {
+    "rootSchemaViolationCount" : 0,
+    "entitySchemaViolationCount" : 0,
+    "missingEntityCount" : 0,
+    "duplicateEntityCount" : 0,
+    "crossProjectReferenceCount" : 0,
+    "invalidEvidenceRefCount" : 0,
+    "chapterMembershipMismatchCount" : 0,
+    "reasonWithoutEvidenceCount" : 0,
+    "emptyReadableSummaryCount" : 0,
+    "unsupportedClaimCount" : 0,
+    "returnedStoryCount" : 2,
+    "returnedChapterCount" : 1
+  },
+  "diagnostics" : {
+    "finishReason" : "COMPLETE",
+    "requestCount" : 1,
+    "schemaMatched" : true,
+    "truncated" : false,
+    "reasoningPresent" : true,
+    "latencyMs" : 13510,
+    "totalTokens" : 1539
+  },
+  "security" : {
+    "promptPersisted" : false,
+    "absolutePathPersisted" : false,
+    "rawResponsePersisted" : false,
+    "reasoningPersisted" : false,
+    "apiKeyPersisted" : false
+  }
+}

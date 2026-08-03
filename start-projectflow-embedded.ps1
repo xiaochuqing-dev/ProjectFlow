@@ -23,16 +23,17 @@ $installedPackageLockHash = if (Test-Path -LiteralPath $dependencyMarkerPath) {
 $frontendDependenciesReady = (Test-Path -LiteralPath (Join-Path $frontendDir "node_modules\next\package.json")) -and $installedPackageLockHash -eq $packageLockHash
 $sourceRevision = "unknown"
 $sourceHasLocalChanges = $false
+$gitSafeDirectory = $root.Replace("\", "/")
 $gitCommand = Get-Command "git.exe" -ErrorAction SilentlyContinue
 if (-not $gitCommand) {
     $gitCommand = Get-Command "git" -ErrorAction SilentlyContinue
 }
 if ($gitCommand) {
-    $revisionOutput = & $gitCommand.Source -C $root rev-parse HEAD 2>$null
+    $revisionOutput = & $gitCommand.Source -c "safe.directory=$gitSafeDirectory" -C $root rev-parse HEAD 2>$null
     if ($LASTEXITCODE -eq 0 -and $revisionOutput) {
         $sourceRevision = ([string]$revisionOutput).Trim()
     }
-    $sourceHasLocalChanges = @(& $gitCommand.Source -C $root status --porcelain --untracked-files=normal 2>$null).Count -gt 0
+    $sourceHasLocalChanges = @(& $gitCommand.Source -c "safe.directory=$gitSafeDirectory" -C $root status --porcelain --untracked-files=normal 2>$null).Count -gt 0
 }
 
 Write-Host "ProjectFlow V$productVersion - local embedded mode"

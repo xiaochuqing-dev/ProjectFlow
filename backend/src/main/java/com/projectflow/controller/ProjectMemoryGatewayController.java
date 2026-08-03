@@ -1,6 +1,7 @@
 package com.projectflow.controller;
 
 import static com.projectflow.dto.ProjectMemoryGatewayDtos.*;
+import static com.projectflow.dto.ProjectHistoryDtos.*;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -154,6 +155,109 @@ public class ProjectMemoryGatewayController {
         String filters = "capability=" + capabilityId + ",page=" + page + ",size=" + size + ",detail=" + detailLevel;
         return read(user, projectId, "get_capability_evolution", caller, "", "EVOLUTION", filters,
             ignored -> gateway.capabilityEvolution(user.id(), projectId, capabilityId, page, size, detailLevel),
+            result -> result.items().size());
+    }
+
+    @GetMapping("/projects/{projectId}/project-memory/history/overview")
+    ApiResponse<HistoryOverviewResponse> historyOverview(
+        @RequestHeader(value = "Authorization", required = false) String authorization,
+        @RequestHeader(value = "X-ProjectFlow-Caller", required = false) String caller,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorization);
+        return read(user, projectId, "get_project_history_overview", caller, "", "PROJECT_HISTORY", "detail=compact",
+            ignored -> gateway.historyOverview(user.id(), projectId), ignored -> 1);
+    }
+
+    @GetMapping("/projects/{projectId}/project-memory/history/chapters")
+    ApiResponse<HistoryChapterPageResponse> historyChapters(
+        @RequestHeader(value = "Authorization", required = false) String authorization,
+        @RequestHeader(value = "X-ProjectFlow-Caller", required = false) String caller,
+        @PathVariable UUID projectId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        AuthUser user = authService.currentUser(authorization);
+        String filters = "page=" + page + ",size=" + size;
+        return read(user, projectId, "list_project_history_chapters", caller, "", "PROJECT_HISTORY_CHAPTER", filters,
+            ignored -> gateway.historyChapters(user.id(), projectId, page, size), result -> result.items().size());
+    }
+
+    @GetMapping("/projects/{projectId}/project-memory/history/stories")
+    ApiResponse<HistoryStoryPageResponse> historyStories(
+        @RequestHeader(value = "Authorization", required = false) String authorization,
+        @RequestHeader(value = "X-ProjectFlow-Caller", required = false) String caller,
+        @PathVariable UUID projectId,
+        @RequestParam(required = false) String subject,
+        @RequestParam(defaultValue = "false") boolean attentionOnly,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        AuthUser user = authService.currentUser(authorization);
+        String filters = "from=" + from + ",to=" + to + ",attention=" + attentionOnly
+            + ",page=" + page + ",size=" + size;
+        return read(user, projectId, "list_project_change_stories", caller, subject, "PROJECT_HISTORY_STORY", filters,
+            ignored -> gateway.historyStories(user.id(), projectId, subject, attentionOnly, from, to, page, size),
+            result -> result.items().size());
+    }
+
+    @GetMapping("/projects/{projectId}/project-memory/history/threads")
+    ApiResponse<EvolutionThreadPageResponse> historyThreads(
+        @RequestHeader(value = "Authorization", required = false) String authorization,
+        @RequestHeader(value = "X-ProjectFlow-Caller", required = false) String caller,
+        @PathVariable UUID projectId,
+        @RequestParam(required = false) String subject,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        AuthUser user = authService.currentUser(authorization);
+        String filters = "page=" + page + ",size=" + size;
+        return read(user, projectId, "list_project_evolution_threads", caller, subject, "PROJECT_HISTORY_THREAD", filters,
+            ignored -> gateway.historyThreads(user.id(), projectId, subject, page, size),
+            result -> result.items().size());
+    }
+
+    @GetMapping("/projects/{projectId}/project-memory/history/events")
+    ApiResponse<HistoryEventPageResponse> historyEvents(
+        @RequestHeader(value = "Authorization", required = false) String authorization,
+        @RequestHeader(value = "X-ProjectFlow-Caller", required = false) String caller,
+        @PathVariable UUID projectId,
+        @RequestParam(required = false) String sourceType,
+        @RequestParam(required = false) String category,
+        @RequestParam(required = false) String transition,
+        @RequestParam(required = false) String authority,
+        @RequestParam(required = false) String epistemicStatus,
+        @RequestParam(required = false) String rewriteState,
+        @RequestParam(required = false) String subject,
+        @RequestParam(defaultValue = "false") boolean attentionOnly,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        AuthUser user = authService.currentUser(authorization);
+        String filters = "source=" + sourceType + ",category=" + category + ",transition=" + transition
+            + ",authority=" + authority + ",status=" + epistemicStatus + ",rewrite=" + rewriteState
+            + ",attention=" + attentionOnly + ",from=" + from + ",to=" + to + ",page=" + page + ",size=" + size;
+        return read(user, projectId, "list_project_history_events", caller, subject, "PROJECT_HISTORY_EVENT", filters,
+            ignored -> gateway.historyEvents(
+                user.id(), projectId, sourceType, category, transition, authority, epistemicStatus, rewriteState,
+                subject, attentionOnly, from, to, page, size
+            ), result -> result.items().size());
+    }
+
+    @GetMapping("/projects/{projectId}/project-memory/history/events/{eventId}/evidence")
+    ApiResponse<HistoryEvidenceResponse> historyEvidence(
+        @RequestHeader(value = "Authorization", required = false) String authorization,
+        @RequestHeader(value = "X-ProjectFlow-Caller", required = false) String caller,
+        @PathVariable UUID projectId,
+        @PathVariable UUID eventId
+    ) {
+        AuthUser user = authService.currentUser(authorization);
+        return read(user, projectId, "get_project_history_evidence", caller, "", "PROJECT_HISTORY_EVIDENCE",
+            "event=" + eventId, ignored -> gateway.historyEvidence(user.id(), projectId, eventId),
             result -> result.items().size());
     }
 

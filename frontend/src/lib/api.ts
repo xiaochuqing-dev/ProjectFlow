@@ -2999,3 +2999,176 @@ export function writeAgentTaskBrief(
     body: JSON.stringify({ projectPath, requirements }),
   });
 }
+
+export type ProjectHistoryChapter = {
+  id: string;
+  title: string;
+  summary: string;
+  from: string;
+  to: string;
+  storyRefs: string[];
+  storyCount: number;
+  rawEventCount: number;
+  authority: string;
+  coverage: string;
+  limitations: string[];
+};
+
+export type ProjectHistoryChapterSummary = {
+  id: string;
+  title: string;
+  summary: string;
+  from: string;
+  to: string;
+  storyCount: number;
+  rawEventCount: number;
+  authority: string;
+};
+
+export type ProjectHistoryStory = {
+  id: string;
+  primarySubjectKey: string;
+  humanTitle: string;
+  oneSentenceSummary: string;
+  beforeState: string;
+  change: string;
+  afterState: string;
+  affectedAreas: string[];
+  reason: string;
+  reasonEvidenceRefs: string[];
+  laterOutcome: string;
+  conflicts: string[];
+  unknowns: string[];
+  occurredFrom: string;
+  occurredTo: string;
+  evidenceCount: number;
+  rawEventCount: number;
+  authority: string;
+  summaryStatus: string;
+  coverage: string;
+  limitations: string[];
+  eventRefs: string[];
+  evidenceRefs: string[];
+};
+
+export type ProjectHistoryThread = {
+  id: string;
+  subjectKey: string;
+  subjectLabel: string;
+  subjectType: string;
+  storyRefs: string[];
+  transitions: string[];
+  currentOutcome: string;
+  gaps: string[];
+  conflicts: string[];
+  unknowns: string[];
+  evidenceCount: number;
+  capabilityId: string | null;
+};
+
+export type ProjectHistoryEvent = {
+  id: string;
+  occurredAt: string;
+  sourceType: string;
+  category: string;
+  transition: string;
+  safeSourceLabel: string;
+  affectedPaths: string[];
+  evidenceRefs: string[];
+  authority: string;
+  epistemicStatus: string;
+  limitations: string[];
+  rawSourceDeepLink: string;
+  rewriteState: string;
+};
+
+export type ProjectHistoryOverview = {
+  projectId: string;
+  status: string;
+  sourceEventCount: number;
+  earliestEventAt: string | null;
+  latestEventAt: string | null;
+  overview: {
+    earliestConfirmedState: string;
+    currentState: string;
+    chapters: ProjectHistoryChapterSummary[];
+    recentChanges: string[];
+    conflicts: string[];
+    unknowns: string[];
+  };
+  coverage: {
+    complete: boolean;
+    currentness: string;
+    currentEventCount: number;
+    staleEventCount: number;
+    invalidatedEventCount: number;
+    gaps: string[];
+    limitations: string[];
+  };
+  errorCode: string;
+  errorSummary: string;
+};
+
+export type ProjectHistoryChapterDetail = {
+  projectId: string;
+  chapter: ProjectHistoryChapter;
+  stories: ProjectHistoryStory[];
+};
+
+export type ProjectHistoryStoryDetail = {
+  projectId: string;
+  story: ProjectHistoryStory;
+  events: ProjectHistoryEvent[];
+  threads: ProjectHistoryThread[];
+};
+
+export type ProjectHistoryThreadDetail = {
+  projectId: string;
+  thread: ProjectHistoryThread;
+  stories: ProjectHistoryStory[];
+};
+
+function projectHistoryGet<T>(token: string, path: string): Promise<T> {
+  return requestJson<T>(path, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export function getProjectHistoryOverview(token: string, projectId: string): Promise<ProjectHistoryOverview> {
+  return projectHistoryGet<ProjectHistoryOverview>(token, `/projects/${projectId}/history/overview`);
+}
+
+export function getProjectHistoryChapter(
+  token: string,
+  projectId: string,
+  chapterId: string,
+): Promise<ProjectHistoryChapterDetail> {
+  return projectHistoryGet<ProjectHistoryChapterDetail>(
+    token,
+    `/projects/${projectId}/history/chapters/${encodeURIComponent(chapterId)}`,
+  );
+}
+
+export function getProjectHistoryStory(
+  token: string,
+  projectId: string,
+  storyId: string,
+): Promise<ProjectHistoryStoryDetail> {
+  return projectHistoryGet<ProjectHistoryStoryDetail>(
+    token,
+    `/projects/${projectId}/history/stories/${encodeURIComponent(storyId)}`,
+  );
+}
+
+export function getProjectHistoryThread(
+  token: string,
+  projectId: string,
+  threadId: string,
+): Promise<ProjectHistoryThreadDetail> {
+  return projectHistoryGet<ProjectHistoryThreadDetail>(
+    token,
+    `/projects/${projectId}/history/threads/${encodeURIComponent(threadId)}`,
+  );
+}

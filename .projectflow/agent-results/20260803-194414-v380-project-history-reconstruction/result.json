@@ -1,0 +1,44 @@
+{
+  "taskGoal": "完成 ProjectFlow V3.8.0 基于证据的项目历程重建：独立复核开源产品与 Obsidian 真实工作流，建立通用 History 主轴、可替换快照、只读消费链、真实项目与模型验收，并推进 GitHub PR、CI、合并和最终清理。",
+  "actualChanges": [
+    "新增 ProjectHistoryEvent 原始事件库存和 ProjectHistorySnapshot 可替换读模型，把任意项目材料组织为 Overview、Chapter、Change Story、Evolution Thread、Raw Event、Evidence 六层；ProjectFact 继续是唯一强事实来源，History 不写回事实、Timeline 或 Capability。",
+    "显式 PROJECT_HISTORY_REFRESH 持久化任务执行有界来源收集、确定性分组、增量 overlap、Git rewrite 失效标记和最多一次 PROJECT_HISTORY_SYNTHESIS 措辞改写；GET overview/chapter/story/thread/event/evidence/filter 保持项目隔离、只读、分页和零模型调用。",
+    "Project Memory Gateway、19-tool Hermes MCP、Obsidian Projection 和最小前端预览已消费同一持久化 History；Obsidian 零插件官方 URI 默认可用，Advanced URI 可选降级，稳定反向链接、旧 Vault 用户内容、移动、冲突和 no-op 均保留。",
+    "冻结 24 类历史形状，完成 ProjectFlow dogfood、Synthetic 可读产物、Kubernetes/MDN Content/Reveal.js 三公开仓库浅历史验证，以及 DeepSeek Chat Completions 与 GLM Responses 双真实模型合同；非法 Evidence、跨项目引用、不支持强事实和事件丢失均为 0。",
+    "完成 Backend H2、PostgreSQL 16、Frontend、Playwright、Hermes、Obsidian、安全产物、提交密钥扫描和根启动器门禁；启动器在隔离 worktree 中使用当前仓库级 safe.directory，不修改全局 Git 配置。",
+    "acceptance freeze manifest 现冻结七个正式安全产物的 Git blob 长度和 SHA-256，并由 CI 校验路径边界、存在性、哈希与敏感字段；双真实 Provider、PostgreSQL 16 和 GitHub required checks 已通过，merge 与最终验收仍保持未完成。",
+    "修复 CI 暴露的同秒历史排序不稳定：不再让包含随机 projectId 的 stable key 或 SHA 字典序决定 Story 边界，同秒 Git Commit 改为先按 parent 拓扑、再按 Commit 内事件类别和 source identity 排序，保留 occurredAt、transition、Evidence 和事件守恒。",
+    "修复大型源码因通用摘要覆盖 Content Map 而丢失中段证据的问题；large-middle 真实模型用例现能看到有界 head/middle/tail 内容信号。",
+    "把 History 模型诊断拆分为非空原因无 Evidence 与空原因漏写 UNKNOWN：前者继续硬拒绝，后者由工程层确定性补齐 UNKNOWN；最终 GLM History 工件两项计数均为 0。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryReconstructionService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistorySourceCollector.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryReadService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryPromptBuilder.java",
+    "backend/src/main/java/com/projectflow/controller/ProjectHistoryController.java",
+    "backend/src/main/java/com/projectflow/entity/ProjectHistoryEvent.java",
+    "backend/src/main/java/com/projectflow/entity/ProjectHistorySnapshot.java",
+    "backend/src/main/java/com/projectflow/service/ProjectEvidenceDiscoveryService.java",
+    ".github/workflows/quality-gates.yml",
+    "frontend/src/app/projects/[projectId]/history/page.tsx",
+    "integrations/hermes/projectflow_mcp.py",
+    "integrations/obsidian/projectflow_obsidian.py",
+    "docs/projectflow-v3.8.0-acceptance-report.md",
+    "docs/acceptance-evidence/v3.8.0/acceptance-freeze-manifest.json",
+    "docs/acceptance-evidence/v3.8.0/real-model/glm-v380/project-history-real-model.json"
+  ],
+  "verification": {
+    "build": "Frontend TypeScript/lint and Next.js production build passed. Start-ProjectFlow.bat performed worktree-local npm ci, rebuilt production output, started backend/frontend, reached health, wrote logs/last-embedded-build.json and stopped with ports 3000/8080 released.",
+    "tests": "Backend H2 full suite: 482 tests, 0 failures, 0 errors, 1 opt-in benchmark skipped. ProjectHistoryReconstructionTest 19/19 and PromptBuilder combined 20/20; public repositories 1/1 covering three fixed projects; DeepSeek and GLM History contracts each 1/1. GLM 38-run completed 38/38 with 51 requests and 501,188 tokens; product E2E completed 17/17 with 33 logical/physical requests and 433,092 tokens, with 0 invalid Evidence and 0 degradation. Frontend contracts 55/55; Playwright 8/8; Hermes 8/8 with 19 tools; Obsidian 21/21 with a 5,000-fact temporary Vault. GitHub required runs 30832088537 and 30832092348 passed all blocking jobs; workflow_dispatch run 30832103333 passed PostgreSQL and all real GLM jobs.",
+    "manualCheck": "Independently re-read official repositories, source blobs and open issues dated 2026-08-03; verified seven frozen Git blob hashes, shallow-history DEGRADED/PARTIAL diagnostics, GLM safe artifact, root launcher evidence, no residual ports, no Tag/Release and no global Git configuration change. Local Docker was unavailable; PostgreSQL 16 was verified by GitHub Actions on the current acceptance head. GLM Conflict Detection 0.6667 remains documented as a limitation."
+  },
+  "unfinished": [
+    "Feature PR, possible acceptance-backfill PR, final master verification, branch deletion and worktree cleanup remain pending."
+  ],
+  "sedimentCandidates": [
+    "可复用能力：把原始来源事件库存与可替换 History 展示快照分离，确定性工程层拥有成员、时间、transition、Evidence 和 authority，模型只做一次有界措辞改写。",
+    "可复用经验：大历史使用有界读取、动态 Chapter、稳定 subject、增量 overlap、rewrite 失效标记和原始事件守恒，同时对浅克隆与未读范围保持 PARTIAL 诊断。",
+    "可复用能力：以安全 freeze manifest 固定公开验收产物的路径、长度和 SHA-256，并在 CI 同时校验敏感字段、路径逃逸和文件漂移。"
+  ]
+}

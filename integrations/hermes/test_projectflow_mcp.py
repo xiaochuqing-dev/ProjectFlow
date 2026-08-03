@@ -16,6 +16,7 @@ from urllib.parse import parse_qs, urlparse
 
 SCRIPT = Path(__file__).with_name("projectflow_mcp.py")
 PROJECT_ID = "11111111-1111-1111-1111-111111111111"
+EVENT_ID = "44444444-4444-4444-4444-444444444444"
 
 
 class State:
@@ -190,11 +191,15 @@ class MCPProjectHistoryTest(unittest.TestCase):
                 "clientInfo": {"name": "contract-test", "version": "1"},
             })
             self.assertEqual("2025-11-25", initialized["result"]["protocolVersion"])
+            self.assertEqual("3.8.0", initialized["result"]["serverInfo"]["version"])
             tools = mcp.request("tools/list")["result"]["tools"]
         print(f"MCP_METRIC startup_and_discovery_ms={(time.perf_counter() - started) * 1000:.1f} tools={len(tools)}")
-        self.assertEqual(13, len(tools))
+        self.assertEqual(19, len(tools))
         self.assertEqual([
-            "list_projects", "get_project_snapshot", "search_project_memory", "get_recent_changes",
+            "list_projects", "get_project_snapshot", "get_project_history_overview",
+            "list_project_history_chapters", "list_project_change_stories",
+            "list_project_evolution_threads", "list_project_history_events", "get_project_history_evidence",
+            "search_project_memory", "get_recent_changes",
             "get_project_timeline", "list_project_capabilities", "get_capability_evolution",
             "trace_project_fact", "get_project_brief", "search_project_portfolio",
             "get_project_context_package", "get_project_evidence", "get_project_knowledge",
@@ -235,6 +240,38 @@ class MCPProjectHistoryTest(unittest.TestCase):
         self.assertEqual("Bearer example-token", request["authorization"])
         self.assertEqual("hermes-stdio", request["caller"])
         self.assertEqual(["FACT,CAPABILITY"], request["query"]["entityTypes"])
+
+    def test_project_history_tools_forward_filters_pagination_and_evidence_identity(self) -> None:
+        with McpProcess(self.base_url) as mcp:
+            events = mcp.request("tools/call", {"name": "list_project_history_events", "arguments": {
+                "projectId": PROJECT_ID,
+                "sourceType": "GIT",
+                "category": "FILE_CHANGE",
+                "transition": "RESTORED",
+                "authority": "SOURCE_BACKED",
+                "epistemicStatus": "OBSERVED",
+                "rewriteState": "CURRENT",
+                "subject": "authentication",
+                "attentionOnly": True,
+                "from": "2026-01-01T00:00:00Z",
+                "until": "2026-08-01T00:00:00Z",
+                "page": 3,
+                "size": 17,
+            }})["result"]
+            evidence = mcp.request("tools/call", {"name": "get_project_history_evidence", "arguments": {
+                "projectId": PROJECT_ID, "eventId": EVENT_ID,
+            }})["result"]
+        self.assertFalse(events["isError"])
+        self.assertFalse(evidence["isError"])
+        with State.lock:
+            event_request, evidence_request = State.requests[-2:]
+        self.assertTrue(event_request["path"].endswith("/project-memory/history/events"))
+        self.assertEqual(["GIT"], event_request["query"]["sourceType"])
+        self.assertEqual(["RESTORED"], event_request["query"]["transition"])
+        self.assertEqual(["true"], event_request["query"]["attentionOnly"])
+        self.assertEqual(["3"], event_request["query"]["page"])
+        self.assertEqual(["17"], event_request["query"]["size"])
+        self.assertTrue(evidence_request["path"].endswith(f"/project-memory/history/events/{EVENT_ID}/evidence"))
 
     def test_context_package_forwards_task_scope_revision_and_depth(self) -> None:
         with McpProcess(self.base_url) as mcp:

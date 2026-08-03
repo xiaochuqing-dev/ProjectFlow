@@ -15,6 +15,7 @@ assert.match(embeddedLauncher, /package-lock\.json/, "embedded launcher should f
 assert.match(embeddedLauncher, /Arguments @\("ci"\)/, "embedded launcher should install missing or changed frontend dependencies");
 assert.match(embeddedLauncher, /Arguments @\("run", "build"\)/, "embedded launcher should rebuild the production frontend");
 assert.match(embeddedLauncher, /last-embedded-build\.json/, "embedded launcher should record runtime build evidence");
+assert.match(embeddedLauncher, /safe\.directory/, "embedded launcher should read Git metadata without changing global worktree trust");
 
 const readme = read("README.md");
 for (const term of ["ProjectFlow V3.4.5", "Model Gateway V2", "OpenAI Responses", "Anthropic Messages", "Project Fact", "Change Batch", "Development Segment", "Project Records", "Project Memory", "Project Capability", "Capability Evolution", "Project Memory Gateway", "Hermes MCP", "Obsidian Projection", "Managed Root", "GitHub CLI"]) {
@@ -30,7 +31,8 @@ assert.match(agents, /\.projectflow\/AGENT_PROTOCOL\.md/, "AGENTS should route a
 
 const context = read("PROJECT_CONTEXT.md");
 assert.match(context, /ProjectFlow V3\.4\.5/, "compact project context should identify the current release");
-assert.match(context, /分析新变化.*DevelopmentSegment.*ProjectFact.*项目记忆/s, "compact project context should record the automatic fact workflow");
+assert.match(context, /真实材料.*来源事件.*时间篇章.*变化故事.*演变链.*Evidence/s, "compact project context should record the V3.8 project-history workflow");
+assert.match(context, /ProjectFact.*(?:only strong-fact source|唯一强事实来源)/s, "compact project context should preserve the durable strong-fact boundary");
 
 for (const path of [
   ".projectflow/AGENT_PROTOCOL.md",

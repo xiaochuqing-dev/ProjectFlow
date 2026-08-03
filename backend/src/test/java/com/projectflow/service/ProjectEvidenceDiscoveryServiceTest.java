@@ -98,6 +98,43 @@ class ProjectEvidenceDiscoveryServiceTest {
         assertThat(result.sourceMap().scoutEvidenceCount()).isLessThanOrEqualTo(5);
     }
 
+    @Test
+    void largeCodeFileUsesBoundedContentMap() throws Exception {
+        String neutral = "class NeutralLine { int value = 1; }\n";
+        Files.writeString(
+            root.resolve("HugeService.java"),
+            neutral.repeat(2_500)
+                + "// CURRENT FACT: writes use idempotency keys backed by commit evidence.\n"
+                + neutral.repeat(2_500)
+        );
+
+        LocalCommandExecutor commands = (directory, command, timeout) ->
+            new LocalCommandExecutor.CommandResult(1, "", false);
+        SccCodeMetricsAdapter scc = mock(SccCodeMetricsAdapter.class);
+        when(scc.inspect(root)).thenReturn(SccCodeMetricsAdapter.CodeMetrics.unavailable());
+        RepositoryIntakeService intake = intake(commands, scc);
+        ProjectEvidenceDiscoveryService discovery = new ProjectEvidenceDiscoveryService(new SensitiveContentRedactor());
+        ReflectionTestUtils.setField(discovery, "maxCandidates", 100);
+        ReflectionTestUtils.setField(discovery, "maxScoutEvidence", 80);
+        ReflectionTestUtils.setField(discovery, "maxSampleChars", 4_000);
+        ReflectionTestUtils.setField(discovery, "maxSampleBytes", 8_192);
+        ReflectionTestUtils.setField(discovery, "largeFileThresholdBytes", 65_536L);
+
+        var result = discovery.discover(intake.scan(root));
+
+        assertThat(result.sourceMap().sources())
+            .filteredOn(source -> "HugeService.java".equals(source.locator()))
+            .singleElement()
+            .satisfies(source -> {
+                assertThat(source.category()).isEqualTo("CODE");
+                assertThat(source.summary()).contains("CONTENT_MAP");
+            });
+        assertThat(result.promptEvidence())
+            .filteredOn(item -> "HugeService.java".equals(item.locator()))
+            .singleElement()
+            .satisfies(item -> assertThat(item.boundedSample()).contains("CONTENT_MAP"));
+    }
+
     private RepositoryIntakeService intake(LocalCommandExecutor commands, SccCodeMetricsAdapter scc) {
         RepositoryIntakeService intake = new RepositoryIntakeService(
             commands,

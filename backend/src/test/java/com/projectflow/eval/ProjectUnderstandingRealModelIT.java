@@ -481,7 +481,7 @@ class ProjectUnderstandingRealModelIT {
             }
             case "conflicting-final-docs" -> {
                 if (snapshot.sourceMap().sources().stream()
-                    .filter(source -> "DOC".equals(source.category())).count() < 2) {
+                    .filter(source -> Set.of("DOC", "UNKNOWN_DOCUMENT").contains(source.category())).count() < 2) {
                     failures.add("CONFLICTING_DOCUMENTS_NOT_DISCOVERED");
                 }
             }

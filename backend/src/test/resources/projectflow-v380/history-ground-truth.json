@@ -1,0 +1,224 @@
+{
+  "standard": "ProjectFlow V3.8.0 frozen project-history shapes; labels fixed before real-provider qualification; not a universal accuracy benchmark",
+  "version": "projectflow-v3.8.0-history-ground-truth-v1",
+  "hardGates": {
+    "invalidEvidenceReferenceCountMax": 0,
+    "crossProjectReferenceCountMax": 0,
+    "unsupportedStrongFactCountMax": 0,
+    "knownChronologyErrorCountMax": 0,
+    "lifecycleTransitionErrorCountMax": 0,
+    "rawEventLossCountMax": 0,
+    "userManagedContentOverwriteCountMax": 0,
+    "secretOrAbsolutePathLeakCountMax": 0
+  },
+  "qualityDimensions": [
+    "chronology_correctness",
+    "change_grouping_precision",
+    "change_grouping_recall",
+    "evolution_thread_continuity",
+    "add_delete_restore_detection",
+    "before_after_correctness",
+    "reason_evidence_validity",
+    "unsupported_claim_rate",
+    "evidence_traceability",
+    "conflict_preservation",
+    "unknown_preservation",
+    "compression_usefulness",
+    "human_readability",
+    "cross_model_consistency"
+  ],
+  "cases": [
+    {
+      "id": "small-five-commit-project",
+      "shape": "small project with a short clear history",
+      "verificationTests": ["com.projectflow.ProjectHistoryProductAcceptanceTest#exportsThreeChaptersTenStoriesAndTwoLifecycleThreads"],
+      "expectedTransitions": ["CREATED", "MODIFIED"],
+      "expectedCoverage": "COMPLETE",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "chaotic-300-plus-commits",
+      "shape": "large mixed-message history with more than three hundred commits",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#keepsMoreThanOneThousandEventsAcrossThreeHundredCommitsAndCapsModelAtOneBoundedBatch"],
+      "expectedTransitions": ["CREATED", "MODIFIED"],
+      "expectedCoverage": "COMPLETE",
+      "maxModelCalls": 1
+    },
+    {
+      "id": "create-modify-delete-restore-replace",
+      "shape": "one subject repeatedly created modified removed restored and renamed or replaced",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#rebuildsSourceEventsStoriesAndCreatedModifiedRemovedRestoredThread"],
+      "expectedTransitions": ["CREATED", "MODIFIED", "REMOVED", "RESTORED", "RENAMED"],
+      "expectedCoverage": "COMPLETE",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "rename-move-split-merge",
+      "shape": "subject identity survives rename move split and merge",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#reconstructsRenameMoveSplitMergeRevertReapplyMergeCommitsAndMixedMessages"],
+      "expectedTransitions": ["RENAMED", "MOVED", "SPLIT", "MERGED"],
+      "expectedCoverage": "COMPLETE",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "multi-commit-one-change",
+      "shape": "several nearby commits complete one subject change",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#groupsMultipleCommitsForOneSubjectIntoOneBoundedChangeStory"],
+      "expectedTransitions": ["CREATED", "MODIFIED"],
+      "expectedCoverage": "COMPLETE",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "one-commit-three-unrelated-changes",
+      "shape": "one generic commit contains three unrelated subjects",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#splitsOneGenericCommitAcrossIndependentSubjectsAndKeepsOwnershipIsolation"],
+      "expectedTransitions": ["CREATED"],
+      "expectedCoverage": "COMPLETE",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "revert-then-reimplement",
+      "shape": "a reverted change is later reapplied",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#reconstructsRenameMoveSplitMergeRevertReapplyMergeCommitsAndMixedMessages"],
+      "expectedTransitions": ["REVERTED", "REAPPLIED"],
+      "expectedCoverage": "COMPLETE",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "merge-heavy-multi-branch",
+      "shape": "multiple non-fast-forward branch merges preserve merge events without dropping branch changes",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#reconstructsRenameMoveSplitMergeRevertReapplyMergeCommitsAndMixedMessages"],
+      "expectedTransitions": ["MERGED"],
+      "expectedCoverage": "COMPLETE",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "commit-message-diff-mismatch",
+      "shape": "generic message must not override changed subjects",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#splitsOneGenericCommitAcrossIndependentSubjectsAndKeepsOwnershipIsolation", "com.projectflow.service.ContentOverFilenameTest#misleadingFrontendFilenameDoesNotEraseBackendContentSignal"],
+      "expectedTransitions": ["CREATED"],
+      "expectedCoverage": "COMPLETE",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "blank-fix-update-messages",
+      "shape": "blank and generic commit messages remain raw metadata rather than story truth",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#reconstructsRenameMoveSplitMergeRevertReapplyMergeCommitsAndMixedMessages"],
+      "expectedTransitions": ["MODIFIED"],
+      "expectedCoverage": "COMPLETE",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "mixed-chinese-english-commits",
+      "shape": "Chinese and English messages share one neutral history contract",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#reconstructsRenameMoveSplitMergeRevertReapplyMergeCommitsAndMixedMessages"],
+      "expectedTransitions": ["CREATED", "MODIFIED"],
+      "expectedCoverage": "COMPLETE",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "pull-request-issue-reason",
+      "shape": "bounded PR or Issue text supplies declared rationale without proving implementation",
+      "verificationTests": ["com.projectflow.ProjectHistoryGitHubEvidenceTest#usesBoundedDeclaredPullRequestEvidenceForReasonWithoutPersistingFullBody"],
+      "expectedTransitions": ["MERGED", "MODIFIED"],
+      "expectedCoverage": "COMPLETE",
+      "maxModelCalls": 1
+    },
+    {
+      "id": "readme-agent-collaboration-conflict",
+      "shape": "declared documents and Agent process evidence cannot self-promote over conflicting engineering evidence",
+      "verificationTests": ["com.projectflow.service.FactPromotionGuardTest#readmeObsidianMilestoneAndUserPhaseStayDeclared", "com.projectflow.service.AgentResultBoundaryTest#agentResultClaimIsProcessEvidence"],
+      "expectedTransitions": [],
+      "expectedCoverage": "EVIDENCE_BOUNDARY",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "test-claim-without-independent-verification",
+      "shape": "an Agent test claim remains process evidence until independently checked",
+      "verificationTests": ["com.projectflow.service.AgentResultBoundaryTest#agentResultClaimIsProcessEvidence", "com.projectflow.service.StrongFactStatusTest#onlyObservedAndVerifiedAreStrongFacts"],
+      "expectedTransitions": [],
+      "expectedCoverage": "EVIDENCE_BOUNDARY",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "document-only-project",
+      "shape": "ordinary documents without Git produce current-state-only history",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#reconstructsCurrentStateOnlyForDocumentProjectWithoutGitAndKeepsSensitiveContentUnread"],
+      "expectedTransitions": ["CREATED"],
+      "expectedCoverage": "CURRENT_STATE_ONLY",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "presentation-material-project",
+      "shape": "PPT material is represented only by readable metadata and known current state",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#reconstructsCurrentStateOnlyForDocumentProjectWithoutGitAndKeepsSensitiveContentUnread"],
+      "expectedTransitions": ["CREATED"],
+      "expectedCoverage": "CURRENT_STATE_ONLY",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "single-page-frontend",
+      "shape": "frontend material is not forced into backend or capability semantics",
+      "verificationTests": ["com.projectflow.service.ContentOverFilenameTest#misleadingFrontendFilenameDoesNotEraseBackendContentSignal"],
+      "expectedTransitions": [],
+      "expectedCoverage": "CONTENT_FIRST",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "data-analysis-project",
+      "shape": "tabular and analytical material uses neutral project subjects",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#reconstructsCurrentStateOnlyForDocumentProjectWithoutGitAndKeepsSensitiveContentUnread"],
+      "expectedTransitions": ["CREATED"],
+      "expectedCoverage": "CURRENT_STATE_ONLY",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "no-git-project",
+      "shape": "missing Git is explicit and does not block current material history",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#reconstructsCurrentStateOnlyForDocumentProjectWithoutGitAndKeepsSensitiveContentUnread"],
+      "expectedTransitions": ["CREATED"],
+      "expectedCoverage": "CURRENT_STATE_ONLY",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "incomplete-git-history",
+      "shape": "unknown commit count cannot be marked complete",
+      "verificationTests": ["com.projectflow.ProjectHistoryGitHubEvidenceTest#marksUnknownGitCommitCountIncompleteWhileKeepingReadableLocalEvents"],
+      "expectedTransitions": ["CREATED"],
+      "expectedCoverage": "PARTIAL",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "force-push-rebase-rewrite",
+      "shape": "rewritten commits invalidate old source events without deleting evidence",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#invalidatesEventsRemovedByHistoryRewriteWithoutDeletingTheirEvidence"],
+      "expectedTransitions": ["CREATED", "MODIFIED", "REPLACED"],
+      "expectedCoverage": "REWRITE_AWARE",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "project-path-rebinding",
+      "shape": "rebinding a project path invalidates prior source events and isolates the new source",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#rebindingProjectPathInvalidatesOldSourceEventsAndKeepsNewHistoryIsolated"],
+      "expectedTransitions": ["CREATED"],
+      "expectedCoverage": "REWRITE_AWARE",
+      "maxModelCalls": 0
+    },
+    {
+      "id": "sensitive-files-and-credential-fields",
+      "shape": "sensitive paths are metadata-only and outbound text is redacted",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#keepsDependencyAndSensitiveEventsRawOnlyAndOutOfModelContract", "com.projectflow.ProjectHistoryReconstructionTest#sanitizesAbsolutePathsFromProjectFactsBeforePersistencePromptAndReadApi", "com.projectflow.ProjectHistoryGitHubEvidenceTest#usesBoundedDeclaredPullRequestEvidenceForReasonWithoutPersistingFullBody"],
+      "expectedTransitions": ["CREATED", "MODIFIED"],
+      "expectedCoverage": "METADATA_ONLY",
+      "maxModelCalls": 1
+    },
+    {
+      "id": "thousand-plus-raw-events",
+      "shape": "more than one thousand source events are conserved and compressed with one bounded model call",
+      "verificationTests": ["com.projectflow.ProjectHistoryReconstructionTest#keepsMoreThanOneThousandEventsAcrossThreeHundredCommitsAndCapsModelAtOneBoundedBatch"],
+      "expectedTransitions": ["CREATED", "MODIFIED"],
+      "expectedCoverage": "COMPLETE",
+      "maxModelCalls": 1
+    }
+  ]
+}

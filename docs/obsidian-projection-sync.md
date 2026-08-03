@@ -1,8 +1,18 @@
 # Obsidian Projection and Sync
 
+## V3.8.0 real workflow
+
+CORE now makes `项目概览` and `项目历程` the primary navigation. It adds bounded chapter, story and evolution-thread notes while retaining existing Timeline, Fact and Capability notes for compatibility. Existing managed roots are migrated deterministically: old notes are not deleted, stable metadata and redirects remain valid, and user frontmatter plus content outside the managed block is preserved.
+
+Level 0 requires no plugin. Notes include correctly encoded official `obsidian://open?vault=...&file=...` URIs and stable reverse links to the local ProjectFlow history preview. A user move or rename is reconciled through stable entity metadata and refreshes the URI without replacing authored content.
+
+Level 1 optionally emits Advanced URI links for heading/block/workspace targeting. When disabled or unavailable, the official URI remains usable. Level 2 Local REST/MCP and Level 3 Dataview/Bases remain optional, loopback/minimum-permission designs and are not required by the projection. ProjectFlow does not inject DataviewJS or expose a Vault to the public network.
+
+The real temporary-Vault tests cover URI encoding, official fallback, reverse links, user moves, no-op incremental sync, conflicts, manifest recovery, atomic writes, traversal/symlink protection and legacy Capability compatibility.
+
 ## Purpose
 
-Obsidian is a curated long-term knowledge projection of ProjectFlow, not a database mirror and not a source of truth. The projection reads Snapshot, Timeline, Capability, Evolution and Fact semantics only through Project Memory Gateway. It never calls a model and never writes back ProjectFact, Timeline, Capability or Evolution.
+Obsidian is a curated long-term knowledge projection of ProjectFlow, not a database mirror and not a source of truth. The projection reads Project History, Snapshot, Timeline, Capability, Evolution and Fact semantics only through Project Memory Gateway. It never calls a model and never writes back ProjectFact, History, Timeline, Capability or Evolution.
 
 V3.7.5 does not change the projection storage format. Only `OBSERVED` and independently validated `VERIFIED` are strong facts. `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` and `PROCESS_EVIDENCE` retain their authority metadata; Timeline model summaries are `INFERRED` and `NON_AUTHORITATIVE`. Agent candidates, work-result bodies, Context Package task text, model Token/latency diagnostics and reasoning-control settings are not projected as facts or quality judgments.
 

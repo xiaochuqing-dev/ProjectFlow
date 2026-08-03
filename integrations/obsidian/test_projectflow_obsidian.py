@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -26,6 +27,8 @@ from projectflow_obsidian import (
     ProjectionError,
     event_month,
     filename,
+    obsidian_advanced_uri,
+    obsidian_open_uri,
 )
 
 
@@ -34,6 +37,12 @@ CAP_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 CAP_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 FACT_JUNE = "10000000-0000-0000-0000-000000000001"
 FACT_JULY = "10000000-0000-0000-0000-000000000002"
+CHAPTER_A = "chapter-11111111111111111111"
+CHAPTER_B = "chapter-22222222222222222222"
+STORY_A = "story-11111111111111111111"
+STORY_B = "story-22222222222222222222"
+STORY_C = "story-33333333333333333333"
+THREAD_A = "thread-11111111111111111111"
 
 
 def fact(fact_id: str, title: str, occurred: str, recorded: str, capabilities: list[str] | None = None, status: str = "RECORDED") -> dict:
@@ -133,6 +142,77 @@ def dataset() -> dict:
         ],
         CAP_B: [evolution("20000000-0000-0000-0000-000000000003", CAP_B, FACT_JULY, "2026-07", 1)],
     }
+    stories = [
+        {
+            "id": STORY_A, "primarySubjectKey": "project-memory", "humanTitle": "新增项目事实记忆并形成初始结果",
+            "oneSentenceSummary": "项目开始保存可追溯的事实记忆。", "beforeState": "此前没有可确认的事实记忆。",
+            "change": "来源记录显示新增了项目事实记忆。", "afterState": "项目事实记忆已经存在。",
+            "affectedAreas": ["项目记忆"], "reason": "", "reasonEvidenceRefs": [],
+            "laterOutcome": "随后继续扩展为按时间组织的项目历程。", "conflicts": [], "unknowns": ["原因保持 UNKNOWN。"],
+            "occurredFrom": "2026-06-15T10:00:00Z", "occurredTo": "2026-06-15T10:00:00Z",
+            "evidenceCount": 2, "rawEventCount": 2, "authority": "ENGINEERING_GROUPING", "summaryStatus": "DETERMINISTIC",
+            "coverage": "FULL_WITHIN_DISCOVERED_SOURCES", "limitations": [],
+            "eventRefs": ["30000000-0000-0000-0000-000000000001"], "evidenceRefs": [f"fact:{FACT_JUNE}", "commit:aaaa"],
+        },
+        {
+            "id": STORY_B, "primarySubjectKey": "project-memory", "humanTitle": "调整项目事实记忆并按发生时间组织历程",
+            "oneSentenceSummary": "事实记忆增加了真实发生时间维度。", "beforeState": "事实已存在但时间阅读层有限。",
+            "change": "来源记录显示按发生时间组织项目事实。", "afterState": "项目历程可以按真实发生时间阅读。",
+            "affectedAreas": ["项目记忆", "时间线"], "reason": "", "reasonEvidenceRefs": [],
+            "laterOutcome": "随后形成统一外部读取。", "conflicts": [], "unknowns": ["原因保持 UNKNOWN。"],
+            "occurredFrom": "2026-07-17T09:00:00Z", "occurredTo": "2026-07-17T09:00:00Z",
+            "evidenceCount": 2, "rawEventCount": 2, "authority": "ENGINEERING_GROUPING", "summaryStatus": "DETERMINISTIC",
+            "coverage": "FULL_WITHIN_DISCOVERED_SOURCES", "limitations": [],
+            "eventRefs": ["30000000-0000-0000-0000-000000000002"], "evidenceRefs": [f"fact:{FACT_JULY}", "commit:bbbb"],
+        },
+        {
+            "id": STORY_C, "primarySubjectKey": "project-memory", "humanTitle": "恢复统一读取入口并重新连接项目记忆",
+            "oneSentenceSummary": "被移除的统一读取入口重新出现。", "beforeState": "统一读取入口此前已被移除。",
+            "change": "来源记录显示统一读取入口被恢复。", "afterState": "统一读取入口重新存在。",
+            "affectedAreas": ["外部读取"], "reason": "", "reasonEvidenceRefs": [], "laterOutcome": "",
+            "conflicts": [], "unknowns": ["恢复原因保持 UNKNOWN。"],
+            "occurredFrom": "2026-07-20T09:00:00Z", "occurredTo": "2026-07-20T09:00:00Z",
+            "evidenceCount": 2, "rawEventCount": 2, "authority": "ENGINEERING_GROUPING", "summaryStatus": "DETERMINISTIC",
+            "coverage": "FULL_WITHIN_DISCOVERED_SOURCES", "limitations": [],
+            "eventRefs": ["30000000-0000-0000-0000-000000000003"], "evidenceRefs": ["commit:cccc", "file:integrations/hermes/projectflow_mcp.py"],
+        },
+    ]
+    chapters = [
+        {
+            "id": CHAPTER_A, "title": "2026-06：项目事实记忆形成", "summary": "事实记忆形成并可追溯。",
+            "from": "2026-06-15T10:00:00Z", "to": "2026-06-15T10:00:00Z", "boundarySignals": ["EARLIEST_DISCOVERED_EVENT"],
+            "storyRefs": [STORY_A], "storyCount": 1, "rawEventCount": 2, "authority": "ENGINEERING_GROUPING",
+            "coverage": "FULL_WITHIN_DISCOVERED_SOURCES", "limitations": [],
+        },
+        {
+            "id": CHAPTER_B, "title": "2026-07：历程与统一读取扩展", "summary": "项目历程和统一读取在同一时间区间继续演变。",
+            "from": "2026-07-17T09:00:00Z", "to": "2026-07-20T09:00:00Z", "boundarySignals": ["TIME_GAP_32_DAYS"],
+            "storyRefs": [STORY_B, STORY_C], "storyCount": 2, "rawEventCount": 4, "authority": "ENGINEERING_GROUPING",
+            "coverage": "FULL_WITHIN_DISCOVERED_SOURCES", "limitations": [],
+        },
+    ]
+    threads = [{
+        "id": THREAD_A, "subjectKey": "project-memory", "subjectLabel": "项目记忆", "subjectType": "PROJECT_SUBJECT",
+        "storyRefs": [STORY_A, STORY_B, STORY_C], "transitions": ["CREATED", "MODIFIED", "REMOVED", "RESTORED"],
+        "currentOutcome": "统一读取入口已经恢复。", "gaps": [], "conflicts": [], "unknowns": ["恢复原因保持 UNKNOWN。"],
+        "evidenceCount": 6, "capabilityId": None,
+    }]
+    history_overview = {
+        "projectId": PROJECT_ID, "status": "READY", "projectRevision": "git:history", "sourceEventCount": 6,
+        "earliestEventAt": "2026-06-15T10:00:00Z", "latestEventAt": "2026-07-20T09:00:00Z",
+        "strategyVersion": "project-history-v1", "promptVersion": "project-history-synthesis-v1",
+        "overview": {
+            "earliestConfirmedState": "最早可确认项目形成了事实记忆。", "currentState": "最近可确认统一读取入口已经恢复。",
+            "chapters": chapters, "recentChanges": ["恢复统一读取入口并重新连接项目记忆（2026-07-20）"],
+            "conflicts": [], "unknowns": ["恢复原因保持 UNKNOWN。"],
+        },
+        "coverage": {"complete": True, "currentness": "CURRENT", "discoveredEventCount": 6, "currentEventCount": 6,
+                     "staleEventCount": 0, "invalidatedEventCount": 0, "sourceCounts": {"GIT": 4, "PROJECT_FACT": 2},
+                     "gaps": [], "limitations": []},
+        "diagnostics": {}, "analysisJobId": None, "generatedAt": "2026-08-20T10:00:00Z",
+        "latestSuccessfulAt": "2026-08-20T10:00:00Z", "updatedAt": "2026-08-20T10:00:00Z",
+        "errorCode": "", "errorSummary": "",
+    }
     return {
         "snapshot": {
             "project": {"projectId": PROJECT_ID, "name": "ProjectFlow", "summary": "自动维护项目从创建至今的长期记忆。", "status": "BUILDING", "techStack": ["Java", "Python"]},
@@ -140,8 +220,13 @@ def dataset() -> dict:
             "coveredCommitCount": 2, "totalCommitCount": 2, "earliestFactAt": "2026-06-15T10:00:00Z", "latestFactAt": "2026-07-17T09:00:00Z",
             "recentChanges": {"items": [july_fact, june_fact]}, "activeCapabilityCount": 2,
             "lifecycleSummary": {"status": "READY", "summary": "项目从事实记忆演进为统一外部语义层。", "notice": ""},
-            "health": {"historyStatus": "COMPLETED", "timelineStatus": "READY", "capabilityMapStatus": "READY", "capabilityMapStale": False, "latestRealChangeAt": "2026-07-17T09:00:00Z", "warnings": []},
+            "projectHistory": history_overview,
+            "health": {"historyStatus": "COMPLETED", "projectHistoryStatus": "READY", "timelineStatus": "READY", "capabilityMapStatus": "READY", "capabilityMapStale": False, "latestRealChangeAt": "2026-07-17T09:00:00Z", "warnings": []},
         },
+        "historyOverview": history_overview,
+        "historyChapters": chapters,
+        "historyStories": stories,
+        "historyThreads": threads,
         "lifecycle": {"timelineZone": "Asia/Shanghai", "lifecycle": {"summary": {"status": "READY", "summary": "项目从事实记忆演进为统一外部语义层。", "notice": ""}, "history": {"status": "COMPLETED"}}},
         "months": months,
         "capabilities": capabilities,
@@ -153,6 +238,7 @@ class FakeSource:
     def __init__(self, value: dict | None = None):
         self.value = value or dataset()
         self.calls = 0
+        self.app_url = "http://127.0.0.1:3000"
 
     def collect(self, project_id: str) -> dict:
         self.calls += 1
@@ -180,15 +266,18 @@ class ObsidianProjectionTest(unittest.TestCase):
     def test_first_sync_creates_complete_core_with_metadata_links_and_no_fact_files(self) -> None:
         result = self.projection().sync(PROJECT_ID)
         self.assertEqual("COMPLETED", result["status"])
-        self.assertEqual(10, result["plan"]["CREATED"])
+        self.assertEqual(17, result["plan"]["CREATED"])
         expected = [
-            "项目概览.md", "项目历程/2026-06.md", "项目历程/2026-07.md", "项目事实/2026-06.md", "项目事实/2026-07.md",
+            "项目概览.md", "项目历程/索引.md", "项目历程/2026-06.md", "项目历程/2026-07.md", "项目事实/2026-06.md", "项目事实/2026-07.md",
             "索引/能力索引.md", "索引/时间索引.md", "索引/事实索引.md",
         ]
         for relative in expected:
             self.assertTrue((self.managed() / relative).is_file(), relative)
         capability_files = list((self.managed() / "项目能力").glob("*.md"))
         self.assertEqual(2, len(capability_files))
+        self.assertEqual(2, len(list((self.managed() / "项目历程/篇章").glob("*.md"))))
+        self.assertEqual(3, len(list((self.managed() / "项目历程/变化故事").glob("*.md"))))
+        self.assertEqual(1, len(list((self.managed() / "项目历程/演变链").glob("*.md"))))
         self.assertFalse((self.managed() / "重要事实").exists())
         overview = (self.managed() / "项目概览.md").read_text(encoding="utf-8")
         for key in ["projectflow_managed: true", "projectflow_project_id:", "entity_type:", "entity_id:", "source_version:", "content_hash:", "generated_at:", "source_updated_at:", "projection_version:"]:
@@ -196,22 +285,80 @@ class ObsidianProjectionTest(unittest.TestCase):
         self.assertIn(BEGIN_MARKER, overview)
         self.assertIn(END_MARKER, overview)
         self.assertIn("[[项目能力/", overview)
+        self.assertIn("[[项目历程/", overview)
+        self.assertIn("obsidian_open_uri: \"obsidian://open?", overview)
+        self.assertIn(f"http://127.0.0.1:3000/projects/{PROJECT_ID}/history", overview)
         self.assertIn("# 我的笔记", overview)
         manifest = json.loads((self.managed() / MANIFEST_NAME).read_text(encoding="utf-8"))
         self.assertEqual(PROJECT_ID, manifest["projectId"])
-        self.assertEqual(10, len(manifest["files"]))
+        self.assertEqual(17, len(manifest["files"]))
+        self.assertTrue(result["deepLinks"]["overview"]["officialFallback"].startswith("obsidian://open?"))
+        self.assertTrue(result["integrationLevels"]["level0MarkdownAndOfficialUri"])
+        self.assertFalse(result["integrationLevels"]["level2LocalRestOrMcp"])
 
     def test_noop_has_zero_writes_and_stable_hashes(self) -> None:
         first = self.projection().sync(PROJECT_ID)
         hashes = {path.relative_to(self.managed()).as_posix(): path.read_bytes() for path in self.managed().rglob("*.md")}
         manifest_before = (self.managed() / MANIFEST_NAME).read_bytes()
         second = self.projection().sync(PROJECT_ID)
-        self.assertEqual(10, second["plan"]["UNCHANGED"])
+        self.assertEqual(17, second["plan"]["UNCHANGED"])
         self.assertEqual(0, second["noteWrites"])
         self.assertEqual(0, second["totalWrites"])
         self.assertEqual(manifest_before, (self.managed() / MANIFEST_NAME).read_bytes())
         self.assertEqual(hashes, {path.relative_to(self.managed()).as_posix(): path.read_bytes() for path in self.managed().rglob("*.md")})
         self.assertGreater(first["bytesWritten"], 0)
+
+    def test_history_notes_remain_readable_without_plugins_and_advanced_uri_degrades_to_official(self) -> None:
+        first = self.projection().sync(PROJECT_ID)
+        self.assertFalse(first["integrationLevels"]["level1AdvancedUri"])
+        self.assertEqual(
+            first["deepLinks"]["history"]["officialFallback"],
+            first["deepLinks"]["history"]["preferred"],
+        )
+        story_note = next((self.managed() / "项目历程/变化故事").glob("*.md"))
+        rendered = story_note.read_text(encoding="utf-8")
+        self.assertIn("## Before", rendered)
+        self.assertIn("## Change", rendered)
+        self.assertIn("## After", rendered)
+        self.assertIn("ProjectFlow：", rendered)
+        self.assertIn(f"http://127.0.0.1:3000/projects/{PROJECT_ID}/history?type=story", rendered)
+
+        plugin_root = self.vault / ".obsidian/plugins/obsidian-advanced-uri"
+        plugin_root.mkdir(parents=True)
+        (plugin_root / "manifest.json").write_text('{"id":"obsidian-advanced-uri"}', encoding="utf-8")
+        (self.vault / ".obsidian/community-plugins.json").write_text('["obsidian-advanced-uri"]', encoding="utf-8")
+        upgraded = self.projection().sync(PROJECT_ID)
+        self.assertTrue(upgraded["integrationLevels"]["level1AdvancedUri"])
+        self.assertTrue(upgraded["deepLinks"]["history"]["preferred"].startswith("obsidian://advanced-uri?"))
+        self.assertTrue(upgraded["deepLinks"]["history"]["officialFallback"].startswith("obsidian://open?"))
+        self.assertGreater(upgraded["plan"]["UPDATED"], 0)
+
+        official = obsidian_open_uri("知识 Vault", "ProjectFlow/项目历程/索引.md")
+        advanced = obsidian_advanced_uri("知识 Vault", "ProjectFlow/项目历程/变化故事/示例.md", "Before")
+        self.assertEqual("obsidian", urllib.parse.urlparse(official).scheme)
+        self.assertEqual("obsidian", urllib.parse.urlparse(advanced).scheme)
+        self.assertIn("heading=Before", advanced)
+
+    def test_projectflow_backlinks_use_stable_frontend_routes_in_a_real_temporary_vault(self) -> None:
+        self.projection().sync(PROJECT_ID)
+        story_note = next((self.managed() / "项目历程/变化故事").glob("*.md"))
+        rendered = story_note.read_text(encoding="utf-8")
+        match = re.search(r"https?://[^)\s\"']+/projects/[^)\s\"']+/history\?type=story&amp;id=[^)\s\"']+", rendered)
+        if match is None:
+            match = re.search(r"https?://[^)\s\"']+/projects/[^)\s\"']+/history\?type=story&id=[^)\s\"']+", rendered)
+        self.assertIsNotNone(match)
+        parsed = urllib.parse.urlparse(match.group(0).replace("&amp;", "&"))
+        self.assertEqual("127.0.0.1", parsed.hostname)
+        self.assertEqual(f"/projects/{PROJECT_ID}/history", parsed.path)
+        query = urllib.parse.parse_qs(parsed.query)
+        self.assertEqual(["story"], query["type"])
+        self.assertIn(query["id"][0], {STORY_A, STORY_B, STORY_C})
+
+    def test_projectflow_app_backlinks_reject_remote_or_credentialed_urls(self) -> None:
+        for value in ["https://example.com", "http://user@127.0.0.1:3000", "http://127.0.0.1:3000?token=secret"]:
+            self.source.app_url = value
+            with self.assertRaisesRegex(ProjectionError, "local loopback"):
+                self.projection()
 
     def test_incremental_july_fact_updates_only_affected_notes_and_preserves_june(self) -> None:
         self.projection().sync(PROJECT_ID)
@@ -258,7 +405,7 @@ class ObsidianProjectionTest(unittest.TestCase):
         self.projection().sync(PROJECT_ID)
         path = self.managed() / "项目概览.md"
         original = path.read_text(encoding="utf-8")
-        changed = original.replace("## 当前状态", "## 用户修改了自动区域")
+        changed = original.replace("## 项目历程", "## 用户修改了自动区域")
         path.write_text(changed, encoding="utf-8")
         result = self.projection().sync(PROJECT_ID)
         self.assertEqual("COMPLETED_WITH_CONFLICTS", result["status"])
@@ -297,7 +444,7 @@ class ObsidianProjectionTest(unittest.TestCase):
         manifest = json.loads((self.managed() / MANIFEST_NAME).read_text(encoding="utf-8"))
         self.assertEqual(CAP_B, manifest["redirects"][key])
 
-    def test_user_move_is_discovered_and_manifest_reconciled_without_note_rewrite(self) -> None:
+    def test_user_move_is_discovered_and_reconciled_with_updated_open_uri(self) -> None:
         self.projection().sync(PROJECT_ID)
         manifest_path = self.managed() / MANIFEST_NAME
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -306,12 +453,15 @@ class ObsidianProjectionTest(unittest.TestCase):
         moved = self.managed() / "我的分类/项目事实记忆.md"
         moved.parent.mkdir()
         original.rename(moved)
-        moved_before = moved.read_bytes()
+        moved_before = moved.read_text(encoding="utf-8")
         result = self.projection().sync(PROJECT_ID)
         self.assertTrue(moved.exists())
-        self.assertEqual(moved_before, moved.read_bytes())
+        moved_after = moved.read_text(encoding="utf-8")
+        self.assertNotEqual(moved_before, moved_after)
+        self.assertIn("obsidian_open_uri: \"obsidian://open?", moved_after)
+        self.assertIn("%E6%88%91%E7%9A%84%E5%88%86%E7%B1%BB", moved_after)
         moved_plan = next(item for item in result["items"] if item["key"] == key)
-        self.assertEqual("UNCHANGED", moved_plan["action"])
+        self.assertEqual("UPDATED", moved_plan["action"])
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         self.assertEqual("我的分类/项目事实记忆.md", manifest["files"][key]["path"])
 
@@ -371,7 +521,7 @@ class ObsidianProjectionTest(unittest.TestCase):
         recovered = self.projection().sync(PROJECT_ID)
         self.assertEqual("COMPLETED", recovered["status"])
         self.assertTrue((self.managed() / MANIFEST_NAME).is_file())
-        self.assertEqual(10, len(list(self.managed().rglob("*.md"))))
+        self.assertEqual(17, len(list(self.managed().rglob("*.md"))))
 
     def test_corrupt_manifest_is_rebuilt_without_rewriting_notes(self) -> None:
         self.projection().sync(PROJECT_ID)
@@ -383,7 +533,7 @@ class ObsidianProjectionTest(unittest.TestCase):
         self.assertEqual(0, result["noteWrites"])
         self.assertEqual(before, {path.relative_to(self.managed()).as_posix(): path.read_bytes() for path in self.managed().rglob("*.md")})
         rebuilt = json.loads(manifest.read_text(encoding="utf-8"))
-        self.assertEqual(10, len(rebuilt["files"]))
+        self.assertEqual(17, len(rebuilt["files"]))
 
     def test_dry_run_status_validate_and_profiles_do_not_call_a_model(self) -> None:
         projection = self.projection()
@@ -392,7 +542,7 @@ class ObsidianProjectionTest(unittest.TestCase):
         dry = projection.dry_run(PROJECT_ID)
         self.assertFalse(dry["executed"])
         self.assertFalse(self.managed().exists())
-        self.assertEqual(10, dry["plan"]["CREATED"])
+        self.assertEqual(17, dry["plan"]["CREATED"])
         status = projection.status(PROJECT_ID)
         self.assertFalse(status["executed"])
         self.assertFalse(self.managed().exists())
@@ -433,6 +583,17 @@ class ObsidianProjectionTest(unittest.TestCase):
                 response: dict | None = None
                 if parsed.path == base + "/snapshot":
                     response = Handler.data["snapshot"]
+                elif parsed.path == base + "/history/overview":
+                    response = Handler.data["historyOverview"]
+                elif parsed.path == base + "/history/chapters":
+                    items = Handler.data["historyChapters"]
+                    response = {"items": items, "page": 0, "size": 100, "totalElements": len(items), "totalPages": 1}
+                elif parsed.path == base + "/history/stories":
+                    items = Handler.data["historyStories"]
+                    response = {"items": items, "page": 0, "size": 100, "totalElements": len(items), "totalPages": 1}
+                elif parsed.path == base + "/history/threads":
+                    items = Handler.data["historyThreads"]
+                    response = {"items": items, "page": 0, "size": 100, "totalElements": len(items), "totalPages": 1}
                 elif parsed.path == base + "/timeline" and query.get("granularity") == ["LIFECYCLE"]:
                     response = Handler.data["lifecycle"]
                 elif parsed.path == base + "/timeline" and query.get("granularity") == ["MONTH"]:
@@ -487,7 +648,7 @@ class ObsidianProjectionTest(unittest.TestCase):
             self.assertFalse(dry["executed"])
             self.assertFalse(self.managed().exists())
             first = invoke("sync")
-            self.assertEqual(10, first["noteWrites"])
+            self.assertEqual(17, first["noteWrites"])
             second = invoke("sync")
             self.assertEqual(0, second["totalWrites"])
             self.assertTrue(Handler.caller_headers)
@@ -534,7 +695,7 @@ class ObsidianProjectionTest(unittest.TestCase):
         result = ObsidianProjection(source, self.vault, now=lambda: "2026-08-20T12:00:00Z").sync(PROJECT_ID)
         elapsed_ms = (time.perf_counter() - started) * 1000
         markdown_files = len(list(self.managed().rglob("*.md")))
-        self.assertEqual(176, markdown_files)
+        self.assertEqual(183, markdown_files)
         self.assertLess(markdown_files, 250)
         self.assertEqual(0, result["plan"]["CONFLICT"])
         self.assertEqual(1, source.calls)

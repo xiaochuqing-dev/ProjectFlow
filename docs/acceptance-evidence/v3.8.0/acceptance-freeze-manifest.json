@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "release": "3.8.0",
+  "generatedAt": "2026-08-04T02:37:46+08:00",
+  "baselineMasterSha": "fd5ce827245f4fc4a20ecda15c63fc03313505ab",
+  "state": "PRE_MERGE_INCOMPLETE",
+  "artifacts": [
+    {
+      "category": "projectflow-dogfood-json",
+      "path": "docs/acceptance-evidence/v3.8.0/projectflow-dogfood/projectflow-v375-dogfood.json",
+      "length": 57191,
+      "sha256": "2D07376082D3CE4AC8E8E0BDA1F44AF596D87D880B475BBB796EFECDD37642B0"
+    },
+    {
+      "category": "projectflow-dogfood-readable",
+      "path": "docs/acceptance-evidence/v3.8.0/projectflow-dogfood/projectflow-v375-dogfood.md",
+      "length": 13793,
+      "sha256": "25E330A7F15ADDC29E1C9CD532A43D2E980DFB639F722A0C0DF9A9ECF29372DE"
+    },
+    {
+      "category": "synthetic-product-json",
+      "path": "docs/acceptance-evidence/v3.8.0/synthetic-product/synthetic-project-history.json",
+      "length": 21205,
+      "sha256": "B1F98E4152DE469F4689B38A120D447E97F4B6B005E0B3636C375E08126C63FF"
+    },
+    {
+      "category": "synthetic-product-readable",
+      "path": "docs/acceptance-evidence/v3.8.0/synthetic-product/synthetic-project-history.md",
+      "length": 13248,
+      "sha256": "54FFEA5F404D0C0532E264BEA8C26B09183F0B19F4542980B2869C5944349427"
+    },
+    {
+      "category": "public-repository-validation",
+      "path": "docs/acceptance-evidence/v3.8.0/real-projects/public-repository-validation.json",
+      "length": 4493,
+      "sha256": "82BBE0813AAE7AA2E3CD224E2D62DD516F75B136209CB6552D310F6009D08E94"
+    },
+    {
+      "category": "deepseek-real-model",
+      "path": "docs/acceptance-evidence/v3.8.0/real-model/deepseek-v380/project-history-real-model.json",
+      "length": 1234,
+      "sha256": "45CFC3B32B58DAEF844B54260D0822B860100BE8EEB79511BB156A81704B2587"
+    },
+    {
+      "category": "glm-real-model",
+      "path": "docs/acceptance-evidence/v3.8.0/real-model/glm-v380/project-history-real-model.json",
+      "length": 1252,
+      "sha256": "9B3331B5AF2BC57BB0F10C4FA879432BE0DD5038E167B0616B6FE595E8E5D088"
+    }
+  ],
+  "gates": {
+    "localDeterministic": "PASSED",
+    "realProviderCount": 2,
+    "requiredRealProviderCount": 2,
+    "crossProviderQualification": "PASSED",
+    "postgresql16": "PASSED_REQUIRED_CI",
+    "githubRequiredChecks": "PASSED",
+    "merge": "PENDING",
+    "finalAcceptance": "INCOMPLETE"
+  }
+}

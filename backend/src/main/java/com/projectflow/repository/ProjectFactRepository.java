@@ -33,6 +33,8 @@ public interface ProjectFactRepository extends JpaRepository<ProjectFact, UUID> 
     List<ProjectFact> findTop200ByProjectIdOrderByOccurredToDescCreatedAtDesc(UUID projectId);
     Page<ProjectFact> findByProjectIdOrderByTimelineEventAtAscCreatedAtAsc(UUID projectId, Pageable pageable);
 
+    Page<ProjectFact> findByProjectIdOrderByOccurredFromAscCreatedAtAsc(UUID projectId, Pageable pageable);
+
     @Query(value = """
         select fact from ProjectFact fact
         where fact.projectId = :projectId

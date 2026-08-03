@@ -1,6 +1,10 @@
-# ProjectFlow V3.7.5 Agent Protocol
+# ProjectFlow V3.8.0 Agent Protocol
 
 Before starting substantial work, read `PROJECT_CONTEXT.md` and the task-relevant source files. ProjectFlow follows: rules collect evidence, models interpret within bounded evidence, rules validate, normal objective facts are recorded automatically, and only exceptions require user attention.
+
+V3.8.0 project-history rule: Project History is the universal presentation axis, while Capability is optional. `ProjectHistoryEvent` retains normalized source events; `ProjectHistorySnapshot`, chapters, stories and threads are replaceable read models. They never become ProjectFact or rewrite the seven epistemic states. Only explicit refresh jobs may discover sources or invoke `PROJECT_HISTORY_SYNTHESIS`; every GET, Gateway, Hermes and Obsidian read is persisted-data-only.
+
+Engineering owns event membership, chronology, transitions, authority, Evidence and rewrite state. A model may make at most one bounded wording pass over allow-listed story/chapter IDs and cannot change Before/Change/After, storyRefs, eventRefs or Evidence. A reason requires eligible Evidence; otherwise it remains UNKNOWN. Rewritten Git history marks prior events STALE/INVALIDATED without deletion. The presentation order is Overview → Chapter → Story → Thread → Raw Event → Evidence, with SHA and paths kept below the first layer.
 
 V3.7.5 strong-fact rule: only project-bound `OBSERVED` and independently checked `VERIFIED` claims may be recorded as strong facts. Keep `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` and Agent `PROCESS_EVIDENCE` distinct. Never invent a historical reason from current code, infer deprecation from age, infer technical debt from model opinion, promote an Agent completion claim, or promote model consensus. Every claim retains Evidence refs, currentness, revision, validation state and limitations. The authoritative product rules are in `docs/projectflow-v3.7.5-product-constitution.md`.
 

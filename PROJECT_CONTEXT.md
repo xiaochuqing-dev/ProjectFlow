@@ -1,22 +1,34 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-08-01
+Last updated: 2026-08-03
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.7.5 is a local-first strong-fact and shared project-memory system for anyone who uses a computer to conduct a project. It discovers ordinary and unusual materials by bounded content, maps and samples large files beyond their heads, lets a provider-neutral Scout request only registered capabilities and known Evidence IDs, validates every result, and persists only evidence-qualified facts. Replaceable understanding remains separate from durable Project Facts, Timeline, Capability Map, Agent candidates, Project Memory Gateway, Hermes reads and Obsidian projection.
+ProjectFlow V3.8.0 is a local-first project-history reconstruction, strong-fact and shared project-memory system for anyone who uses a computer to conduct a project. It turns real project materials into a readable history while preserving ProjectFact as the only strong-fact source. Replaceable understanding and history snapshots remain separate from durable Project Facts, compatibility Timeline, optional Capability Map, Agent candidates, Project Memory Gateway, Hermes reads and Obsidian projection.
 
 ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation. ProjectFlow V3.5.0 added the bounded intake foundation retained by V3.6.0 and V3.7.0.
 
 Current direction:
 
 - Local Git supplies objective change evidence; Agent results add task intent and verification context.
-- The primary workflow is 分析新变化 → DevelopmentSegment → 自动 ProjectFact → 项目记录 / 项目记忆 → 自动项目历程 → 全生命周期能力地图.
+- The primary cross-project workflow is 真实材料 → 来源事件 → 时间篇章 → 变化故事 → 演变链 → Evidence 下钻 → 当前状态与长期继续工作.
 - Rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records normal evidence-backed facts.
 - Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
+
+V3.8.0 focus:
+
+- Project History is the universal product axis. Capability remains an optional software-project view and compatibility layer.
+- `ProjectHistoryEvent` is the normalized raw-event inventory. It retains source identity, revision, occurrence time, category, transition, authority, epistemic status, Evidence, relations and rewrite state without becoming a ProjectFact.
+- `ProjectHistorySnapshot` is a replaceable Level 0-3 read model containing overview, dynamic chapters, change stories and evolution threads. Failed refresh keeps the prior successful snapshot.
+- Refresh runs only through explicit persistent `PROJECT_HISTORY_REFRESH` jobs. GET overview/chapter/story/thread/event/evidence/filter APIs are owned, bounded, read-only and model-free.
+- Deterministic grouping owns membership, chronology, transition and Evidence. One bounded `PROJECT_HISTORY_SYNTHESIS` call may improve wording only; unknown IDs, fields, Evidence and unsupported authority claims are rejected.
+- Large history is paged, cached by source/strategy/Prompt identity and incrementally rebuilt with overlap. Git rewrite marks removed source events stale or invalidated rather than deleting them.
+- The presentation contract is Overview → Chapter → Story → Thread → Raw Event → Evidence. The minimal history page is a developer preview, not the final GUI.
+- Project Memory Gateway, 19-tool Hermes MCP and Obsidian Projection consume the same persisted history. Obsidian keeps zero-plugin official URI as the baseline and optional Advanced URI as an enhancement.
+- V3.8.0 introduces no new dependency, Tag, Release, daemon, watcher, Git client, project-management board, Agent manager or generic RAG layer.
 
 V3.7.5 focus:
 

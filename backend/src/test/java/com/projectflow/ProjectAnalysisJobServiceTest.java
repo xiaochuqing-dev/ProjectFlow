@@ -150,6 +150,27 @@ class ProjectAnalysisJobServiceTest {
     }
 
     @Test
+    void recoveryTreatsHistoryModelStageAsPotentiallyCharged() {
+        UUID projectId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        ProjectAnalysisJob history = new ProjectAnalysisJob(
+            projectId, userId, ProjectAnalysisJobType.PROJECT_HISTORY_REFRESH, "false"
+        );
+        history.markRunning();
+        history.advanceStage("HISTORY_MODEL_SYNTHESIS", "正在归纳变化故事");
+        when(jobRepository.findAll()).thenReturn(List.of(history));
+        ProjectAnalysisJobService service = new ProjectAnalysisJobService(
+            jobRepository, projectRepository, jobRunner, objectMapper, transactionManager
+        );
+
+        service.recoverInterruptedJobs();
+
+        assertThat(history.getStatus()).isEqualTo(ProjectAnalysisJobStatus.INTERRUPTED);
+        assertThat(history.getRestartRecoveryState()).isEqualTo("USER_CONFIRMATION_REQUIRED");
+        verify(jobRunner, never()).execute(history.getId());
+    }
+
+    @Test
     void acknowledgesFailedCapabilityJobWithoutChangingItsResultHistory() {
         UUID userId = UUID.randomUUID();
         UUID projectId = UUID.randomUUID();

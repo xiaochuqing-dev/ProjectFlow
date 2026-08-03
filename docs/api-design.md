@@ -2,6 +2,27 @@
 
 Base path: `/api`
 
+## V3.8.0 Project History
+
+History refresh is the only mutating entry. All other endpoints read persisted results and enforce authenticated project ownership.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/projects/{projectId}/history/refresh` | Start or reuse a persistent history refresh job; optional `force` ignores completed cache only, never duplicates an active equivalent job. |
+| GET | `/projects/{projectId}/history/overview` | Read status, revision, earliest/current state, representative chapters, recent changes, coverage, gaps and diagnostics. |
+| GET | `/projects/{projectId}/history/chapters` | Page dynamic chapters. |
+| GET | `/projects/{projectId}/history/chapters/{chapterId}` | Read one chapter and its stories. |
+| GET | `/projects/{projectId}/history/stories` | Page stories by subject, attention and occurrence range. |
+| GET | `/projects/{projectId}/history/stories/{storyId}` | Read Before/Change/After, raw events and related threads. |
+| GET | `/projects/{projectId}/history/threads` | Page evolution threads by subject. |
+| GET | `/projects/{projectId}/history/threads/{threadId}` | Read one thread and ordered stories. |
+| GET | `/projects/{projectId}/history/events` | Page raw events by source, category, transition, authority, epistemic status, rewrite state, subject, attention and time. |
+| GET | `/projects/{projectId}/history/events/{eventId}` | Read one normalized event. |
+| GET | `/projects/{projectId}/history/events/{eventId}/evidence` | Read bounded currentness/revision/validation/limitation/deep-link Evidence. |
+| GET | `/projects/{projectId}/history/filters` | Read supported filter values. |
+
+The same bounded reads are available under `/projects/{projectId}/project-memory/history/*` for Gateway consumers. Page size is clamped to 1–100. Responses never include raw diff, complete source payload, absolute local path, Prompt, raw model response, reasoning, Key or Authorization.
+
 All protected endpoints require:
 
 ```http

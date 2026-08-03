@@ -1,6 +1,8 @@
 # ProjectFlow
 
-ProjectFlow V3.7.5 is a strong-fact and long-term project-memory layer, not a one-shot Agent summarizer. It works from whatever project material actually exists, keeps missing knowledge as `UNKNOWN`, and separates `OBSERVED`/`VERIFIED` facts from `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` and `PROCESS_EVIDENCE`. Current code never invents a historical reason; an Agent result never proves completion; agreement between models never upgrades a claim.
+ProjectFlow V3.8.0 is a local-first project-history reconstruction and long-term project-memory layer. Its universal product axis is 项目历程, not Capability Map: it turns Git, files, documents, Project Facts, Agent results and optional collaboration metadata into a readable path from source events to dynamic chapters, change stories, evolution threads and Evidence drill-down.
+
+ProjectFact remains the only persistent strong-fact source. `OBSERVED`/`VERIFIED` stay separate from `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` and `PROCESS_EVIDENCE`; a story or chapter is a replaceable read model and cannot promote a claim. Missing reasons remain UNKNOWN, raw events are retained, and GET reads never scan Git or call a model.
 
 ProjectFlow V3.4.5 established the model-protocol foundation, V3.5.0 added bounded repository intake, V3.6.0 added precise SCIP consumption and the minimum evolution bridge, and V3.7.0 added universal evidence discovery and adaptive planning. V3.7.1 closes the plan-to-execution gap with bounded DOC_READER, Git history, Tag, worktree, manifest and Agent-result providers, complete-JSON context packing, diversity-aware evidence selection, honest dimensional history coverage, discovery caches and outbound secret redaction.
 
@@ -12,7 +14,18 @@ V3.7.4 strengthened content-first discovery, large-file ranges and shared Agent 
 
 Authorized Agents can list all loaded projects, query bounded cross-project history, read evidence/knowledge/context packages, and continue from the same durable memory after an Agent or model switch. Reads remain project-isolated and audited. Agents may submit only validated candidates; they cannot directly write strong facts. Hermes exposes the same boundary through read-only MCP tools and project context resources.
 
-V3.7.5 supports multiple Model Gateway protocols without building a model leaderboard or calling two models for every request. Quality-first means no hidden Token or time degradation. This phase establishes the factual foundation and V3.8 entry contract; it does not build a complete project-life narrative, expose internal quality metrics in the product, create a Git Tag, or create a GitHub Release.
+V3.8.0 reuses the existing provider-neutral Model Gateway and persistent Job system. Deterministic reconstruction always remains available; one bounded model call may improve wording for an eligible history window but cannot change membership, chronology, transitions or Evidence. This phase includes only a minimal read-only developer preview, not the final GUI, and creates no Git Tag or GitHub Release.
+
+## V3.8.0 Evidence-backed Project History Reconstruction
+
+- `ProjectHistoryEvent` retains normalized Git, GitHub, filesystem, document, ProjectFact and Agent-result events with stable identity, occurrence time, authority, epistemic state, Evidence, relations and CURRENT/STALE/INVALIDATED rewrite state.
+- `ProjectHistorySnapshot` stores replaceable overview, dynamic chapters, change stories and evolution threads. Refresh failure keeps the last successful snapshot and exposes degraded diagnostics.
+- The read contract is Overview → Chapters → Change Stories → Evolution Threads → Raw Events → Evidence. The first layer says what happened; SHA, paths and Evidence IDs stay in drill-down.
+- Explicit `PROJECT_HISTORY_REFRESH` jobs reuse active-job uniqueness, cancellation, retry, heartbeat, Provider timeout and ownership checks. Reads are model-free and source-scan-free.
+- Large histories are paged and reconstructed by deterministic subject/time/transition windows. They do not call a model per Commit; the bounded synthesis request can only rewrite allowed story/chapter wording.
+- Gateway and Hermes expose bounded history reads. Obsidian projects Project Overview and Project History as primary notes, preserves existing Capability notes and user-authored content, and provides official URI plus optional Advanced URI deep links.
+- The minimal `/projects/{projectId}/history` page validates information hierarchy and stable local links. It is intentionally not a final navigation or visual redesign.
+- V3.8.0 adds no runtime dependency and copies no third-party implementation. Research patterns and license boundaries are recorded in the V3.8.0 reports.
 
 ## V3.7.5 Cross-model Strong Fact and Agent Context Closure
 

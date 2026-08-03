@@ -24,6 +24,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.projectflow.dto.ProjectHistoryDtos.ChangeStory;
+import com.projectflow.dto.ProjectHistoryDtos.EvolutionThread;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryChapter;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryCoverage;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryOverviewContent;
 import com.projectflow.entity.ChangeBatch;
 import com.projectflow.entity.EvidenceConfidence;
 import com.projectflow.entity.ProjectCapability;
@@ -38,6 +43,7 @@ import com.projectflow.entity.ProjectFactCommitRef;
 import com.projectflow.entity.ProjectFactFileRef;
 import com.projectflow.entity.ProjectFactOrigin;
 import com.projectflow.entity.ProjectFactRecordStatus;
+import com.projectflow.entity.ProjectHistorySnapshot;
 import com.projectflow.entity.ProjectSediment;
 import com.projectflow.entity.ProjectSpace;
 import com.projectflow.entity.ProjectStatus;
@@ -55,6 +61,7 @@ import com.projectflow.repository.ProjectFactAgentResultRefRepository;
 import com.projectflow.repository.ProjectFactCommitRefRepository;
 import com.projectflow.repository.ProjectFactFileRefRepository;
 import com.projectflow.repository.ProjectFactRepository;
+import com.projectflow.repository.ProjectHistorySnapshotRepository;
 import com.projectflow.repository.ProjectMemoryReadAuditRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.repository.ProjectSedimentRepository;
@@ -91,6 +98,7 @@ class ProjectMemoryGatewayTest {
     @Autowired ProjectTimelineThemeRepository themeRepository;
     @Autowired ProjectTimelineThemeFactRepository themeFactRepository;
     @Autowired ProjectMemoryReadAuditRepository auditRepository;
+    @Autowired ProjectHistorySnapshotRepository historySnapshotRepository;
     @Autowired ProjectAgentCandidateRepository candidateRepository;
     @Autowired ProjectSedimentRepository sedimentRepository;
     @Autowired ProjectMemoryGatewayService gateway;
@@ -107,6 +115,7 @@ class ProjectMemoryGatewayTest {
     ProjectFact fact;
     ProjectCapability capability;
     ProjectCapabilityEvolution evolution;
+    String historyStoryId;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -152,6 +161,44 @@ class ProjectMemoryGatewayTest {
             summary.getId(), project.getId(), "FactCursor 形成背景", "真实事实支持的七月主题。", 0
         ));
         themeFactRepository.saveAndFlush(new ProjectTimelineThemeFact(project.getId(), theme.getId(), fact.getId()));
+
+        historyStoryId = "story-fact-cursor";
+        ChangeStory historyStory = new ChangeStory(
+            historyStoryId, "fact-cursor", "新增事实游标并形成稳定增量边界", "事实游标避免重试制造重复事实。",
+            "此前没有稳定的增量事实边界。", "来源记录显示新增并验证了事实游标。", "事实游标已经成为增量读取边界。",
+            List.of("项目记忆"), "", List.of(), "随后继续用于统一项目记忆读取。", List.of(), List.of("变更原因保持 UNKNOWN。"),
+            OCCURRED, OCCURRED, 1, 1, "ENGINEERING_GROUPING", "DETERMINISTIC",
+            "FULL_WITHIN_DISCOVERED_SOURCES", List.of(), List.of(UUID.randomUUID()), List.of("fact:" + fact.getId())
+        );
+        HistoryChapter historyChapter = new HistoryChapter(
+            "chapter-fact-cursor", "2026-07：事实游标形成", "这一时间区间形成了稳定的事实游标边界。",
+            OCCURRED, OCCURRED, List.of("EARLIEST_DISCOVERED_EVENT"), List.of(historyStoryId), 1, 1,
+            "ENGINEERING_GROUPING", "FULL_WITHIN_DISCOVERED_SOURCES", List.of()
+        );
+        EvolutionThread historyThread = new EvolutionThread(
+            "thread-fact-cursor", "fact-cursor", "事实游标", "PROJECT_SUBJECT", List.of(historyStoryId),
+            List.of("CREATED"), historyStory.afterState(), List.of(), List.of(), historyStory.unknowns(), 1, capability.getId()
+        );
+        HistoryCoverage historyCoverage = new HistoryCoverage(
+            true, "CURRENT", 1, 1, 0, 0, java.util.Map.of("PROJECT_FACT", 1), List.of(), List.of()
+        );
+        HistoryOverviewContent historyOverview = new HistoryOverviewContent(
+            "最早可确认事实游标尚未存在。", "最近可确认事实游标已经形成稳定增量边界。",
+            List.of(new com.projectflow.dto.ProjectHistoryDtos.HistoryChapterSummary(
+                historyChapter.id(), historyChapter.title(), historyChapter.summary(), historyChapter.from(), historyChapter.to(),
+                historyChapter.storyCount(), historyChapter.rawEventCount(), historyChapter.authority()
+            )),
+            List.of(historyStory.humanTitle()), List.of(), historyStory.unknowns()
+        );
+        ProjectHistorySnapshot historySnapshot = new ProjectHistorySnapshot(project.getId());
+        historySnapshot.complete(
+            "git:test", "history-fingerprint", 1, OCCURRED, OCCURRED,
+            "project-history-v1", "project-history-synthesis-v1",
+            objectMapper.writeValueAsString(historyOverview), objectMapper.writeValueAsString(List.of(historyChapter)),
+            objectMapper.writeValueAsString(List.of(historyStory)), objectMapper.writeValueAsString(List.of(historyThread)),
+            objectMapper.writeValueAsString(historyCoverage), "{}", UUID.randomUUID(), false
+        );
+        historySnapshotRepository.saveAndFlush(historySnapshot);
     }
 
     @Test
@@ -160,10 +207,15 @@ class ProjectMemoryGatewayTest {
         assertThat(snapshot.latestFactAt()).isEqualTo(OCCURRED);
         assertThat(snapshot.health().latestRealChangeAt()).isEqualTo(OCCURRED);
         assertThat(snapshot.health().latestAnalysisAt()).isEqualTo(ANALYZED);
+        assertThat(snapshot.health().projectHistoryStatus()).isEqualTo("READY");
+        assertThat(snapshot.projectHistory().overview().currentState()).contains("事实游标");
         assertThat(snapshot.recentChanges().items()).singleElement()
             .satisfies(item -> assertThat(item.time().eventAt()).isEqualTo(OCCURRED));
         assertThat(snapshot.representativeCapabilities()).singleElement()
             .satisfies(item -> assertThat(item.stale()).isTrue());
+        String brief = gateway.brief(owner.userId(), project.getId(), 6_000).contextText();
+        assertThat(brief).contains("项目历程：READY", "当前状态：最近可确认事实游标");
+        assertThat(brief.indexOf("项目历程：")).isLessThan(brief.indexOf("主要能力："));
 
         var july = gateway.timeline(owner.userId(), project.getId(), "MONTH", "2026-07", null, null, 0, 20, "compact");
         assertThat(july.period().facts().items()).singleElement();
@@ -172,6 +224,45 @@ class ProjectMemoryGatewayTest {
         assertThat(july.period().summary().epistemicStatus()).isEqualTo("INFERRED");
         assertThat(july.period().summary().authority()).isEqualTo("NON_AUTHORITATIVE");
         assertThat(july.period().facts().items().get(0).time().eventAt()).isEqualTo(OCCURRED);
+    }
+
+    @Test
+    void exposesWarningsForEveryNonReadyProjectHistoryState() {
+        ProjectHistorySnapshot ready = historySnapshotRepository.findByProjectId(project.getId()).orElseThrow();
+        historySnapshotRepository.deleteAll();
+        ProjectHistorySnapshot notInitialized = historySnapshotRepository.saveAndFlush(new ProjectHistorySnapshot(project.getId()));
+        assertThat(gateway.snapshot(owner.userId(), project.getId()).health().warnings())
+            .contains("项目历程尚未显式刷新");
+
+        notInitialized.begin(UUID.randomUUID(), false);
+        historySnapshotRepository.saveAndFlush(notInitialized);
+        assertThat(gateway.snapshot(owner.userId(), project.getId()).health().warnings())
+            .contains("项目历程正在刷新，当前读取结果可能尚未生成");
+
+        historySnapshotRepository.deleteAll();
+        ProjectHistorySnapshot stale = new ProjectHistorySnapshot(project.getId());
+        stale.complete(
+            ready.getProjectRevision(), ready.getSourceEventFingerprint(), ready.getSourceEventCount(),
+            ready.getEarliestEventAt(), ready.getLatestEventAt(), ready.getStrategyVersion(), ready.getPromptVersion(),
+            ready.getOverviewJson(), ready.getChaptersJson(), ready.getStoriesJson(), ready.getThreadsJson(),
+            ready.getCoverageJson(), ready.getDiagnosticsJson(), UUID.randomUUID(), false
+        );
+        stale.begin(UUID.randomUUID(), true);
+        historySnapshotRepository.saveAndFlush(stale);
+        assertThat(gateway.snapshot(owner.userId(), project.getId()).health().warnings())
+            .contains("项目历程来源已变化，当前返回上次成功快照");
+
+        stale.fail("HISTORY_FAILED", "refresh failed", "{}", UUID.randomUUID());
+        historySnapshotRepository.saveAndFlush(stale);
+        assertThat(gateway.snapshot(owner.userId(), project.getId()).health().warnings())
+            .contains("项目历程存在来源缺口、失败保留或模型降级，当前结果仍可追溯");
+
+        historySnapshotRepository.deleteAll();
+        ProjectHistorySnapshot failed = new ProjectHistorySnapshot(project.getId());
+        failed.fail("HISTORY_FAILED", "refresh failed", "{}", UUID.randomUUID());
+        historySnapshotRepository.saveAndFlush(failed);
+        assertThat(gateway.snapshot(owner.userId(), project.getId()).health().warnings())
+            .contains("项目历程刷新失败且没有可用成功快照");
     }
 
     @Test
@@ -206,15 +297,28 @@ class ProjectMemoryGatewayTest {
             .andExpect(jsonPath("$.data.items.length()").value(2))
             .andExpect(jsonPath("$.data.hasMore").value(true));
 
+        mockMvc.perform(get("/api/projects/" + project.getId() + "/project-memory/history/stories")
+                .header("Authorization", "Bearer " + owner.token())
+                .header("X-ProjectFlow-Caller", "hermes-local-test")
+                .queryParam("subject", "fact-cursor")
+                .queryParam("size", "5"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items.length()").value(1))
+            .andExpect(jsonPath("$.data.items[0].id").value(historyStoryId));
+
         var audits = auditRepository.findTop50ByProjectIdOrderByOccurredAtDesc(project.getId());
         assertThat(audits).isNotEmpty();
-        var audit = audits.get(0);
+        var audit = audits.stream().filter(item -> item.getOperationName().equals("search_project_memory"))
+            .findFirst().orElseThrow();
         assertThat(audit.getOperationName()).isEqualTo("search_project_memory");
         assertThat(audit.getQueryLength()).isEqualTo("factcursor".length());
         assertThat(audit.getQueryHash()).hasSize(64);
         assertThat(objectMapper.valueToTree(audit).toString()).doesNotContain("FactCursor", "hermes-local-test");
+        assertThat(audits).anySatisfy(item -> assertThat(item.getOperationName()).isEqualTo("list_project_change_stories"));
 
         assertThatThrownBy(() -> gateway.snapshot(UUID.randomUUID(), project.getId()))
+            .isInstanceOf(AppException.class);
+        assertThatThrownBy(() -> gateway.historyOverview(UUID.randomUUID(), project.getId()))
             .isInstanceOf(AppException.class);
         assertThatThrownBy(() -> gateway.traceFact(owner.userId(), otherProject.getId(), fact.getId(), "compact"))
             .isInstanceOf(AppException.class);
