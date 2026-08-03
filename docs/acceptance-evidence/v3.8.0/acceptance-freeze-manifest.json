@@ -8,8 +8,8 @@
     {
       "category": "projectflow-dogfood-json",
       "path": "docs/acceptance-evidence/v3.8.0/projectflow-dogfood/projectflow-v375-dogfood.json",
-      "length": 58187,
-      "sha256": "6C20E1AD94EC749DB7ABC2C0C5EBC35831F7E47875DD6790D1091612D017849A"
+      "length": 57191,
+      "sha256": "2D07376082D3CE4AC8E8E0BDA1F44AF596D87D880B475BBB796EFECDD37642B0"
     },
     {
       "category": "projectflow-dogfood-readable",
@@ -20,8 +20,8 @@
     {
       "category": "synthetic-product-json",
       "path": "docs/acceptance-evidence/v3.8.0/synthetic-product/synthetic-project-history.json",
-      "length": 21590,
-      "sha256": "CA54CE8CBBA8AD1D2C283F3C8FA8D62C9CE5BC52B8B1D6746D71B143492EF3C7"
+      "length": 21205,
+      "sha256": "B1F98E4152DE469F4689B38A120D447E97F4B6B005E0B3636C375E08126C63FF"
     },
     {
       "category": "synthetic-product-readable",
@@ -32,14 +32,14 @@
     {
       "category": "public-repository-validation",
       "path": "docs/acceptance-evidence/v3.8.0/real-projects/public-repository-validation.json",
-      "length": 4591,
-      "sha256": "4CBFEB910673CB797D7EC5A7A193FFA9E837E5C4815BE614CE481E75E61AC4EA"
+      "length": 4493,
+      "sha256": "82BBE0813AAE7AA2E3CD224E2D62DD516F75B136209CB6552D310F6009D08E94"
     },
     {
       "category": "deepseek-real-model",
       "path": "docs/acceptance-evidence/v3.8.0/real-model/deepseek-v380/project-history-real-model.json",
-      "length": 1278,
-      "sha256": "1CE9347F722D6D7479BCF1E3805D587ACFBD2D550C2C10B832B6D9DB2B460770"
+      "length": 1234,
+      "sha256": "45CFC3B32B58DAEF844B54260D0822B860100BE8EEB79511BB156A81704B2587"
     }
   ],
   "gates": {

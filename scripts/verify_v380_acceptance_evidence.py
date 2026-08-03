@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -30,6 +31,30 @@ def walk_json(value: Any, location: str, failures: list[str]) -> None:
             walk_json(child, f"{location}[{index}]", failures)
     elif isinstance(value, str) and SENSITIVE_VALUE.search(value):
         failures.append(f"{location}: sensitive or absolute-path value")
+
+
+def frozen_artifact_bytes(relative: str, target: Path) -> bytes:
+    safe_directory = f"safe.directory={ROOT.as_posix()}"
+    try:
+        staged = subprocess.run(
+            ["git", "-c", safe_directory, "ls-files", "--stage", "--", relative],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        ).stdout.strip()
+        if staged:
+            object_id = staged.split(maxsplit=3)[1]
+            return subprocess.run(
+                ["git", "-c", safe_directory, "cat-file", "blob", object_id],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+            ).stdout
+    except (OSError, subprocess.CalledProcessError, IndexError):
+        pass
+    return target.read_bytes()
 
 
 def verify_manifest(failures: list[str]) -> None:
@@ -64,7 +89,7 @@ def verify_manifest(failures: list[str]) -> None:
         if not target.is_file():
             failures.append(f"{location}: artifact is missing")
             continue
-        content = target.read_bytes()
+        content = frozen_artifact_bytes(relative, target)
         actual_hash = hashlib.sha256(content).hexdigest().upper()
         if not isinstance(expected_hash, str) or actual_hash != expected_hash.upper():
             failures.append(f"{location}: SHA-256 mismatch")

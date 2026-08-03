@@ -65,7 +65,7 @@
 
 安全产物：docs/acceptance-evidence/v3.8.0/real-model/deepseek-v380/project-history-real-model.json。
 
-SHA-256：1CE9347F722D6D7479BCF1E3805D587ACFBD2D550C2C10B832B6D9DB2B460770。
+SHA-256：45CFC3B32B58DAEF844B54260D0822B860100BE8EEB79511BB156A81704B2587。
 
 产物不包含 API Key、完整 Prompt、raw response、reasoning 或绝对路径。
 

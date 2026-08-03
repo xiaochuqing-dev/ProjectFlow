@@ -111,7 +111,9 @@ DeepSeek deepseek-v4-pro 通过固定 Prompt v2 合同：1 次请求、1,539 Tok
 
 当前正式产物中 Unsupported Claim、Invalid Evidence、Cross-project reference、Reason without Evidence 均为 0，eventConservation=true。提交内容密钥模式扫描与验收产物路径、敏感字段、长度和 SHA-256 校验均通过。
 
-安全冻结清单为 `docs/acceptance-evidence/v3.8.0/acceptance-freeze-manifest.json`，当前 SHA-256 为 `4A37B6F528CF1DB35A55A558CF9FD6A99560B5C1E3CDCC31E11C3488AA6F1652`。清单冻结六个正式产物，同时明确第二 Provider、PostgreSQL required CI、GitHub checks 和 merge 仍未完成。
+安全冻结清单为 `docs/acceptance-evidence/v3.8.0/acceptance-freeze-manifest.json`。清单冻结六个正式 Git blob 的长度和 SHA-256，避免 Windows CRLF 与 Linux LF 造成平台相关哈希，同时明确第二 Provider、PostgreSQL required CI、GitHub checks 和 merge 仍未完成。
+
+PR #13 首轮 run `30811227750` 的 `sensitive-content` 因最初清单冻结 Windows 工作树 CRLF 字节而失败；四个 JSON 在 Git 提交后转为 LF，导致长度和 SHA-256 不同。修复后校验器直接读取 Git index/blob 的规范字节，未修改验收产物语义或降低安全门槛。
 
 ## 23. Obsidian 分级结论
 

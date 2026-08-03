@@ -68,6 +68,7 @@ Dogfood 两个文件连续多次 SHA-256 一致，证明冻结输入下输出稳
 7. Frontend 首轮完整合同门禁为 54/55。旧 V3.3 文档合同只接受中文“唯一强事实来源”，而当前 PROJECT_CONTEXT 使用等价英文 “only strong-fact source”；合同改为接受两种明确等价表述后 55/55 通过。
 8. 根启动器首次 CheckOnly 在隔离 worktree 中触发 Git dubious ownership。启动器改为只给当前仓库调用传入 `git -c safe.directory`，不修改全局配置；随后 build/start/health/stop 通过。
 9. 隔离 worktree 首次生产构建因 `node_modules` 指向 worktree 外部而被 Turbopack 拒绝；改用 worktree 内独立 `npm ci`。备用 junction 一度被 TypeScript 扫描，移出 frontend 后最终生产构建通过。该环境失败未被描述为代码通过。
+10. PR #13 首轮 `sensitive-content` 因 freeze manifest 使用 Windows 工作树 CRLF 字节计算四个 JSON 的长度和 SHA-256 而失败。产物语义未变化；清单与校验器改为读取 Git index/blob 的规范提交字节，消除 Windows/Linux 换行差异，并保留首轮 CI 失败证据。
 
 这些失败均保留在验收记录中，没有通过降低安全阈值、伪造 PASS 或删除不利证据处理。
 
