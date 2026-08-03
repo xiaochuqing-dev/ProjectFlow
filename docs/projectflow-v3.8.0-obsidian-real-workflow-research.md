@@ -1,6 +1,6 @@
 # ProjectFlow V3.8.0 Obsidian 真实工作流研究
 
-研究日期：2026-08-02
+研究日期：2026-08-03
 
 ## 结论
 
@@ -18,12 +18,26 @@ ProjectFlow 与 Obsidian 的正确关系是：
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Obsidian 官方 URI | obsidianmd/obsidian-help；Obsidian 产品非开源，帮助仓库仅作官方文档参考 | 官方持续维护 | 否 | 跨应用打开 Vault、文件、标题或块 | open 支持 vault 名称/ID、file，相对文件可编码 #Heading 或 #^Block；支持 x-callback-url | URI 编码和 Linux 注册有平台差异；绝对 path 会暴露机器路径 | Level 0 默认，只使用 vault 标识和 managed relative file，不写绝对 path |
 | Advanced URI | Vinzent03/obsidian-advanced-uri，MIT | 活跃，2026-07-26 有提交 | 是，需关闭 Restricted mode 并启用社区插件 | 打开 heading、block、line、workspace、bookmark，按 frontmatter UID 导航 | obsidian://adv-uri，支持 stable UID、heading、block、workspace、bookmark | 权限可扩展到写入、命令和插件控制；插件缺失时 URI 不工作 | Level 1 可选，仅生成导航 URI；不存在时自动退回官方 URI |
-| Local REST API with MCP | coddingtonbear/obsidian-local-rest-api，MIT | 活跃，2026-08-01 有提交 | 是 | 通过本地 HTTPS REST/MCP 读写、搜索、patch、执行命令 | 127.0.0.1:27124，Bearer API key，支持 heading/block/frontmatter patch 和 ifMatch | 权限覆盖整个 Vault，包含删除、命令执行和 Agent 访问；API key 配置成本高 | Level 2 明确 opt-in、loopback、认证、最小权限；V3.8 核心不依赖，不授予 ProjectFlow 事实写权 |
-| Obsidian Git | Vinzent03/obsidian-git，MIT | 活跃，2026-07-29 有提交 | 是 | 在 Vault 内 commit、pull、push、history、diff | 可打开 GitHub 文件和历史 | README 明确 mobile highly unstable；Issue #558 报告移动端冲突导致数据丢失；大 repo 有内存和性能限制 | 只作为用户自己的同步选择；ProjectFlow 投影不自动 commit/pull/push，不把其日志当强事实 |
-| Dataview | blacksmithgu/obsidian-dataview，MIT | 最近提交 2025-04-08，维护节奏低于其他对象 | 是 | 将 frontmatter/inline fields 建索引并以 DQL/JS 查询 | 通过 query 动态汇总 ProjectFlow managed notes | DataviewJS 能改写/删除文件和联网；Issue #1280 报告 9k notes 时持续高 CPU，#1928 报告不足 700 notes 的全 Vault query 超过 100 秒 | Level 3 可选模板；默认不注入 DataviewJS，不让 Dataview 成为主索引 |
+| Local REST API with MCP | coddingtonbear/obsidian-local-rest-api，MIT | 活跃，2026-08-03 有提交 | 是 | 通过本地 HTTPS REST/MCP 读写、搜索、patch、执行命令 | 127.0.0.1:27124，Bearer API key，支持 heading/block/frontmatter patch 和 ifMatch | 权限覆盖整个 Vault，包含删除、命令执行和 Agent 访问；API key 配置成本高 | Level 2 明确 opt-in、loopback、认证、最小权限；V3.8 核心不依赖，不授予 ProjectFlow 事实写权 |
+| Obsidian Git | Vinzent03/obsidian-git，MIT | 活跃，2026-08-02 有提交 | 是 | 在 Vault 内 commit、pull、push、history、diff | 可打开 GitHub 文件和历史 | README 明确 mobile highly unstable；Issue #558 报告移动端冲突导致数据丢失；大 repo 有内存和性能限制 | 只作为用户自己的同步选择；ProjectFlow 投影不自动 commit/pull/push，不把其日志当强事实 |
+| Dataview | blacksmithgu/obsidian-dataview，MIT | 最近提交 2025-11-17，维护节奏低于其他对象 | 是 | 将 frontmatter/inline fields 建索引并以 DQL/JS 查询 | 通过 query 动态汇总 ProjectFlow managed notes | DataviewJS 能改写/删除文件和联网；Issue #1280 报告 9k notes 时持续高 CPU，#1928 报告不足 700 notes 的全 Vault query 超过 100 秒 | Level 3 可选模板；默认不注入 DataviewJS，不让 Dataview 成为主索引 |
 | Obsidian Bases | Obsidian 官方帮助；核心插件 | 官方持续维护 | 不需社区插件，但依赖支持 Bases 的 Obsidian 版本 | 基于 Markdown properties 创建 table/list/card/map 视图 | .base 文件或 Markdown code block，数据仍在本地 Markdown | 老版本或禁用核心插件时不可用；它是视图，不是事实系统 | Level 3 可选视图，普通 Markdown 仍是稳定底座 |
 
 ## 官方 URI 的现实能力
+
+### 2026-08-03 独立复核
+
+本轮重新读取官方仓库默认分支和公开 Issue，固定证据如下：
+
+- Obsidian URI 官方帮助 blob SHA：a9780431a62f49f77a8d7daeda455de0960b651a。
+- Advanced URI README blob SHA：49e6274d58787efea6bbc000cf921b06c6c1f696。
+- Local REST API with MCP README blob SHA：2b406931b281cbd00324a2c3caf07cf32916b739。
+- Obsidian Git README blob SHA：6cfe2401bee785f74c3347025ddf7b6c47be5c17。
+- Dataview README blob SHA：4e365f3ae7d22df5c9aa9926c0737fe36755dd32。
+- Obsidian Git Issue #558 仍开放，复现移动端冲突导致跨文件历史内容丢失。
+- Dataview Issue #1280 和 #1928 均仍开放，分别记录约 9,000 notes 的持续高 CPU，以及不足 700 notes 的全 Vault 查询超过 100 秒。
+
+官方帮助站页面若受浏览器权限限制，不绕过权限，改用同一官方 obsidian-help 仓库内容。
 
 官方文档已确认：
 

@@ -1,5 +1,14 @@
 # Known risks
 
+- 2026-08-03 的 `npm audit` 对当前前端依赖图报告 3 个 high，涉及 PostCSS 的 source map 文件读取/路径问题与 Sharp/libvips 继承漏洞，并聚合影响 Next。注册表当前自动修复建议是破坏性的 Next 9.3.3 downgrade，不能用 `npm audit fix --force` 代替兼容性判断；应等待或选择官方兼容修复版本，升级后重跑 lint、contracts、production build、Playwright 和根启动器。
+- V3.8.0 的 Story/Chapter 标题仍以确定性主体名为基础，真实模型只在有默认 Provider 且窗口合格时做一次有界措辞增强；无模型或模型失败时可读性保守，但成员和 Evidence 不受影响。
+- Git `--all` 会覆盖本地可达分支，不等同于远端全部协作历史；浅克隆、force-push、已删除远端分支和未授权 GitHub 元数据会形成明确覆盖缺口。
+- 当前增量策略使用受影响时间窗口与 31 天 overlap，能重建常见新增和 rewrite 范围，但超长跨年语义链仍依赖稳定 subject/Evidence；不会用模型相似度强行连接。
+- Source event 和 snapshot schema 仍由 Hibernate `ddl-auto=update` 管理，没有 Flyway/Liquibase。必须继续用旧 H2 升级与 PostgreSQL 16 CI 验证，禁止删库规避。
+- 最小 `/history` 页面只验证信息层次和深链接，不是最终 GUI；筛选、虚拟滚动、跨篇章可视化和完整可访问性设计仍是 V3.9 进入条件。
+- Obsidian Advanced URI、Local REST/MCP、Dataview/Bases 均为可选增强。零插件官方 URI 只能稳定打开 Vault/文件，标题或块级定位需要插件能力并必须安全降级。
+- 本地 DeepSeek 专项结果只适用于当日模型、Prompt v2 和冻结输入；GLM 需要可选 GitHub Secret 工作流复验，任何结果都不是任意项目准确率承诺。
+
 - API Key 与自定义 Header 值当前仍保存在应用数据库，只适合本地兼容；桌面产品化前需迁移到 OS secure store。
 - 固定本地 relay 覆盖协议、SDK 和恢复契约，不代表真实 OpenAI、Anthropic 或 DeepSeek 的输出质量、限流与私有扩展。
 - Endpoint override 只支持保留标准协议尾路径的非标准前缀；完全自定义非标准协议不在 V3.4.5。

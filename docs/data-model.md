@@ -1,5 +1,27 @@
 # Data Model
 
+## V3.8.0 Project History
+
+### project_history_events
+
+One row represents one normalized source event. Stable identity is scoped by project, source type, source identity and source revision. Rows are never promoted to ProjectFact merely because they exist.
+
+| Field group | Meaning |
+| --- | --- |
+| project/source identity | `project_id`, `stable_event_key`, `source_type`, `source_identity`, `source_revision`, `project_revision` |
+| occurrence | `occurred_at`, `effective_at`, safe actor/scope/category/transition labels |
+| trace | bounded relative affected paths, subject keys, Evidence refs, relation refs and safe deep link |
+| trust | authority plus seven-state epistemic status |
+| coverage | compact coverage and limitations JSON; no raw source payload |
+| rewrite | `CURRENT`, `STALE` or `INVALIDATED`; prior evidence is retained after Git rewrite |
+| integrity | payload hash plus created/updated timestamps |
+
+### project_history_snapshots
+
+One replaceable row per project stores source fingerprint, project revision, strategy/Prompt versions, status, coverage/diagnostics and JSON for overview, chapters, stories and evolution threads. `latest_successful_at` and prior JSON survive failed refresh. Snapshot JSON is derived intelligence and cannot update ProjectFact, Timeline, Capability or Evolution Bridge.
+
+Story IDs derive from stable subject and first stable event. Chapter IDs derive from the first story in an engineering window. Thread IDs derive from the canonical subject. These IDs are stable for the same project/source identity and support local/Obsidian deep links.
+
 ## V3.6 structural intelligence and evolution bridge
 
 `project_structure_indexes` remains one replaceable, rebuildable structure row per project. Its JSON read model is versioned as `structure-v2` and adds bounded Symbol, Definition, Reference, graph relation, important-node, functional-area, provider-diagnostic, metric, coverage, unsupported-area, source-revision, and dirty-set data. It is derived intelligence and never replaces ProjectFact.

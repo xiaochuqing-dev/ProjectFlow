@@ -1,5 +1,11 @@
 # Project Memory Gateway
 
+## V3.8.0 history-first reads
+
+Project Memory Gateway now leads snapshot and brief semantics with persisted Project History: what happened, earliest confirmed state, current state, recent stories, dynamic chapters, conflicts, unknowns and coverage. Existing Fact, fixed Timeline, Capability and Evolution reads remain compatible and keep their SOURCE/DERIVED labels.
+
+New read-only Gateway routes expose history overview, chapters, stories, threads, raw events and event Evidence under `/api/projects/{projectId}/project-memory/history`. They delegate to `ProjectHistoryReadService`, preserve 1–100 page bounds and ownership, and never call a model, Git, filesystem or refresh job. History entities remain DERIVED except the normalized source-event payload fields that directly report their original authority/epistemic status; a Gateway consumer must not treat a Chapter or Story as ProjectFact.
+
 ProjectFlow V3.4.3 adds one read-only business-semantic gateway above ProjectFact, Timeline, ProjectCapability and ProjectCapabilityEvolution. Hermes and later projections consume this layer instead of coupling to repository tables or independently reinterpreting facts.
 
 ## Semantic contract

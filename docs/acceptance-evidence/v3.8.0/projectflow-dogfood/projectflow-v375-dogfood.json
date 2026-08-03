@@ -1,0 +1,997 @@
+{
+  "version" : "projectflow-v3.8.0-dogfood-v1",
+  "source" : "ProjectFlow public Git history through V3.7.5",
+  "baselineCommit" : "fd5ce827245f4fc4a20ecda15c63fc03313505ab",
+  "baselineCommitCount" : 197,
+  "sourceEventCount" : 2611,
+  "chapterCount" : 27,
+  "storyCount" : 536,
+  "sampledStoryCount" : 100,
+  "threadCount" : 392,
+  "sampledThreadCount" : 100,
+  "v37CommitEvents" : 33,
+  "v37RawEvents" : 525,
+  "v37Stories" : 186,
+  "v37Window" : {
+    "fromInclusive" : "2026-07-25T00:00:00Z",
+    "toExclusive" : "2026-08-02T00:00:00Z",
+    "gitEventScope" : "Only GIT source events in the frozen V3.7.x window",
+    "storyScope" : "All reconstructed stories overlapping the same window, including frozen current-material metadata",
+    "comparisonLimit" : "The Git-event and story counts have different source scopes and are not a direct compression ratio"
+  },
+  "compression" : {
+    "rawEvents" : 2611,
+    "stories" : 536,
+    "chapters" : 27
+  },
+  "diagnostics" : {
+    "eventConservation" : true,
+    "invalidEvidenceRefCount" : 0,
+    "crossProjectRefCount" : 0,
+    "unsupportedStrongFactCount" : 0
+  },
+  "chapters" : [ {
+    "id" : "chapter-7505c36c54fbbeb41751",
+    "title" : "2026-06-04 至 2026-06-05：docker compose、gitignore、initialize project flow skeleton相关变化",
+    "summary" : "这一动态时间区间汇总 20 个变化故事，主要围绕“docker compose、gitignore、initialize project flow skeleton”。该区间是工程分组，不代表里程碑、成熟度或成功判断。",
+    "from" : "2026-06-04T07:50:47Z",
+    "to" : "2026-06-05T06:15:22Z",
+    "boundarySignals" : [ "EARLIEST_DISCOVERED_EVENT" ],
+    "storyRefs" : [ "story-0544fc5f713e9d57b87e", "story-363afc6c31e111223720", "story-3ce4c37a5cd2e442ec1f", "story-3dc77617b9f33a8da8ac", "story-40255ee9391b4bcdbddd", "story-4c80f271db06cadc5294", "story-ec964da15536c08dd71a", "story-f97f8d1b9cf61eb6a58b", "story-78d07260937bd38c4d0e", "story-1660366872f2e8154cfc", "story-2d041bbb8d01f52f9a59", "story-5f9dd952031e8e41bce9", "story-64f2311d04f4e56cd8f2", "story-69aebaf604cc20b319dd", "story-733ed77cce6b13195047", "story-92ada241089562ff574f", "story-a4a333f2635d31a014c4", "story-b21f40b1559f620f8e86", "story-bbaad3e10066fe487b02", "story-ca187577aebd6a0145f5" ],
+    "storyCount" : 20,
+    "rawEventCount" : 154,
+    "authority" : "ENGINEERING_GROUPING",
+    "coverage" : "FULL_WITHIN_DISCOVERED_SOURCES",
+    "limitations" : [ ]
+  }, {
+    "id" : "chapter-c6ef9ef0888074d18f5c",
+    "title" : "2026-06-04 至 2026-06-19：task、task item、task dtos相关变化",
+    "summary" : "这一动态时间区间汇总 20 个变化故事，主要围绕“task、task item、task dtos”。该区间是工程分组，不代表里程碑、成熟度或成功判断。",
+    "from" : "2026-06-04T11:26:06Z",
+    "to" : "2026-06-19T11:47:43Z",
+    "boundarySignals" : [ "DENSITY_BOUNDARY" ],
+    "storyRefs" : [ "story-11d6792df62137e84e86", "story-334f07bf75dc27263558", "story-364fc461e3ad0b06f0bf", "story-bb92dbb9dd8c883dc653", "story-bbfa0cb8f9fffdd5ffd3", "story-dcb602bff22eacbf8741", "story-f230446fefcd42eaa58a", "story-3c46966a30692b185520", "story-4a827c9ba64d18ac5cb2", "story-4fd0cf905d3ce4733322", "story-506452482ddfd7ca120f", "story-9cd8d40cdd31d9aca9cb", "story-b330eef93b4ef070ae91", "story-ceefc0aa868d6c510f6a", "story-d7e87430dade48bb60a5", "story-20c93b3d60e9e1dedb42", "story-183f321b7f8f88a8dd42", "story-fcc7cf07609facc2a935", "story-090772686f2d86701027", "story-2066503196c3849df62f" ],
+    "storyCount" : 20,
+    "rawEventCount" : 43,
+    "authority" : "ENGINEERING_GROUPING",
+    "coverage" : "FULL_WITHIN_DISCOVERED_SOURCES",
+    "limitations" : [ ]
+  }, {
+    "id" : "chapter-2fbf9d5267fc75cda7c9",
+    "title" : "2026-06-19 至 2026-06-24：v2 next work items、project context、v2 core plan相关变化",
+    "summary" : "这一动态时间区间汇总 20 个变化故事，主要围绕“v2 next work items、project context、v2 core plan”。该区间是工程分组，不代表里程碑、成熟度或成功判断。",
+    "from" : "2026-06-19T11:47:43Z",
+    "to" : "2026-06-24T05:01:09Z",
+    "boundarySignals" : [ "DENSITY_BOUNDARY" ],
+    "storyRefs" : [ "story-25cb047a00b7a730b990", "story-2787bc4070520e751b68", "story-3ea6f8446c16849c6ccd", "story-408f0f9a6d8b0625cfe2", "story-4ace8df0cd6c9e36ca0a", "story-657314ebab1ae506aee7", "story-7dcb0ea5feda7e959840", "story-83705598f1c557bc4be1", "story-8c8f3b0a49dc8675afa4", "story-9665a611337660af2aee", "story-99a1166bc1220037a8e4", "story-9b711f09d7b262cab847", "story-a1d0d62127ee8cf8e466", "story-a43ae7d72bfc2634caf1", "story-a5a79cbd930cf4945623", "story-a66ffaa84efdb71669cc", "story-bf42664c6b56cb8a7792", "story-e4d6ad867d6f2b8921cd", "story-0d0b9bc89b6c446c2b9e", "story-31c58ee8fd0bf27823dc" ],
+    "storyCount" : 20,
+    "rawEventCount" : 160,
+    "authority" : "ENGINEERING_GROUPING",
+    "coverage" : "FULL_WITHIN_DISCOVERED_SOURCES",
+    "limitations" : [ ]
+  }, {
+    "id" : "chapter-53e6936cf29d96a66b15",
+    "title" : "2026-06-19 至 2026-06-20：start projectflow、readme、export embedded data相关变化",
+    "summary" : "这一动态时间区间汇总 20 个变化故事，主要围绕“start projectflow、readme、export embedded data”。该区间是工程分组，不代表里程碑、成熟度或成功判断。",
+    "from" : "2026-06-19T18:24:12Z",
+    "to" : "2026-06-20T13:36:19Z",
+    "boundarySignals" : [ "DENSITY_BOUNDARY" ],
+    "storyRefs" : [ "story-4270e2da680fa17e1499", "story-a20a666ab0917bb0cfb1", "story-ba71b7e989d2996ebf52", "story-f4142244bf8480732b8c", "story-5e1a46f438990685411c", "story-85d6db8655ac37fbdcee", "story-168d1f0238c638029e37", "story-176b04d64bcebfea86a9", "story-1b39851b68d4171832ac", "story-26e6c410f1129bbc614d", "story-428e2bedcf52d5a6ba2c", "story-48fda9befae5df9fc90b", "story-56e3cb32ed30637839e3", "story-57ad17b2c18a0126e89c", "story-8b3c28de10754442f6fe", "story-8da58a1fbcf7f26f3460", "story-8da992b347a22648eb2e", "story-a86bc2549209b4b2ff63", "story-c62b25ea8c22ce9a6f33", "story-e54f723e9ebcfb0ede88" ],
+    "storyCount" : 20,
+    "rawEventCount" : 61,
+    "authority" : "ENGINEERING_GROUPING",
+    "coverage" : "FULL_WITHIN_DISCOVERED_SOURCES",
+    "limitations" : [ ]
+  }, {
+    "id" : "chapter-b1d3847ecedc6a0fcbd3",
+    "title" : "2026-06-20 至 2026-06-20：v3 2 phase5 context sync report、dev log format、ui相关变化",
+    "summary" : "这一动态时间区间汇总 20 个变化故事，主要围绕“v3 2 phase5 context sync report、dev log format、ui”。该区间是工程分组，不代表里程碑、成熟度或成功判断。",
+    "from" : "2026-06-20T13:36:19Z",
+    "to" : "2026-06-20T18:45:42Z",
+    "boundarySignals" : [ "DENSITY_BOUNDARY" ],
+    "storyRefs" : [ "story-e9030944122a7c9ccb42", "story-e94e4d7d7294b2b94cd2", "story-04e8eeb9b9f8b6a92520", "story-718020ce0653e71671a2", "story-73fbce4306443a1e7a83", "story-8ab219b927b81edd96b8", "story-9aeda98ed64e476c9e32", "story-d889bbbf9cda21c00d67", "story-fa00f2ee4a923547d0b9", "story-240912efc9848d0d805c", "story-404aae0124fa3a7d894a", "story-5f009af683e5e97b6897", "story-66baf441eb05bf8a2ddc", "story-7b9f3b6eb4ac50fbbf37", "story-7f2143d6453746de5a42", "story-7f8460ba34e9b19693a5", "story-8025d67e009161cc4f08", "story-82c0e84715b8475dde4e", "story-8572cdc05eca324fa658", "story-89709fa96874de43848d" ],
+    "storyCount" : 20,
+    "rawEventCount" : 86,
+    "authority" : "ENGINEERING_GROUPING",
+    "coverage" : "FULL_WITHIN_DISCOVERED_SOURCES",
+    "limitations" : [ ]
+  }, {
+    "id" : "chapter-6a112d34eaa76ec59c9e",
+    "title" : "2026-06-20 至 2026-06-22：ai review、tasks、project intelligence相关变化",
+    "summary" : "这一动态时间区间汇总 20 个变化故事，主要围绕“ai review、tasks、project intelligence”。该区间是工程分组，不代表里程碑、成熟度或成功判断。",
+    "from" : "2026-06-20T18:45:42Z",
+    "to" : "2026-06-22T01:58:12Z",
+    "boundarySignals" : [ "DENSITY_BOUNDARY" ],
+    "storyRefs" : [ "story-940f8100f38cd555a245", "story-9e627c784bc3cb5d10e5", "story-a5383367f7e98def783c", "story-a6b4ff94c0100195c1ac", "story-677b5f9e07ebd7f21f1a", "story-554faebdf8f9527c62c8", "story-6195d2c83a4a4d6db6a4", "story-a6de6e5467f691586526", "story-c3205a11ce77caff58e5", "story-c40c657e39c5261609f4", "story-f3c44214ecd2af78f552", "story-f9102605ebb31069e5e5", "story-0ce397cef49ff120a784", "story-2ce4927a8ace134832cd", "story-34724547ade37485b643", "story-3a4e1ae5fc8827759080", "story-583ef2e1c3192071a6bc", "story-6178eb87303cbb69cc1a", "story-7a8f61bf45e33e74ba81", "story-85bb6381ab7ed1e5978d" ],
+    "storyCount" : 20,
+    "rawEventCount" : 91,
+    "authority" : "ENGINEERING_GROUPING",
+    "coverage" : "FULL_WITHIN_DISCOVERED_SOURCES",
+    "limitations" : [ ]
+  }, {
+    "id" : "chapter-010901e1303366ab8325",
+    "title" : "2026-06-22 至 2026-06-22：ai provider url guard、next、resources相关变化",
+    "summary" : "这一动态时间区间汇总 20 个变化故事，主要围绕“ai provider url guard、next、resources”。该区间是工程分组，不代表里程碑、成熟度或成功判断。",
+    "from" : "2026-06-22T01:58:12Z",
+    "to" : "2026-06-22T02:49:50Z",
+    "boundarySignals" : [ "DENSITY_BOUNDARY" ],
+    "storyRefs" : [ "story-86abb62c5e95badba627", "story-ecc83985aeb9e872570f", "story-f3d77cf4f5ab3a339852", "story-030035951e7f8e3e9ca9", "story-a63b69de6071bd2ab6f9", "story-b05a65eef231100a52c2", "story-d4e20829432e59e030c8", "story-d74949875558858633f9", "story-de7453339c26fc196659", "story-ded8d2d672992cc7d094", "story-df4070507f7be4e1fb47", "story-0bd109f76e424f4b9cc9", "story-315d9d761c716f261280", "story-7438815f7bcccaa89100", "story-74840c8f5d4ac587318b", "story-7c23e869f74d2dddbfa2", "story-a987896ac9169bbb4cf9", "story-beee62bfefd44ae6df40", "story-c9124a0b60f9de715171", "story-d06a395dd7aa7eb6db66" ],
+    "storyCount" : 20,
+    "rawEventCount" : 42,
+    "authority" : "ENGINEERING_GROUPING",
+    "coverage" : "FULL_WITHIN_DISCOVERED_SOURCES",
+    "limitations" : [ ]
+  }, {
+    "id" : "chapter-b385287ac489e80f7d9e",
+    "title" : "2026-06-22 至 2026-06-22：architecture quick entry、review sidebar、dashboard stats相关变化",
+    "summary" : "这一动态时间区间汇总 20 个变化故事，主要围绕“architecture quick entry、review sidebar、dashboard stats”。该区间是工程分组，不代表里程碑、成熟度或成功判断。",
+    "from" : "2026-06-22T02:49:50Z",
+    "to" : "2026-06-22T07:45:46Z",
+    "boundarySignals" : [ "DENSITY_BOUNDARY" ],
+    "storyRefs" : [ "story-d8af3fd1d6525c4701f2", "story-dceab337a5396c29a7be", "story-e361c6959759b6586d3f", "story-e4a65ed2067a7879632b", "story-f4c8e1bc70a5a9b518da", "story-37bf611a832b77783c52", "story-12e6b321034bb6ec3238", "story-19acdfdec7b34aa485a2", "story-9ae8de9834b3973de0cf", "story-d01f84bce97fca60d321", "story-d48c7e8b99a8471e3a80", "story-92e16f05192e7f1d1c35", "story-4b5283cdde5de335b5ec", "story-ab23f3762cb8f2d1b06c", "story-3ee698fabe7c16751b80", "story-fe5731297ae7d0ec09a3", "story-3ff91ffa9a78617e9875", "story-8ec0cc43ae79690fc443", "story-895490fb90248b360921", "story-6c7895f66b5769a7732e" ],
+    "storyCount" : 20,
+    "rawEventCount" : 60,
+    "authority" : "ENGINEERING_GROUPING",
+    "coverage" : "FULL_WITHIN_DISCOVERED_SOURCES",
+    "limitations" : [ ]
+  }, {
+    "id" : "chapter-3af573192f7c8f0e93c9",
+    "title" : "2026-06-24 至 2026-06-26：web config、health controller、global exception相关变化",
+    "summary" : "这一动态时间区间汇总 20 个变化故事，主要围绕“web config、health controller、global exception”。该区间是工程分组，不代表里程碑、成熟度或成功判断。",
+    "from" : "2026-06-24T05:01:09Z",
+    "to" : "2026-06-26T05:03:15Z",
+    "boundarySignals" : [ "DENSITY_BOUNDARY" ],
+    "storyRefs" : [ "story-03eb540e9db070c1aa21", "story-7b0604cc0bd13f44f73d", "story-fdf4ac295571c0a66c9e", "story-25605096dbcd9629117c", "story-693ad43971c7a44c53bb", "story-6ce31c5b17258f35a5d8", "story-26722281dcd1d15920e5", "story-3d65f0f0af8713c38bbf", "story-4fa63966c8355dbd94fb", "story-8854c9fd60616ddeda08", "story-9444281b3f8f3d4d26d8", "story-96cd8d35eb284f8148a4", "story-df12d3bf24d650782b9e", "story-260bd0c329b10e3d916d", "story-53a785318b11c7e01d82", "story-77f54d0cf71822b19534", "story-4beb61cb9ecf831dd1b0", "story-5dd2e1be12c1836fb126", "story-7750e3fcb932a57716e2", "story-a16185b369deed7a1429" ],
+    "storyCount" : 20,
+    "rawEventCount" : 54,
+    "authority" : "ENGINEERING_GROUPING",
+    "coverage" : "FULL_WITHIN_DISCOVERED_SOURCES",
+    "limitations" : [ ]
+  }, {
+    "id" : "chapter-7f5d0e8b66c8ab1e3183",
+    "title" : "2026-06-26 至 2026-07-06：analysis records、files、fact sources相关变化",
+    "summary" : "这一动态时间区间汇总 20 个变化故事，主要围绕“analysis records、files、fact sources”。该区间是工程分组，不代表里程碑、成熟度或成功判断。",
+    "from" : "2026-06-26T05:03:15Z",
+    "to" : "2026-07-06T09:11:26Z",
+    "boundarySignals" : [ "DENSITY_BOUNDARY" ],
+    "storyRefs" : [ "story-da7d7fdca7bf14c0b741", "story-e60e9d95c6051b44f3be", "story-f6d66ab9ff6d9641d90a", "story-c1d3cc8d516165c6451a", "story-b7563fa343cce8abefb7", "story-2d9fe5b660102528f7fa", "story-db49db0f93f0c28dc126", "story-0b32ecefbf35c7e963de", "story-79979e21bd04cf89238a", "story-2e429454a801d28e7ba6", "story-31bd04482084855b3b32", "story-23cef070ba6e2934ca3c", "story-395110fc2f3aafb13551", "story-6af047fdc2ef1f4378b2", "story-136d6053ab15983e740a", "story-67e3afb487b90a8c1eae", "story-51bec72e417b1e395b29", "story-929ef2d14c88f219bc92", "story-b9bdeb5a6b90146c0dd0", "story-1733deab9d682fe8c02f" ],
+    "storyCount" : 20,
+    "rawEventCount" : 32,
+    "authority" : "ENGINEERING_GROUPING",
+    "coverage" : "FULL_WITHIN_DISCOVERED_SOURCES",
+    "limitations" : [ ]
+  }, {
+    "id" : "chapter-27c8233780ff3ccc15f2",
+    "title" : "2026-07-06 至 2026-07-06：batch status、evidence confidence、v33 persistence相关变化",
+    "summary" : "这一动态时间区间汇总 20 个变化故事，主要围绕“batch status、evidence confidence、v33 persistence”。该区间是工程分组，不代表里程碑、成熟度或成功判断。",
+    "from" : "2026-07-06T09:11:26Z",
+    "to" : "2026-07-06T18:13:25Z",
+    "boundarySignals" : [ "DENSITY_BOUNDARY" ],
+    "storyRefs" : [ "story-2f4b2d48f9ba35cb6912", "story-4b592aa5200cc8441925", "story-905227e50d5c75cda211", "story-933b0e3d8087a175f722", "story-9419f930cf3eed2c5497", "story-9d3926427f27909fb27e", "story-b08e62848f0c9d0bcf5b", "story-d5687370bf3753fff35b", "story-e3d77d9776418ade78de", "story-1af5865645474dc89c58", "story-3905fd77eded21800835", "story-4bec739c1bc4dc05371e", "story-5ebd4c7a2fc6bbdf2b1b", "story-c78d60e0ff2625a82b20", "story-0ca666dd1b9645e119c8", "story-42a0b025a09aaf1e2ef9", "story-a92210e20734a85843b1", "story-b5d635ff7cd05216b20e", "story-59556cf85fa2351f9546", "story-67d7a457645282f54ed8" ],
+    "storyCount" : 20,
+    "rawEventCount" : 80,
+    "authority" : "ENGINEERING_GROUPING",
+    "coverage" : "FULL_WITHIN_DISCOVERED_SOURCES",
+    "limitations" : [ ]
+  }, {
+    "id" : "chapter-088612a85364210bb972",
+    "title" : "2026-07-06 至 2026-07-06：evidence draft change、project change source type、v2 core controller相关变化",
+    "summary" : "这一动态时间区间汇总 20 个变化故事，主要围绕“evidence draft change、project change source type、v2 core controller”。该区间是工程分组，不代表里程碑、成熟度或成功判断。",
+    "from" : "2026-07-06T09:31:18Z",
+    "to" : "2026-07-06T09:54:50Z",
+    "boundarySignals" : [ "DENSITY_BOUNDARY" ],
+    "storyRefs" : [ "story-b7578258729740939b1f", "story-f81071d6cc3ecd642013", "story-037c5bd8dac90da011f3", "story-100aa12c0db01749dab8", "story-1332241039adb4bf83df", "story-1f22233e6ebb475adb12", "story-0bd3ab271f529dbf1ec6", "story-3a934f6296ea7c88510e", "story-4ca67e3912e1db6ff605", "story-cfe2c879a0fa3c7e9a3f", "story-e09a4414d2b51eb4ac3b", "story-178ad2f3843ff7a5cb38", "story-4473d04701c5795dd76e", "story-4a2a2a3d1b8a76caad17", "story-517ed5d78ae0b5f42572", "story-b6438f85789bc323623f", "story-d5d939cb298dc8404ccf", "story-ef79dbe2d3ddee60cc7b", "story-086743718d4fa5107d1b", "story-2bb06d7299e8f008b596" ],
+    "storyCount" : 20,
+    "rawEventCount" : 42,
+    "authority" : "ENGINEERING_GROUPING",
+    "coverage" : "FULL_WITHIN_DISCOVERED_SOURCES",
+    "limitations" : [ ]
+  } ],
+  "stories" : [ {
+    "id" : "story-0544fc5f713e9d57b87e",
+    "title" : "新增“docker compose”并形成初始结果",
+    "summary" : "新增“docker compose”并形成初始结果。变化后，项目中出现了“docker compose”的初始记录。",
+    "occurredFrom" : "2026-06-04T07:50:47Z",
+    "occurredTo" : "2026-06-04T07:50:47Z",
+    "rawEventCount" : 2,
+    "evidenceCount" : 2,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "27c507ab7ef303671bf8e8e0e82b9f3f4899cd7801da6391466b7e03e7de70e1",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a" ]
+    }, {
+      "stableEventKey" : "842f737f0de84f8d8446d404debc32fd78e8ab911780459c3490a5a9d4c8dea9",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:docker-compose.yml" ]
+    } ]
+  }, {
+    "id" : "story-363afc6c31e111223720",
+    "title" : "新增“gitignore”并形成初始结果",
+    "summary" : "新增“gitignore”并形成初始结果。变化后，项目中出现了“gitignore”的初始记录。",
+    "occurredFrom" : "2026-06-04T07:50:47Z",
+    "occurredTo" : "2026-06-06T19:15:18Z",
+    "rawEventCount" : 4,
+    "evidenceCount" : 3,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "088ffe0471f13ae8de016a15ae0999d2ff8c1744ab345aea4becf8de5f41191c",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:.gitignore" ]
+    }, {
+      "stableEventKey" : "27c507ab7ef303671bf8e8e0e82b9f3f4899cd7801da6391466b7e03e7de70e1",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a" ]
+    }, {
+      "stableEventKey" : "3afbd3796f2ccb6601d9f7a67c2235ebbe3aef3b64fa83b0e43d6d8837848463",
+      "category" : "FILE_CHANGE",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:2d69352dbe853fe4368aab13491a99b1147782ad", "file:.gitignore" ]
+    }, {
+      "stableEventKey" : "a6f2e86c01b732d5ddfbd732aac8cea7ee9db7731547bf02e6d0a9ad33eea4cd",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:2d69352dbe853fe4368aab13491a99b1147782ad" ]
+    } ]
+  }, {
+    "id" : "story-3ce4c37a5cd2e442ec1f",
+    "title" : "调整“initialize project flow skeleton”并更新已有结果",
+    "summary" : "调整“initialize project flow skeleton”并更新已有结果。变化后，“initialize project flow skeleton”进入当前时间点可确认的新状态。",
+    "occurredFrom" : "2026-06-04T07:50:47Z",
+    "occurredTo" : "2026-06-04T07:50:47Z",
+    "rawEventCount" : 1,
+    "evidenceCount" : 1,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "27c507ab7ef303671bf8e8e0e82b9f3f4899cd7801da6391466b7e03e7de70e1",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a" ]
+    } ]
+  }, {
+    "id" : "story-3dc77617b9f33a8da8ac",
+    "title" : "新增“readme”并形成初始结果",
+    "summary" : "新增“readme”并形成初始结果。变化后，项目中出现了“readme”的初始记录。",
+    "occurredFrom" : "2026-06-04T07:50:47Z",
+    "occurredTo" : "2026-06-05T06:30:33Z",
+    "rawEventCount" : 10,
+    "evidenceCount" : 6,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "27c507ab7ef303671bf8e8e0e82b9f3f4899cd7801da6391466b7e03e7de70e1",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a" ]
+    }, {
+      "stableEventKey" : "3fbdd32fb041629aae33a17a0ddf6b65c5f4097fb7259021b37e82b148c543b5",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:README.md" ]
+    }, {
+      "stableEventKey" : "93c183056ad5c36c3f9594a7aefd91a77653be482b8f8ab48b75094a33ad3a95",
+      "category" : "FILE_CHANGE",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:bc13b1a12d7926a52368d503b7b219965642954b", "file:README.md" ]
+    }, {
+      "stableEventKey" : "ae94f5a4a4c1be37d0a2833244b57ae8bb7da66b48a7614271d2eba45baba8fd",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:bc13b1a12d7926a52368d503b7b219965642954b" ]
+    }, {
+      "stableEventKey" : "3fe2363ac3ef9d8fa3d28986b0009fe547e928e3c0c90428eec00dd3bda0ab9c",
+      "category" : "FILE_CHANGE",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:4b0d5ba6605b56993aac5658b0005fa4e2273263", "file:README.md" ]
+    } ]
+  }, {
+    "id" : "story-40255ee9391b4bcdbddd",
+    "title" : "新增“env example”并形成初始结果",
+    "summary" : "新增“env example”并形成初始结果。变化后，项目中出现了“env example”的初始记录。",
+    "occurredFrom" : "2026-06-04T07:50:47Z",
+    "occurredTo" : "2026-06-04T08:19:30Z",
+    "rawEventCount" : 4,
+    "evidenceCount" : 3,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "1d726d56eb57dab8e4ef4d62eeddd913e41a05160258a2013e0937f67e46c8eb",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:.env.example" ]
+    }, {
+      "stableEventKey" : "27c507ab7ef303671bf8e8e0e82b9f3f4899cd7801da6391466b7e03e7de70e1",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a" ]
+    }, {
+      "stableEventKey" : "81ca33963916f3d5ff861fd70468d1a20882129cd6fb9cb2656a7afbc3e484b6",
+      "category" : "FILE_CHANGE",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:88730a21880d130b28370e967f175aa90fb0568b", "file:.env.example" ]
+    }, {
+      "stableEventKey" : "c605d3851e7fb68fd6588588f70496c8a1feaf141bfeb66d1f72c6b347713b5c",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:88730a21880d130b28370e967f175aa90fb0568b" ]
+    } ]
+  }, {
+    "id" : "story-4c80f271db06cadc5294",
+    "title" : "新增“前端区域”并形成初始结果",
+    "summary" : "新增“前端区域”并形成初始结果。变化后，项目中出现了“前端区域”的初始记录。",
+    "occurredFrom" : "2026-06-04T07:50:47Z",
+    "occurredTo" : "2026-06-06T19:15:18Z",
+    "rawEventCount" : 32,
+    "evidenceCount" : 26,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "27c507ab7ef303671bf8e8e0e82b9f3f4899cd7801da6391466b7e03e7de70e1",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a" ]
+    }, {
+      "stableEventKey" : "28199cd84e935ebe2f39eb452c00b109169de935da5be21af63b913323c55326",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:frontend/postcss.config.mjs" ]
+    }, {
+      "stableEventKey" : "38e57653917d17ff6912063ba07c6801fd8a3866f115c6837970b846ead8cf7b",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:frontend/package.json" ]
+    }, {
+      "stableEventKey" : "5b5fa7fa6821f311d7cfca0569657836e0bc67615d37cffc2735f5b7ad8a969a",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:frontend/next-env.d.ts" ]
+    }, {
+      "stableEventKey" : "5fe3a9659179319a2f801688408dec00aed1475227bb4a7fb9721aedb28d162c",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:frontend/public/assets/login-background.png" ]
+    } ]
+  }, {
+    "id" : "story-ec964da15536c08dd71a",
+    "title" : "新增“文档区域”并形成初始结果",
+    "summary" : "新增“文档区域”并形成初始结果。变化后，项目中出现了“文档区域”的初始记录。",
+    "occurredFrom" : "2026-06-04T07:50:47Z",
+    "occurredTo" : "2026-06-06T19:15:18Z",
+    "rawEventCount" : 21,
+    "evidenceCount" : 20,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "1e50628b72268a97c766ce0b9cacd4d040d6f46a620e4b05d98e83fc0dffc5eb",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:docs/api-design.md" ]
+    }, {
+      "stableEventKey" : "27c507ab7ef303671bf8e8e0e82b9f3f4899cd7801da6391466b7e03e7de70e1",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a" ]
+    }, {
+      "stableEventKey" : "94ce83578888ee31eed874663ac1a3ec703a9537a21624115795413b646d5f24",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:docs/round-plan.md" ]
+    }, {
+      "stableEventKey" : "a360c9609cfa16b252020fcd05e61a6fde8d0df18525c70b57f442e766e94cdc",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:docs/product-scope.md" ]
+    }, {
+      "stableEventKey" : "a90e9663821394c0b9daec35257ff38b7f579635d8e78867cdd9cf2bb6aec37a",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:docs/data-model.md" ]
+    } ]
+  }, {
+    "id" : "story-f97f8d1b9cf61eb6a58b",
+    "title" : "新增“后端区域”并形成初始结果",
+    "summary" : "新增“后端区域”并形成初始结果。变化后，项目中出现了“后端区域”的初始记录。",
+    "occurredFrom" : "2026-06-04T07:50:47Z",
+    "occurredTo" : "2026-06-06T19:15:18Z",
+    "rawEventCount" : 67,
+    "evidenceCount" : 60,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "27c507ab7ef303671bf8e8e0e82b9f3f4899cd7801da6391466b7e03e7de70e1",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a" ]
+    }, {
+      "stableEventKey" : "673a48755dcae338a50a95ab50338002cbfff3e303e9f5eba66f020b6da115a6",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:backend/src/test/resources/application-test.yml" ]
+    }, {
+      "stableEventKey" : "a1ba7100f660b91424c58944a5132d0dec8483248e1a32c0384e04760c6b15b2",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:backend/src/test/java/com/projectflow/HealthControllerTest.java" ]
+    }, {
+      "stableEventKey" : "a919397b7adbffbf45b061ad243a7cd209458b3f3129712d133ea9ee30694bce",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:backend/src/main/resources/application.yml" ]
+    }, {
+      "stableEventKey" : "ab5f146ba0b6137c7124b5e8c3cc713eff2bb3943483951c5b218dc2554509af",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:ae9fba1e60758252635695b797169dfde3c41e0a", "file:backend/src/main/java/com/projectflow/HealthController.java" ]
+    } ]
+  }, {
+    "id" : "story-78d07260937bd38c4d0e",
+    "title" : "调整“add authentication and app shell”并更新已有结果",
+    "summary" : "调整“add authentication and app shell”并更新已有结果。变化后，“add authentication and app shell”进入当前时间点可确认的新状态。",
+    "occurredFrom" : "2026-06-04T08:19:30Z",
+    "occurredTo" : "2026-06-04T08:19:30Z",
+    "rawEventCount" : 1,
+    "evidenceCount" : 1,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "c605d3851e7fb68fd6588588f70496c8a1feaf141bfeb66d1f72c6b347713b5c",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:88730a21880d130b28370e967f175aa90fb0568b" ]
+    } ]
+  }, {
+    "id" : "story-1660366872f2e8154cfc",
+    "title" : "新增“project dtos”并形成初始结果",
+    "summary" : "新增“project dtos”并形成初始结果。变化后，项目中出现了“project dtos”的初始记录。",
+    "occurredFrom" : "2026-06-04T10:41:25Z",
+    "occurredTo" : "2026-06-04T10:41:25Z",
+    "rawEventCount" : 2,
+    "evidenceCount" : 2,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "281b25209f3be810723b7a27c236795cb7769c041ced0fac36857d08914c3865",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a" ]
+    }, {
+      "stableEventKey" : "339b1763b22bc633319f7d8e33ea1a78f9c624b782a731d500386dc2fb2913e6",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a", "file:backend/src/main/java/com/projectflow/dto/ProjectDtos.java" ]
+    } ]
+  }, {
+    "id" : "story-2d041bbb8d01f52f9a59",
+    "title" : "调整“dashboard”并更新已有结果",
+    "summary" : "调整“dashboard”并更新已有结果。变化后，“dashboard”进入当前时间点可确认的新状态。",
+    "occurredFrom" : "2026-06-04T10:41:25Z",
+    "occurredTo" : "2026-06-05T04:37:48Z",
+    "rawEventCount" : 4,
+    "evidenceCount" : 3,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "281b25209f3be810723b7a27c236795cb7769c041ced0fac36857d08914c3865",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a" ]
+    }, {
+      "stableEventKey" : "53295a5f9ffe165a8556c4d49fcb024282e0f44812b6f3bc6dc7d8469d39ea46",
+      "category" : "FILE_CHANGE",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a", "file:frontend/src/app/dashboard/page.tsx" ]
+    }, {
+      "stableEventKey" : "3bb215d03a9caad5e8027a5ad236ee76c2d3b80b60a8015cac0c070c8e3d2265",
+      "category" : "FILE_CHANGE",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:1e95e622a7c253e1a2dd2c15f176c77927f7714b", "file:frontend/src/app/dashboard/page.tsx" ]
+    }, {
+      "stableEventKey" : "99f842122bc7645e6c7d1b384310c3c6a11e12d66735fc4c273d6b8615688bff",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:1e95e622a7c253e1a2dd2c15f176c77927f7714b" ]
+    } ]
+  }, {
+    "id" : "story-5f9dd952031e8e41bce9",
+    "title" : "新增“project status”并形成初始结果",
+    "summary" : "新增“project status”并形成初始结果。变化后，项目中出现了“project status”的初始记录。",
+    "occurredFrom" : "2026-06-04T10:41:25Z",
+    "occurredTo" : "2026-06-04T10:41:25Z",
+    "rawEventCount" : 2,
+    "evidenceCount" : 2,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "281b25209f3be810723b7a27c236795cb7769c041ced0fac36857d08914c3865",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a" ]
+    }, {
+      "stableEventKey" : "c7beb3d80ee1abcb8f7da0d4e3f7046b8ef9483f7f7031cf9a70660afee28207",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a", "file:backend/src/main/java/com/projectflow/entity/ProjectStatus.java" ]
+    } ]
+  }, {
+    "id" : "story-64f2311d04f4e56cd8f2",
+    "title" : "新增“project id”并形成初始结果",
+    "summary" : "新增“project id”并形成初始结果。变化后，项目中出现了“project id”的初始记录。",
+    "occurredFrom" : "2026-06-04T10:41:25Z",
+    "occurredTo" : "2026-06-05T06:01:13Z",
+    "rawEventCount" : 4,
+    "evidenceCount" : 3,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "281b25209f3be810723b7a27c236795cb7769c041ced0fac36857d08914c3865",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a" ]
+    }, {
+      "stableEventKey" : "373c419c72a3f47461c04b70f8d2c3e6cfae4d986a8f4bd1a7dc2b0732916fc7",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a", "file:frontend/src/app/projects/[projectId][ABSOLUTE_PATH_REDACTED]" ]
+    }, {
+      "stableEventKey" : "93fdac16cbd469460de2f77bb99aefb43586367c1e0fabd71c1d9b0b88f74c69",
+      "category" : "FILE_CHANGE",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:d4a22f49b3bc073731d5bcf5010abefc1e649173", "file:frontend/src/app/projects/[projectId][ABSOLUTE_PATH_REDACTED]" ]
+    }, {
+      "stableEventKey" : "97c638eb021882d929a750b643edc75bedd56e650f94839ac1f2b05763f70ffb",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:d4a22f49b3bc073731d5bcf5010abefc1e649173" ]
+    } ]
+  }, {
+    "id" : "story-69aebaf604cc20b319dd",
+    "title" : "新增“string list converter”并形成初始结果",
+    "summary" : "新增“string list converter”并形成初始结果。变化后，项目中出现了“string list converter”的初始记录。",
+    "occurredFrom" : "2026-06-04T10:41:25Z",
+    "occurredTo" : "2026-06-04T10:41:25Z",
+    "rawEventCount" : 2,
+    "evidenceCount" : 2,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "281b25209f3be810723b7a27c236795cb7769c041ced0fac36857d08914c3865",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a" ]
+    }, {
+      "stableEventKey" : "29d6fa5b5f73ea2bc847c4051708d0b1e5433f955272ba1e0f61aa81f78025ac",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a", "file:backend/src/main/java/com/projectflow/support/StringListConverter.java" ]
+    } ]
+  }, {
+    "id" : "story-733ed77cce6b13195047",
+    "title" : "新增“app shell”并形成初始结果",
+    "summary" : "新增“app shell”并形成初始结果。变化后，项目中出现了“app shell”的初始记录。",
+    "occurredFrom" : "2026-06-04T10:41:25Z",
+    "occurredTo" : "2026-06-04T12:27:09Z",
+    "rawEventCount" : 6,
+    "evidenceCount" : 4,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "281b25209f3be810723b7a27c236795cb7769c041ced0fac36857d08914c3865",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a" ]
+    }, {
+      "stableEventKey" : "ef05e1a20471aac174344744651119b34950c9ebbc2b9a13637f16661986283a",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a", "file:frontend/src/components/AppShell.tsx" ]
+    }, {
+      "stableEventKey" : "0bafb2a927a2f5c0935798dff84ab259b0fd269965996338f2f5686576c83ae4",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:ab497cbd6e36791c5ffa6911df7276447d49c354" ]
+    }, {
+      "stableEventKey" : "afe0a0fd6bf6f67c5103ce8ffda92458c4570a9c58749d7a53b82c741c64aed2",
+      "category" : "FILE_CHANGE",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:ab497cbd6e36791c5ffa6911df7276447d49c354", "file:frontend/src/components/AppShell.tsx" ]
+    }, {
+      "stableEventKey" : "9e134d3e6a503481fc0a312c59c09454ddf1e478a13f4bc57348ca3911c1291c",
+      "category" : "FILE_CHANGE",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:bc427a7623ec59f3fa9b7dc55edb7067793201fb", "file:frontend/src/components/AppShell.tsx" ]
+    } ]
+  }, {
+    "id" : "story-92ada241089562ff574f",
+    "title" : "新增“project space”并形成初始结果",
+    "summary" : "新增“project space”并形成初始结果。变化后，项目中出现了“project space”的初始记录。",
+    "occurredFrom" : "2026-06-04T10:41:25Z",
+    "occurredTo" : "2026-06-04T10:41:25Z",
+    "rawEventCount" : 2,
+    "evidenceCount" : 2,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "1d092e566fa60c0f5b974217644dea08bb073462766f958608464d88b2daf055",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a", "file:backend/src/main/java/com/projectflow/entity/ProjectSpace.java" ]
+    }, {
+      "stableEventKey" : "281b25209f3be810723b7a27c236795cb7769c041ced0fac36857d08914c3865",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a" ]
+    } ]
+  }, {
+    "id" : "story-a4a333f2635d31a014c4",
+    "title" : "新增“project controller”并形成初始结果",
+    "summary" : "新增“project controller”并形成初始结果。变化后，项目中出现了“project controller”的初始记录。",
+    "occurredFrom" : "2026-06-04T10:41:25Z",
+    "occurredTo" : "2026-06-04T10:41:25Z",
+    "rawEventCount" : 2,
+    "evidenceCount" : 2,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "281b25209f3be810723b7a27c236795cb7769c041ced0fac36857d08914c3865",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a" ]
+    }, {
+      "stableEventKey" : "3a6b2334d179c155e42214e4ed4433f004f8ff0396246f296db5888c2f40b39b",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a", "file:backend/src/test/java/com/projectflow/ProjectControllerTest.java" ]
+    } ]
+  }, {
+    "id" : "story-b21f40b1559f620f8e86",
+    "title" : "新增“project”并形成初始结果",
+    "summary" : "新增“project”并形成初始结果。变化后，项目中出现了“project”的初始记录。",
+    "occurredFrom" : "2026-06-04T10:41:25Z",
+    "occurredTo" : "2026-06-04T10:41:25Z",
+    "rawEventCount" : 4,
+    "evidenceCount" : 4,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "13823d3487110afb6a1462d18635cd78ad4a22d4160ff8b26ddc472d587f75db",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a", "file:backend/src/main/java/com/projectflow/service/ProjectService.java" ]
+    }, {
+      "stableEventKey" : "281b25209f3be810723b7a27c236795cb7769c041ced0fac36857d08914c3865",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a" ]
+    }, {
+      "stableEventKey" : "c137ea0f8efd41009ff75c6536900e35aaae039c51662f20b3f500b29a84a268",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a", "file:backend/src/main/java/com/projectflow/repository/ProjectRepository.java" ]
+    }, {
+      "stableEventKey" : "e8d46f400d42b617baa3a3dd58aaba26cdeb6cb0138e22d16c739d55c1e374e6",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a", "file:backend/src/main/java/com/projectflow/controller/ProjectController.java" ]
+    } ]
+  }, {
+    "id" : "story-bbaad3e10066fe487b02",
+    "title" : "新增“projects”并形成初始结果",
+    "summary" : "新增“projects”并形成初始结果。变化后，项目中出现了“projects”的初始记录。",
+    "occurredFrom" : "2026-06-04T10:41:25Z",
+    "occurredTo" : "2026-06-05T06:15:22Z",
+    "rawEventCount" : 6,
+    "evidenceCount" : 4,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "281b25209f3be810723b7a27c236795cb7769c041ced0fac36857d08914c3865",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a" ]
+    }, {
+      "stableEventKey" : "74acf3a6abb90d8b45daf5a441920c4a4a5324d02ffaa43e6b01c869e2d2c236",
+      "category" : "FILE_CHANGE",
+      "transition" : "CREATED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a", "file:frontend/src/app/projects/page.tsx" ]
+    }, {
+      "stableEventKey" : "8d886e85284be93b8ab55dd957ecd641e6fd0363155c9e67b81d09cd44a95c8e",
+      "category" : "FILE_CHANGE",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:d4a22f49b3bc073731d5bcf5010abefc1e649173", "file:frontend/src/app/projects/page.tsx" ]
+    }, {
+      "stableEventKey" : "97c638eb021882d929a750b643edc75bedd56e650f94839ac1f2b05763f70ffb",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:d4a22f49b3bc073731d5bcf5010abefc1e649173" ]
+    }, {
+      "stableEventKey" : "27544cc5e3024d5a9be3f8bd6df47e3af38a82f7ac840136b3bb011f3a8fe2e8",
+      "category" : "FILE_CHANGE",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:59efee7a18e61bc3beb826522bd0ad95fe8ff242", "file:frontend/src/app/projects/page.tsx" ]
+    } ]
+  }, {
+    "id" : "story-ca187577aebd6a0145f5",
+    "title" : "调整“api”并更新已有结果",
+    "summary" : "调整“api”并更新已有结果。变化后，“api”进入当前时间点可确认的新状态。",
+    "occurredFrom" : "2026-06-04T10:41:25Z",
+    "occurredTo" : "2026-06-05T06:15:22Z",
+    "rawEventCount" : 8,
+    "evidenceCount" : 5,
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "drillDown" : [ {
+      "stableEventKey" : "281b25209f3be810723b7a27c236795cb7769c041ced0fac36857d08914c3865",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a" ]
+    }, {
+      "stableEventKey" : "d100a525faca903a1de7ebec68623064d908ac35e96f5fe7e136958ac2bf2e81",
+      "category" : "FILE_CHANGE",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:a624ad8436bdc9b54a9bdb1a3e15f62348eb924a", "file:frontend/src/lib/api.ts" ]
+    }, {
+      "stableEventKey" : "0bafb2a927a2f5c0935798dff84ab259b0fd269965996338f2f5686576c83ae4",
+      "category" : "COMMIT",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:ab497cbd6e36791c5ffa6911df7276447d49c354" ]
+    }, {
+      "stableEventKey" : "e10dd417466427dc92ac5a63c5effff2cacfd845c2f304313e00bfd9fcf0124a",
+      "category" : "FILE_CHANGE",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:ab497cbd6e36791c5ffa6911df7276447d49c354", "file:frontend/src/lib/api.ts" ]
+    }, {
+      "stableEventKey" : "8cc5b31f9963d6819fe401fa538ecf2775062e085aa10a39d04b053e3f73fc72",
+      "category" : "FILE_CHANGE",
+      "transition" : "MODIFIED",
+      "evidenceRefs" : [ "commit:bc427a7623ec59f3fa9b7dc55edb7067793201fb", "file:frontend/src/lib/api.ts" ]
+    } ]
+  } ],
+  "threads" : [ {
+    "id" : "thread-bb365c19d81ed1c10706",
+    "subjectKey" : "2026-07-06-persistent-change-scan-job",
+    "subjectLabel" : "2026 07 06 persistent change scan job",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-2b66510ee0ef43b4b098" ],
+    "transitions" : [ "MODIFIED", "CREATED" ],
+    "currentOutcome" : "变化后，项目中出现了“2026 07 06 persistent change scan job”的初始记录。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 2,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-09cbdcdcaa75cc428cf3",
+    "subjectKey" : "2026-07-06-persistent-change-scan-job-design",
+    "subjectLabel" : "2026 07 06 persistent change scan job design",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-8f1d805af69fa5ffbeb8" ],
+    "transitions" : [ "CREATED", "MODIFIED" ],
+    "currentOutcome" : "变化后，项目中出现了“2026 07 06 persistent change scan job design”的初始记录。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 2,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-cd1df45b8ffb3e4d4e06",
+    "subjectKey" : "2026-07-06-projectflow-v3-3-sedimentation",
+    "subjectLabel" : "2026 07 06 projectflow v3 3 sedimentation",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-b9bdeb5a6b90146c0dd0" ],
+    "transitions" : [ "MODIFIED", "CREATED" ],
+    "currentOutcome" : "变化后，项目中出现了“2026 07 06 projectflow v3 3 sedimentation”的初始记录。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 3,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-c651d4a4e61434eb0ff5",
+    "subjectKey" : "2026-07-06-projectflow-v3-3-sedimentation-design",
+    "subjectLabel" : "2026 07 06 projectflow v3 3 sedimentation design",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-929ef2d14c88f219bc92" ],
+    "transitions" : [ "MODIFIED", "CREATED" ],
+    "currentOutcome" : "变化后，项目中出现了“2026 07 06 projectflow v3 3 sedimentation design”的初始记录。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 2,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-db3e8f0ad429866e8282",
+    "subjectKey" : "212-2026-07-10",
+    "subjectLabel" : "212 2026 07 10",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-77b3f5d8d4440f3762d9" ],
+    "transitions" : [ "CREATED", "MODIFIED" ],
+    "currentOutcome" : "变化后，项目中出现了“212 2026 07 10”的初始记录。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 3,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-2504963e438577d47d76",
+    "subjectKey" : "project-area-github",
+    "subjectLabel" : "CI 与协作配置",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-412a5a3d1e4f18244940" ],
+    "transitions" : [ "MODIFIED", "CREATED" ],
+    "currentOutcome" : "变化后，项目中出现了“CI 与协作配置”的初始记录。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 17,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-eb44a9894ff7df0a8179",
+    "subjectKey" : "activity-feed",
+    "subjectLabel" : "activity feed",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-a987896ac9169bbb4cf9" ],
+    "transitions" : [ "CREATED", "MODIFIED" ],
+    "currentOutcome" : "变化后，项目中出现了“activity feed”的初始记录。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 3,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-9dc4ff52f68385b77c9e",
+    "subjectKey" : "adaptive-analysis-planner",
+    "subjectLabel" : "adaptive analysis planner",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-665a576574156092d822" ],
+    "transitions" : [ "MODIFIED" ],
+    "currentOutcome" : "变化后，“adaptive analysis planner”进入当前时间点可确认的新状态。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 14,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-37fea1aaaa53ff914b05",
+    "subjectKey" : "change-add-adaptive-evidence-understanding",
+    "subjectLabel" : "add adaptive evidence understanding",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-0742400c773a27fadd3e" ],
+    "transitions" : [ "MODIFIED" ],
+    "currentOutcome" : "变化后，“add adaptive evidence understanding”进入当前时间点可确认的新状态。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 1,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-8acda5004f43f9e59726",
+    "subjectKey" : "change-add-authentication-and-app-shell",
+    "subjectLabel" : "add authentication and app shell",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-78d07260937bd38c4d0e" ],
+    "transitions" : [ "MODIFIED" ],
+    "currentOutcome" : "变化后，“add authentication and app shell”进入当前时间点可确认的新状态。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 1,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-ea4fb49b5783398ee8bf",
+    "subjectKey" : "change-add-automatic-project-fact-memory",
+    "subjectLabel" : "add automatic project fact memory",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-8184c234868f9e042175" ],
+    "transitions" : [ "MODIFIED" ],
+    "currentOutcome" : "变化后，“add automatic project fact memory”进入当前时间点可确认的新状态。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 1,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-b3d658499d3434ce41fc",
+    "subjectKey" : "change-add-automatic-project-timeline",
+    "subjectLabel" : "add automatic project timeline",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-f3ce961ab79fa71a2af9" ],
+    "transitions" : [ "MODIFIED" ],
+    "currentOutcome" : "变化后，“add automatic project timeline”进入当前时间点可确认的新状态。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 1,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-577acfbf17492a8af8a2",
+    "subjectKey" : "change-add-curated-obsidian-project-memory-projection",
+    "subjectLabel" : "add curated obsidian project memory projection",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-9edb2d5fca7e136536f4" ],
+    "transitions" : [ "MODIFIED" ],
+    "currentOutcome" : "变化后，“add curated obsidian project memory projection”进入当前时间点可确认的新状态。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 1,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-f92a30b2821a1085a41e",
+    "subjectKey" : "change-add-fact-native-lifecycle-capability-map",
+    "subjectLabel" : "add fact native lifecycle capability map",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-c6a071e1163601b8334a" ],
+    "transitions" : [ "MODIFIED" ],
+    "currentOutcome" : "变化后，“add fact native lifecycle capability map”进入当前时间点可确认的新状态。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 1,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-00b37c92ca1c4a060998",
+    "subjectKey" : "change-add-import-and-ai-reflection-workflows",
+    "subjectLabel" : "add import and ai reflection workflows",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-20c93b3d60e9e1dedb42" ],
+    "transitions" : [ "MODIFIED" ],
+    "currentOutcome" : "变化后，“add import and ai reflection workflows”进入当前时间点可确认的新状态。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 1,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-d8edd115310acf99e04e",
+    "subjectKey" : "change-add-project-flow-v3-3-7",
+    "subjectLabel" : "add project flow v3 3 7",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-be90f35e9924e3582706" ],
+    "transitions" : [ "MODIFIED" ],
+    "currentOutcome" : "变化后，“add project flow v3 3 7”进入当前时间点可确认的新状态。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 1,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-da84d69d44588a88a02f",
+    "subjectKey" : "change-add-project-memory-gateway-and-hermes",
+    "subjectLabel" : "add project memory gateway and hermes",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-c4fa856c4b84794068e3" ],
+    "transitions" : [ "MODIFIED" ],
+    "currentOutcome" : "变化后，“add project memory gateway and hermes”进入当前时间点可确认的新状态。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 1,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-5b1c57aa4de9d68b4c9c",
+    "subjectKey" : "change-add-v3-6-structural-intelligence-and",
+    "subjectLabel" : "add v3 6 structural intelligence and",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-45b294dd707b1351a52c" ],
+    "transitions" : [ "MODIFIED" ],
+    "currentOutcome" : "变化后，“add v3 6 structural intelligence and”进入当前时间点可确认的新状态。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 1,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-203d52197a349a4cc757",
+    "subjectKey" : "agent-bridge-health",
+    "subjectLabel" : "agent bridge health",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-1332241039adb4bf83df" ],
+    "transitions" : [ "CREATED", "MODIFIED" ],
+    "currentOutcome" : "变化后，项目中出现了“agent bridge health”的初始记录。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 2,
+    "capabilityId" : null
+  }, {
+    "id" : "thread-8b4cd892a3a1035246cb",
+    "subjectKey" : "agent-bridge-v33-controller",
+    "subjectLabel" : "agent bridge v33 controller",
+    "subjectType" : "PROJECT_SUBJECT",
+    "storyRefs" : [ "story-1f22233e6ebb475adb12" ],
+    "transitions" : [ "MODIFIED", "CREATED" ],
+    "currentOutcome" : "变化后，项目中出现了“agent bridge v33 controller”的初始记录。",
+    "gaps" : [ ],
+    "conflicts" : [ ],
+    "unknowns" : [ "未发现可独立验证的变更原因；原因保持 UNKNOWN。 " ],
+    "evidenceCount" : 2,
+    "capabilityId" : null
+  } ]
+}

@@ -1,10 +1,12 @@
 # Hermes MCP Integration
 
-ProjectFlow provides a repository-local, dependency-free Python stdio MCP adapter at `integrations/hermes/projectflow_mcp.py`. It exposes the Project Memory Gateway and the V3.7.5 Agent Context read boundary only; it is not a general REST proxy and contains no write tool.
+ProjectFlow provides a repository-local, dependency-free Python stdio MCP adapter at `integrations/hermes/projectflow_mcp.py`. It exposes the Project Memory Gateway, V3.8.0 Project History and Agent Context read boundaries only; it is not a general REST proxy and contains no write tool.
 
 ## Tools
 
-The server exposes thirteen bounded, idempotent, read-only tools: `list_projects`, `get_project_snapshot`, `search_project_memory`, `get_recent_changes`, `get_project_timeline`, `list_project_capabilities`, `get_capability_evolution`, `trace_project_fact`, `get_project_brief`, `search_project_portfolio`, `get_project_context_package`, `get_project_evidence`, and `get_project_knowledge`.
+The server exposes nineteen bounded, idempotent, read-only tools. Six V3.8.0 tools cover `get_project_history_overview`, `list_project_history_chapters`, `list_project_change_stories`, `list_project_evolution_threads`, `list_project_history_events` and `get_project_history_evidence`. The previous thirteen project, snapshot, search, recent, Timeline, Capability, Fact, brief, portfolio, context, Evidence and knowledge tools remain compatible.
+
+History tools preserve filters, pagination, occurrence time, authority, epistemic status and rewrite state. Hermes starts with what happened, then drills into raw events and Evidence; it cannot refresh history, write a Fact, alter a Story or control Git/Obsidian.
 
 Context Package v2 accepts task, scope, revision preference, Evidence depth and size budget. It returns deterministic package revision, status partitions, safe ranges, currentness, conflicts, unknowns, limitations and unread scope without scanning the repository or calling a model. Hermes cannot submit Candidate Work Results or invoke local revalidation.
 

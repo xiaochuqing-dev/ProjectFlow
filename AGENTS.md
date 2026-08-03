@@ -1,3 +1,16 @@
+<!-- PROJECTFLOW V3.8.0 CONTEXT START -->
+ProjectFlow 当前版本为 V3.8.0。后续 Agent 必须按“真实项目材料 -> 规范化来源事件 -> 动态时间篇章 -> 变化故事 -> 演变链 -> 原始事件与 Evidence 下钻 -> 当前结果 -> 人与 Agent 继续工作”理解产品。项目历程是通用主轴，Capability 只是部分项目的可选视图。
+
+V3.8.0 项目历程重建规则（后续 Agent 必须遵守）：
+- ProjectFact 仍是唯一强事实来源。ProjectHistoryEvent 是来源事件库存，ProjectHistorySnapshot、Chapter、Story、Thread 都是可替换派生读模型，不能反向晋升或改写事实。
+- 只有显式刷新 Job 可以发现 Git、文件、文档、Agent Result 或可选 GitHub 元数据并运行模型。所有 History GET、Gateway、Hermes 和 Obsidian 读取必须只读持久化结果。
+- 工程层固定事件成员、时间顺序、transition、authority、epistemic status 与 Evidence。模型最多一次、只能改写已知 story/chapter 的中文表达，不能新增 ID、成员、时间、原因、证据、里程碑、成熟度或成功判断。
+- 原因必须有明确 eligible Evidence；否则保持空并显示 UNKNOWN。Commit message、文件名、Agent 声明、模型共识和 README 宣传都不能单独证明原因或结果。
+- 大历史必须分页、有界、缓存和增量处理，不得逐 Commit 调模型。历史 rewrite 必须保留旧事件并标记 STALE/INVALIDATED，不能删除不利记录或静默沿用旧摘要。
+- 第一层展示“发生了什么”；SHA、路径、文件数、Evidence ID 和内部状态只能在原始事件或 Evidence 下钻中出现。
+- Obsidian 零插件官方 URI 是基线；Advanced URI、REST/MCP、Dataview/Bases 都只能可选。用户 frontmatter、managed block 外内容、移动笔记和旧 Capability 笔记必须兼容。
+- 不得新增最终 GUI、通用看板、Git 客户端、Vault 管理器、Agent 管理器、Provider 排行榜、Token 仪表盘、通用 RAG、daemon、Tag 或 Release。
+
 <!-- PROJECTFLOW V3.7.5 CONTEXT START -->
 ProjectFlow 当前版本为 V3.7.5。后续 Agent 必须按“开放世界项目材料 -> 有界 Evidence Discovery 与 Content Map -> Provider-neutral Semantic Scout -> 注册 Capability 执行与引用校验 -> 七种事实状态严格分层 -> ProjectFact 唯一事实源 -> 任务相关 Agent Context Package -> Candidate Write 与局部复验 -> Timeline/Capability/Evolution/Projection 只读消费”理解产品。
 

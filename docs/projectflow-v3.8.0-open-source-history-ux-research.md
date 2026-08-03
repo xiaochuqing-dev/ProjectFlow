@@ -1,6 +1,6 @@
 # ProjectFlow V3.8.0 开源项目历史与可读变化研究
 
-研究日期：2026-08-02
+研究日期：2026-08-03
 
 ## 研究方法
 
@@ -32,15 +32,15 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | GitHub Activity View | github/docs：Using the activity view | GitHub 产品非开源；文档仓库 CC-BY-4.0 | 官方文档持续维护 | 看清 push、merge、force-push、分支创建和删除 | 谁在何时对哪个分支做了什么 | 按活动发生时间 | 按分支、用户、时间、活动类型筛选；Compare changes 下钻 |
 | GitLab CE Activity / Events | GitLab 官方源码与 push_event_activities_limit 文档 | CE 为 MIT Expat；文档与商标另有规则 | 活跃 | 大 push 不应刷满活动流 | 单个 push/merge/branch 事件或 bulk push 摘要 | 事件时间 | 默认超过 3 个 branch/tag ref 时合并为一个 bulk push；API 保留 ref_count，但单 ref 细节为空 |
-| Gitea | go-gitea/gitea | MIT | 活跃，2026-08-02 有提交 | 自托管仓库中浏览 Commit、Graph、Compare、Release | Commit、分支或 Release 原始信息 | Commit 时间和 ref | 分页、分支选择、compare 和单 Commit 下钻 |
-| GitButler | gitbutlerapp/gitbutler | FSL-1.1-MIT | 活跃，2026-08-01 有提交 | 在复杂 Git 操作中理解当前 stack、操作历史和可恢复点 | 可操作 stack、snapshot、operation | 操作时间和 snapshot | Undo Timeline、snapshot diff、恢复点；可灰显或折叠不在当前状态的区间 |
+| Gitea | go-gitea/gitea | MIT | 活跃，2026-08-03 有提交 | 自托管仓库中浏览 Commit、Graph、Compare、Release | Commit、分支或 Release 原始信息 | Commit 时间和 ref | 分页、分支选择、compare 和单 Commit 下钻 |
+| GitButler | gitbutlerapp/gitbutler | FSL-1.1-MIT | 活跃，2026-08-03 有提交 | 在复杂 Git 操作中理解当前 stack、操作历史和可恢复点 | 可操作 stack、snapshot、operation | 操作时间和 snapshot | Undo Timeline、snapshot diff、恢复点；可灰显或折叠不在当前状态的区间 |
 | Gource | acaudwell/Gource | GPL-3.0 | 维护中，2026-03-06 有提交 | 快速看到仓库随时间增长和人员/文件活动 | 动态可视化时间轴 | 连续时间播放 | 缩放、跳转、跟随用户或文件；详情阅读能力弱 |
-| OpenProject | opf/openproject | GPL-3.0 | 活跃，2026-08-01 有提交 | 在工作包上下文中查看状态、评论和关联活动 | 当前工作包及其 Activity | 活动时间 | 类型/上下文过滤、分页；源码存在 activities paginator |
+| OpenProject | opf/openproject | GPL-3.0 | 活跃，2026-08-03 有提交 | 在工作包上下文中查看状态、评论和关联活动 | 当前工作包及其 Activity | 活动时间 | 类型/上下文过滤、分页；源码存在 activities paginator |
 | release-please | googleapis/release-please | Apache-2.0 | 活跃，2026-07-31 有提交 | 从约定提交生成可审阅 Release PR 和 changelog | 待发布版本和按类型分组的变更 | 两个 release 边界之间 | Release PR 下钻到 PR/Commit；用户可编辑 Release PR |
-| Changesets | changesets/changesets | MIT | 活跃，2026-07-31 有提交 | 在 Monorepo 中显式声明包、版本影响和用户可读摘要 | 待发布 changeset 和受影响包 | release/batch | changeset 文件聚合，人工选择包和 bump；PR 中可修正 |
+| Changesets | changesets/changesets | MIT | 活跃，2026-08-03 有提交 | 在 Monorepo 中显式声明包、版本影响和用户可读摘要 | 待发布 changeset 和受影响包 | release/batch | changeset 文件聚合，人工选择包和 bump；PR 中可修正 |
 | git-cliff | orhun/git-cliff | MIT 或 Apache-2.0 | 活跃，2026-07-27 有提交 | 高度可配置地从 Git 生成 changelog | 按配置分组的提交说明 | Tag/release range | parser、filter、group、template；可链接 Commit/PR |
-| Changie | miniscruff/changie | MIT | 活跃，2026-07-20 有提交 | 让每次变化先形成独立 fragment，再批量发布 | 变化 fragment 的 kind、component、body | batch/version | fragment 聚合为版本 changelog；人工编辑 fragment |
-| git-chglog | git-chglog/git-chglog | MIT | 仓库已 archived；最近提交 2025-03-28 | 用模板和提交约定生成 changelog | 按类型和版本分组的 Commit | Tag/release range | 配置模板和筛选；归档状态不适合作新依赖 |
+| Changie | miniscruff/changie | MIT | 活跃，2026-07-25 有提交 | 让每次变化先形成独立 fragment，再批量发布 | 变化 fragment 的 kind、component、body | batch/version | fragment 聚合为版本 changelog；人工编辑 fragment |
+| git-chglog | git-chglog/git-chglog | MIT | 仓库已 archived；最近提交 2026-01-18 | 用模板和提交约定生成 changelog | 按类型和版本分组的 Commit | Tag/release range | 配置模板和筛选；归档状态不适合作新依赖 |
 
 ## 研究矩阵 B：反馈、关联、可借鉴与拒绝
 
@@ -59,6 +59,20 @@
 | git-chglog | Tag、Commit、模板链接 | 简单、成熟的 release-range 模式 | 已归档，仍依赖规范 Commit | 仅作为 release 级对照样本 | 不作新依赖或历史引擎 | MIT 但维护结束，拒绝依赖 |
 
 ## 关键研究证据
+
+### 2026-08-03 独立复核
+
+本轮没有沿用执行提示词中的结论作为事实，而是重新读取官方仓库默认分支和公开 Issue。关键固定证据如下：
+
+- GitHub Activity 官方文档 blob SHA：0da513afcf19ee44594a1b09b900060ebdf9e5b7。
+- GitLab push event limit 文档 blob SHA：3980c9eae4ba44e322d2bbf23c7b3d6b6dae358b；默认阈值仍为 3。
+- GitLab BulkPushEventPayloadService blob SHA：54157bc23f91c442b25df86161aa121f27e88f5b；仍写入 commit_count=0 和 ref_count。
+- OpenProject activities paginator blob SHA：f1176b8b78a875e7f7f9f1914d4d9e28b8b78ac6。
+- GitButler Issue #3726 已关闭，但正文仍明确 restore 是 time travel，不是简单 undo。
+- GitButler Issue #3235 仍开放，2026-07-20 更新，继续记录大型 monorepo 中拖拽与更新延迟。
+- Changesets Issue #862 仍开放，明确说明显式 package 关联是 Conventional Commit 工作流缺少的信息。
+
+这些证据只支持交互与边界决策，不作为 ProjectFlow 实现正确性的替代验收。
 
 ### GitHub Activity
 

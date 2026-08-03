@@ -1,5 +1,11 @@
 # CI quality gates
 
+V3.8.0 uses full Git checkout for backend/H2 and PostgreSQL jobs because fixed ProjectFlow dogfood must reach the V3.7.5 baseline and its ancestors. The backend job runs the complete suite and explicitly verifies that Frozen Dataset, History Prompt, Dogfood and Product Acceptance reports were emitted; it does not rerun duplicate Maven work.
+
+Blocking jobs remain backend/H2, PostgreSQL 16 Testcontainers, frontend TypeScript/build/contracts, Playwright, Hermes, Obsidian and sensitive-content checks. `scripts/verify_v380_acceptance_evidence.py` parses committed JSON and scans JSON/Markdown/text artifacts for credentials and machine absolute paths. It also rejects raw `apiKey`, `authorization`, `prompt`, `rawResponse` or `reasoning` JSON fields while allowing explicit `*Persisted: false` safety assertions. The same check requires the V3.8.0 acceptance freeze manifest, confines every listed path to the evidence root and verifies the committed file length and SHA-256.
+
+The optional `workflow_dispatch` real-Provider job additionally runs `ProjectHistoryRealModelIT` after the Provider probe, frozen 18-case evaluation and Project Understanding E2E. GLM uses the same production History Prompt/contract as the locally qualified DeepSeek profile. The job uploads only sanitized aggregate artifacts under `backend/target/projectflow-eval`; it never uploads Key, Prompt, raw response or reasoning.
+
 `.github/workflows/quality-gates.yml` runs on pushes and pull requests.
 
 The blocking jobs are backend unit/H2 tests, PostgreSQL Testcontainers, frontend TypeScript/production build/contracts, Playwright browser E2E and a basic committed-secret scan. JUnit and Playwright failure evidence are uploaded as artifacts. API keys, Authorization values, raw reasoning, model bodies and local database snapshots are not uploaded.

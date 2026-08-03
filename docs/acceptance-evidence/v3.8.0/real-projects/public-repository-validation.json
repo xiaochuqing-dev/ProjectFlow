@@ -1,0 +1,99 @@
+{
+  "version" : "projectflow-v3.8.0-public-repository-validation-v1",
+  "validationDate" : "2026-08-03",
+  "method" : "Fixed public commits, bounded shallow Git windows, blob-filtered sparse worktrees, deterministic model-free reconstruction",
+  "repositories" : [ {
+    "repository" : "kubernetes/kubernetes",
+    "shape" : "大型代码仓库",
+    "fixedCommit" : "0e5f0f9374ca822d0a5619088d4a00f335b8bafd",
+    "snapshotStatus" : "DEGRADED",
+    "requestedDepth" : 120,
+    "reachableCommitCountInFetchedWindow" : 92183,
+    "readGitCommitCount" : 2999,
+    "sourceEventCount" : 20000,
+    "storyCount" : 4615,
+    "chapterCount" : 236,
+    "threadCount" : 3396,
+    "coverage" : {
+      "shallowHistoryGapReported" : true,
+      "complete" : false,
+      "currentness" : "PARTIAL",
+      "boundedCommitWindowReported" : true
+    },
+    "bounds" : {
+      "sourceEventLimit" : 20000,
+      "gitCommitReadLimit" : 5000
+    },
+    "contract" : {
+      "invalidEvidenceRefCount" : 0,
+      "unsupportedStrongFactCount" : 0,
+      "eventConservation" : true,
+      "crossProjectRefCount" : 0
+    },
+    "sampleStoryTitles" : [ "调整“cpu assignment”并更新已有结果", "调整“policy stati”并更新已有结果", "调整“topology”并更新已有结果", "调整“policy”并更新已有结果", "调整“policy stati”并更新已有结果", "调整“cpu assignment”并更新已有结果", "调整“topology”并更新已有结果", "调整“cpu assignment”并更新已有结果", "调整“host path”并更新已有结果", "调整“host pat”并更新已有结果" ]
+  }, {
+    "repository" : "mdn/content",
+    "shape" : "文档与知识仓库",
+    "fixedCommit" : "f35f247e16286c4e0b1c88fba3d8ce01683c189b",
+    "snapshotStatus" : "DEGRADED",
+    "requestedDepth" : 100,
+    "reachableCommitCountInFetchedWindow" : 100,
+    "readGitCommitCount" : 100,
+    "sourceEventCount" : 1758,
+    "storyCount" : 453,
+    "chapterCount" : 23,
+    "threadCount" : 430,
+    "coverage" : {
+      "shallowHistoryGapReported" : true,
+      "complete" : false,
+      "currentness" : "PARTIAL",
+      "boundedCommitWindowReported" : true
+    },
+    "bounds" : {
+      "sourceEventLimit" : 20000,
+      "gitCommitReadLimit" : 5000
+    },
+    "contract" : {
+      "invalidEvidenceRefCount" : 0,
+      "unsupportedStrongFactCount" : 0,
+      "eventConservation" : true,
+      "crossProjectRefCount" : 0
+    },
+    "sampleStoryTitles" : [ "新增“CI 与协作配置”并形成初始结果", "新增“markdownlint cli2 jsonc”并形成初始结果", "新增“code of conduct”并形成初始结果", "新增“gitattributes”并形成初始结果", "新增“editorconfig”并形成初始结果", "新增“nvmrc”并形成初始结果", "新增“reviewing”并形成初始结果", "调整“issue 44741”并更新已有结果", "新增“npmrc”并形成初始结果", "新增“files 区域”并形成初始结果" ]
+  }, {
+    "repository" : "hakimel/reveal.js",
+    "shape" : "前端与创意展示仓库",
+    "fixedCommit" : "a3b940695648aa1c5b0680bc9a5b905cf43020e5",
+    "snapshotStatus" : "DEGRADED",
+    "requestedDepth" : 100,
+    "reachableCommitCountInFetchedWindow" : 196,
+    "readGitCommitCount" : 196,
+    "sourceEventCount" : 2039,
+    "storyCount" : 366,
+    "chapterCount" : 23,
+    "threadCount" : 217,
+    "coverage" : {
+      "shallowHistoryGapReported" : true,
+      "complete" : false,
+      "currentness" : "PARTIAL",
+      "boundedCommitWindowReported" : true
+    },
+    "bounds" : {
+      "sourceEventLimit" : 20000,
+      "gitCommitReadLimit" : 5000
+    },
+    "contract" : {
+      "invalidEvidenceRefCount" : 0,
+      "unsupportedStrongFactCount" : 0,
+      "eventConservation" : true,
+      "crossProjectRefCount" : 0
+    },
+    "sampleStoryTitles" : [ "新增“readme”并形成初始结果", "调整“issue 3593”并更新已有结果", "新增“gulpfile”并形成初始结果", "新增“npmignore”并形成初始结果", "新增“js 区域”并形成初始结果", "新增“package”并形成初始结果", "调整“exception when destroying uninitialized reveal instance”并更新已有结果", "新增“css 区域”并形成初始结果", "新增“license”并形成初始结果", "新增“CI 与协作配置”并形成初始结果" ]
+  } ],
+  "security" : {
+    "rawResponsePersisted" : false,
+    "promptPersisted" : false,
+    "absolutePathPersisted" : false,
+    "credentialsPersisted" : false
+  }
+}

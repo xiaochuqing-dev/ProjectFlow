@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "release": "3.8.0",
+  "generatedAt": "2026-08-03T19:36:00+08:00",
+  "baselineMasterSha": "fd5ce827245f4fc4a20ecda15c63fc03313505ab",
+  "state": "PRE_MERGE_INCOMPLETE",
+  "artifacts": [
+    {
+      "category": "projectflow-dogfood-json",
+      "path": "docs/acceptance-evidence/v3.8.0/projectflow-dogfood/projectflow-v375-dogfood.json",
+      "length": 58187,
+      "sha256": "6C20E1AD94EC749DB7ABC2C0C5EBC35831F7E47875DD6790D1091612D017849A"
+    },
+    {
+      "category": "projectflow-dogfood-readable",
+      "path": "docs/acceptance-evidence/v3.8.0/projectflow-dogfood/projectflow-v375-dogfood.md",
+      "length": 13793,
+      "sha256": "25E330A7F15ADDC29E1C9CD532A43D2E980DFB639F722A0C0DF9A9ECF29372DE"
+    },
+    {
+      "category": "synthetic-product-json",
+      "path": "docs/acceptance-evidence/v3.8.0/synthetic-product/synthetic-project-history.json",
+      "length": 21590,
+      "sha256": "CA54CE8CBBA8AD1D2C283F3C8FA8D62C9CE5BC52B8B1D6746D71B143492EF3C7"
+    },
+    {
+      "category": "synthetic-product-readable",
+      "path": "docs/acceptance-evidence/v3.8.0/synthetic-product/synthetic-project-history.md",
+      "length": 13248,
+      "sha256": "54FFEA5F404D0C0532E264BEA8C26B09183F0B19F4542980B2869C5944349427"
+    },
+    {
+      "category": "public-repository-validation",
+      "path": "docs/acceptance-evidence/v3.8.0/real-projects/public-repository-validation.json",
+      "length": 4591,
+      "sha256": "4CBFEB910673CB797D7EC5A7A193FFA9E837E5C4815BE614CE481E75E61AC4EA"
+    },
+    {
+      "category": "deepseek-real-model",
+      "path": "docs/acceptance-evidence/v3.8.0/real-model/deepseek-v380/project-history-real-model.json",
+      "length": 1278,
+      "sha256": "1CE9347F722D6D7479BCF1E3805D587ACFBD2D550C2C10B832B6D9DB2B460770"
+    }
+  ],
+  "gates": {
+    "localDeterministic": "PASSED",
+    "realProviderCount": 1,
+    "requiredRealProviderCount": 2,
+    "crossProviderQualification": "BLOCKED_SECOND_PROVIDER_NOT_CONFIGURED",
+    "postgresql16": "PENDING_REQUIRED_CI",
+    "githubRequiredChecks": "PENDING",
+    "merge": "PENDING",
+    "finalAcceptance": "INCOMPLETE"
+  }
+}
