@@ -1,8 +1,8 @@
 # ProjectFlow V3.8.0 验收报告
 
-报告状态：本地与 required CI 通过，跨 Provider 门禁待完成
+报告状态：双真实 Provider 与 required CI 已通过，待合并和最终回填
 
-更新日期：2026-08-03
+更新日期：2026-08-04
 
 ## 1. 最终版本
 
@@ -30,19 +30,23 @@ fd5ce827245f4fc4a20ecda15c63fc03313505ab。
 
 ## 7. GitHub Actions
 
-PR #13 已运行 required CI。提交 `077e218` 的 push run `30811074162` 与 pull_request run `30811227750` 保留了 acceptance manifest 使用 Windows 工作树 CRLF 哈希导致的首次失败。提交 `d3a935c` 的 push run `30811621732` 与 pull_request run `30811625114` 中，Frontend、PostgreSQL 16、Hermes、Obsidian、Sensitive Content 和 Browser E2E 均通过，`backend-unit-and-h2` 暴露同秒事件排序缺陷。修复提交 `ffe35de` 的 push run `30814897379` 与 pull_request run `30814901364` 已全部通过 Backend/H2、PostgreSQL 16、Frontend、Browser E2E、Hermes、Obsidian 和 Sensitive Content；`optional-real-provider` 因未配置 GitHub Secret 明确 SKIPPED。
+PR #13 已运行 required CI。提交 `077e218` 的 push run `30811074162` 与 pull_request run `30811227750` 保留了 acceptance manifest 使用 Windows 工作树 CRLF 哈希导致的首次失败。提交 `d3a935c` 的 push run `30811621732` 与 pull_request run `30811625114` 中，Frontend、PostgreSQL 16、Hermes、Obsidian、Sensitive Content 和 Browser E2E 均通过，`backend-unit-and-h2` 暴露同秒事件排序缺陷。修复提交 `ffe35de` 的 runs `30814897379`、`30814901364` 首次全绿；当前 head `828a259` 的 push run `30832088537` 与 pull_request run `30832092348` 再次全部通过 Backend/H2、PostgreSQL 16、Frontend、Browser E2E、Hermes、Obsidian 和 Sensitive Content。
+
+独立 workflow_dispatch run `30832103333` 的全部作业成功，其中 `optional-real-provider` job `91748308607` 完成 GLM 38-run、17-case 产品链路和 Project History 合同验收。
 
 ## 8. PostgreSQL 16
 
-本机 Docker Desktop 守护进程未运行，因此没有伪造本地 Testcontainers 结果。GitHub Actions run `30814897379` 和 `30814901364` 的 required `postgres-integration` 已在排序修复 head 上通过。
+本机 Docker Desktop 守护进程未运行，因此没有伪造本地 Testcontainers 结果。GitHub Actions runs `30832088537`、`30832092348` 和 `30832103333` 的 `postgres-integration` 已在当前验收 head 上通过。
 
 ## 9. 当前测试结果
 
-- Project History 聚焦回归：26/26 通过。
+- ProjectHistoryReconstructionTest：19/19 通过；连同 ProjectHistoryPromptBuilderTest 为 20/20。
 - 同秒 Git 拓扑回归：两个原失败场景共同通过，新增/修改/删除/恢复场景额外连续重复 4 次通过。
 - 三公开仓库有界验证：1/1 通过，覆盖三个固定公开项目。
-- DeepSeek 项目历程真实模型合同：1/1 通过。
-- Backend H2 full suite：483 tests，0 failure，0 error，1 skipped；跳过项是显式 opt-in 的真实开源仓库 benchmark，不是功能失败。
+- DeepSeek 与 GLM 项目历程真实模型合同：各 1/1 通过。
+- GLM 冻结评测：38/38 成功，51 requests、501,188 Token、0 failure/timeout/schema/degradation；Critical Evidence Recall 0.9610、Evidence Precision 1.0000、Tool Precision/Recall 0.9792、Deep-read Sufficiency 0.8333、Dynamic View Recall 0.9412、Repeatability 0.9858、Unsupported Claim 0。Conflict Detection 0.6667 作为限制保留。
+- GLM 产品链路：17/17 成功，33 logical / 33 physical requests、433,092 Token、3,246,152 ms，Invalid Evidence 0、Degraded 0。
+- Backend H2 full suite：482 tests，0 failure，0 error，1 skipped；跳过项是显式 opt-in 的真实开源仓库 benchmark，不是功能失败。
 - Frontend：TypeScript/lint 通过，contract 55/55 通过，Next.js 生产构建通过。
 - Playwright：8/8 通过，运行真实前端、后端和固定模型服务。
 - Hermes MCP：8/8 通过，19 tools；并发读取与故障恢复通过。
@@ -106,17 +110,19 @@ Kubernetes、MDN Content 和 Reveal.js 固定 SHA 验证通过。三个项目均
 
 ## 21. 真实 Provider
 
-DeepSeek deepseek-v4-pro 通过固定 Prompt v2 合同：1 次请求、1,539 Token、13,510 ms，所有结构、安全和 Evidence 违规为 0。第二真实 Provider 当前未配置，因此跨 Provider 硬门禁尚未满足。
+DeepSeek deepseek-v4-pro / OpenAI Chat Completions 通过固定 Prompt v2 合同：1 次请求、1,539 Token、13,510 ms。GLM glm-5.2 / OpenAI Responses 通过同一合同：1 次请求、4,537 Token、52,278 ms。两者的结构、安全和 Evidence 违规均为 0，跨 Provider 硬门禁已满足。
 
 ## 22. 关键安全计数
 
 当前正式产物中 Unsupported Claim、Invalid Evidence、Cross-project reference、Reason without Evidence 均为 0，eventConservation=true。提交内容密钥模式扫描与验收产物路径、敏感字段、长度和 SHA-256 校验均通过。
 
-安全冻结清单为 `docs/acceptance-evidence/v3.8.0/acceptance-freeze-manifest.json`。清单冻结六个正式 Git blob 的长度和 SHA-256，避免 Windows CRLF 与 Linux LF 造成平台相关哈希；清单冻结时记录的第二 Provider、PostgreSQL required CI、GitHub checks 和 merge 状态保留为当时证据，最新进度以本报告为准。
+安全冻结清单为 `docs/acceptance-evidence/v3.8.0/acceptance-freeze-manifest.json`。清单冻结七个正式 Git blob 的长度和 SHA-256，避免 Windows CRLF 与 Linux LF 造成平台相关哈希；清单记录跨 Provider、PostgreSQL required CI 和 GitHub checks 已通过，merge 与 final acceptance 仍为未完成。
 
 PR #13 首轮 run `30811227750` 的 `sensitive-content` 因最初清单冻结 Windows 工作树 CRLF 字节而失败；四个 JSON 在 Git 提交后转为 LF，导致长度和 SHA-256 不同。修复后校验器直接读取 Git index/blob 的规范字节，未修改验收产物语义或降低安全门槛。
 
 PR #13 run `30811621732` 和 `30811625114` 的 `backend-unit-and-h2` 又暴露同秒事件排序缺陷：来源事件的 stable key 包含随机 projectId，不能充当历史次序；复杂 Merge fixture 也证明 SHA 字典序不能替代 Git parent 拓扑。修复保留原始 occurredAt、Event、transition 和 Evidence，只稳定工程分组次序，没有降低 Story/Thread Ground Truth。
+
+GLM run `30816468130` 保留了两项真实产品链路失败：large-middle 未生成 Content Map，conflicting-final-docs 使用错误文档类别断言；History 又因脚本顺序未执行。修复大型源码采样、类别断言和 CI 工件顺序后，最终 run `30832103333` 全部通过。run `30830424132` 与 `30831241801` 的旧 reasonWithoutEvidenceCount=1 也被保留；拆分硬 Evidence 违规与 missing UNKNOWN 后，最终两项均为 0。
 
 ## 23. Obsidian 分级结论
 
@@ -135,7 +141,7 @@ ProjectFlow → Obsidian 使用 vault 标识和 managed relative path。Obsidian
 
 ## 26. 当前未完成
 
-第二独立真实 Provider、功能 PR 合并、验收回填、最终 master 核验、分支与 worktree 清理仍未完成。本地与 GitHub required CI 已完成；可选真实 Provider workflow 因缺少独立 Provider Secret 明确跳过。
+功能 PR 合并、验收回填、最终 master 核验、分支与 worktree 清理仍未完成。双真实 Provider、本地门禁、PostgreSQL 16 和 GitHub required CI 已完成。
 
 ## 27. 为什么仍不进入最终 GUI
 

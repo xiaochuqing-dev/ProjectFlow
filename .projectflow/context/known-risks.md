@@ -7,7 +7,7 @@
 - Source event 和 snapshot schema 仍由 Hibernate `ddl-auto=update` 管理，没有 Flyway/Liquibase。必须继续用旧 H2 升级与 PostgreSQL 16 CI 验证，禁止删库规避。
 - 最小 `/history` 页面只验证信息层次和深链接，不是最终 GUI；筛选、虚拟滚动、跨篇章可视化和完整可访问性设计仍是 V3.9 进入条件。
 - Obsidian Advanced URI、Local REST/MCP、Dataview/Bases 均为可选增强。零插件官方 URI 只能稳定打开 Vault/文件，标题或块级定位需要插件能力并必须安全降级。
-- 本地 DeepSeek 专项结果只适用于当日模型、Prompt v2 和冻结输入；GLM 需要可选 GitHub Secret 工作流复验，任何结果都不是任意项目准确率承诺。
+- DeepSeek 与 GLM 专项结果只适用于当日模型、协议、Prompt v2 和冻结输入，不是任意项目准确率承诺。GLM 38-run 的 Conflict Detection 为 0.6667、Deep-read Sufficiency 为 0.8333，仍需把冲突和未读范围作为显式限制保留，不能因总门禁通过而隐藏。
 
 - API Key 与自定义 Header 值当前仍保存在应用数据库，只适合本地兼容；桌面产品化前需迁移到 OS secure store。
 - 固定本地 relay 覆盖协议、SDK 和恢复契约，不代表真实 OpenAI、Anthropic 或 DeepSeek 的输出质量、限流与私有扩展。

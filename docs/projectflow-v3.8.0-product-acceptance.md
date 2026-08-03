@@ -1,10 +1,10 @@
 # ProjectFlow V3.8.0 产品验收
 
-更新日期：2026-08-03
+更新日期：2026-08-04
 
 ## 当前结论
 
-项目历程核心实现、26 项聚焦回归、三个公开仓库验证、DeepSeek 固定真实模型合同、Backend H2、Frontend、Playwright、Hermes、Obsidian、启动器和安全扫描已通过。PostgreSQL 16 required CI、GitHub required CI 和第二真实 Provider 尚未完成，因此当前状态是“本地门禁通过，外部门禁待完成”，不是最终发布批准。
+项目历程核心实现、聚焦回归、三个公开仓库验证、DeepSeek 与 GLM 双真实 Provider、Backend H2、PostgreSQL 16、Frontend、Playwright、Hermes、Obsidian、启动器和安全扫描均已通过。当前只剩功能 PR 合并、验收回填、最终 master 核验和分支/worktree 清理，因此还不是最终发布批准。
 
 ## 产品能力验收
 
@@ -19,7 +19,7 @@
 | 增量与缓存 | fingerprint cache、31 天 overlap、保留未受影响 Story | 通过聚焦测试 |
 | Git 重写 | 移除来源标记 STALE/INVALIDATED，不删除 Evidence | 通过聚焦测试 |
 | Transition | Created/Modified/Removed/Restored/Rename/Move/Split/Merge/Revert/Reapply | 通过冻结与专项测试 |
-| 模型安全 | 单次有界措辞改写，非法 ID/Evidence/原因拒绝 | DeepSeek 与聚焦测试通过 |
+| 模型安全 | 单次有界措辞改写，非法 ID/Evidence/原因拒绝 | DeepSeek、GLM 与聚焦测试通过 |
 | 前端层级 | Overview、Chapter、Story、Thread 稳定深链接 | 开发者预览已实现，最终 GUI 未实现 |
 | Gateway/Hermes | 持久化 history 只读消费 | 8/8 通过，19 tools，并发读取与故障恢复通过 |
 | Obsidian | Overview/History/Chapter/Story/Thread，官方 URI 默认、Advanced URI 可选 | 21/21 通过，真实临时 Vault、双向跳转、用户内容保留、冲突和 no-op 通过 |
@@ -55,7 +55,7 @@ Dogfood 两个文件连续多次 SHA-256 一致，证明冻结输入下输出稳
 - 模型原因无 Evidence：0。
 - Key、Authorization、完整 Prompt、raw response、reasoning、绝对路径持久化：0。
 
-提交内容密钥模式扫描和所有验收产物的敏感值、路径边界、文件长度与 SHA-256 校验已通过。六个正式产物由 `acceptance-freeze-manifest.json` 冻结；清单仍明确标记跨 Provider、PostgreSQL CI、GitHub checks 和 merge 未完成。
+提交内容密钥模式扫描和所有验收产物的敏感值、路径边界、文件长度与 SHA-256 校验已通过。七个正式产物由 `acceptance-freeze-manifest.json` 冻结；跨 Provider、PostgreSQL 16 和 GitHub required checks 已通过，merge 与最终验收仍保持未完成。
 
 ## 首次失败保留
 
@@ -69,6 +69,8 @@ Dogfood 两个文件连续多次 SHA-256 一致，证明冻结输入下输出稳
 8. 根启动器首次 CheckOnly 在隔离 worktree 中触发 Git dubious ownership。启动器改为只给当前仓库调用传入 `git -c safe.directory`，不修改全局配置；随后 build/start/health/stop 通过。
 9. 隔离 worktree 首次生产构建因 `node_modules` 指向 worktree 外部而被 Turbopack 拒绝；改用 worktree 内独立 `npm ci`。备用 junction 一度被 TypeScript 扫描，移出 frontend 后最终生产构建通过。该环境失败未被描述为代码通过。
 10. PR #13 首轮 `sensitive-content` 因 freeze manifest 使用 Windows 工作树 CRLF 字节计算四个 JSON 的长度和 SHA-256 而失败。产物语义未变化；清单与校验器改为读取 Git index/blob 的规范提交字节，消除 Windows/Linux 换行差异，并保留首轮 CI 失败证据。
+11. GLM run `30816468130` 的 Provider Probe 和 38-run 通过，但产品链路为 15/17：large-middle 暴露大型源码 Content Map 丢失，conflicting-final-docs 暴露错误类别断言；History 因脚本顺序未执行。修复后真实聚焦复验通过。
+12. GLM run `30830424132` 与 `30831241801` 的旧 reasonWithoutEvidenceCount=1 混合了硬 Evidence 违规和漏写 UNKNOWN。拆分诊断后，非空原因无 Evidence 继续硬拒绝，空原因漏写 UNKNOWN 由工程层补齐；最终运行两项均为 0。
 
 这些失败均保留在验收记录中，没有通过降低安全阈值、伪造 PASS 或删除不利证据处理。
 
@@ -104,4 +106,4 @@ GitButler、Gource、OpenProject 等仅作为产品模式研究。FSL-1.1-MIT �
 - 功能 PR 和可能的验收回填 PR 均通过 required CI 并合并。
 - master clean，开发分支、回填分支和 worktree 全部删除。
 
-其中本地 Backend、Frontend、Playwright、Hermes、Obsidian、安全与根启动器已满足；当前阻断项是第二真实 Provider、PostgreSQL 16 required CI、GitHub required checks、合并和最终清理。
+Backend、PostgreSQL 16、Frontend、Playwright、Hermes、Obsidian、安全、根启动器、双真实 Provider 和 GitHub required checks 已满足；当前阻断项只剩合并、验收回填、最终 master 核验和清理。

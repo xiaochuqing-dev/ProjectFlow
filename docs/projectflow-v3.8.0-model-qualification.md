@@ -1,6 +1,6 @@
 # ProjectFlow V3.8.0 项目历程模型资格
 
-更新日期：2026-08-03
+更新日期：2026-08-04
 
 ## 资格范围
 
@@ -69,11 +69,45 @@ SHA-256：45CFC3B32B58DAEF844B54260D0822B860100BE8EEB79511BB156A81704B2587。
 
 产物不包含 API Key、完整 Prompt、raw response、reasoning 或绝对路径。
 
-## 第二 Provider 状态
+## GLM 真实运行
 
-2026-08-03 只发现一个已配置且可安全调用的真实 Provider：DeepSeek。没有可用的 GLM、OpenAI 或其他第二 Provider 凭证，因此没有伪造第二次真实验收，也没有把固定模型或 Mock 描述为真实 Provider。
+运行日期：2026-08-03。
 
-结论：DeepSeek 已通过当前固定项目历程措辞合同；“至少两种真实 Provider”总门禁尚未满足。若用户以后配置第二 Provider，必须使用同一 Prompt builder、同一固定样本和同一结构校验重新运行，并生成独立安全产物。
+| 项目 | 结果 |
+| --- | --- |
+| Provider | GLM |
+| Model | glm-5.2 |
+| Protocol | OPENAI_RESPONSES |
+| Story / Chapter | 2 / 1 |
+| Prompt 字符 | 2,032 |
+| 请求次数 | 1 |
+| Token | 4,537 |
+| 延迟 | 52,278 ms |
+| Finish reason | COMPLETE |
+| Schema matched | true |
+| Truncated | false |
+| Reasoning present | false |
+
+合同中的结构、遗漏、重复、跨项目引用、非法 Evidence、成员变化、无证据原因、漏写 UNKNOWN、空摘要和不支持断言计数全部为 0。
+
+安全产物：docs/acceptance-evidence/v3.8.0/real-model/glm-v380/project-history-real-model.json。
+
+SHA-256：9B3331B5AF2BC57BB0F10C4FA879432BE0DD5038E167B0616B6FE595E8E5D088。
+
+产物不包含 API Key、完整 Prompt、raw response、reasoning 或绝对路径。
+
+## GLM 扩展资格
+
+GitHub Actions run 30832103333、job 91748308607 使用同一生产 Prompt builder 完成：
+
+- 冻结 38-run：38/38 成功，51 次请求，501,188 Token；failure、timeout、Schema failure、degradation 和 unsupported claim 均为 0。
+- Critical Evidence Recall 0.9610，Evidence Precision 1.0000，Tool Precision/Recall 0.9792，Deep-read Sufficiency 0.8333，Dynamic View Recall 0.9412，Repeatability 0.9858。
+- Conflict Detection 0.6667，作为当前真实限制保留，不能解释为任意项目冲突都能可靠识别。
+- 真实产品链路：17/17 成功，33 次逻辑请求、33 次物理请求、433,092 Token、3,246,152 ms；Invalid Evidence 和 Degraded 均为 0。
+
+首次 GLM run 30816468130 中 Provider Probe 与 38-run 通过，但产品链路只有 15/17：large-middle 暴露大型源码未进入 Content Map，conflicting-final-docs 暴露测试使用错误文档类别；History 又因 CI 顺序未执行。代码、断言和工件保存顺序修复后才进行最终验收。
+
+run 30830424132 与 30831241801 的旧诊断出现 reasonWithoutEvidenceCount=1；当时该字段混合“非空原因无 Evidence”的硬违规和“空原因漏写 UNKNOWN”。拆分为 reasonWithoutEvidenceCount 与 missingReasonUnknownCount 后，最终运行两项均为 0，生产规则仍对前者硬拒绝并对后者确定性补齐 UNKNOWN。
 
 ## 失败与降级
 
@@ -84,4 +118,4 @@ SHA-256：45CFC3B32B58DAEF844B54260D0822B860100BE8EEB79511BB156A81704B2587。
 
 ## 当前资格结论
 
-生产/Eval Prompt parity、结构校验、Evidence 约束和 DeepSeek 固定样本已通过。第二真实 Provider 尚缺，因此 V3.8.0 的跨 Provider 资格仍是未完成门禁，不能在最终验收中写为全通过。
+生产/Eval Prompt parity、结构校验、Evidence 约束、DeepSeek Chat Completions 和 GLM Responses 固定样本均已通过。至少两种真实 Provider 的跨协议资格门禁已满足；结论只适用于上述日期、模型、Prompt v2 和冻结输入。
