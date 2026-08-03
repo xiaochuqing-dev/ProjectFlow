@@ -15,6 +15,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
@@ -34,6 +35,7 @@ import com.projectflow.entity.ProjectHistoryEvent;
 import com.projectflow.entity.ProjectHistoryEvent.Authority;
 import com.projectflow.entity.ProjectHistoryEvent.Category;
 import com.projectflow.entity.ProjectHistoryEvent.RewriteState;
+import com.projectflow.entity.ProjectHistoryEvent.SourceType;
 import com.projectflow.entity.ProjectHistoryEvent.Transition;
 import com.projectflow.entity.ProjectHistorySnapshot;
 import com.projectflow.repository.AiProviderRepository;
@@ -347,6 +349,7 @@ public class ProjectHistoryReconstructionService {
     ) {
         List<EventView> events = persisted.currentEvents().stream().map(this::view).toList();
         List<EventView> semanticEvents = events.stream().filter(ProjectHistoryReconstructionService::semanticEligible).toList();
+        Comparator<EventView> storyEventOrder = storyEventOrder(events);
         Map<UUID, EventView> eventsById = new LinkedHashMap<>();
         events.forEach(event -> eventsById.put(event.id(), event));
         Set<UUID> semanticEventIds = semanticEvents.stream().map(EventView::id)
@@ -378,7 +381,7 @@ public class ProjectHistoryReconstructionService {
         List<StoryEnvelope> envelopes = new ArrayList<>();
         retainedStories.forEach(story -> envelopes.add(envelope(story, eventsById)));
         List<StoryEnvelope> recomputed = buildStoryEnvelopes(
-            reconstructionEvents, subjectAliases, collected.complete()
+            reconstructionEvents, subjectAliases, collected.complete(), storyEventOrder
         );
         envelopes.addAll(recomputed);
         envelopes.sort(Comparator.comparing((StoryEnvelope envelope) -> envelope.story().occurredFrom())
@@ -397,7 +400,8 @@ public class ProjectHistoryReconstructionService {
     private List<StoryEnvelope> buildStoryEnvelopes(
         List<EventView> events,
         Map<String, String> subjectAliases,
-        boolean complete
+        boolean complete,
+        Comparator<EventView> storyEventOrder
     ) {
         Map<String, List<EventView>> bySubject = new LinkedHashMap<>();
         for (EventView event : events) {
@@ -411,16 +415,16 @@ public class ProjectHistoryReconstructionService {
         List<StoryEnvelope> envelopes = new ArrayList<>();
         for (Map.Entry<String, List<EventView>> entry : bySubject.entrySet()) {
             List<EventView> subjectEvents = entry.getValue().stream()
-                .sorted(Comparator.comparing(EventView::occurredAt).thenComparing(EventView::stableKey)).toList();
+                .sorted(storyEventOrder).toList();
             List<EventView> group = new ArrayList<>();
             for (EventView event : subjectEvents) {
                 if (!group.isEmpty() && newStory(group, event)) {
-                    envelopes.add(story(entry.getKey(), group, complete));
+                    envelopes.add(story(entry.getKey(), group, complete, storyEventOrder));
                     group = new ArrayList<>();
                 }
                 group.add(event);
             }
-            if (!group.isEmpty()) envelopes.add(story(entry.getKey(), group, complete));
+            if (!group.isEmpty()) envelopes.add(story(entry.getKey(), group, complete, storyEventOrder));
         }
         return envelopes;
     }
@@ -495,9 +499,14 @@ public class ProjectHistoryReconstructionService {
         return next.category() == Category.TAG || previous.category() == Category.TAG;
     }
 
-    private StoryEnvelope story(String subjectKey, List<EventView> input, boolean complete) {
+    private StoryEnvelope story(
+        String subjectKey,
+        List<EventView> input,
+        boolean complete,
+        Comparator<EventView> storyEventOrder
+    ) {
         List<EventView> events = input.stream().distinct()
-            .sorted(Comparator.comparing(EventView::occurredAt).thenComparing(EventView::stableKey)).toList();
+            .sorted(storyEventOrder).toList();
         Instant from = events.get(0).occurredAt();
         Instant to = events.get(events.size() - 1).occurredAt();
         List<Transition> transitions = events.stream().map(EventView::transition).distinct().toList();
@@ -1117,7 +1126,8 @@ public class ProjectHistoryReconstructionService {
 
     private EventView view(ProjectHistoryEvent event) {
         return new EventView(
-            event.getId(), event.getStableEventKey(), event.getOccurredAt(), event.getCategory(), event.getTransition(),
+            event.getId(), event.getStableEventKey(), event.getSourceType(), event.getSourceIdentity(),
+            event.getSourceRevision(), event.getOccurredAt(), event.getCategory(), event.getTransition(),
             event.getSafeSourceLabel(), strings(event.getAffectedPathsJson()), strings(event.getSubjectKeysJson()),
             strings(event.getEvidenceRefsJson()), strings(event.getRelationRefsJson()), event.getAuthority(),
             event.getEpistemicStatus(), strings(event.getLimitationsJson())
@@ -1217,6 +1227,63 @@ public class ProjectHistoryReconstructionService {
         if (nextCommits.isEmpty()) return false;
         return current.stream().map(ProjectHistoryReconstructionService::commitRefs)
             .anyMatch(refs -> refs.stream().anyMatch(nextCommits::contains));
+    }
+
+    private static Comparator<EventView> storyEventOrder(List<EventView> events) {
+        Map<String, Integer> gitRevisionOrder = gitRevisionOrder(events);
+        return Comparator.comparing(EventView::occurredAt)
+            .thenComparingInt(event -> gitRevisionOrder.getOrDefault(event.sourceRevision(), Integer.MAX_VALUE))
+            .thenComparing(EventView::sourceRevision)
+            .thenComparingInt(event -> ProjectHistorySourceCollector.eventCategoryOrder(event.category()))
+            .thenComparing(event -> event.sourceType().name())
+            .thenComparing(EventView::sourceIdentity)
+            .thenComparing(event -> event.transition().name())
+            .thenComparing(event -> String.join("\u0000", event.paths()))
+            .thenComparing(event -> String.join("\u0000", event.evidenceRefs()))
+            .thenComparing(EventView::stableKey);
+    }
+
+    private static Map<String, Integer> gitRevisionOrder(List<EventView> events) {
+        Map<String, EventView> commits = new LinkedHashMap<>();
+        for (EventView event : events) {
+            if (event.sourceType() == SourceType.GIT
+                && Set.of(Category.COMMIT, Category.MERGE).contains(event.category())
+                && !event.sourceRevision().isBlank()) {
+                commits.putIfAbsent(event.sourceRevision(), event);
+            }
+        }
+        Map<String, Integer> indegree = new LinkedHashMap<>();
+        Map<String, Set<String>> children = new LinkedHashMap<>();
+        commits.keySet().forEach(revision -> indegree.put(revision, 0));
+        for (Map.Entry<String, EventView> entry : commits.entrySet()) {
+            Set<String> parents = entry.getValue().relationRefs().stream()
+                .filter(value -> value.startsWith("parent:"))
+                .map(value -> value.substring("parent:".length()))
+                .filter(commits::containsKey)
+                .collect(LinkedHashSet::new, Set::add, Set::addAll);
+            indegree.put(entry.getKey(), parents.size());
+            parents.forEach(parent -> children.computeIfAbsent(parent, ignored -> new LinkedHashSet<>()).add(entry.getKey()));
+        }
+        Comparator<String> revisionOrder = Comparator
+            .comparing((String revision) -> commits.get(revision).occurredAt())
+            .thenComparing(revision -> commits.get(revision).sourceIdentity())
+            .thenComparing(revision -> revision);
+        PriorityQueue<String> ready = new PriorityQueue<>(revisionOrder);
+        indegree.forEach((revision, count) -> {
+            if (count == 0) ready.add(revision);
+        });
+        Map<String, Integer> result = new LinkedHashMap<>();
+        while (!ready.isEmpty()) {
+            String revision = ready.remove();
+            result.put(revision, result.size());
+            for (String child : children.getOrDefault(revision, Set.of())) {
+                int remaining = indegree.computeIfPresent(child, (ignored, count) -> count - 1);
+                if (remaining == 0) ready.add(child);
+            }
+        }
+        commits.keySet().stream().filter(revision -> !result.containsKey(revision)).sorted(revisionOrder)
+            .forEach(revision -> result.put(revision, result.size()));
+        return result;
     }
 
     private static Set<String> commitRefs(EventView event) {
@@ -1403,6 +1470,9 @@ public class ProjectHistoryReconstructionService {
     private record EventView(
         UUID id,
         String stableKey,
+        SourceType sourceType,
+        String sourceIdentity,
+        String sourceRevision,
         Instant occurredAt,
         Category category,
         Transition transition,

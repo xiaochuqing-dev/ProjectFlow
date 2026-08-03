@@ -6,7 +6,8 @@
     "Project Memory Gateway、19-tool Hermes MCP、Obsidian Projection 和最小前端预览已消费同一持久化 History；Obsidian 零插件官方 URI 默认可用，Advanced URI 可选降级，稳定反向链接、旧 Vault 用户内容、移动、冲突和 no-op 均保留。",
     "冻结 24 类历史形状，完成 ProjectFlow dogfood、Synthetic 可读产物、Kubernetes/MDN Content/Reveal.js 三公开仓库浅历史验证和 DeepSeek 固定真实模型合同；非法 Evidence、跨项目引用、不支持强事实和事件丢失均为 0。",
     "完成 Backend H2、Frontend、Playwright、Hermes、Obsidian、安全产物、提交密钥扫描和根启动器门禁；启动器在隔离 worktree 中使用当前仓库级 safe.directory，不修改全局 Git 配置。",
-    "新增 acceptance freeze manifest，对六个正式安全产物记录长度和 SHA-256，并由 CI 脚本校验路径边界、存在性、长度、哈希与敏感字段；当前清单诚实标记第二 Provider、PostgreSQL required CI、GitHub checks 和 merge 未完成。"
+    "新增 acceptance freeze manifest，对六个正式安全产物记录长度和 SHA-256，并由 CI 脚本校验路径边界、存在性、长度、哈希与敏感字段；当前清单诚实标记第二 Provider、PostgreSQL required CI、GitHub checks 和 merge 未完成。",
+    "修复 CI 暴露的同秒历史排序不稳定：不再让包含随机 projectId 的 stable key 或 SHA 字典序决定 Story 边界，同秒 Git Commit 改为先按 parent 拓扑、再按 Commit 内事件类别和 source identity 排序，保留 occurredAt、transition、Evidence 和事件守恒。"
   ],
   "keyFiles": [
     "backend/src/main/java/com/projectflow/service/ProjectHistoryReconstructionService.java",
@@ -25,11 +26,11 @@
   "verification": {
     "build": "Frontend TypeScript/lint and Next.js production build passed. Start-ProjectFlow.bat performed worktree-local npm ci, rebuilt production output, started backend/frontend, reached health, wrote logs/last-embedded-build.json and stopped with ports 3000/8080 released.",
     "tests": "Backend H2 full suite: 483 tests, 0 failures, 0 errors, 1 opt-in benchmark skipped. History focused regression 26/26; public repositories 1/1 covering three fixed projects; DeepSeek History contract 1/1. Frontend contracts 55/55; Playwright 8/8; Hermes 8/8 with 19 tools; Obsidian 21/21 with a 5,000-fact temporary Vault; acceptance evidence and committed secret scans passed.",
-    "manualCheck": "Independently re-read official repositories, source blobs and open issues dated 2026-08-03; verified six frozen artifact hashes, shallow-history DEGRADED/PARTIAL diagnostics, root launcher evidence, no residual ports, no Tag/Release and no global Git configuration change. Local Docker was unavailable, so PostgreSQL was not reported as passed."
+    "manualCheck": "Independently re-read official repositories, source blobs and open issues dated 2026-08-03; verified six frozen artifact hashes, shallow-history DEGRADED/PARTIAL diagnostics, root launcher evidence, no residual ports, no Tag/Release and no global Git configuration change. Local Docker was unavailable; PostgreSQL 16 was instead verified by GitHub Actions runs 30811621732 and 30811625114 on the previous head, and the new head still requires CI rerun."
   },
   "unfinished": [
     "A second current real Provider has not yet been safely configured or run; DeepSeek alone cannot satisfy the cross-Provider hard gate.",
-    "PostgreSQL 16 Testcontainers and all required GitHub checks must pass on the feature PR before merge.",
+    "The deterministic same-timestamp ordering fix still requires all required GitHub checks, including PostgreSQL 16, to rerun on the new feature-branch head before merge.",
     "Feature PR, possible acceptance-backfill PR, final master verification, branch deletion and worktree cleanup remain pending."
   ],
   "sedimentCandidates": [

@@ -1,6 +1,6 @@
 # ProjectFlow V3.8.0 验收报告
 
-报告状态：本地门禁通过，外部门禁待完成
+报告状态：本地门禁通过，required CI 复验与跨 Provider 门禁待完成
 
 更新日期：2026-08-03
 
@@ -14,7 +14,7 @@ fd5ce827245f4fc4a20ecda15c63fc03313505ab。
 
 ## 3. 功能 PR
 
-尚未创建。
+功能 PR 为 #13：`https://github.com/xiaochuqing-dev/ProjectFlow/pull/13`，当前保持 Draft，目标分支为 master。
 
 ## 4. 功能 merge SHA
 
@@ -22,7 +22,7 @@ fd5ce827245f4fc4a20ecda15c63fc03313505ab。
 
 ## 5. 验收回填 PR
 
-尚未创建；是否需要取决于功能 PR 合并后是否要回填 PR、merge SHA 和 CI run ID。
+尚未创建；功能 PR 合并后将用短期 acceptance-backfill PR 回填 merge SHA、最终 Actions run ID 和最终 master 状态。
 
 ## 6. 最终 master SHA
 
@@ -30,15 +30,16 @@ fd5ce827245f4fc4a20ecda15c63fc03313505ab。
 
 ## 7. GitHub Actions
 
-V3.8.0 required CI 尚未运行。不得用本地 H2 结果代替 PostgreSQL 16 required check。
+PR #13 已运行 required CI。提交 `077e218` 的 push run `30811074162` 与 pull_request run `30811227750` 保留了 acceptance manifest 使用 Windows 工作树 CRLF 哈希导致的首次失败。提交 `d3a935c` 的 push run `30811621732` 与 pull_request run `30811625114` 中，Frontend、PostgreSQL 16、Hermes、Obsidian、Sensitive Content 和 Browser E2E 均通过；`backend-unit-and-h2` 因同时间 Git 事件曾使用 project-scoped 随机哈希决定次序而失败。工程层现已改为同秒 Commit 先按 parent 拓扑、再按 Commit 内事件类别与 source identity 排序；新 head 的 required CI 仍需复验。
 
 ## 8. PostgreSQL 16
 
-本机 Docker Desktop 守护进程未运行，因此没有伪造本地 Testcontainers 结果。PostgreSQL 16 必须由本轮 GitHub Actions 的 required `postgres-integration` 验证。
+本机 Docker Desktop 守护进程未运行，因此没有伪造本地 Testcontainers 结果。GitHub Actions run `30811621732` 和 `30811625114` 的 required `postgres-integration` 已通过；排序修复推送后仍需在新 head 上再次通过。
 
 ## 9. 当前测试结果
 
 - Project History 聚焦回归：26/26 通过。
+- 同秒 Git 拓扑回归：两个原失败场景共同通过，新增/修改/删除/恢复场景额外连续重复 4 次通过。
 - 三公开仓库有界验证：1/1 通过，覆盖三个固定公开项目。
 - DeepSeek 项目历程真实模型合同：1/1 通过。
 - Backend H2 full suite：483 tests，0 failure，0 error，1 skipped；跳过项是显式 opt-in 的真实开源仓库 benchmark，不是功能失败。
@@ -111,9 +112,11 @@ DeepSeek deepseek-v4-pro 通过固定 Prompt v2 合同：1 次请求、1,539 Tok
 
 当前正式产物中 Unsupported Claim、Invalid Evidence、Cross-project reference、Reason without Evidence 均为 0，eventConservation=true。提交内容密钥模式扫描与验收产物路径、敏感字段、长度和 SHA-256 校验均通过。
 
-安全冻结清单为 `docs/acceptance-evidence/v3.8.0/acceptance-freeze-manifest.json`。清单冻结六个正式 Git blob 的长度和 SHA-256，避免 Windows CRLF 与 Linux LF 造成平台相关哈希，同时明确第二 Provider、PostgreSQL required CI、GitHub checks 和 merge 仍未完成。
+安全冻结清单为 `docs/acceptance-evidence/v3.8.0/acceptance-freeze-manifest.json`。清单冻结六个正式 Git blob 的长度和 SHA-256，避免 Windows CRLF 与 Linux LF 造成平台相关哈希；清单冻结时记录的第二 Provider、PostgreSQL required CI、GitHub checks 和 merge 状态保留为当时证据，最新进度以本报告为准。
 
 PR #13 首轮 run `30811227750` 的 `sensitive-content` 因最初清单冻结 Windows 工作树 CRLF 字节而失败；四个 JSON 在 Git 提交后转为 LF，导致长度和 SHA-256 不同。修复后校验器直接读取 Git index/blob 的规范字节，未修改验收产物语义或降低安全门槛。
+
+PR #13 run `30811621732` 和 `30811625114` 的 `backend-unit-and-h2` 又暴露同秒事件排序缺陷：来源事件的 stable key 包含随机 projectId，不能充当历史次序；复杂 Merge fixture 也证明 SHA 字典序不能替代 Git parent 拓扑。修复保留原始 occurredAt、Event、transition 和 Evidence，只稳定工程分组次序，没有降低 Story/Thread Ground Truth。
 
 ## 23. Obsidian 分级结论
 
@@ -132,7 +135,7 @@ ProjectFlow → Obsidian 使用 vault 标识和 managed relative path。Obsidian
 
 ## 26. 当前未完成
 
-第二真实 Provider、PostgreSQL 16 required CI、GitHub PR/CI、可能的验收回填、最终 master 核验、分支与 worktree 清理。本地确定性、前后端、Playwright、Hermes、Obsidian、安全和根启动器门禁已完成。
+第二独立真实 Provider、新 head 的全部 required CI、功能 PR 合并、验收回填、最终 master 核验、分支与 worktree 清理仍未完成。PostgreSQL 16 已在上一 head 的两次 Actions run 通过；本地确定性、Backend H2、Frontend、Playwright、Hermes、Obsidian、安全和根启动器门禁已完成。
 
 ## 27. 为什么仍不进入最终 GUI
 

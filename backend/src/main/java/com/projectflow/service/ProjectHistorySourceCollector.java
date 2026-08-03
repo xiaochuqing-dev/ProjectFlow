@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
@@ -188,7 +189,7 @@ public class ProjectHistorySourceCollector {
         collectProjectFacts(projectId, projectRevision, events, limitations, collectionState);
 
         List<CollectedEvent> ordered = events.values().stream()
-            .sorted(Comparator.comparing(CollectedEvent::occurredAt).thenComparing(CollectedEvent::stableEventKey))
+            .sorted(sourceEventOrder(events.values()))
             .limit(MAX_EVENTS)
             .toList();
         if (events.size() > MAX_EVENTS) {
@@ -1116,6 +1117,35 @@ public class ProjectHistorySourceCollector {
             input.append(event.stableEventKey()).append(':').append(event.payloadHash()).append('\n')
         );
         return sha256(input.toString());
+    }
+
+    private static Comparator<CollectedEvent> sourceEventOrder(Collection<CollectedEvent> events) {
+        Map<String, Integer> gitRevisionOrder = new LinkedHashMap<>();
+        for (CollectedEvent event : events) {
+            if (event.sourceType() == SourceType.GIT
+                && Set.of(Category.COMMIT, Category.MERGE).contains(event.category())
+                && !event.sourceRevision().isBlank()) {
+                gitRevisionOrder.putIfAbsent(event.sourceRevision(), gitRevisionOrder.size());
+            }
+        }
+        return Comparator.comparing(CollectedEvent::occurredAt)
+            .thenComparingInt(event -> gitRevisionOrder.getOrDefault(event.sourceRevision(), Integer.MAX_VALUE))
+            .thenComparing(CollectedEvent::sourceRevision)
+            .thenComparingInt(event -> eventCategoryOrder(event.category()))
+            .thenComparing(event -> event.sourceType().name())
+            .thenComparing(CollectedEvent::sourceIdentity)
+            .thenComparing(event -> event.transition().name())
+            .thenComparing(event -> String.join("\u0000", event.affectedPaths()))
+            .thenComparing(CollectedEvent::stableEventKey);
+    }
+
+    static int eventCategoryOrder(Category category) {
+        return switch (category) {
+            case COMMIT, MERGE -> 0;
+            case FILE_CHANGE, DOCUMENT_VERSION -> 1;
+            case PULL_REQUEST, ISSUE, AGENT_RESULT, VALIDATION, USER_DECLARATION, PROJECT_FACT, EXTERNAL -> 2;
+            case TAG -> 3;
+        };
     }
 
     private static Transition fileTransition(FileChange change, Set<String> removedPaths) {
