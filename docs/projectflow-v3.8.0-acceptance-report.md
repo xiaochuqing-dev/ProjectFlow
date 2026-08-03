@@ -1,6 +1,6 @@
 # ProjectFlow V3.8.0 验收报告
 
-报告状态：本地门禁通过，required CI 复验与跨 Provider 门禁待完成
+报告状态：本地与 required CI 通过，跨 Provider 门禁待完成
 
 更新日期：2026-08-03
 
@@ -30,11 +30,11 @@ fd5ce827245f4fc4a20ecda15c63fc03313505ab。
 
 ## 7. GitHub Actions
 
-PR #13 已运行 required CI。提交 `077e218` 的 push run `30811074162` 与 pull_request run `30811227750` 保留了 acceptance manifest 使用 Windows 工作树 CRLF 哈希导致的首次失败。提交 `d3a935c` 的 push run `30811621732` 与 pull_request run `30811625114` 中，Frontend、PostgreSQL 16、Hermes、Obsidian、Sensitive Content 和 Browser E2E 均通过；`backend-unit-and-h2` 因同时间 Git 事件曾使用 project-scoped 随机哈希决定次序而失败。工程层现已改为同秒 Commit 先按 parent 拓扑、再按 Commit 内事件类别与 source identity 排序；新 head 的 required CI 仍需复验。
+PR #13 已运行 required CI。提交 `077e218` 的 push run `30811074162` 与 pull_request run `30811227750` 保留了 acceptance manifest 使用 Windows 工作树 CRLF 哈希导致的首次失败。提交 `d3a935c` 的 push run `30811621732` 与 pull_request run `30811625114` 中，Frontend、PostgreSQL 16、Hermes、Obsidian、Sensitive Content 和 Browser E2E 均通过，`backend-unit-and-h2` 暴露同秒事件排序缺陷。修复提交 `ffe35de` 的 push run `30814897379` 与 pull_request run `30814901364` 已全部通过 Backend/H2、PostgreSQL 16、Frontend、Browser E2E、Hermes、Obsidian 和 Sensitive Content；`optional-real-provider` 因未配置 GitHub Secret 明确 SKIPPED。
 
 ## 8. PostgreSQL 16
 
-本机 Docker Desktop 守护进程未运行，因此没有伪造本地 Testcontainers 结果。GitHub Actions run `30811621732` 和 `30811625114` 的 required `postgres-integration` 已通过；排序修复推送后仍需在新 head 上再次通过。
+本机 Docker Desktop 守护进程未运行，因此没有伪造本地 Testcontainers 结果。GitHub Actions run `30814897379` 和 `30814901364` 的 required `postgres-integration` 已在排序修复 head 上通过。
 
 ## 9. 当前测试结果
 
@@ -135,7 +135,7 @@ ProjectFlow → Obsidian 使用 vault 标识和 managed relative path。Obsidian
 
 ## 26. 当前未完成
 
-第二独立真实 Provider、新 head 的全部 required CI、功能 PR 合并、验收回填、最终 master 核验、分支与 worktree 清理仍未完成。PostgreSQL 16 已在上一 head 的两次 Actions run 通过；本地确定性、Backend H2、Frontend、Playwright、Hermes、Obsidian、安全和根启动器门禁已完成。
+第二独立真实 Provider、功能 PR 合并、验收回填、最终 master 核验、分支与 worktree 清理仍未完成。本地与 GitHub required CI 已完成；可选真实 Provider workflow 因缺少独立 Provider Secret 明确跳过。
 
 ## 27. 为什么仍不进入最终 GUI
 
