@@ -1,6 +1,6 @@
 # ProjectFlow V3.8.0 验收报告
 
-报告状态：功能合并、双真实 Provider 与 master required CI 已通过，验收回填中
+报告状态：最终验收通过（本文件随验收回填 PR #14 合并生效）
 
 更新日期：2026-08-04
 
@@ -22,7 +22,7 @@ ea0cc126c17f36fea60af01f2dd060a94282d5c4。
 
 ## 5. 验收回填 PR
 
-短期分支 `codex/v3.8.0-acceptance-backfill` 只回填验收元数据。PR 将在本次提交推送后创建，编号在下一次元数据提交中补齐；其 merge SHA 由 GitHub 合并时生成，并在最终回复记录。
+验收回填 PR 为 #14：`https://github.com/xiaochuqing-dev/ProjectFlow/pull/14`，只修改验收元数据。其 merge SHA 由 GitHub 合并时生成，并在最终回复记录；报告内容随该 PR 合并进入 master 后生效。
 
 ## 6. 最终 master SHA
 
@@ -143,7 +143,7 @@ ProjectFlow → Obsidian 使用 vault 标识和 managed relative path。Obsidian
 
 ## 26. 当前未完成
 
-产品实现、双真实 Provider、本地门禁、PostgreSQL 16、功能 PR 和合并后 master CI 均已完成。只剩验收回填 PR 合并以及 V3.8.0 开发分支和 worktree 清理。
+产品实现、双真实 Provider、本地门禁、PostgreSQL 16、功能 PR 和合并后 master CI 均已完成。PR #14 只承载最终元数据，并由 required checks 保护；其合并后执行 V3.8.0 分支和 worktree 清理，不存在遗留产品实现项。
 
 ## 27. 为什么仍不进入最终 GUI
 
@@ -159,7 +159,7 @@ NO。
 
 ## 30. 开发分支清理
 
-功能分支与验收回填分支将在回填 PR 合并后删除；删除结果由最终核验和最终回复记录。
+功能分支与验收回填分支在 PR #14 合并后删除；删除结果由最终核验和最终回复记录。
 
 ## 31. master clean
 
@@ -167,7 +167,7 @@ NO。
 
 ## 32. 残留 worktree
 
-当前两个 V3.8.0 worktree 仅用于功能与验收回填，回填合并后删除。其他早已存在、与 V3.8.0 无关的 worktree 不在本阶段授权范围内，保持不动。
+两个 V3.8.0 worktree 在 PR #14 合并后删除。其他早已存在、与 V3.8.0 无关的 worktree 不在本阶段授权范围内，保持不动。
 
 ## 33. V3.9 进入条件
 

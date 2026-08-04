@@ -4,7 +4,7 @@
 
 ## 当前结论
 
-项目历程核心实现、聚焦回归、三个公开仓库验证、DeepSeek 与 GLM 双真实 Provider、Backend H2、PostgreSQL 16、Frontend、Playwright、Hermes、Obsidian、启动器和安全扫描均已通过。功能 PR #13 已合并，合并后 master required CI 也已通过；当前只剩验收回填 PR 合并和 V3.8.0 分支/worktree 清理。
+项目历程核心实现、聚焦回归、三个公开仓库验证、DeepSeek 与 GLM 双真实 Provider、Backend H2、PostgreSQL 16、Frontend、Playwright、Hermes、Obsidian、启动器和安全扫描均已通过。功能 PR #13 和合并后 master required CI 已通过；本文件随仅含元数据的验收回填 PR #14 合并后构成最终批准。
 
 ## 产品能力验收
 
@@ -107,4 +107,4 @@ GitButler、Gource、OpenProject 等仅作为产品模式研究。FSL-1.1-MIT �
 - 功能 PR 和可能的验收回填 PR 均通过 required CI 并合并。
 - master clean，开发分支、回填分支和 worktree 全部删除。
 
-Backend、PostgreSQL 16、Frontend、Playwright、Hermes、Obsidian、安全、根启动器、双真实 Provider、功能合并和 master required checks 已满足。验收回填 PR 只修改元数据，并在自身 required checks 通过后合并；随后完成 V3.8.0 分支/worktree 清理。
+Backend、PostgreSQL 16、Frontend、Playwright、Hermes、Obsidian、安全、根启动器、双真实 Provider、功能合并和 master required checks 已满足。验收回填 PR #14 只修改元数据，并在自身 required checks 通过后合并；随后删除 V3.8.0 分支/worktree，最终验收完成。

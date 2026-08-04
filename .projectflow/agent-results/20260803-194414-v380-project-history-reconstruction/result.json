@@ -6,7 +6,7 @@
     "Project Memory Gateway、19-tool Hermes MCP、Obsidian Projection 和最小前端预览已消费同一持久化 History；Obsidian 零插件官方 URI 默认可用，Advanced URI 可选降级，稳定反向链接、旧 Vault 用户内容、移动、冲突和 no-op 均保留。",
     "冻结 24 类历史形状，完成 ProjectFlow dogfood、Synthetic 可读产物、Kubernetes/MDN Content/Reveal.js 三公开仓库浅历史验证，以及 DeepSeek Chat Completions 与 GLM Responses 双真实模型合同；非法 Evidence、跨项目引用、不支持强事实和事件丢失均为 0。",
     "完成 Backend H2、PostgreSQL 16、Frontend、Playwright、Hermes、Obsidian、安全产物、提交密钥扫描和根启动器门禁；启动器在隔离 worktree 中使用当前仓库级 safe.directory，不修改全局 Git 配置。",
-    "acceptance freeze manifest 现冻结七个正式安全产物的 Git blob 长度和 SHA-256，并由 CI 校验路径边界、存在性、哈希与敏感字段；双真实 Provider、PostgreSQL 16、功能 merge 和合并后 master required checks 已通过，最终状态等待元数据回填 PR。",
+    "acceptance freeze manifest 现冻结七个正式安全产物的 Git blob 长度和 SHA-256，并由 CI 校验路径边界、存在性、哈希与敏感字段；双真实 Provider、PostgreSQL 16、功能 merge 和合并后 master required checks 已通过，最终状态随验收回填 PR #14 合并生效。",
     "修复 CI 暴露的同秒历史排序不稳定：不再让包含随机 projectId 的 stable key 或 SHA 字典序决定 Story 边界，同秒 Git Commit 改为先按 parent 拓扑、再按 Commit 内事件类别和 source identity 排序，保留 occurredAt、transition、Evidence 和事件守恒。",
     "修复大型源码因通用摘要覆盖 Content Map 而丢失中段证据的问题；large-middle 真实模型用例现能看到有界 head/middle/tail 内容信号。",
     "把 History 模型诊断拆分为非空原因无 Evidence 与空原因漏写 UNKNOWN：前者继续硬拒绝，后者由工程层确定性补齐 UNKNOWN；最终 GLM History 工件两项计数均为 0。",
@@ -34,9 +34,7 @@
     "tests": "Backend H2 full suite: 482 tests, 0 failures, 0 errors, 1 opt-in benchmark skipped. ProjectHistoryReconstructionTest 19/19 and PromptBuilder combined 20/20; public repositories 1/1 covering three fixed projects; DeepSeek and GLM History contracts each 1/1. GLM 38-run completed 38/38 with 51 requests and 501,188 tokens; product E2E completed 17/17 with 33 logical/physical requests and 433,092 tokens, with 0 invalid Evidence and 0 degradation. Frontend contracts 55/55; Playwright 8/8; Hermes 8/8 with 19 tools; Obsidian 21/21 with a 5,000-fact temporary Vault. Feature required runs 30842484912 and 30842488653 passed all blocking jobs; workflow_dispatch run 30832103333 passed PostgreSQL and all real GLM jobs; merged-master run 30842827453 passed on attempt 2 after preserving a transient first-attempt Browser E2E startup failure.",
     "manualCheck": "Independently re-read official repositories, source blobs and open issues dated 2026-08-03; verified seven frozen Git blob hashes, shallow-history DEGRADED/PARTIAL diagnostics, GLM safe artifact, root launcher evidence, version 3.8.0, feature merge ea0cc126, no Tag/Release and no global Git configuration change. Local Docker was unavailable; PostgreSQL 16 was verified by GitHub Actions on feature and merged master. The original user workspace had unrelated pre-existing changes and was not modified. GLM Conflict Detection 0.6667 remains documented as a limitation."
   },
-  "unfinished": [
-    "Acceptance-backfill PR merge and V3.8.0 branch/worktree cleanup remain as the final metadata operations."
-  ],
+  "unfinished": [],
   "sedimentCandidates": [
     "可复用能力：把原始来源事件库存与可替换 History 展示快照分离，确定性工程层拥有成员、时间、transition、Evidence 和 authority，模型只做一次有界措辞改写。",
     "可复用经验：大历史使用有界读取、动态 Chapter、稳定 subject、增量 overlap、rewrite 失效标记和原始事件守恒，同时对浅克隆与未读范围保持 PARTIAL 诊断。",
