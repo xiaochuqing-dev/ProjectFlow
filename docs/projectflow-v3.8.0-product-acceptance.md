@@ -4,7 +4,7 @@
 
 ## 当前结论
 
-项目历程核心实现、聚焦回归、三个公开仓库验证、DeepSeek 与 GLM 双真实 Provider、Backend H2、PostgreSQL 16、Frontend、Playwright、Hermes、Obsidian、启动器和安全扫描均已通过。当前只剩功能 PR 合并、验收回填、最终 master 核验和分支/worktree 清理，因此还不是最终发布批准。
+项目历程核心实现、聚焦回归、三个公开仓库验证、DeepSeek 与 GLM 双真实 Provider、Backend H2、PostgreSQL 16、Frontend、Playwright、Hermes、Obsidian、启动器和安全扫描均已通过。功能 PR #13 已合并，合并后 master required CI 也已通过；当前只剩验收回填 PR 合并和 V3.8.0 分支/worktree 清理。
 
 ## 产品能力验收
 
@@ -55,7 +55,7 @@ Dogfood 两个文件连续多次 SHA-256 一致，证明冻结输入下输出稳
 - 模型原因无 Evidence：0。
 - Key、Authorization、完整 Prompt、raw response、reasoning、绝对路径持久化：0。
 
-提交内容密钥模式扫描和所有验收产物的敏感值、路径边界、文件长度与 SHA-256 校验已通过。七个正式产物由 `acceptance-freeze-manifest.json` 冻结；跨 Provider、PostgreSQL 16 和 GitHub required checks 已通过，merge 与最终验收仍保持未完成。
+提交内容密钥模式扫描和所有验收产物的敏感值、路径边界、文件长度与 SHA-256 校验已通过。七个正式产物由 `acceptance-freeze-manifest.json` 冻结；跨 Provider、PostgreSQL 16、GitHub required checks、功能 merge 和合并后 master 核验均已通过，最终状态随验收回填 PR 合并生效。
 
 ## 首次失败保留
 
@@ -71,6 +71,7 @@ Dogfood 两个文件连续多次 SHA-256 一致，证明冻结输入下输出稳
 10. PR #13 首轮 `sensitive-content` 因 freeze manifest 使用 Windows 工作树 CRLF 字节计算四个 JSON 的长度和 SHA-256 而失败。产物语义未变化；清单与校验器改为读取 Git index/blob 的规范提交字节，消除 Windows/Linux 换行差异，并保留首轮 CI 失败证据。
 11. GLM run `30816468130` 的 Provider Probe 和 38-run 通过，但产品链路为 15/17：large-middle 暴露大型源码 Content Map 丢失，conflicting-final-docs 暴露错误类别断言；History 因脚本顺序未执行。修复后真实聚焦复验通过。
 12. GLM run `30830424132` 与 `30831241801` 的旧 reasonWithoutEvidenceCount=1 混合了硬 Evidence 违规和漏写 UNKNOWN。拆分诊断后，非空原因无 Evidence 继续硬拒绝，空原因漏写 UNKNOWN 由工程层补齐；最终运行两项均为 0。
+13. 功能 merge 后 master run `30842827453` 首次只有 Browser E2E 因 Playwright webServer 启动进程一次性退出而失败；同一提交的功能 PR 两轮 Browser E2E 和其余 master jobs 均通过。保留失败证据后只重跑失败作业，attempt 2 成功，没有用代码改动掩盖环境波动。
 
 这些失败均保留在验收记录中，没有通过降低安全阈值、伪造 PASS 或删除不利证据处理。
 
@@ -106,4 +107,4 @@ GitButler、Gource、OpenProject 等仅作为产品模式研究。FSL-1.1-MIT �
 - 功能 PR 和可能的验收回填 PR 均通过 required CI 并合并。
 - master clean，开发分支、回填分支和 worktree 全部删除。
 
-Backend、PostgreSQL 16、Frontend、Playwright、Hermes、Obsidian、安全、根启动器、双真实 Provider 和 GitHub required checks 已满足；当前阻断项只剩合并、验收回填、最终 master 核验和清理。
+Backend、PostgreSQL 16、Frontend、Playwright、Hermes、Obsidian、安全、根启动器、双真实 Provider、功能合并和 master required checks 已满足。验收回填 PR 只修改元数据，并在自身 required checks 通过后合并；随后完成 V3.8.0 分支/worktree 清理。

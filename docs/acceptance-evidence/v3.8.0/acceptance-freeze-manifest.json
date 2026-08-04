@@ -1,9 +1,14 @@
 {
   "schemaVersion": 1,
   "release": "3.8.0",
-  "generatedAt": "2026-08-04T02:37:46+08:00",
+  "generatedAt": "2026-08-04T02:55:45+08:00",
   "baselineMasterSha": "fd5ce827245f4fc4a20ecda15c63fc03313505ab",
-  "state": "PRE_MERGE_INCOMPLETE",
+  "state": "POST_FEATURE_MERGE_BACKFILL_PENDING",
+  "featurePr": 13,
+  "featureMergeSha": "ea0cc126c17f36fea60af01f2dd060a94282d5c4",
+  "validatedMasterSha": "ea0cc126c17f36fea60af01f2dd060a94282d5c4",
+  "masterRequiredCiRun": 30842827453,
+  "masterRequiredCiAttempt": 2,
   "artifacts": [
     {
       "category": "projectflow-dogfood-json",
@@ -54,8 +59,8 @@
     "requiredRealProviderCount": 2,
     "crossProviderQualification": "PASSED",
     "postgresql16": "PASSED_REQUIRED_CI",
-    "githubRequiredChecks": "PASSED",
-    "merge": "PENDING",
-    "finalAcceptance": "INCOMPLETE"
+    "githubRequiredChecks": "PASSED_FEATURE_AND_MASTER",
+    "merge": "PASSED_FEATURE_PR_13",
+    "finalAcceptance": "PENDING_BACKFILL_PR"
   }
 }

@@ -1,12 +1,12 @@
 # ProjectFlow V3.8.0 验收报告
 
-报告状态：双真实 Provider 与 required CI 已通过，待合并和最终回填
+报告状态：功能合并、双真实 Provider 与 master required CI 已通过，验收回填中
 
 更新日期：2026-08-04
 
 ## 1. 最终版本
 
-目标版本为 3.8.0。Backend、Frontend 和文档版本已更新，但功能尚未合并 master，因此当前不是最终发布状态。
+最终版本为 3.8.0。Backend、Frontend 和文档版本均已更新，功能已合并 master；本阶段不创建 Tag 或 Release。
 
 ## 2. 基线 master SHA
 
@@ -14,29 +14,31 @@ fd5ce827245f4fc4a20ecda15c63fc03313505ab。
 
 ## 3. 功能 PR
 
-功能 PR 为 #13：`https://github.com/xiaochuqing-dev/ProjectFlow/pull/13`，当前保持 Draft，目标分支为 master。
+功能 PR 为 #13：`https://github.com/xiaochuqing-dev/ProjectFlow/pull/13`，已通过 required checks 并合并 master。
 
 ## 4. 功能 merge SHA
 
-尚未产生。
+ea0cc126c17f36fea60af01f2dd060a94282d5c4。
 
 ## 5. 验收回填 PR
 
-尚未创建；功能 PR 合并后将用短期 acceptance-backfill PR 回填 merge SHA、最终 Actions run ID 和最终 master 状态。
+短期分支 `codex/v3.8.0-acceptance-backfill` 只回填验收元数据。PR 将在本次提交推送后创建，编号在下一次元数据提交中补齐；其 merge SHA 由 GitHub 合并时生成，并在最终回复记录。
 
 ## 6. 最终 master SHA
 
-尚未产生。
+当前已验证 master SHA 为 ea0cc126c17f36fea60af01f2dd060a94282d5c4。验收回填合并后的最终 master SHA 由 GitHub 生成，并在最终回复记录。
 
 ## 7. GitHub Actions
 
-PR #13 已运行 required CI。提交 `077e218` 的 push run `30811074162` 与 pull_request run `30811227750` 保留了 acceptance manifest 使用 Windows 工作树 CRLF 哈希导致的首次失败。提交 `d3a935c` 的 push run `30811621732` 与 pull_request run `30811625114` 中，Frontend、PostgreSQL 16、Hermes、Obsidian、Sensitive Content 和 Browser E2E 均通过，`backend-unit-and-h2` 暴露同秒事件排序缺陷。修复提交 `ffe35de` 的 runs `30814897379`、`30814901364` 首次全绿；当前 head `828a259` 的 push run `30832088537` 与 pull_request run `30832092348` 再次全部通过 Backend/H2、PostgreSQL 16、Frontend、Browser E2E、Hermes、Obsidian 和 Sensitive Content。
+PR #13 已运行 required CI。提交 `077e218` 的 push run `30811074162` 与 pull_request run `30811227750` 保留了 acceptance manifest 使用 Windows 工作树 CRLF 哈希导致的首次失败。提交 `d3a935c` 的 push run `30811621732` 与 pull_request run `30811625114` 中，Frontend、PostgreSQL 16、Hermes、Obsidian、Sensitive Content 和 Browser E2E 均通过，`backend-unit-and-h2` 暴露同秒事件排序缺陷。修复提交 `ffe35de` 的 runs `30814897379`、`30814901364` 首次全绿；最终功能 head `dbeae33` 的 push run `30842484912` 与 pull_request run `30842488653` 全部通过 Backend/H2、PostgreSQL 16、Frontend、Browser E2E、Hermes、Obsidian 和 Sensitive Content。
 
 独立 workflow_dispatch run `30832103333` 的全部作业成功，其中 `optional-real-provider` job `91748308607` 完成 GLM 38-run、17-case 产品链路和 Project History 合同验收。
 
+功能 merge 后的 master run `30842827453` 首次只有 Browser E2E 失败，原因为 Playwright webServer 启动进程一次性退出；同一提交在功能 PR 两轮 Browser E2E 均已通过，其余 master jobs 也全部成功。保留该失败后仅重跑失败作业，attempt 2 的 Browser E2E 与整轮 required CI 成功。
+
 ## 8. PostgreSQL 16
 
-本机 Docker Desktop 守护进程未运行，因此没有伪造本地 Testcontainers 结果。GitHub Actions runs `30832088537`、`30832092348` 和 `30832103333` 的 `postgres-integration` 已在当前验收 head 上通过。
+本机 Docker Desktop 守护进程未运行，因此没有伪造本地 Testcontainers 结果。GitHub Actions runs `30842484912`、`30842488653`、`30832103333` 和 master run `30842827453` 的 `postgres-integration` 均通过。
 
 ## 9. 当前测试结果
 
@@ -116,7 +118,7 @@ DeepSeek deepseek-v4-pro / OpenAI Chat Completions 通过固定 Prompt v2 合同
 
 当前正式产物中 Unsupported Claim、Invalid Evidence、Cross-project reference、Reason without Evidence 均为 0，eventConservation=true。提交内容密钥模式扫描与验收产物路径、敏感字段、长度和 SHA-256 校验均通过。
 
-安全冻结清单为 `docs/acceptance-evidence/v3.8.0/acceptance-freeze-manifest.json`。清单冻结七个正式 Git blob 的长度和 SHA-256，避免 Windows CRLF 与 Linux LF 造成平台相关哈希；清单记录跨 Provider、PostgreSQL required CI 和 GitHub checks 已通过，merge 与 final acceptance 仍为未完成。
+安全冻结清单为 `docs/acceptance-evidence/v3.8.0/acceptance-freeze-manifest.json`。清单冻结七个正式 Git blob 的长度和 SHA-256，避免 Windows CRLF 与 Linux LF 造成平台相关哈希；清单记录跨 Provider、PostgreSQL required CI、功能 merge 和 master checks 已通过，最终状态将在验收回填 PR 合并时生效。
 
 PR #13 首轮 run `30811227750` 的 `sensitive-content` 因最初清单冻结 Windows 工作树 CRLF 字节而失败；四个 JSON 在 Git 提交后转为 LF，导致长度和 SHA-256 不同。修复后校验器直接读取 Git index/blob 的规范字节，未修改验收产物语义或降低安全门槛。
 
@@ -141,7 +143,7 @@ ProjectFlow → Obsidian 使用 vault 标识和 managed relative path。Obsidian
 
 ## 26. 当前未完成
 
-功能 PR 合并、验收回填、最终 master 核验、分支与 worktree 清理仍未完成。双真实 Provider、本地门禁、PostgreSQL 16 和 GitHub required CI 已完成。
+产品实现、双真实 Provider、本地门禁、PostgreSQL 16、功能 PR 和合并后 master CI 均已完成。只剩验收回填 PR 合并以及 V3.8.0 开发分支和 worktree 清理。
 
 ## 27. 为什么仍不进入最终 GUI
 
@@ -157,16 +159,16 @@ NO。
 
 ## 30. 开发分支清理
 
-尚未执行；功能未合并前不能删除当前开发分支。
+功能分支与验收回填分支将在回填 PR 合并后删除；删除结果由最终核验和最终回复记录。
 
 ## 31. master clean
 
-尚未进入最终核验阶段。不会覆盖主工作区中用户已有修改。
+远端 master 的功能合并态 ea0cc126 已在独立 clean worktree 核验。原主工作区存在用户预先已有的三个修改/未跟踪结果，未被覆盖、暂存、清理或混入本阶段提交，因此不把该用户工作区伪报为 clean。
 
 ## 32. 残留 worktree
 
-当前 V3.8.0 独立 worktree 仍存在，待合并和回填完成后删除。
+当前两个 V3.8.0 worktree 仅用于功能与验收回填，回填合并后删除。其他早已存在、与 V3.8.0 无关的 worktree 不在本阶段授权范围内，保持不动。
 
 ## 33. V3.9 进入条件
 
-V3.8.0 必须先完成全部本地与 required CI 门禁、真实跨 Provider 资格或经用户明确调整该门禁、功能与回填合并、最终 acceptance freeze、master clean、分支和 worktree 清理。之后才可基于真实用户对 Chapter/Story/Thread 可读性、浅历史续扫和 Obsidian 工作流的反馈决定 V3.9 范围。
+V3.9 只能在验收回填合并、V3.8.0 分支/worktree 清理和最终远端 master 核验完成后进入。随后应基于真实用户对 Chapter/Story/Thread 可读性、浅历史续扫和 Obsidian 工作流的反馈决定范围，不自动扩张为最终 GUI 或通用项目管理工具。
