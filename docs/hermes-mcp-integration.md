@@ -1,5 +1,9 @@
 # Hermes MCP Integration
 
+## V3.8.5 corrected history
+
+Hermes keeps the history read boundary model-free and now exposes `list_project_history_corrections` alongside the existing overview/chapter/story/thread/event/Evidence tools. Story results include user-readable text first, Primary/Supporting role, presentation authority/revision, correction conflicts and bounded technical drill-down. User declarations remain presentation-only and cannot be written through Hermes.
+
 ProjectFlow provides a repository-local, dependency-free Python stdio MCP adapter at `integrations/hermes/projectflow_mcp.py`. It exposes the Project Memory Gateway, V3.8.0 Project History and Agent Context read boundaries only; it is not a general REST proxy and contains no write tool.
 
 ## Tools

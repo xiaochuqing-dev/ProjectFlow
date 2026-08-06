@@ -1,4 +1,10 @@
-# ProjectFlow V3.8.0 Agent Protocol
+# ProjectFlow V3.8.5 Agent Protocol
+
+V3.8.5 presentation rule: Project History is the universal reading axis. Raw Events remain the complete source inventory; Technical Atoms, Primary/Supporting Changes, Stories, Threads and Chapters are replaceable derived presentation. The first layer must be Chinese-first and outcome-oriented, while engineering detail and Evidence stay reachable on demand.
+
+Deterministic code owns event conservation, grouping membership, chronology, transitions, authority, Evidence, rewrite state and bounded execution. Semantic windows may propose wording and presentation roles only after IDs and Evidence are validated. Window cache/checkpoint state must disclose failures, cancellation, skipped work and unprocessed scope. No model call is made per Commit or file.
+
+`USER_DECLARED_PRESENTATION` is an auditable, reversible overlay for title, summary, grouping, role, visibility, pinning and chapter declarations. It never mutates ProjectFact, ProjectHistoryEvent, Commit or Evidence. Gateway, Agent Context, Hermes, Frontend and Obsidian must consume the same corrected view and preserve source/presentation revisions.
 
 Before starting substantial work, read `PROJECT_CONTEXT.md` and the task-relevant source files. ProjectFlow follows: rules collect evidence, models interpret within bounded evidence, rules validate, normal objective facts are recorded automatically, and only exceptions require user attention.
 

@@ -1,0 +1,32 @@
+{
+  "taskGoal": "完成 ProjectFlow V3.8.5 项目历程质量封顶与用户修正闭环的验收收口，更新可复核证据，并保持敏感信息不落盘。",
+  "actualChanges": [
+    "补齐 V3.8.5 验收报告和证据索引，记录本地后端、前端、浏览器、Hermes、Obsidian 与启动器的实际结果，并明确 PostgreSQL 与真实 Provider 的外部环境边界。",
+    "修正 known-risks 中把 Playwright 仍写成未完成的过期描述，并保留 PostgreSQL、真实 Provider、calibration/holdout 和非代码项目的真实未完成状态。",
+    "完成当前工作树的 UTF-8 敏感值扫描；用户提供的 Provider 凭据没有写入代码、命令、日志、报告或本结果。"
+  ],
+  "keyFiles": [
+    "docs/projectflow-v3.8.5-acceptance-report.md",
+    "docs/acceptance-evidence/v3.8.5/evidence-index.md",
+    ".projectflow/context/known-risks.md",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryReconstructionService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryCorrectionService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryWindowPlanner.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryLanguageService.java",
+    "frontend/src/app/projects/[projectId]/history/page.tsx",
+    "frontend/src/lib/api.ts",
+    "integrations/hermes/projectflow_mcp.py",
+    "integrations/obsidian/projectflow_obsidian.py"
+  ],
+  "verification": {
+    "build": "backend mvn.cmd -q test completed with 496 tests, 0 failures, 0 errors, 1 skipped; frontend npm.cmd run build and npm.cmd run lint passed; Start-ProjectFlow.bat -CheckOnly passed.",
+    "tests": "frontend contracts 55/55 passed; Playwright 8/8 passed; Hermes unittest 9/9 passed; Obsidian unittest 21/21 passed. PostgreSQL 16 Testcontainers blocked because Docker Desktop Linux engine was unavailable.",
+    "manualCheck": "UTF-8 scan covered 856 tracked/untracked text files with zero real token/Bearer hits. Two absolute-path matches were intentional redaction test fixtures. Real GLM/DeepSeek requests and GitHub CI were not run."
+  },
+  "unfinished": [
+    "在具备 Docker 的隔离环境补跑 PostgreSQL 16 Testcontainers。",
+    "在安全凭据隔离环境补跑 GLM/DeepSeek calibration、holdout、双模型产品链和非代码项目验收。",
+    "GitHub PR、CI、推送和合并仍未执行。"
+  ],
+  "sedimentCandidates": []
+}

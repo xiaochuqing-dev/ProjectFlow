@@ -225,6 +225,13 @@ class GatewayClient:
         history_chapters = self._pages(base + "/history/chapters", None, {"size": 100})
         history_stories = self._pages(base + "/history/stories", None, {"size": 100})
         history_threads = self._pages(base + "/history/threads", None, {"size": 100})
+        try:
+            history_corrections = self.get(base + "/history/corrections")
+        except ProjectionError as error:
+            if error.code in {"PROJECT_HISTORY_CORRECTIONS_NOT_FOUND", "PROJECT_HISTORY_NOT_INITIALIZED", "NOT_FOUND"}:
+                history_corrections = {"items": [], "presentationRevision": ""}
+            else:
+                raise
         if len(history_chapters) > MAX_HISTORY_CHAPTERS:
             raise ProjectionError("PROJECTFLOW_RESULT_TOO_LARGE", "Project History chapters exceeded the projection input bound.")
         if len(history_stories) > MAX_HISTORY_STORIES:
@@ -283,6 +290,7 @@ class GatewayClient:
             "historyChapters": history_chapters,
             "historyStories": history_stories,
             "historyThreads": history_threads,
+            "historyCorrections": history_corrections,
             "lifecycle": lifecycle,
             "months": months,
             "capabilities": capabilities,
@@ -652,7 +660,41 @@ class ObsidianProjection:
         history_chapters = sorted(data.get("historyChapters") or [], key=lambda value: (str(value.get("from") or ""), str(value.get("id") or "")))
         history_stories = sorted(data.get("historyStories") or [], key=lambda value: (str(value.get("occurredFrom") or ""), str(value.get("id") or "")))
         history_threads = sorted(data.get("historyThreads") or [], key=lambda value: (str(value.get("subjectLabel") or ""), str(value.get("id") or "")))
+        history_corrections = data.get("historyCorrections") or {}
+        if isinstance(history_corrections, dict):
+            history_overview = dict(history_overview)
+            history_overview["presentationRevision"] = history_corrections.get("presentationRevision", "")
+            history_overview["corrections"] = history_corrections.get("items") or []
         history_story_by_id = {str(story.get("id")): story for story in history_stories}
+        small_history = len(history_stories) <= 60 and len(history_threads) <= 40
+
+        def primary_story(story: dict[str, Any]) -> bool:
+            return str(story.get("role") or "PRIMARY").upper() != "SUPPORTING"
+
+        def important_supporting(story: dict[str, Any]) -> bool:
+            return primary_story(story) or bool(
+                story.get("pinned") or story.get("conflicts") or story.get("unknowns")
+                or story.get("correctionConflicts") or story.get("presentationAuthority") == "USER_DECLARED_PRESENTATION"
+            )
+
+        if self.profile == "CORE" and not small_history:
+            history_story_notes = [story for story in history_stories if important_supporting(story)]
+            selected_story_ids = {str(story.get("id")) for story in history_story_notes}
+            history_thread_notes = [
+                thread for thread in history_threads
+                if any(str(ref) in selected_story_ids for ref in thread.get("storyRefs") or [])
+            ][:120]
+        elif self.profile == "EXTENDED":
+            history_story_notes = [story for story in history_stories if important_supporting(story)]
+            selected_story_ids = {str(story.get("id")) for story in history_story_notes}
+            history_thread_notes = [
+                thread for thread in history_threads
+                if any(str(ref) in selected_story_ids for ref in thread.get("storyRefs") or [])
+            ]
+        else:
+            history_story_notes = history_stories
+            selected_story_ids = {str(story.get("id")) for story in history_story_notes}
+            history_thread_notes = history_threads
         months = sorted(data.get("months") or [], key=lambda value: str(value.get("periodKey") or ""))
         capabilities = data.get("capabilities") or []
         evolutions = data.get("evolutions") or {}
@@ -697,7 +739,7 @@ class ObsidianProjection:
             or (snapshot.get("health") or {}).get("latestRealChangeAt") or snapshot.get("latestFactAt") or ""
         )
         overview_body = self._overview_body(
-            project_id, snapshot, history_overview, history_chapters, history_stories, history_threads,
+            project_id, snapshot, history_overview, history_chapters, history_story_notes, history_thread_notes,
             lifecycle, months, capabilities, evolutions, paths
         )
         notes.append(self._note(
@@ -713,12 +755,13 @@ class ObsidianProjection:
             f"HISTORY_INDEX:{project_id}", "HISTORY_INDEX", project_id, paths["index:HISTORY_INDEX"],
             f"{history_overview.get('projectRevision', '')}:{len(history_chapters)}:{len(history_stories)}:{len(history_threads)}",
             note_time,
-            self._history_index_body(project_id, history_overview, history_chapters, history_stories, history_threads, paths),
+            self._history_index_body(project_id, history_overview, history_chapters, history_story_notes, history_thread_notes, paths),
             {"projectflow_detail_url": self._projectflow_history_url(project_id, "OVERVIEW")},
         ))
         for chapter in history_chapters:
             chapter_id = str(chapter.get("id") or "")
-            chapter_stories = [history_story_by_id[ref] for ref in map(str, chapter.get("storyRefs") or []) if ref in history_story_by_id]
+            chapter_stories = [history_story_by_id[ref] for ref in map(str, chapter.get("storyRefs") or [])
+                               if ref in selected_story_ids and ref in history_story_by_id]
             notes.append(self._note(
                 f"HISTORY_CHAPTER:{chapter_id}", "HISTORY_CHAPTER", chapter_id, paths[f"history-chapter:{chapter_id}"],
                 sha256_text(json.dumps(chapter, ensure_ascii=False, sort_keys=True, separators=(",", ":"))),
@@ -731,13 +774,13 @@ class ObsidianProjection:
                     "projectflow_detail_url": self._projectflow_history_url(project_id, "CHAPTER", chapter_id),
                 },
             ))
-        for story in history_stories:
+        for story in history_story_notes:
             story_id = str(story.get("id") or "")
             notes.append(self._note(
                 f"HISTORY_STORY:{story_id}", "HISTORY_STORY", story_id, paths[f"history-story:{story_id}"],
                 sha256_text(json.dumps(story, ensure_ascii=False, sort_keys=True, separators=(",", ":"))),
                 str(story.get("occurredTo") or story.get("occurredFrom") or note_time),
-                self._history_story_body(project_id, story, history_threads, paths),
+                self._history_story_body(project_id, story, history_thread_notes, paths),
                 {
                     "history_story_id": story_id,
                     "occurred_from": story.get("occurredFrom") or "",
@@ -745,9 +788,10 @@ class ObsidianProjection:
                     "projectflow_detail_url": self._projectflow_history_url(project_id, "STORY", story_id),
                 },
             ))
-        for thread in history_threads:
+        for thread in history_thread_notes:
             thread_id = str(thread.get("id") or "")
-            thread_stories = [history_story_by_id[ref] for ref in map(str, thread.get("storyRefs") or []) if ref in history_story_by_id]
+            thread_stories = [history_story_by_id[ref] for ref in map(str, thread.get("storyRefs") or [])
+                              if ref in selected_story_ids and ref in history_story_by_id]
             notes.append(self._note(
                 f"HISTORY_THREAD:{thread_id}", "HISTORY_THREAD", thread_id, paths[f"history-thread:{thread_id}"],
                 sha256_text(json.dumps(thread, ensure_ascii=False, sort_keys=True, separators=(",", ":"))),
@@ -853,6 +897,7 @@ class ObsidianProjection:
         warnings = list((snapshot.get("health") or {}).get("warnings") or [])
         warnings.extend(history.get("conflicts") or [])
         warnings.extend(history.get("unknowns") or [])
+        corrections = history_overview.get("corrections") or []
         story_by_id = {str(story.get("id")): story for story in history_stories}
         lines = [
             f"# {compact_text(project.get('name'), 120) or '项目概览'}",
@@ -868,6 +913,7 @@ class ObsidianProjection:
             f"- 可确认范围：{history_overview.get('earliestEventAt') or '未知'} → {history_overview.get('latestEventAt') or '未知'}",
             f"- 当前性：{status_label(coverage.get('currentness'))}",
             f"- 完整性：{'完整' if coverage.get('complete') else '存在明确缺口'}",
+            f"- 展示修正：{len(corrections)} 条（只覆盖阅读层，不改变事实）",
             "",
             "### 最早可确认状态",
             "",
@@ -894,6 +940,13 @@ class ObsidianProjection:
             )
         if not history_chapters:
             lines.append("- 尚无时间篇章。")
+        if corrections:
+            lines += ["", "### 用户展示声明", ""]
+            for correction in corrections[:8]:
+                lines.append(
+                    f"- {status_label(correction.get('status'))}："
+                    f"{compact_text(correction.get('difference'), 260) or '展示层有用户声明'}"
+                )
         lines += ["", "## 当前事实与可选能力", ""]
         lines += [
             f"- 项目事实：{snapshot.get('factCount', 0)}（已记录 {snapshot.get('recordedFactCount', 0)}，需要关注 {snapshot.get('attentionFactCount', 0)}）",
@@ -1046,6 +1099,7 @@ class ObsidianProjection:
             f"- 发生时间：{story.get('occurredFrom') or '未知'} → {story.get('occurredTo') or '未知'}",
             f"- 权威：{status_label(story.get('authority'))}",
             f"- 摘要状态：{status_label(story.get('summaryStatus'))}",
+            f"- 展示权威：{compact_text(story.get('presentationAuthority') or 'AUTOMATIC', 80)} · 角色：{compact_text(story.get('role') or 'PRIMARY', 40)}",
             f"- 覆盖：{compact_text(story.get('coverage'), 200)}",
             "",
             "## Before",
@@ -1072,13 +1126,24 @@ class ObsidianProjection:
                 thread_id = str(thread.get("id") or "")
                 lines.append(note_link(paths[f"history-thread:{thread_id}"], compact_text(thread.get("subjectLabel"), 140)))
         conflicts = story.get("conflicts") or []
+        correction_conflicts = story.get("correctionConflicts") or []
         unknowns = story.get("unknowns") or []
         limitations = story.get("limitations") or []
-        if conflicts or unknowns or limitations:
+        if conflicts or correction_conflicts or unknowns or limitations:
             lines += ["", "## 冲突、未知与限制", ""]
             lines += [f"- 冲突：{compact_text(item, 400)}" for item in conflicts]
+            lines += [f"- 展示修正冲突：{compact_text(item, 400)}" for item in correction_conflicts]
             lines += [f"- 未知：{compact_text(item, 400)}" for item in unknowns]
             lines += [f"- 限制：{compact_text(item, 400)}" for item in limitations]
+        technical = story.get("technicalDetails") or []
+        atoms = story.get("technicalAtomRefs") or []
+        commits = story.get("commitSummaries") or []
+        if technical or atoms or commits:
+            lines += ["", "## 工程下钻", ""]
+            if atoms:
+                lines.append(f"- Technical Atom：{', '.join(compact_text(item, 120) for item in atoms[:20])}")
+            lines += [f"- {compact_text(item, 600)}" for item in technical[:12]]
+            lines += [f"- Commit 摘要：{compact_text(item, 600)}" for item in commits[:12]]
         evidence = story.get("evidenceRefs") or []
         lines += ["", "## 证据下钻", ""]
         lines += [f"- `{compact_text(item, 300)}`" for item in evidence[:50]] or ["- 当前没有可投影的 Evidence 引用。"]

@@ -1,5 +1,13 @@
 # Architecture
 
+## V3.8.5 human-readable history closure
+
+V3.8.5 keeps the V3.8.0 source-event and snapshot boundaries and adds a presentation pipeline inside the replaceable history read model: Raw Event → Technical Atom → Primary/Supporting Change → Story → Thread → Chapter. Deterministic code owns membership, chronology, transitions, Evidence and rewrite state; bounded model windows can only improve validated wording and presentation roles.
+
+Window identities, source fingerprints, strategy/Prompt versions and presentation correction revisions form the cache identity. `ProjectHistoryWindowCheckpoint` retains safe diagnostics and validated results so completed windows can be reused and failed, cancelled, skipped or unprocessed windows remain visible. `ProjectHistoryCorrectionService` applies `USER_DECLARED_PRESENTATION` overlays at read time without writing ProjectFact, events or Evidence.
+
+Gateway, Agent Context Package, Hermes, the frontend history preview and Obsidian all consume the corrected presentation mapper. Obsidian CORE is intentionally bounded to overview, history index, readable chapters, pinned/corrected stories and selected threads; full Story/Thread/audit output is opt-in.
+
 ## V3.8.0 project-history reconstruction
 
 V3.8.0 adds one source-event inventory and one replaceable history snapshot without changing ProjectFact authority.

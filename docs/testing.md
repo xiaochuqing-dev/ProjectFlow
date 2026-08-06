@@ -1,5 +1,13 @@
 # Testing
 
+## V3.8.5 human-readable history gates
+
+The V3.8.5 deterministic suite covers Technical Atom compression, Primary/Supporting classification, readable Before/Change/After wording, commit-level summaries, non-code fallback, window planning/cache/checkpoint recovery, cancellation/failure disclosure and presentation correction persistence. It asserts raw-event conservation, valid Evidence, no unsupported reason, no first-layer technical leakage and no mutation of ProjectFact/Event/Evidence.
+
+Correction tests cover rename, summary edit, role changes, merge/split, hide/pin, declared chapter, restore, optimistic conflict and source rewrite conflict. Read consumers are checked for the same corrected view. Obsidian CORE density tests ensure all Story/Thread notes are not emitted by default while explicit extended/full modes remain available.
+
+The V3.8.5 acceptance report separates deterministic/H2 evidence from Docker-dependent PostgreSQL, browser, and real Provider runs. `BLOCKED` and `NOT_RUN` are retained rather than treated as PASS.
+
 ## V3.8.0 project-history gates
 
 The deterministic suite freezes 24 required history shapes in `history-ground-truth.json` and binds every case to executable tests. Coverage includes small and 300+ Commit repositories, 1000+ raw events, create/modify/delete/restore/replace, rename/move/split/merge, one-to-many and many-to-one grouping, revert/reapply, merge-heavy history, weak or conflicting messages, multilingual commits, PR/Issue rationale, Agent/test claims, document/PPT/data/frontend/no-Git inputs, incomplete/rebound/rewritten history and sensitive material.

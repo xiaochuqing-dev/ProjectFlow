@@ -191,13 +191,13 @@ class MCPProjectHistoryTest(unittest.TestCase):
                 "clientInfo": {"name": "contract-test", "version": "1"},
             })
             self.assertEqual("2025-11-25", initialized["result"]["protocolVersion"])
-            self.assertEqual("3.8.0", initialized["result"]["serverInfo"]["version"])
+            self.assertEqual("3.8.5", initialized["result"]["serverInfo"]["version"])
             tools = mcp.request("tools/list")["result"]["tools"]
         print(f"MCP_METRIC startup_and_discovery_ms={(time.perf_counter() - started) * 1000:.1f} tools={len(tools)}")
-        self.assertEqual(19, len(tools))
+        self.assertEqual(20, len(tools))
         self.assertEqual([
             "list_projects", "get_project_snapshot", "get_project_history_overview",
-            "list_project_history_chapters", "list_project_change_stories",
+            "list_project_history_chapters", "list_project_history_corrections", "list_project_change_stories",
             "list_project_evolution_threads", "list_project_history_events", "get_project_history_evidence",
             "search_project_memory", "get_recent_changes",
             "get_project_timeline", "list_project_capabilities", "get_capability_evolution",
@@ -272,6 +272,16 @@ class MCPProjectHistoryTest(unittest.TestCase):
         self.assertEqual(["3"], event_request["query"]["page"])
         self.assertEqual(["17"], event_request["query"]["size"])
         self.assertTrue(evidence_request["path"].endswith(f"/project-memory/history/events/{EVENT_ID}/evidence"))
+
+    def test_history_corrections_are_read_only_and_forwarded(self) -> None:
+        with McpProcess(self.base_url) as mcp:
+            result = mcp.request("tools/call", {"name": "list_project_history_corrections", "arguments": {
+                "projectId": PROJECT_ID,
+            }})["result"]
+        self.assertFalse(result["isError"])
+        with State.lock:
+            request = State.requests[-1]
+        self.assertTrue(request["path"].endswith("/project-memory/history/corrections"))
 
     def test_context_package_forwards_task_scope_revision_and_depth(self) -> None:
         with McpProcess(self.base_url) as mcp:

@@ -15,7 +15,7 @@ from typing import Any
 
 
 SERVER_NAME = "projectflow-project-memory"
-SERVER_VERSION = "3.8.0"
+SERVER_VERSION = "3.8.5"
 PROTOCOL_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"}
 DEFAULT_PROTOCOL_VERSION = "2025-11-25"
 
@@ -134,6 +134,11 @@ TOOLS = [
         "list_project_history_chapters",
         "List paged dynamic Project History chapters with real time ranges, readable summaries, story counts, raw-event counts, authority, coverage, and limitations. Chapters are derived groupings rather than milestones.",
         _schema({"projectId": PROJECT_ID, "page": PAGE, "size": SIZE}, ["projectId"]),
+    ),
+    _tool(
+        "list_project_history_corrections",
+        "Read the durable user presentation declarations for Project History, including automatic and applied values, differences, conflicts, target presence, and the current presentation revision. Read-only; declarations never mutate facts or raw events.",
+        _schema({"projectId": PROJECT_ID}, ["projectId"]),
     ),
     _tool(
         "list_project_change_stories",
@@ -418,6 +423,8 @@ def call_tool(client: ProjectFlowClient, name: str, arguments: dict[str, Any]) -
         return client.get(base + "/history/chapters", {
             "page": _argument(arguments, "page", 0), "size": _argument(arguments, "size", 10),
         })
+    if name == "list_project_history_corrections":
+        return client.get(base + "/history/corrections")
     if name == "list_project_change_stories":
         return client.get(base + "/history/stories", {
             "subject": _argument(arguments, "subject"),

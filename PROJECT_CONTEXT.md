@@ -1,12 +1,12 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-08-03
+Last updated: 2026-08-06
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.8.0 is a local-first project-history reconstruction, strong-fact and shared project-memory system for anyone who uses a computer to conduct a project. It turns real project materials into a readable history while preserving ProjectFact as the only strong-fact source. Replaceable understanding and history snapshots remain separate from durable Project Facts, compatibility Timeline, optional Capability Map, Agent candidates, Project Memory Gateway, Hermes reads and Obsidian projection.
+ProjectFlow V3.8.5 is a local-first project-history reconstruction, strong-fact and shared project-memory system for anyone who uses a computer to conduct a project. It turns real project materials into a human-readable history while preserving ProjectFact as the only strong-fact source. Replaceable understanding and history snapshots remain separate from durable Project Facts, compatibility Timeline, optional Capability Map, Agent candidates, Project Memory Gateway, Hermes reads and Obsidian projection.
 
 ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation. ProjectFlow V3.5.0 added the bounded intake foundation retained by V3.6.0 and V3.7.0.
 
@@ -17,6 +17,14 @@ Current direction:
 - Rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records normal evidence-backed facts.
 - Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
+
+V3.8.5 focus:
+
+- Project History now separates Raw Events, Technical Atoms, Primary Stories, Supporting Changes, Evolution Threads and readable Chapters. The default layer describes action, understandable object and confirmed result; engineering paths, symbols and Evidence remain available on demand.
+- Deterministic grouping and validation own event membership, chronology, transitions, authority and Evidence. Bounded semantic windows may improve wording and presentation role, but cannot change facts, events or Evidence.
+- Window cache keys include source fingerprint, strategy/Prompt versions, window identity and presentation correction revision. Durable checkpoints retain validated results and expose failed, cancelled, skipped and unprocessed scope.
+- `USER_DECLARED_PRESENTATION` corrections are persistent, auditable, reversible overlays. Gateway, Agent Context, Hermes, frontend and Obsidian all read the same corrected view without promoting declarations to ProjectFact.
+- Obsidian CORE projects a bounded reading set; all Story/Thread and audit projection remains explicit opt-in. This stage adds no dependency, Tag, Release, daemon, watcher or final GUI.
 
 V3.8.0 focus:
 

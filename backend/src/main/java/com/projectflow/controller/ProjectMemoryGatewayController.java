@@ -183,6 +183,17 @@ public class ProjectMemoryGatewayController {
             ignored -> gateway.historyChapters(user.id(), projectId, page, size), result -> result.items().size());
     }
 
+    @GetMapping("/projects/{projectId}/project-memory/history/corrections")
+    ApiResponse<HistoryCorrectionListResponse> historyCorrections(
+        @RequestHeader(value = "Authorization", required = false) String authorization,
+        @RequestHeader(value = "X-ProjectFlow-Caller", required = false) String caller,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorization);
+        return read(user, projectId, "list_project_history_corrections", caller, "", "PROJECT_HISTORY_CORRECTION",
+            "detail=compact", ignored -> gateway.historyCorrections(user.id(), projectId), result -> result.items().size());
+    }
+
     @GetMapping("/projects/{projectId}/project-memory/history/stories")
     ApiResponse<HistoryStoryPageResponse> historyStories(
         @RequestHeader(value = "Authorization", required = false) String authorization,

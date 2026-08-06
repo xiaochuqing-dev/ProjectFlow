@@ -81,7 +81,7 @@ public enum ModelTaskType {
     PROJECT_HISTORY_SYNTHESIS(
         "项目历程变化故事与篇章归纳", 6_000, 20_000, 0.1, false,
         List.of(), List.of("stories", "chapters"), List.of(),
-        "{\"stories\":[{\"storyId\":\"\",\"humanTitle\":\"\",\"oneSentenceSummary\":\"\",\"reason\":\"\",\"reasonEvidenceRefs\":[],\"conflicts\":[],\"unknowns\":[]}],\"chapters\":[{\"chapterId\":\"\",\"title\":\"\",\"summary\":\"\",\"storyRefs\":[]}] }"
+        "{\"stories\":[{\"storyId\":\"\",\"humanTitle\":\"\",\"oneSentenceSummary\":\"\",\"role\":\"PRIMARY\",\"reason\":\"\",\"reasonEvidenceRefs\":[],\"conflicts\":[],\"unknowns\":[]}],\"chapters\":[{\"chapterId\":\"\",\"title\":\"\",\"summary\":\"\",\"storyRefs\":[]}] }"
     ),
     LEGACY_STRUCTURED(
         "兼容结构化调用", 2_048, 20_000, 0.2, false,

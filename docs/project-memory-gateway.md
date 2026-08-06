@@ -1,5 +1,11 @@
 # Project Memory Gateway
 
+## V3.8.5 corrected history view
+
+Gateway history reads now apply the persisted `USER_DECLARED_PRESENTATION` overlay at read time. Responses distinguish automatic text from user-declared text, expose presentation authority/revision, Primary/Supporting role, technical atom and commit-summary drill-down, correction conflicts, unknowns and coverage. The overlay is presentation-only: Gateway never changes ProjectFact, raw events or Evidence and never invokes a model.
+
+`GET /api/projects/{projectId}/project-memory/history/corrections` lists the same bounded correction records used by the history controller. Agent Context, Hermes, frontend and Obsidian consume this Gateway view instead of reading correction or history repositories directly.
+
 ## V3.8.0 history-first reads
 
 Project Memory Gateway now leads snapshot and brief semantics with persisted Project History: what happened, earliest confirmed state, current state, recent stories, dynamic chapters, conflicts, unknowns and coverage. Existing Fact, fixed Timeline, Capability and Evolution reads remain compatible and keep their SOURCE/DERIVED labels.

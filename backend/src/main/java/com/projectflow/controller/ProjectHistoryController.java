@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,20 +22,24 @@ import com.projectflow.dto.V2ProjectDtos.ProjectAnalysisJobResponse;
 import com.projectflow.service.AuthService;
 import com.projectflow.service.ProjectAnalysisJobService;
 import com.projectflow.service.ProjectHistoryReadService;
+import com.projectflow.service.ProjectHistoryCorrectionService;
 
 @RestController
 @RequestMapping("/api/projects/{projectId}/history")
 public class ProjectHistoryController {
     private final ProjectHistoryReadService historyService;
+    private final ProjectHistoryCorrectionService correctionService;
     private final ProjectAnalysisJobService jobService;
     private final AuthService authService;
 
     public ProjectHistoryController(
         ProjectHistoryReadService historyService,
+        ProjectHistoryCorrectionService correctionService,
         ProjectAnalysisJobService jobService,
         AuthService authService
     ) {
         this.historyService = historyService;
+        this.correctionService = correctionService;
         this.jobService = jobService;
         this.authService = authService;
     }
@@ -178,5 +183,35 @@ public class ProjectHistoryController {
         AuthUser user = authService.currentUser(authorizationHeader);
         historyService.overview(user.id(), projectId);
         return ApiResponse.ok(historyService.filters());
+    }
+
+    @GetMapping("/corrections")
+    ApiResponse<HistoryCorrectionListResponse> corrections(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(correctionService.list(user.id(), projectId));
+    }
+
+    @PostMapping("/corrections")
+    ApiResponse<HistoryCorrectionResponse> createCorrection(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId,
+        @RequestBody HistoryCorrectionRequest request
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(correctionService.create(user.id(), projectId, request));
+    }
+
+    @PostMapping("/corrections/{correctionId}/revert")
+    ApiResponse<HistoryCorrectionResponse> revertCorrection(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId,
+        @PathVariable UUID correctionId,
+        @RequestParam(required = false) String expectedPresentationRevision
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(correctionService.revert(user.id(), projectId, correctionId, expectedPresentationRevision));
     }
 }

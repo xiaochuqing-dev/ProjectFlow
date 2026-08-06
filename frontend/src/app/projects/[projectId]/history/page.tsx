@@ -7,6 +7,8 @@ import { AppShell } from "@/components/AppShell";
 import {
   getProject,
   getProjectHistoryChapter,
+  getProjectHistoryCorrections,
+  createProjectHistoryCorrection,
   getProjectHistoryOverview,
   getProjectHistoryStory,
   getProjectHistoryThread,
@@ -38,6 +40,7 @@ export default function ProjectHistoryPreviewPage() {
   const entityId = searchParams.get("id") ?? "";
   const [project, setProject] = useState<Project | null>(null);
   const [history, setHistory] = useState<LoadedHistory | null>(null);
+  const [presentationRevision, setPresentationRevision] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -48,10 +51,12 @@ export default function ProjectHistoryPreviewPage() {
     Promise.all([
       getProject(token, params.projectId),
       loadHistory(token, params.projectId, entityType, entityId),
-    ]).then(([nextProject, nextHistory]) => {
+      getProjectHistoryCorrections(token, params.projectId),
+    ]).then(([nextProject, nextHistory, corrections]) => {
       if (!active) return;
       setProject(nextProject);
       setHistory(nextHistory);
+      setPresentationRevision(corrections.presentationRevision || "");
     }).catch((exception) => {
       if (!active) return;
       setError(exception instanceof Error ? exception.message : "项目历程加载失败");
@@ -84,7 +89,20 @@ export default function ProjectHistoryPreviewPage() {
         {!error && !history ? <p className="rounded-card border border-line bg-white p-5 text-sm text-muted">正在读取持久化历程……</p> : null}
         {history?.type === "overview" ? <OverviewView projectId={params.projectId} value={history.value} /> : null}
         {history?.type === "chapter" ? <ChapterView projectId={params.projectId} value={history.value} /> : null}
-        {history?.type === "story" ? <StoryView projectId={params.projectId} value={history.value} /> : null}
+        {history?.type === "story" ? (
+          <StoryView
+            projectId={params.projectId}
+            value={history.value}
+            presentationRevision={presentationRevision}
+            onChanged={async () => {
+              const token = readSession().accessToken;
+              const next = await loadHistory(token, params.projectId, entityType, entityId);
+              const corrections = await getProjectHistoryCorrections(token, params.projectId);
+              setHistory(next);
+              setPresentationRevision(corrections.presentationRevision || "");
+            }}
+          />
+        ) : null}
         {history?.type === "thread" ? <ThreadView projectId={params.projectId} value={history.value} /> : null}
       </div>
     </AppShell>
@@ -165,8 +183,49 @@ function ChapterView({ projectId, value }: { projectId: string; value: ProjectHi
   );
 }
 
-function StoryView({ projectId, value }: { projectId: string; value: ProjectHistoryStoryDetail }) {
+function StoryView({
+  projectId,
+  value,
+  presentationRevision,
+  onChanged,
+}: {
+  projectId: string;
+  value: ProjectHistoryStoryDetail;
+  presentationRevision: string;
+  onChanged: () => Promise<void>;
+}) {
   const story = value.story;
+  const [title, setTitle] = useState(story.humanTitle);
+  const [summary, setSummary] = useState(story.oneSentenceSummary);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    setTitle(story.humanTitle);
+    setSummary(story.oneSentenceSummary);
+    setMessage("");
+  }, [story.id, story.humanTitle, story.oneSentenceSummary]);
+
+  async function submit(type: string, fields: Record<string, unknown> = {}) {
+    setBusy(true);
+    setMessage("");
+    try {
+      await createProjectHistoryCorrection(readSession().accessToken, projectId, {
+        type,
+        targetType: "STORY",
+        targetId: story.id,
+        ...(presentationRevision ? { expectedPresentationRevision: presentationRevision } : {}),
+        ...fields,
+      });
+      await onChanged();
+      setMessage("展示内容已更新。");
+    } catch (exception) {
+      setMessage(exception instanceof Error ? exception.message : "展示修正失败，请刷新后重试。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <>
       <section className="rounded-card border border-line bg-white p-6 shadow-card">
@@ -180,7 +239,28 @@ function StoryView({ projectId, value }: { projectId: string; value: ProjectHist
         </div>
         {story.reason ? <p className="mt-4 text-sm"><span className="font-semibold">有证据支持的原因：</span>{story.reason}</p> : null}
         {story.laterOutcome ? <p className="mt-3 text-sm"><span className="font-semibold">后续结果：</span>{story.laterOutcome}</p> : null}
-        <p className="mt-4 text-xs text-muted">{story.rawEventCount} 个来源事件 · {story.evidenceCount} 条证据 · {story.authority} · {story.summaryStatus}</p>
+        <p className="mt-4 text-xs text-muted">{story.rawEventCount} 个来源事件 · {story.evidenceCount} 条证据 · {story.authority} · {story.summaryStatus} · 展示角色 {story.role ?? "PRIMARY"}</p>
+        <div className="mt-6 border-t border-line pt-5">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <label className="text-sm text-body">
+              标题
+              <input className="mt-2 w-full rounded-field border border-line bg-white px-3 py-2" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={240} />
+            </label>
+            <label className="text-sm text-body">
+              摘要
+              <textarea className="mt-2 min-h-24 w-full rounded-field border border-line bg-white px-3 py-2" value={summary} onChange={(event) => setSummary(event.target.value)} maxLength={1200} />
+            </label>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" className="rounded-field bg-brand px-3 py-2 text-sm text-white disabled:opacity-50" disabled={busy || !title.trim()} onClick={() => submit("RENAME_STORY", { title: title.trim(), declaredTitle: title.trim() })}>保存标题</button>
+            <button type="button" className="rounded-field border border-line px-3 py-2 text-sm text-body disabled:opacity-50" disabled={busy || !summary.trim()} onClick={() => submit("EDIT_SUMMARY", { summary: summary.trim(), declaredSummary: summary.trim() })}>保存摘要</button>
+            <button type="button" className="rounded-field border border-line px-3 py-2 text-sm text-body disabled:opacity-50" disabled={busy} onClick={() => submit("HIDE_STORY")}>从默认阅读中隐藏</button>
+            <button type="button" className="rounded-field border border-line px-3 py-2 text-sm text-body disabled:opacity-50" disabled={busy} onClick={() => submit("PIN_STORY")}>置顶阅读</button>
+            <button type="button" className="rounded-field border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 disabled:opacity-50" disabled={busy} onClick={() => submit("RESTORE_AUTOMATIC")}>恢复自动展示</button>
+          </div>
+          {message ? <p className="mt-3 text-sm text-amber-800" role="status">{message}</p> : null}
+          <p className="mt-3 text-xs text-muted">当前展示权威：{story.presentationAuthority ?? "AUTOMATIC"} · 自动标题：{story.automaticTitle ?? story.humanTitle} · 自动摘要：{story.automaticSummary ?? story.oneSentenceSummary}</p>
+        </div>
       </section>
 
       {value.threads.length ? (
@@ -212,8 +292,16 @@ function StoryView({ projectId, value }: { projectId: string; value: ProjectHist
       </section>
 
       {story.conflicts.length ? <ListSection title="冲突" items={story.conflicts} tone="warning" /> : null}
+      {story.correctionConflicts?.length ? <ListSection title="展示修正冲突" items={story.correctionConflicts} tone="warning" /> : null}
       {story.unknowns.length ? <ListSection title="未知" items={story.unknowns} tone="warning" /> : null}
       {story.limitations.length ? <ListSection title="覆盖限制" items={story.limitations} tone="warning" /> : null}
+      {story.technicalDetails?.length || story.technicalAtomRefs?.length ? (
+        <details className="rounded-card border border-line bg-white p-6 shadow-card">
+          <summary className="cursor-pointer text-sm font-semibold">工程详情</summary>
+          {story.technicalAtomRefs?.length ? <p className="mt-3 text-xs text-muted">Technical Atom：{story.technicalAtomRefs.join("、")}</p> : null}
+          {story.technicalDetails?.length ? <ul className="mt-3 space-y-2 text-sm text-body">{story.technicalDetails.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul> : null}
+        </details>
+      ) : null}
     </>
   );
 }

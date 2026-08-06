@@ -2,6 +2,18 @@
 
 Base path: `/api`
 
+## V3.8.5 presentation corrections
+
+History reads remain persisted-data-only and project-owned. The refresh endpoint is still the only source-discovery/model entry. The following presentation-only endpoints persist auditable `USER_DECLARED_PRESENTATION` declarations; they never change ProjectFact, raw events, Commit metadata or Evidence:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/projects/{projectId}/history/corrections` | Read active/reverted/conflicted declarations, automatic/applied values and presentation revision. |
+| POST | `/projects/{projectId}/history/corrections` | Create rename, summary, merge/split, Primary/Supporting, hide/pin or declared Chapter correction with optimistic source/presentation checks. |
+| POST | `/projects/{projectId}/history/corrections/{correctionId}/revert` | Revert one declaration and restore the automatic presentation. |
+
+The same correction list is available through Project Memory Gateway. Gateway, Agent Context, Hermes, frontend and Obsidian use the same stable IDs, source revision and presentation revision.
+
 ## V3.8.0 Project History
 
 History refresh is the only mutating entry. All other endpoints read persisted results and enforce authenticated project ownership.

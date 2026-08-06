@@ -1,6 +1,7 @@
 package com.projectflow.service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -13,24 +14,25 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v2";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v3";
     static final int MAX_PROMPT_CHARS = 60_000;
-    static final int MAX_STORY_SECTION_CHARS = 46_000;
-    static final int MAX_CHAPTER_SECTION_CHARS = 10_000;
-    static final int MAX_STORY_RECORD_CHARS = 8_000;
-    static final int MAX_CHAPTER_RECORD_CHARS = 4_000;
+    static final int MAX_STORY_SECTION_CHARS = 45_000;
+    static final int MAX_CHAPTER_SECTION_CHARS = 12_000;
+    static final int MAX_STORY_RECORD_CHARS = 9_000;
+    static final int MAX_CHAPTER_RECORD_CHARS = 4_500;
 
     private static final String STORIES_MARKER = "\nSTORIES_JSON=";
     private static final String CHAPTERS_MARKER = "\nCHAPTERS_JSON=";
     private static final String INSTRUCTIONS = """
-        你正在改写 ProjectFlow 已由工程层确定成员关系的项目历程。只能改进中文表达，不能改变故事、篇章、时间、成员或 Evidence。
+        你正在改写一个项目已经由工程层确定成员关系的项目历程。只能改进中文表达和展示角色，不能改变故事、篇章、时间、成员或 Evidence。
         只返回输入中列出的 storyId 和 chapterId；每个 ID 必须且只能返回一次，storyRefs 必须原样覆盖其允许集合。
         humanTitle 必须是“动作 + 对象 + 结果”，禁止只写“优化系统、改进功能、进行了重构、提升体验、修改相关文件”。
+        role 只能保持 PRIMARY 或 SUPPORTING；不能凭空合并、拆分或删除成员。Supporting 只表示测试、文档、配置等对主成果的支撑。
         工程层已经固定 Before / Change / After 与 laterOutcome；不得返回或改写这些字段。Commit message 只是线索，不是无需验证的事实。
         reason 只有在 reasonEvidenceRefs 非空且全部来自 reasonEligibleEvidenceRefs 时才可填写；否则 reason 必须为空并在 unknowns 写明原因未知。
         禁止重要性、成熟度、里程碑、成功判断、下一步、计划或建议。禁止创造 ID、Evidence、文件、数字、原因或项目状态。
         返回严格 JSON，不得增加字段：
-        {"stories":[{"storyId":"","humanTitle":"","oneSentenceSummary":"","reason":"","reasonEvidenceRefs":[],"conflicts":[],"unknowns":[]}],
+        {"stories":[{"storyId":"","humanTitle":"","oneSentenceSummary":"","role":"PRIMARY","reason":"","reasonEvidenceRefs":[],"conflicts":[],"unknowns":[]}],
          "chapters":[{"chapterId":"","title":"","summary":"","storyRefs":[]}]}
         """;
 
@@ -72,7 +74,7 @@ public final class ProjectHistoryPromptBuilder {
         Set<String> chapterIds = selectedChapters.stream().map(ChapterPromptInput::chapterId)
             .collect(LinkedHashSet::new, Set::add, Set::addAll);
         return new PromptBuildResult(
-            prompt, Set.copyOf(storyIds), Set.copyOf(chapterIds), prompt.length(),
+            prompt, ordered(storyIds), ordered(chapterIds), prompt.length(),
             Math.max(0, safeInput.stories().size() - selectedStories.size()),
             Math.max(0, safeInput.chapters().size() - selectedChapters.size())
         );
@@ -136,6 +138,10 @@ public final class ProjectHistoryPromptBuilder {
         return value == null ? "" : value.trim();
     }
 
+    private static <T> Set<T> ordered(Set<T> values) {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(values == null ? Set.of() : values));
+    }
+
     public record PromptInput(List<StoryPromptInput> stories, List<ChapterPromptInput> chapters) {
     }
 
@@ -151,8 +157,46 @@ public final class ProjectHistoryPromptBuilder {
         List<String> reasonEligibleEvidenceRefs,
         String deterministicBefore,
         String deterministicChange,
-        String deterministicAfter
+        String deterministicAfter,
+        String role,
+        List<String> supportingChangeRefs,
+        List<String> commitSummaries,
+        List<String> technicalDetails
     ) {
+        public StoryPromptInput(
+            String storyId,
+            String subject,
+            String occurredFrom,
+            String occurredTo,
+            List<String> transitions,
+            List<String> sourceLabels,
+            List<String> affectedAreas,
+            List<String> evidenceRefs,
+            List<String> reasonEligibleEvidenceRefs,
+            String deterministicBefore,
+            String deterministicChange,
+            String deterministicAfter
+        ) {
+            this(storyId, subject, occurredFrom, occurredTo, transitions, sourceLabels, affectedAreas, evidenceRefs,
+                reasonEligibleEvidenceRefs, deterministicBefore, deterministicChange, deterministicAfter, "PRIMARY",
+                List.of(), List.of(), List.of());
+        }
+
+        public StoryPromptInput {
+            transitions = immutable(transitions);
+            sourceLabels = immutable(sourceLabels);
+            affectedAreas = immutable(affectedAreas);
+            evidenceRefs = immutable(evidenceRefs);
+            reasonEligibleEvidenceRefs = immutable(reasonEligibleEvidenceRefs);
+            supportingChangeRefs = immutable(supportingChangeRefs);
+            commitSummaries = immutable(commitSummaries);
+            technicalDetails = immutable(technicalDetails);
+            role = role == null || role.isBlank() ? "PRIMARY" : role.trim();
+        }
+
+        private static List<String> immutable(List<String> values) {
+            return values == null ? List.of() : List.copyOf(values);
+        }
     }
 
     public record ChapterPromptInput(

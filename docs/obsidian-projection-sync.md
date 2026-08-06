@@ -1,5 +1,11 @@
 # Obsidian Projection and Sync
 
+## V3.8.5 history projection density
+
+Project History projection reads the corrected Gateway view and keeps the first note layer human-readable. CORE emits the project overview, history index, readable Chapters, pinned/corrected representative Primary Stories, important conflicts/unknowns and a bounded set of high-value Threads. Supporting Changes and the complete Story/Thread/raw audit inventory remain available through EXTENDED or explicit FULL/AUDIT selection.
+
+Correction metadata is shown as a declaration with source/presentation revision and never imported as a strong fact. Existing frontmatter, managed-block content, stable IDs, redirects, archive/conflict handling and no-op atomic sync remain unchanged.
+
 ## V3.8.0 real workflow
 
 CORE now makes `项目概览` and `项目历程` the primary navigation. It adds bounded chapter, story and evolution-thread notes while retaining existing Timeline, Fact and Capability notes for compatibility. Existing managed roots are migrated deterministically: old notes are not deleted, stable metadata and redirects remain valid, and user frontmatter plus content outside the managed block is preserved.
