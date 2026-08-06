@@ -7,6 +7,13 @@
 - 基线产品版本：V3.8.0；本阶段实现将后端和前端版本提升为 V3.8.5
 - 本阶段不创建 Tag、Release、watcher、daemon、Git 客户端或新的运行时依赖
 
+本轮最终审计状态
+
+- 确定性实现、H2、前端、Playwright、Hermes、Obsidian 和 GitHub required CI 已通过。
+- GLM `glm-5.2` 与 DeepSeek `deepseek-v4-pro` 单请求合同通过，但两份 19-case qualification 均 FAIL；DeepSeek 真实场景为 10/11，ProjectFlow Dogfood 失败。
+- GLM 真实场景、旧版 ProjectFlowRealModelEvalIT、ProjectUnderstandingRealModelIT 和人工可读性抽样未运行。
+- 因此本阶段保持 BLOCKED，PR #15 继续 Draft，不合并 master。
+
 已存在的可信底座
 
 `ProjectHistoryEvent` 保存有界来源事件，`ProjectHistorySnapshot` 保存可替换的 Overview、Chapter、Story 和 Thread。`ProjectFact` 仍是唯一强事实来源；历史刷新不得改写 Fact、Timeline、Capability、Evidence 或既有 Evolution。只有显式刷新 Job 可以发现来源或调用 `PROJECT_HISTORY_SYNTHESIS`，所有 GET、Gateway、Hermes 和 Obsidian 读取均为持久化只读。

@@ -21,4 +21,4 @@
 
 质量状态
 
-本地确定性 Ground Truth 契约已通过；本次收口没有伪造真实 Provider 的人工质量分数。真实模型和人工抽样仍须在具备安全运行环境后单独记录。
+本地确定性 Ground Truth 契约和生产输出比较已通过。GLM 与 DeepSeek 真实 19-case 工件均保留失败窗口、降级窗口和拒绝主张：GLM 20 请求/103,268 token/16 个降级窗口，DeepSeek 20 请求/79,702 token/14 个降级窗口；两者 qualification 均 FAIL。DeepSeek 真实场景 10/11，ProjectFlow Dogfood 的 Primary/Supporting 引用不一致；GLM 真实场景未运行。人工可读性抽样仍为 0 Story/0 Chapter，因此不能把结构指标或模型自评写成最终人工质量 PASS。

@@ -64,11 +64,23 @@ public class ProjectHistoryCorrection {
     @Column(name = "declared_chapter_id", length = 180)
     private String declaredChapterId;
 
+    @Column(name = "secondary_declared_title", columnDefinition = "text")
+    private String secondaryDeclaredTitle;
+
+    @Column(name = "secondary_declared_summary", columnDefinition = "text")
+    private String secondaryDeclaredSummary;
+
     @Column(name = "before_presentation_revision", nullable = false, length = 180)
     private String beforePresentationRevision;
 
     @Column(name = "source_fingerprint", nullable = false, length = 64)
     private String sourceFingerprint;
+
+    @Column(name = "target_membership_fingerprint", length = 64)
+    private String targetMembershipFingerprint;
+
+    @Column(name = "automatic_presentation_fingerprint", length = 64)
+    private String automaticPresentationFingerprint;
 
     @Column(name = "conflict_reason", columnDefinition = "text")
     private String conflictReason;
@@ -106,6 +118,28 @@ public class ProjectHistoryCorrection {
         String beforePresentationRevision,
         String sourceFingerprint
     ) {
+        this(projectId, actorUserId, correctionType, targetType, targetId, targetIdsJson, declaredTitle, declaredSummary,
+            declaredRole, declaredChapterId, beforePresentationRevision, sourceFingerprint, "", "", "", "");
+    }
+
+    public ProjectHistoryCorrection(
+        UUID projectId,
+        UUID actorUserId,
+        String correctionType,
+        String targetType,
+        String targetId,
+        String targetIdsJson,
+        String declaredTitle,
+        String declaredSummary,
+        String declaredRole,
+        String declaredChapterId,
+        String beforePresentationRevision,
+        String sourceFingerprint,
+        String targetMembershipFingerprint,
+        String automaticPresentationFingerprint,
+        String secondaryDeclaredTitle,
+        String secondaryDeclaredSummary
+    ) {
         this.id = UUID.randomUUID();
         this.projectId = projectId;
         this.actorUserId = actorUserId;
@@ -117,8 +151,12 @@ public class ProjectHistoryCorrection {
         this.declaredSummary = bounded(declaredSummary, 12_000, "");
         this.declaredRole = bounded(declaredRole, 30, "");
         this.declaredChapterId = bounded(declaredChapterId, 180, "");
+        this.secondaryDeclaredTitle = bounded(secondaryDeclaredTitle, 8_000, "");
+        this.secondaryDeclaredSummary = bounded(secondaryDeclaredSummary, 12_000, "");
         this.beforePresentationRevision = bounded(beforePresentationRevision, 180, "");
         this.sourceFingerprint = bounded(sourceFingerprint, 64, "");
+        this.targetMembershipFingerprint = bounded(targetMembershipFingerprint, 64, "");
+        this.automaticPresentationFingerprint = bounded(automaticPresentationFingerprint, 64, "");
         this.conflictReason = "";
         this.status = Status.ACTIVE;
     }
@@ -131,6 +169,10 @@ public class ProjectHistoryCorrection {
         if (targetIdsJson == null || targetIdsJson.isBlank()) targetIdsJson = "[]";
         if (beforePresentationRevision == null) beforePresentationRevision = "";
         if (sourceFingerprint == null) sourceFingerprint = "";
+        if (targetMembershipFingerprint == null) targetMembershipFingerprint = "";
+        if (automaticPresentationFingerprint == null) automaticPresentationFingerprint = "";
+        if (secondaryDeclaredTitle == null) secondaryDeclaredTitle = "";
+        if (secondaryDeclaredSummary == null) secondaryDeclaredSummary = "";
         if (conflictReason == null) conflictReason = "";
         createdAt = createdAt == null ? now : createdAt;
         updatedAt = now;
@@ -160,8 +202,12 @@ public class ProjectHistoryCorrection {
     public String getDeclaredSummary() { return declaredSummary == null ? "" : declaredSummary; }
     public String getDeclaredRole() { return declaredRole == null ? "" : declaredRole; }
     public String getDeclaredChapterId() { return declaredChapterId == null ? "" : declaredChapterId; }
+    public String getSecondaryDeclaredTitle() { return secondaryDeclaredTitle == null ? "" : secondaryDeclaredTitle; }
+    public String getSecondaryDeclaredSummary() { return secondaryDeclaredSummary == null ? "" : secondaryDeclaredSummary; }
     public String getBeforePresentationRevision() { return beforePresentationRevision == null ? "" : beforePresentationRevision; }
     public String getSourceFingerprint() { return sourceFingerprint == null ? "" : sourceFingerprint; }
+    public String getTargetMembershipFingerprint() { return targetMembershipFingerprint == null ? "" : targetMembershipFingerprint; }
+    public String getAutomaticPresentationFingerprint() { return automaticPresentationFingerprint == null ? "" : automaticPresentationFingerprint; }
     public String getConflictReason() { return conflictReason == null ? "" : conflictReason; }
     public Status getStatus() { return status == null ? Status.CONFLICT : status; }
     public UUID getReplacedById() { return replacedById; }
@@ -177,6 +223,6 @@ public class ProjectHistoryCorrection {
 
     private static String boundedJson(String value) {
         String safe = value == null || value.isBlank() ? "[]" : value.trim();
-        return safe.length() <= 10_000 ? safe : safe.substring(0, 10_000);
+        return safe;
     }
 }

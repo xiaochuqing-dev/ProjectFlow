@@ -51,4 +51,31 @@ class ProjectHistoryPromptBuilderTest {
         assertThat(packedChapters).allSatisfy(node -> assertThat(production.includedStoryIds())
             .containsAll(mapper.convertValue(node.path("storyRefs"), List.class)));
     }
+
+    @Test
+    void chapterStageUsesOnlyBoundedValidatedStorySummaries() {
+        List<ProjectHistoryPromptBuilder.ChapterStorySummaryInput> stories = new ArrayList<>();
+        for (int index = 0; index < 200; index++) {
+            stories.add(new ProjectHistoryPromptBuilder.ChapterStorySummaryInput(
+                "story-" + index, "形成项目结果 " + index, "这项结果已经通过来源校验。" + "摘要".repeat(40),
+                index % 5 == 0 ? "SUPPORTING" : "PRIMARY", "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z"
+            ));
+        }
+        var input = new ProjectHistoryPromptBuilder.ChapterSynthesisPromptInput(
+            "chapter-large", "2026-01-01T00:00:00Z", "2026-02-01T00:00:00Z", 200, 160, 40,
+            List.of("DENSITY_BOUNDARY"), "membership-fingerprint", stories
+        );
+
+        var production = builder.buildChapterProduction(input);
+        var evaluation = builder.buildChapterEvaluation(input);
+
+        assertThat(production).isEqualTo(evaluation);
+        assertThat(production.promptCharacterCount())
+            .isLessThanOrEqualTo(ProjectHistoryPromptBuilder.MAX_CHAPTER_SYNTHESIS_PROMPT_CHARS);
+        assertThat(production.includedStoryIds()).hasSize(ProjectHistoryPromptBuilder.MAX_CHAPTER_STORY_SUMMARIES)
+            .contains("story-0", "story-199");
+        assertThat(production.omittedStoryCount()).isEqualTo(120);
+        assertThat(production.prompt()).contains("primaryStoryCount", "supportingStoryCount", "membershipFingerprint")
+            .doesNotContain("rawEvent", "evidenceRefs", "technicalDetails", "commitSummaries", "file:", "commit:");
+    }
 }

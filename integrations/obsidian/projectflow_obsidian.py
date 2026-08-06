@@ -37,6 +37,7 @@ MAX_EVOLUTIONS = 100_000
 MAX_HISTORY_CHAPTERS = 2_000
 MAX_HISTORY_STORIES = 20_000
 MAX_HISTORY_THREADS = 10_000
+MAX_HISTORY_CORRECTIONS = 10_000
 MAX_PAGES = 1_000
 RESERVED_NAMES = {"CON", "PRN", "AUX", "NUL", *{f"COM{i}" for i in range(1, 10)}, *{f"LPT{i}" for i in range(1, 10)}}
 INVALID_FILENAME = re.compile(r"[<>:\"/\\|?*\x00-\x1f]")
@@ -158,6 +159,50 @@ def status_label(value: Any) -> str:
     return labels.get(str(value or ""), compact_text(value, 60) or "未知")
 
 
+def history_authority_label(value: Any) -> str:
+    labels = {
+        "ENGINEERING_GROUPING": "按来源自动整理",
+        "INFERRED_NON_AUTHORITATIVE": "非权威归纳",
+        "SOURCE_BACKED": "来源支持",
+        "FACTUAL_SOURCE": "事实来源支持",
+        "DECLARED": "用户声明",
+    }
+    return labels.get(str(value or ""), "整理依据待核对")
+
+
+def history_summary_label(value: Any) -> str:
+    labels = {
+        "DETERMINISTIC": "自动整理",
+        "MODEL_VALIDATED": "模型表达已校验",
+        "MODEL_ENHANCED": "模型辅助整理",
+        "PARTIAL": "部分内容待核对",
+    }
+    return labels.get(str(value or ""), "摘要状态待核对")
+
+
+def history_presentation_label(value: Any) -> str:
+    return "经过用户修改" if str(value or "") == "USER_DECLARED_PRESENTATION" else "自动整理"
+
+
+def history_role_label(value: Any) -> str:
+    return "支撑工作" if str(value or "") == "SUPPORTING" else "主要变化"
+
+
+def history_coverage_label(value: Any) -> str:
+    labels = {
+        "FULL_WITHIN_DISCOVERED_SOURCES": "已发现来源内完整",
+        "PARTIAL_WITHIN_DISCOVERED_SOURCES": "已发现来源内部分覆盖",
+        "PARTIAL": "部分覆盖",
+        "UNKNOWN": "覆盖范围未知",
+    }
+    return labels.get(str(value or ""), "覆盖范围待核对")
+
+
+def history_subject_type_label(value: Any) -> str:
+    labels = {"PROJECT_SUBJECT": "项目对象", "DOCUMENT": "文档对象", "ARTIFACT": "项目成果"}
+    return labels.get(str(value or ""), "项目对象")
+
+
 class GatewayClient:
     def __init__(
         self,
@@ -226,7 +271,7 @@ class GatewayClient:
         history_stories = self._pages(base + "/history/stories", None, {"size": 100})
         history_threads = self._pages(base + "/history/threads", None, {"size": 100})
         try:
-            history_corrections = self.get(base + "/history/corrections")
+            history_corrections = self._correction_pages(base + "/history/corrections")
         except ProjectionError as error:
             if error.code in {"PROJECT_HISTORY_CORRECTIONS_NOT_FOUND", "PROJECT_HISTORY_NOT_INITIALIZED", "NOT_FOUND"}:
                 history_corrections = {"items": [], "presentationRevision": ""}
@@ -296,6 +341,51 @@ class GatewayClient:
             "capabilities": capabilities,
             "evolutions": evolutions,
         }
+
+    def _correction_pages(self, path: str) -> dict[str, Any]:
+        items: list[dict[str, Any]] = []
+        first: dict[str, Any] | None = None
+        revision = ""
+        page = 0
+        while True:
+            if page >= MAX_PAGES:
+                raise ProjectionError(
+                    "PROJECTFLOW_RESULT_TOO_LARGE",
+                    "Project History correction pagination exceeded the projection bound.",
+                )
+            response = self.get(path, {"page": page, "size": 100})
+            current_revision = str(response.get("presentationRevision") or "")
+            if first is None:
+                first = dict(response)
+                revision = current_revision
+            elif current_revision != revision:
+                raise ProjectionError(
+                    "PROJECTFLOW_HISTORY_REVISION_CHANGED",
+                    "Project History presentation changed while corrections were being read; retry the projection.",
+                    retryable=True,
+                )
+            current = response.get("items") or []
+            if not isinstance(current, list):
+                raise ProjectionError("PROJECTFLOW_RESPONSE_INVALID", "Project History corrections were not a list.")
+            items.extend(current)
+            if len(items) > MAX_HISTORY_CORRECTIONS:
+                raise ProjectionError(
+                    "PROJECTFLOW_RESULT_TOO_LARGE",
+                    "Project History corrections exceeded the projection input bound.",
+                )
+            total = int(response.get("total") or len(items))
+            if len(items) >= total:
+                result = first or {}
+                result.update({"items": items, "presentationRevision": revision, "page": 0,
+                               "size": len(items), "total": total, "truncated": False})
+                return result
+            if not current:
+                raise ProjectionError(
+                    "PROJECTFLOW_RESPONSE_INVALID",
+                    "Project History correction pagination ended before the declared total.",
+                    retryable=True,
+                )
+            page += 1
 
     def _pages(self, path: str, nested: str | None, params: dict[str, Any]) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
@@ -1058,8 +1148,8 @@ class ObsidianProjection:
             f"- 时间范围：{chapter.get('from') or '未知'} → {chapter.get('to') or '未知'}",
             f"- 变化故事：{chapter.get('storyCount', len(stories))}",
             f"- 原始事件：{chapter.get('rawEventCount', 0)}",
-            f"- 权威：{status_label(chapter.get('authority'))}",
-            f"- 覆盖：{compact_text(chapter.get('coverage'), 200)}",
+            f"- 整理依据：{history_authority_label(chapter.get('authority'))}",
+            f"- 覆盖：{history_coverage_label(chapter.get('coverage'))}",
             "",
             "## 变化故事",
             "",
@@ -1097,26 +1187,26 @@ class ObsidianProjection:
             compact_text(story.get("oneSentenceSummary"), 1200) or "当前没有变化摘要。",
             "",
             f"- 发生时间：{story.get('occurredFrom') or '未知'} → {story.get('occurredTo') or '未知'}",
-            f"- 权威：{status_label(story.get('authority'))}",
-            f"- 摘要状态：{status_label(story.get('summaryStatus'))}",
-            f"- 展示权威：{compact_text(story.get('presentationAuthority') or 'AUTOMATIC', 80)} · 角色：{compact_text(story.get('role') or 'PRIMARY', 40)}",
-            f"- 覆盖：{compact_text(story.get('coverage'), 200)}",
+            f"- 整理依据：{history_authority_label(story.get('authority'))}",
+            f"- 摘要状态：{history_summary_label(story.get('summaryStatus'))}",
+            f"- 展示来源：{history_presentation_label(story.get('presentationAuthority'))} · 阅读位置：{history_role_label(story.get('role'))}",
+            f"- 覆盖：{history_coverage_label(story.get('coverage'))}",
             "",
-            "## Before",
+            "## 原来状态",
             "",
             compact_text(story.get("beforeState"), 1500) or "未知。",
             "",
-            "## Change",
+            "## 本次变化",
             "",
             compact_text(story.get("change"), 1800) or "未知。",
             "",
-            "## After",
+            "## 当前结果",
             "",
             compact_text(story.get("afterState"), 1500) or "未知。",
             "",
             "## 原因与后续",
             "",
-            f"- 原因：{compact_text(story.get('reason'), 1000) or 'UNKNOWN（没有合法原因 Evidence）'}",
+            f"- 原因：{compact_text(story.get('reason'), 1000) or '未知（没有合法原因 Evidence）'}",
             f"- 后续结果：{compact_text(story.get('laterOutcome'), 1000) or '尚无后续来源'}",
             f"- 影响区域：{'、'.join(compact_text(item, 120) for item in story.get('affectedAreas') or []) or '未单独归类'}",
         ]
@@ -1164,7 +1254,7 @@ class ObsidianProjection:
             "",
             f"当前结果：{compact_text(thread.get('currentOutcome'), 1200) or 'UNKNOWN'}",
             "",
-            f"- 主体类型：{compact_text(thread.get('subjectType'), 120)}",
+            f"- 对象类型：{history_subject_type_label(thread.get('subjectType'))}",
             f"- 转换序列：{' → '.join(transitions) if transitions else '未知'}",
             f"- Evidence 数：{thread.get('evidenceCount', 0)}",
             "",

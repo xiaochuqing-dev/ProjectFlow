@@ -1,6 +1,6 @@
 # Known risks
 
-- V3.8.5 的确定性语义压缩、用户修正、缓存/checkpoint、Playwright、Obsidian/Hermes 和 GitHub PostgreSQL 16 门禁已完成；GLM/DeepSeek 真实 Provider、calibration/holdout、非代码项目与人工可读性验收仍需隔离环境补跑，不能把 required CI 描述为完整产品质量 PASS。
+- V3.8.5 的确定性语义压缩、用户修正、缓存/checkpoint、Playwright、Obsidian/Hermes 和 GitHub PostgreSQL 16 门禁已完成；GLM/DeepSeek 19-case 真实资格均 FAIL。DeepSeek 真实场景 10/11，ProjectFlow Dogfood 因 Primary/Supporting 引用不一致失败；GLM 真实场景和人工可读性抽样仍未运行，不能把 required CI 或合同 PASS 描述为完整产品质量 PASS。
 - V3.8.5 用户修正是可审计、可逆的展示覆盖，不改变 ProjectFact、原始事件或 Evidence；跨窗口的模型措辞仍受窗口上限、Provider 兼容性和未处理范围诊断约束。
 - 2026-08-03 的 `npm audit` 对当前前端依赖图报告 3 个 high，涉及 PostCSS 的 source map 文件读取/路径问题与 Sharp/libvips 继承漏洞，并聚合影响 Next。注册表当前自动修复建议是破坏性的 Next 9.3.3 downgrade，不能用 `npm audit fix --force` 代替兼容性判断；应等待或选择官方兼容修复版本，升级后重跑 lint、contracts、production build、Playwright 和根启动器。
 - V3.8.5 的 Story/Chapter 标题仍以确定性主体名为基础，真实模型只在有默认 Provider 且窗口合格时做一次有界措辞增强；无模型或模型失败时可读性保守，但成员和 Evidence 不受影响。
@@ -10,6 +10,7 @@
 - 最小 `/history` 页面只验证信息层次和深链接，不是最终 GUI；筛选、虚拟滚动、跨篇章可视化和完整可访问性设计仍是 V3.9 进入条件。
 - Obsidian Advanced URI、Local REST/MCP、Dataview/Bases 均为可选增强。零插件官方 URI 只能稳定打开 Vault/文件，标题或块级定位需要插件能力并必须安全降级。
 - DeepSeek 与 GLM 专项结果只适用于当日模型、协议、Prompt v2 和冻结输入，不是任意项目准确率承诺。GLM 38-run 的 Conflict Detection 为 0.6667、Deep-read Sufficiency 为 0.8333，仍需把冲突和未读范围作为显式限制保留，不能因总门禁通过而隐藏。
+- V3.8.5 真实 qualification 工件保留 12 个 UNSUPPORTED_CLAIM 拒绝和 24 个失败/未处理窗口（两 Provider 均如此）；聚合安全指标为零违规不等于质量资格通过。
 
 - API Key 与自定义 Header 值当前仍保存在应用数据库，只适合本地兼容；桌面产品化前需迁移到 OS secure store。
 - 固定本地 relay 覆盖协议、SDK 和恢复契约，不代表真实 OpenAI、Anthropic 或 DeepSeek 的输出质量、限流与私有扩展。

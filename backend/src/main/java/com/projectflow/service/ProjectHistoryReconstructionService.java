@@ -58,6 +58,7 @@ public class ProjectHistoryReconstructionService {
     private static final int MODEL_STORY_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
     private static final int MODEL_EVENT_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_EVENT_LIMIT;
     private static final int MAX_MODEL_WINDOWS = ProjectHistoryWindowPlanner.MAX_WINDOWS;
+    private static final int MAX_CHAPTER_SYNTHESIS_WINDOWS = 4;
     // Keep repetitive histories readable without letting one subject absorb an
     // unbounded stream of events. The smaller bound also leaves room for
     // multiple bounded windows in large repositories.
@@ -74,9 +75,11 @@ public class ProjectHistoryReconstructionService {
     );
     private static final Set<String> MODEL_ROOT_FIELDS = Set.of("stories", "chapters");
     private static final Set<String> MODEL_STORY_FIELDS = Set.of(
-        "storyId", "humanTitle", "oneSentenceSummary", "role", "reason", "reasonEvidenceRefs", "conflicts", "unknowns"
+        "storyId", "humanTitle", "oneSentenceSummary", "role", "primaryStoryId", "supportingChangeRefs",
+        "reason", "reasonEvidenceRefs", "conflicts", "unknowns"
     );
     private static final Set<String> MODEL_CHAPTER_FIELDS = Set.of("chapterId", "title", "summary", "storyRefs");
+    private static final Set<String> MODEL_CHAPTER_SYNTHESIS_FIELDS = Set.of("chapterId", "title", "summary");
     private static final Set<Transition> STORY_BOUNDARIES = Set.of(
         Transition.REMOVED, Transition.RESTORED, Transition.REPLACED,
         Transition.REVERTED, Transition.REAPPLIED, Transition.SPLIT, Transition.MERGED
@@ -92,6 +95,7 @@ public class ProjectHistoryReconstructionService {
     private final ProjectHistoryEventRepository eventRepository;
     private final ProjectHistorySnapshotRepository snapshotRepository;
     private final ProjectHistoryWindowCheckpointRepository windowCheckpointRepository;
+    private final ProjectHistoryWindowCheckpointService windowCheckpointService;
     private final AiProviderRepository providerRepository;
     private final ModelGatewayService modelGateway;
     private final SensitiveContentRedactor redactor;
@@ -99,6 +103,7 @@ public class ProjectHistoryReconstructionService {
     private final ProjectHistoryLanguageService languageService;
     private final ProjectHistoryWindowPlanner windowPlanner;
     private final ProjectHistoryCorrectionService correctionService;
+    private final ProjectHistoryPresentationInvariantValidator presentationInvariantValidator;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
 
@@ -107,12 +112,14 @@ public class ProjectHistoryReconstructionService {
         ProjectHistoryEventRepository eventRepository,
         ProjectHistorySnapshotRepository snapshotRepository,
         ProjectHistoryWindowCheckpointRepository windowCheckpointRepository,
+        ProjectHistoryWindowCheckpointService windowCheckpointService,
         AiProviderRepository providerRepository,
         ModelGatewayService modelGateway,
         SensitiveContentRedactor redactor,
         ProjectHistoryPromptBuilder promptBuilder,
         ProjectHistoryLanguageService languageService,
         ProjectHistoryCorrectionService correctionService,
+        ProjectHistoryPresentationInvariantValidator presentationInvariantValidator,
         ObjectMapper objectMapper,
         PlatformTransactionManager transactionManager
     ) {
@@ -120,6 +127,7 @@ public class ProjectHistoryReconstructionService {
         this.eventRepository = eventRepository;
         this.snapshotRepository = snapshotRepository;
         this.windowCheckpointRepository = windowCheckpointRepository;
+        this.windowCheckpointService = windowCheckpointService;
         this.providerRepository = providerRepository;
         this.modelGateway = modelGateway;
         this.redactor = redactor;
@@ -127,6 +135,7 @@ public class ProjectHistoryReconstructionService {
         this.languageService = languageService;
         this.windowPlanner = new ProjectHistoryWindowPlanner();
         this.correctionService = correctionService;
+        this.presentationInvariantValidator = presentationInvariantValidator;
         this.objectMapper = objectMapper;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
@@ -163,7 +172,8 @@ public class ProjectHistoryReconstructionService {
                 && STRATEGY_VERSION.equals(before.getStrategyVersion())
                 && PROMPT_VERSION.equals(before.getPromptVersion())
                 && correctionRevision.equals(previousPresentationRevision(before))
-                && !hasRetryableWindowCheckpoint(projectId, currentFingerprint);
+                && !hasRetryableWindowCheckpoint(projectId)
+                && !hasPendingWindowDiagnostics(before);
             if (cacheHit) {
                 Map<String, Object> diagnostics = diagnostics(
                     completedCollection, completedPersistence, "UNCHANGED", "CACHE_HIT", 0, true, 0, 0,
@@ -171,6 +181,7 @@ public class ProjectHistoryReconstructionService {
                     0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0
                 );
+                carryForwardSnapshotDiagnostics(before, diagnostics);
                 diagnostics.put("presentationRevision", correctionRevision);
                 transactionTemplate.executeWithoutResult(status -> {
                     ProjectHistorySnapshot snapshot = snapshotRepository.findLockedByProjectId(projectId).orElseThrow();
@@ -187,7 +198,7 @@ public class ProjectHistoryReconstructionService {
             safeProgress.update("HISTORY_ENGINEERING_RECONSTRUCTION", "正在确定性组织变化故事、时间篇章和演变链");
             DeterministicResult deterministic = reconstruct(completedCollection, completedPersistence, before, force);
             ModelResult modelResult = enhanceWithModel(
-                userId, projectId, deterministic, completedPersistence.currentEvents(), correctionRevision,
+                userId, projectId, deterministic, completedPersistence.currentEvents(),
                 modelDiagnostics, safeProgress
             );
             SnapshotResult finalResult = modelResult.result();
@@ -221,6 +232,22 @@ public class ProjectHistoryReconstructionService {
                 modelResult.unprocessedStoryCount()
             );
             diagnostics.put("presentationRevision", correctionRevision);
+            diagnostics.put("totalWindowCount", modelResult.windowCount());
+            diagnostics.put("succeededWindowCount", modelResult.succeededWindowCount());
+            diagnostics.put("failedWindowCount", modelResult.failedWindowCount());
+            diagnostics.put("skippedWindowCount", modelResult.skippedWindowCount());
+            diagnostics.put("skippedStoryCount", modelResult.skippedStoryCount());
+            diagnostics.put("pendingWindowCount", modelResult.pendingWindowCount());
+            diagnostics.put("nextWindowOrdinal", modelResult.nextWindowOrdinal());
+            diagnostics.put("processedStoryCount", modelResult.enhancedStoryCount());
+            diagnostics.put("unprocessedStoryCount", modelResult.unprocessedStoryCount());
+            diagnostics.put("chapterSynthesisCount", modelResult.chapterSynthesisCount());
+            diagnostics.put("chapterSynthesisProcessedCount", modelResult.chapterSynthesisProcessedCount());
+            diagnostics.put("chapterSynthesisCacheHitCount", modelResult.chapterSynthesisCacheHitCount());
+            diagnostics.put("chapterSynthesisFailedCount", modelResult.chapterSynthesisFailedCount());
+            diagnostics.put("chapterSynthesisPendingCount", modelResult.chapterSynthesisPendingCount());
+            diagnostics.put("chapterSynthesisPromptCharacterCount", modelResult.chapterSynthesisPromptCharacterCount());
+            diagnostics.put("chapterSynthesisOmittedStoryCount", modelResult.chapterSynthesisOmittedStoryCount());
             if (modelResult.failureSummary() != null && !modelResult.failureSummary().isBlank()) {
                 diagnostics.put("modelFallback", modelResult.failureSummary());
             }
@@ -240,6 +267,7 @@ public class ProjectHistoryReconstructionService {
                     json(coverage), json(diagnostics), jobId, degraded
                 );
                 snapshotRepository.save(snapshot);
+                cleanupObsoleteWindowCheckpoints(projectId, modelResult.activeCheckpointCacheKeys());
             });
             return new HistoryRefreshOutcome(
                 json(Map.ofEntries(
@@ -257,6 +285,9 @@ public class ProjectHistoryReconstructionService {
                     Map.entry("modelProcessedWindowCount", modelResult.processedWindowCount()),
                     Map.entry("modelUnprocessedWindowCount", modelResult.unprocessedWindowCount()),
                     Map.entry("modelUnprocessedStoryCount", modelResult.unprocessedStoryCount()),
+                    Map.entry("chapterSynthesisCount", modelResult.chapterSynthesisCount()),
+                    Map.entry("chapterSynthesisProcessedCount", modelResult.chapterSynthesisProcessedCount()),
+                    Map.entry("chapterSynthesisPendingCount", modelResult.chapterSynthesisPendingCount()),
                     Map.entry("modelStatus", modelResult.status())
                 )),
                 List.copyOf(modelDiagnostics), modelResult.used(), degraded, false
@@ -559,6 +590,7 @@ public class ProjectHistoryReconstructionService {
     ) {
         if (envelopes.isEmpty()) return envelopes;
         List<StoryEnvelope> ordered = new ArrayList<>(envelopes);
+        Set<String> potentialSupportingIds = new LinkedHashSet<>();
         Set<String> supportingIds = new LinkedHashSet<>();
         Map<String, String> attachments = new LinkedHashMap<>();
         for (StoryEnvelope envelope : ordered) {
@@ -572,14 +604,18 @@ public class ProjectHistoryReconstructionService {
                 .distinct().limit(20).toList();
             List<Transition> transitions = members.stream().map(EventView::transition).distinct().toList();
             boolean independent = members.size() >= 3 && members.stream().allMatch(event -> event.category() == Category.FILE_CHANGE)
-                || hasGenericCommit(members, eventsById)
                 || members.stream().anyMatch(event ->
                 Set.of(Category.COMMIT, Category.MERGE, Category.PULL_REQUEST, Category.ISSUE, Category.PROJECT_FACT, Category.AGENT_RESULT)
                     .contains(event.category()) && !supportPathOnly(event.paths())
                     && !languageService.supportingCommitLabel(event.label())
             ) || transitions.stream().anyMatch(STORY_BOUNDARIES::contains);
             if (!languageService.supporting(categories, paths, labels, transitions, independent)) continue;
-            String target = nearestPrimary(story, ordered, eventsById, supportingIds);
+            potentialSupportingIds.add(story.id());
+        }
+        for (StoryEnvelope envelope : ordered) {
+            ChangeStory story = envelope.story();
+            if (!potentialSupportingIds.contains(story.id())) continue;
+            String target = nearestPrimary(story, ordered, eventsById, potentialSupportingIds);
             if (target != null) {
                 supportingIds.add(story.id());
                 attachments.put(story.id(), target);
@@ -606,22 +642,6 @@ public class ProjectHistoryReconstructionService {
                 support.correctionConflicts()));
         }
         return ordered.stream().map(item -> new StoryEnvelope(byId.get(item.story().id()), item.transitions())).toList();
-    }
-
-    private boolean hasGenericCommit(List<EventView> members, Map<UUID, EventView> eventsById) {
-        Set<String> revisions = members.stream().flatMap(event -> commitRefs(event).stream())
-            .map(value -> value.substring("commit:".length())).collect(LinkedHashSet::new, Set::add, Set::addAll);
-        return revisions.stream().map(revision -> eventsById.values().stream()
-                .filter(event -> revision.equals(event.sourceRevision()) || revision.equals(event.sourceIdentity()))
-                .findFirst().orElse(null))
-            .filter(java.util.Objects::nonNull)
-            .filter(event -> Set.of(Category.COMMIT, Category.MERGE).contains(event.category()))
-            .anyMatch(event -> genericCommitLabel(event.label()));
-    }
-
-    private static boolean genericCommitLabel(String label) {
-        String value = label == null ? "" : label.trim().toLowerCase(Locale.ROOT);
-        return value.isBlank() || value.matches("^(update|fix|change|changes|work|wip|todo|修复|修改|更新|调整|提交)$");
     }
 
     /**
@@ -654,6 +674,7 @@ public class ProjectHistoryReconstructionService {
             boolean boundary = candidate.transitions().stream().anyMatch(STORY_BOUNDARIES::contains);
             boolean canFold = representative != null
                 && !boundary
+                && story.supportingChangeRefs().isEmpty()
                 && representative.transitions().stream().noneMatch(STORY_BOUNDARIES::contains)
                 && representative.story().occurredTo() != null
                 && story.occurredFrom() != null
@@ -695,14 +716,15 @@ public class ProjectHistoryReconstructionService {
         ChangeStory support,
         List<StoryEnvelope> candidates,
         Map<UUID, EventView> eventsById,
-        Set<String> alreadySupporting
+        Set<String> supportingCandidates
     ) {
         Set<String> supportCommits = support.eventRefs().stream().map(eventsById::get).filter(java.util.Objects::nonNull)
             .flatMap(event -> commitRefs(event).stream()).collect(LinkedHashSet::new, Set::add, Set::addAll);
+        Set<String> supportTopics = presentationTopics(support);
         return candidates.stream()
             .map(StoryEnvelope::story)
             .filter(candidate -> !candidate.id().equals(support.id()))
-            .filter(candidate -> !alreadySupporting.contains(candidate.id()))
+            .filter(candidate -> !supportingCandidates.contains(candidate.id()))
             .filter(candidate -> candidate.primary())
             .filter(candidate -> {
                 Set<String> commits = candidate.eventRefs().stream().map(eventsById::get).filter(java.util.Objects::nonNull)
@@ -711,30 +733,98 @@ public class ProjectHistoryReconstructionService {
                 boolean close = !candidate.occurredTo().isBefore(support.occurredFrom().minus(Duration.ofDays(7)))
                     && !support.occurredTo().isBefore(candidate.occurredFrom().minus(Duration.ofDays(7)));
                 boolean sameArea = candidate.affectedAreas().stream().anyMatch(support.affectedAreas()::contains);
-                return sameCommit || (close && sameArea);
+                boolean sharedTopic = presentationTopics(candidate).stream().anyMatch(supportTopics::contains);
+                return sameCommit || (close && (sameArea || sharedTopic));
             })
             .sorted(Comparator.comparing((ChangeStory value) -> {
                 Set<String> commits = value.eventRefs().stream().map(eventsById::get).filter(java.util.Objects::nonNull)
                     .flatMap(event -> commitRefs(event).stream()).collect(LinkedHashSet::new, Set::add, Set::addAll);
                 return !supportCommits.isEmpty() && commits.stream().anyMatch(supportCommits::contains) ? 0 : 1;
-            }).thenComparing(ChangeStory::occurredFrom).thenComparing(ChangeStory::id))
+            }).thenComparing(value -> storyDistanceSeconds(support, value)).thenComparing(ChangeStory::id))
             .map(ChangeStory::id).findFirst().orElse(null);
+    }
+
+    private static Set<String> presentationTopics(ChangeStory story) {
+        return Stream.concat(
+                Stream.of(story.primarySubjectKey()),
+                Stream.concat(story.technicalDetails().stream(), story.affectedAreas().stream())
+            )
+            .filter(value -> value != null && !value.isBlank())
+            .flatMap(value -> java.util.Arrays.stream(value.toLowerCase(Locale.ROOT)
+                .replace('\\', '/').split("[^\\p{L}\\p{N}]+")))
+            .filter(value -> value.length() >= 3)
+            .filter(value -> !Set.of(
+                "test", "tests", "validation", "validate", "config", "configuration", "fixture", "fixtures",
+                "json", "html", "java", "project", "result", "data", "page"
+            ).contains(value))
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+    }
+
+    private static long storyDistanceSeconds(ChangeStory left, ChangeStory right) {
+        if (left.occurredFrom() == null || right.occurredTo() == null) return Long.MAX_VALUE;
+        long seconds = Duration.between(right.occurredTo(), left.occurredFrom()).getSeconds();
+        return seconds == Long.MIN_VALUE ? Long.MAX_VALUE : Math.abs(seconds);
     }
 
     private static boolean supportPathOnly(List<String> paths) {
         if (paths == null || paths.isEmpty()) return false;
         return paths.stream().allMatch(path -> {
             String lower = path == null ? "" : path.replace('\\', '/').toLowerCase(Locale.ROOT);
-            return lower.contains("/test") || lower.startsWith("test/") || lower.contains("/docs/")
-                || lower.startsWith("docs/") || lower.contains(".github/") || lower.endsWith(".md")
-                || lower.endsWith(".yml") || lower.endsWith(".yaml") || lower.endsWith(".json")
-                || lower.endsWith(".toml") || lower.endsWith(".lock");
+            return lower.contains("/test/") || lower.startsWith("test/") || lower.startsWith("tests/")
+                || lower.contains("/.github/") || lower.startsWith(".github/") || lower.contains("/fixtures/")
+                || lower.startsWith("fixtures/") || lower.contains("/config/") || lower.startsWith("config/")
+                || lower.contains("/migration/") || lower.contains("/migrations/");
         });
     }
 
-    private boolean hasRetryableWindowCheckpoint(UUID projectId, String sourceFingerprint) {
-        return windowCheckpointRepository.findByProjectIdAndSourceFingerprint(projectId, sourceFingerprint).stream()
+    private boolean hasRetryableWindowCheckpoint(UUID projectId) {
+        return windowCheckpointRepository.findByProjectIdOrderByUpdatedAtAsc(projectId).stream()
             .anyMatch(checkpoint -> RETRYABLE_WINDOW_STATUSES.contains(checkpoint.getStatus()));
+    }
+
+    private boolean hasPendingWindowDiagnostics(ProjectHistorySnapshot snapshot) {
+        if (snapshot == null || snapshot.getDiagnosticsJson() == null || snapshot.getDiagnosticsJson().isBlank()) return false;
+        try {
+            JsonNode root = objectMapper.readTree(snapshot.getDiagnosticsJson());
+            if (root == null || !root.isObject()) return false;
+            return root.path("modelUnprocessedWindowCount").asInt(0) > 0
+                || root.path("modelUnprocessedStoryCount").asInt(0) > 0
+                || root.path("pendingWindowCount").asInt(0) > 0
+                || root.path("chapterSynthesisPendingCount").asInt(0) > 0
+                || root.path("chapterSynthesisFailedCount").asInt(0) > 0;
+        } catch (Exception ignored) {
+            // An unreadable diagnostic must not turn an incomplete snapshot into
+            // a false global cache hit.
+            return true;
+        }
+    }
+
+    private void carryForwardSnapshotDiagnostics(ProjectHistorySnapshot snapshot, Map<String, Object> target) {
+        if (snapshot == null || target == null || snapshot.getDiagnosticsJson() == null) return;
+        try {
+            JsonNode previous = objectMapper.readTree(snapshot.getDiagnosticsJson());
+            if (previous == null || !previous.isObject()) return;
+            for (String field : List.of(
+                "storyCount", "threadCount", "reconstructionMode", "reusedStoryCount", "recomputedStoryCount",
+                "modelEnhancedStoryCount", "boundedDeterministicStoryCount", "eventConservation",
+                "modelRejectedInvalidEvidenceRefCount", "modelRejectedCrossProjectRefCount",
+                "modelRejectedUnsupportedClaimCount", "modelPromptCharacterCount", "modelPromptOmittedStoryCount",
+                "modelPromptOmittedChapterCount", "modelWindowCount", "modelProcessedWindowCount",
+                "modelUnprocessedWindowCount", "modelUnprocessedStoryCount", "modelWindowCacheHitCount",
+                "modelCheckpointCount", "totalWindowCount", "succeededWindowCount", "failedWindowCount",
+                "skippedWindowCount", "skippedStoryCount", "pendingWindowCount", "nextWindowOrdinal",
+                "processedStoryCount", "unprocessedStoryCount"
+                , "chapterSynthesisCount", "chapterSynthesisProcessedCount", "chapterSynthesisCacheHitCount",
+                "chapterSynthesisFailedCount", "chapterSynthesisPendingCount", "chapterSynthesisPromptCharacterCount",
+                "chapterSynthesisOmittedStoryCount"
+            )) {
+                JsonNode value = previous.get(field);
+                if (value != null && !value.isNull()) target.put(field, objectMapper.convertValue(value, Object.class));
+            }
+            target.put("previousModelStatus", previous.path("modelStatus").asText(""));
+        } catch (Exception ignored) {
+            target.put("previousDiagnosticsUnreadable", true);
+        }
     }
 
     private String previousPresentationRevision(ProjectHistorySnapshot snapshot) {
@@ -746,6 +836,15 @@ public class ProjectHistoryReconstructionService {
         } catch (Exception ignored) {
             return "";
         }
+    }
+
+    private void cleanupObsoleteWindowCheckpoints(UUID projectId, Set<String> activeCacheKeys) {
+        Set<String> active = activeCacheKeys == null ? Set.of() : activeCacheKeys;
+        List<ProjectHistoryWindowCheckpoint> obsolete = windowCheckpointRepository
+            .findByProjectIdOrderByUpdatedAtAsc(projectId).stream()
+            .filter(checkpoint -> !active.contains(checkpoint.getCacheKey()))
+            .toList();
+        if (!obsolete.isEmpty()) windowCheckpointRepository.deleteAll(obsolete);
     }
 
     private List<ChangeStory> previousStories(ProjectHistorySnapshot snapshot) {
@@ -864,7 +963,7 @@ public class ProjectHistoryReconstructionService {
             .sorted(storyEventOrder).toList();
         Instant from = events.get(0).occurredAt();
         Instant to = events.get(events.size() - 1).occurredAt();
-        List<Transition> transitions = events.stream().map(EventView::transition).distinct().toList();
+        List<Transition> transitions = storyTransitions(events);
         Transition outcome = primaryTransition(transitions);
         String subjectLabel = languageService.readableObject(
             subjectKey,
@@ -880,20 +979,17 @@ public class ProjectHistoryReconstructionService {
         List<String> labels = events.stream()
             .filter(event -> event.category() != Category.FILE_CHANGE)
             .map(EventView::label).filter(value -> !value.isBlank()).distinct().limit(3).toList();
-        String transitionSummary = transitionCounts(events);
         ProjectHistoryLanguageService.Presentation presentation = languageService.fallback(
             outcome, subjectKey,
             events.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(), labels,
             transitions.stream().map(Enum::name).toList()
         );
-        String change = labels.isEmpty()
-            ? presentation.change() + "（共观察到" + transitionSummary + "）"
-            : presentation.change() + "相关来源说明包括：" + String.join("；", labels.stream().limit(2).toList()) + "。";
+        String change = presentation.change();
         String before = presentation.before();
         String after = presentation.after();
         List<String> conflicts = events.stream()
             .filter(event -> event.epistemicStatus() == ProjectFactEpistemicStatus.CONFLICTED)
-            .map(event -> "来源存在冲突：" + event.label()).distinct().limit(10).toList();
+            .map(event -> "来源对这项结果存在冲突，需在详情中核对。 ").distinct().limit(10).toList();
         List<String> unknowns = new ArrayList<>();
         unknowns.add("未发现可独立验证的变更原因；原因保持 UNKNOWN。 ");
         if (events.stream().anyMatch(event -> event.epistemicStatus() == ProjectFactEpistemicStatus.UNKNOWN)) {
@@ -918,6 +1014,39 @@ public class ProjectHistoryReconstructionService {
             humanTitle, summary, List.of(), false, false, "", "ACTIVE", List.of()
         );
         return new StoryEnvelope(story, transitions);
+    }
+
+    /**
+     * A Git commit's default MODIFIED value is envelope metadata. When the
+     * same revision has file-level transitions, those transitions describe
+     * the actual lifecycle and must define the readable sequence. Explicit
+     * commit transitions such as REVERTED or REAPPLIED remain meaningful.
+     */
+    private static List<Transition> storyTransitions(List<EventView> events) {
+        Set<String> revisionsWithFileEvents = events.stream()
+            .filter(event -> event.category() == Category.FILE_CHANGE || event.category() == Category.DOCUMENT_VERSION)
+            .map(EventView::sourceRevision).filter(value -> value != null && !value.isBlank())
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        Set<String> revisionsWithExplicitCommitTransition = events.stream()
+            .filter(event -> event.category() == Category.COMMIT || event.category() == Category.MERGE)
+            .filter(event -> event.transition() != Transition.MODIFIED
+                && event.transition() != Transition.UNKNOWN_TRANSITION)
+            .map(EventView::sourceRevision).filter(value -> value != null && !value.isBlank())
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        LinkedHashSet<Transition> result = new LinkedHashSet<>();
+        for (EventView event : events) {
+            boolean commitEnvelope = event.category() == Category.COMMIT || event.category() == Category.MERGE;
+            if (commitEnvelope && event.transition() == Transition.MODIFIED
+                && revisionsWithFileEvents.contains(event.sourceRevision())) {
+                continue;
+            }
+            if (!commitEnvelope && event.transition() == Transition.MODIFIED
+                && revisionsWithExplicitCommitTransition.contains(event.sourceRevision())) {
+                continue;
+            }
+            result.add(event.transition());
+        }
+        return List.copyOf(result);
     }
 
     private List<EvolutionThread> threads(List<StoryEnvelope> envelopes) {
@@ -1028,7 +1157,9 @@ public class ProjectHistoryReconstructionService {
             group.forEach(story -> rawEvents.addAll(story.eventRefs()));
             String id = "chapter-" + ProjectHistorySourceCollector.sha256(group.get(0).id()).substring(0, 20);
             String title = languageService.chapterTitle(titles, transitions, from, to);
-            String summary = languageService.chapterSummary(titles, group.size(), rawEvents.size());
+            int chapterPrimaryCount = (int) group.stream().filter(ChangeStory::primary).count();
+            int chapterSupportingCount = Math.max(0, group.size() - chapterPrimaryCount);
+            String summary = languageService.chapterSummary(titles, chapterPrimaryCount, chapterSupportingCount);
             result.add(new HistoryChapter(
                 id, title, summary, from, to, signals.getOrDefault(group.get(0).id(), List.of()),
                 group.stream().map(ChangeStory::id).toList(), group.size(), rawEvents.size(),
@@ -1043,7 +1174,6 @@ public class ProjectHistoryReconstructionService {
         UUID projectId,
         DeterministicResult deterministic,
         List<ProjectHistoryEvent> events,
-        String correctionRevision,
         List<ModelGatewayService.ModelCallDiagnostics> diagnostics,
         HistoryProgress progress
     ) {
@@ -1052,20 +1182,29 @@ public class ProjectHistoryReconstructionService {
         if (events.stream().noneMatch(event -> event.getScope() == ProjectHistoryEvent.Scope.HISTORICAL)) {
             return ModelResult.notUsed(base, "NOT_REQUIRED_CURRENT_STATE_ONLY", base.stories().size());
         }
-        Set<String> eligibleStories = deterministic.recomputedStoryIds();
-        if (eligibleStories.isEmpty()) return ModelResult.notUsed(base, "REUSED_WITHOUT_MODEL", 0);
+        Set<String> recomputedStories = deterministic.recomputedStoryIds();
+        Set<String> eligibleStories = semanticModelCandidates(base.stories(), recomputedStories);
+        int deterministicOnlyStoryCount = Math.max(0, recomputedStories.size() - eligibleStories.size());
+        if (eligibleStories.isEmpty()) {
+            return ModelResult.notUsed(base, "REUSED_WITHOUT_MODEL", deterministicOnlyStoryCount);
+        }
         AiProvider provider = providerRepository.findFirstByUserIdAndDefaultEnabledTrueOrderByUpdatedAtDesc(userId).orElse(null);
-        if (provider == null) return ModelResult.notUsed(base, "NOT_CONFIGURED_DETERMINISTIC", eligibleStories.size());
-
-        ModelBatchPlan batchPlan = modelBatches(base, eligibleStories, events, provider, correctionRevision);
-        List<ModelBatch> batches = batchPlan.batches();
-        if (batches.isEmpty()) return ModelResult.notUsed(base, "BOUNDED_DETERMINISTIC", eligibleStories.size());
+        if (provider == null) return ModelResult.notUsed(base, "NOT_CONFIGURED_DETERMINISTIC", recomputedStories.size());
         Map<UUID, EventView> eventsById = new LinkedHashMap<>();
         events.stream().map(this::view).forEach(event -> eventsById.put(event.id(), event));
+        Map<String, List<String>> reasonEvidence = reasonEligibleEvidence(base, eventsById, eligibleStories);
+        ModelBatchPlan batchPlan = modelBatches(projectId, base, eligibleStories, events, provider, reasonEvidence);
+        List<ModelBatch> batches = batchPlan.batches();
+        if (batches.isEmpty()) return ModelResult.notUsed(base, "BOUNDED_DETERMINISTIC", eligibleStories.size());
+
         SnapshotResult current = base;
         Set<String> enhancedStories = new LinkedHashSet<>();
+        Set<String> enhancedChapters = new LinkedHashSet<>();
+        Set<String> succeededWindows = new LinkedHashSet<>();
+        Set<String> terminalSkippedWindows = new LinkedHashSet<>();
         boolean used = false;
         boolean failed = false;
+        boolean systemicFailure = false;
         String failureSummary = "";
         int rejectedInvalidEvidence = 0;
         int rejectedCrossProject = 0;
@@ -1076,88 +1215,116 @@ public class ProjectHistoryReconstructionService {
         int windowCacheHits = 0;
         int checkpointCount = 0;
         int processedWindowCount = 0;
-        boolean incomplete = batchPlan.totalWindowCount() > batches.size();
-        // Each bounded semantic window is one logical request.  The planner caps
-        // the number of windows and exposes omitted scope through diagnostics;
-        // it is important that an unprocessed tail is never presented as a full
-        // model pass.
+
+        // Restore every valid successful window first. Cache hits do not consume
+        // the per-refresh execution budget, which is what makes continuation
+        // deterministic when a project has more than MAX_MODEL_WINDOWS windows.
         for (ModelBatch batch : batches) {
             ProjectHistoryWindowCheckpoint checkpoint = windowCheckpointRepository
                 .findByProjectIdAndCacheKey(projectId, batch.cacheKey()).orElse(null);
-            if (checkpoint != null && "SUCCEEDED".equals(checkpoint.getStatus())
-                && batch.sourceFingerprint().equals(checkpoint.getSourceFingerprint())) {
+            if (checkpoint == null || !batch.sourceFingerprint().equals(checkpoint.getSourceFingerprint())) continue;
+            if ("SUCCEEDED".equals(checkpoint.getStatus())) {
                 SnapshotResult cached = readCachedWindow(checkpoint, batch);
                 if (cached != null) {
                     current = mergeWindowResult(current, cached, batch);
+                    succeededWindows.add(batch.identity());
                     enhancedStories.addAll(batch.storyIds());
+                    cached.chapters().forEach(chapter -> enhancedChapters.add(chapter.id()));
                     used = true;
                     windowCacheHits++;
                     checkpointCount++;
                     processedWindowCount++;
+                }
+            } else if ("SKIPPED_OVERSIZE".equals(checkpoint.getStatus())) {
+                terminalSkippedWindows.add(batch.identity());
+                checkpointCount++;
+            }
+        }
+
+        List<ModelBatch> pending = batches.stream()
+            .filter(batch -> !succeededWindows.contains(batch.identity())
+                && !terminalSkippedWindows.contains(batch.identity()))
+            .limit(MAX_MODEL_WINDOWS)
+            .toList();
+        boolean incomplete = batches.stream().anyMatch(batch ->
+            !succeededWindows.contains(batch.identity()) && !terminalSkippedWindows.contains(batch.identity()));
+        for (ModelBatch batch : pending) {
+            ProjectHistoryWindowCheckpointService.Attempt attempt = windowCheckpointService.begin(
+                projectId, batch.identity(), batch.cacheKey(), batch.sourceFingerprint(),
+                batch.storyIds().size(), batch.eventIds().size()
+            );
+            checkpointCount++;
+            if (!attempt.claimed()) {
+                incomplete = true;
+                failureSummary = "语义窗口正在由另一刷新任务处理，本次未重复调用模型。";
+                continue;
+            }
+            try {
+                if (batch.promptOverflow()) {
+                    String summary = "单个变化故事超过安全 Prompt 记录上限，已保留确定性结果并停止重复重试。";
+                    boolean stored = windowCheckpointService.skipOversize(
+                        attempt, summary, json(Map.of("status", "SKIPPED_OVERSIZE", "terminal", true))
+                    );
+                    if (stored) terminalSkippedWindows.add(batch.identity());
+                    failed = true;
+                    incomplete = true;
+                    failureSummary = summary;
                     continue;
                 }
-            }
-            checkpoint = checkpoint == null
-                ? new ProjectHistoryWindowCheckpoint(projectId, batch.identity(), batch.cacheKey(), batch.sourceFingerprint(),
-                    batch.storyIds().size(), batch.eventIds().size())
-                : checkpoint;
-            checkpoint.beginAttempt();
-            checkpointCount++;
-            windowCheckpointRepository.save(checkpoint);
-            Map<String, List<String>> reasonEvidence = reasonEligibleEvidence(current, eventsById, batch.storyIds());
-            try {
                 ProjectHistoryPromptBuilder.PromptBuildResult prompt = modelPrompt(
                     current, events, batch.storyIds(), batch.chapterIds(), reasonEvidence
                 );
                 promptCharacterCount += prompt.promptCharacterCount();
                 promptOmittedStories += prompt.omittedStoryCount();
                 promptOmittedChapters += prompt.omittedChapterCount();
-                boolean partialWindow = prompt.includedStoryIds().size() != batch.storyIds().size()
-                    || prompt.includedChapterIds().size() != batch.chapterIds().size();
-                if (prompt.includedStoryIds().isEmpty()) {
-                    incomplete = true;
-                    failureSummary = "语义窗口因 Prompt 有界容量未完整进入模型，已披露未处理范围。";
-                    checkpoint.skip(failureSummary, json(Map.of(
-                        "status", "SKIPPED",
-                        "includedStoryCount", prompt.includedStoryIds().size(),
-                        "windowStoryCount", batch.storyIds().size(),
-                        "includedChapterCount", prompt.includedChapterIds().size(),
-                        "windowChapterCount", batch.chapterIds().size()
+                if (!prompt.includedStoryIds().containsAll(batch.storyIds())) {
+                    // This should only be reachable when a provider-independent
+                    // input changes between planning and execution. Do not save a
+                    // partial semantic result; mark it terminal and continue.
+                    String summary = "语义窗口无法完整进入有界 Prompt，已保留确定性结果。";
+                    boolean stored = windowCheckpointService.skipOversize(attempt, summary, json(Map.of(
+                        "status", "SKIPPED_OVERSIZE", "terminal", true,
+                        "includedStoryCount", prompt.includedStoryIds().size(), "windowStoryCount", batch.storyIds().size()
                     )));
-                    windowCheckpointRepository.save(checkpoint);
+                    if (stored) terminalSkippedWindows.add(batch.identity());
+                    failed = true;
+                    incomplete = true;
+                    failureSummary = summary;
                     continue;
                 }
                 progress.update("HISTORY_MODEL_SYNTHESIS", "正在对已确定成员和 Evidence 的变化故事做有界语义归纳");
                 ModelGatewayService.StructuredModelResponse response = modelGateway.callStructured(
                     provider, prompt.prompt(), ModelTaskType.PROJECT_HISTORY_SYNTHESIS
                 );
-                diagnostics.add(response.diagnostics());
-                current = parseModel(
-                    response.parsed().root(), current, prompt.includedStoryIds(), prompt.includedChapterIds(), reasonEvidence
-                );
-                enhancedStories.addAll(prompt.includedStoryIds());
-                used = true;
-                if (partialWindow) {
-                    incomplete = true;
-                    failureSummary = "语义窗口只完成了有界 Prompt 能容纳的部分，剩余范围已披露。";
-                    checkpoint.skip(failureSummary, json(Map.of(
-                        "status", "PARTIAL",
-                        "includedStoryCount", prompt.includedStoryIds().size(),
-                        "windowStoryCount", batch.storyIds().size(),
-                        "includedChapterCount", prompt.includedChapterIds().size(),
-                        "windowChapterCount", batch.chapterIds().size(),
-                        "requestCount", response.diagnostics().requestCount()
-                    )));
-                } else {
-                    checkpoint.storeValidatedResult(writeWindowResult(current, batch));
-                    checkpoint.succeed(response.diagnostics().requestCount(), safeCheckpointDiagnostics(response.diagnostics()));
+                if (response == null || response.parsed() == null || response.diagnostics() == null) {
+                    throw new IllegalStateException("模型未返回可诊断的结构化结果");
                 }
-                windowCheckpointRepository.save(checkpoint);
+                diagnostics.add(response.diagnostics());
+                Set<String> includedChapters = prompt.includedChapterIds();
+                SnapshotResult parsed = parseModel(
+                    response.parsed().root(), current, prompt.includedStoryIds(), includedChapters, reasonEvidence
+                );
+                ModelBatch effective = batch.withChapterIds(includedChapters);
+                boolean stored = windowCheckpointService.succeed(
+                    attempt, writeWindowResult(parsed, effective), response.diagnostics().requestCount(),
+                    safeCheckpointDiagnostics(response.diagnostics())
+                );
+                if (!stored) {
+                    incomplete = true;
+                    failureSummary = "语义窗口 attempt 已被更新，本次结果未覆盖较新的 checkpoint。";
+                    continue;
+                }
+                current = parsed;
+                enhancedStories.addAll(prompt.includedStoryIds());
+                enhancedChapters.addAll(includedChapters);
+                succeededWindows.add(batch.identity());
+                used = true;
                 processedWindowCount++;
             } catch (CancellationException exception) {
                 incomplete = true;
-                checkpoint.cancel("窗口语义归纳已取消，保留确定性结果。", "{\"status\":\"CANCELLED\"}");
-                windowCheckpointRepository.save(checkpoint);
+                windowCheckpointService.cancel(
+                    attempt, "窗口语义归纳已取消，保留确定性结果。", "{\"status\":\"CANCELLED\"}"
+                );
                 throw exception;
             } catch (HistoryValidationException exception) {
                 failed = true;
@@ -1166,34 +1333,212 @@ public class ProjectHistoryReconstructionService {
                 rejectedCrossProject += exception.kind() == ValidationKind.CROSS_PROJECT_REFERENCE ? 1 : 0;
                 rejectedUnsupportedClaim += exception.kind() == ValidationKind.UNSUPPORTED_CLAIM ? 1 : 0;
                 failureSummary = "模型归纳未通过结构、ID、Evidence 或安全校验，已保留确定性历程：" + safeError(exception);
-                checkpoint.fail(failureSummary, "{\"validation\":\"REJECTED\"}");
-                windowCheckpointRepository.save(checkpoint);
-                break;
+                windowCheckpointService.fail(
+                    attempt, failureSummary, "{\"validation\":\"REJECTED\",\"scope\":\"WINDOW\"}"
+                );
+                // A malformed response is local to this bounded window. Keep
+                // processing independent windows; a later refresh retries only
+                // this failed checkpoint.
             } catch (Exception exception) {
                 failed = true;
                 incomplete = true;
                 failureSummary = "模型归纳调用失败，已保留确定性历程：" + safeError(exception);
-                checkpoint.fail(failureSummary, "{\"status\":\"FAILED\"}");
-                windowCheckpointRepository.save(checkpoint);
-                break;
+                windowCheckpointService.fail(
+                    attempt, failureSummary, "{\"status\":\"FAILED\",\"scope\":\"WINDOW\"}"
+                );
+                if (systemicProviderFailure(exception)) {
+                    systemicFailure = true;
+                    break;
+                }
             }
         }
-        int boundedStories = Math.max(0, eligibleStories.size() - enhancedStories.size());
-        int unprocessedWindowCount = Math.max(0, batchPlan.totalWindowCount() - processedWindowCount);
-        int unprocessedStoryCount = boundedStories;
+
+        boolean storyStageComplete = batches.stream().allMatch(batch ->
+            succeededWindows.contains(batch.identity()) || terminalSkippedWindows.contains(batch.identity()));
+        ChapterSynthesisResult chapterSynthesis = storyStageComplete
+            ? enhanceLargeChapters(
+                projectId, current, enhancedStories, enhancedChapters, provider, diagnostics, progress,
+                !systemicFailure
+            )
+            : ChapterSynthesisResult.notRequired(current);
+        current = chapterSynthesis.result();
+        used = used || chapterSynthesis.used();
+        failed = failed || chapterSynthesis.failed();
+        systemicFailure = systemicFailure || chapterSynthesis.systemicFailure();
+        incomplete = incomplete || chapterSynthesis.incomplete();
+        promptCharacterCount += chapterSynthesis.promptCharacterCount();
+        promptOmittedStories += chapterSynthesis.omittedStoryCount();
+        checkpointCount += chapterSynthesis.checkpointCount();
+        if (!chapterSynthesis.failureSummary().isBlank()) failureSummary = chapterSynthesis.failureSummary();
+
+        int succeededWindowCount = succeededWindows.size();
+        int skippedWindowCount = terminalSkippedWindows.size();
+        Set<String> terminalSkippedStoryIds = batches.stream()
+            .filter(batch -> terminalSkippedWindows.contains(batch.identity()))
+            .flatMap(batch -> batch.storyIds().stream())
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        Set<String> retryableStoryIds = batches.stream()
+            .filter(batch -> !succeededWindows.contains(batch.identity()) && !terminalSkippedWindows.contains(batch.identity()))
+            .flatMap(batch -> batch.storyIds().stream())
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        Set<String> activeCheckpointCacheKeys = batches.stream()
+            .map(ModelBatch::cacheKey)
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        activeCheckpointCacheKeys.addAll(chapterSynthesis.activeCheckpointCacheKeys());
+        int failedWindowCount = windowCheckpointService.summarize(projectId, activeCheckpointCacheKeys).count("FAILED");
+        int unprocessedWindowCount = Math.max(0, batches.size() - succeededWindowCount - skippedWindowCount);
+        int pendingWindowCount = Math.max(0, unprocessedWindowCount - failedWindowCount);
+        int boundedStories = deterministicOnlyStoryCount + Math.max(0, eligibleStories.size() - enhancedStories.size());
+        int unprocessedStoryCount = retryableStoryIds.size();
+        int nextWindowOrdinal = batches.stream()
+            .filter(batch -> !succeededWindows.contains(batch.identity()) && !terminalSkippedWindows.contains(batch.identity()))
+            .map(batch -> windowOrdinal(batch.identity()))
+            .min(Integer::compareTo).orElse(-1);
         String status;
-        if (failed && used) status = "MODEL_PARTIAL_FALLBACK_DETERMINISTIC";
-        else if (failed) status = "MODEL_FALLBACK_DETERMINISTIC";
-        else if (incomplete && !used) status = "BOUNDED_DETERMINISTIC_PARTIAL";
+        if (failed && used) status = systemicFailure ? "MODEL_PARTIAL_FALLBACK_PROVIDER_STOPPED" : "MODEL_PARTIAL_FALLBACK_DETERMINISTIC";
+        else if (failed) status = systemicFailure ? "MODEL_FALLBACK_PROVIDER_STOPPED" : "MODEL_FALLBACK_DETERMINISTIC";
+        else if (!used && unprocessedWindowCount > 0) status = "BOUNDED_DETERMINISTIC_PARTIAL";
+        else if (!used && skippedWindowCount > 0) status = "BOUNDED_DETERMINISTIC_SKIPPED_OVERSIZE";
         else if (!used) status = "BOUNDED_DETERMINISTIC";
-        else if (incomplete || boundedStories > 0) status = "MODEL_VALIDATED_PARTIAL_BOUNDED";
+        else if (unprocessedWindowCount > 0 || skippedWindowCount > 0 || chapterSynthesis.incomplete()) {
+            status = "MODEL_VALIDATED_PARTIAL_BOUNDED";
+        }
         else status = deterministic.reusedStoryCount() > 0 ? "MODEL_VALIDATED_INCREMENTAL" : "MODEL_VALIDATED";
         return new ModelResult(
             current, used, failed, status, failureSummary, enhancedStories.size(), boundedStories,
             rejectedInvalidEvidence, rejectedCrossProject, rejectedUnsupportedClaim,
             promptCharacterCount, promptOmittedStories, promptOmittedChapters,
-            batchPlan.totalWindowCount(), processedWindowCount, unprocessedWindowCount, unprocessedStoryCount,
-            windowCacheHits, checkpointCount, incomplete
+            batches.size(), processedWindowCount, unprocessedWindowCount, unprocessedStoryCount,
+            windowCacheHits, checkpointCount, unprocessedWindowCount > 0 || skippedWindowCount > 0,
+            succeededWindowCount, failedWindowCount, skippedWindowCount, terminalSkippedStoryIds.size(),
+            pendingWindowCount, nextWindowOrdinal,
+            activeCheckpointCacheKeys,
+            chapterSynthesis.candidateCount(), chapterSynthesis.processedCount(), chapterSynthesis.cacheHitCount(),
+            chapterSynthesis.failedCount(), chapterSynthesis.pendingCount(), chapterSynthesis.promptCharacterCount(),
+            chapterSynthesis.omittedStoryCount()
+        );
+    }
+
+    private ChapterSynthesisResult enhanceLargeChapters(
+        UUID projectId,
+        SnapshotResult input,
+        Set<String> enhancedStoryIds,
+        Set<String> enhancedChapterIds,
+        AiProvider provider,
+        List<ModelGatewayService.ModelCallDiagnostics> diagnostics,
+        HistoryProgress progress,
+        boolean allowCalls
+    ) {
+        List<ChapterBatch> batches = input.chapters().stream()
+            .filter(chapter -> !chapter.hiddenByDefault() && !chapter.userDeclared())
+            .filter(chapter -> !ProjectHistoryCorrectionService.USER_DECLARED_PRESENTATION.equals(chapter.presentationAuthority()))
+            .filter(chapter -> !enhancedChapterIds.contains(chapter.id()))
+            .filter(chapter -> chapter.storyRefs().size() > 1 && enhancedStoryIds.containsAll(chapter.storyRefs()))
+            .map(chapter -> chapterBatch(input, chapter))
+            .toList();
+        if (batches.isEmpty()) return ChapterSynthesisResult.notRequired(input);
+
+        SnapshotResult current = input;
+        Set<String> succeeded = new LinkedHashSet<>();
+        Set<String> terminalSkipped = new LinkedHashSet<>();
+        Set<String> activeKeys = batches.stream().map(ChapterBatch::cacheKey)
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        boolean used = false;
+        boolean systemicFailure = false;
+        String failureSummary = "";
+        int cacheHits = 0;
+        int checkpointCount = 0;
+        int promptCharacters = 0;
+        int omittedStories = 0;
+
+        for (ChapterBatch batch : batches) {
+            ProjectHistoryWindowCheckpoint checkpoint = windowCheckpointRepository
+                .findByProjectIdAndCacheKey(projectId, batch.cacheKey()).orElse(null);
+            if (checkpoint == null || !batch.sourceFingerprint().equals(checkpoint.getSourceFingerprint())) continue;
+            if ("SUCCEEDED".equals(checkpoint.getStatus())) {
+                HistoryChapter cached = readCachedChapter(checkpoint, current, batch);
+                if (cached != null) {
+                    current = replaceChapter(current, cached);
+                    succeeded.add(batch.identity());
+                    used = true;
+                    cacheHits++;
+                    checkpointCount++;
+                }
+            } else if ("SKIPPED_OVERSIZE".equals(checkpoint.getStatus())) {
+                terminalSkipped.add(batch.identity());
+                checkpointCount++;
+            }
+        }
+
+        if (allowCalls) {
+            List<ChapterBatch> pending = batches.stream()
+                .filter(batch -> !succeeded.contains(batch.identity()) && !terminalSkipped.contains(batch.identity()))
+                .limit(MAX_CHAPTER_SYNTHESIS_WINDOWS).toList();
+            for (ChapterBatch batch : pending) {
+                ProjectHistoryWindowCheckpointService.Attempt attempt = windowCheckpointService.begin(
+                    projectId, batch.identity(), batch.cacheKey(), batch.sourceFingerprint(), batch.storyIds().size(), 0
+                );
+                checkpointCount++;
+                if (!attempt.claimed()) {
+                    failureSummary = "篇章二阶段归纳正在由另一刷新任务处理，本次未重复调用模型。";
+                    continue;
+                }
+                try {
+                    HistoryChapter chapter = current.chapters().stream()
+                        .filter(value -> value.id().equals(batch.chapterId())).findFirst().orElseThrow();
+                    ProjectHistoryPromptBuilder.ChapterSynthesisBuildResult prompt = chapterPrompt(current, chapter);
+                    promptCharacters += prompt.promptCharacterCount();
+                    omittedStories += prompt.omittedStoryCount();
+                    progress.update("HISTORY_CHAPTER_SYNTHESIS", "正在使用已校验的变化故事摘要归纳大篇章");
+                    ModelGatewayService.StructuredModelResponse response = modelGateway.callStructured(
+                        provider, prompt.prompt(), ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS
+                    );
+                    if (response == null || response.parsed() == null || response.diagnostics() == null) {
+                        throw new IllegalStateException("模型未返回可诊断的篇章归纳结果");
+                    }
+                    diagnostics.add(response.diagnostics());
+                    HistoryChapter enhanced = parseChapterSynthesis(response.parsed().root(), chapter);
+                    boolean stored = windowCheckpointService.succeed(
+                        attempt, writeChapterResult(enhanced), response.diagnostics().requestCount(),
+                        safeCheckpointDiagnostics(response.diagnostics())
+                    );
+                    if (!stored) {
+                        failureSummary = "篇章归纳 attempt 已被更新，本次结果未覆盖较新的 checkpoint。";
+                        continue;
+                    }
+                    current = replaceChapter(current, enhanced);
+                    succeeded.add(batch.identity());
+                    used = true;
+                } catch (CancellationException exception) {
+                    windowCheckpointService.cancel(
+                        attempt, "篇章二阶段归纳已取消，保留确定性标题。", "{\"status\":\"CANCELLED\",\"scope\":\"CHAPTER\"}"
+                    );
+                    throw exception;
+                } catch (HistoryValidationException exception) {
+                    failureSummary = "篇章二阶段归纳未通过结构、ID 或安全校验，已保留确定性标题：" + safeError(exception);
+                    windowCheckpointService.fail(
+                        attempt, failureSummary, "{\"validation\":\"REJECTED\",\"scope\":\"CHAPTER\"}"
+                    );
+                } catch (Exception exception) {
+                    failureSummary = "篇章二阶段归纳调用失败，已保留确定性标题：" + safeError(exception);
+                    windowCheckpointService.fail(
+                        attempt, failureSummary, "{\"status\":\"FAILED\",\"scope\":\"CHAPTER\"}"
+                    );
+                    if (systemicProviderFailure(exception)) {
+                        systemicFailure = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        int failedCount = windowCheckpointService.summarize(projectId, activeKeys).count("FAILED");
+        int unresolved = Math.max(0, batches.size() - succeeded.size() - terminalSkipped.size());
+        int pendingCount = Math.max(0, unresolved - failedCount);
+        return new ChapterSynthesisResult(
+            current, used, failedCount > 0, systemicFailure, unresolved > 0 || !terminalSkipped.isEmpty(),
+            failureSummary, batches.size(), succeeded.size(), cacheHits, failedCount, pendingCount,
+            checkpointCount, promptCharacters, omittedStories, activeKeys
         );
     }
 
@@ -1214,8 +1559,11 @@ public class ProjectHistoryReconstructionService {
             // window. Partial prompt packing or a hand-edited row must never be
             // mistaken for a successful semantic pass.
             if (cachedStoryIds.size() != stories.size() || cachedChapterIds.size() != chapters.size()) return null;
-            if (!cachedStoryIds.equals(batch.storyIds()) || !cachedChapterIds.equals(batch.chapterIds())) return null;
-            return new SnapshotResult(chapters, stories, List.of());
+            if (!cachedStoryIds.equals(batch.storyIds())) return null;
+            List<HistoryChapter> reusableChapters = chapters.stream()
+                .filter(chapter -> batch.chapterIds().contains(chapter.id()))
+                .toList();
+            return new SnapshotResult(reusableChapters, stories, List.of());
         } catch (Exception ignored) {
             return null;
         }
@@ -1230,7 +1578,11 @@ public class ProjectHistoryReconstructionService {
         Map<String, HistoryChapter> chapters = new LinkedHashMap<>();
         current.chapters().forEach(value -> chapters.put(value.id(), value));
         cached.chapters().forEach(value -> {
-            if (batch.chapterIds().contains(value.id())) chapters.put(value.id(), value);
+            HistoryChapter currentChapter = chapters.get(value.id());
+            if (batch.chapterIds().contains(value.id()) && currentChapter != null
+                && new LinkedHashSet<>(currentChapter.storyRefs()).equals(new LinkedHashSet<>(value.storyRefs()))) {
+                chapters.put(value.id(), value);
+            }
         });
         return new SnapshotResult(
             current.chapters().stream().map(value -> chapters.getOrDefault(value.id(), value)).toList(),
@@ -1250,6 +1602,114 @@ public class ProjectHistoryReconstructionService {
         }
     }
 
+    private ChapterBatch chapterBatch(SnapshotResult snapshot, HistoryChapter chapter) {
+        Map<String, ChangeStory> stories = snapshot.stories().stream().collect(
+            LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll
+        );
+        StringBuilder fingerprintInput = new StringBuilder(chapter.id()).append('|')
+            .append(String.join("|", chapter.storyRefs()));
+        chapter.storyRefs().stream().map(stories::get).filter(java.util.Objects::nonNull).forEach(story ->
+            fingerprintInput.append('|').append(story.id()).append('|').append(story.humanTitle())
+                .append('|').append(story.oneSentenceSummary()).append('|').append(story.role())
+                .append('|').append(story.presentationAuthority()).append('|').append(story.presentationRevision())
+        );
+        String sourceFingerprint = ProjectHistorySourceCollector.sha256(fingerprintInput.toString());
+        String identity = "chapter-summary-" + ProjectHistorySourceCollector.sha256(chapter.id()).substring(0, 20);
+        String cacheKey = ProjectHistorySourceCollector.sha256(String.join("|",
+            sourceFingerprint, STRATEGY_VERSION, ProjectHistoryPromptBuilder.CHAPTER_PROMPT_VERSION, identity
+        ));
+        return new ChapterBatch(
+            identity, cacheKey, sourceFingerprint, chapter.id(), ordered(new LinkedHashSet<>(chapter.storyRefs()))
+        );
+    }
+
+    private ProjectHistoryPromptBuilder.ChapterSynthesisBuildResult chapterPrompt(
+        SnapshotResult snapshot,
+        HistoryChapter chapter
+    ) {
+        Map<String, ChangeStory> stories = snapshot.stories().stream().collect(
+            LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll
+        );
+        List<ChangeStory> members = chapter.storyRefs().stream().map(stories::get)
+            .filter(java.util.Objects::nonNull).toList();
+        List<ProjectHistoryPromptBuilder.ChapterStorySummaryInput> summaries = members.stream()
+            .map(story -> new ProjectHistoryPromptBuilder.ChapterStorySummaryInput(
+                story.id(), boundedPromptText(story.humanTitle(), 240), boundedPromptText(story.oneSentenceSummary(), 700),
+                story.role(), story.occurredFrom() == null ? "" : story.occurredFrom().toString(),
+                story.occurredTo() == null ? "" : story.occurredTo().toString()
+            )).toList();
+        int primaryCount = (int) members.stream().filter(ChangeStory::primary).count();
+        ProjectHistoryPromptBuilder.ChapterSynthesisPromptInput input =
+            new ProjectHistoryPromptBuilder.ChapterSynthesisPromptInput(
+                chapter.id(), chapter.from() == null ? "" : chapter.from().toString(),
+                chapter.to() == null ? "" : chapter.to().toString(), chapter.storyRefs().size(), primaryCount,
+                Math.max(0, chapter.storyRefs().size() - primaryCount), chapter.boundarySignals(),
+                ProjectHistorySourceCollector.sha256(String.join("|", chapter.storyRefs())), summaries
+            );
+        return promptBuilder.buildChapterProduction(input);
+    }
+
+    private HistoryChapter parseChapterSynthesis(JsonNode root, HistoryChapter original) {
+        if (root == null || !root.isObject()) {
+            throw new HistoryValidationException(ValidationKind.CONTRACT, "History chapter model output is not an object");
+        }
+        requireAllowedFields(root, Set.of("chapters"), "History chapter model root contains unsupported fields");
+        JsonNode chapters = root.path("chapters");
+        if (!chapters.isArray() || chapters.size() != 1) {
+            throw new HistoryValidationException(ValidationKind.CONTRACT, "History chapter model must return one chapter");
+        }
+        JsonNode node = chapters.get(0);
+        requireAllowedFields(node, MODEL_CHAPTER_SYNTHESIS_FIELDS, "History chapter model contains forbidden fields");
+        if (!original.id().equals(text(node, "chapterId"))) {
+            throw new HistoryValidationException(ValidationKind.CROSS_PROJECT_REFERENCE, "Unknown chapter ID");
+        }
+        String title = modelText(node, "title", 240);
+        String summary = modelText(node, "summary", 1_500);
+        if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
+            throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM,
+                "History chapter model returned an unsupported claim");
+        }
+        return new HistoryChapter(
+            original.id(), title, summary, original.from(), original.to(), original.boundarySignals(),
+            original.storyRefs(), original.storyCount(), original.rawEventCount(), "INFERRED_NON_AUTHORITATIVE",
+            original.coverage(), original.limitations(), original.presentationAuthority(), original.presentationRevision(),
+            original.userDeclared(), original.userCorrectionRefs(), original.hiddenByDefault(), original.pinned()
+        );
+    }
+
+    private HistoryChapter readCachedChapter(
+        ProjectHistoryWindowCheckpoint checkpoint,
+        SnapshotResult current,
+        ChapterBatch batch
+    ) {
+        try {
+            JsonNode root = objectMapper.readTree(checkpoint.getValidatedResultJson());
+            HistoryChapter cached = objectMapper.convertValue(root.path("chapter"), HistoryChapter.class);
+            HistoryChapter original = current.chapters().stream()
+                .filter(chapter -> chapter.id().equals(batch.chapterId())).findFirst().orElse(null);
+            if (cached == null || original == null || !original.id().equals(cached.id())) return null;
+            if (!new LinkedHashSet<>(original.storyRefs()).equals(new LinkedHashSet<>(cached.storyRefs()))) return null;
+            return cached;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private SnapshotResult replaceChapter(SnapshotResult current, HistoryChapter replacement) {
+        return new SnapshotResult(
+            current.chapters().stream().map(chapter -> chapter.id().equals(replacement.id()) ? replacement : chapter).toList(),
+            current.stories(), current.threads()
+        );
+    }
+
+    private String writeChapterResult(HistoryChapter chapter) {
+        try {
+            return redactor.redactOutboundText(objectMapper.writeValueAsString(Map.of("chapter", chapter)));
+        } catch (JsonProcessingException exception) {
+            return "{}";
+        }
+    }
+
     private String safeCheckpointDiagnostics(ModelGatewayService.ModelCallDiagnostics diagnostics) {
         if (diagnostics == null) return "{}";
         return json(Map.of(
@@ -1262,57 +1722,113 @@ public class ProjectHistoryReconstructionService {
         ));
     }
 
+    private boolean systemicProviderFailure(Exception exception) {
+        if (exception instanceof ModelGatewayService.ModelHttpException http) {
+            return http.statusCode() == 401 || http.statusCode() == 403 || http.statusCode() == 402
+                || http.statusCode() == 404;
+        }
+        String message = exception.getMessage() == null ? "" : exception.getMessage().toLowerCase(Locale.ROOT);
+        return message.contains("configuration") || message.contains("未配置") || message.contains("provider")
+            && (message.contains("disabled") || message.contains("unavailable") || message.contains("额度"));
+    }
+
+    private static int windowOrdinal(String identity) {
+        if (identity == null) return Integer.MAX_VALUE;
+        int start = identity.indexOf("window-");
+        if (start < 0) return Integer.MAX_VALUE;
+        int from = start + "window-".length();
+        int end = from;
+        while (end < identity.length() && Character.isDigit(identity.charAt(end))) end++;
+        try {
+            return end == from ? Integer.MAX_VALUE : Integer.parseInt(identity.substring(from, end));
+        } catch (NumberFormatException ignored) {
+            return Integer.MAX_VALUE;
+        }
+    }
+
     private ModelBatchPlan modelBatches(
+        UUID projectId,
         SnapshotResult base,
         Set<String> eligibleStoryIds,
         List<ProjectHistoryEvent> events,
         AiProvider provider,
-        String correctionRevision
+        Map<String, List<String>> reasonEvidence
     ) {
         String sourceFingerprint = fingerprint(events);
         List<ProjectHistoryWindowPlanner.Window> allWindows = windowPlanner.planAll(
             base.stories(), eligibleStoryIds, sourceFingerprint, STRATEGY_VERSION, PROMPT_VERSION,
-            correctionRevision
+            ""
         );
-        // The old local fixed-response compatibility provider cannot model
-        // independent windows. Keep one logical request for that adapter while
-        // retaining the normal multi-window path for real providers. This is
-        // capability-based compatibility, not a repository or fixture rule.
-        if (legacySingleRequestCompatibility(provider) && allWindows.size() > 1) {
-            Set<String> storyIds = new LinkedHashSet<>(eligibleStoryIds);
-            Set<UUID> eventIds = storyIds.stream().map(id -> base.stories().stream()
-                .filter(story -> story.id().equals(id)).findFirst().orElse(null))
-                .filter(java.util.Objects::nonNull)
-                .flatMap(story -> story.eventRefs().stream())
-                .collect(LinkedHashSet::new, Set::add, Set::addAll);
-            String identity = "window-compat-" + ProjectHistorySourceCollector.sha256(String.join("|", storyIds)).substring(0, 20);
-            String cacheKey = ProjectHistorySourceCollector.sha256(String.join("|", sourceFingerprint,
-                STRATEGY_VERSION, PROMPT_VERSION, identity, correctionRevision));
-            return new ModelBatchPlan(
-                List.of(modelBatch(base, storyIds, eventIds, identity, cacheKey, sourceFingerprint)), 1
-            );
-        }
-        List<ModelBatch> result = new ArrayList<>();
+        List<ModelBatch> planned = new ArrayList<>();
         Map<String, ChangeStory> byId = base.stories().stream().collect(
             LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll
         );
-        for (ProjectHistoryWindowPlanner.Window window : allWindows.stream().limit(MAX_MODEL_WINDOWS).toList()) {
+        Map<UUID, ProjectHistoryEvent> eventsById = events.stream().collect(
+            LinkedHashMap::new, (map, event) -> map.put(event.getId(), event), Map::putAll
+        );
+        for (ProjectHistoryWindowPlanner.Window window : allWindows) {
             Set<String> storyIds = new LinkedHashSet<>(window.storyIds());
             Set<UUID> eventIds = storyIds.stream().map(byId::get).filter(java.util.Objects::nonNull)
                 .flatMap(story -> story.eventRefs().stream()).collect(LinkedHashSet::new, Set::add, Set::addAll);
-            result.add(modelBatch(base, storyIds, eventIds, window.identity(), window.cacheKey(), sourceFingerprint));
+            String windowFingerprint = fingerprint(eventIds.stream().map(eventsById::get)
+                .filter(java.util.Objects::nonNull).toList());
+            planned.add(modelBatch(base, storyIds, eventIds, window.identity(), "", windowFingerprint));
         }
-        return new ModelBatchPlan(result, allWindows.size());
+        List<ProjectHistoryCorrectionService.WindowRevisionScope> scopes = planned.stream().map(batch -> {
+            Set<String> targets = new LinkedHashSet<>(batch.storyIds());
+            targets.addAll(batch.chapterIds());
+            return new ProjectHistoryCorrectionService.WindowRevisionScope(batch.sourceFingerprint(), targets);
+        }).toList();
+        List<String> windowRevisions = correctionService.currentWindowPresentationRevisions(projectId, scopes);
+        List<ModelBatch> result = new ArrayList<>();
+        for (int index = 0; index < planned.size(); index++) {
+            ModelBatch item = planned.get(index);
+            String revision = index < windowRevisions.size() ? windowRevisions.get(index) : "";
+            String cacheKey = windowPlanner.cacheKey(
+                item.identity(), item.sourceFingerprint(), STRATEGY_VERSION, PROMPT_VERSION, revision
+            );
+            ModelBatch batch = new ModelBatch(
+                item.identity(), cacheKey, item.sourceFingerprint(), item.storyIds(), item.chapterIds(), item.eventIds(), false
+            );
+            result.addAll(splitPromptOverflow(base, events, batch, reasonEvidence));
+        }
+        return new ModelBatchPlan(result, result.size());
     }
 
-    private boolean legacySingleRequestCompatibility(AiProvider provider) {
-        if (provider == null) return false;
-        String model = provider.getModelName() == null ? "" : provider.getModelName().toLowerCase(Locale.ROOT);
-        String baseUrl = provider.getBaseUrl() == null ? "" : provider.getBaseUrl().toLowerCase(Locale.ROOT);
-        return provider.getType() == com.projectflow.entity.AiProviderType.MOCK
-            || model.contains("fixed")
-            || (baseUrl.contains("127.0.0.1") || baseUrl.contains("localhost"))
-                && provider.getMaxTokens() != null && provider.getMaxTokens() <= 8_000;
+    /** Split a window deterministically until every Story fits the real prompt budget. */
+    private List<ModelBatch> splitPromptOverflow(
+        SnapshotResult base,
+        List<ProjectHistoryEvent> events,
+        ModelBatch batch,
+        Map<String, List<String>> reasonEvidence
+    ) {
+        ProjectHistoryPromptBuilder.PromptBuildResult prompt = modelPrompt(
+            base, events, batch.storyIds(), batch.chapterIds(), reasonEvidence
+        );
+        if (prompt.includedStoryIds().containsAll(batch.storyIds())) return List.of(batch);
+        if (batch.storyIds().size() <= 1) {
+            // A single record can still be too large when user material contains
+            // long text. modelPrompt applies bounded field projections; retaining
+            // the stable batch here makes the unresolved condition explicit rather
+            // than retrying an identical SKIPPED row forever.
+            return List.of(batch.withPromptOverflow(true));
+        }
+        List<String> ids = new ArrayList<>(batch.storyIds());
+        int midpoint = Math.max(1, ids.size() / 2);
+        Set<String> left = new LinkedHashSet<>(ids.subList(0, midpoint));
+        Set<String> right = new LinkedHashSet<>(ids.subList(midpoint, ids.size()));
+        return Stream.concat(Stream.of(childBatch(base, batch, left, "a"), childBatch(base, batch, right, "b")), Stream.empty())
+            .flatMap(child -> splitPromptOverflow(base, events, child, reasonEvidence).stream())
+            .toList();
+    }
+
+    private ModelBatch childBatch(SnapshotResult base, ModelBatch parent, Set<String> storyIds, String suffix) {
+        Set<UUID> eventIds = base.stories().stream().filter(story -> storyIds.contains(story.id()))
+            .flatMap(story -> story.eventRefs().stream())
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        String identity = parent.identity() + "-" + suffix;
+        String cacheKey = ProjectHistorySourceCollector.sha256(String.join("|", parent.cacheKey(), identity));
+        return modelBatch(base, storyIds, eventIds, identity, cacheKey, parent.sourceFingerprint());
     }
 
     private ModelBatch modelBatch(
@@ -1328,7 +1844,7 @@ public class ProjectHistoryReconstructionService {
             return !refs.isEmpty() && storyIds.containsAll(refs);
         }).map(HistoryChapter::id).collect(LinkedHashSet::new, Set::add, Set::addAll);
         return new ModelBatch(identity, cacheKey, sourceFingerprint,
-            ordered(storyIds), ordered(chapters), ordered(eventIds));
+            ordered(storyIds), ordered(chapters), ordered(eventIds), false);
     }
 
     private static <T> Set<T> ordered(Set<T> values) {
@@ -1348,17 +1864,20 @@ public class ProjectHistoryReconstructionService {
             .filter(story -> eligibleStories.contains(story.id())).map(story -> {
             List<EventView> members = story.eventRefs().stream().map(views::get).filter(java.util.Objects::nonNull).toList();
             return new ProjectHistoryPromptBuilder.StoryPromptInput(
-                story.id(), ProjectHistorySourceCollector.subjectLabel(story.primarySubjectKey()),
+                story.id(), boundedPromptText(ProjectHistorySourceCollector.subjectLabel(story.primarySubjectKey()), 180),
                 story.occurredFrom().toString(), story.occurredTo().toString(),
                 members.stream().map(event -> event.transition().name()).distinct().toList(),
                 members.stream().filter(event -> event.category() != Category.FILE_CHANGE)
-                    .map(EventView::label).distinct().limit(5).toList(),
-                story.affectedAreas().stream().limit(10).toList(), story.evidenceRefs().stream().limit(40).toList(),
+                    .map(EventView::label).map(value -> boundedPromptText(value, 240)).distinct().limit(5).toList(),
+                story.affectedAreas().stream().limit(10).map(value -> boundedPromptText(value, 180)).toList(),
+                story.evidenceRefs().stream().limit(12).map(value -> boundedPromptText(value, 180)).toList(),
                 reasonEvidenceByStory.getOrDefault(story.id(), List.of()).stream().limit(30).toList(),
-                story.beforeState(), story.change(), story.afterState(), story.role(),
+                boundedPromptText(story.beforeState(), 700), boundedPromptText(story.change(), 900),
+                boundedPromptText(story.afterState(), 700), story.role(),
+                story.primaryStoryId(),
                 story.supportingChangeRefs().stream().limit(40).toList(),
-                story.commitSummaries().stream().limit(12).toList(),
-                story.technicalDetails().stream().limit(30).toList()
+                story.commitSummaries().stream().limit(12).map(value -> boundedPromptText(value, 450)).toList(),
+                story.technicalDetails().stream().limit(30).map(value -> boundedPromptText(value, 450)).toList()
             );
         }).toList();
         List<ProjectHistoryPromptBuilder.ChapterPromptInput> chapters = base.chapters().stream()
@@ -1367,6 +1886,12 @@ public class ProjectHistoryReconstructionService {
                 chapter.id(), chapter.from().toString(), chapter.to().toString(), chapter.storyRefs(), chapter.boundarySignals()
             )).toList();
         return promptBuilder.buildProduction(new ProjectHistoryPromptBuilder.PromptInput(stories, chapters));
+    }
+
+    private static String boundedPromptText(String value, int limit) {
+        String safe = value == null ? "" : value.trim();
+        if (safe.length() <= limit) return safe;
+        return safe.substring(0, Math.max(0, limit - 1)) + "…";
     }
 
     private SnapshotResult parseModel(
@@ -1398,6 +1923,23 @@ public class ProjectHistoryReconstructionService {
             if (!Set.of("PRIMARY", "SUPPORTING").contains(role)) {
                 throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, "History model returned an invalid presentation role");
             }
+            String primaryStoryId = node.has("primaryStoryId")
+                ? modelStoryId(node, "primaryStoryId", true)
+                : original.primaryStoryId();
+            List<String> supportingChangeRefs = node.has("supportingChangeRefs")
+                ? modelStoryIds(node, "supportingChangeRefs", 40)
+                : original.supportingChangeRefs();
+            if (!primaryStoryId.equals(original.primaryStoryId()) && !primaryStoryId.isBlank()
+                && !eligibleStoryIds.contains(primaryStoryId)) {
+                throw new HistoryValidationException(ValidationKind.CROSS_PROJECT_REFERENCE,
+                    "History model changed a role relation to an ineligible story");
+            }
+            Set<String> newSupportingRefs = new LinkedHashSet<>(supportingChangeRefs);
+            newSupportingRefs.removeAll(original.supportingChangeRefs());
+            if (!eligibleStoryIds.containsAll(newSupportingRefs)) {
+                throw new HistoryValidationException(ValidationKind.CROSS_PROJECT_REFERENCE,
+                    "History model changed role relations to ineligible stories");
+            }
             String title = modelText(node, "humanTitle", 240);
             String summary = modelText(node, "oneSentenceSummary", 1_000);
             if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
@@ -1426,14 +1968,15 @@ public class ProjectHistoryReconstructionService {
             ));
             ChangeStory enhanced = stories.get(id);
             stories.put(id, withPresentation(enhanced, enhanced.humanTitle(), enhanced.oneSentenceSummary(),
-                enhanced.beforeState(), enhanced.change(), enhanced.afterState(), role, enhanced.primaryStoryId(),
-                enhanced.supportingChangeRefs(), enhanced.presentationAuthority(), enhanced.presentationRevision(),
+                enhanced.beforeState(), enhanced.change(), enhanced.afterState(), role, primaryStoryId,
+                supportingChangeRefs, enhanced.presentationAuthority(), enhanced.presentationRevision(),
                 enhanced.userCorrectionRefs(), enhanced.hiddenByDefault(), enhanced.pinned(), enhanced.mergedIntoStoryId(),
                 enhanced.displayStatus(), enhanced.correctionConflicts()));
         }
         if (!seenStories.equals(eligibleStoryIds)) {
             throw new HistoryValidationException(ValidationKind.CONTRACT, "History model omitted stories");
         }
+        validateRoleGraph(stories.values());
 
         Map<String, HistoryChapter> chapters = new LinkedHashMap<>();
         base.chapters().forEach(chapter -> chapters.put(chapter.id(), chapter));
@@ -1539,6 +2082,7 @@ public class ProjectHistoryReconstructionService {
             }
             coveredEvents.addAll(story.eventRefs());
         }
+        validateRoleGraph(result.stories());
         if (!coveredEvents.containsAll(semanticEvents)) {
             throw new HistoryValidationException(ValidationKind.CONTRACT, "Semantic event coverage failed");
         }
@@ -1735,13 +2279,6 @@ public class ProjectHistoryReconstructionService {
     private static boolean semanticEligible(EventView event) {
         return event.subjectKeys().isEmpty()
             || event.subjectKeys().stream().anyMatch(subject -> !RAW_ONLY_SUBJECTS.contains(subject));
-    }
-
-    private static String transitionCounts(List<EventView> events) {
-        Map<Transition, Long> counts = new LinkedHashMap<>();
-        events.forEach(event -> counts.merge(event.transition(), 1L, Long::sum));
-        return counts.entrySet().stream().map(entry -> transitionName(entry.getKey()) + " " + entry.getValue() + " 次")
-            .reduce((left, right) -> left + "、" + right).orElse("有界变化");
     }
 
     private static Transition primaryTransition(List<Transition> transitions) {
@@ -1959,6 +2496,44 @@ public class ProjectHistoryReconstructionService {
         );
     }
 
+    private Set<String> semanticModelCandidates(List<ChangeStory> stories, Set<String> recomputedStoryIds) {
+        List<ChangeStory> candidates = stories.stream()
+            .filter(ChangeStory::primary)
+            .filter(story -> recomputedStoryIds.contains(story.id()))
+            .toList();
+        Map<String, List<ChangeStory>> byFamily = new LinkedHashMap<>();
+        candidates.forEach(story -> byFamily.computeIfAbsent(presentationFamily(story), ignored -> new ArrayList<>()).add(story));
+        if (byFamily.values().stream().noneMatch(group -> group.size() > 1)) {
+            return candidates.stream().map(ChangeStory::id)
+                .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        }
+
+        long eventCount = candidates.stream().mapToLong(story -> story.eventRefs().size()).sum();
+        int averageEvents = Math.max(1, (int) Math.ceil((double) eventCount / Math.max(1, candidates.size())));
+        int target = Math.max(byFamily.size(), Math.min(
+            ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT,
+            Math.max(1, ProjectHistoryWindowPlanner.DEFAULT_EVENT_LIMIT / averageEvents)
+        ));
+        if (candidates.size() <= target) {
+            return candidates.stream().map(ChangeStory::id)
+                .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        }
+
+        Set<String> selected = new LinkedHashSet<>();
+        for (int depth = 0; selected.size() < target; depth++) {
+            boolean added = false;
+            for (List<ChangeStory> family : byFamily.values()) {
+                int index = depth % 2 == 0 ? depth / 2 : family.size() - 1 - depth / 2;
+                if (index < 0 || index >= family.size()) continue;
+                added |= selected.add(family.get(index).id());
+                if (selected.size() >= target) break;
+            }
+            if (!added) break;
+        }
+        return candidates.stream().map(ChangeStory::id).filter(selected::contains)
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+    }
+
     private String modelText(JsonNode node, String field, int max) {
         String value = node.path(field).isTextual() ? node.path(field).asText().trim() : "";
         value = redactor.redactOutboundText(value);
@@ -1995,6 +2570,54 @@ public class ProjectHistoryReconstructionService {
 
     private static String text(JsonNode node, String field) {
         return node.path(field).isTextual() ? node.path(field).asText().trim() : "";
+    }
+
+    private static String modelStoryId(JsonNode node, String field, boolean allowBlank) {
+        JsonNode value = node.get(field);
+        if (value == null || !value.isTextual()) {
+            throw new HistoryValidationException(ValidationKind.CONTRACT,
+                "History model role relation is not textual: " + field);
+        }
+        String id = value.asText().trim();
+        if ((!allowBlank && id.isBlank()) || id.length() > 240) {
+            throw new HistoryValidationException(ValidationKind.CONTRACT,
+                "History model role relation is invalid: " + field);
+        }
+        return id;
+    }
+
+    private static List<String> modelStoryIds(JsonNode node, String field, int limit) {
+        JsonNode values = node.get(field);
+        if (values == null || !values.isArray() || values.size() > limit) {
+            throw new HistoryValidationException(ValidationKind.CONTRACT,
+                "History model role relation list is invalid: " + field);
+        }
+        LinkedHashSet<String> result = new LinkedHashSet<>();
+        for (JsonNode value : values) {
+            if (!value.isTextual()) {
+                throw new HistoryValidationException(ValidationKind.CONTRACT,
+                    "History model role relation contains a non-text ID: " + field);
+            }
+            String id = value.asText().trim();
+            if (id.isBlank() || id.length() > 240 || !result.add(id)) {
+                throw new HistoryValidationException(ValidationKind.CONTRACT,
+                    "History model role relation contains an invalid ID: " + field);
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    private void validateRoleGraph(Collection<ChangeStory> values) {
+        try {
+            presentationInvariantValidator.validateRoleGraph(values);
+        } catch (ProjectHistoryPresentationInvariantValidator.Violation exception) {
+            ValidationKind kind = switch (exception.kind()) {
+                case CROSS_PROJECT_REFERENCE -> ValidationKind.CROSS_PROJECT_REFERENCE;
+                case UNSUPPORTED_CLAIM -> ValidationKind.UNSUPPORTED_CLAIM;
+                case CONTRACT -> ValidationKind.CONTRACT;
+            };
+            throw new HistoryValidationException(kind, exception.getMessage());
+        }
     }
 
     private static void requireAllowedFields(JsonNode node, Set<String> allowed, String message) {
@@ -2128,11 +2751,63 @@ public class ProjectHistoryReconstructionService {
         int unprocessedStoryCount,
         int windowCacheHitCount,
         int checkpointCount,
-        boolean incomplete
+        boolean incomplete,
+        int succeededWindowCount,
+        int failedWindowCount,
+        int skippedWindowCount,
+        int skippedStoryCount,
+        int pendingWindowCount,
+        int nextWindowOrdinal,
+        Set<String> activeCheckpointCacheKeys,
+        int chapterSynthesisCount,
+        int chapterSynthesisProcessedCount,
+        int chapterSynthesisCacheHitCount,
+        int chapterSynthesisFailedCount,
+        int chapterSynthesisPendingCount,
+        int chapterSynthesisPromptCharacterCount,
+        int chapterSynthesisOmittedStoryCount
     ) {
+        private ModelResult {
+            activeCheckpointCacheKeys = java.util.Collections.unmodifiableSet(new LinkedHashSet<>(
+                activeCheckpointCacheKeys == null ? Set.of() : activeCheckpointCacheKeys
+            ));
+        }
+
         private static ModelResult notUsed(SnapshotResult result, String status, int boundedStoryCount) {
             return new ModelResult(result, false, false, status, "", 0, boundedStoryCount, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, false);
+                0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0, 0, -1, Set.of(),
+                0, 0, 0, 0, 0, 0, 0);
+        }
+    }
+
+    private record ChapterSynthesisResult(
+        SnapshotResult result,
+        boolean used,
+        boolean failed,
+        boolean systemicFailure,
+        boolean incomplete,
+        String failureSummary,
+        int candidateCount,
+        int processedCount,
+        int cacheHitCount,
+        int failedCount,
+        int pendingCount,
+        int checkpointCount,
+        int promptCharacterCount,
+        int omittedStoryCount,
+        Set<String> activeCheckpointCacheKeys
+    ) {
+        private ChapterSynthesisResult {
+            failureSummary = failureSummary == null ? "" : failureSummary;
+            activeCheckpointCacheKeys = java.util.Collections.unmodifiableSet(new LinkedHashSet<>(
+                activeCheckpointCacheKeys == null ? Set.of() : activeCheckpointCacheKeys
+            ));
+        }
+
+        private static ChapterSynthesisResult notRequired(SnapshotResult result) {
+            return new ChapterSynthesisResult(
+                result, false, false, false, false, "", 0, 0, 0, 0, 0, 0, 0, 0, Set.of()
+            );
         }
     }
 
@@ -2149,8 +2824,34 @@ public class ProjectHistoryReconstructionService {
         String sourceFingerprint,
         Set<String> storyIds,
         Set<String> chapterIds,
-        Set<UUID> eventIds
+        Set<UUID> eventIds,
+        boolean promptOverflow
     ) {
+        private ModelBatch {
+            storyIds = java.util.Collections.unmodifiableSet(new LinkedHashSet<>(storyIds == null ? Set.of() : storyIds));
+            chapterIds = java.util.Collections.unmodifiableSet(new LinkedHashSet<>(chapterIds == null ? Set.of() : chapterIds));
+            eventIds = java.util.Collections.unmodifiableSet(new LinkedHashSet<>(eventIds == null ? Set.of() : eventIds));
+        }
+
+        private ModelBatch withPromptOverflow(boolean value) {
+            return new ModelBatch(identity, cacheKey, sourceFingerprint, storyIds, chapterIds, eventIds, value);
+        }
+
+        private ModelBatch withChapterIds(Set<String> values) {
+            return new ModelBatch(identity, cacheKey, sourceFingerprint, storyIds, values, eventIds, promptOverflow);
+        }
+    }
+
+    private record ChapterBatch(
+        String identity,
+        String cacheKey,
+        String sourceFingerprint,
+        String chapterId,
+        Set<String> storyIds
+    ) {
+        private ChapterBatch {
+            storyIds = java.util.Collections.unmodifiableSet(new LinkedHashSet<>(storyIds == null ? Set.of() : storyIds));
+        }
     }
 
     private enum ValidationKind {

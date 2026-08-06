@@ -9,12 +9,16 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterAll;
@@ -22,12 +26,19 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.projectflow.dto.ProjectHistoryDtos.ChangeStory;
+import com.projectflow.dto.ProjectHistoryDtos.EvolutionThread;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryChapter;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryCorrectionRequest;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryCoverage;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryOverviewContent;
 import com.projectflow.dto.V33WorkflowDtos.CapabilityCardAction;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
@@ -46,6 +57,8 @@ import com.projectflow.entity.ProjectCapabilityRelationRole;
 import com.projectflow.entity.ProjectFact;
 import com.projectflow.entity.ProjectFactOrigin;
 import com.projectflow.entity.ProjectFactRecordStatus;
+import com.projectflow.entity.ProjectHistoryCorrection;
+import com.projectflow.entity.ProjectHistorySnapshot;
 import com.projectflow.entity.ProjectMemory;
 import com.projectflow.entity.ProjectSediment;
 import com.projectflow.entity.ProjectSpace;
@@ -64,12 +77,19 @@ import com.projectflow.repository.ProjectRepository;
 import com.projectflow.repository.ProjectSedimentRepository;
 import com.projectflow.repository.ProjectFactCursorRepository;
 import com.projectflow.repository.ProjectFactRepository;
+import com.projectflow.repository.ProjectHistoryCorrectionRepository;
+import com.projectflow.repository.ProjectHistorySnapshotRepository;
+import com.projectflow.repository.ProjectHistoryWindowCheckpointRepository;
 import com.projectflow.service.ProjectAnalysisJobRunner;
 import com.projectflow.service.ProjectAnalysisJobService;
 import com.projectflow.service.ProjectCapabilityService;
 import com.projectflow.service.ProjectCapabilityQueryService;
 import com.projectflow.service.DashboardBootstrapService;
+import com.projectflow.service.ProjectHistoryCorrectionService;
+import com.projectflow.service.ProjectHistoryWindowCheckpointService;
+import com.projectflow.service.ProjectService;
 import com.projectflow.service.WorkSessionScanService;
+import com.projectflow.support.AppException;
 import com.sun.net.httpserver.HttpServer;
 
 @SpringBootTest(properties = {
@@ -111,11 +131,18 @@ class ProjectFlowPostgresIT {
     @Autowired ProjectCapabilityFactRepository capabilityFactRepository;
     @Autowired ProjectCapabilityFactCoverageRepository capabilityCoverageRepository;
     @Autowired ProjectCapabilityMapStateRepository capabilityMapStateRepository;
+    @Autowired ProjectHistoryCorrectionRepository historyCorrectionRepository;
+    @Autowired ProjectHistorySnapshotRepository historySnapshotRepository;
+    @Autowired ProjectHistoryWindowCheckpointRepository historyWindowCheckpointRepository;
     @Autowired WorkSessionScanService workSessionScanService;
     @Autowired ProjectCapabilityService capabilityService;
     @Autowired ProjectCapabilityQueryService capabilityQueryService;
     @Autowired DashboardBootstrapService dashboardBootstrapService;
+    @Autowired ProjectHistoryCorrectionService historyCorrectionService;
+    @Autowired ProjectHistoryWindowCheckpointService historyWindowCheckpointService;
+    @Autowired ProjectService projectService;
     @Autowired PlatformTransactionManager transactionManager;
+    @Autowired JdbcTemplate jdbcTemplate;
     @Autowired ObjectMapper objectMapper;
 
     @BeforeAll
@@ -335,6 +362,158 @@ class ProjectFlowPostgresIT {
         assertThat(capabilityCoverageRepository.findByProjectIdAndFactId(project.getId(), fact.getId())).isPresent();
     }
 
+    @Test
+    void serializesCheckpointContinuationRecoversExpiredLeaseAndCleansUpProject() throws Exception {
+        WorkflowFixture fixture = createFixture("PostgreSQL checkpoint 并发验收");
+        UUID projectId = fixture.project().getId();
+        String sourceFingerprint = "s".repeat(64);
+        String sharedCacheKey = "c".repeat(64);
+        int contenders = 8;
+        CountDownLatch ready = new CountDownLatch(contenders);
+        CountDownLatch start = new CountDownLatch(1);
+        var executor = Executors.newFixedThreadPool(contenders);
+        try {
+            var futures = java.util.stream.IntStream.range(0, contenders)
+                .mapToObj(index -> executor.submit(() -> {
+                    ready.countDown();
+                    if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("checkpoint start timeout");
+                    return historyWindowCheckpointService.begin(
+                        projectId, "window-0", sharedCacheKey, sourceFingerprint, 32, 120
+                    );
+                }))
+                .toList();
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            var attempts = futures.stream().map(future -> {
+                try { return future.get(20, TimeUnit.SECONDS); }
+                catch (Exception exception) { throw new AssertionError(exception); }
+            }).toList();
+            assertThat(attempts).filteredOn(ProjectHistoryWindowCheckpointService.Attempt::claimed).hasSize(1);
+            assertThat(historyWindowCheckpointRepository.findByProjectIdAndCacheKey(projectId, sharedCacheKey)).isPresent();
+
+            var winner = attempts.stream().filter(ProjectHistoryWindowCheckpointService.Attempt::claimed)
+                .findFirst().orElseThrow();
+            String largeValidatedResult = "{\"value\":\"" + "x".repeat(450_000) + "\"}";
+            assertThat(historyWindowCheckpointService.succeed(
+                winner, largeValidatedResult, 1, "{\"status\":\"SUCCEEDED\"}"
+            )).isTrue();
+            assertThat(historyWindowCheckpointRepository.findByProjectIdAndCacheKey(projectId, sharedCacheKey)
+                .orElseThrow().getValidatedResultJson()).hasSize(largeValidatedResult.length());
+
+            String expiredCacheKey = "e".repeat(64);
+            var expiredAttempt = historyWindowCheckpointService.begin(
+                projectId, "window-1", expiredCacheKey, sourceFingerprint, 16, 60
+            );
+            assertThat(expiredAttempt.claimed()).isTrue();
+            jdbcTemplate.update(
+                "update project_history_window_checkpoints set updated_at = ? where id = ?",
+                Timestamp.from(Instant.now().minus(Duration.ofMinutes(6))), expiredAttempt.checkpointId()
+            );
+
+            var replacement = historyWindowCheckpointService.begin(
+                projectId, "window-1", expiredCacheKey, sourceFingerprint, 16, 60
+            );
+            assertThat(replacement.claimed()).isTrue();
+            assertThat(replacement.version()).isGreaterThan(expiredAttempt.version());
+            assertThat(historyWindowCheckpointService.fail(
+                expiredAttempt, "stale attempt", "{\"status\":\"FAILED\"}"
+            )).isFalse();
+            assertThat(historyWindowCheckpointService.succeed(
+                replacement, "{\"stories\":[],\"chapters\":[]}", 1, "{\"status\":\"SUCCEEDED\"}"
+            )).isTrue();
+            assertThat(historyWindowCheckpointService.summarize(
+                projectId, List.of(sharedCacheKey, expiredCacheKey)
+            ).count("SUCCEEDED")).isEqualTo(2);
+
+            projectService.delete(fixture.userId(), projectId);
+            assertThat(historyWindowCheckpointRepository.findByProjectIdOrderByUpdatedAtAsc(projectId)).isEmpty();
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void commitsConcurrentCorrectionConflictAndPagesTwentyFiveHundredRows() throws Exception {
+        WorkflowFixture concurrentFixture = createFixture("PostgreSQL correction 并发验收");
+        ProjectHistorySnapshot concurrentSnapshot = createHistorySnapshot(concurrentFixture.project(), "concurrent-source");
+        String revision = historyCorrectionService.list(
+            concurrentFixture.userId(), concurrentFixture.project().getId()
+        ).presentationRevision();
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            List<String> titles = List.of("并发确认结果 A", "并发确认结果 B");
+            var futures = titles.stream().map(title -> executor.submit(() -> {
+                ready.countDown();
+                if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("correction start timeout");
+                try {
+                    historyCorrectionService.create(
+                        concurrentFixture.userId(), concurrentFixture.project().getId(),
+                        new HistoryCorrectionRequest(
+                            "RENAME_STORY", "STORY", "story-postgres", List.of(), title, "", "", "",
+                            revision, concurrentSnapshot.getSourceEventFingerprint()
+                        )
+                    );
+                    return "SUCCESS";
+                } catch (AppException exception) {
+                    return exception.getCode();
+                }
+            })).toList();
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            List<String> outcomes = futures.stream().map(future -> {
+                try { return future.get(20, TimeUnit.SECONDS); }
+                catch (Exception exception) { throw new AssertionError(exception); }
+            }).toList();
+            assertThat(outcomes).containsExactlyInAnyOrder("SUCCESS", "PROJECT_HISTORY_CORRECTION_CONFLICT");
+            assertThat(historyCorrectionRepository.countByProjectIdAndStatus(
+                concurrentFixture.project().getId(), ProjectHistoryCorrection.Status.ACTIVE
+            )).isEqualTo(1);
+            assertThat(historyCorrectionRepository.countByProjectIdAndStatus(
+                concurrentFixture.project().getId(), ProjectHistoryCorrection.Status.CONFLICT
+            )).isEqualTo(1);
+            assertThat(historyCorrectionService.resolve(
+                concurrentFixture.project().getId(), concurrentSnapshot
+            ).stories().get(0).humanTitle()).isIn("并发确认结果 A", "并发确认结果 B");
+        } finally {
+            executor.shutdownNow();
+        }
+
+        WorkflowFixture paginationFixture = createFixture("PostgreSQL correction 分页验收");
+        ProjectHistorySnapshot paginationSnapshot = createHistorySnapshot(paginationFixture.project(), "pagination-source");
+        List<ProjectHistoryCorrection> corrections = java.util.stream.IntStream.range(0, 2_500)
+            .mapToObj(index -> new ProjectHistoryCorrection(
+                paginationFixture.project().getId(), paginationFixture.userId(), "RENAME_STORY", "STORY",
+                "story-postgres", "[]", "分页标题 " + index, "", "", "", "",
+                paginationSnapshot.getSourceEventFingerprint(), "", "", "", ""
+            )).toList();
+        historyCorrectionRepository.saveAllAndFlush(corrections);
+
+        var firstPage = historyCorrectionService.list(
+            paginationFixture.userId(), paginationFixture.project().getId(), 0, 100
+        );
+        var lastPage = historyCorrectionService.list(
+            paginationFixture.userId(), paginationFixture.project().getId(), 24, 100
+        );
+        var corrected = historyCorrectionService.resolve(paginationFixture.project().getId(), paginationSnapshot);
+        assertThat(firstPage.items()).hasSize(100);
+        assertThat(lastPage.items()).hasSize(100);
+        assertThat(firstPage.total()).isEqualTo(2_500);
+        assertThat(lastPage.total()).isEqualTo(2_500);
+        assertThat(firstPage.activeCount()).isEqualTo(2_500);
+        assertThat(firstPage.activeLimit()).isEqualTo(2_000);
+        assertThat(firstPage.activeLimitExceeded()).isTrue();
+        assertThat(firstPage.presentationRevision()).isEqualTo(corrected.presentationRevision());
+        assertThat(lastPage.items()).allSatisfy(item -> assertThat(item.declaredTitle()).startsWith("分页标题 "));
+
+        projectService.delete(concurrentFixture.userId(), concurrentFixture.project().getId());
+        projectService.delete(paginationFixture.userId(), paginationFixture.project().getId());
+        assertThat(historyCorrectionRepository.findByProjectIdOrderByCreatedAtAsc(
+            paginationFixture.project().getId()
+        )).isEmpty();
+    }
+
     private WorkflowFixture createFixture(String name) {
         UUID userId = UUID.randomUUID();
         ProjectSpace project = new ProjectSpace(userId);
@@ -345,6 +524,42 @@ class ProjectFlowPostgresIT {
             "projectflow-fixed-postgres", AiProviderType.OPENAI_COMPATIBLE, 0.1, 4000, true, List.of("POSTGRES_WORKFLOW_NOT_REAL_DEEPSEEK"));
         providerRepository.saveAndFlush(provider);
         return new WorkflowFixture(userId, project);
+    }
+
+    private ProjectHistorySnapshot createHistorySnapshot(ProjectSpace project, String sourceFingerprint) throws Exception {
+        Instant occurredAt = Instant.parse("2026-08-01T00:00:00Z");
+        UUID eventId = UUID.randomUUID();
+        ChangeStory story = new ChangeStory(
+            "story-postgres", "report", "形成可阅读报告", "已整理并形成可核对的报告。",
+            "材料尚未整理。", "整理项目材料并形成报告。", "报告已经可以阅读和核对。",
+            List.of("报告"), "", List.of(), "", List.of(), List.of(), occurredAt, occurredAt,
+            1, 1, "FACTUAL_SOURCE", "DETERMINISTIC", "FULL_WITHIN_DISCOVERED_SOURCES", List.of(),
+            List.of(eventId), List.of("source:postgres-report")
+        );
+        HistoryChapter chapter = new HistoryChapter(
+            "chapter-postgres", "形成首份报告", "这一阶段整理出首份可阅读报告。", occurredAt, occurredAt,
+            List.of("EARLIEST_DISCOVERED_EVENT"), List.of(story.id()), 1, 1,
+            "ENGINEERING_GROUPING", "FULL_WITHIN_DISCOVERED_SOURCES", List.of()
+        );
+        EvolutionThread thread = new EvolutionThread(
+            "thread-postgres", "report", "报告", "PROJECT_SUBJECT", List.of(story.id()), List.of("CREATED"),
+            "报告已经形成。", List.of(), List.of(), List.of(), 1, null
+        );
+        ProjectHistorySnapshot snapshot = new ProjectHistorySnapshot(project.getId());
+        snapshot.complete(
+            "postgres-fixture", sourceFingerprint, 1, occurredAt, occurredAt,
+            "project-history-v385-semantic-compression-v1", "project-history-synthesis-v3",
+            objectMapper.writeValueAsString(new HistoryOverviewContent(
+                "材料尚未整理。", "报告已经形成。", List.of(), List.of(), List.of(), List.of()
+            )),
+            objectMapper.writeValueAsString(List.of(chapter)), objectMapper.writeValueAsString(List.of(story)),
+            objectMapper.writeValueAsString(List.of(thread)),
+            objectMapper.writeValueAsString(new HistoryCoverage(
+                true, "CURRENT", 1, 1, 0, 0, Map.of("DOCUMENT", 1), List.of(), List.of()
+            )),
+            "{}", UUID.randomUUID(), false
+        );
+        return historySnapshotRepository.saveAndFlush(snapshot);
     }
 
     private Path createGitProject() throws Exception {

@@ -79,6 +79,34 @@ class Handler(BaseHTTPRequestHandler):
                 }
             elif parsed.path.endswith("/snapshot"):
                 data = {"project": {"projectId": PROJECT_ID, "name": "ProjectFlow"}, "factCount": 42}
+            elif parsed.path.endswith("/history/stories"):
+                data = {
+                    "items": [{
+                        "id": "story-split-b", "humanTitle": "拆分后的第二部分", "role": "SUPPORTING",
+                        "primaryStoryId": "story-split-a", "supportingChangeRefs": [],
+                        "presentationAuthority": "USER_DECLARED_PRESENTATION", "pinned": True,
+                        "hiddenByDefault": False, "correctionConflicts": ["来源成员已变化"],
+                        "eventRefs": [EVENT_ID], "evidenceRefs": ["commit:abc"],
+                    }],
+                    "page": 0, "size": 10, "totalElements": 1, "totalPages": 1,
+                }
+            elif parsed.path.endswith("/history/chapters"):
+                data = {
+                    "items": [{"id": "chapter-a", "storyRefs": ["story-split-a", "story-split-b"], "storyCount": 2}],
+                    "page": 0, "size": 10, "totalElements": 1, "totalPages": 1,
+                }
+            elif parsed.path.endswith("/history/threads"):
+                data = {
+                    "items": [{"id": "thread-a", "storyRefs": ["story-split-a", "story-split-b"], "evidenceCount": 2}],
+                    "page": 0, "size": 10, "totalElements": 1, "totalPages": 1,
+                }
+            elif parsed.path.endswith("/history/corrections"):
+                query = parse_qs(parsed.query)
+                data = {
+                    "items": [{"id": "correction-a", "status": "CONFLICT", "membershipStale": True}],
+                    "presentationRevision": "presentation:corrected", "page": int(query.get("page", [0])[0]),
+                    "size": int(query.get("size", [50])[0]), "total": 1,
+                }
             elif parsed.path.endswith("/search"):
                 query = parse_qs(parsed.query)
                 data = {
@@ -277,11 +305,37 @@ class MCPProjectHistoryTest(unittest.TestCase):
         with McpProcess(self.base_url) as mcp:
             result = mcp.request("tools/call", {"name": "list_project_history_corrections", "arguments": {
                 "projectId": PROJECT_ID,
+                "page": 4,
+                "size": 25,
             }})["result"]
         self.assertFalse(result["isError"])
         with State.lock:
             request = State.requests[-1]
         self.assertTrue(request["path"].endswith("/project-memory/history/corrections"))
+        self.assertEqual(["4"], request["query"]["page"])
+        self.assertEqual(["25"], request["query"]["size"])
+
+    def test_corrected_split_role_conflict_and_revision_fields_are_preserved(self) -> None:
+        with McpProcess(self.base_url) as mcp:
+            story = mcp.request("tools/call", {"name": "list_project_change_stories", "arguments": {
+                "projectId": PROJECT_ID,
+            }})["result"]["structuredContent"]["items"][0]
+            chapter = mcp.request("tools/call", {"name": "list_project_history_chapters", "arguments": {
+                "projectId": PROJECT_ID,
+            }})["result"]["structuredContent"]["items"][0]
+            thread = mcp.request("tools/call", {"name": "list_project_evolution_threads", "arguments": {
+                "projectId": PROJECT_ID,
+            }})["result"]["structuredContent"]["items"][0]
+            corrections = mcp.request("tools/call", {"name": "list_project_history_corrections", "arguments": {
+                "projectId": PROJECT_ID,
+            }})["result"]["structuredContent"]
+        self.assertEqual("SUPPORTING", story["role"])
+        self.assertEqual("story-split-a", story["primaryStoryId"])
+        self.assertEqual(["来源成员已变化"], story["correctionConflicts"])
+        self.assertEqual(["story-split-a", "story-split-b"], chapter["storyRefs"])
+        self.assertEqual(chapter["storyRefs"], thread["storyRefs"])
+        self.assertEqual("presentation:corrected", corrections["presentationRevision"])
+        self.assertEqual("CONFLICT", corrections["items"][0]["status"])
 
     def test_context_package_forwards_task_scope_revision_and_depth(self) -> None:
         with McpProcess(self.base_url) as mcp:

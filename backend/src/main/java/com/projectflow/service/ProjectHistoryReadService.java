@@ -43,6 +43,7 @@ import com.projectflow.support.AppException;
 @Service
 public class ProjectHistoryReadService {
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int OVERVIEW_CHAPTER_LIMIT = 8;
     private final ProjectRepository projectRepository;
     private final ProjectHistorySnapshotRepository snapshotRepository;
     private final ProjectHistoryEventRepository eventRepository;
@@ -292,6 +293,11 @@ public class ProjectHistoryReadService {
         return correctionService.list(userId, projectId);
     }
 
+    @Transactional(readOnly = true)
+    public HistoryCorrectionListResponse corrections(UUID userId, UUID projectId, int page, int size) {
+        return correctionService.list(userId, projectId, page, size);
+    }
+
     private ProjectHistoryCorrectionService.CorrectedHistory corrected(UUID userId, UUID projectId) {
         owned(userId, projectId);
         ProjectHistorySnapshot snapshot = snapshotRepository.findByProjectId(projectId).orElse(null);
@@ -302,8 +308,7 @@ public class ProjectHistoryReadService {
         HistoryOverviewContent automatic,
         ProjectHistoryCorrectionService.CorrectedHistory corrected
     ) {
-        List<HistoryChapterSummary> summaries = corrected.chapters().stream()
-            .filter(chapter -> !chapter.hiddenByDefault())
+        List<HistoryChapterSummary> summaries = representativeChapters(corrected).stream()
             .map(chapter -> new HistoryChapterSummary(
                  chapter.id(), chapter.title(), chapter.summary(), chapter.from(), chapter.to(), chapter.storyCount(),
                  chapter.rawEventCount(), chapter.authority()
@@ -317,6 +322,95 @@ public class ProjectHistoryReadService {
             automatic.earliestConfirmedState(), automatic.currentState(), summaries, recent,
             automatic.conflicts(), automatic.unknowns()
         );
+    }
+
+    private List<HistoryChapter> representativeChapters(
+        ProjectHistoryCorrectionService.CorrectedHistory corrected
+    ) {
+        List<HistoryChapter> visible = corrected.chapters().stream()
+            .filter(chapter -> !chapter.hiddenByDefault())
+            .sorted(Comparator.comparing(HistoryChapter::from, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(HistoryChapter::to, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(HistoryChapter::id))
+            .toList();
+        if (visible.size() <= OVERVIEW_CHAPTER_LIMIT) return visible;
+
+        Map<String, ChangeStory> stories = corrected.stories().stream()
+            .collect(LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll);
+        LinkedHashMap<String, HistoryChapter> selected = new LinkedHashMap<>();
+        addRepresentative(selected, visible.get(0));
+        addRepresentative(selected, visible.get(visible.size() - 1));
+        addLatestMatching(selected, visible, chapter -> chapter.pinned() || chapter.storyRefs().stream()
+            .map(stories::get).filter(java.util.Objects::nonNull).anyMatch(ChangeStory::pinned));
+        addLatestMatching(selected, visible, chapter -> chapter.userDeclared()
+            || ProjectHistoryCorrectionService.USER_DECLARED_PRESENTATION.equals(chapter.presentationAuthority()));
+        addLatestMatching(selected, visible, chapter -> chapter.storyRefs().stream().map(stories::get)
+            .filter(java.util.Objects::nonNull).anyMatch(story -> !story.conflicts().isEmpty()
+                || !story.correctionConflicts().isEmpty()));
+        addLatestMatching(selected, visible, chapter -> chapter.storyRefs().stream().map(stories::get)
+            .filter(java.util.Objects::nonNull).anyMatch(ProjectHistoryReadService::hasImportantUnknown));
+
+        int spanSlots = OVERVIEW_CHAPTER_LIMIT - selected.size();
+        for (int slot = 1; slot <= spanSlots; slot++) {
+            int target = (int) Math.round((double) slot * (visible.size() - 1) / (spanSlots + 1));
+            addNearestUnselected(selected, visible, target);
+        }
+        for (HistoryChapter chapter : visible) {
+            if (selected.size() >= OVERVIEW_CHAPTER_LIMIT) break;
+            addRepresentative(selected, chapter);
+        }
+        return selected.values().stream()
+            .sorted(Comparator.comparing(HistoryChapter::from, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(HistoryChapter::to, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(HistoryChapter::id))
+            .limit(OVERVIEW_CHAPTER_LIMIT).toList();
+    }
+
+    private static void addLatestMatching(
+        Map<String, HistoryChapter> selected,
+        List<HistoryChapter> chapters,
+        java.util.function.Predicate<HistoryChapter> predicate
+    ) {
+        if (selected.size() >= OVERVIEW_CHAPTER_LIMIT) return;
+        for (int index = chapters.size() - 1; index >= 0; index--) {
+            HistoryChapter chapter = chapters.get(index);
+            if (predicate.test(chapter)) {
+                addRepresentative(selected, chapter);
+                return;
+            }
+        }
+    }
+
+    private static void addNearestUnselected(
+        Map<String, HistoryChapter> selected,
+        List<HistoryChapter> chapters,
+        int target
+    ) {
+        for (int distance = 0; distance < chapters.size(); distance++) {
+            int before = target - distance;
+            if (before >= 0 && !selected.containsKey(chapters.get(before).id())) {
+                addRepresentative(selected, chapters.get(before));
+                return;
+            }
+            int after = target + distance;
+            if (after < chapters.size() && !selected.containsKey(chapters.get(after).id())) {
+                addRepresentative(selected, chapters.get(after));
+                return;
+            }
+        }
+    }
+
+    private static void addRepresentative(Map<String, HistoryChapter> selected, HistoryChapter chapter) {
+        if (chapter != null && selected.size() < OVERVIEW_CHAPTER_LIMIT) selected.putIfAbsent(chapter.id(), chapter);
+    }
+
+    private static boolean hasImportantUnknown(ChangeStory story) {
+        return story.unknowns().stream().anyMatch(value -> {
+            String text = value == null ? "" : value.trim();
+            return !text.isBlank()
+                && !text.contains("未发现可独立验证的变更原因")
+                && !text.matches(".*原因保持\\s*UNKNOWN[。.]?.*");
+        });
     }
 
     private void owned(UUID userId, UUID projectId) {

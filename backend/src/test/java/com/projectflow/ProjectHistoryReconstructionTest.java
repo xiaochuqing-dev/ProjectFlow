@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -24,10 +25,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
 import com.projectflow.entity.EvidenceConfidence;
@@ -44,13 +48,16 @@ import com.projectflow.repository.AiProviderRepository;
 import com.projectflow.repository.ProjectFactRepository;
 import com.projectflow.repository.ProjectHistoryEventRepository;
 import com.projectflow.repository.ProjectHistorySnapshotRepository;
+import com.projectflow.repository.ProjectHistoryWindowCheckpointRepository;
 import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.service.ModelGatewayService;
 import com.projectflow.service.ModelOutputAdapter;
 import com.projectflow.service.ModelTaskType;
+import com.projectflow.service.ProjectHistoryCorrectionService;
 import com.projectflow.service.ProjectHistoryReadService;
 import com.projectflow.service.ProjectHistoryReconstructionService;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryCorrectionRequest;
 import com.projectflow.support.AppException;
 
 @SpringBootTest
@@ -61,9 +68,11 @@ class ProjectHistoryReconstructionTest {
     @Autowired ProjectMemoryRepository memoryRepository;
     @Autowired ProjectHistoryEventRepository eventRepository;
     @Autowired ProjectHistorySnapshotRepository snapshotRepository;
+    @Autowired ProjectHistoryWindowCheckpointRepository checkpointRepository;
     @Autowired ProjectFactRepository factRepository;
     @Autowired AiProviderRepository providerRepository;
     @Autowired ProjectHistoryReconstructionService reconstructionService;
+    @Autowired ProjectHistoryCorrectionService correctionService;
     @Autowired ProjectHistoryReadService readService;
     @Autowired ModelOutputAdapter outputAdapter;
     @Autowired ObjectMapper objectMapper;
@@ -105,7 +114,7 @@ class ProjectHistoryReconstructionTest {
         var threads = readService.threads(userId, project.getId(), "auth", 0, 20);
         assertThat(threads.items()).hasSize(1);
         assertThat(threads.items().get(0).transitions())
-            .contains("CREATED", "MODIFIED", "REMOVED", "RESTORED", "RENAMED");
+            .containsSubsequence("CREATED", "MODIFIED", "REMOVED", "RESTORED", "RENAMED");
         assertThat(threads.items().get(0).storyRefs()).hasSizeGreaterThanOrEqualTo(3);
 
         var stories = readService.stories(userId, project.getId(), "auth", false, null, null, 0, 20);
@@ -449,11 +458,87 @@ class ProjectHistoryReconstructionTest {
         assertThat(stories.items()).extracting(item -> item.primarySubjectKey())
             .contains("project-area-backend", "project-area-frontend", "project-area-docs");
         assertThat(stories.items()).extracting(item -> item.humanTitle())
-            .noneMatch(title -> title.matches(".*(BackendModule|FeaturePage|guide-\\d+).*"));
+            .noneMatch(title -> title.matches(".*(BackendModule|FeaturePage|guide-\\d+|后端区域|前端区域|Controller|Service).*"));
         assertThat(stories.items()).extracting(item -> item.humanTitle())
-            .anyMatch(title -> title.contains("后端区域"))
-            .anyMatch(title -> title.contains("前端区域"))
-            .anyMatch(title -> title.contains("文档区域"));
+            .anyMatch(title -> title.contains("项目材料"))
+            .anyMatch(title -> title.contains("页面内容"))
+            .anyMatch(title -> title.contains("项目文档"));
+    }
+
+    @Test
+    void keepsNonCodeArtifactsAsPrimaryResultsWithNeutralFirstLayerLanguage() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("non-code-artifacts");
+        Files.createDirectories(repository);
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        List<List<String>> artifacts = List.of(
+            List.of("slides/quarterly-review.pptx", "quarterly presentation"),
+            List.of("paper/research-conclusion.md", "research conclusion"),
+            List.of("analysis/revenue-summary.csv", "revenue analysis"),
+            List.of("media/final-cut.mp4", "final video"),
+            List.of("design/brand-system.fig", "brand design"),
+            List.of("site/index.html", "campaign page")
+        );
+        Instant first = Instant.parse("2025-04-01T00:00:00Z");
+        for (int index = 0; index < artifacts.size(); index++) {
+            Path file = repository.resolve(artifacts.get(index).get(0));
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, "artifact-" + index, StandardCharsets.UTF_8);
+            commitAt(repository, "add " + artifacts.get(index).get(1), first.plusSeconds(index * 86_400L));
+        }
+        ProjectSpace project = project(userId, "Non-code artifacts", repository);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var visible = readService.stories(userId, project.getId(), null, false, null, null, 0, 100).items();
+        String firstLayer = visible.stream().map(story -> String.join(" ", story.humanTitle(), story.oneSentenceSummary(),
+            story.beforeState(), story.change(), story.afterState())).collect(java.util.stream.Collectors.joining(" "));
+        assertThat(visible).allSatisfy(story -> assertThat(story.role()).isEqualTo("PRIMARY"));
+        assertThat(firstLayer).contains("演示文稿", "文档", "数据结果", "视频", "设计稿", "页面")
+            .doesNotContain("能力", "后端", "Controller", "Service", "Repository", "ENGINEERING_GROUPING");
+    }
+
+    @Test
+    void genericCommitsLowerConfidenceAndFoldExplicitTestsAndConfigurationUnderThePrimaryResult() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("generic-supporting-work");
+        Files.createDirectories(repository);
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Path page = repository.resolve("site/overview.html");
+        Files.createDirectories(page.getParent());
+        Files.writeString(page, "<main>overview</main>", StandardCharsets.UTF_8);
+        commitAt(repository, "launch project overview", Instant.parse("2025-05-01T00:00:00Z"));
+        Path test = repository.resolve("tests/overview-validation.json");
+        Files.createDirectories(test.getParent());
+        Files.writeString(test, "{\"valid\":true}", StandardCharsets.UTF_8);
+        commitAt(repository, "fix", Instant.parse("2025-05-02T00:00:00Z"));
+        Path config = repository.resolve("config/site.json");
+        Files.createDirectories(config.getParent());
+        Files.writeString(config, "{\"title\":\"Overview\"}", StandardCharsets.UTF_8);
+        commitAt(repository, "update", Instant.parse("2025-05-03T00:00:00Z"));
+        ProjectSpace project = project(userId, "Generic supporting work", repository);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var snapshot = snapshotRepository.findByProjectId(project.getId()).orElseThrow();
+        var corrected = correctionService.resolve(project.getId(), snapshot);
+        var supporting = corrected.stories().stream().filter(story -> story.technicalDetails().stream().anyMatch(path ->
+            path.startsWith("tests/") || path.startsWith("config/"))).toList();
+        assertThat(supporting).isNotEmpty().allSatisfy(story -> {
+            assertThat(story.role()).isEqualTo("SUPPORTING");
+            assertThat(story.primaryStoryId()).isNotBlank();
+        });
+        assertThat(corrected.stories()).filteredOn(story -> story.role().equals("PRIMARY"))
+            .anySatisfy(primary -> assertThat(primary.supportingChangeRefs()).containsAll(
+                supporting.stream().map(item -> item.id()).toList()
+            ));
+        assertThat(corrected.stories()).extracting(item -> item.humanTitle())
+            .noneMatch(title -> title.toLowerCase().contains("fix 相关变化")
+                || title.toLowerCase().contains("update 相关变化"));
     }
 
     @Test
@@ -697,6 +782,58 @@ class ProjectHistoryReconstructionTest {
     }
 
     @Test
+    void appliesOnlyCompleteProjectBoundPrimarySupportingRoleGraphs() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("model-role-graph");
+        Files.createDirectories(repository.resolve("product"));
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Files.writeString(repository.resolve("product/intake.txt"), "intake result\n");
+        commitAt(repository, "establish project intake result", Instant.parse("2024-01-01T00:00:00Z"));
+        Files.writeString(repository.resolve("product/delivery.txt"), "delivery result\n");
+        commitAt(repository, "establish project delivery result", Instant.parse("2024-02-01T00:00:00Z"));
+        ProjectSpace project = project(userId, "Model Role Graph", repository);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        var deterministic = readService.stories(userId, project.getId(), null, false, null, null, 0, 100).items();
+        assertThat(deterministic.stream().filter(item -> item.primary()).toList()).hasSizeGreaterThanOrEqualTo(2);
+        String supportId = deterministic.stream().filter(item -> item.primary()).findFirst().orElseThrow().id();
+        String primaryId = deterministic.stream().filter(item -> item.primary())
+            .filter(item -> !item.id().equals(supportId)).findFirst().orElseThrow().id();
+
+        provider(userId);
+        AtomicReference<String> scenario = new AtomicReference<>("ORPHAN");
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> modelResponse(
+            historyRoleGraphResponse(invocation.getArgument(1, String.class), scenario.get(), supportId, primaryId)
+        ));
+
+        for (String invalid : List.of("ORPHAN", "INVERSE_MISMATCH", "SUPPORTING_TARGET", "CYCLE", "CROSS_PROJECT")) {
+            scenario.set(invalid);
+            reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+            Map<String, com.projectflow.dto.ProjectHistoryDtos.ChangeStory> afterInvalid = readService.stories(
+                userId, project.getId(), null, false, null, null, 0, 100
+            ).items().stream().collect(java.util.stream.Collectors.toMap(
+                com.projectflow.dto.ProjectHistoryDtos.ChangeStory::id, item -> item
+            ));
+            assertThat(afterInvalid.get(supportId).role()).as(invalid).isEqualTo("PRIMARY");
+            assertThat(afterInvalid.get(primaryId).role()).as(invalid).isEqualTo("PRIMARY");
+        }
+
+        scenario.set("LEGAL");
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+        Map<String, com.projectflow.dto.ProjectHistoryDtos.ChangeStory> corrected = readService.stories(
+            userId, project.getId(), null, false, null, null, 0, 100
+        ).items().stream().collect(java.util.stream.Collectors.toMap(
+            com.projectflow.dto.ProjectHistoryDtos.ChangeStory::id, item -> item
+        ));
+        assertThat(corrected.get(supportId).role()).isEqualTo("SUPPORTING");
+        assertThat(corrected.get(supportId).primaryStoryId()).isEqualTo(primaryId);
+        assertThat(corrected.get(primaryId).role()).isEqualTo("PRIMARY");
+        assertThat(corrected.get(primaryId).supportingChangeRefs()).containsExactly(supportId);
+    }
+
+    @Test
     void reconstructsRenameMoveSplitMergeRevertReapplyMergeCommitsAndMixedMessages() throws Exception {
         UUID userId = UUID.randomUUID();
         Path repository = temporaryRoot.resolve("complex-history");
@@ -803,6 +940,400 @@ class ProjectHistoryReconstructionTest {
             .isGreaterThanOrEqualTo(40);
     }
 
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void continuesFortyWindowsAcrossRefreshesAndOnlyCachesAfterTheTailCompletes() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path root = temporaryRoot.resolve("forty-window-history");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Forty Window History", root);
+        historicalFacts(project, 40 * 32, 1, 1, 0);
+        provider(userId);
+
+        AtomicInteger calls = new AtomicInteger();
+        AtomicInteger chapterCalls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+                chapterCalls.incrementAndGet();
+                return modelResponse(historyChapterModelResponse(invocation.getArgument(1, String.class)));
+            }
+            calls.incrementAndGet();
+            return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
+        });
+
+        var first = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        Map<String, Object> firstDiagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(first.cacheHit()).isFalse();
+        assertThat(calls.get()).isEqualTo(16);
+        assertThat(firstDiagnostics).containsEntry("totalWindowCount", 40)
+            .containsEntry("succeededWindowCount", 16)
+            .containsEntry("failedWindowCount", 0)
+            .containsEntry("skippedWindowCount", 0)
+            .containsEntry("pendingWindowCount", 24)
+            .containsEntry("nextWindowOrdinal", 16);
+        assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
+            .filteredOn(checkpoint -> "SUCCEEDED".equals(checkpoint.getStatus()))
+            .hasSize(16);
+
+        var second = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        Map<String, Object> secondDiagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(second.cacheHit()).isFalse();
+        assertThat(calls.get()).isEqualTo(32);
+        assertThat(secondDiagnostics).containsEntry("succeededWindowCount", 32)
+            .containsEntry("pendingWindowCount", 8)
+            .containsEntry("nextWindowOrdinal", 32);
+
+        var third = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        Map<String, Object> completedDiagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(third.cacheHit()).isFalse();
+        assertThat(calls.get()).isEqualTo(40);
+        assertThat(completedDiagnostics).containsEntry("succeededWindowCount", 40)
+            .containsEntry("pendingWindowCount", 0)
+            .containsEntry("nextWindowOrdinal", -1)
+            .containsEntry("unprocessedStoryCount", 0);
+        assertThat(readService.stories(userId, project.getId(), null, false, null, null, 0, 1).totalElements())
+            .isEqualTo(40L * 32L);
+
+        int guard = 0;
+        while (((Number) readService.overview(userId, project.getId()).diagnostics()
+            .getOrDefault("chapterSynthesisPendingCount", 0)).intValue() > 0 && guard++ < 10) {
+            reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        }
+        Map<String, Object> chapterDiagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(chapterDiagnostics).containsEntry("chapterSynthesisPendingCount", 0);
+        assertThat(chapterCalls.get()).isEqualTo(((Number) chapterDiagnostics.get("chapterSynthesisCount")).intValue());
+
+        var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(cached.cacheHit()).isTrue();
+        assertThat(calls.get()).isEqualTo(40);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void synthesizesLargeChaptersAfterTheirStoriesCrossMultipleValidatedWindows() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path root = temporaryRoot.resolve("large-chapter-second-stage");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Large Chapter Second Stage", root);
+        historicalFacts(project, 100, 1, 1, 0);
+        provider(userId);
+
+        AtomicInteger storyCalls = new AtomicInteger();
+        AtomicInteger chapterCalls = new AtomicInteger();
+        List<String> chapterPrompts = new ArrayList<>();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(1, String.class);
+            ModelTaskType task = invocation.getArgument(2, ModelTaskType.class);
+            if (task == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+                chapterCalls.incrementAndGet();
+                chapterPrompts.add(prompt);
+                return modelResponse(historyChapterModelResponse(prompt));
+            }
+            storyCalls.incrementAndGet();
+            return modelResponse(historyModelResponse(prompt));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var chapters = readService.chapters(userId, project.getId(), 0, 100).items();
+        List<com.projectflow.dto.ProjectHistoryDtos.HistoryChapter> large = chapters.stream()
+            .filter(chapter -> chapter.storyRefs().size() == 40).toList();
+        assertThat(storyCalls.get()).isEqualTo(4);
+        assertThat(chapterCalls.get()).isEqualTo(chapters.size());
+        assertThat(large).hasSize(2).allSatisfy(chapter -> {
+            assertThat(chapter.title()).startsWith("归纳跨窗口阶段");
+            assertThat(chapter.authority()).isEqualTo("INFERRED_NON_AUTHORITATIVE");
+            assertThat(chapter.storyRefs()).doesNotHaveDuplicates().hasSize(40);
+        });
+        assertThat(chapterPrompts).hasSize(chapters.size()).allSatisfy(prompt -> assertThat(prompt)
+            .hasSizeLessThanOrEqualTo(48_000)
+            .contains("CHAPTER_SYNTHESIS_JSON", "primaryStoryCount", "supportingStoryCount")
+            .doesNotContain("evidenceRefs", "technicalDetails", "commitSummaries", "results/Outcome", "fact:"));
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("chapterSynthesisCount", chapters.size())
+            .containsEntry("chapterSynthesisProcessedCount", chapters.size())
+            .containsEntry("chapterSynthesisFailedCount", 0)
+            .containsEntry("chapterSynthesisPendingCount", 0);
+        assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
+            .filteredOn(checkpoint -> checkpoint.getWindowIdentity().startsWith("chapter-summary-"))
+            .hasSize(chapters.size()).allSatisfy(checkpoint -> {
+                assertThat(checkpoint.getStatus()).isEqualTo("SUCCEEDED");
+                assertThat(checkpoint.getEventCount()).isZero();
+            });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+
+        assertThat(storyCalls.get()).isEqualTo(4);
+        assertThat(chapterCalls.get()).isEqualTo(chapters.size());
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("chapterSynthesisCacheHitCount", chapters.size());
+    }
+
+    @Test
+    void continuesAfterOneWindowSchemaFailureAndRetriesOnlyThatWindow() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path root = temporaryRoot.resolve("window-local-failure");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Window Local Failure", root);
+        historicalFacts(project, 3 * 32, 1, 1, 0);
+        provider(userId);
+
+        AtomicInteger calls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+                return modelResponse(historyChapterModelResponse(invocation.getArgument(1, String.class)));
+            }
+            int call = calls.incrementAndGet();
+            if (call == 2) return modelResponse("{\"stories\":[],\"chapters\":[]}");
+            return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        Map<String, Object> failedDiagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(calls.get()).isEqualTo(3);
+        assertThat(failedDiagnostics).containsEntry("totalWindowCount", 3)
+            .containsEntry("succeededWindowCount", 2)
+            .containsEntry("failedWindowCount", 1)
+            .containsEntry("pendingWindowCount", 0)
+            .containsEntry("nextWindowOrdinal", 1);
+        assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
+            .filteredOn(checkpoint -> "SUCCEEDED".equals(checkpoint.getStatus())).hasSize(2);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        Map<String, Object> recoveredDiagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(calls.get()).isEqualTo(4);
+        assertThat(recoveredDiagnostics).containsEntry("succeededWindowCount", 3)
+            .containsEntry("failedWindowCount", 0)
+            .containsEntry("pendingWindowCount", 0)
+            .containsEntry("nextWindowOrdinal", -1);
+    }
+
+    @Test
+    void stopsLaterWindowsAfterSystemicProviderFailure() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path root = temporaryRoot.resolve("window-systemic-failure");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Window Systemic Failure", root);
+        historicalFacts(project, 3 * 32, 1, 1, 0);
+        provider(userId);
+
+        AtomicInteger calls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            if (calls.incrementAndGet() == 2) throw new ModelGatewayService.ModelHttpException(401);
+            return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        Map<String, Object> diagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(calls.get()).isEqualTo(2);
+        assertThat(diagnostics).containsEntry("succeededWindowCount", 1)
+            .containsEntry("failedWindowCount", 1)
+            .containsEntry("pendingWindowCount", 1)
+            .containsEntry("nextWindowOrdinal", 1)
+            .containsEntry("modelStatus", "MODEL_PARTIAL_FALLBACK_PROVIDER_STOPPED");
+        assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId())).hasSize(2);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void cancellationStopsTheTailAndRetryRunsOnlyCancelledAndUnstartedWindows() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path root = temporaryRoot.resolve("window-cancellation");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Window Cancellation", root);
+        historicalFacts(project, 3 * 32, 1, 1, 0);
+        provider(userId);
+
+        AtomicInteger calls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+                return modelResponse(historyChapterModelResponse(invocation.getArgument(1, String.class)));
+            }
+            if (calls.incrementAndGet() == 2) throw new CancellationException("cancelled by user");
+            return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
+        });
+
+        assertThatThrownBy(() -> reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false))
+            .isInstanceOf(CancellationException.class);
+        assertThat(calls.get()).isEqualTo(2);
+        assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
+            .extracting(value -> value.getStatus())
+            .containsExactly("SUCCEEDED", "CANCELLED");
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        assertThat(calls.get()).isEqualTo(4);
+        assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
+            .extracting(value -> value.getStatus())
+            .containsOnly("SUCCEEDED");
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("succeededWindowCount", 3)
+            .containsEntry("failedWindowCount", 0)
+            .containsEntry("pendingWindowCount", 0);
+    }
+
+    @Test
+    void splitsPromptOverflowIntoStableChildWindowsWithoutRepeatingSuccesses() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path root = temporaryRoot.resolve("window-prompt-overflow");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Window Prompt Overflow", root);
+        historicalFacts(project, 32, 8, 12, 120);
+        provider(userId);
+
+        AtomicInteger calls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+                return modelResponse(historyChapterModelResponse(invocation.getArgument(1, String.class)));
+            }
+            calls.incrementAndGet();
+            return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        Map<String, Object> diagnostics = readService.overview(userId, project.getId()).diagnostics();
+        int completedCalls = calls.get();
+        assertThat(completedCalls).isGreaterThan(1).isLessThanOrEqualTo(16);
+        assertThat(((Number) diagnostics.get("totalWindowCount")).intValue()).isEqualTo(completedCalls);
+        assertThat(diagnostics).containsEntry("succeededWindowCount", completedCalls)
+            .containsEntry("failedWindowCount", 0)
+            .containsEntry("skippedWindowCount", 0)
+            .containsEntry("pendingWindowCount", 0);
+        assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
+            .filteredOn(checkpoint -> checkpoint.getWindowIdentity().startsWith("window-"))
+            .allSatisfy(checkpoint -> {
+                assertThat(checkpoint.getStatus()).isEqualTo("SUCCEEDED");
+                assertThat(checkpoint.getWindowIdentity()).containsAnyOf("-a", "-b");
+            });
+
+        var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(cached.cacheHit()).isTrue();
+        assertThat(calls.get()).isEqualTo(completedCalls);
+    }
+
+    @Test
+    void marksSingleStoryPromptOverflowTerminalAndDoesNotRetryIt() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path root = temporaryRoot.resolve("single-story-overflow");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Single Story Overflow", root);
+        historicalFacts(project, 1, 40, 80, 200);
+        provider(userId);
+
+        AtomicInteger calls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+                return modelResponse(historyChapterModelResponse(invocation.getArgument(1, String.class)));
+            }
+            calls.incrementAndGet();
+            return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        Map<String, Object> diagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(calls.get()).isZero();
+        assertThat(diagnostics).containsEntry("totalWindowCount", 1)
+            .containsEntry("succeededWindowCount", 0)
+            .containsEntry("skippedWindowCount", 1)
+            .containsEntry("skippedStoryCount", 1)
+            .containsEntry("pendingWindowCount", 0)
+            .containsEntry("unprocessedStoryCount", 0);
+        assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
+            .singleElement().satisfies(checkpoint -> assertThat(checkpoint.getStatus()).isEqualTo("SKIPPED_OVERSIZE"));
+
+        var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(cached.cacheHit()).isTrue();
+        assertThat(calls.get()).isZero();
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("skippedWindowCount", 1)
+            .containsEntry("skippedStoryCount", 1)
+            .containsEntry("pendingWindowCount", 0)
+            .containsEntry("previousModelStatus", "MODEL_FALLBACK_DETERMINISTIC");
+    }
+
+    @Test
+    void sourceAppendReusesUnaffectedWindowCheckpointsAndCreatesOnlyTheTail() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path root = temporaryRoot.resolve("window-source-append");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Window Source Append", root);
+        historicalFacts(project, 64, 1, 1, 0);
+        provider(userId);
+
+        AtomicInteger calls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+                return modelResponse(historyChapterModelResponse(invocation.getArgument(1, String.class)));
+            }
+            calls.incrementAndGet();
+            return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        var originalCheckpoints = checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId());
+        List<UUID> originalCheckpointIds = originalCheckpoints.stream().map(value -> value.getId()).toList();
+        List<String> originalCacheKeys = originalCheckpoints.stream().map(value -> value.getCacheKey()).toList();
+        assertThat(calls.get()).isEqualTo(2);
+        assertThat(originalCheckpointIds).hasSize(2);
+
+        historicalFacts(project, 64, 1, 1, 1, 0);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var appendedCheckpoints = checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId());
+        var appendedStoryCheckpoints = appendedCheckpoints.stream()
+            .filter(value -> value.getWindowIdentity().startsWith("window-")).toList();
+        List<UUID> afterAppend = appendedStoryCheckpoints.stream().map(value -> value.getId()).toList();
+        List<String> appendedCacheKeys = appendedStoryCheckpoints.stream().map(value -> value.getCacheKey()).toList();
+        assertThat(calls.get()).as("before cache keys=%s, after cache keys=%s, identities=%s",
+            originalCacheKeys, appendedCacheKeys,
+            appendedCheckpoints.stream().map(value -> value.getWindowIdentity()).toList()).isEqualTo(3);
+        assertThat(afterAppend).hasSize(3).containsAll(originalCheckpointIds);
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("totalWindowCount", 3)
+            .containsEntry("succeededWindowCount", 3)
+            .containsEntry("pendingWindowCount", 0);
+    }
+
+    @Test
+    void correctionRevisionInvalidatesOnlyTheTargetWindow() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path root = temporaryRoot.resolve("window-correction-revision");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Window Correction Revision", root);
+        historicalFacts(project, 64, 1, 1, 0);
+        provider(userId);
+
+        AtomicInteger calls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            calls.incrementAndGet();
+            return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        List<UUID> originalCheckpointIds = checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId())
+            .stream().map(value -> value.getId()).toList();
+        var target = readService.stories(userId, project.getId(), null, false, null, null, 0, 1).items().get(0);
+        ProjectHistorySnapshot snapshot = snapshotRepository.findByProjectId(project.getId()).orElseThrow();
+        String revision = correctionService.list(userId, project.getId()).presentationRevision();
+        correctionService.create(userId, project.getId(), new HistoryCorrectionRequest(
+            "RENAME_STORY", "STORY", target.id(), List.of(), "用户确认的结果名称", "", "", "",
+            revision, snapshot.getSourceEventFingerprint()
+        ));
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        List<UUID> afterCorrection = checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId())
+            .stream().map(value -> value.getId()).toList();
+        assertThat(calls.get()).isEqualTo(3);
+        assertThat(afterCorrection).hasSize(2);
+        assertThat(afterCorrection.stream().filter(originalCheckpointIds::contains).count()).isEqualTo(1);
+        assertThat(readService.stories(userId, project.getId(), null, false, null, null, 0, 100).items())
+            .filteredOn(story -> story.id().equals(target.id()))
+            .singleElement().satisfies(story -> assertThat(story.humanTitle()).isEqualTo("用户确认的结果名称"));
+    }
+
     private ProjectSpace project(UUID userId, String name, Path root) {
         ProjectSpace project = new ProjectSpace(userId);
         project.update(name, "History fixture", ProjectStatus.BUILDING, List.of("Java"), "https://github.com/example/history", LocalDate.now(), null);
@@ -812,6 +1343,45 @@ class ProjectHistoryReconstructionTest {
         memory.rememberLocalProjectPath(root.toAbsolutePath().normalize().toString());
         memoryRepository.saveAndFlush(memory);
         return project;
+    }
+
+    private void historicalFacts(ProjectSpace project, int count, int pathCount, int evidenceCount, int payloadWidth) {
+        historicalFacts(project, 0, count, pathCount, evidenceCount, payloadWidth);
+    }
+
+    private void historicalFacts(ProjectSpace project, int startIndex, int count, int pathCount, int evidenceCount,
+        int payloadWidth) {
+        Instant first = Instant.parse("2024-01-01T00:00:00Z");
+        List<ProjectFact> facts = new ArrayList<>();
+        for (int offset = 0; offset < count; offset++) {
+            int index = startIndex + offset;
+            Instant occurredAt = first.plusSeconds(index * 3_600L);
+            List<String> paths = new ArrayList<>();
+            for (int pathIndex = 0; pathIndex < pathCount; pathIndex++) {
+                paths.add("results/Outcome" + String.format("%05d", index) + "Part"
+                    + String.format("%03d", pathIndex) + (payloadWidth <= 0 ? "" : "-" + "p".repeat(payloadWidth)) + ".java");
+            }
+            List<String> evidence = new ArrayList<>();
+            for (int evidenceIndex = 0; evidenceIndex < evidenceCount; evidenceIndex++) {
+                evidence.add("source:outcome-" + String.format("%05d", index) + "-"
+                    + String.format("%03d", evidenceIndex) + (payloadWidth <= 0 ? "" : "-" + "e".repeat(payloadWidth)));
+            }
+            ProjectFact fact = new ProjectFact(
+                project.getId(), null, null, ProjectFactOrigin.INCREMENTAL_SCAN,
+                String.format("%064d", index + 1)
+            );
+            fact.updateContent(
+                "记录项目结果 " + index, "来源确认项目结果 " + index + " 已发生。", List.of("形成可核对结果"),
+                "结果可从来源继续核对。", occurredAt, occurredAt, List.of(), List.of(), List.of(), paths, evidence,
+                "LOCAL_RULE", "PASS", EvidenceConfidence.HIGH, ProjectFactRecordStatus.RECORDED, ""
+            );
+            fact.applyKnowledgeContract(
+                ProjectFactEpistemicStatus.OBSERVED, List.of("FILESYSTEM"), "CURRENT", "fact-revision-" + index,
+                occurredAt, occurredAt, List.of(), List.of(), "ENGINEERING_VALIDATION", "", "", "VALIDATED"
+            );
+            facts.add(fact);
+        }
+        factRepository.saveAllAndFlush(facts);
     }
 
     private void provider(UUID userId) {
@@ -864,6 +1434,78 @@ class ProjectHistoryReconstructionTest {
             chapterOutput.add(item);
         }
         return mapper.writeValueAsString(Map.of("stories", storyOutput, "chapters", chapterOutput));
+    }
+
+    private String historyChapterModelResponse(String prompt) throws Exception {
+        String marker = "\nCHAPTER_SYNTHESIS_JSON=";
+        int start = prompt.indexOf(marker);
+        assertThat(start).isGreaterThanOrEqualTo(0);
+        JsonNode chapter = objectMapper.readTree(prompt.substring(start + marker.length()));
+        String chapterId = chapter.path("chapterId").asText();
+        return objectMapper.writeValueAsString(Map.of("chapters", List.of(Map.of(
+            "chapterId", chapterId,
+            "title", "归纳跨窗口阶段并形成主要结果",
+            "summary", "这一阶段按已校验的故事摘要归纳主要结果，并将支撑工作保留在详情中。"
+        ))));
+    }
+
+    private String historyRoleGraphResponse(String prompt, String scenario, String supportId, String primaryId) throws Exception {
+        ObjectNode root = (ObjectNode) objectMapper.readTree(historyModelResponse(prompt));
+        ArrayNode stories = (ArrayNode) root.path("stories");
+        ObjectNode support = null;
+        ObjectNode primary = null;
+        for (JsonNode item : stories) {
+            if (supportId.equals(item.path("storyId").asText())) support = (ObjectNode) item;
+            if (primaryId.equals(item.path("storyId").asText())) primary = (ObjectNode) item;
+        }
+        if (support == null || primary == null) throw new AssertionError("role graph stories were not packed together");
+
+        switch (scenario) {
+            case "ORPHAN" -> {
+                support.put("role", "SUPPORTING");
+                support.put("primaryStoryId", "");
+                support.putArray("supportingChangeRefs");
+            }
+            case "INVERSE_MISMATCH" -> {
+                support.put("role", "SUPPORTING");
+                support.put("primaryStoryId", primaryId);
+                support.putArray("supportingChangeRefs");
+                primary.put("role", "PRIMARY");
+                primary.put("primaryStoryId", "");
+                primary.putArray("supportingChangeRefs");
+            }
+            case "SUPPORTING_TARGET" -> {
+                support.put("role", "SUPPORTING");
+                support.put("primaryStoryId", primaryId);
+                support.putArray("supportingChangeRefs");
+                primary.put("role", "SUPPORTING");
+                primary.put("primaryStoryId", "");
+                primary.putArray("supportingChangeRefs").add(supportId);
+            }
+            case "CYCLE" -> {
+                support.put("role", "PRIMARY");
+                support.put("primaryStoryId", "");
+                support.putArray("supportingChangeRefs").add(primaryId);
+                primary.put("role", "PRIMARY");
+                primary.put("primaryStoryId", "");
+                primary.putArray("supportingChangeRefs").add(supportId);
+            }
+            case "CROSS_PROJECT" -> {
+                support.put("role", "SUPPORTING");
+                support.put("primaryStoryId", "story-from-another-project");
+                support.putArray("supportingChangeRefs");
+            }
+            case "LEGAL" -> {
+                support.put("role", "SUPPORTING");
+                support.put("primaryStoryId", primaryId);
+                support.putArray("supportingChangeRefs");
+                primary.put("role", "PRIMARY");
+                primary.put("primaryStoryId", "");
+                primary.putArray("supportingChangeRefs").add(supportId);
+            }
+            default -> throw new IllegalArgumentException("unknown scenario: " + scenario);
+        }
+        return objectMapper.writeValueAsString(root);
     }
 
     private void fastImport(Path root, int commits) throws Exception {

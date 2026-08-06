@@ -1,0 +1,270 @@
+package com.projectflow.eval;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.projectflow.entity.AiProvider;
+import com.projectflow.repository.AiProviderRepository;
+import com.projectflow.repository.ProjectFactRepository;
+import com.projectflow.repository.ProjectHistoryEventRepository;
+import com.projectflow.repository.ProjectHistorySnapshotRepository;
+import com.projectflow.repository.ProjectMemoryRepository;
+import com.projectflow.repository.ProjectRepository;
+import com.projectflow.service.ProjectHistoryCorrectionService;
+import com.projectflow.service.ProjectHistoryReadService;
+import com.projectflow.service.ProjectHistoryReconstructionService;
+
+/** Qualifies real Provider output through the production history refresh path. */
+@SpringBootTest
+@ActiveProfiles("test")
+class ProjectHistoryV385RealOutputEvaluatorTest {
+    private static final String RESOURCE = "/projectflow-v385/history-ground-truth.json";
+
+    @Autowired ProjectRepository projectRepository;
+    @Autowired ProjectMemoryRepository memoryRepository;
+    @Autowired ProjectFactRepository factRepository;
+    @Autowired ProjectHistoryEventRepository eventRepository;
+    @Autowired ProjectHistorySnapshotRepository snapshotRepository;
+    @Autowired AiProviderRepository providerRepository;
+    @Autowired ProjectHistoryReconstructionService reconstructionService;
+    @Autowired ProjectHistoryCorrectionService correctionService;
+    @Autowired ProjectHistoryReadService readService;
+    @Autowired ObjectMapper objectMapper;
+
+    @TempDir Path temporaryRoot;
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void evaluatesCalibrationAndFrozenHoldoutUsingRealProductionRefresh() throws Exception {
+        ProjectFlowRealModelEvalIT.ProviderConfig config = ProjectFlowRealModelEvalIT.providerConfig();
+        Assumptions.assumeTrue(config != null, "未提供真实 Provider 安全配置，V3.8.5 真实输出评测跳过");
+
+        JsonNode groundTruth = loadGroundTruth();
+        UUID userId = UUID.randomUUID();
+        providerRepository.saveAndFlush(provider(userId, config));
+        ProjectHistoryV385FixtureRunner runner = new ProjectHistoryV385FixtureRunner(
+            projectRepository, memoryRepository, factRepository, eventRepository, snapshotRepository,
+            reconstructionService, correctionService, readService, objectMapper
+        );
+
+        long started = System.nanoTime();
+        List<ProjectHistoryV385QualityEvaluator.CaseObservation> observations = new ArrayList<>();
+        List<SafeCaseRun> runs = new ArrayList<>();
+        int ordinal = 0;
+        System.out.printf("V385_REAL_PROVIDER_START provider=%s model=%s protocol=%s%n",
+            config.name(), config.model(), config.protocol());
+        for (JsonNode testCase : groundTruth.path("cases")) {
+            ProjectHistoryV385FixtureRunner.FixtureExecution execution = runner.execute(
+                userId, testCase, temporaryRoot.resolve("case-" + ++ordinal)
+            );
+            observations.add(execution.observation());
+            SafeCaseRun run = safeRun(execution);
+            runs.add(run);
+            System.out.printf(
+                "V385_REAL_CASE_DONE split=%s status=%s requests=%d tokens=%d elapsedMs=%d%n",
+                run.split(), run.modelStatus(), run.requestCount(), run.tokenCount(), run.latencyMs()
+            );
+        }
+
+        ProjectHistoryV385QualityEvaluator.EvaluationReport report =
+            ProjectHistoryV385QualityEvaluator.evaluateCases(groundTruth, observations);
+        QualificationSummary qualification = qualification(report, runs, elapsedMs(started));
+        writeSafeArtifact(config, report, runs, qualification);
+        System.out.printf(
+            "V385_REAL_PROVIDER_DONE provider=%s model=%s status=%s requests=%d tokens=%d elapsedMs=%d%n",
+            config.name(), config.model(), qualification.qualified() ? "PASS" : "FAIL",
+            qualification.requestCount(), qualification.tokenCount(), qualification.elapsedMs()
+        );
+
+        assertThat(report.missingCases()).isEmpty();
+        assertSafetyGates(report.calibration());
+        assertSafetyGates(report.holdout());
+        assertThat(report.calibration().passes()).isTrue();
+        assertThat(report.holdout().passes()).isTrue();
+        assertThat(qualification.calibrationRequestCount()).isPositive();
+        assertThat(qualification.holdoutRequestCount()).isPositive();
+        assertThat(qualification.degradedCaseCount()).isZero();
+        assertThat(qualification.failedOrPendingWindowCount()).isZero();
+        assertThat(qualification.rejectedModelOutputCount()).isZero();
+        assertThat(runs).filteredOn(value -> value.requestCount() > 0)
+            .allSatisfy(value -> assertThat(value.modelUsed()).isTrue());
+        assertThat(qualification.qualified()).isTrue();
+    }
+
+    private AiProvider provider(UUID userId, ProjectFlowRealModelEvalIT.ProviderConfig config) {
+        AiProvider provider = new AiProvider(userId);
+        provider.update(
+            config.name(), config.baseUrl(), config.apiKey(), config.model(), config.type(),
+            0.1, config.maxTokens(), true, List.of("V3.8.5_HISTORY_REAL_OUTPUT")
+        );
+        provider.configureProtocol(
+            config.protocol(), null, null, null, null, Map.of(), config.timeoutSeconds(), null,
+            config.supportsJsonMode(), null, config.supportsReasoning(), config.supportsReasoningControl()
+        );
+        return provider;
+    }
+
+    private SafeCaseRun safeRun(ProjectHistoryV385FixtureRunner.FixtureExecution execution) {
+        Map<String, Object> diagnostics = execution.diagnostics();
+        ProjectHistoryV385QualityEvaluator.CaseObservation observation = execution.observation();
+        return new SafeCaseRun(
+            observation.caseId(), observation.split(), observation.modelRequestCount(), observation.modelTokenCount(),
+            execution.modelLatencyMs(), execution.modelUsed(), execution.degraded(), execution.cacheHit(),
+            text(diagnostics.get("modelStatus")), number(diagnostics, "failedWindowCount"),
+            number(diagnostics, "modelUnprocessedWindowCount"), number(diagnostics, "skippedWindowCount"),
+            number(diagnostics, "chapterSynthesisFailedCount"), number(diagnostics, "chapterSynthesisPendingCount"),
+            number(diagnostics, "modelRejectedInvalidEvidenceRefCount"),
+            number(diagnostics, "modelRejectedCrossProjectRefCount"),
+            number(diagnostics, "modelRejectedUnsupportedClaimCount")
+        );
+    }
+
+    private QualificationSummary qualification(
+        ProjectHistoryV385QualityEvaluator.EvaluationReport report,
+        List<SafeCaseRun> runs,
+        long elapsedMs
+    ) {
+        int calibrationRequests = runs.stream().filter(value -> "CALIBRATION".equals(value.split()))
+            .mapToInt(SafeCaseRun::requestCount).sum();
+        int holdoutRequests = runs.stream().filter(value -> "HOLDOUT".equals(value.split()))
+            .mapToInt(SafeCaseRun::requestCount).sum();
+        int degraded = (int) runs.stream().filter(SafeCaseRun::degraded).count();
+        int failedOrPending = runs.stream().mapToInt(value -> value.failedWindowCount()
+            + value.unprocessedWindowCount() + value.skippedWindowCount()
+            + value.chapterFailedCount() + value.chapterPendingCount()).sum();
+        int rejected = runs.stream().mapToInt(value -> value.rejectedInvalidEvidenceCount()
+            + value.rejectedCrossProjectCount() + value.rejectedUnsupportedClaimCount()).sum();
+        int requests = runs.stream().mapToInt(SafeCaseRun::requestCount).sum();
+        long tokens = runs.stream().mapToLong(SafeCaseRun::tokenCount).sum();
+        boolean qualified = report.passes() && calibrationRequests > 0 && holdoutRequests > 0
+            && degraded == 0 && failedOrPending == 0 && rejected == 0
+            && runs.stream().filter(value -> value.requestCount() > 0).allMatch(SafeCaseRun::modelUsed);
+        return new QualificationSummary(
+            qualified, requests, tokens, elapsedMs, calibrationRequests, holdoutRequests,
+            degraded, failedOrPending, rejected
+        );
+    }
+
+    private void writeSafeArtifact(
+        ProjectFlowRealModelEvalIT.ProviderConfig config,
+        ProjectHistoryV385QualityEvaluator.EvaluationReport report,
+        List<SafeCaseRun> runs,
+        QualificationSummary qualification
+    ) throws Exception {
+        String defaultName = "v385-real-" + config.protocol().name().toLowerCase(java.util.Locale.ROOT);
+        String outputName = System.getProperty("projectflow.eval.output-name", defaultName)
+            .replaceAll("[^A-Za-z0-9._-]", "_");
+        Path output = Path.of("target", "projectflow-eval", outputName);
+        Files.createDirectories(output);
+        Map<String, Object> artifact = new LinkedHashMap<>();
+        artifact.put("version", "projectflow-v3.8.5-history-real-output-v1");
+        artifact.put("generatedAt", Instant.now().toString());
+        artifact.put("provider", Map.of(
+            "name", config.name(), "model", config.model(), "protocol", config.protocol().name()
+        ));
+        artifact.put("qualification", qualification);
+        artifact.put("evaluation", report);
+        artifact.put("caseRuns", List.copyOf(runs));
+        artifact.put("security", Map.of(
+            "apiKeyPersisted", false,
+            "promptPersisted", false,
+            "rawResponsePersisted", false,
+            "reasoningPersisted", false,
+            "absolutePathPersisted", false
+        ));
+        objectMapper.writerWithDefaultPrettyPrinter().writeValue(
+            output.resolve("history-ground-truth-real-result.json").toFile(), artifact
+        );
+    }
+
+    private void assertSafetyGates(ProjectHistoryV385QualityEvaluator.AggregateMetrics metrics) {
+        assertThat(metrics.invalidEvidenceReferenceCount()).isZero();
+        assertThat(metrics.crossProjectReferenceCount()).isZero();
+        assertThat(metrics.unsupportedStrongFactCount()).isZero();
+        assertThat(metrics.rawEventLossCount()).isZero();
+        assertThat(metrics.orphanSupportingCount()).isZero();
+        assertThat(metrics.chapterStoryOverlapCount()).isZero();
+        assertThat(metrics.reasonWithoutEvidenceCount()).isZero();
+        assertThat(metrics.absolutePathOrSecretLeakCount()).isZero();
+    }
+
+    private JsonNode loadGroundTruth() throws Exception {
+        try (InputStream input = getClass().getResourceAsStream(RESOURCE)) {
+            assertThat(input).isNotNull();
+            return objectMapper.readTree(input);
+        }
+    }
+
+    private static int number(Map<String, Object> values, String key) {
+        Object value = values.get(key);
+        if (value instanceof Number number) return number.intValue();
+        if (value == null) return 0;
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
+    }
+
+    private static String text(Object value) {
+        return value == null ? "" : value.toString();
+    }
+
+    private static long elapsedMs(long started) {
+        return Math.max(0, (System.nanoTime() - started) / 1_000_000L);
+    }
+
+    private record SafeCaseRun(
+        String caseId,
+        String split,
+        int requestCount,
+        long tokenCount,
+        long latencyMs,
+        boolean modelUsed,
+        boolean degraded,
+        boolean cacheHit,
+        String modelStatus,
+        int failedWindowCount,
+        int unprocessedWindowCount,
+        int skippedWindowCount,
+        int chapterFailedCount,
+        int chapterPendingCount,
+        int rejectedInvalidEvidenceCount,
+        int rejectedCrossProjectCount,
+        int rejectedUnsupportedClaimCount
+    ) {
+    }
+
+    private record QualificationSummary(
+        boolean qualified,
+        int requestCount,
+        long tokenCount,
+        long elapsedMs,
+        int calibrationRequestCount,
+        int holdoutRequestCount,
+        int degradedCaseCount,
+        int failedOrPendingWindowCount,
+        int rejectedModelOutputCount
+    ) {
+    }
+}

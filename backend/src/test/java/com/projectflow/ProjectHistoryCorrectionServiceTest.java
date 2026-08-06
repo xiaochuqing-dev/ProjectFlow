@@ -11,8 +11,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.IntStream;
+
+import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +29,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,12 +41,18 @@ import com.projectflow.dto.ProjectHistoryDtos.HistoryCoverage;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryOverviewContent;
 import com.projectflow.dto.AuthDtos.AuthUser;
 import com.projectflow.entity.ProjectHistorySnapshot;
+import com.projectflow.entity.ProjectHistoryCorrection;
+import com.projectflow.entity.ProjectHistoryEvent;
+import com.projectflow.entity.ProjectFactEpistemicStatus;
 import com.projectflow.entity.ProjectSpace;
 import com.projectflow.entity.ProjectStatus;
 import com.projectflow.repository.ProjectHistoryCorrectionRepository;
+import com.projectflow.repository.ProjectHistoryEventRepository;
 import com.projectflow.repository.ProjectHistorySnapshotRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.service.ProjectHistoryCorrectionService;
+import com.projectflow.service.ProjectAgentHistoryService;
+import com.projectflow.service.ProjectMemoryGatewayService;
 import com.projectflow.service.AuthService;
 import com.projectflow.support.AppException;
 
@@ -53,9 +66,13 @@ class ProjectHistoryCorrectionServiceTest {
     @Autowired ProjectRepository projectRepository;
     @Autowired ProjectHistorySnapshotRepository snapshotRepository;
     @Autowired ProjectHistoryCorrectionRepository correctionRepository;
+    @Autowired ProjectHistoryEventRepository eventRepository;
     @Autowired ProjectHistoryCorrectionService correctionService;
+    @Autowired ProjectMemoryGatewayService memoryGatewayService;
+    @Autowired ProjectAgentHistoryService agentHistoryService;
     @Autowired ObjectMapper objectMapper;
     @Autowired MockMvc mockMvc;
+    @Autowired EntityManager entityManager;
     @MockitoBean AuthService authService;
 
     private UUID ownerId;
@@ -214,6 +231,472 @@ class ProjectHistoryCorrectionServiceTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.story.humanTitle").value("普通用户看得懂的登录结果"))
             .andExpect(jsonPath("$.data.story.presentationAuthority").value("USER_DECLARED_PRESENTATION"));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void staleRevisionConflictIsCommittedAsAuditableNonActiveRow() {
+        String staleRevision = "presentation:stale-revision";
+        assertThatThrownBy(() -> correctionService.create(ownerId, project.getId(), request(
+            "RENAME_STORY", "story-a", List.of(), "不会覆盖自动结果", "", "", "", staleRevision
+        ))).isInstanceOf(AppException.class)
+            .satisfies(error -> {
+                AppException app = (AppException) error;
+                assertThat(app.getCode()).isEqualTo("PROJECT_HISTORY_CORRECTION_CONFLICT");
+                assertThat(app.getStatus().value()).isEqualTo(409);
+            });
+
+        entityManager.clear();
+        assertThat(correctionRepository.findByProjectIdOrderByCreatedAtAsc(project.getId()))
+            .anySatisfy(value -> {
+                assertThat(value.getStatus()).isEqualTo(ProjectHistoryCorrection.Status.CONFLICT);
+                assertThat(value.getConflictReason()).isNotBlank();
+            });
+        assertThat(correctionService.resolve(project.getId(), snapshotRepository.findByProjectId(project.getId()).orElseThrow())
+            .stories()).noneMatch(value -> value.humanTitle().equals("不会覆盖自动结果"));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void staleSourceConflictIsCommittedAndDoesNotBecomeActive() {
+        HistoryCorrectionRequest staleSource = new HistoryCorrectionRequest(
+            "RENAME_STORY", "STORY", "story-a", List.of(), "来源已变化", "", "", "",
+            "", "source-that-is-not-current", "", "", "", "", "", ""
+        );
+        assertThatThrownBy(() -> correctionService.create(ownerId, project.getId(), staleSource))
+            .isInstanceOf(AppException.class)
+            .satisfies(error -> assertThat(((AppException) error).getCode())
+                .isEqualTo("PROJECT_HISTORY_CORRECTION_STALE"));
+
+        entityManager.clear();
+        assertThat(correctionRepository.findByProjectIdOrderByCreatedAtAsc(project.getId()))
+            .anySatisfy(value -> assertThat(value.getStatus()).isEqualTo(ProjectHistoryCorrection.Status.CONFLICT));
+        assertThat(correctionRepository.findByProjectIdAndStatusOrderByCreatedAtAscIdAsc(
+            project.getId(), ProjectHistoryCorrection.Status.ACTIVE)).isEmpty();
+    }
+
+    @Test
+    void rejectsOversizedCorrectionInputWithoutTruncatingTargetsOrText() {
+        List<String> tooMany = IntStream.range(0, 101).mapToObj(index -> "story-" + index).toList();
+        assertThatThrownBy(() -> correctionService.create(ownerId, project.getId(), request(
+            "MERGE_STORIES", "story-a", tooMany, "", "", "", "", ""
+        ))).isInstanceOf(AppException.class)
+            .satisfies(error -> assertThat(((AppException) error).getCode())
+                .isEqualTo("TOO_MANY_HISTORY_CORRECTION_TARGETS"));
+
+        assertThatThrownBy(() -> correctionService.create(ownerId, project.getId(), request(
+            "RENAME_STORY", "x".repeat(181), List.of(), "标题", "", "", "", ""
+        ))).isInstanceOf(AppException.class)
+            .satisfies(error -> assertThat(((AppException) error).getCode())
+                .isEqualTo("INVALID_HISTORY_CORRECTION_TARGET"));
+
+        assertThatThrownBy(() -> correctionService.create(ownerId, project.getId(), request(
+            "RENAME_STORY", "story-a", List.of(), "x".repeat(8_001), "", "", "", ""
+        ))).isInstanceOf(AppException.class)
+            .satisfies(error -> assertThat(((AppException) error).getCode())
+                .isEqualTo("INVALID_HISTORY_CORRECTION_CONTENT"));
+
+        assertThatThrownBy(() -> correctionService.create(ownerId, project.getId(), request(
+            "EDIT_SUMMARY", "story-a", List.of(), "", "x".repeat(12_001), "", "", ""
+        ))).isInstanceOf(AppException.class)
+            .satisfies(error -> assertThat(((AppException) error).getCode())
+                .isEqualTo("INVALID_HISTORY_CORRECTION_CONTENT"));
+        assertThat(correctionRepository.findByProjectIdOrderByCreatedAtAsc(project.getId())).isEmpty();
+    }
+
+    @Test
+    void correctionsArePagedAcrossHistoryApiAndGatewayWithoutSilentlyDroppingRows() throws Exception {
+        List<ProjectHistoryCorrection> rows = IntStream.range(0, 2_500)
+            .mapToObj(this::persistedCorrection).toList();
+        correctionRepository.saveAllAndFlush(rows);
+
+        var first = correctionService.list(ownerId, project.getId(), 0, 100);
+        var last = correctionService.list(ownerId, project.getId(), 24, 100);
+        assertThat(first.items()).hasSize(100);
+        assertThat(last.items()).hasSize(100);
+        assertThat(first.total()).isEqualTo(2_500);
+        assertThat(last.total()).isEqualTo(2_500);
+        assertThat(first.activeCount()).isEqualTo(2_500);
+        assertThat(first.activeLimit()).isEqualTo(2_000);
+        assertThat(first.activeLimitExceeded()).isTrue();
+        assertThat(first.truncated()).isTrue();
+        assertThat(last.truncated()).isFalse();
+
+        mockMvc.perform(get("/api/projects/" + project.getId() + "/history/corrections?page=24&size=100")
+                .header("Authorization", "Bearer local-test"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.page").value(24))
+            .andExpect(jsonPath("$.data.size").value(100))
+            .andExpect(jsonPath("$.data.total").value(2_500))
+            .andExpect(jsonPath("$.data.items.length()").value(100))
+            .andExpect(jsonPath("$.data.activeLimitExceeded").value(true));
+
+        mockMvc.perform(get("/api/projects/" + project.getId()
+                + "/project-memory/history/corrections?page=24&size=100")
+                .header("Authorization", "Bearer local-test")
+                .header("X-ProjectFlow-Caller", "correction-pagination-test"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.page").value(24))
+            .andExpect(jsonPath("$.data.size").value(100))
+            .andExpect(jsonPath("$.data.total").value(2_500))
+            .andExpect(jsonPath("$.data.items.length()").value(100))
+            .andExpect(jsonPath("$.data.presentationRevision").value(first.presentationRevision()));
+    }
+
+    @Test
+    void restoreAtActiveLimitMustActuallyRevokeAnExistingCorrection() {
+        correctionRepository.saveAllAndFlush(IntStream.range(0, 2_000)
+            .mapToObj(index -> persistedCorrection(index, index == 0 ? "story-a" : "legacy-" + index)).toList());
+
+        assertThatThrownBy(() -> correctionService.create(ownerId, project.getId(), request(
+            "RESTORE_AUTOMATIC", "story-b", List.of(), "", "", "", "", ""
+        ))).isInstanceOf(AppException.class)
+            .satisfies(error -> assertThat(((AppException) error).getCode())
+                .isEqualTo("PROJECT_HISTORY_CORRECTION_LIMIT_REACHED"));
+        assertThat(correctionRepository.countByProjectIdAndStatus(project.getId(), ProjectHistoryCorrection.Status.ACTIVE))
+            .isEqualTo(2_000);
+
+        correctionService.create(ownerId, project.getId(), request(
+            "RESTORE_AUTOMATIC", "story-a", List.of(), "", "", "", "", ""
+        ));
+        assertThat(correctionRepository.countByProjectIdAndStatus(project.getId(), ProjectHistoryCorrection.Status.ACTIVE))
+            .isEqualTo(2_000);
+    }
+
+    @Test
+    void sourceChangeWithSameMembershipStillReplaysCorrection() throws Exception {
+        correctionService.create(ownerId, project.getId(), request(
+            "RENAME_STORY", "story-a", List.of(), "用户确认的标题", "", "", "", ""
+        ));
+        rewriteSnapshot("new-source-fingerprint", List.of(
+            story("story-a", "建立登录流程", List.of(eventA, eventB), FIRST),
+            story("story-b", "补充登录测试", List.of(UUID.randomUUID()), FIRST.plusSeconds(60)),
+            story("story-c", "整理登录说明", List.of(UUID.randomUUID()), FIRST.plusSeconds(120))
+        ));
+
+        var corrected = correctionService.resolve(project.getId(), snapshotRepository.findByProjectId(project.getId()).orElseThrow());
+        assertThat(corrected.stories().stream().filter(value -> value.id().equals("story-a")).findFirst().orElseThrow().humanTitle())
+            .isEqualTo("用户确认的标题");
+        var listed = correctionService.list(ownerId, project.getId()).items().stream()
+            .filter(value -> value.targetId().equals("story-a")).findFirst().orElseThrow();
+        assertThat(listed.sourceStale()).isTrue();
+        assertThat(listed.membershipStale()).isFalse();
+        assertThat(listed.status()).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void changedStoryMembershipDoesNotSilentlyApplyOldCorrection() throws Exception {
+        correctionService.create(ownerId, project.getId(), request(
+            "RENAME_STORY", "story-a", List.of(), "旧对象标题", "", "", "", ""
+        ));
+        rewriteSnapshot("rewritten-source-fingerprint", List.of(
+            story("story-a", "重建后的对象", List.of(eventA, UUID.randomUUID()), FIRST),
+            story("story-b", "补充登录测试", List.of(UUID.randomUUID()), FIRST.plusSeconds(60)),
+            story("story-c", "整理登录说明", List.of(UUID.randomUUID()), FIRST.plusSeconds(120))
+        ));
+
+        var corrected = correctionService.resolve(project.getId(), snapshotRepository.findByProjectId(project.getId()).orElseThrow());
+        ChangeStory changed = corrected.stories().stream().filter(value -> value.id().equals("story-a")).findFirst().orElseThrow();
+        assertThat(changed.humanTitle()).isEqualTo("重建后的对象");
+        assertThat(changed.displayStatus()).isEqualTo("CONFLICT");
+        assertThat(changed.correctionConflicts()).isNotEmpty();
+        var listed = correctionService.list(ownerId, project.getId()).items().stream()
+            .filter(value -> value.targetId().equals("story-a")).findFirst().orElseThrow();
+        assertThat(listed.membershipStale()).isTrue();
+        assertThat(listed.status()).isEqualTo("CONFLICT");
+    }
+
+    @Test
+    void listRevisionMatchesCorrectedReadModel() {
+        String before = correctionService.list(ownerId, project.getId()).presentationRevision();
+        correctionService.create(ownerId, project.getId(), request(
+            "RENAME_STORY", "story-a", List.of(), "修正后的标题", "", "", "", before
+        ));
+        String listedRevision = correctionService.list(ownerId, project.getId()).presentationRevision();
+        String resolvedRevision = correctionService.resolve(project.getId(), snapshot).presentationRevision();
+        assertThat(listedRevision).isEqualTo(resolvedRevision);
+    }
+
+    @Test
+    void splitPartitionsEventsEvidenceTimeAndOnlyOriginalChapterAndThread() throws Exception {
+        ProjectHistoryEvent firstEvent = historyEvent(
+            "split-first", FIRST, List.of("materials/part-a.md"), List.of("evidence:a", "evidence:shared"),
+            ProjectHistoryEvent.Transition.CREATED
+        );
+        ProjectHistoryEvent secondEvent = historyEvent(
+            "split-second", FIRST.plusSeconds(300), List.of("materials/part-b.md"),
+            List.of("evidence:b", "evidence:shared"), ProjectHistoryEvent.Transition.MODIFIED
+        );
+        ChangeStory original = richStory(
+            "story-split", "原始完整成果", List.of(firstEvent, secondEvent), "PRIMARY", "", List.of()
+        );
+        ChangeStory unrelated = story("story-unrelated", "其他成果", List.of(UUID.randomUUID()), FIRST.plusSeconds(600));
+        HistoryChapter originalChapter = new HistoryChapter(
+            "chapter-original", "原篇章", "只包含待拆分成果", FIRST, FIRST.plusSeconds(300),
+            List.of("SOURCE_BOUNDARY"), List.of(original.id()), 1, 2,
+            "ENGINEERING_GROUPING", "FULL_WITHIN_DISCOVERED_SOURCES", List.of()
+        );
+        HistoryChapter unrelatedChapter = new HistoryChapter(
+            "chapter-unrelated", "其他篇章", "不应接收拆分结果", FIRST.plusSeconds(600), FIRST.plusSeconds(600),
+            List.of("SOURCE_BOUNDARY"), List.of(unrelated.id()), 1, 1,
+            "ENGINEERING_GROUPING", "FULL_WITHIN_DISCOVERED_SOURCES", List.of()
+        );
+        EvolutionThread originalThread = new EvolutionThread(
+            "thread-original", "material", "材料成果", "PROJECT_SUBJECT", List.of(original.id()),
+            List.of("CREATED", "MODIFIED"), original.afterState(), List.of(), List.of(), List.of(), 3, null
+        );
+        EvolutionThread unrelatedThread = new EvolutionThread(
+            "thread-unrelated", "other", "其他成果", "PROJECT_SUBJECT", List.of(unrelated.id()),
+            List.of("MODIFIED"), unrelated.afterState(), List.of(), List.of(), List.of(), 1, null
+        );
+        rewriteSnapshot("split-source", List.of(original, unrelated),
+            List.of(originalChapter, unrelatedChapter), List.of(originalThread, unrelatedThread));
+
+        correctionService.create(ownerId, project.getId(), new HistoryCorrectionRequest(
+            "SPLIT_STORY", "STORY", original.id(), List.of(firstEvent.getId().toString()),
+            "", "", "", "", "", "split-source",
+            "第一部分", "第一部分摘要", "", "", "第二部分", "第二部分摘要"
+        ));
+
+        var corrected = correctionService.resolve(project.getId(), snapshotRepository.findByProjectId(project.getId()).orElseThrow());
+        ChangeStory first = corrected.stories().stream().filter(value -> value.id().equals(original.id())).findFirst().orElseThrow();
+        ChangeStory second = corrected.stories().stream()
+            .filter(value -> !value.id().equals(original.id()) && !value.id().equals(unrelated.id())).findFirst().orElseThrow();
+        assertThat(first.eventRefs()).containsExactly(firstEvent.getId());
+        assertThat(second.eventRefs()).containsExactly(secondEvent.getId());
+        assertThat(first.eventRefs()).doesNotContainAnyElementsOf(second.eventRefs());
+        LinkedHashSet<UUID> splitEvents = new LinkedHashSet<>(first.eventRefs());
+        splitEvents.addAll(second.eventRefs());
+        assertThat(splitEvents).containsExactlyInAnyOrderElementsOf(original.eventRefs());
+        assertThat(first.evidenceRefs()).containsExactlyInAnyOrder("evidence:a", "evidence:shared");
+        assertThat(second.evidenceRefs()).containsExactlyInAnyOrder("evidence:b", "evidence:shared");
+        assertThat(first.reasonEvidenceRefs()).containsExactly("evidence:a");
+        assertThat(second.reasonEvidenceRefs()).containsExactly("evidence:b");
+        assertThat(first.occurredFrom()).isEqualTo(FIRST);
+        assertThat(first.occurredTo()).isEqualTo(FIRST);
+        assertThat(second.occurredFrom()).isEqualTo(FIRST.plusSeconds(300));
+        assertThat(second.occurredTo()).isEqualTo(FIRST.plusSeconds(300));
+        assertThat(first.technicalAtomRefs()).containsExactly("split-first");
+        assertThat(second.technicalAtomRefs()).containsExactly("split-second");
+        assertThat(first.technicalDetails()).containsExactly("materials/part-a.md");
+        assertThat(second.technicalDetails()).containsExactly("materials/part-b.md");
+        assertThat(first.humanTitle()).isEqualTo("第一部分");
+        assertThat(first.oneSentenceSummary()).isEqualTo("第一部分摘要");
+        assertThat(second.humanTitle()).isEqualTo("第二部分");
+        assertThat(second.oneSentenceSummary()).isEqualTo("第二部分摘要");
+
+        HistoryChapter splitChapter = corrected.chapters().stream()
+            .filter(value -> value.id().equals(originalChapter.id())).findFirst().orElseThrow();
+        assertThat(splitChapter.storyRefs()).containsExactly(original.id(), second.id());
+        assertThat(splitChapter.storyCount()).isEqualTo(2);
+        assertThat(splitChapter.rawEventCount()).isEqualTo(2);
+        assertThat(corrected.chapters().stream().filter(value -> value.id().equals(unrelatedChapter.id()))
+            .findFirst().orElseThrow().storyRefs()).doesNotContain(second.id());
+        EvolutionThread splitThread = corrected.threads().stream()
+            .filter(value -> value.id().equals(originalThread.id())).findFirst().orElseThrow();
+        assertThat(splitThread.storyRefs()).containsExactly(original.id(), second.id());
+        assertThat(splitThread.transitions()).containsExactly("CREATED", "MODIFIED");
+        assertThat(splitThread.evidenceCount()).isEqualTo(3);
+        assertThat(corrected.threads().stream().filter(value -> value.id().equals(unrelatedThread.id()))
+            .findFirst().orElseThrow().storyRefs()).doesNotContain(second.id());
+
+        var gatewayStories = memoryGatewayService.historyStories(
+            ownerId, project.getId(), null, false, null, null, 0, 20
+        );
+        assertThat(gatewayStories.items()).extracting(ChangeStory::id)
+            .contains(original.id(), second.id(), unrelated.id());
+        assertThat(memoryGatewayService.historyChapters(ownerId, project.getId(), 0, 20).items())
+            .filteredOn(value -> value.id().equals(originalChapter.id())).singleElement()
+            .satisfies(value -> assertThat(value.storyRefs()).containsExactly(original.id(), second.id()));
+        assertThat(memoryGatewayService.historyThreads(ownerId, project.getId(), null, 0, 20).items())
+            .filteredOn(value -> value.id().equals(originalThread.id())).singleElement()
+            .satisfies(value -> assertThat(value.storyRefs()).containsExactly(original.id(), second.id()));
+        assertThat(memoryGatewayService.historyCorrections(ownerId, project.getId()).presentationRevision())
+            .isEqualTo(corrected.presentationRevision());
+        assertThat(agentHistoryService.contextPackage(ownerId, project.getId(), 32_000).historicalCoverage())
+            .contains("第一部分", "第二部分");
+    }
+
+    @Test
+    void mergeUsesUniqueEventsEvidenceAndCleansMembershipAndRoleReferences() throws Exception {
+        ProjectHistoryEvent firstEvent = historyEvent(
+            "merge-first", FIRST, List.of("materials/first.md"), List.of("evidence:first"),
+            ProjectHistoryEvent.Transition.CREATED
+        );
+        ProjectHistoryEvent sharedEvent = historyEvent(
+            "merge-shared", FIRST.plusSeconds(60), List.of("materials/shared.md"), List.of("evidence:shared"),
+            ProjectHistoryEvent.Transition.MODIFIED
+        );
+        ProjectHistoryEvent lastEvent = historyEvent(
+            "merge-last", FIRST.plusSeconds(120), List.of("materials/last.md"), List.of("evidence:last"),
+            ProjectHistoryEvent.Transition.MODIFIED
+        );
+        ChangeStory left = richStory(
+            "story-left", "左侧成果", List.of(firstEvent, sharedEvent), "PRIMARY", "", List.of("story-right")
+        );
+        ChangeStory right = richStory(
+            "story-right", "右侧成果", List.of(sharedEvent, lastEvent), "SUPPORTING", "story-left", List.of()
+        );
+        HistoryChapter chapter = new HistoryChapter(
+            "chapter-merge", "合并篇章", "两个待合并成果", FIRST, FIRST.plusSeconds(120),
+            List.of("SOURCE_BOUNDARY"), List.of(left.id(), right.id()), 2, 3,
+            "ENGINEERING_GROUPING", "FULL_WITHIN_DISCOVERED_SOURCES", List.of()
+        );
+        EvolutionThread thread = new EvolutionThread(
+            "thread-merge", "material", "材料成果", "PROJECT_SUBJECT", List.of(left.id(), right.id()),
+            List.of("CREATED", "MODIFIED"), right.afterState(), List.of(), List.of(), List.of(), 3, null
+        );
+        rewriteSnapshot("merge-source", List.of(left, right), List.of(chapter), List.of(thread));
+
+        correctionService.create(ownerId, project.getId(), new HistoryCorrectionRequest(
+            "MERGE_STORIES", "STORY", left.id(), List.of(left.id(), right.id()),
+            "", "", "", "", "", "merge-source",
+            "合并后的成果", "合并后的摘要", "", "", "", ""
+        ));
+        var corrected = correctionService.resolve(project.getId(), snapshotRepository.findByProjectId(project.getId()).orElseThrow());
+        ChangeStory merged = corrected.stories().stream().filter(value -> value.id().equals(left.id())).findFirst().orElseThrow();
+        ChangeStory mergedAway = corrected.stories().stream().filter(value -> value.id().equals(right.id())).findFirst().orElseThrow();
+        assertThat(merged.eventRefs()).containsExactlyInAnyOrder(firstEvent.getId(), sharedEvent.getId(), lastEvent.getId());
+        assertThat(merged.rawEventCount()).isEqualTo(3);
+        assertThat(merged.evidenceRefs()).containsExactlyInAnyOrder("evidence:first", "evidence:shared", "evidence:last");
+        assertThat(merged.evidenceCount()).isEqualTo(3);
+        assertThat(merged.supportingChangeRefs()).doesNotContain(left.id(), right.id());
+        assertThat(mergedAway.displayStatus()).isEqualTo("MERGED");
+        assertThat(mergedAway.hiddenByDefault()).isTrue();
+        assertThat(mergedAway.mergedIntoStoryId()).isEqualTo(left.id());
+        assertThat(corrected.chapters().get(0).storyRefs()).containsExactly(left.id());
+        assertThat(corrected.chapters().get(0).storyCount()).isEqualTo(1);
+        assertThat(corrected.chapters().get(0).rawEventCount()).isEqualTo(3);
+        assertThat(corrected.threads().get(0).storyRefs()).containsExactly(left.id());
+        assertThat(corrected.threads().get(0).evidenceCount()).isEqualTo(3);
+
+        var gatewayStories = memoryGatewayService.historyStories(
+            ownerId, project.getId(), null, false, null, null, 0, 20
+        );
+        assertThat(gatewayStories.items()).extracting(ChangeStory::id).contains(left.id()).doesNotContain(right.id());
+        assertThat(memoryGatewayService.historyChapters(ownerId, project.getId(), 0, 20).items())
+            .singleElement().satisfies(value -> {
+                assertThat(value.storyRefs()).containsExactly(left.id());
+                assertThat(value.rawEventCount()).isEqualTo(3);
+            });
+        assertThat(memoryGatewayService.historyThreads(ownerId, project.getId(), null, 0, 20).items())
+            .singleElement().satisfies(value -> {
+                assertThat(value.storyRefs()).containsExactly(left.id());
+                assertThat(value.evidenceCount()).isEqualTo(3);
+            });
+
+        correctionService.create(ownerId, project.getId(), request(
+            "RESTORE_AUTOMATIC", left.id(), List.of(), "", "", "", "", ""
+        ));
+        var restored = correctionService.resolve(project.getId(), snapshotRepository.findByProjectId(project.getId()).orElseThrow());
+        assertThat(restored.stories().stream().filter(value -> !value.hiddenByDefault()).map(ChangeStory::id))
+            .contains(left.id());
+        assertThat(restored.stories().stream().map(ChangeStory::displayStatus)).allMatch("ACTIVE"::equals);
+    }
+
+    private ProjectHistoryCorrection persistedCorrection(int index) {
+        return persistedCorrection(index, "story-a");
+    }
+
+    private ProjectHistoryCorrection persistedCorrection(int index, String targetId) {
+        return new ProjectHistoryCorrection(
+            project.getId(), ownerId, "RENAME_STORY", "STORY", targetId, "[]",
+            "title-" + index, "summary-" + index, "", "", "", snapshot.getSourceEventFingerprint(),
+            "membership-" + index, "presentation-" + index, "", ""
+        );
+    }
+
+    private void rewriteSnapshot(String sourceFingerprint, List<ChangeStory> stories) throws Exception {
+        snapshot.complete(
+            snapshot.getProjectRevision(), sourceFingerprint, stories.size(), FIRST, FIRST.plusSeconds(120),
+            snapshot.getStrategyVersion(), snapshot.getPromptVersion(), snapshot.getOverviewJson(),
+            snapshot.getChaptersJson(), objectMapper.writeValueAsString(stories), snapshot.getThreadsJson(),
+            snapshot.getCoverageJson(), snapshot.getDiagnosticsJson(), snapshot.getAnalysisJobId(), false
+        );
+        snapshot = snapshotRepository.saveAndFlush(snapshot);
+    }
+
+    private void rewriteSnapshot(
+        String sourceFingerprint,
+        List<ChangeStory> stories,
+        List<HistoryChapter> chapters,
+        List<EvolutionThread> threads
+    ) throws Exception {
+        snapshot.complete(
+            snapshot.getProjectRevision(), sourceFingerprint,
+            stories.stream().mapToInt(ChangeStory::rawEventCount).sum(),
+            stories.stream().map(ChangeStory::occurredFrom).filter(java.util.Objects::nonNull)
+                .min(Instant::compareTo).orElse(null),
+            stories.stream().map(ChangeStory::occurredTo).filter(java.util.Objects::nonNull)
+                .max(Instant::compareTo).orElse(null),
+            snapshot.getStrategyVersion(), snapshot.getPromptVersion(), snapshot.getOverviewJson(),
+            objectMapper.writeValueAsString(chapters), objectMapper.writeValueAsString(stories),
+            objectMapper.writeValueAsString(threads), snapshot.getCoverageJson(), snapshot.getDiagnosticsJson(),
+            snapshot.getAnalysisJobId(), false
+        );
+        snapshot = snapshotRepository.saveAndFlush(snapshot);
+    }
+
+    private ProjectHistoryEvent historyEvent(
+        String stableKey,
+        Instant occurredAt,
+        List<String> paths,
+        List<String> evidenceRefs,
+        ProjectHistoryEvent.Transition transition
+    ) throws Exception {
+        ProjectHistoryEvent event = new ProjectHistoryEvent(project.getId(), stableKey);
+        event.replace(
+            ProjectHistoryEvent.SourceType.GIT, stableKey, "revision-" + stableKey, "project-revision",
+            occurredAt, occurredAt, "test-author", ProjectHistoryEvent.Scope.HISTORICAL,
+            ProjectHistoryEvent.Category.COMMIT, transition, stableKey,
+            objectMapper.writeValueAsString(paths), objectMapper.writeValueAsString(List.of("material")),
+            objectMapper.writeValueAsString(evidenceRefs), "[]", ProjectHistoryEvent.Authority.FACTUAL_SOURCE,
+            ProjectFactEpistemicStatus.OBSERVED, "{}", objectMapper.writeValueAsString(List.of()),
+            "", "payload-" + stableKey
+        );
+        return eventRepository.saveAndFlush(event);
+    }
+
+    private ChangeStory richStory(
+        String id,
+        String title,
+        List<ProjectHistoryEvent> sourceEvents,
+        String role,
+        String primaryStoryId,
+        List<String> supportingChangeRefs
+    ) {
+        List<ProjectHistoryEvent> events = sourceEvents.stream()
+            .sorted(Comparator.comparing(ProjectHistoryEvent::getOccurredAt).thenComparing(ProjectHistoryEvent::getId))
+            .toList();
+        List<String> evidence = events.stream().flatMap(value -> strings(value.getEvidenceRefsJson()).stream())
+            .distinct().toList();
+        List<String> reasonEvidence = evidence.stream().filter(value -> !value.endsWith(":shared")).toList();
+        List<String> paths = events.stream().flatMap(value -> strings(value.getAffectedPathsJson()).stream())
+            .distinct().toList();
+        List<String> limitations = events.stream().flatMap(value -> strings(value.getLimitationsJson()).stream())
+            .distinct().toList();
+        Instant from = events.stream().map(ProjectHistoryEvent::getOccurredAt).min(Instant::compareTo).orElse(null);
+        Instant to = events.stream().map(ProjectHistoryEvent::getOccurredAt).max(Instant::compareTo).orElse(from);
+        return new ChangeStory(
+            id, "material", title, title + "摘要", "此前状态", "来源记录发生变化", "当前状态",
+            paths.stream().map(value -> value.split("/", 2)[0]).distinct().toList(),
+            "来源记录了变化原因", reasonEvidence, "", List.of(), List.of("部分背景未知"),
+            from, to, evidence.size(), events.size(), "ENGINEERING_GROUPING", "DETERMINISTIC",
+            "FULL_WITHIN_DISCOVERED_SOURCES", limitations, events.stream().map(ProjectHistoryEvent::getId).distinct().toList(),
+            evidence, role, primaryStoryId, supportingChangeRefs,
+            events.stream().map(ProjectHistoryEvent::getStableEventKey).distinct().toList(),
+            events.stream().map(ProjectHistoryEvent::getSafeSourceLabel).distinct().toList(), paths,
+            "AUTOMATIC", "", title, title + "摘要", List.of(), false, false, "", "ACTIVE", List.of()
+        );
+    }
+
+    private List<String> strings(String json) {
+        try {
+            return objectMapper.readValue(json == null || json.isBlank() ? "[]" : json,
+                new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+        } catch (Exception ignored) {
+            return List.of();
+        }
     }
 
     private HistoryCorrectionRequest request(

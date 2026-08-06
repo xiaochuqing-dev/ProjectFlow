@@ -85,6 +85,31 @@ class ProjectHistoryWindowPlannerTest {
         assertThat(corrected.cacheKey()).isNotEqualTo(first.cacheKey());
     }
 
+    @Test
+    void selectsTheNextIncompleteWindowInsteadOfStarvingTheTail() {
+        List<ChangeStory> stories = new ArrayList<>();
+        for (int index = 0; index < (ProjectHistoryWindowPlanner.MAX_WINDOWS + 1)
+            * ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT; index++) {
+            stories.add(story("continuation-story-" + index, 1));
+        }
+        List<ProjectHistoryWindowPlanner.Window> all = planner.planAll(
+            stories, ids(stories), "source-v1", "strategy-v1", "prompt-v1", "correction-v1"
+        );
+        Set<String> completed = all.subList(0, ProjectHistoryWindowPlanner.MAX_WINDOWS).stream()
+            .map(ProjectHistoryWindowPlanner.Window::identity)
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+
+        List<ProjectHistoryWindowPlanner.Window> next = planner.selectExecutionWindows(all, completed,
+            ProjectHistoryWindowPlanner.MAX_WINDOWS);
+
+        assertThat(next).hasSize(1);
+        assertThat(next.get(0).ordinal()).isEqualTo(ProjectHistoryWindowPlanner.MAX_WINDOWS);
+        assertThat(next.get(0).storyIds()).containsExactlyElementsOf(
+            stories.subList(ProjectHistoryWindowPlanner.MAX_WINDOWS * ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT,
+                stories.size()).stream().map(ChangeStory::id).toList()
+        );
+    }
+
     private ChangeStory story(String id, int eventCount) {
         List<UUID> events = new ArrayList<>();
         for (int index = 0; index < eventCount; index++) events.add(UUID.nameUUIDFromBytes((id + index).getBytes()));

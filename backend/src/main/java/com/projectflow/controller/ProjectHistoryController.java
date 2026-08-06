@@ -188,10 +188,12 @@ public class ProjectHistoryController {
     @GetMapping("/corrections")
     ApiResponse<HistoryCorrectionListResponse> corrections(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @PathVariable UUID projectId
+        @PathVariable UUID projectId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "50") int size
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(correctionService.list(user.id(), projectId));
+        return ApiResponse.ok(correctionService.list(user.id(), projectId, page, size));
     }
 
     @PostMapping("/corrections")

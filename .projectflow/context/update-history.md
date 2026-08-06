@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.8.5 真实资格收口 - 2026-08-07
+
+补充记录真实 Provider 结果：GLM `glm-5.2` Responses 合同通过但 19-case qualification FAIL（20 请求、103,268 token、16 个降级窗口、24 个失败/未处理窗口）；DeepSeek Chat 合同通过但 19-case qualification FAIL（20 请求、79,702 token、14 个降级窗口、24 个失败/未处理窗口）。DeepSeek 11 个真实场景通过 10 个，ProjectFlow Dogfood 因 Primary/Supporting 引用不一致失败；五类非代码场景通过。GLM 真实场景、旧版项目理解/历程入口和人工可读性抽样未运行。PR #15 保持 Draft，未合并、未创建 Tag/Release、未清理分支或 worktree。
+
 ## ProjectFlow V3.8.5 大众可读项目历程质量封顶与用户修正闭环 - 2026-08-06
 
 在 V3.8.0 的来源事件和可替换历史快照之上，新增 Raw Event → Technical Atom → Primary/Supporting Change → Story → Thread → Chapter 的多层语义压缩。首层中文优先呈现 Before/Change/After、成果摘要和工程详情下钻；模型只在有界窗口内改善措辞与展示角色，确定性规则保留成员、时间、Evidence 和安全边界。新增窗口 cache/checkpoint、失败/取消/跳过/未处理范围诊断，以及 `USER_DECLARED_PRESENTATION` 的重命名、摘要、分组、隐藏、置顶、合并/拆分、章节声明、恢复自动结果和乐观冲突处理。Gateway、Agent Context、Hermes、Frontend 和 Obsidian 共用修正后的只读展示视图；默认 Obsidian CORE 保持有限密度。确定性、H2、Playwright、Hermes、Obsidian 与 GitHub PostgreSQL 16 门禁已通过；双真实 Provider、非代码项目和人工可读性验收仍待隔离环境补跑，详细状态见 V3.8.5 Acceptance Report。

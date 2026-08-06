@@ -20,10 +20,21 @@ public final class ProjectHistoryWindowPlanner {
     public List<Window> plan(List<ChangeStory> stories, Set<String> eligibleStoryIds, String sourceFingerprint,
         String strategyVersion, String promptVersion, String correctionRevision) {
         List<Window> planned = planAll(stories, eligibleStoryIds, sourceFingerprint, strategyVersion, promptVersion, correctionRevision);
-        if (planned.size() <= MAX_WINDOWS) return planned;
-        // Keep the execution bound explicit. Callers that need to disclose the
-        // omitted tail can use planAll and compare the two counts.
-        return List.copyOf(planned.subList(0, MAX_WINDOWS));
+        return selectExecutionWindows(planned, Set.of(), MAX_WINDOWS);
+    }
+
+    /**
+     * Selects the next bounded execution slice from a complete plan. Completed
+     * identities are deliberately filtered before applying the execution cap so
+     * successful early windows cannot starve the tail on a later refresh.
+     */
+    public List<Window> selectExecutionWindows(List<Window> allWindows, Set<String> completedIdentities, int limit) {
+        if (allWindows == null || allWindows.isEmpty() || limit <= 0) return List.of();
+        Set<String> completed = completedIdentities == null ? Set.of() : completedIdentities;
+        return allWindows.stream()
+            .filter(window -> window != null && !completed.contains(window.identity()))
+            .limit(limit)
+            .toList();
     }
 
     /** Returns the complete bounded-by-input plan before the execution cap. */
@@ -51,10 +62,15 @@ public final class ProjectHistoryWindowPlanner {
     private Window window(int index, Set<String> storyIds, int eventCount, String sourceFingerprint,
         String strategyVersion, String promptVersion, String correctionRevision) {
         String identity = "window-" + index + "-" + hash(String.join("|", storyIds));
-        String cacheKey = hash(String.join("|", sourceFingerprint == null ? "" : sourceFingerprint,
+        String cacheKey = cacheKey(identity, sourceFingerprint, strategyVersion, promptVersion, correctionRevision);
+        return new Window(identity, cacheKey, ordered(storyIds), eventCount, index);
+    }
+
+    public String cacheKey(String identity, String sourceFingerprint, String strategyVersion, String promptVersion,
+        String correctionRevision) {
+        return hash(String.join("|", sourceFingerprint == null ? "" : sourceFingerprint,
             strategyVersion == null ? "" : strategyVersion, promptVersion == null ? "" : promptVersion,
             identity, correctionRevision == null ? "" : correctionRevision));
-        return new Window(identity, cacheKey, ordered(storyIds), eventCount, index);
     }
 
     private static <T> Set<T> ordered(Set<T> values) {

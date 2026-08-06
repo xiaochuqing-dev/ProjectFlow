@@ -187,11 +187,14 @@ public class ProjectMemoryGatewayController {
     ApiResponse<HistoryCorrectionListResponse> historyCorrections(
         @RequestHeader(value = "Authorization", required = false) String authorization,
         @RequestHeader(value = "X-ProjectFlow-Caller", required = false) String caller,
-        @PathVariable UUID projectId
+        @PathVariable UUID projectId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "50") int size
     ) {
         AuthUser user = authService.currentUser(authorization);
+        String filters = "page=" + page + ",size=" + size;
         return read(user, projectId, "list_project_history_corrections", caller, "", "PROJECT_HISTORY_CORRECTION",
-            "detail=compact", ignored -> gateway.historyCorrections(user.id(), projectId), result -> result.items().size());
+            filters, ignored -> gateway.historyCorrections(user.id(), projectId, page, size), result -> result.items().size());
     }
 
     @GetMapping("/projects/{projectId}/project-memory/history/stories")

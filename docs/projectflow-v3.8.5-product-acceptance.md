@@ -1,21 +1,21 @@
 # V3.8.5 产品验收清单
 
-通过
+## 已通过
 
-- ProjectFact、ProjectHistoryEvent、Evidence 和 rewrite 状态未被历史或修正写入覆盖。
-- Primary/Supporting、中文 fallback、工程详情下钻、用户修正 API/读取覆盖和多窗口 checkpoint 已实现。
-- 完整 `ProjectHistoryReconstructionTest` 通过。
-- planner/checkpoint 边界测试、Ground Truth 契约和 correction service 测试通过。
-- 前端 lint、生产构建、55 项契约测试通过。
-- Playwright 浏览器 E2E 8/8 通过，覆盖真实前端、嵌入后端和固定模型服务。
-- Hermes 9/9、Obsidian 21/21 通过。
-- GitHub push/PR 两轮 required CI 全部通过，包括 PostgreSQL 16 Testcontainers。
+- ProjectFact、ProjectHistoryEvent、Evidence 和 rewrite 状态未被历史重建或展示修正覆盖。
+- Primary/Supporting、中文 fallback、工程详情下钻、用户修正 API/读取、多窗口 checkpoint 和失败/取消/未处理诊断已实现。
+- 后端 H2 496 项、前端 build/lint、contracts 55/55、Playwright 8/8、Hermes 9/9、Obsidian 21/21 通过。
+- GitHub required CI 与 PostgreSQL 16 Testcontainers 通过。
+- GLM Responses 与 DeepSeek Chat 的单请求协议/安全合同通过。
 
-阻断或未运行
+## 阻断或未运行
 
-- GLM 与 DeepSeek 真实模型：NOT_RUN；没有用固定 Mock 结果替代真实质量证明。
-- Draft PR #15 已创建且可合并；merge、Tag、Release 和分支清理未执行。
+- GLM 19-case qualification FAIL；DeepSeek 19-case qualification FAIL。
+- DeepSeek 真实场景 10/11，ProjectFlow Dogfood 因 Primary/Supporting 引用不一致失败；GLM 真实场景未运行。
+- 五类 DeepSeek 非代码场景通过，但不是双 Provider 最终泛化门禁。
+- 人工可读性抽样 0 Story/0 Chapter，NOT_RUN。
+- 前端目前只提供标题、摘要、隐藏、置顶、恢复等基础修正 UI；高级合并/拆分/角色/章节声明仍以 API/消费者预览为主，不宣称普通用户全量 UI 闭环。
 
-质量结论
+## GitHub 结论
 
-确定性实现、本地消费链和 PostgreSQL required CI 达到可交付候选状态；“HUMAN-READABLE PROJECT HISTORY QUALITY GATE = PASS” 仍需真实 Provider 和人工 holdout 抽样的独立证据，当前不能提前标记 PASS。
+PR #15 仍为 Draft。未执行 Ready for Review、merge master、Tag、Release、分支删除或 worktree 清理。真实 Provider 和人工门禁未通过前，不得把产品候选标为最终 PASS。

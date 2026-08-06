@@ -319,6 +319,11 @@ public class ProjectMemoryGatewayService {
     }
 
     @Transactional(readOnly = true)
+    public HistoryCorrectionListResponse historyCorrections(UUID userId, UUID projectId, int page, int size) {
+        return historyReadService.corrections(userId, projectId, page, size);
+    }
+
+    @Transactional(readOnly = true)
     public HistoryChapterPageResponse historyChapters(UUID userId, UUID projectId, int page, int size) {
         return historyReadService.chapters(userId, projectId, page, size);
     }

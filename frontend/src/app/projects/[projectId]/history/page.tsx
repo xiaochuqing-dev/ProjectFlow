@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ExternalLink, EyeOff, FileSearch, Pin, RotateCcw, Save } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
@@ -9,11 +10,14 @@ import {
   getProjectHistoryChapter,
   getProjectHistoryCorrections,
   createProjectHistoryCorrection,
+  getProjectHistoryEvidence,
   getProjectHistoryOverview,
   getProjectHistoryStory,
   getProjectHistoryThread,
   type Project,
   type ProjectHistoryChapterDetail,
+  type ProjectHistoryEvidence,
+  type ProjectHistoryEvent,
   type ProjectHistoryOverview,
   type ProjectHistoryStory,
   type ProjectHistoryStoryDetail,
@@ -23,6 +27,11 @@ import { readSession } from "@/lib/auth";
 import {
   projectHistoryEntityType,
   projectHistoryHref,
+  projectHistoryPresentationLabel,
+  projectHistoryRewriteStateLabel,
+  projectHistoryRoleLabel,
+  projectHistorySourceTypeLabel,
+  projectHistoryStatusLabel,
   projectHistoryTransitionLabel,
   type ProjectHistoryEntityType,
 } from "@/lib/project-history";
@@ -67,7 +76,7 @@ export default function ProjectHistoryPreviewPage() {
   }, [entityId, entityType, params.projectId]);
 
   return (
-    <AppShell eyebrow="只读开发者预览" title={`${project?.name ?? "项目"} · 项目历程`}>
+    <AppShell eyebrow="项目历程预览" title={`${project?.name ?? "项目"} · 项目历程`}>
       <div className="space-y-5 p-6 md:p-8">
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <Link className="rounded-field border border-line bg-white px-3 py-2 text-body hover:bg-surfaceAlt" href={`/projects/${params.projectId}`}>
@@ -76,7 +85,6 @@ export default function ProjectHistoryPreviewPage() {
           <Link className="rounded-field border border-line bg-white px-3 py-2 text-body hover:bg-surfaceAlt" href={projectHistoryHref(params.projectId)}>
             历程总览
           </Link>
-          <span className="text-muted">此页面提供稳定深链接和信息层次验收，不代表最终 GUI。</span>
         </div>
 
         {error ? (
@@ -129,11 +137,11 @@ function OverviewView({ projectId, value }: { projectId: string; value: ProjectH
       <section className="rounded-card border border-line bg-white p-6 shadow-card">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs text-muted">状态 {value.status} · {value.sourceEventCount} 个来源事件</p>
+            <p className="text-xs text-muted">{projectHistoryStatusLabel(value.status)} · {value.sourceEventCount} 个来源事件</p>
             <h2 className="mt-1 text-xl font-semibold">项目从哪里来，现在是什么状态</h2>
           </div>
           <span className={`rounded-full px-3 py-1 text-xs font-medium ${value.coverage.complete ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
-            {value.coverage.complete ? "历史覆盖完整" : value.coverage.currentness}
+            {value.coverage.complete ? "历史覆盖完整" : "覆盖范围有限"}
           </span>
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -141,6 +149,10 @@ function OverviewView({ projectId, value }: { projectId: string; value: ProjectH
           <StateCard label="当前状态" value={value.overview.currentState} />
         </div>
         <p className="mt-4 text-xs text-muted">覆盖时间：{formatMoment(value.earliestEventAt)} → {formatMoment(value.latestEventAt)}</p>
+        <details className="mt-4 border-t border-line pt-4 text-xs text-muted">
+          <summary className="cursor-pointer font-medium text-body">查看工程详情与审计信息</summary>
+          <p className="mt-3">状态：{value.status} · 当前性：{value.coverage.currentness} · 来源事件：{value.sourceEventCount}</p>
+        </details>
       </section>
 
       <section className="rounded-card border border-line bg-white p-6 shadow-card">
@@ -173,7 +185,11 @@ function ChapterView({ projectId, value }: { projectId: string; value: ProjectHi
         <p className="text-xs text-muted">时间篇章 · {formatMoment(value.chapter.from)} → {formatMoment(value.chapter.to)}</p>
         <h2 className="mt-1 text-xl font-semibold">{value.chapter.title}</h2>
         <p className="mt-3 max-w-4xl text-sm leading-6 text-body">{value.chapter.summary}</p>
-        <p className="mt-3 text-xs text-muted">{value.chapter.storyCount} 个故事 · {value.chapter.rawEventCount} 个来源事件 · {value.chapter.authority}</p>
+        <p className="mt-3 text-xs text-muted">{value.chapter.storyCount} 个故事 · {value.chapter.rawEventCount} 个来源事件</p>
+        <details className="mt-4 border-t border-line pt-4 text-xs text-muted">
+          <summary className="cursor-pointer font-medium text-body">查看工程详情与审计信息</summary>
+          <p className="mt-3">归纳权威：{value.chapter.authority} · 覆盖：{value.chapter.coverage}</p>
+        </details>
       </section>
       <section className="space-y-4">
         {value.stories.map((story) => <StoryCard key={story.id} projectId={projectId} story={story} />)}
@@ -203,8 +219,9 @@ function StoryView({
   useEffect(() => {
     setTitle(story.humanTitle);
     setSummary(story.oneSentenceSummary);
-    setMessage("");
   }, [story.id, story.humanTitle, story.oneSentenceSummary]);
+
+  useEffect(() => setMessage(""), [story.id]);
 
   async function submit(type: string, fields: Record<string, unknown> = {}) {
     setBusy(true);
@@ -229,18 +246,25 @@ function StoryView({
   return (
     <>
       <section className="rounded-card border border-line bg-white p-6 shadow-card">
-        <p className="text-xs text-muted">变化故事 · {formatMoment(story.occurredFrom)} → {formatMoment(story.occurredTo)}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted">
+          <p>变化故事 · {formatMoment(story.occurredFrom)} → {formatMoment(story.occurredTo)}</p>
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full bg-surfaceAlt px-3 py-1">{projectHistoryRoleLabel(story.role)}</span>
+            <span className="rounded-full bg-brand-soft px-3 py-1 text-brand">{projectHistoryPresentationLabel(story.presentationAuthority)}</span>
+          </div>
+        </div>
         <h2 className="mt-1 text-xl font-semibold">{story.humanTitle}</h2>
         <p className="mt-3 text-sm leading-6 text-body">{story.oneSentenceSummary}</p>
         <div className="mt-5 grid gap-4 lg:grid-cols-3">
-          <StateCard label="Before" value={story.beforeState} />
-          <StateCard label="Change" value={story.change} />
-          <StateCard label="After" value={story.afterState} />
+          <StateCard label="原来状态" value={story.beforeState} />
+          <StateCard label="本次变化" value={story.change} />
+          <StateCard label="当前结果" value={story.afterState} />
         </div>
         {story.reason ? <p className="mt-4 text-sm"><span className="font-semibold">有证据支持的原因：</span>{story.reason}</p> : null}
         {story.laterOutcome ? <p className="mt-3 text-sm"><span className="font-semibold">后续结果：</span>{story.laterOutcome}</p> : null}
-        <p className="mt-4 text-xs text-muted">{story.rawEventCount} 个来源事件 · {story.evidenceCount} 条证据 · {story.authority} · {story.summaryStatus} · 展示角色 {story.role ?? "PRIMARY"}</p>
+        <p className="mt-4 text-xs text-muted">{story.rawEventCount} 个来源事件 · {story.evidenceCount} 条证据</p>
         <div className="mt-6 border-t border-line pt-5">
+          <h3 className="text-sm font-semibold">展示修正</h3>
           <div className="grid gap-4 lg:grid-cols-2">
             <label className="text-sm text-body">
               标题
@@ -252,14 +276,13 @@ function StoryView({
             </label>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" className="rounded-field bg-brand px-3 py-2 text-sm text-white disabled:opacity-50" disabled={busy || !title.trim()} onClick={() => submit("RENAME_STORY", { title: title.trim(), declaredTitle: title.trim() })}>保存标题</button>
-            <button type="button" className="rounded-field border border-line px-3 py-2 text-sm text-body disabled:opacity-50" disabled={busy || !summary.trim()} onClick={() => submit("EDIT_SUMMARY", { summary: summary.trim(), declaredSummary: summary.trim() })}>保存摘要</button>
-            <button type="button" className="rounded-field border border-line px-3 py-2 text-sm text-body disabled:opacity-50" disabled={busy} onClick={() => submit("HIDE_STORY")}>从默认阅读中隐藏</button>
-            <button type="button" className="rounded-field border border-line px-3 py-2 text-sm text-body disabled:opacity-50" disabled={busy} onClick={() => submit("PIN_STORY")}>置顶阅读</button>
-            <button type="button" className="rounded-field border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 disabled:opacity-50" disabled={busy} onClick={() => submit("RESTORE_AUTOMATIC")}>恢复自动展示</button>
+            <button type="button" className="inline-flex items-center gap-2 rounded-field bg-brand px-3 py-2 text-sm text-white disabled:opacity-50" disabled={busy || !title.trim()} onClick={() => submit("RENAME_STORY", { title: title.trim(), declaredTitle: title.trim() })}><Save aria-hidden="true" size={16} />保存标题</button>
+            <button type="button" className="inline-flex items-center gap-2 rounded-field border border-line px-3 py-2 text-sm text-body disabled:opacity-50" disabled={busy || !summary.trim()} onClick={() => submit("EDIT_SUMMARY", { summary: summary.trim(), declaredSummary: summary.trim() })}><Save aria-hidden="true" size={16} />保存摘要</button>
+            <button type="button" className="inline-flex items-center gap-2 rounded-field border border-line px-3 py-2 text-sm text-body disabled:opacity-50" disabled={busy} onClick={() => submit("HIDE_STORY")}><EyeOff aria-hidden="true" size={16} />从默认阅读中隐藏</button>
+            <button type="button" className="inline-flex items-center gap-2 rounded-field border border-line px-3 py-2 text-sm text-body disabled:opacity-50" disabled={busy} onClick={() => submit("PIN_STORY")}><Pin aria-hidden="true" size={16} />置顶阅读</button>
+            <button type="button" className="inline-flex items-center gap-2 rounded-field border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 disabled:opacity-50" disabled={busy} onClick={() => submit("RESTORE_AUTOMATIC")}><RotateCcw aria-hidden="true" size={16} />恢复自动展示</button>
           </div>
           {message ? <p className="mt-3 text-sm text-amber-800" role="status">{message}</p> : null}
-          <p className="mt-3 text-xs text-muted">当前展示权威：{story.presentationAuthority ?? "AUTOMATIC"} · 自动标题：{story.automaticTitle ?? story.humanTitle} · 自动摘要：{story.automaticSummary ?? story.oneSentenceSummary}</p>
         </div>
       </section>
 
@@ -276,33 +299,96 @@ function StoryView({
         </section>
       ) : null}
 
-      <section className="rounded-card border border-line bg-white p-6 shadow-card">
-        <h2 className="text-lg font-semibold">来源事件下钻</h2>
+      <details className="rounded-card border border-line bg-white p-6 shadow-card">
+        <summary className="cursor-pointer text-lg font-semibold">查看来源事件、Commit 与 Evidence</summary>
         <div className="mt-4 space-y-3">
-          {value.events.map((event) => (
-            <article className="rounded-field border border-line bg-surfaceAlt p-4" key={event.id}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-medium">{event.safeSourceLabel}</h3>
-                <span className="text-xs text-muted">{projectHistoryTransitionLabel(event.transition)} · {event.sourceType}</span>
-              </div>
-              <p className="mt-2 text-xs text-muted">{formatMoment(event.occurredAt)} · {event.evidenceRefs.length} 条 Evidence · {event.rewriteState}</p>
-            </article>
-          ))}
+          {value.events.map((event) => <HistoryEventCard event={event} key={event.id} projectId={projectId} />)}
         </div>
-      </section>
+      </details>
 
       {story.conflicts.length ? <ListSection title="冲突" items={story.conflicts} tone="warning" /> : null}
       {story.correctionConflicts?.length ? <ListSection title="展示修正冲突" items={story.correctionConflicts} tone="warning" /> : null}
       {story.unknowns.length ? <ListSection title="未知" items={story.unknowns} tone="warning" /> : null}
       {story.limitations.length ? <ListSection title="覆盖限制" items={story.limitations} tone="warning" /> : null}
-      {story.technicalDetails?.length || story.technicalAtomRefs?.length ? (
-        <details className="rounded-card border border-line bg-white p-6 shadow-card">
-          <summary className="cursor-pointer text-sm font-semibold">工程详情</summary>
+      <details className="rounded-card border border-line bg-white p-6 shadow-card">
+          <summary className="cursor-pointer text-sm font-semibold">查看工程详情与审计信息</summary>
+          <dl className="mt-4 grid gap-3 text-xs text-muted md:grid-cols-2">
+            <div><dt className="font-medium text-body">归纳权威</dt><dd className="mt-1">{story.authority}</dd></div>
+            <div><dt className="font-medium text-body">摘要状态</dt><dd className="mt-1">{story.summaryStatus}</dd></div>
+            <div><dt className="font-medium text-body">展示角色</dt><dd className="mt-1">{story.role ?? "PRIMARY"}</dd></div>
+            <div><dt className="font-medium text-body">展示权威</dt><dd className="mt-1">{story.presentationAuthority ?? "AUTOMATIC"}</dd></div>
+          </dl>
+          <p className="mt-4 text-xs text-muted">自动标题：{story.automaticTitle ?? story.humanTitle}</p>
+          <p className="mt-2 text-xs text-muted">自动摘要：{story.automaticSummary ?? story.oneSentenceSummary}</p>
           {story.technicalAtomRefs?.length ? <p className="mt-3 text-xs text-muted">Technical Atom：{story.technicalAtomRefs.join("、")}</p> : null}
           {story.technicalDetails?.length ? <ul className="mt-3 space-y-2 text-sm text-body">{story.technicalDetails.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul> : null}
-        </details>
-      ) : null}
+      </details>
     </>
+  );
+}
+
+function HistoryEventCard({ projectId, event }: { projectId: string; event: ProjectHistoryEvent }) {
+  const [evidence, setEvidence] = useState<ProjectHistoryEvidence | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const sourceLink = safeHistoryDeepLink(event.rawSourceDeepLink);
+
+  async function loadEvidence() {
+    if (evidence || loading) return;
+    setLoading(true);
+    setError("");
+    try {
+      setEvidence(await getProjectHistoryEvidence(readSession().accessToken, projectId, event.id));
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : "Evidence 详情读取失败");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <article className="rounded-field border border-line bg-surfaceAlt p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-medium">{event.safeSourceLabel}</h3>
+        <span className="text-xs text-muted">{projectHistoryTransitionLabel(event.transition)} · {projectHistorySourceTypeLabel(event.sourceType)}</span>
+      </div>
+      <p className="mt-2 text-xs text-muted">{formatMoment(event.occurredAt)} · {event.evidenceRefs.length} 条 Evidence · {projectHistoryRewriteStateLabel(event.rewriteState)}</p>
+      {event.affectedPaths.length ? (
+        <div className="mt-3 text-xs text-body">
+          <p className="font-medium">涉及文件</p>
+          <ul className="mt-1 space-y-1 text-muted">
+            {event.affectedPaths.slice(0, 12).map((path) => <li className="break-all" key={path}>{path}</li>)}
+          </ul>
+        </div>
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" className="inline-flex items-center gap-2 rounded-field border border-line bg-white px-3 py-2 text-xs text-body disabled:opacity-50" disabled={loading} onClick={loadEvidence}>
+          <FileSearch aria-hidden="true" size={15} />{loading ? "正在读取" : evidence ? "Evidence 已展开" : "查看 Evidence 详情"}
+        </button>
+        {sourceLink ? (
+          <a className="inline-flex items-center gap-2 rounded-field border border-line bg-white px-3 py-2 text-xs text-body" href={sourceLink} rel="noreferrer" target={sourceLink.startsWith("https://") ? "_blank" : undefined}>
+            <ExternalLink aria-hidden="true" size={15} />打开原始来源
+          </a>
+        ) : null}
+      </div>
+      {error ? <p className="mt-3 text-xs text-rose-700" role="status">{error}</p> : null}
+      {evidence ? (
+        <div className="mt-3 space-y-2 border-t border-line pt-3">
+          {evidence.items.length ? evidence.items.map((item) => {
+            const deepLink = safeHistoryDeepLink(item.deepLink);
+            return (
+              <div className="text-xs text-muted" key={`${item.type}:${item.reference}`}>
+                <p className="font-medium text-body">{item.label || item.type}</p>
+                <p className="mt-1 break-all">{item.reference} · {item.currentness} · {item.validation}</p>
+                {deepLink ? <a className="mt-1 inline-flex items-center gap-1 text-brand hover:underline" href={deepLink} rel="noreferrer" target={deepLink.startsWith("https://") ? "_blank" : undefined}><ExternalLink aria-hidden="true" size={13} />打开证据</a> : null}
+                {item.limitations.length ? <p className="mt-1 text-amber-800">{item.limitations.join("；")}</p> : null}
+              </div>
+            );
+          }) : <p className="text-xs text-muted">当前事件没有可进一步展开的 Evidence。</p>}
+          {evidence.truncated ? <p className="text-xs text-amber-800">Evidence 详情达到安全上限，当前仅显示有界结果。</p> : null}
+        </div>
+      ) : null}
+    </article>
   );
 }
 
@@ -310,7 +396,7 @@ function ThreadView({ projectId, value }: { projectId: string; value: ProjectHis
   return (
     <>
       <section className="rounded-card border border-line bg-white p-6 shadow-card">
-        <p className="text-xs text-muted">演变链 · {value.thread.subjectType}</p>
+        <p className="text-xs text-muted">演变链</p>
         <h2 className="mt-1 text-xl font-semibold">{value.thread.subjectLabel}</h2>
         <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
           {value.thread.transitions.map((transition, index) => (
@@ -322,6 +408,10 @@ function ThreadView({ projectId, value }: { projectId: string; value: ProjectHis
         </div>
         <p className="mt-4 text-sm leading-6 text-body">{value.thread.currentOutcome}</p>
         <p className="mt-3 text-xs text-muted">{value.thread.evidenceCount} 条证据</p>
+        <details className="mt-4 border-t border-line pt-4 text-xs text-muted">
+          <summary className="cursor-pointer font-medium text-body">查看工程详情与审计信息</summary>
+          <p className="mt-3">主题类型：{value.thread.subjectType} · 展示权威：{value.thread.presentationAuthority ?? "AUTOMATIC"}</p>
+        </details>
       </section>
       <section className="space-y-4">
         {value.stories.map((story) => <StoryCard key={story.id} projectId={projectId} story={story} />)}
@@ -338,7 +428,10 @@ function StoryCard({ projectId, story }: { projectId: string; story: ProjectHist
     <Link className="block rounded-card border border-line bg-white p-5 shadow-card hover:border-lineStrong hover:bg-surfaceAlt" href={projectHistoryHref(projectId, "story", story.id)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-semibold">{story.humanTitle}</h3>
-        <span className="text-xs text-muted">{story.rawEventCount} 个事件 · {story.evidenceCount} 条证据</span>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+          <span className="rounded-full bg-surfaceAlt px-2.5 py-1">{projectHistoryRoleLabel(story.role)}</span>
+          <span>{story.rawEventCount} 个事件 · {story.evidenceCount} 条证据</span>
+        </div>
       </div>
       <p className="mt-2 text-sm leading-6 text-body">{story.oneSentenceSummary}</p>
       <p className="mt-2 text-xs text-muted">{formatMoment(story.occurredFrom)} → {formatMoment(story.occurredTo)}</p>
@@ -370,4 +463,9 @@ function formatMoment(value: string | null | undefined) {
   if (!value) return "未知时间";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-CN", { hour12: false });
+}
+
+function safeHistoryDeepLink(value: string | null | undefined) {
+  const candidate = value?.trim() ?? "";
+  return /^(https:\/\/|\/projects\/|obsidian:\/\/)/i.test(candidate) ? candidate : "";
 }

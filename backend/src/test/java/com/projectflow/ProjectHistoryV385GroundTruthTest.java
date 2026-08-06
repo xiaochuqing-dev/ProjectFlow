@@ -109,7 +109,7 @@ class ProjectHistoryV385GroundTruthTest {
     void deterministicFallbackUsesActionAndObjectWithoutForbiddenTemplates() {
         ProjectHistoryLanguageService language = new ProjectHistoryLanguageService();
         var result = language.fallback(Transition.CREATED, "backend/src/main/java/AuthController.java", List.of("backend/src/main/java/AuthController.java"), List.of(), List.of());
-        assertThat(result.title()).contains("建立").doesNotContain("形成初始结果", "工程分组", "相关变化");
+        assertThat(result.title()).contains("新增").doesNotContain("形成初始结果", "工程分组", "相关变化");
         assertThat(result.summary()).doesNotContain("来源记录显示", "进入当前时间点可确认的新状态");
         assertThat(language.supporting(
             List.of(com.projectflow.entity.ProjectHistoryEvent.Category.VALIDATION), List.of("tests/login.md"), List.of("test"), List.of(Transition.MODIFIED), false

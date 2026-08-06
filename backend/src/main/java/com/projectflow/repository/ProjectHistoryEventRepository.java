@@ -1,6 +1,7 @@
 package com.projectflow.repository;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,6 +24,8 @@ public interface ProjectHistoryEventRepository
     );
 
     List<ProjectHistoryEvent> findByProjectId(UUID projectId);
+
+    List<ProjectHistoryEvent> findByProjectIdAndIdIn(UUID projectId, Collection<UUID> ids);
 
     long countByProjectIdAndRewriteState(UUID projectId, RewriteState rewriteState);
 

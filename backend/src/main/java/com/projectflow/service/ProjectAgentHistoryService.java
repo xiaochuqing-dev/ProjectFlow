@@ -558,9 +558,9 @@ public class ProjectAgentHistoryService {
                     .append("  此前：").append(bounded(story.beforeState(), 260))
                     .append("；变化：").append(bounded(story.change(), 260))
                     .append("；之后：").append(bounded(story.afterState(), 260)).append("\n")
-                    .append("  展示权威：").append(story.presentationAuthority())
-                    .append("；角色：").append(story.role())
-                    .append("；Evidence：").append(story.evidenceRefs().stream().limit(8).toList()).append("\n");
+                    .append("  展示来源：").append(presentationLabel(story.presentationAuthority()))
+                    .append("；阅读位置：").append(roleLabel(story.role()))
+                    .append("；证据下钻：").append(story.evidenceRefs().stream().limit(8).toList()).append("\n");
                 if (!story.technicalDetails().isEmpty() || !story.technicalAtomRefs().isEmpty()) {
                     text.append("  工程下钻：atoms=").append(story.technicalAtomRefs().stream().limit(8).toList())
                         .append("；details=").append(story.technicalDetails().stream().limit(4).map(item -> bounded(item, 240)).toList()).append("\n");
@@ -576,6 +576,14 @@ public class ProjectAgentHistoryService {
         }
         String result = text.toString();
         return result.isBlank() ? fallback : bounded(result, 9_000);
+    }
+
+    private static String presentationLabel(String authority) {
+        return "USER_DECLARED_PRESENTATION".equals(authority) ? "经过用户修改" : "自动整理";
+    }
+
+    private static String roleLabel(String role) {
+        return "SUPPORTING".equals(role) ? "支撑工作" : "主要变化";
     }
 
     private AgentContextPackageResponse packageResponse(

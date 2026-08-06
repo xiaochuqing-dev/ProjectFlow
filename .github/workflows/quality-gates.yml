@@ -1,4 +1,4 @@
-name: ProjectFlow V3.8.0 Quality Gates
+name: ProjectFlow V3.8.5 Quality Gates
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       run_real_model:
-        description: "使用 Secret 执行一次受预算限制的 GLM 真实验收"
+        description: "使用 Secrets 执行 GLM 与 DeepSeek V3.8.5 真实验收"
         required: false
         default: false
         type: boolean
@@ -156,12 +156,24 @@ jobs:
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
           cache: maven
-      - name: 真实 GLM Provider、18-case、项目理解与项目历程验收
+      - name: 确认 GLM 与 DeepSeek 安全凭据均已配置
+        shell: bash
+        env:
+          GLM_KEY: ${{ secrets.PROJECTFLOW_REAL_MODEL_API_KEY }}
+          DEEPSEEK_KEY: ${{ secrets.PROJECTFLOW_DEEPSEEK_API_KEY }}
+        run: |
+          if [ -z "$GLM_KEY" ] || [ -z "$DEEPSEEK_KEY" ]; then
+            echo "BLOCKED: GLM 或 DeepSeek 真实验收 Secret 缺失"
+            exit 1
+          fi
+      - name: 真实 GLM Responses、Ground Truth、项目理解与项目历程验收
         working-directory: backend
         env:
           PROJECTFLOW_RUN_REAL_MODEL: "true"
@@ -180,14 +192,34 @@ jobs:
           PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING: "true"
           PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL: "true"
         run: |
-          if [ -z "$PROJECTFLOW_REAL_MODEL_API_KEY" ]; then
-            echo "SKIPPED: 未提供安全测试 Key"
-            exit 0
-          fi
           mvn -B -Dtest=ProjectFlowRealProviderProbeIT test
           mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name=glm-v380 test
-          mvn -B -Dtest=ProjectFlowRealModelEvalIT test
-          mvn -B -Dtest=ProjectUnderstandingRealModelIT test
+          mvn -B -Dtest=ProjectFlowRealModelEvalIT -Dprojectflow.eval.output-name=glm-v375 test
+          mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name=glm-understanding test
+          mvn -B -Dtest=ProjectHistoryV385RealOutputEvaluatorTest -Dprojectflow.eval.output-name=glm-v385 test
+          mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name=glm-v385-scenarios test
+      - name: 真实 DeepSeek Chat、Ground Truth 与项目历程验收
+        working-directory: backend
+        env:
+          PROJECTFLOW_RUN_REAL_MODEL: "true"
+          PROJECTFLOW_REAL_MODEL_API_KEY: ${{ secrets.PROJECTFLOW_DEEPSEEK_API_KEY }}
+          PROJECTFLOW_REAL_MODEL_PROVIDER: "DeepSeek OpenCode Go"
+          PROJECTFLOW_REAL_MODEL_BASE_URL: "https://opencode.ai/zen/go/v1"
+          PROJECTFLOW_REAL_MODEL_NAME: "deepseek-v4-pro"
+          PROJECTFLOW_REAL_MODEL_TYPE: "DEEPSEEK"
+          PROJECTFLOW_REAL_MODEL_PROTOCOL: "OPENAI_CHAT_COMPLETIONS"
+          PROJECTFLOW_REAL_MODEL_TIMEOUT_SECONDS: "600"
+          PROJECTFLOW_REAL_MODEL_MAX_TOKENS: "65536"
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE: "false"
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING: "true"
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL: "false"
+        run: |
+          mvn -B -Dtest=ProjectFlowRealProviderProbeIT test
+          mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name=deepseek-v380 test
+          mvn -B -Dtest=ProjectFlowRealModelEvalIT -Dprojectflow.eval.output-name=deepseek-v375 test
+          mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name=deepseek-understanding test
+          mvn -B -Dtest=ProjectHistoryV385RealOutputEvaluatorTest -Dprojectflow.eval.output-name=deepseek-v385 test
+          mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name=deepseek-v385-scenarios test
       - name: 保存内部真实模型评测工件
         if: always()
         uses: actions/upload-artifact@v4

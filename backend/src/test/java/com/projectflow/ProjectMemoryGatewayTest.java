@@ -28,6 +28,7 @@ import com.projectflow.dto.ProjectHistoryDtos.ChangeStory;
 import com.projectflow.dto.ProjectHistoryDtos.EvolutionThread;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryChapter;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryCoverage;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryCorrectionRequest;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryOverviewContent;
 import com.projectflow.entity.ChangeBatch;
 import com.projectflow.entity.EvidenceConfidence;
@@ -70,6 +71,7 @@ import com.projectflow.repository.ProjectTimelineThemeFactRepository;
 import com.projectflow.repository.ProjectTimelineThemeRepository;
 import com.projectflow.service.ProjectFactMigrationService;
 import com.projectflow.service.ProjectAgentHistoryService;
+import com.projectflow.service.ProjectHistoryCorrectionService;
 import com.projectflow.service.ProjectMemoryGatewayService;
 import com.projectflow.service.TimelinePeriodResolver;
 import com.projectflow.support.AppException;
@@ -103,6 +105,7 @@ class ProjectMemoryGatewayTest {
     @Autowired ProjectSedimentRepository sedimentRepository;
     @Autowired ProjectMemoryGatewayService gateway;
     @Autowired ProjectAgentHistoryService agentHistory;
+    @Autowired ProjectHistoryCorrectionService historyCorrectionService;
     @Autowired ProjectFactMigrationService migrationService;
     @Autowired TimelinePeriodResolver resolver;
     @Autowired MockMvc mockMvc;
@@ -407,6 +410,30 @@ class ProjectMemoryGatewayTest {
 
         assertThat(auditRepository.findTop50ByProjectIdOrderByOccurredAtDesc(project.getId()))
             .anySatisfy(audit -> assertThat(audit.getOperationName()).isEqualTo("get_project_context_package"));
+    }
+
+    @Test
+    void gatewayAndAgentContextExposeTheSameCorrectedPresentationWithoutInternalEnums() {
+        String revision = gateway.historyCorrections(owner.userId(), project.getId()).presentationRevision();
+        historyCorrectionService.create(owner.userId(), project.getId(), new HistoryCorrectionRequest(
+            "RENAME_STORY", "STORY", historyStoryId, List.of(), "让事实游标避免重复记录", "", "", "",
+            revision, ""
+        ));
+
+        var gatewayStories = gateway.historyStories(
+            owner.userId(), project.getId(), null, false, null, null, 0, 20
+        );
+        assertThat(gatewayStories.items()).singleElement().satisfies(story -> {
+            assertThat(story.humanTitle()).isEqualTo("让事实游标避免重复记录");
+            assertThat(story.presentationAuthority()).isEqualTo("USER_DECLARED_PRESENTATION");
+        });
+
+        var context = agentHistory.contextPackage(owner.userId(), project.getId(), 12_000);
+        assertThat(context.historicalCoverage())
+            .contains("让事实游标避免重复记录", "经过用户修改", "主要变化")
+            .doesNotContain("USER_DECLARED_PRESENTATION", "PRIMARY", "ENGINEERING_GROUPING", "DETERMINISTIC");
+        assertThat(factRepository.findTop200ByProjectIdOrderByOccurredToDescCreatedAtDesc(project.getId()))
+            .singleElement();
     }
 
     @Test

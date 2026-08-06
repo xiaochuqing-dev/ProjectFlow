@@ -42,6 +42,13 @@ class ProjectHistoryWindowCheckpointTest {
         skipped.skip("Prompt 容量不足", "{\"status\":\"SKIPPED\"}");
         assertThat(skipped.getStatus()).isEqualTo("SKIPPED");
         assertThat(skipped.getLastError()).contains("Prompt");
+
+        ProjectHistoryWindowCheckpoint oversized = checkpoint();
+        oversized.skipOversize("单个变化故事超过安全 Prompt 记录上限",
+            "{\"status\":\"SKIPPED_OVERSIZE\",\"terminal\":true}");
+        assertThat(oversized.getStatus()).isEqualTo("SKIPPED_OVERSIZE");
+        assertThat(oversized.getDiagnosticsJson()).contains("\"terminal\":true");
+        assertThat(oversized.getLastError()).contains("超过安全 Prompt");
     }
 
     @Test

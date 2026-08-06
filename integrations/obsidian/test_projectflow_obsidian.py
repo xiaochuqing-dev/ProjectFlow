@@ -317,9 +317,14 @@ class ObsidianProjectionTest(unittest.TestCase):
         )
         story_note = next((self.managed() / "项目历程/变化故事").glob("*.md"))
         rendered = story_note.read_text(encoding="utf-8")
-        self.assertIn("## Before", rendered)
-        self.assertIn("## Change", rendered)
-        self.assertIn("## After", rendered)
+        self.assertIn("## 原来状态", rendered)
+        self.assertIn("## 本次变化", rendered)
+        self.assertIn("## 当前结果", rendered)
+        self.assertIn("展示来源：自动整理 · 阅读位置：主要变化", rendered)
+        self.assertNotIn("展示权威：AUTOMATIC", rendered)
+        self.assertNotIn("角色：PRIMARY", rendered)
+        self.assertNotIn("ENGINEERING_GROUPING", rendered)
+        self.assertNotIn("DETERMINISTIC", rendered)
         self.assertIn("ProjectFlow：", rendered)
         self.assertIn(f"http://127.0.0.1:3000/projects/{PROJECT_ID}/history?type=story", rendered)
 
@@ -338,6 +343,71 @@ class ObsidianProjectionTest(unittest.TestCase):
         self.assertEqual("obsidian", urllib.parse.urlparse(official).scheme)
         self.assertEqual("obsidian", urllib.parse.urlparse(advanced).scheme)
         self.assertIn("heading=Before", advanced)
+
+    def test_corrected_split_role_conflict_and_merge_projection_stay_consistent(self) -> None:
+        data = copy.deepcopy(dataset())
+        stories = data["historyStories"]
+        primary = stories[0]
+        supporting = stories[1]
+        conflicted = stories[2]
+        split = copy.deepcopy(primary)
+        split.update({
+            "id": "story-44444444444444444444",
+            "humanTitle": "拆分报告附录并形成独立可读版本",
+            "oneSentenceSummary": "报告附录已经从主体内容中拆出并可单独阅读。",
+            "eventRefs": ["30000000-0000-0000-0000-000000000004"],
+            "evidenceRefs": ["document:appendix"],
+            "evidenceCount": 1,
+            "rawEventCount": 1,
+            "occurredFrom": "2026-06-16T10:00:00Z",
+            "occurredTo": "2026-06-16T10:00:00Z",
+        })
+        primary["supportingChangeRefs"] = [supporting["id"]]
+        supporting.update({
+            "role": "SUPPORTING",
+            "primaryStoryId": primary["id"],
+            "presentationAuthority": "USER_DECLARED_PRESENTATION",
+            "pinned": True,
+        })
+        conflicted["correctionConflicts"] = ["来源成员已经变化，旧展示修正未应用。"]
+        conflicted["displayStatus"] = "CONFLICT"
+        stories.append(split)
+        first_chapter = data["historyChapters"][0]
+        first_chapter["storyRefs"] = [primary["id"], split["id"]]
+        first_chapter["storyCount"] = 2
+        first_chapter["rawEventCount"] = 3
+        data["historyThreads"][0]["storyRefs"] = [primary["id"], split["id"], supporting["id"], conflicted["id"]]
+        data["historyCorrections"] = {
+            "items": [
+                {"id": "correction-role", "status": "ACTIVE", "difference": "将该变化归为支撑工作。"},
+                {"id": "correction-merge", "status": "CONFLICT", "difference": "待合并对象已被新来源替换。"},
+            ],
+            "presentationRevision": "presentation:corrected",
+            "total": 2,
+        }
+        self.source = FakeSource(data)
+
+        result = self.projection().sync(PROJECT_ID)
+        self.assertEqual("COMPLETED", result["status"])
+        notes = list((self.managed() / "项目历程/变化故事").glob("*.md"))
+        self.assertEqual(4, len(notes))
+        rendered = {path.name: path.read_text(encoding="utf-8") for path in notes}
+        supporting_note = next(value for value in rendered.values() if supporting["humanTitle"] in value)
+        conflict_note = next(value for value in rendered.values() if conflicted["humanTitle"] in value)
+        split_note = next(value for value in rendered.values() if split["humanTitle"] in value)
+        self.assertIn("展示来源：经过用户修改 · 阅读位置：支撑工作", supporting_note)
+        self.assertNotIn("USER_DECLARED_PRESENTATION", supporting_note)
+        self.assertNotIn("SUPPORTING", supporting_note)
+        self.assertIn("展示修正冲突：来源成员已经变化，旧展示修正未应用。", conflict_note)
+        self.assertIn("document:appendix", split_note)
+
+        chapter_note = next((self.managed() / "项目历程/篇章").glob("*.md")).read_text(encoding="utf-8")
+        thread_note = next((self.managed() / "项目历程/演变链").glob("*.md")).read_text(encoding="utf-8")
+        self.assertIn(split["humanTitle"], chapter_note)
+        self.assertIn(split["humanTitle"], thread_note)
+        overview = (self.managed() / "项目概览.md").read_text(encoding="utf-8")
+        self.assertIn("展示修正：2 条", overview)
+        self.assertIn("待合并对象已被新来源替换", overview)
 
     def test_projectflow_backlinks_use_stable_frontend_routes_in_a_real_temporary_vault(self) -> None:
         self.projection().sync(PROJECT_ID)
@@ -569,6 +639,33 @@ class ObsidianProjectionTest(unittest.TestCase):
             ObsidianProjection(self.source, self.vault / "missing")
         with self.assertRaisesRegex(ProjectionError, "local loopback"):
             GatewayClient("https://example.com")
+
+    def test_correction_pages_preserve_all_entries_and_one_revision(self) -> None:
+        client = GatewayClient("http://127.0.0.1:18080")
+        corrections = [
+            {"id": f"correction-{index:03d}", "status": "ACTIVE"}
+            for index in range(125)
+        ]
+
+        def response(_path: str, params: dict | None = None) -> dict:
+            page = int((params or {}).get("page", 0))
+            size = int((params or {}).get("size", 50))
+            start = page * size
+            return {
+                "items": corrections[start:start + size],
+                "presentationRevision": "presentation:stable",
+                "page": page,
+                "size": size,
+                "total": len(corrections),
+            }
+
+        with mock.patch.object(client, "get", side_effect=response) as get:
+            result = client._correction_pages("/history/corrections")
+
+        self.assertEqual(corrections, result["items"])
+        self.assertEqual("presentation:stable", result["presentationRevision"])
+        self.assertEqual(125, result["total"])
+        self.assertEqual(2, get.call_count)
 
     def test_cli_uses_only_local_gateway_and_reaches_noop(self) -> None:
         class Handler(BaseHTTPRequestHandler):

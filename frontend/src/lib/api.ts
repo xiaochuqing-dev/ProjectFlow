@@ -3107,6 +3107,23 @@ export type ProjectHistoryEvent = {
   rewriteState: string;
 };
 
+export type ProjectHistoryEvidence = {
+  projectId: string;
+  eventId: string;
+  items: Array<{
+    type: string;
+    reference: string;
+    label: string;
+    currentness: string;
+    revision: string;
+    validation: string;
+    coverage: string;
+    limitations: string[];
+    deepLink: string;
+  }>;
+  truncated: boolean;
+};
+
 export type ProjectHistoryOverview = {
   projectId: string;
   status: string;
@@ -3158,6 +3175,13 @@ export type ProjectHistoryCorrection = {
   appliedValue: string;
   difference: string;
   targetPresent: boolean;
+  declaredSecondaryTitle: string;
+  declaredSecondarySummary: string;
+  targetMembershipFingerprint: string;
+  automaticPresentationFingerprint: string;
+  sourceStale: boolean;
+  membershipStale: boolean;
+  automaticPresentationChanged: boolean;
 };
 
 export type ProjectHistoryCorrectionList = {
@@ -3165,6 +3189,12 @@ export type ProjectHistoryCorrectionList = {
   items: ProjectHistoryCorrection[];
   presentationRevision: string;
   truncated: boolean;
+  page: number;
+  size: number;
+  total: number;
+  activeCount: number;
+  activeLimit: number;
+  activeLimitExceeded: boolean;
 };
 
 export type ProjectHistoryChapterDetail = {
@@ -3231,8 +3261,27 @@ export function getProjectHistoryThread(
   );
 }
 
-export function getProjectHistoryCorrections(token: string, projectId: string): Promise<ProjectHistoryCorrectionList> {
-  return projectHistoryGet<ProjectHistoryCorrectionList>(token, `/projects/${projectId}/history/corrections`);
+export function getProjectHistoryEvidence(
+  token: string,
+  projectId: string,
+  eventId: string,
+): Promise<ProjectHistoryEvidence> {
+  return projectHistoryGet<ProjectHistoryEvidence>(
+    token,
+    `/projects/${projectId}/history/events/${encodeURIComponent(eventId)}/evidence`,
+  );
+}
+
+export function getProjectHistoryCorrections(
+  token: string,
+  projectId: string,
+  page = 0,
+  size = 50,
+): Promise<ProjectHistoryCorrectionList> {
+  return projectHistoryGet<ProjectHistoryCorrectionList>(
+    token,
+    `/projects/${projectId}/history/corrections?page=${Math.max(0, page)}&size=${Math.max(1, size)}`,
+  );
 }
 
 export function createProjectHistoryCorrection(
@@ -3253,6 +3302,8 @@ export function createProjectHistoryCorrection(
     declaredSummary?: string;
     declaredRole?: string;
     declaredChapterId?: string;
+    secondaryTitle?: string;
+    secondarySummary?: string;
   },
 ): Promise<ProjectHistoryCorrection> {
   return requestJson<ProjectHistoryCorrection>(`/projects/${projectId}/history/corrections`, {

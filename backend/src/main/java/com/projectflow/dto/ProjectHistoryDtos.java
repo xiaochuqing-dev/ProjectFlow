@@ -422,7 +422,9 @@ public final class ProjectHistoryDtos {
         String declaredTitle,
         String declaredSummary,
         String declaredRole,
-        String declaredChapterId
+        String declaredChapterId,
+        String secondaryTitle,
+        String secondarySummary
     ) {
         public HistoryCorrectionRequest(
             String type,
@@ -437,17 +439,23 @@ public final class ProjectHistoryDtos {
             String sourceFingerprint
         ) {
             this(type, targetType, targetId, targetIds, title, summary, role, chapterId,
-                expectedPresentationRevision, sourceFingerprint, "", "", "", "");
+                expectedPresentationRevision, sourceFingerprint, "", "", "", "", "", "");
         }
 
         public List<String> safeTargetIds() {
-            return targetIds == null ? List.of() : targetIds.stream().filter(value -> value != null && !value.isBlank()).distinct().limit(100).toList();
+            return targetIds == null ? List.of() : targetIds.stream()
+                .filter(value -> value != null && !value.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
         }
 
         public String effectiveTitle() { return firstNonBlank(declaredTitle, title); }
         public String effectiveSummary() { return firstNonBlank(declaredSummary, summary); }
         public String effectiveRole() { return firstNonBlank(declaredRole, role); }
         public String effectiveChapterId() { return firstNonBlank(declaredChapterId, chapterId); }
+        public String effectiveSecondaryTitle() { return secondaryTitle == null ? "" : secondaryTitle.trim(); }
+        public String effectiveSecondarySummary() { return secondarySummary == null ? "" : secondarySummary.trim(); }
 
         private static String firstNonBlank(String preferred, String fallback) {
             return preferred != null && !preferred.isBlank() ? preferred.trim() : fallback == null ? "" : fallback.trim();
@@ -475,7 +483,14 @@ public final class ProjectHistoryDtos {
         String automaticValue,
         String appliedValue,
         String difference,
-        boolean targetPresent
+        boolean targetPresent,
+        String declaredSecondaryTitle,
+        String declaredSecondarySummary,
+        String targetMembershipFingerprint,
+        String automaticPresentationFingerprint,
+        boolean sourceStale,
+        boolean membershipStale,
+        boolean automaticPresentationChanged
     ) {
         public HistoryCorrectionResponse(
             UUID id,
@@ -493,7 +508,7 @@ public final class ProjectHistoryDtos {
             String presentationRevision
         ) {
             this(id, projectId, type, targetType, targetId, targetIds, status, beforePresentationRevision,
-                sourceFingerprint, conflictReason, createdAt, updatedAt, presentationRevision, "", "", "", "", "", "", "", false);
+                sourceFingerprint, conflictReason, createdAt, updatedAt, presentationRevision, "", "", "", "", "", "", "", false, "", "", "", "", false, false, false);
         }
     }
 
@@ -501,7 +516,22 @@ public final class ProjectHistoryDtos {
         UUID projectId,
         List<HistoryCorrectionResponse> items,
         String presentationRevision,
-        boolean truncated
+        boolean truncated,
+        int page,
+        int size,
+        long total,
+        long activeCount,
+        int activeLimit,
+        boolean activeLimitExceeded
     ) {
+        public HistoryCorrectionListResponse(
+            UUID projectId,
+            List<HistoryCorrectionResponse> items,
+            String presentationRevision,
+            boolean truncated
+        ) {
+            this(projectId, items, presentationRevision, truncated, 0, items == null ? 0 : items.size(),
+                items == null ? 0 : items.size(), 0, 2_000, false);
+        }
     }
 }

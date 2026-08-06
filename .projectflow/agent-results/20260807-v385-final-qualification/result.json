@@ -1,0 +1,35 @@
+{
+  "taskGoal": "完成 ProjectFlow V3.8.5 RC 代码质量修复、真实 Provider 资格收口和诚实的最终验收记录，保持敏感信息不落盘。",
+  "actualChanges": [
+    "更新 V3.8.5 验收报告、证据索引、模型资格、真实项目、非代码泛化、人工可读性、产品验收、Dogfood 对比和代码审计记录，区分固定兼容证据、真实合同、真实资格失败、未运行入口和人工门禁。",
+    "将 DeepSeek 真实场景 10/11 的 ProjectFlow Dogfood Primary/Supporting 引用不一致失败、GLM 真实场景未运行以及双 Provider 19-case qualification FAIL 写入报告和 known-risks；没有把安全聚合指标或合同 PASS 写成质量 PASS。",
+    "修正 GitHub Actions DeepSeek endpoint 配置为保留标准协议尾路径的 /v1 形式，未写入任何凭据。",
+    "创建本 Agent Result，记录实际变更、验证边界和阻断项；不保存 API Key、Authorization、完整 Prompt、raw response、reasoning 或绝对路径。"
+  ],
+  "keyFiles": [
+    ".github/workflows/quality-gates.yml",
+    "docs/projectflow-v3.8.5-acceptance-report.md",
+    "docs/acceptance-evidence/v3.8.5/evidence-index.md",
+    "docs/projectflow-v3.8.5-model-qualification.md",
+    "docs/projectflow-v3.8.5-real-project-validation.md",
+    "docs/projectflow-v3.8.5-non-code-generalization.md",
+    "docs/projectflow-v3.8.5-human-readability-sampling.md",
+    "docs/projectflow-v3.8.5-product-acceptance.md",
+    "docs/projectflow-v3.8.5-dogfood-comparison.md",
+    "docs/projectflow-v3.8.5-rc-code-audit-and-fix-report.md",
+    ".projectflow/context/known-risks.md",
+    ".projectflow/context/update-history.md"
+  ],
+  "verification": {
+    "build": "此前已验证 backend mvn.cmd -q test：496 项，0 失败，0 错误，1 跳过；frontend build/lint 通过；Start-ProjectFlow.bat -CheckOnly 通过。本文档收口未改生产 Java/TypeScript 逻辑。",
+    "tests": "此前已验证 frontend contracts 55/55、Playwright 8/8、Hermes 9/9、Obsidian 21/21；GitHub required CI 与 PostgreSQL 16 Testcontainers 通过。真实合同：GLM Responses 1 请求/4,850 token/41,659 ms，DeepSeek Chat 1 请求/4,271 token/81,987 ms，均合同 PASS；19-case qualification：GLM FAIL、DeepSeek FAIL；DeepSeek 场景 10/11。",
+    "manualCheck": "git diff --check 退出码 0。敏感扫描覆盖 871 个文本文件，token-like/Bearer 命中 0；7 个绝对路径匹配位于 4 个脱敏测试夹具。人工 Story/Chapter 抽样为 0/0，NOT_RUN。"
+  },
+  "unfinished": [
+    "GLM 真实场景、旧版 ProjectFlowRealModelEvalIT 和 ProjectUnderstandingRealModelIT 未运行。",
+    "双 Provider 19-case qualification 未通过；DeepSeek ProjectFlow Dogfood 场景失败，需修复引用一致性后重新资格评测。",
+    "至少 30 个 Story、8 个 Chapter 的独立人工可读性评分未完成。",
+    "PR #15 必须保持 Draft；未合并 master、未创建 Tag/Release、未删除分支或 worktree。"
+  ],
+  "sedimentCandidates": []
+}

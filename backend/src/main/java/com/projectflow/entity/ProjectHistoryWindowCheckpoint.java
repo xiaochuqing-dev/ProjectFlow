@@ -96,6 +96,7 @@ public class ProjectHistoryWindowCheckpoint {
     public void beginAttempt() {
         this.status = "RUNNING";
         this.lastError = "";
+        this.updatedAt = Instant.now();
     }
 
     public void fail(String error, String diagnosticsJson) {
@@ -112,6 +113,12 @@ public class ProjectHistoryWindowCheckpoint {
 
     public void skip(String summary, String diagnosticsJson) {
         this.status = "SKIPPED";
+        this.lastError = clean(summary, 500);
+        this.diagnosticsJson = object(diagnosticsJson);
+    }
+
+    public void skipOversize(String summary, String diagnosticsJson) {
+        this.status = "SKIPPED_OVERSIZE";
         this.lastError = clean(summary, 500);
         this.diagnosticsJson = object(diagnosticsJson);
     }
@@ -166,4 +173,5 @@ public class ProjectHistoryWindowCheckpoint {
     public String getLastError() { return lastError; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+    public Long getVersion() { return version; }
 }

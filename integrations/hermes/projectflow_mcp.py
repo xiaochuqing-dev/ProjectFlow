@@ -138,7 +138,7 @@ TOOLS = [
     _tool(
         "list_project_history_corrections",
         "Read the durable user presentation declarations for Project History, including automatic and applied values, differences, conflicts, target presence, and the current presentation revision. Read-only; declarations never mutate facts or raw events.",
-        _schema({"projectId": PROJECT_ID}, ["projectId"]),
+        _schema({"projectId": PROJECT_ID, "page": PAGE, "size": SIZE}, ["projectId"]),
     ),
     _tool(
         "list_project_change_stories",
@@ -424,7 +424,9 @@ def call_tool(client: ProjectFlowClient, name: str, arguments: dict[str, Any]) -
             "page": _argument(arguments, "page", 0), "size": _argument(arguments, "size", 10),
         })
     if name == "list_project_history_corrections":
-        return client.get(base + "/history/corrections")
+        return client.get(base + "/history/corrections", {
+            "page": _argument(arguments, "page", 0), "size": _argument(arguments, "size", 50),
+        })
     if name == "list_project_change_stories":
         return client.get(base + "/history/stories", {
             "subject": _argument(arguments, "subject"),
