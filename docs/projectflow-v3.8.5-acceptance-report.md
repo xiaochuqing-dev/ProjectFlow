@@ -1,6 +1,6 @@
 # ProjectFlow V3.8.5 验收报告
 
-报告状态：实现完成；本地确定性门禁与真实前后端产品 E2E 已通过，外部数据库和真实 Provider 门禁仍未闭环。
+报告状态：实现完成；本地确定性门禁、真实前后端产品 E2E 和 GitHub required CI 已通过，真实 Provider 与人工 holdout 门禁仍未闭环。
 
 更新日期：2026-08-06
 
@@ -12,8 +12,10 @@
 
 - 基线 master：`5cb5e49661206feb8f59885bea672c314c9374e8`
 - 本地分支：`codex/v3.8.5-history-quality`
+- 功能提交：`8ad42281a3754d0aa14d4a17ed44254f8681d6b0`
+- Draft PR：[#15](https://github.com/xiaochuqing-dev/ProjectFlow/pull/15)，目标分支 `master`
 - 工作树版本：后端/前端 `3.8.5`
-- 本地工作树包含未提交修改；未执行远程同步、提交、推送、PR 或合并
+- 功能提交已推送，工作树干净；PR 尚未合并
 - No Tag、No Release
 
 ## 本地验证
@@ -29,14 +31,16 @@
 | Hermes MCP | PASS，9/9 |
 | Obsidian projection | PASS，21/21；5,000 facts、36 months、100 capabilities、1,000 evolutions 压力样本通过 |
 | `Start-ProjectFlow.bat -CheckOnly` | PASS；识别 3.8.5 和本地修改，未执行远程写入 |
+| GitHub required CI | PASS；push run `31069320457` 与 PR run `31069362971` 全部成功 |
+| PostgreSQL 16 Testcontainers | PASS；上述两轮 GitHub `postgres-integration` 均成功 |
 
 关键命令和可复核输出见 `docs/acceptance-evidence/v3.8.5/evidence-index.md`。
 
 ## 外部门禁
 
-- PostgreSQL 16 Testcontainers：BLOCKED。本机 `docker info` 无法连接 `dockerDesktopLinuxEngine`，没有用 H2 冒充 PostgreSQL 结果。
-- GLM `glm-5.2`、DeepSeek 真实 Provider、calibration/holdout、非代码项目：NOT_RUN。本轮没有使用或持久化用户提供的凭据，也没有把固定模型测试描述为真实 Provider 质量结论。
-- GitHub PR、CI、推送和合并：NOT_RUN。
+- 本机 PostgreSQL 复核：BLOCKED。本机 `docker info` 无法连接 `dockerDesktopLinuxEngine`；独立的 GitHub PostgreSQL 16 Testcontainers 门禁已通过，没有用 H2 冒充数据库结果。
+- GLM `glm-5.2`、DeepSeek 真实 Provider、calibration/holdout、非代码项目：NOT_RUN。GitHub `optional-real-provider` 按设计跳过；本轮没有使用或持久化用户提供的凭据，也没有把固定模型测试描述为真实 Provider 质量结论。
+- GitHub PR #15 已创建为 Draft，required CI 已通过；merge、Tag 和 Release 未执行。
 
 ## 安全检查
 
@@ -44,4 +48,4 @@
 
 ## 结论与剩余项
 
-V3.8.5 的实现和本地产品链路已完成，失败、取消、跳过、未处理范围、Evidence 引用和用户修正均保留可诊断状态。最终外部验收仍需在具备 Docker 和安全 Provider 凭据的隔离环境补跑 PostgreSQL、双真实 Provider、calibration/holdout 与非代码项目；这些项目完成前不把本报告标为最终质量 PASS。
+V3.8.5 的实现、本地产品链路和 GitHub required CI 已完成，失败、取消、跳过、未处理范围、Evidence 引用和用户修正均保留可诊断状态。最终质量验收仍需在安全 Provider 凭据环境补跑双真实 Provider、calibration/holdout、非代码项目和人工可读性抽样；这些项目完成前不把本报告标为最终质量 PASS。

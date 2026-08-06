@@ -2,7 +2,7 @@
 
 ## ProjectFlow V3.8.5 大众可读项目历程质量封顶与用户修正闭环 - 2026-08-06
 
-在 V3.8.0 的来源事件和可替换历史快照之上，新增 Raw Event → Technical Atom → Primary/Supporting Change → Story → Thread → Chapter 的多层语义压缩。首层中文优先呈现 Before/Change/After、成果摘要和工程详情下钻；模型只在有界窗口内改善措辞与展示角色，确定性规则保留成员、时间、Evidence 和安全边界。新增窗口 cache/checkpoint、失败/取消/跳过/未处理范围诊断，以及 `USER_DECLARED_PRESENTATION` 的重命名、摘要、分组、隐藏、置顶、合并/拆分、章节声明、恢复自动结果和乐观冲突处理。Gateway、Agent Context、Hermes、Frontend 和 Obsidian 共用修正后的只读展示视图；默认 Obsidian CORE 保持有限密度。确定性、H2、Playwright、Hermes、Obsidian 相关门禁已在本地复核，PostgreSQL、双真实 Provider 与非代码项目验收仍待隔离环境补跑，详细状态见 V3.8.5 Acceptance Report。
+在 V3.8.0 的来源事件和可替换历史快照之上，新增 Raw Event → Technical Atom → Primary/Supporting Change → Story → Thread → Chapter 的多层语义压缩。首层中文优先呈现 Before/Change/After、成果摘要和工程详情下钻；模型只在有界窗口内改善措辞与展示角色，确定性规则保留成员、时间、Evidence 和安全边界。新增窗口 cache/checkpoint、失败/取消/跳过/未处理范围诊断，以及 `USER_DECLARED_PRESENTATION` 的重命名、摘要、分组、隐藏、置顶、合并/拆分、章节声明、恢复自动结果和乐观冲突处理。Gateway、Agent Context、Hermes、Frontend 和 Obsidian 共用修正后的只读展示视图；默认 Obsidian CORE 保持有限密度。确定性、H2、Playwright、Hermes、Obsidian 与 GitHub PostgreSQL 16 门禁已通过；双真实 Provider、非代码项目和人工可读性验收仍待隔离环境补跑，详细状态见 V3.8.5 Acceptance Report。
 
 ## ProjectFlow V3.8.0 基于证据的项目历程重建 - 2026-08-03
 

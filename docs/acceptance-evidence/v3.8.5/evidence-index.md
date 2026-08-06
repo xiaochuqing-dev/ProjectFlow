@@ -31,10 +31,13 @@
 - `python -m unittest discover -s integrations/hermes -p 'test_*.py'`：PASS，9/9。
 - `python -m unittest discover -s integrations/obsidian -p 'test_*.py'`：PASS，21/21。
 - `cmd.exe /c Start-ProjectFlow.bat -CheckOnly`：PASS，版本 3.8.5。
-- `docker info`：BLOCKED，Docker Desktop Linux engine named pipe 不可用；未运行或伪造 PostgreSQL 结果。
+- `docker info`：本机 BLOCKED，Docker Desktop Linux engine named pipe 不可用；GitHub Actions 的 PostgreSQL 16 Testcontainers 已独立通过。
+- GitHub push run [`31069320457`](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31069320457)：PASS。
+- GitHub PR run [`31069362971`](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31069362971)：PASS。
 
 安全与范围
 
 - UTF-8 扫描 856 个文本文件，真实 token/Bearer 命中 0。
 - 2 个绝对路径命中仅是脱敏单元测试夹具，不在验收产物或 Agent Result 中。
-- GLM/DeepSeek 真实 Provider、calibration/holdout、非代码项目和 GitHub CI：NOT_RUN；用户凭据未写入仓库、日志、命令或报告。
+- Draft PR [#15](https://github.com/xiaochuqing-dev/ProjectFlow/pull/15) 指向 `master`；功能提交为 `8ad42281a3754d0aa14d4a17ed44254f8681d6b0`。
+- GLM/DeepSeek 真实 Provider、calibration/holdout 和非代码项目：NOT_RUN；用户凭据未写入仓库、日志、命令或报告。

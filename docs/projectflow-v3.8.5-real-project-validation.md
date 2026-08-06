@@ -8,10 +8,11 @@
 - 前端 TypeScript、生产构建和 55 项契约测试通过。
 - Playwright 本地浏览器 E2E 8/8 通过，运行真实前端、嵌入后端和固定模型服务。
 - Hermes 9 项测试通过；Obsidian 21 项测试通过，包含大投影、CORE 密度、修正展示、冲突、移动、原子写入和 no-op 场景。
+- GitHub push run `31069320457` 与 PR run `31069362971` 全部成功；两轮 PostgreSQL 16 Testcontainers、Backend/H2、Browser E2E、Frontend、Hermes、Obsidian 和敏感内容作业均通过。
 
 未完成或受环境限制
 
-- Docker Desktop 当前不可用，PostgreSQL 16 Testcontainers 未运行，状态为 BLOCKED。
+- Docker Desktop 本机仍不可用；PostgreSQL 16 已由两轮 GitHub Testcontainers 作业独立验证，未用 H2 代替。
 - GLM/DeepSeek 真实模型请求、真实非代码项目和人工可读性抽样未在本次收口执行，不能宣称真实 Provider Gate 通过。
 
 验证原则

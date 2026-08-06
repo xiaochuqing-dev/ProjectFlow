@@ -1,6 +1,6 @@
 # Known risks
 
-- V3.8.5 的确定性语义压缩、用户修正、缓存/checkpoint、Playwright 与 Obsidian/Hermes 消费门禁已在本地完成；PostgreSQL 16、GLM/DeepSeek 真实 Provider、calibration/holdout 与非代码项目验收仍需隔离环境补跑，不能把本地确定性结果描述为完整产品质量 PASS。
+- V3.8.5 的确定性语义压缩、用户修正、缓存/checkpoint、Playwright、Obsidian/Hermes 和 GitHub PostgreSQL 16 门禁已完成；GLM/DeepSeek 真实 Provider、calibration/holdout、非代码项目与人工可读性验收仍需隔离环境补跑，不能把 required CI 描述为完整产品质量 PASS。
 - V3.8.5 用户修正是可审计、可逆的展示覆盖，不改变 ProjectFact、原始事件或 Evidence；跨窗口的模型措辞仍受窗口上限、Provider 兼容性和未处理范围诊断约束。
 - 2026-08-03 的 `npm audit` 对当前前端依赖图报告 3 个 high，涉及 PostCSS 的 source map 文件读取/路径问题与 Sharp/libvips 继承漏洞，并聚合影响 Next。注册表当前自动修复建议是破坏性的 Next 9.3.3 downgrade，不能用 `npm audit fix --force` 代替兼容性判断；应等待或选择官方兼容修复版本，升级后重跑 lint、contracts、production build、Playwright 和根启动器。
 - V3.8.5 的 Story/Chapter 标题仍以确定性主体名为基础，真实模型只在有默认 Provider 且窗口合格时做一次有界措辞增强；无模型或模型失败时可读性保守，但成员和 Evidence 不受影响。

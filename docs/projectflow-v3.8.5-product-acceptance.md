@@ -9,13 +9,13 @@
 - 前端 lint、生产构建、55 项契约测试通过。
 - Playwright 浏览器 E2E 8/8 通过，覆盖真实前端、嵌入后端和固定模型服务。
 - Hermes 9/9、Obsidian 21/21 通过。
+- GitHub push/PR 两轮 required CI 全部通过，包括 PostgreSQL 16 Testcontainers。
 
 阻断或未运行
 
-- PostgreSQL 16 Testcontainers：BLOCKED，本机 Docker daemon 不可用。
 - GLM 与 DeepSeek 真实模型：NOT_RUN；没有用固定 Mock 结果替代真实质量证明。
-- GitHub push、PR、CI、merge 和分支清理：本地收口未执行，报告保留为未完成项。
+- Draft PR #15 已创建且可合并；merge、Tag、Release 和分支清理未执行。
 
 质量结论
 
-确定性实现和本地消费链达到可交付候选状态；“HUMAN-READABLE PROJECT HISTORY QUALITY GATE = PASS” 仍需真实 Provider、PostgreSQL 和人工 holdout 抽样的独立证据，当前不能提前标记 PASS。
+确定性实现、本地消费链和 PostgreSQL required CI 达到可交付候选状态；“HUMAN-READABLE PROJECT HISTORY QUALITY GATE = PASS” 仍需真实 Provider 和人工 holdout 抽样的独立证据，当前不能提前标记 PASS。
