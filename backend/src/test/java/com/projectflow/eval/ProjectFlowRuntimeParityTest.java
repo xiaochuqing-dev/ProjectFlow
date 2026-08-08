@@ -67,4 +67,25 @@ class ProjectFlowRuntimeParityTest {
                 "value.toolEvidence()"
             );
     }
+
+    @Test
+    void realWorkflowCollectsBothProviderSuitesBeforeReturningFailure() throws Exception {
+        String workflow = Files.readString(Path.of("../.github/workflows/quality-gates.yml"));
+
+        assertThat(workflow)
+            .contains(
+                "run_gate history-v385-qualification",
+                "run_gate history-v385-scenarios",
+                "run_gate history-v385-dogfood",
+                "if: ${{ !cancelled() && steps.credentials.outcome == 'success' }}"
+            );
+        assertThat(count(workflow, "run_gate provider-probe")).isEqualTo(2);
+        assertThat(count(workflow, "run_gate history-v385-qualification")).isEqualTo(2);
+        assertThat(count(workflow, "run_gate history-v385-scenarios")).isEqualTo(2);
+        assertThat(count(workflow, "run_gate history-v385-dogfood")).isEqualTo(2);
+    }
+
+    private static int count(String value, String needle) {
+        return value.split(java.util.regex.Pattern.quote(needle), -1).length - 1;
+    }
 }

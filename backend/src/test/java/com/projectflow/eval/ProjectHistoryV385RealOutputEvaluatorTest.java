@@ -103,7 +103,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         assertThat(report.holdout().passes()).isTrue();
         assertThat(qualification.calibrationRequestCount()).isPositive();
         assertThat(qualification.holdoutRequestCount()).isPositive();
-        assertThat(qualification.degradedCaseCount()).isZero();
+        assertThat(qualification.modelDegradedCaseCount()).isZero();
         assertThat(qualification.failedOrPendingWindowCount()).isZero();
         assertThat(qualification.rejectedModelOutputCount()).isZero();
         assertThat(runs).filteredOn(value -> value.requestCount() > 0)
@@ -127,12 +127,22 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
     private SafeCaseRun safeRun(ProjectHistoryV385FixtureRunner.FixtureExecution execution) {
         Map<String, Object> diagnostics = execution.diagnostics();
         ProjectHistoryV385QualityEvaluator.CaseObservation observation = execution.observation();
+        String modelStatus = text(diagnostics.get("modelStatus"));
+        int failedWindowCount = number(diagnostics, "failedWindowCount");
+        int unprocessedWindowCount = number(diagnostics, "modelUnprocessedWindowCount");
+        int skippedWindowCount = number(diagnostics, "skippedWindowCount");
+        int chapterFailedCount = number(diagnostics, "chapterSynthesisFailedCount");
+        int chapterPendingCount = number(diagnostics, "chapterSynthesisPendingCount");
         return new SafeCaseRun(
             observation.caseId(), observation.split(), observation.modelRequestCount(), observation.modelTokenCount(),
-            execution.modelLatencyMs(), execution.modelUsed(), execution.degraded(), execution.cacheHit(),
-            text(diagnostics.get("modelStatus")), number(diagnostics, "failedWindowCount"),
-            number(diagnostics, "modelUnprocessedWindowCount"), number(diagnostics, "skippedWindowCount"),
-            number(diagnostics, "chapterSynthesisFailedCount"), number(diagnostics, "chapterSynthesisPendingCount"),
+            execution.modelLatencyMs(), execution.modelUsed(), execution.degraded(),
+            booleanValue(diagnostics, "complete", true),
+            modelExecutionDegraded(
+                modelStatus, failedWindowCount, unprocessedWindowCount, skippedWindowCount,
+                chapterFailedCount, chapterPendingCount
+            ),
+            execution.cacheHit(), modelStatus, failedWindowCount,
+            unprocessedWindowCount, skippedWindowCount, chapterFailedCount, chapterPendingCount,
             number(diagnostics, "modelRejectedInvalidEvidenceRefCount"),
             number(diagnostics, "modelRejectedCrossProjectRefCount"),
             number(diagnostics, "modelRejectedUnsupportedClaimCount")
@@ -148,7 +158,10 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
             .mapToInt(SafeCaseRun::requestCount).sum();
         int holdoutRequests = runs.stream().filter(value -> "HOLDOUT".equals(value.split()))
             .mapToInt(SafeCaseRun::requestCount).sum();
-        int degraded = (int) runs.stream().filter(SafeCaseRun::degraded).count();
+        int sourceCoverageIncomplete = (int) runs.stream()
+            .filter(value -> !value.sourceCollectionComplete()).count();
+        int refreshDegraded = (int) runs.stream().filter(SafeCaseRun::refreshDegraded).count();
+        int modelDegraded = (int) runs.stream().filter(SafeCaseRun::modelDegraded).count();
         int failedOrPending = runs.stream().mapToInt(value -> value.failedWindowCount()
             + value.unprocessedWindowCount() + value.skippedWindowCount()
             + value.chapterFailedCount() + value.chapterPendingCount()).sum();
@@ -157,11 +170,11 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         int requests = runs.stream().mapToInt(SafeCaseRun::requestCount).sum();
         long tokens = runs.stream().mapToLong(SafeCaseRun::tokenCount).sum();
         boolean qualified = report.passes() && calibrationRequests > 0 && holdoutRequests > 0
-            && degraded == 0 && failedOrPending == 0 && rejected == 0
+            && modelDegraded == 0 && failedOrPending == 0 && rejected == 0
             && runs.stream().filter(value -> value.requestCount() > 0).allMatch(SafeCaseRun::modelUsed);
         return new QualificationSummary(
             qualified, requests, tokens, elapsedMs, calibrationRequests, holdoutRequests,
-            degraded, failedOrPending, rejected
+            sourceCoverageIncomplete, refreshDegraded, modelDegraded, failedOrPending, rejected
         );
     }
 
@@ -177,7 +190,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         Path output = Path.of("target", "projectflow-eval", outputName);
         Files.createDirectories(output);
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("version", "projectflow-v3.8.5-history-real-output-v1");
+        artifact.put("version", "projectflow-v3.8.5-history-real-output-v2");
         artifact.put("generatedAt", Instant.now().toString());
         artifact.put("provider", Map.of(
             "name", config.name(), "model", config.model(), "protocol", config.protocol().name()
@@ -230,6 +243,27 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         return value == null ? "" : value.toString();
     }
 
+    private static boolean booleanValue(Map<String, Object> values, String key, boolean fallback) {
+        Object value = values.get(key);
+        if (value instanceof Boolean bool) return bool;
+        if (value == null) return fallback;
+        return Boolean.parseBoolean(value.toString());
+    }
+
+    static boolean modelExecutionDegraded(
+        String modelStatus,
+        int failedWindowCount,
+        int unprocessedWindowCount,
+        int skippedWindowCount,
+        int chapterFailedCount,
+        int chapterPendingCount
+    ) {
+        boolean validated = "MODEL_VALIDATED".equals(modelStatus)
+            || "MODEL_VALIDATED_INCREMENTAL".equals(modelStatus);
+        return !validated || failedWindowCount > 0 || unprocessedWindowCount > 0 || skippedWindowCount > 0
+            || chapterFailedCount > 0 || chapterPendingCount > 0;
+    }
+
     private static long elapsedMs(long started) {
         return Math.max(0, (System.nanoTime() - started) / 1_000_000L);
     }
@@ -241,7 +275,9 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         long tokenCount,
         long latencyMs,
         boolean modelUsed,
-        boolean degraded,
+        boolean refreshDegraded,
+        boolean sourceCollectionComplete,
+        boolean modelDegraded,
         boolean cacheHit,
         String modelStatus,
         int failedWindowCount,
@@ -262,7 +298,9 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         long elapsedMs,
         int calibrationRequestCount,
         int holdoutRequestCount,
-        int degradedCaseCount,
+        int sourceCoverageIncompleteCaseCount,
+        int refreshDegradedCaseCount,
+        int modelDegradedCaseCount,
         int failedOrPendingWindowCount,
         int rejectedModelOutputCount
     ) {

@@ -183,6 +183,7 @@ jobs:
           java-version: "17"
           cache: maven
       - name: 确认 GLM 与 DeepSeek 安全凭据均已配置
+        id: credentials
         shell: bash
         env:
           GLM_KEY: ${{ secrets.PROJECTFLOW_REAL_MODEL_API_KEY }}
@@ -211,14 +212,32 @@ jobs:
           PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING: "true"
           PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL: "true"
         run: |
-          mvn -B -Dtest=ProjectFlowRealProviderProbeIT test
-          mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name=glm-v380 test
-          mvn -B -Dtest=ProjectFlowRealModelEvalIT -Dprojectflow.eval.output-name=glm-v375 test
-          mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name=glm-understanding test
-          mvn -B -Dtest=ProjectHistoryV385RealOutputEvaluatorTest -Dprojectflow.eval.output-name=glm-v385 test
-          mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name=glm-v385-scenarios test
-          mvn -B -Dtest=GLMDogfoodRegressionTest -Dprojectflow.eval.output-name=glm-v385-scenarios test
+          failures=0
+          run_gate() {
+            label="$1"
+            shift
+            echo "::group::$label"
+            if "$@"; then
+              echo "$label: PASS"
+            else
+              echo "$label: FAIL"
+              failures=$((failures + 1))
+            fi
+            echo "::endgroup::"
+          }
+          run_gate provider-probe mvn -B -Dtest=ProjectFlowRealProviderProbeIT test
+          run_gate history-v380 mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name=glm-v380 test
+          run_gate understanding-v375 mvn -B -Dtest=ProjectFlowRealModelEvalIT -Dprojectflow.eval.output-name=glm-v375 test
+          run_gate understanding-e2e mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name=glm-understanding test
+          run_gate history-v385-qualification mvn -B -Dtest=ProjectHistoryV385RealOutputEvaluatorTest -Dprojectflow.eval.output-name=glm-v385 test
+          run_gate history-v385-scenarios mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name=glm-v385-scenarios test
+          run_gate history-v385-dogfood mvn -B -Dtest=GLMDogfoodRegressionTest -Dprojectflow.eval.output-name=glm-v385-scenarios test
+          if [ "$failures" -ne 0 ]; then
+            echo "GLM real gates failed: $failures"
+            exit 1
+          fi
       - name: 真实 DeepSeek Chat、Ground Truth 与项目历程验收
+        if: ${{ !cancelled() && steps.credentials.outcome == 'success' }}
         working-directory: backend
         env:
           PROJECTFLOW_RUN_REAL_MODEL: "true"
@@ -234,13 +253,30 @@ jobs:
           PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING: "true"
           PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL: "false"
         run: |
-          mvn -B -Dtest=ProjectFlowRealProviderProbeIT test
-          mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name=deepseek-v380 test
-          mvn -B -Dtest=ProjectFlowRealModelEvalIT -Dprojectflow.eval.output-name=deepseek-v375 test
-          mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name=deepseek-understanding test
-          mvn -B -Dtest=ProjectHistoryV385RealOutputEvaluatorTest -Dprojectflow.eval.output-name=deepseek-v385 test
-          mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name=deepseek-v385-scenarios test
-          mvn -B -Dtest=DeepSeekDogfoodRegressionTest -Dprojectflow.eval.output-name=deepseek-v385-scenarios test
+          failures=0
+          run_gate() {
+            label="$1"
+            shift
+            echo "::group::$label"
+            if "$@"; then
+              echo "$label: PASS"
+            else
+              echo "$label: FAIL"
+              failures=$((failures + 1))
+            fi
+            echo "::endgroup::"
+          }
+          run_gate provider-probe mvn -B -Dtest=ProjectFlowRealProviderProbeIT test
+          run_gate history-v380 mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name=deepseek-v380 test
+          run_gate understanding-v375 mvn -B -Dtest=ProjectFlowRealModelEvalIT -Dprojectflow.eval.output-name=deepseek-v375 test
+          run_gate understanding-e2e mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name=deepseek-understanding test
+          run_gate history-v385-qualification mvn -B -Dtest=ProjectHistoryV385RealOutputEvaluatorTest -Dprojectflow.eval.output-name=deepseek-v385 test
+          run_gate history-v385-scenarios mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name=deepseek-v385-scenarios test
+          run_gate history-v385-dogfood mvn -B -Dtest=DeepSeekDogfoodRegressionTest -Dprojectflow.eval.output-name=deepseek-v385-scenarios test
+          if [ "$failures" -ne 0 ]; then
+            echo "DeepSeek real gates failed: $failures"
+            exit 1
+          fi
       - name: 保存内部真实模型评测工件
         if: always()
         uses: actions/upload-artifact@v4
