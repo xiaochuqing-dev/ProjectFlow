@@ -266,6 +266,7 @@ public final class ProjectHistoryDtos {
 
     public record HistoryOverviewResponse(
         UUID projectId,
+        String presentationRevision,
         String status,
         String projectRevision,
         int sourceEventCount,
@@ -287,6 +288,7 @@ public final class ProjectHistoryDtos {
 
     public record HistoryChapterPageResponse(
         UUID projectId,
+        String presentationRevision,
         List<HistoryChapter> items,
         int page,
         int size,
@@ -297,6 +299,7 @@ public final class ProjectHistoryDtos {
 
     public record HistoryChapterDetailResponse(
         UUID projectId,
+        String presentationRevision,
         HistoryChapter chapter,
         List<ChangeStory> stories
     ) {
@@ -304,6 +307,7 @@ public final class ProjectHistoryDtos {
 
     public record HistoryStoryPageResponse(
         UUID projectId,
+        String presentationRevision,
         List<ChangeStory> items,
         int page,
         int size,
@@ -314,6 +318,7 @@ public final class ProjectHistoryDtos {
 
     public record HistoryStoryDetailResponse(
         UUID projectId,
+        String presentationRevision,
         ChangeStory story,
         List<HistoryEventResponse> events,
         List<EvolutionThread> threads
@@ -322,6 +327,7 @@ public final class ProjectHistoryDtos {
 
     public record EvolutionThreadPageResponse(
         UUID projectId,
+        String presentationRevision,
         List<EvolutionThread> items,
         int page,
         int size,
@@ -332,6 +338,7 @@ public final class ProjectHistoryDtos {
 
     public record EvolutionThreadDetailResponse(
         UUID projectId,
+        String presentationRevision,
         EvolutionThread thread,
         List<ChangeStory> stories
     ) {
@@ -351,6 +358,7 @@ public final class ProjectHistoryDtos {
         String scope,
         String category,
         String transition,
+        String userSummary,
         String safeSourceLabel,
         List<String> affectedPaths,
         List<String> subjectKeys,

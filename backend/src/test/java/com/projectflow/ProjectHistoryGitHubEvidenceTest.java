@@ -173,7 +173,6 @@ class ProjectHistoryGitHubEvidenceTest {
                 : "来源事件已按时间归纳，无法确认的原因继续保持未知。");
             item.put("reason", reasonEligible ? "旧客户端仍需要 CSV 兼容路径。" : "");
             item.put("reasonEvidenceRefs", reasonEligible ? List.of("github-pr:7") : List.of());
-            item.put("conflicts", List.of());
             item.put("unknowns", reasonEligible ? List.of() : List.of("原因未知"));
             storyOutput.add(item);
         }
@@ -183,7 +182,6 @@ class ProjectHistoryGitHubEvidenceTest {
             item.put("chapterId", chapter.path("chapterId").asText());
             item.put("title", "整理导出兼容变化并形成可读区间");
             item.put("summary", "该时间区间汇总导出兼容与协作声明，未把声明升级为实现事实。");
-            item.put("storyRefs", objectMapper.convertValue(chapter.path("storyRefs"), List.class));
             chapterOutput.add(item);
         }
         return objectMapper.writeValueAsString(Map.of("stories", storyOutput, "chapters", chapterOutput));

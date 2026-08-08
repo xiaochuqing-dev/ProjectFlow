@@ -90,13 +90,16 @@ public class ProjectHistoryController {
         @PathVariable UUID projectId,
         @RequestParam(required = false) String subject,
         @RequestParam(defaultValue = "false") boolean attentionOnly,
+        @RequestParam(defaultValue = "false") boolean includeHidden,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(historyService.stories(user.id(), projectId, subject, attentionOnly, from, to, page, size));
+        return ApiResponse.ok(historyService.stories(
+            user.id(), projectId, subject, attentionOnly, includeHidden, from, to, page, size
+        ));
     }
 
     @GetMapping("/stories/{storyId}")

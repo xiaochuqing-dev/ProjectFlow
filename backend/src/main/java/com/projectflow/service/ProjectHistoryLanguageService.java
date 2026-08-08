@@ -138,7 +138,12 @@ public final class ProjectHistoryLanguageService {
     }
 
     public String commitSummary(String label, Transition transition, List<String> paths) {
-        String object = readableObject(label, paths, List.of(label));
+        boolean genericLabel = supportingCommitLabel(label);
+        String object = readableObject(genericLabel ? "" : label, paths, List.of(label));
+        if (genericLabel && !containsHan(object)) {
+            boolean supportOnly = paths != null && !paths.isEmpty() && paths.stream().allMatch(this::supportPath);
+            object = supportOnly ? "验证与配套内容" : "相关功能";
+        }
         String action = switch (transition == null ? Transition.UNKNOWN_TRANSITION : transition) {
             case CREATED -> "建立";
             case MODIFIED -> "完善";
@@ -152,23 +157,23 @@ public final class ProjectHistoryLanguageService {
             case REAPPLIED -> "重新实现";
             default -> "记录";
         };
-        return action + object + "。";
+        return action + object + "，并保留原始提交信息供核对。";
     }
 
     public String chapterTitle(List<String> storyTitles, List<Transition> transitions, Instant from, Instant to) {
         List<String> focus = (storyTitles == null ? List.<String>of() : storyTitles).stream()
             .map(ProjectHistoryLanguageService::chapterFocus).filter(value -> !value.isBlank()).distinct().limit(2).toList();
-        if (focus.isEmpty()) return "整理项目材料并形成阶段结果";
+        if (focus.isEmpty()) return "项目材料形成当前阶段的可确认结果";
         String joined = String.join("与", focus);
         if (transitions != null && !transitions.isEmpty()
             && transitions.stream().allMatch(value -> value == Transition.CREATED)) {
-            return "形成" + joined + "等首批结果";
+            return "首次形成" + joined + "等可确认结果";
         }
         if (transitions != null && transitions.stream().anyMatch(value ->
             value == Transition.RESTORED || value == Transition.REAPPLIED)) {
-            return "恢复" + joined + "并继续整理相关内容";
+            return "恢复" + joined + "，相关结果重新可用";
         }
-        return "推进" + joined + "并形成阶段结果";
+        return joined + "在这一阶段继续完善";
     }
 
     public String chapterSummary(List<String> storyTitles, int primaryCount, int supportingCount) {
@@ -262,5 +267,10 @@ public final class ProjectHistoryLanguageService {
     private static boolean containsAny(String value, String... markers) {
         for (String marker : markers) if (value.contains(marker.toLowerCase(Locale.ROOT))) return true;
         return false;
+    }
+
+    private static boolean containsHan(String value) {
+        if (value == null) return false;
+        return value.codePoints().anyMatch(codePoint -> codePoint >= 0x3400 && codePoint <= 0x9FFF);
     }
 }

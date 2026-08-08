@@ -540,7 +540,7 @@ public class ProjectAgentHistoryService {
         StringBuilder text = new StringBuilder();
         text.append("项目历程（优先展示用户可读叙事；用户声明只覆盖展示，不改变事实）：\n");
         text.append("来源修订：").append(overview.projectRevision()).append("；展示修订：")
-            .append(String.valueOf(overview.diagnostics().getOrDefault("presentationRevision", ""))).append("\n");
+            .append(overview.presentationRevision()).append("\n");
         text.append("最早状态：").append(bounded(overview.overview().earliestConfirmedState(), 500)).append("\n");
         text.append("当前状态：").append(bounded(overview.overview().currentState(), 500)).append("\n");
         if (!chapters.isEmpty()) {

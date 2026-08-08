@@ -14,8 +14,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v4";
-    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v1";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v5";
+    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v2";
     static final int MAX_PROMPT_CHARS = 60_000;
     static final int MAX_CHAPTER_SYNTHESIS_PROMPT_CHARS = 48_000;
     static final int MAX_CHAPTER_STORY_SUMMARIES = 80;
@@ -28,22 +28,21 @@ public final class ProjectHistoryPromptBuilder {
     private static final String CHAPTERS_MARKER = "\nCHAPTERS_JSON=";
     private static final String CHAPTER_SYNTHESIS_MARKER = "\nCHAPTER_SYNTHESIS_JSON=";
     private static final String INSTRUCTIONS = """
-        你正在改写一个项目已经由工程层确定成员关系的项目历程。只能改进中文表达和展示角色，不能改变故事、篇章、时间、成员或 Evidence。
-        只返回输入中列出的 storyId 和 chapterId；每个 ID 必须且只能返回一次，storyRefs 必须原样覆盖其允许集合。
-        humanTitle 必须是“动作 + 对象 + 结果”，禁止只写“优化系统、改进功能、进行了重构、提升体验、修改相关文件”。
-        role、primaryStoryId 和 supportingChangeRefs 是候选展示关系，必须构成完整双向图。PRIMARY 的 primaryStoryId 必须为空；SUPPORTING 必须指向本输入中的一个 PRIMARY，且该 PRIMARY 的 supportingChangeRefs 必须反向包含它。
-        不得形成循环、孤立 Supporting、Supporting 指向 Supporting 或未知 ID。如果不确定是否需要改变角色，原样保留输入的三个关系字段。Supporting 只表示对主成果的支撑。
-        工程层已经固定 Before / Change / After 与 laterOutcome；不得返回或改写这些字段。Commit message 只是线索，不是无需验证的事实。
-        reason 只有在 reasonEvidenceRefs 非空且全部来自 reasonEligibleEvidenceRefs 时才可填写；否则 reason 必须为空并在 unknowns 写明原因未知。
-        禁止重要性、成熟度、里程碑、成功判断、下一步、计划或建议。禁止创造 ID、Evidence、文件、数字、原因或项目状态。
-        返回严格 JSON，不得增加字段：
-        {"stories":[{"storyId":"","humanTitle":"","oneSentenceSummary":"","role":"PRIMARY","primaryStoryId":"","supportingChangeRefs":[],"reason":"","reasonEvidenceRefs":[],"conflicts":[],"unknowns":[]}],
-         "chapters":[{"chapterId":"","title":"","summary":"","storyRefs":[]}]}
+        任务：把工程层已经组织好的项目历程改写成普通用户能看懂的中文。只改文字，不改事实或结构。
+        只返回输入中的 storyId 和 chapterId，每个 ID 必须且只能返回一次。
+        可改字段只有 Story 的 humanTitle、oneSentenceSummary、reason、reasonEvidenceRefs、unknowns，以及 Chapter 的 title、summary。
+        role、primaryStoryId、supportingChangeRefs、storyRefs、时间、Before / Change / After、laterOutcome、成员和 Evidence 都由工程层固定，禁止返回或改写。
+        humanTitle 要表达“做了什么 + 对象 + 形成的结果”。正例：补充项目使用说明，让读者知道如何开始。反例：整理 readme、优化系统、修改相关文件。
+        Commit message 只是线索。reason 仅在 reasonEvidenceRefs 非空且全部来自该 Story 的 reasonEligibleEvidenceRefs 时填写；否则 reason 留空，并在 unknowns 说明原因未知。
+        不得创造 ID、Evidence、文件、数字、原因或项目状态；不得写重要性、成熟度、里程碑、成功判断、下一步、计划或建议。非软件项目不要使用 Controller、Service、Capability 等软件术语。
+        只返回严格 JSON，不得增加字段：
+        {"stories":[{"storyId":"","humanTitle":"","oneSentenceSummary":"","reason":"","reasonEvidenceRefs":[],"unknowns":[]}],
+         "chapters":[{"chapterId":"","title":"","summary":""}]}
         """;
     private static final String CHAPTER_SYNTHESIS_INSTRUCTIONS = """
         你正在对一个成员关系已经由工程层固定的项目历程篇章做第二阶段归纳。输入只包含已经校验的 Story 展示摘要，不包含 Raw Event、Evidence、文件路径或提交原文。
         只能改进篇章的中文标题和摘要。chapterId 必须原样返回且只能返回一次；不得返回或修改 Story 成员、时间、边界、权威或任何其他字段。
-        标题必须表达这一阶段实际形成的主要结果；摘要必须区分 Primary 主要结果和 Supporting 支撑工作，不得把测试、配置或验证数量描述为用户成果。
+        标题必须让普通用户看懂这一阶段形成的主要结果；摘要必须区分 Primary 主要结果和 Supporting 支撑工作，不得把测试、配置或验证数量描述为用户成果。
         如果部分 Story 摘要因边界被省略，只能根据输入中的数量和代表摘要保守归纳，不得补造遗漏内容。
         禁止重要性、成熟度、里程碑、成功判断、下一步、计划或建议。禁止创造 ID、Evidence、文件、数字、原因或项目状态。
         只返回严格 JSON，不得增加字段：

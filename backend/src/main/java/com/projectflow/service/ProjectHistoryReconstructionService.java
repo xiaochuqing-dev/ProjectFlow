@@ -73,12 +73,6 @@ public class ProjectHistoryReconstructionService {
     private static final Set<String> WEAK_TEXT = Set.of(
         "优化了系统", "改进了功能", "进行了重构", "提升了体验", "修改了相关文件", "项目变化", "相关调整"
     );
-    private static final Set<String> MODEL_ROOT_FIELDS = Set.of("stories", "chapters");
-    private static final Set<String> MODEL_STORY_FIELDS = Set.of(
-        "storyId", "humanTitle", "oneSentenceSummary", "role", "primaryStoryId", "supportingChangeRefs",
-        "reason", "reasonEvidenceRefs", "conflicts", "unknowns"
-    );
-    private static final Set<String> MODEL_CHAPTER_FIELDS = Set.of("chapterId", "title", "summary", "storyRefs");
     private static final Set<String> MODEL_CHAPTER_SYNTHESIS_FIELDS = Set.of("chapterId", "title", "summary");
     private static final Set<Transition> STORY_BOUNDARIES = Set.of(
         Transition.REMOVED, Transition.RESTORED, Transition.REPLACED,
@@ -1904,42 +1898,22 @@ public class ProjectHistoryReconstructionService {
         if (root == null || !root.isObject()) {
             throw new HistoryValidationException(ValidationKind.CONTRACT, "History model output is not an object");
         }
-        requireAllowedFields(root, MODEL_ROOT_FIELDS, "History model root contains unsupported fields");
+        requireAllowedFields(root, ProjectHistoryModelOutputContract.ROOT_FIELDS,
+            "History model root contains unsupported fields");
         Map<String, ChangeStory> stories = new LinkedHashMap<>();
         base.stories().forEach(story -> stories.put(story.id(), story));
         Set<String> seenStories = new LinkedHashSet<>();
         JsonNode storyNodes = root.path("stories");
         if (!storyNodes.isArray()) throw new HistoryValidationException(ValidationKind.CONTRACT, "History model stories are missing");
         for (JsonNode node : storyNodes) {
-            requireAllowedFields(node, MODEL_STORY_FIELDS, "History model story contains forbidden fields");
+            requireAllowedFields(node, ProjectHistoryModelOutputContract.STORY_FIELDS,
+                "History model story contains forbidden fields");
             String id = text(node, "storyId");
             ChangeStory original = stories.get(id);
             if (original == null || !eligibleStoryIds.contains(id)) {
                 throw new HistoryValidationException(ValidationKind.CROSS_PROJECT_REFERENCE, "Unknown story ID");
             }
             if (!seenStories.add(id)) throw new HistoryValidationException(ValidationKind.CONTRACT, "Duplicate story ID");
-            String role = text(node, "role").toUpperCase(Locale.ROOT);
-            if (role.isBlank()) role = original.role();
-            if (!Set.of("PRIMARY", "SUPPORTING").contains(role)) {
-                throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, "History model returned an invalid presentation role");
-            }
-            String primaryStoryId = node.has("primaryStoryId")
-                ? modelStoryId(node, "primaryStoryId", true)
-                : original.primaryStoryId();
-            List<String> supportingChangeRefs = node.has("supportingChangeRefs")
-                ? modelStoryIds(node, "supportingChangeRefs", 40)
-                : original.supportingChangeRefs();
-            if (!primaryStoryId.equals(original.primaryStoryId()) && !primaryStoryId.isBlank()
-                && !eligibleStoryIds.contains(primaryStoryId)) {
-                throw new HistoryValidationException(ValidationKind.CROSS_PROJECT_REFERENCE,
-                    "History model changed a role relation to an ineligible story");
-            }
-            Set<String> newSupportingRefs = new LinkedHashSet<>(supportingChangeRefs);
-            newSupportingRefs.removeAll(original.supportingChangeRefs());
-            if (!eligibleStoryIds.containsAll(newSupportingRefs)) {
-                throw new HistoryValidationException(ValidationKind.CROSS_PROJECT_REFERENCE,
-                    "History model changed role relations to ineligible stories");
-            }
             String title = modelText(node, "humanTitle", 240);
             String summary = modelText(node, "oneSentenceSummary", 1_000);
             if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
@@ -1953,10 +1927,6 @@ public class ProjectHistoryReconstructionService {
             if (!reason.isBlank() && reasonEvidence.isEmpty()) {
                 throw new HistoryValidationException(ValidationKind.INVALID_EVIDENCE, "History reason has no Evidence");
             }
-            List<String> conflicts = stringList(node.path("conflicts"), 20);
-            if (!original.conflicts().containsAll(conflicts)) {
-                throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, "History model invented a conflict");
-            }
             List<String> unknowns = stringList(node.path("unknowns"), 20);
             if (reason.isBlank() && unknowns.stream().noneMatch(value -> value.contains("未知") || value.toUpperCase(Locale.ROOT).contains("UNKNOWN"))) {
                 unknowns = append(unknowns, "未发现可验证的变更原因；原因保持 UNKNOWN。 ", 20);
@@ -1966,12 +1936,6 @@ public class ProjectHistoryReconstructionService {
                 title, summary, original.beforeState(), original.change(), original.afterState(), reason, reasonEvidence,
                 original.conflicts(), merge(original.unknowns(), unknowns, 20)
             ));
-            ChangeStory enhanced = stories.get(id);
-            stories.put(id, withPresentation(enhanced, enhanced.humanTitle(), enhanced.oneSentenceSummary(),
-                enhanced.beforeState(), enhanced.change(), enhanced.afterState(), role, primaryStoryId,
-                supportingChangeRefs, enhanced.presentationAuthority(), enhanced.presentationRevision(),
-                enhanced.userCorrectionRefs(), enhanced.hiddenByDefault(), enhanced.pinned(), enhanced.mergedIntoStoryId(),
-                enhanced.displayStatus(), enhanced.correctionConflicts()));
         }
         if (!seenStories.equals(eligibleStoryIds)) {
             throw new HistoryValidationException(ValidationKind.CONTRACT, "History model omitted stories");
@@ -1984,17 +1948,14 @@ public class ProjectHistoryReconstructionService {
         JsonNode chapterNodes = root.path("chapters");
         if (!chapterNodes.isArray()) throw new HistoryValidationException(ValidationKind.CONTRACT, "History model chapters are missing");
         for (JsonNode node : chapterNodes) {
-            requireAllowedFields(node, MODEL_CHAPTER_FIELDS, "History model chapter contains forbidden fields");
+            requireAllowedFields(node, ProjectHistoryModelOutputContract.CHAPTER_FIELDS,
+                "History model chapter contains forbidden fields");
             String id = text(node, "chapterId");
             HistoryChapter original = chapters.get(id);
             if (original == null || !eligibleChapterIds.contains(id)) {
                 throw new HistoryValidationException(ValidationKind.CROSS_PROJECT_REFERENCE, "Unknown chapter ID");
             }
             if (!seenChapters.add(id)) throw new HistoryValidationException(ValidationKind.CONTRACT, "Duplicate chapter ID");
-            List<String> refs = stringList(node.path("storyRefs"), 100);
-            if (!new LinkedHashSet<>(refs).equals(new LinkedHashSet<>(original.storyRefs()))) {
-                throw new HistoryValidationException(ValidationKind.CROSS_PROJECT_REFERENCE, "History model changed chapter membership");
-            }
             String title = modelText(node, "title", 240);
             String summary = modelText(node, "summary", 1_500);
             if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
@@ -2570,41 +2531,6 @@ public class ProjectHistoryReconstructionService {
 
     private static String text(JsonNode node, String field) {
         return node.path(field).isTextual() ? node.path(field).asText().trim() : "";
-    }
-
-    private static String modelStoryId(JsonNode node, String field, boolean allowBlank) {
-        JsonNode value = node.get(field);
-        if (value == null || !value.isTextual()) {
-            throw new HistoryValidationException(ValidationKind.CONTRACT,
-                "History model role relation is not textual: " + field);
-        }
-        String id = value.asText().trim();
-        if ((!allowBlank && id.isBlank()) || id.length() > 240) {
-            throw new HistoryValidationException(ValidationKind.CONTRACT,
-                "History model role relation is invalid: " + field);
-        }
-        return id;
-    }
-
-    private static List<String> modelStoryIds(JsonNode node, String field, int limit) {
-        JsonNode values = node.get(field);
-        if (values == null || !values.isArray() || values.size() > limit) {
-            throw new HistoryValidationException(ValidationKind.CONTRACT,
-                "History model role relation list is invalid: " + field);
-        }
-        LinkedHashSet<String> result = new LinkedHashSet<>();
-        for (JsonNode value : values) {
-            if (!value.isTextual()) {
-                throw new HistoryValidationException(ValidationKind.CONTRACT,
-                    "History model role relation contains a non-text ID: " + field);
-            }
-            String id = value.asText().trim();
-            if (id.isBlank() || id.length() > 240 || !result.add(id)) {
-                throw new HistoryValidationException(ValidationKind.CONTRACT,
-                    "History model role relation contains an invalid ID: " + field);
-            }
-        }
-        return List.copyOf(result);
     }
 
     private void validateRoleGraph(Collection<ChangeStory> values) {

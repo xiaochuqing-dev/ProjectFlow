@@ -142,12 +142,13 @@ TOOLS = [
     ),
     _tool(
         "list_project_change_stories",
-        "List paged evidence-bound change stories with before, change, after, later outcome, conflicts, unknowns, authority, and raw-event references. Supports subject, time, and attention filters.",
+        "List paged evidence-bound change stories with before, change, after, later outcome, conflicts, unknowns, authority, and raw-event references. Hidden presentation items remain omitted unless includeHidden is explicitly true.",
         _schema(
             {
                 "projectId": PROJECT_ID,
                 "subject": {"type": "string", "maxLength": 200},
                 "attentionOnly": {"type": "boolean", "default": False},
+                "includeHidden": {"type": "boolean", "default": False},
                 "from": TIME,
                 "until": TIME,
                 "page": PAGE,
@@ -431,6 +432,7 @@ def call_tool(client: ProjectFlowClient, name: str, arguments: dict[str, Any]) -
         return client.get(base + "/history/stories", {
             "subject": _argument(arguments, "subject"),
             "attentionOnly": str(bool(_argument(arguments, "attentionOnly", False))).lower(),
+            "includeHidden": str(bool(_argument(arguments, "includeHidden", False))).lower(),
             "from": _argument(arguments, "from"), "to": _argument(arguments, "until"),
             "page": _argument(arguments, "page", 0), "size": _argument(arguments, "size", 10),
         })

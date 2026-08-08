@@ -30,8 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
 import com.projectflow.entity.EvidenceConfidence;
@@ -731,8 +729,8 @@ class ProjectHistoryReconstructionTest {
         provider(userId);
 
         when(modelGateway.callStructured(any(), any(), any())).thenReturn(modelResponse("""
-            {"stories":[{"storyId":"%s","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","reason":"因为另一个项目要求复用","reasonEvidenceRefs":["fact:%s"],"conflicts":[],"unknowns":[]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。","storyRefs":%s}]}
-            """.formatted(story.id(), UUID.randomUUID(), chapter.id(), json(chapter.storyRefs()))));
+            {"stories":[{"storyId":"%s","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","reason":"因为另一个项目要求复用","reasonEvidenceRefs":["fact:%s"],"unknowns":[]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。"}]}
+            """.formatted(story.id(), UUID.randomUUID(), chapter.id())));
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
         var invalidEvidence = readService.overview(userId, project.getId()).diagnostics();
         assertThat(invalidEvidence.get("invalidEvidenceRefCount")).isEqualTo(0);
@@ -740,7 +738,7 @@ class ProjectHistoryReconstructionTest {
         assertThat(readService.stories(userId, project.getId(), null, false, null, null, 0, 20).items().get(0).reason()).isBlank();
 
         when(modelGateway.callStructured(any(), any(), any())).thenReturn(modelResponse("""
-            {"stories":[{"storyId":"story-from-another-project","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","reason":"","reasonEvidenceRefs":[],"conflicts":[],"unknowns":["原因未知"]}],"chapters":[]}
+            {"stories":[{"storyId":"story-from-another-project","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","reason":"","reasonEvidenceRefs":[],"unknowns":["原因未知"]}],"chapters":[]}
             """));
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
         var crossProject = readService.overview(userId, project.getId()).diagnostics();
@@ -748,8 +746,8 @@ class ProjectHistoryReconstructionTest {
         assertThat(crossProject.get("modelRejectedCrossProjectRefCount")).isEqualTo(1);
 
         when(modelGateway.callStructured(any(), any(), any())).thenReturn(modelResponse("""
-            {"stories":[{"storyId":"%s","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","reason":"","reasonEvidenceRefs":[],"conflicts":["模型编造的来源冲突"],"unknowns":["原因未知"]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。","storyRefs":%s}]}
-            """.formatted(story.id(), chapter.id(), json(chapter.storyRefs()))));
+            {"stories":[{"storyId":"%s","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","reason":"","reasonEvidenceRefs":[],"conflicts":["模型编造的来源冲突"],"unknowns":["原因未知"]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。"}]}
+            """.formatted(story.id(), chapter.id())));
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
         var unsupported = readService.overview(userId, project.getId()).diagnostics();
         assertThat(unsupported.get("unsupportedStrongFactCount")).isEqualTo(0);
@@ -757,22 +755,22 @@ class ProjectHistoryReconstructionTest {
         assertThat(readService.stories(userId, project.getId(), null, false, null, null, 0, 20).items().get(0).conflicts()).isEmpty();
 
         when(modelGateway.callStructured(any(), any(), any())).thenReturn(modelResponse("""
-            {"stories":[{"storyId":"%s","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","beforeState":"模型试图改写工程状态","reason":"","reasonEvidenceRefs":[],"conflicts":[],"unknowns":["原因未知"]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。","storyRefs":%s}]}
-            """.formatted(story.id(), chapter.id(), json(chapter.storyRefs()))));
+            {"stories":[{"storyId":"%s","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","beforeState":"模型试图改写工程状态","reason":"","reasonEvidenceRefs":[],"unknowns":["原因未知"]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。"}]}
+            """.formatted(story.id(), chapter.id())));
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
         assertThat(readService.overview(userId, project.getId()).diagnostics().get("modelRejectedUnsupportedClaimCount"))
             .isEqualTo(1);
 
         when(modelGateway.callStructured(any(), any(), any())).thenReturn(modelResponse("""
-            {"stories":[{"storyId":"%s","humanTitle":"完成关键里程碑并成功交付项目","oneSentenceSummary":"项目已成功完成并达到成熟度要求。","reason":"","reasonEvidenceRefs":[],"conflicts":[],"unknowns":["原因未知"]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。","storyRefs":%s}]}
-            """.formatted(story.id(), chapter.id(), json(chapter.storyRefs()))));
+            {"stories":[{"storyId":"%s","humanTitle":"完成关键里程碑并成功交付项目","oneSentenceSummary":"项目已成功完成并达到成熟度要求。","reason":"","reasonEvidenceRefs":[],"unknowns":["原因未知"]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。"}]}
+            """.formatted(story.id(), chapter.id())));
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
         assertThat(readService.overview(userId, project.getId()).diagnostics().get("modelRejectedUnsupportedClaimCount"))
             .isEqualTo(1);
 
         when(modelGateway.callStructured(any(), any(), any())).thenReturn(modelResponse("""
-            {"stories":[{"storyId":"%s","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","reason":"","reasonEvidenceRefs":[],"conflicts":[],"unknowns":[]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。","storyRefs":%s}]}
-            """.formatted(story.id(), chapter.id(), json(chapter.storyRefs()))));
+            {"stories":[{"storyId":"%s","humanTitle":"新增认证入口并形成可用结果","oneSentenceSummary":"认证入口已经形成。","reason":"","reasonEvidenceRefs":[],"unknowns":[]}],"chapters":[{"chapterId":"%s","title":"认证入口变化区间","summary":"这一时间区间记录了认证入口的形成。"}]}
+            """.formatted(story.id(), chapter.id())));
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
         var normalizedUnknown = readService.stories(
             userId, project.getId(), null, false, null, null, 0, 20
@@ -782,7 +780,7 @@ class ProjectHistoryReconstructionTest {
     }
 
     @Test
-    void appliesOnlyCompleteProjectBoundPrimarySupportingRoleGraphs() throws Exception {
+    void modelCannotRewriteEngineeringOwnedPrimarySupportingRoleGraph() throws Exception {
         UUID userId = UUID.randomUUID();
         Path repository = temporaryRoot.resolve("model-role-graph");
         Files.createDirectories(repository.resolve("product"));
@@ -798,39 +796,28 @@ class ProjectHistoryReconstructionTest {
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         var deterministic = readService.stories(userId, project.getId(), null, false, null, null, 0, 100).items();
         assertThat(deterministic.stream().filter(item -> item.primary()).toList()).hasSizeGreaterThanOrEqualTo(2);
-        String supportId = deterministic.stream().filter(item -> item.primary()).findFirst().orElseThrow().id();
-        String primaryId = deterministic.stream().filter(item -> item.primary())
-            .filter(item -> !item.id().equals(supportId)).findFirst().orElseThrow().id();
-
-        provider(userId);
-        AtomicReference<String> scenario = new AtomicReference<>("ORPHAN");
-        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> modelResponse(
-            historyRoleGraphResponse(invocation.getArgument(1, String.class), scenario.get(), supportId, primaryId)
+        Map<String, String> deterministicRoles = deterministic.stream().collect(java.util.stream.Collectors.toMap(
+            com.projectflow.dto.ProjectHistoryDtos.ChangeStory::id,
+            com.projectflow.dto.ProjectHistoryDtos.ChangeStory::role
         ));
 
-        for (String invalid : List.of("ORPHAN", "INVERSE_MISMATCH", "SUPPORTING_TARGET", "CYCLE", "CROSS_PROJECT")) {
-            scenario.set(invalid);
-            reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
-            Map<String, com.projectflow.dto.ProjectHistoryDtos.ChangeStory> afterInvalid = readService.stories(
-                userId, project.getId(), null, false, null, null, 0, 100
-            ).items().stream().collect(java.util.stream.Collectors.toMap(
-                com.projectflow.dto.ProjectHistoryDtos.ChangeStory::id, item -> item
-            ));
-            assertThat(afterInvalid.get(supportId).role()).as(invalid).isEqualTo("PRIMARY");
-            assertThat(afterInvalid.get(primaryId).role()).as(invalid).isEqualTo("PRIMARY");
-        }
-
-        scenario.set("LEGAL");
+        provider(userId);
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode valid = mapper.readTree(historyModelResponse(invocation.getArgument(1, String.class)));
+            ((com.fasterxml.jackson.databind.node.ObjectNode) valid.path("stories").get(0))
+                .put("role", "SUPPORTING");
+            return modelResponse(mapper.writeValueAsString(valid));
+        });
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
-        Map<String, com.projectflow.dto.ProjectHistoryDtos.ChangeStory> corrected = readService.stories(
+        Map<String, com.projectflow.dto.ProjectHistoryDtos.ChangeStory> afterAttempt = readService.stories(
             userId, project.getId(), null, false, null, null, 0, 100
         ).items().stream().collect(java.util.stream.Collectors.toMap(
             com.projectflow.dto.ProjectHistoryDtos.ChangeStory::id, item -> item
         ));
-        assertThat(corrected.get(supportId).role()).isEqualTo("SUPPORTING");
-        assertThat(corrected.get(supportId).primaryStoryId()).isEqualTo(primaryId);
-        assertThat(corrected.get(primaryId).role()).isEqualTo("PRIMARY");
-        assertThat(corrected.get(primaryId).supportingChangeRefs()).containsExactly(supportId);
+        deterministicRoles.forEach((id, role) -> assertThat(afterAttempt.get(id).role()).isEqualTo(role));
+        assertThat(readService.overview(userId, project.getId()).diagnostics().get("modelRejectedUnsupportedClaimCount"))
+            .isEqualTo(1);
     }
 
     @Test
@@ -1157,16 +1144,22 @@ class ProjectHistoryReconstructionTest {
         assertThatThrownBy(() -> reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false))
             .isInstanceOf(CancellationException.class);
         assertThat(calls.get()).isEqualTo(2);
-        assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
+        var initialCheckpoints = checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId());
+        assertThat(initialCheckpoints)
             .extracting(value -> value.getStatus())
-            .containsExactly("SUCCEEDED", "CANCELLED");
+            .containsExactlyInAnyOrder("SUCCEEDED", "CANCELLED");
+        UUID succeededCheckpointId = initialCheckpoints.stream()
+            .filter(value -> "SUCCEEDED".equals(value.getStatus()))
+            .findFirst().orElseThrow().getId();
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
 
         assertThat(calls.get()).isEqualTo(4);
-        assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
+        var retriedCheckpoints = checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId());
+        assertThat(retriedCheckpoints)
             .extracting(value -> value.getStatus())
             .containsOnly("SUCCEEDED");
+        assertThat(retriedCheckpoints).anySatisfy(value -> assertThat(value.getId()).isEqualTo(succeededCheckpointId));
         assertThat(readService.overview(userId, project.getId()).diagnostics())
             .containsEntry("succeededWindowCount", 3)
             .containsEntry("failedWindowCount", 0)
@@ -1397,10 +1390,6 @@ class ProjectHistoryReconstructionTest {
         return new ModelGatewayService.StructuredModelResponse(content, outputAdapter.parse(content));
     }
 
-    private String json(Object value) throws Exception {
-        return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(value);
-    }
-
     private String historyModelResponse(String prompt) throws Exception {
         String storiesMarker = "\nSTORIES_JSON=";
         String chaptersMarker = "\nCHAPTERS_JSON=";
@@ -1420,7 +1409,6 @@ class ProjectHistoryReconstructionTest {
             item.put("oneSentenceSummary", "围绕“" + subject + "”的来源事件已按时间归纳为可追溯变化。");
             item.put("reason", "");
             item.put("reasonEvidenceRefs", List.of());
-            item.put("conflicts", List.of());
             item.put("unknowns", List.of("原因未知"));
             storyOutput.add(item);
         }
@@ -1430,7 +1418,6 @@ class ProjectHistoryReconstructionTest {
             item.put("chapterId", chapter.path("chapterId").asText());
             item.put("title", "整理项目变化并形成可读时间区间");
             item.put("summary", "这一时间区间按真实发生顺序汇总有证据支持的变化故事。");
-            item.put("storyRefs", mapper.convertValue(chapter.path("storyRefs"), List.class));
             chapterOutput.add(item);
         }
         return mapper.writeValueAsString(Map.of("stories", storyOutput, "chapters", chapterOutput));
@@ -1447,65 +1434,6 @@ class ProjectHistoryReconstructionTest {
             "title", "归纳跨窗口阶段并形成主要结果",
             "summary", "这一阶段按已校验的故事摘要归纳主要结果，并将支撑工作保留在详情中。"
         ))));
-    }
-
-    private String historyRoleGraphResponse(String prompt, String scenario, String supportId, String primaryId) throws Exception {
-        ObjectNode root = (ObjectNode) objectMapper.readTree(historyModelResponse(prompt));
-        ArrayNode stories = (ArrayNode) root.path("stories");
-        ObjectNode support = null;
-        ObjectNode primary = null;
-        for (JsonNode item : stories) {
-            if (supportId.equals(item.path("storyId").asText())) support = (ObjectNode) item;
-            if (primaryId.equals(item.path("storyId").asText())) primary = (ObjectNode) item;
-        }
-        if (support == null || primary == null) throw new AssertionError("role graph stories were not packed together");
-
-        switch (scenario) {
-            case "ORPHAN" -> {
-                support.put("role", "SUPPORTING");
-                support.put("primaryStoryId", "");
-                support.putArray("supportingChangeRefs");
-            }
-            case "INVERSE_MISMATCH" -> {
-                support.put("role", "SUPPORTING");
-                support.put("primaryStoryId", primaryId);
-                support.putArray("supportingChangeRefs");
-                primary.put("role", "PRIMARY");
-                primary.put("primaryStoryId", "");
-                primary.putArray("supportingChangeRefs");
-            }
-            case "SUPPORTING_TARGET" -> {
-                support.put("role", "SUPPORTING");
-                support.put("primaryStoryId", primaryId);
-                support.putArray("supportingChangeRefs");
-                primary.put("role", "SUPPORTING");
-                primary.put("primaryStoryId", "");
-                primary.putArray("supportingChangeRefs").add(supportId);
-            }
-            case "CYCLE" -> {
-                support.put("role", "PRIMARY");
-                support.put("primaryStoryId", "");
-                support.putArray("supportingChangeRefs").add(primaryId);
-                primary.put("role", "PRIMARY");
-                primary.put("primaryStoryId", "");
-                primary.putArray("supportingChangeRefs").add(supportId);
-            }
-            case "CROSS_PROJECT" -> {
-                support.put("role", "SUPPORTING");
-                support.put("primaryStoryId", "story-from-another-project");
-                support.putArray("supportingChangeRefs");
-            }
-            case "LEGAL" -> {
-                support.put("role", "SUPPORTING");
-                support.put("primaryStoryId", primaryId);
-                support.putArray("supportingChangeRefs");
-                primary.put("role", "PRIMARY");
-                primary.put("primaryStoryId", "");
-                primary.putArray("supportingChangeRefs").add(supportId);
-            }
-            default -> throw new IllegalArgumentException("unknown scenario: " + scenario);
-        }
-        return objectMapper.writeValueAsString(root);
     }
 
     private void fastImport(Path root, int commits) throws Exception {

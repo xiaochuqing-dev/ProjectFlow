@@ -63,9 +63,13 @@ export default function ProjectHistoryPreviewPage() {
       getProjectHistoryCorrections(token, params.projectId),
     ]).then(([nextProject, nextHistory, corrections]) => {
       if (!active) return;
+      const historyRevision = loadedPresentationRevision(nextHistory);
+      if (historyRevision && corrections.presentationRevision && historyRevision !== corrections.presentationRevision) {
+        throw new Error("项目历程展示在读取期间发生变化，请重新加载后再操作。");
+      }
       setProject(nextProject);
       setHistory(nextHistory);
-      setPresentationRevision(corrections.presentationRevision || "");
+      setPresentationRevision(historyRevision || corrections.presentationRevision || "");
     }).catch((exception) => {
       if (!active) return;
       setError(exception instanceof Error ? exception.message : "项目历程加载失败");
@@ -106,8 +110,12 @@ export default function ProjectHistoryPreviewPage() {
               const token = readSession().accessToken;
               const next = await loadHistory(token, params.projectId, entityType, entityId);
               const corrections = await getProjectHistoryCorrections(token, params.projectId);
+              const historyRevision = loadedPresentationRevision(next);
+              if (historyRevision && corrections.presentationRevision && historyRevision !== corrections.presentationRevision) {
+                throw new Error("项目历程展示在读取期间发生变化，请重新加载后再操作。");
+              }
               setHistory(next);
-              setPresentationRevision(corrections.presentationRevision || "");
+              setPresentationRevision(historyRevision || corrections.presentationRevision || "");
             }}
           />
         ) : null}
@@ -128,6 +136,10 @@ async function loadHistory(
   if (type === "chapter") return { type, value: await getProjectHistoryChapter(token, projectId, entityId) };
   if (type === "story") return { type, value: await getProjectHistoryStory(token, projectId, entityId) };
   return { type, value: await getProjectHistoryThread(token, projectId, entityId) };
+}
+
+function loadedPresentationRevision(history: LoadedHistory): string {
+  return history.value.presentationRevision || "";
 }
 
 function OverviewView({ projectId, value }: { projectId: string; value: ProjectHistoryOverview }) {
@@ -349,7 +361,7 @@ function HistoryEventCard({ projectId, event }: { projectId: string; event: Proj
   return (
     <article className="rounded-field border border-line bg-surfaceAlt p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-medium">{event.safeSourceLabel}</h3>
+        <h3 className="font-medium">{event.userSummary || event.safeSourceLabel}</h3>
         <span className="text-xs text-muted">{projectHistoryTransitionLabel(event.transition)} · {projectHistorySourceTypeLabel(event.sourceType)}</span>
       </div>
       <p className="mt-2 text-xs text-muted">{formatMoment(event.occurredAt)} · {event.evidenceRefs.length} 条 Evidence · {projectHistoryRewriteStateLabel(event.rewriteState)}</p>
@@ -361,6 +373,10 @@ function HistoryEventCard({ projectId, event }: { projectId: string; event: Proj
           </ul>
         </div>
       ) : null}
+      <details className="mt-3 text-xs text-muted">
+        <summary className="cursor-pointer font-medium text-body">查看原始提交与工程信息</summary>
+        <p className="mt-2 break-words">原始提交信息：{event.safeSourceLabel}</p>
+      </details>
       <div className="mt-3 flex flex-wrap gap-2">
         <button type="button" className="inline-flex items-center gap-2 rounded-field border border-line bg-white px-3 py-2 text-xs text-body disabled:opacity-50" disabled={loading} onClick={loadEvidence}>
           <FileSearch aria-hidden="true" size={15} />{loading ? "正在读取" : evidence ? "Evidence 已展开" : "查看 Evidence 详情"}

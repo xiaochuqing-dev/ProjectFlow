@@ -3097,6 +3097,7 @@ export type ProjectHistoryEvent = {
   sourceType: string;
   category: string;
   transition: string;
+  userSummary: string;
   safeSourceLabel: string;
   affectedPaths: string[];
   evidenceRefs: string[];
@@ -3126,6 +3127,7 @@ export type ProjectHistoryEvidence = {
 
 export type ProjectHistoryOverview = {
   projectId: string;
+  presentationRevision: string;
   status: string;
   sourceEventCount: number;
   earliestEventAt: string | null;
@@ -3199,12 +3201,14 @@ export type ProjectHistoryCorrectionList = {
 
 export type ProjectHistoryChapterDetail = {
   projectId: string;
+  presentationRevision: string;
   chapter: ProjectHistoryChapter;
   stories: ProjectHistoryStory[];
 };
 
 export type ProjectHistoryStoryDetail = {
   projectId: string;
+  presentationRevision: string;
   story: ProjectHistoryStory;
   events: ProjectHistoryEvent[];
   threads: ProjectHistoryThread[];
@@ -3212,6 +3216,7 @@ export type ProjectHistoryStoryDetail = {
 
 export type ProjectHistoryThreadDetail = {
   projectId: string;
+  presentationRevision: string;
   thread: ProjectHistoryThread;
   stories: ProjectHistoryStory[];
 };

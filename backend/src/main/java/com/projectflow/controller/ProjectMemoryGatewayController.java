@@ -204,16 +204,19 @@ public class ProjectMemoryGatewayController {
         @PathVariable UUID projectId,
         @RequestParam(required = false) String subject,
         @RequestParam(defaultValue = "false") boolean attentionOnly,
+        @RequestParam(defaultValue = "false") boolean includeHidden,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
         AuthUser user = authService.currentUser(authorization);
-        String filters = "from=" + from + ",to=" + to + ",attention=" + attentionOnly
+        String filters = "from=" + from + ",to=" + to + ",attention=" + attentionOnly + ",hidden=" + includeHidden
             + ",page=" + page + ",size=" + size;
         return read(user, projectId, "list_project_change_stories", caller, subject, "PROJECT_HISTORY_STORY", filters,
-            ignored -> gateway.historyStories(user.id(), projectId, subject, attentionOnly, from, to, page, size),
+            ignored -> gateway.historyStories(
+                user.id(), projectId, subject, attentionOnly, includeHidden, from, to, page, size
+            ),
             result -> result.items().size());
     }
 

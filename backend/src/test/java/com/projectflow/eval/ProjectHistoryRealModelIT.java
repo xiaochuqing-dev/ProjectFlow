@@ -24,14 +24,9 @@ import com.projectflow.service.ModelGatewayService;
 import com.projectflow.service.ModelOutputAdapter;
 import com.projectflow.service.ModelTaskType;
 import com.projectflow.service.ProjectHistoryPromptBuilder;
+import com.projectflow.service.ProjectHistoryModelOutputContract;
 
 class ProjectHistoryRealModelIT {
-    private static final Set<String> ROOT_FIELDS = Set.of("stories", "chapters");
-    private static final Set<String> STORY_FIELDS = Set.of(
-        "storyId", "humanTitle", "oneSentenceSummary", "role", "primaryStoryId", "supportingChangeRefs",
-        "reason", "reasonEvidenceRefs", "conflicts", "unknowns"
-    );
-    private static final Set<String> CHAPTER_FIELDS = Set.of("chapterId", "title", "summary", "storyRefs");
     private static final List<String> WEAK_OR_PROHIBITED = List.of(
         "优化了系统", "改进了功能", "进行了重构", "提升了体验", "修改了相关文件",
         "成熟度", "关键里程碑", "项目成功", "成功完成", "下一步", "路线图", "未来计划"
@@ -69,8 +64,6 @@ class ProjectHistoryRealModelIT {
         assertThat(qualification.duplicateEntityCount()).isZero();
         assertThat(qualification.crossProjectReferenceCount()).isZero();
         assertThat(qualification.invalidEvidenceRefCount()).isZero();
-        assertThat(qualification.chapterMembershipMismatchCount()).isZero();
-        assertThat(qualification.invalidRoleGraphCount()).isZero();
         assertThat(qualification.reasonWithoutEvidenceCount()).isZero();
         assertThat(qualification.missingReasonUnknownCount()).isZero();
         assertThat(qualification.emptyReadableSummaryCount()).isZero();
@@ -128,18 +121,14 @@ class ProjectHistoryRealModelIT {
         ProjectHistoryPromptBuilder.PromptInput input,
         ProjectHistoryPromptBuilder.PromptBuildResult prompt
     ) {
-        int rootSchemaViolations = root != null && root.isObject() && fields(root).equals(ROOT_FIELDS) ? 0 : 1;
+        int rootSchemaViolations = root != null && root.isObject()
+            && fields(root).equals(ProjectHistoryModelOutputContract.ROOT_FIELDS) ? 0 : 1;
         Map<String, Set<String>> eligibleEvidence = new LinkedHashMap<>();
         input.stories().forEach(story -> eligibleEvidence.put(story.storyId(), Set.copyOf(story.reasonEligibleEvidenceRefs())));
-        Map<String, List<String>> expectedChapterStories = new LinkedHashMap<>();
-        input.chapters().forEach(chapter -> expectedChapterStories.put(chapter.chapterId(), chapter.storyRefs()));
-
         List<String> returnedStoryIds = new ArrayList<>();
         List<String> returnedChapterIds = new ArrayList<>();
-        Map<String, RoleCandidate> returnedRoles = new LinkedHashMap<>();
         int entitySchemaViolations = 0;
         int invalidEvidenceRefs = 0;
-        int chapterMembershipMismatches = 0;
         int reasonWithoutEvidence = 0;
         int missingReasonUnknown = 0;
         int emptyReadableSummaries = 0;
@@ -150,13 +139,11 @@ class ProjectHistoryRealModelIT {
             rootSchemaViolations++;
         } else {
             for (JsonNode story : stories) {
-                if (!story.isObject() || !fields(story).equals(STORY_FIELDS)) entitySchemaViolations++;
+                if (!story.isObject() || !fields(story).equals(ProjectHistoryModelOutputContract.STORY_FIELDS)) {
+                    entitySchemaViolations++;
+                }
                 String storyId = text(story, "storyId");
                 returnedStoryIds.add(storyId);
-                returnedRoles.put(storyId, new RoleCandidate(
-                    text(story, "role"), text(story, "primaryStoryId"),
-                    strings(story.path("supportingChangeRefs"))
-                ));
                 Set<String> eligible = eligibleEvidence.getOrDefault(storyId, Set.of());
                 List<String> refs = strings(story.path("reasonEvidenceRefs"));
                 invalidEvidenceRefs += refs.stream().filter(ref -> !eligible.contains(ref)).count();
@@ -179,12 +166,11 @@ class ProjectHistoryRealModelIT {
             rootSchemaViolations++;
         } else {
             for (JsonNode chapter : chapters) {
-                if (!chapter.isObject() || !fields(chapter).equals(CHAPTER_FIELDS)) entitySchemaViolations++;
+                if (!chapter.isObject() || !fields(chapter).equals(ProjectHistoryModelOutputContract.CHAPTER_FIELDS)) {
+                    entitySchemaViolations++;
+                }
                 String chapterId = text(chapter, "chapterId");
                 returnedChapterIds.add(chapterId);
-                if (!strings(chapter.path("storyRefs")).equals(expectedChapterStories.get(chapterId))) {
-                    chapterMembershipMismatches++;
-                }
                 String title = text(chapter, "title");
                 String summary = text(chapter, "summary");
                 if (title.length() < 4 || summary.length() < 6) emptyReadableSummaries++;
@@ -200,47 +186,11 @@ class ProjectHistoryRealModelIT {
             + difference(prompt.includedChapterIds(), uniqueChapterIds).size();
         int unknownEntities = difference(uniqueStoryIds, prompt.includedStoryIds()).size()
             + difference(uniqueChapterIds, prompt.includedChapterIds()).size();
-        int invalidRoleGraph = invalidRoleGraphCount(returnedRoles, prompt.includedStoryIds());
-
         return new Qualification(
             rootSchemaViolations, entitySchemaViolations, missingEntities, duplicateEntities, unknownEntities,
-            invalidEvidenceRefs, chapterMembershipMismatches, invalidRoleGraph, reasonWithoutEvidence, missingReasonUnknown,
+            invalidEvidenceRefs, reasonWithoutEvidence, missingReasonUnknown,
             emptyReadableSummaries, unsupportedClaims, returnedStoryIds.size(), returnedChapterIds.size()
         );
-    }
-
-    private static int invalidRoleGraphCount(Map<String, RoleCandidate> roles, Set<String> eligibleStoryIds) {
-        int violations = 0;
-        for (Map.Entry<String, RoleCandidate> entry : roles.entrySet()) {
-            String storyId = entry.getKey();
-            RoleCandidate role = entry.getValue();
-            if (!eligibleStoryIds.contains(storyId)
-                || !Set.of("PRIMARY", "SUPPORTING").contains(role.role())) {
-                violations++;
-                continue;
-            }
-            if ("PRIMARY".equals(role.role())) {
-                if (!role.primaryStoryId().isBlank()
-                    || new LinkedHashSet<>(role.supportingChangeRefs()).size() != role.supportingChangeRefs().size()) {
-                    violations++;
-                }
-                for (String supportingId : role.supportingChangeRefs()) {
-                    RoleCandidate support = roles.get(supportingId);
-                    if (support == null || !"SUPPORTING".equals(support.role())
-                        || !storyId.equals(support.primaryStoryId())) {
-                        violations++;
-                    }
-                }
-            } else {
-                RoleCandidate primary = roles.get(role.primaryStoryId());
-                if (!role.supportingChangeRefs().isEmpty() || primary == null
-                    || !"PRIMARY".equals(primary.role())
-                    || !primary.supportingChangeRefs().contains(storyId)) {
-                    violations++;
-                }
-            }
-        }
-        return violations;
     }
 
     private static void writeSafeArtifact(
@@ -259,7 +209,7 @@ class ProjectHistoryRealModelIT {
         Files.createDirectories(output);
 
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("version", "projectflow-v3.8.5-history-real-model-v3");
+        artifact.put("version", "projectflow-v3.8.5-history-real-model-v4");
         artifact.put("generatedAt", Instant.now().toString());
         artifact.put("promptVersion", ProjectHistoryPromptBuilder.PROMPT_VERSION);
         artifact.put("provider", Map.of(
@@ -328,8 +278,6 @@ class ProjectHistoryRealModelIT {
         int duplicateEntityCount,
         int crossProjectReferenceCount,
         int invalidEvidenceRefCount,
-        int chapterMembershipMismatchCount,
-        int invalidRoleGraphCount,
         int reasonWithoutEvidenceCount,
         int missingReasonUnknownCount,
         int emptyReadableSummaryCount,
@@ -339,11 +287,4 @@ class ProjectHistoryRealModelIT {
     ) {
     }
 
-    private record RoleCandidate(String role, String primaryStoryId, List<String> supportingChangeRefs) {
-        private RoleCandidate {
-            role = role == null ? "" : role.trim().toUpperCase(java.util.Locale.ROOT);
-            primaryStoryId = primaryStoryId == null ? "" : primaryStoryId.trim();
-            supportingChangeRefs = supportingChangeRefs == null ? List.of() : List.copyOf(supportingChangeRefs);
-        }
-    }
 }

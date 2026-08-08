@@ -79,6 +79,8 @@ class Handler(BaseHTTPRequestHandler):
                 }
             elif parsed.path.endswith("/snapshot"):
                 data = {"project": {"projectId": PROJECT_ID, "name": "ProjectFlow"}, "factCount": 42}
+            elif parsed.path.endswith("/history/overview"):
+                data = {"projectId": PROJECT_ID, "presentationRevision": "presentation:corrected", "status": "READY"}
             elif parsed.path.endswith("/history/stories"):
                 data = {
                     "items": [{
@@ -88,16 +90,19 @@ class Handler(BaseHTTPRequestHandler):
                         "hiddenByDefault": False, "correctionConflicts": ["来源成员已变化"],
                         "eventRefs": [EVENT_ID], "evidenceRefs": ["commit:abc"],
                     }],
+                    "presentationRevision": "presentation:corrected",
                     "page": 0, "size": 10, "totalElements": 1, "totalPages": 1,
                 }
             elif parsed.path.endswith("/history/chapters"):
                 data = {
                     "items": [{"id": "chapter-a", "storyRefs": ["story-split-a", "story-split-b"], "storyCount": 2}],
+                    "presentationRevision": "presentation:corrected",
                     "page": 0, "size": 10, "totalElements": 1, "totalPages": 1,
                 }
             elif parsed.path.endswith("/history/threads"):
                 data = {
                     "items": [{"id": "thread-a", "storyRefs": ["story-split-a", "story-split-b"], "evidenceCount": 2}],
+                    "presentationRevision": "presentation:corrected",
                     "page": 0, "size": 10, "totalElements": 1, "totalPages": 1,
                 }
             elif parsed.path.endswith("/history/corrections"):
@@ -317,24 +322,35 @@ class MCPProjectHistoryTest(unittest.TestCase):
 
     def test_corrected_split_role_conflict_and_revision_fields_are_preserved(self) -> None:
         with McpProcess(self.base_url) as mcp:
-            story = mcp.request("tools/call", {"name": "list_project_change_stories", "arguments": {
+            overview = mcp.request("tools/call", {"name": "get_project_history_overview", "arguments": {
                 "projectId": PROJECT_ID,
-            }})["result"]["structuredContent"]["items"][0]
-            chapter = mcp.request("tools/call", {"name": "list_project_history_chapters", "arguments": {
+            }})["result"]["structuredContent"]
+            story_page = mcp.request("tools/call", {"name": "list_project_change_stories", "arguments": {
                 "projectId": PROJECT_ID,
-            }})["result"]["structuredContent"]["items"][0]
-            thread = mcp.request("tools/call", {"name": "list_project_evolution_threads", "arguments": {
+            }})["result"]["structuredContent"]
+            chapter_page = mcp.request("tools/call", {"name": "list_project_history_chapters", "arguments": {
                 "projectId": PROJECT_ID,
-            }})["result"]["structuredContent"]["items"][0]
+            }})["result"]["structuredContent"]
+            thread_page = mcp.request("tools/call", {"name": "list_project_evolution_threads", "arguments": {
+                "projectId": PROJECT_ID,
+            }})["result"]["structuredContent"]
             corrections = mcp.request("tools/call", {"name": "list_project_history_corrections", "arguments": {
                 "projectId": PROJECT_ID,
             }})["result"]["structuredContent"]
+        story = story_page["items"][0]
+        chapter = chapter_page["items"][0]
+        thread = thread_page["items"][0]
         self.assertEqual("SUPPORTING", story["role"])
         self.assertEqual("story-split-a", story["primaryStoryId"])
         self.assertEqual(["来源成员已变化"], story["correctionConflicts"])
         self.assertEqual(["story-split-a", "story-split-b"], chapter["storyRefs"])
         self.assertEqual(chapter["storyRefs"], thread["storyRefs"])
-        self.assertEqual("presentation:corrected", corrections["presentationRevision"])
+        self.assertEqual(
+            {"presentation:corrected"},
+            {overview["presentationRevision"], story_page["presentationRevision"],
+             chapter_page["presentationRevision"], thread_page["presentationRevision"],
+             corrections["presentationRevision"]},
+        )
         self.assertEqual("CONFLICT", corrections["items"][0]["status"])
 
     def test_context_package_forwards_task_scope_revision_and_depth(self) -> None:

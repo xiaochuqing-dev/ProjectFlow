@@ -41,7 +41,11 @@ test("项目历程默认可读、工程证据可下钻且基础修正保持冲�
   }
 
   await page.getByText("查看来源事件、Commit 与 Evidence", { exact: true }).click();
+  await expect(page.getByText(/并保留原始提交信息供核对。/, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("create launch brief with reviewable outline", { exact: true })).toBeHidden();
   await expect(page.getByText("presentation/launch-brief.md", { exact: true }).first()).toBeVisible();
+  await page.getByText("查看原始提交与工程信息", { exact: true }).first().click();
+  await expect(page.getByText("原始提交信息：create launch brief with reviewable outline", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "查看 Evidence 详情" }).first().click();
   await expect(page.getByRole("button", { name: "Evidence 已展开" }).first()).toBeVisible();
   await expect(page.getByText(/commit:|file:/).first()).toBeVisible();

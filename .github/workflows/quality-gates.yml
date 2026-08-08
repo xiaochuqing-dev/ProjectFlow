@@ -198,6 +198,7 @@ jobs:
           mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name=glm-understanding test
           mvn -B -Dtest=ProjectHistoryV385RealOutputEvaluatorTest -Dprojectflow.eval.output-name=glm-v385 test
           mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name=glm-v385-scenarios test
+          mvn -B -Dtest=GLMDogfoodRegressionTest -Dprojectflow.eval.output-name=glm-v385-scenarios test
       - name: 真实 DeepSeek Chat、Ground Truth 与项目历程验收
         working-directory: backend
         env:
@@ -220,6 +221,7 @@ jobs:
           mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name=deepseek-understanding test
           mvn -B -Dtest=ProjectHistoryV385RealOutputEvaluatorTest -Dprojectflow.eval.output-name=deepseek-v385 test
           mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name=deepseek-v385-scenarios test
+          mvn -B -Dtest=DeepSeekDogfoodRegressionTest -Dprojectflow.eval.output-name=deepseek-v385-scenarios test
       - name: 保存内部真实模型评测工件
         if: always()
         uses: actions/upload-artifact@v4

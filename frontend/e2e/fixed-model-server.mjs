@@ -219,23 +219,35 @@ function projectHistoryContent(prompt) {
   return JSON.stringify({
     stories: stories.map((story) => ({
       storyId: story.storyId,
-      humanTitle: `整理${story.subject || "项目内容"}并形成可阅读结果`,
-      oneSentenceSummary: `${story.subject || "项目内容"}已经根据可追溯来源完成整理。`,
-      role: story.role || "PRIMARY",
-      primaryStoryId: story.primaryStoryId || "",
-      supportingChangeRefs: story.supportingChangeRefs || [],
+      humanTitle: historyStoryTitle(story),
+      oneSentenceSummary: historyStorySummary(story),
       reason: "",
       reasonEvidenceRefs: [],
-      conflicts: [],
       unknowns: ["变化原因未知，仍需结合来源核对。"],
     })),
     chapters: chapters.map((chapter) => ({
       chapterId: chapter.chapterId,
-      title: "整理项目内容并形成可阅读阶段结果",
-      summary: "这一阶段把来源变化整理为主要结果和必要的支撑工作。",
-      storyRefs: chapter.storyRefs || [],
+      title: "项目结果逐步形成并经过后续调整",
+      summary: "这一阶段按发生顺序说明主要结果，以及为这些结果提供验证和说明的支撑工作。",
     })),
   });
+}
+
+function historyStoryTitle(story) {
+  const subject = String(story.subject || "项目内容").trim();
+  if (story.role === "SUPPORTING") return `补充${subject}，为主要结果提供支撑`;
+  const transitions = Array.isArray(story.transitions) ? story.transitions : [];
+  if (transitions.includes("RESTORED")) return `恢复${subject}，重新提供原有结果`;
+  if (transitions.includes("REMOVED")) return `移除${subject}，停止提供原有结果`;
+  if (transitions.includes("RENAMED") || transitions.includes("MOVED")) return `调整${subject}的位置和名称，保留原有结果`;
+  if (transitions.includes("ADDED") || transitions.includes("CREATED")) return `新增${subject}，形成可使用的结果`;
+  return `调整${subject}，形成当前可确认的结果`;
+}
+
+function historyStorySummary(story) {
+  const deterministic = String(story.deterministicChange || "").trim();
+  if (deterministic.length >= 6) return deterministic;
+  return `${String(story.subject || "项目内容").trim()}已根据可追溯来源形成当前结果。`;
 }
 
 function projectHistoryChapterContent(prompt) {

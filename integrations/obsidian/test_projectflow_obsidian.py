@@ -371,6 +371,7 @@ class ObsidianProjectionTest(unittest.TestCase):
         })
         conflicted["correctionConflicts"] = ["来源成员已经变化，旧展示修正未应用。"]
         conflicted["displayStatus"] = "CONFLICT"
+        conflicted["hiddenByDefault"] = True
         stories.append(split)
         first_chapter = data["historyChapters"][0]
         first_chapter["storyRefs"] = [primary["id"], split["id"]]
@@ -401,13 +402,92 @@ class ObsidianProjectionTest(unittest.TestCase):
         self.assertIn("展示修正冲突：来源成员已经变化，旧展示修正未应用。", conflict_note)
         self.assertIn("document:appendix", split_note)
 
-        chapter_note = next((self.managed() / "项目历程/篇章").glob("*.md")).read_text(encoding="utf-8")
+        chapter_note = next(
+            path.read_text(encoding="utf-8")
+            for path in (self.managed() / "项目历程/篇章").glob("*.md")
+            if first_chapter["title"] in path.read_text(encoding="utf-8")
+        )
         thread_note = next((self.managed() / "项目历程/演变链").glob("*.md")).read_text(encoding="utf-8")
         self.assertIn(split["humanTitle"], chapter_note)
         self.assertIn(split["humanTitle"], thread_note)
         overview = (self.managed() / "项目概览.md").read_text(encoding="utf-8")
         self.assertIn("展示修正：2 条", overview)
         self.assertIn("待合并对象已被新来源替换", overview)
+        self.assertNotIn(conflicted["humanTitle"], overview)
+
+    def test_obsidian_split_chapter_projection(self) -> None:
+        data = copy.deepcopy(dataset())
+        original = data["historyStories"][0]
+        split = copy.deepcopy(original)
+        split.update({
+            "id": "story-split-contract",
+            "humanTitle": "拆分报告附录并形成独立可读版本",
+            "oneSentenceSummary": "报告附录已经从主体中拆出并可单独阅读。",
+            "eventRefs": ["event:split"],
+            "evidenceRefs": ["document:appendix"],
+            "evidenceCount": 1,
+            "rawEventCount": 1,
+        })
+        data["historyStories"].append(split)
+        chapter = data["historyChapters"][0]
+        chapter["storyRefs"] = [original["id"], split["id"]]
+        chapter["storyCount"] = 2
+        chapter["rawEventCount"] = 3
+        data["historyThreads"][0]["storyRefs"].insert(1, split["id"])
+        self.source = FakeSource(data)
+
+        self.projection().sync(PROJECT_ID)
+
+        chapter_note = next(
+            path.read_text(encoding="utf-8")
+            for path in (self.managed() / "项目历程/篇章").glob("*.md")
+            if chapter["title"] in path.read_text(encoding="utf-8")
+        )
+        self.assertIn(split["humanTitle"], chapter_note)
+        self.assertIn("document:appendix", next(
+            path.read_text(encoding="utf-8")
+            for path in (self.managed() / "项目历程/变化故事").glob("*.md")
+            if split["humanTitle"] in path.read_text(encoding="utf-8")
+        ))
+
+    def test_obsidian_merge_projection(self) -> None:
+        data = copy.deepcopy(dataset())
+        target = data["historyStories"][1]
+        merged = data["historyStories"][2]
+        target.update({
+            "humanTitle": "合并历程与统一读取变化，形成一个连续结果",
+            "eventRefs": target["eventRefs"] + merged["eventRefs"],
+            "evidenceRefs": target["evidenceRefs"] + merged["evidenceRefs"],
+            "evidenceCount": 4,
+            "rawEventCount": 4,
+        })
+        merged.update({
+            "displayStatus": "MERGED",
+            "hiddenByDefault": True,
+            "mergedIntoStoryId": target["id"],
+        })
+        chapter = data["historyChapters"][1]
+        chapter["storyRefs"] = [target["id"]]
+        chapter["storyCount"] = 1
+        chapter["rawEventCount"] = 4
+        data["historyThreads"][0]["storyRefs"] = [data["historyStories"][0]["id"], target["id"]]
+        self.source = FakeSource(data)
+
+        self.projection().sync(PROJECT_ID)
+
+        chapter_note = next(
+            path.read_text(encoding="utf-8")
+            for path in (self.managed() / "项目历程/篇章").glob("*.md")
+            if chapter["title"] in path.read_text(encoding="utf-8")
+        )
+        merged_note = next(
+            path.read_text(encoding="utf-8")
+            for path in (self.managed() / "项目历程/变化故事").glob("*.md")
+            if merged["humanTitle"] in path.read_text(encoding="utf-8")
+        )
+        self.assertIn(target["humanTitle"], chapter_note)
+        self.assertNotIn(merged["humanTitle"], chapter_note)
+        self.assertIn("默认展示：否", merged_note)
 
     def test_projectflow_backlinks_use_stable_frontend_routes_in_a_real_temporary_vault(self) -> None:
         self.projection().sync(PROJECT_ID)

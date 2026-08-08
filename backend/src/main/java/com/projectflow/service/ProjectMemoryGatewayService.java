@@ -333,7 +333,17 @@ public class ProjectMemoryGatewayService {
         UUID userId, UUID projectId, String subject, boolean attentionOnly,
         Instant from, Instant to, int page, int size
     ) {
-        return historyReadService.stories(userId, projectId, subject, attentionOnly, from, to, page, size);
+        return historyStories(userId, projectId, subject, attentionOnly, false, from, to, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public HistoryStoryPageResponse historyStories(
+        UUID userId, UUID projectId, String subject, boolean attentionOnly, boolean includeHidden,
+        Instant from, Instant to, int page, int size
+    ) {
+        return historyReadService.stories(
+            userId, projectId, subject, attentionOnly, includeHidden, from, to, page, size
+        );
     }
 
     @Transactional(readOnly = true)
@@ -447,7 +457,7 @@ public class ProjectMemoryGatewayService {
             limit(overview.conflicts(), 5), limit(overview.unknowns(), 10)
         );
         return new HistoryOverviewResponse(
-            source.projectId(), source.status(), source.projectRevision(), source.sourceEventCount(),
+            source.projectId(), source.presentationRevision(), source.status(), source.projectRevision(), source.sourceEventCount(),
             source.earliestEventAt(), source.latestEventAt(), source.strategyVersion(), source.promptVersion(),
             compact, source.coverage(), Map.of(), source.analysisJobId(), source.generatedAt(),
             source.latestSuccessfulAt(), source.updatedAt(), source.errorCode(), source.errorSummary()
