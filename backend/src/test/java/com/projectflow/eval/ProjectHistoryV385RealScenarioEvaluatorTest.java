@@ -260,7 +260,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         metrics.put("supportingCount", stories.stream().filter(ChangeStory::supporting).count());
         metrics.put("currentness", overview.coverage().currentness());
         metrics.put("firstLayerTechnicalLeakRate", rate(firstLayerLeaks(stories, FIRST_LAYER_FORBIDDEN), stories.size()));
-        return new ScenarioEvidence(metrics, storySamples(stories, 4));
+        return new ScenarioEvidence(metrics, ProjectHistoryV385ReviewSamples.stories(stories, 4));
     }
 
     private ScenarioEvidence continuationAndChapter(UUID userId) throws Exception {
@@ -302,7 +302,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         metrics.put("storyCount", stories.size());
         metrics.put("restartServiceInstance", true);
         metrics.put("finalCacheHit", true);
-        return new ScenarioEvidence(metrics, storySamples(stories, 5));
+        return new ScenarioEvidence(metrics, ProjectHistoryV385ReviewSamples.stories(stories, 5));
     }
 
     private ScenarioEvidence correctionInvalidatesOnlyOneWindow(UUID userId) throws Exception {
@@ -326,7 +326,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             "fullAutomaticWindowRerun", false,
             "presentationAuthority", corrected.presentationAuthority(),
             "finalCacheHit", true
-        ), storySamples(List.of(corrected), 1));
+        ), ProjectHistoryV385ReviewSamples.stories(List.of(corrected), 1));
     }
 
     private ScenarioEvidence schemaFailureRecovery(UUID userId) throws Exception {
@@ -340,7 +340,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         require(number(recovered, "succeededWindowCount") == 3, "schema failure 重试后未全部完成");
         require(number(recovered, "failedWindowCount") == 0, "schema failure checkpoint 未恢复");
         require(calls.get(activeScenario.get()).storyLogicalCalls == 4, "重试执行了成功窗口或遗漏失败窗口");
-        return new ScenarioEvidence(safeDiagnostics(recovered), storySamples(allStories(userId, project.getId()), 4));
+        return new ScenarioEvidence(safeDiagnostics(recovered),
+            ProjectHistoryV385ReviewSamples.stories(allStories(userId, project.getId()), 4));
     }
 
     private ScenarioEvidence cancellationRecovery(UUID userId) throws Exception {
@@ -367,7 +368,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         Map<String, Object> metrics = safeDiagnostics(recovered);
         metrics.put("cancelledCheckpointObserved", true);
         metrics.put("restartServiceInstance", true);
-        return new ScenarioEvidence(metrics, storySamples(allStories(userId, project.getId()), 4));
+        return new ScenarioEvidence(metrics,
+            ProjectHistoryV385ReviewSamples.stories(allStories(userId, project.getId()), 4));
     }
 
     private ScenarioEvidence promptOverflow(UUID userId) throws Exception {
@@ -385,7 +387,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         require(calls.get(activeScenario.get()).storyLogicalCalls == total, "Prompt overflow 子窗口调用数不一致");
         var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         require(cached.cacheHit(), "Prompt overflow 子窗口成功后未命中 cache");
-        return new ScenarioEvidence(safeDiagnostics(diagnostics), storySamples(allStories(userId, project.getId()), 5));
+        return new ScenarioEvidence(safeDiagnostics(diagnostics),
+            ProjectHistoryV385ReviewSamples.stories(allStories(userId, project.getId()), 5));
     }
 
     private ScenarioEvidence dogfood(UUID userId) throws Exception {
@@ -414,10 +417,11 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         List<Map<String, Object>> supportingConsolidation = supportingConsolidationExamples(stories, 10);
 
         List<Map<String, Object>> samples = new ArrayList<>();
-        samples.add(Map.of("sampleType", "primary", "items", storySamples(primary, 15)));
-        samples.add(Map.of("sampleType", "explicit-supporting", "items", storySamples(supporting, 10)));
+        samples.add(Map.of("sampleType", "primary", "items", ProjectHistoryV385ReviewSamples.stories(primary, 15)));
+        samples.add(Map.of("sampleType", "explicit-supporting", "items",
+            ProjectHistoryV385ReviewSamples.stories(supporting, 10)));
         samples.add(Map.of("sampleType", "supporting-consolidation", "items", supportingConsolidation));
-        samples.add(Map.of("sampleType", "chapters", "items", chapterSamples(chapters, 8)));
+        samples.add(Map.of("sampleType", "chapters", "items", ProjectHistoryV385ReviewSamples.chapters(chapters, 8)));
         samples.add(Map.of("sampleType", "threads", "items", threadSamples(threads, 3)));
         samples.add(Map.of("sampleType", "manual-review-candidates", "items", reviewCandidates(stories, 5)));
         Map<String, Object> metrics = safeDiagnostics(diagnostics);
@@ -603,33 +607,6 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             .anyMatch(value -> (story.humanTitle() + " " + story.oneSentenceSummary()).contains(value))).count();
     }
 
-    private static List<Map<String, Object>> storySamples(List<ChangeStory> stories, int limit) {
-        return stories.stream().limit(limit).map(story -> {
-            Map<String, Object> value = new LinkedHashMap<>();
-            value.put("id", story.id());
-            value.put("title", story.humanTitle());
-            value.put("summary", story.oneSentenceSummary());
-            value.put("before", story.beforeState());
-            value.put("change", story.change());
-            value.put("after", story.afterState());
-            value.put("role", story.role());
-            value.put("primaryStoryId", story.primaryStoryId());
-            value.put("supportingChangeRefs", story.supportingChangeRefs());
-            value.put("reasonEvidenceRefs", story.reasonEvidenceRefs());
-            value.put("evidenceRefs", story.evidenceRefs().stream().limit(5).toList());
-            value.put("unknowns", story.unknowns());
-            value.put("conflicts", story.conflicts());
-            return Map.copyOf(value);
-        }).toList();
-    }
-
-    private static List<Map<String, Object>> chapterSamples(List<HistoryChapter> chapters, int limit) {
-        return chapters.stream().limit(limit).map(chapter -> Map.<String, Object>of(
-            "id", chapter.id(), "title", chapter.title(), "summary", chapter.summary(),
-            "storyCount", chapter.storyCount(), "rawEventCount", chapter.rawEventCount()
-        )).toList();
-    }
-
     private static List<Map<String, Object>> supportingConsolidationExamples(List<ChangeStory> stories, int limit) {
         List<Map<String, Object>> result = new ArrayList<>();
         for (ChangeStory story : stories) {
@@ -744,7 +721,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         Path output = Path.of("target", "projectflow-eval", outputName);
         Files.createDirectories(output);
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("version", "projectflow-v3.8.5-real-scenario-qualification-v1");
+        artifact.put("version", "projectflow-v3.8.5-real-scenario-qualification-v2");
         artifact.put("generatedAt", Instant.now().toString());
         artifact.put("provider", Map.of(
             "name", config.name(), "model", config.model(), "protocol", config.protocol().name()

@@ -89,7 +89,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         ProjectHistoryV385QualityEvaluator.EvaluationReport report =
             ProjectHistoryV385QualityEvaluator.evaluateCases(groundTruth, observations);
         QualificationSummary qualification = qualification(report, runs, elapsedMs(started));
-        writeSafeArtifact(config, report, runs, qualification);
+        writeSafeArtifact(config, report, observations, runs, qualification);
         System.out.printf(
             "V385_REAL_PROVIDER_DONE provider=%s model=%s status=%s requests=%d tokens=%d elapsedMs=%d%n",
             config.name(), config.model(), qualification.qualified() ? "PASS" : "FAIL",
@@ -181,6 +181,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
     private void writeSafeArtifact(
         ProjectFlowRealModelEvalIT.ProviderConfig config,
         ProjectHistoryV385QualityEvaluator.EvaluationReport report,
+        List<ProjectHistoryV385QualityEvaluator.CaseObservation> observations,
         List<SafeCaseRun> runs,
         QualificationSummary qualification
     ) throws Exception {
@@ -190,7 +191,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         Path output = Path.of("target", "projectflow-eval", outputName);
         Files.createDirectories(output);
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("version", "projectflow-v3.8.5-history-real-output-v2");
+        artifact.put("version", "projectflow-v3.8.5-history-real-output-v3");
         artifact.put("generatedAt", Instant.now().toString());
         artifact.put("provider", Map.of(
             "name", config.name(), "model", config.model(), "protocol", config.protocol().name()
@@ -198,6 +199,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         artifact.put("qualification", qualification);
         artifact.put("evaluation", report);
         artifact.put("caseRuns", List.copyOf(runs));
+        artifact.put("humanReviewCandidates", humanReviewCandidates(observations));
         artifact.put("security", Map.of(
             "apiKeyPersisted", false,
             "promptPersisted", false,
@@ -208,6 +210,17 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(
             output.resolve("history-ground-truth-real-result.json").toFile(), artifact
         );
+    }
+
+    static List<Map<String, Object>> humanReviewCandidates(
+        List<ProjectHistoryV385QualityEvaluator.CaseObservation> observations
+    ) {
+        return observations.stream().map(observation -> Map.<String, Object>of(
+            "caseId", observation.caseId(),
+            "split", observation.split(),
+            "stories", ProjectHistoryV385ReviewSamples.stories(observation.stories(), 3),
+            "chapters", ProjectHistoryV385ReviewSamples.chapters(observation.chapters(), 2)
+        )).toList();
     }
 
     private void assertSafetyGates(ProjectHistoryV385QualityEvaluator.AggregateMetrics metrics) {
