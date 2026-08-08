@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ProjectUnderstandingPromptBuilder {
     public static final String CONTRACT_VERSION = "project-understanding-prompt-contract-v3";
-    public static final String SCOUT_PROMPT_VERSION = "semantic-scout-v13";
+    public static final String SCOUT_PROMPT_VERSION = "semantic-scout-v14";
     public static final String FINAL_PROMPT_VERSION = "final-synthesis-v7";
     public static final CompatibilityProfile COMPATIBILITY_PROFILE = new CompatibilityProfile(
         "multi-provider-json-v1",
@@ -115,6 +115,22 @@ public class ProjectUnderstandingPromptBuilder {
             Content Map 和 RANGE 只表示工程系统读取的行/字节范围。HEAD、MIDDLE、TAIL、HEADING、SYMBOL、MARKER、
             CHANGED 或 QUERY 样本之外的内容保持 UNKNOWN；不得把局部范围概括为完整文件。不同范围的事实要保留
             各自 Evidence ID、range、currentness 和 conflict，不把旧章节与尾部修订混成一个虚构结论。
+
+            最终决策核对（紧邻输出执行，不能只把 selfCheck 写成 true）：
+            - 发现阶段的 manifests、source:manifest、Git 计数、README 摘要和 boundedSample 都不是 `tool:` Evidence。
+              Eligible Capability Set 含 MANIFEST，且你保留 SCRIPT/FRONTEND/BACKEND/DESKTOP/MONOREPO/
+              DEVELOPER_WORKBENCH shape，或依赖、版本、入口、workspace、模块、ARCHITECTURE 判断时，MANIFEST 必须
+              REQUEST；只有当前上下文已有 `tool:manifest` 才能因已执行而 SKIP。
+            - 文档正文、README 当前性/过时、文档与 manifest/源码冲突依赖 DOC_READER；Agent 自报结果依赖
+              AGENT_RESULT；历史覆盖依赖 GIT_HISTORY，长历史的 milestone anchor 还依赖 GIT_TAG。对应 capability
+              eligible 且没有同类 `tool:` Evidence 时必须分别 REQUEST，不能互相替代。
+            - 你自己识别出 FRONTEND 与 BACKEND 同时存在时，核心 view 至少保留 FRONTEND、BACKEND、
+              INTEGRATION_RELATIONS；POSSIBLY_STALE 文档至少保留 CURRENT_STATE、LIMITATIONS；明确的文档/规范冲突
+              至少保留 CURRENT_STATE、CONFLICTS；明确的多模块结构证据保留 ARCHITECTURE；长历史只保留
+              HISTORICAL_COVERAGE、MILESTONE_WINDOWS 这两个历史类 view，不排除有独立当前证据的 CURRENT_STATE 或
+              ARCHITECTURE。Section 可更少，但 applicableDimensions 不能漏掉这些核心 view。
+            - 若不满足某项前提，删除依赖它的事实性 claim/view 并写 UNKNOWN；不得一边保留依赖项，一边把所需
+              capability 写成 SKIP。输出 capabilityDecisions 前逐项检查 Eligible Capability Set，确保没有只处理第一项。
 
             可引用 Evidence ID：%s
             Eligible Capability Set：%s

@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v5";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v6";
     public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v2";
     static final int MAX_PROMPT_CHARS = 60_000;
     static final int MAX_CHAPTER_SYNTHESIS_PROMPT_CHARS = 48_000;
@@ -184,7 +184,14 @@ public final class ProjectHistoryPromptBuilder {
     }
 
     private String render(List<StoryPromptInput> stories, List<ChapterPromptInput> chapters) {
-        return INSTRUCTIONS + STORIES_MARKER + json(stories) + CHAPTERS_MARKER + json(chapters);
+        List<String> storyIds = stories.stream().map(StoryPromptInput::storyId).toList();
+        List<String> chapterIds = chapters.stream().map(ChapterPromptInput::chapterId).toList();
+        String outputCheck = """
+
+            输出前做机械核对：本次必须返回 Story %d 个、Chapter %d 个；requiredStoryIds=%s；requiredChapterIds=%s。
+            每个 required ID 恰好一次，且对象只能包含上面列出的可改字段；数量、ID 或字段不一致时先修正再输出。
+            """.formatted(storyIds.size(), chapterIds.size(), json(storyIds), json(chapterIds));
+        return INSTRUCTIONS + outputCheck + STORIES_MARKER + json(stories) + CHAPTERS_MARKER + json(chapters);
     }
 
     private String json(Object value) {

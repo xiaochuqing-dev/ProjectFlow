@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 class ProjectUnderstandingPromptBuilderTest {
     private static final String SCOUT_SNAPSHOT_SHA256 =
-        "806aa0110390095f8961fb8abefc96422dcb576b617261153f7393df0569777d";
+        "b600bb6f0b341b8cddc4c5a191b88e346c59b9d4f0af95c702c909babd4d697e";
     private static final String FINAL_SNAPSHOT_SHA256 =
         "14574307a878b46b2b99689e993522b9c01dee9ee594c4616988d1302687c136";
     private final ProjectUnderstandingPromptBuilder builder = new ProjectUnderstandingPromptBuilder();
@@ -34,6 +34,9 @@ class ProjectUnderstandingPromptBuilderTest {
                 "Evidence 重要性不由文件类型、文件名",
                 "稳定映射选择全部适用的核心 view",
                 "多个彼此独立的关键 gap",
+                "最终决策核对",
+                "只有当前上下文已有 `tool:manifest`",
+                "FRONTEND、BACKEND、INTEGRATION_RELATIONS",
                 "\"capabilityDecisions\"",
                 "\"decision\":\"REQUEST|SKIP\"",
                 "informationGap",

@@ -1271,6 +1271,16 @@ class ProjectHistoryReconstructionTest {
         assertThat(calls.get()).isEqualTo(2);
         assertThat(originalCheckpointIds).hasSize(2);
 
+        var stalePresentationCache = originalCheckpoints.stream()
+            .filter(value -> value.getWindowIdentity().startsWith("window-"))
+            .findFirst().orElseThrow();
+        JsonNode cachedPresentation = objectMapper.readTree(stalePresentationCache.getValidatedResultJson());
+        ((com.fasterxml.jackson.databind.node.ObjectNode) cachedPresentation.path("stories").get(0))
+            .put("occurredFrom", "2099-01-01T00:00:00Z")
+            .put("occurredTo", "2099-01-02T00:00:00Z");
+        stalePresentationCache.storeValidatedResult(objectMapper.writeValueAsString(cachedPresentation));
+        checkpointRepository.saveAndFlush(stalePresentationCache);
+
         historicalFacts(project, 64, 1, 1, 1, 0);
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
 
@@ -1287,6 +1297,8 @@ class ProjectHistoryReconstructionTest {
             .containsEntry("totalWindowCount", 3)
             .containsEntry("succeededWindowCount", 3)
             .containsEntry("pendingWindowCount", 0);
+        assertThat(readService.stories(userId, project.getId(), null, false, null, null, 0, 100).items())
+            .allSatisfy(story -> assertThat(story.occurredFrom()).isBefore(Instant.parse("2099-01-01T00:00:00Z")));
     }
 
     @Test

@@ -1567,7 +1567,28 @@ public class ProjectHistoryReconstructionService {
         Map<String, ChangeStory> stories = new LinkedHashMap<>();
         current.stories().forEach(value -> stories.put(value.id(), value));
         cached.stories().forEach(value -> {
-            if (batch.storyIds().contains(value.id())) stories.put(value.id(), value);
+            ChangeStory currentStory = stories.get(value.id());
+            if (batch.storyIds().contains(value.id()) && currentStory != null) {
+                // Checkpoints cache validated wording, not structural truth. A later
+                // bounded refresh may rebuild the same stable story ID with newer
+                // time, role, membership or Evidence fields, so restore only the
+                // presentation fields the model is allowed to produce.
+                stories.put(value.id(), copyStory(
+                    currentStory,
+                    currentStory.laterOutcome(),
+                    "INFERRED_NON_AUTHORITATIVE",
+                    "MODEL_VALIDATED",
+                    value.humanTitle(),
+                    value.oneSentenceSummary(),
+                    currentStory.beforeState(),
+                    currentStory.change(),
+                    currentStory.afterState(),
+                    value.reason(),
+                    value.reasonEvidenceRefs(),
+                    currentStory.conflicts(),
+                    merge(currentStory.unknowns(), value.unknowns(), 20)
+                ));
+            }
         });
         Map<String, HistoryChapter> chapters = new LinkedHashMap<>();
         current.chapters().forEach(value -> chapters.put(value.id(), value));
@@ -1575,7 +1596,14 @@ public class ProjectHistoryReconstructionService {
             HistoryChapter currentChapter = chapters.get(value.id());
             if (batch.chapterIds().contains(value.id()) && currentChapter != null
                 && new LinkedHashSet<>(currentChapter.storyRefs()).equals(new LinkedHashSet<>(value.storyRefs()))) {
-                chapters.put(value.id(), value);
+                chapters.put(value.id(), new HistoryChapter(
+                    currentChapter.id(), value.title(), value.summary(), currentChapter.from(), currentChapter.to(),
+                    currentChapter.boundarySignals(), currentChapter.storyRefs(), currentChapter.storyCount(),
+                    currentChapter.rawEventCount(), "INFERRED_NON_AUTHORITATIVE", currentChapter.coverage(),
+                    currentChapter.limitations(), currentChapter.presentationAuthority(),
+                    currentChapter.presentationRevision(), currentChapter.userDeclared(),
+                    currentChapter.userCorrectionRefs(), currentChapter.hiddenByDefault(), currentChapter.pinned()
+                ));
             }
         });
         return new SnapshotResult(
