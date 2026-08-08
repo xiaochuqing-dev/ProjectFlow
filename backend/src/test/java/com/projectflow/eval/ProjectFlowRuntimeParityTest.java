@@ -74,15 +74,23 @@ class ProjectFlowRuntimeParityTest {
 
         assertThat(workflow)
             .contains(
+                "fail-fast: false",
+                "- id: glm",
+                "- id: deepseek",
+                "secret_name: PROJECTFLOW_REAL_MODEL_API_KEY",
+                "secret_name: PROJECTFLOW_DEEPSEEK_API_KEY",
+                "PROJECTFLOW_REAL_MODEL_API_KEY: ${{ secrets[matrix.secret_name] }}",
+                "dogfood_test: GLMDogfoodRegressionTest",
+                "dogfood_test: DeepSeekDogfoodRegressionTest",
                 "run_gate history-v385-qualification",
                 "run_gate history-v385-scenarios",
                 "run_gate history-v385-dogfood",
-                "if: ${{ !cancelled() && steps.credentials.outcome == 'success' }}"
+                "projectflow-real-model-eval-${{ matrix.id }}"
             );
-        assertThat(count(workflow, "run_gate provider-probe")).isEqualTo(2);
-        assertThat(count(workflow, "run_gate history-v385-qualification")).isEqualTo(2);
-        assertThat(count(workflow, "run_gate history-v385-scenarios")).isEqualTo(2);
-        assertThat(count(workflow, "run_gate history-v385-dogfood")).isEqualTo(2);
+        assertThat(count(workflow, "run_gate provider-probe")).isEqualTo(1);
+        assertThat(count(workflow, "run_gate history-v385-qualification")).isEqualTo(1);
+        assertThat(count(workflow, "run_gate history-v385-scenarios")).isEqualTo(1);
+        assertThat(count(workflow, "run_gate history-v385-dogfood")).isEqualTo(1);
     }
 
     private static int count(String value, String needle) {

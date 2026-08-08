@@ -170,9 +170,38 @@ jobs:
         run: python scripts/verify_v380_acceptance_evidence.py
 
   optional-real-provider:
+    name: optional-real-provider (${{ matrix.id }})
     if: github.event_name == 'workflow_dispatch' && inputs.run_real_model
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: glm
+            display_name: GLM Responses
+            secret_name: PROJECTFLOW_REAL_MODEL_API_KEY
+            provider: GLM
+            base_url: https://ark.cn-beijing.volces.com/api/coding/v3
+            model: glm-5.2
+            type: OPENAI
+            protocol: OPENAI_RESPONSES
+            supports_json_mode: "true"
+            supports_reasoning: "true"
+            supports_reasoning_control: "true"
+            dogfood_test: GLMDogfoodRegressionTest
+          - id: deepseek
+            display_name: DeepSeek Chat
+            secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
+            provider: DeepSeek OpenCode Go
+            base_url: https://opencode.ai/zen/go/v1
+            model: deepseek-v4-pro
+            type: DEEPSEEK
+            protocol: OPENAI_CHAT_COMPLETIONS
+            supports_json_mode: "false"
+            supports_reasoning: "true"
+            supports_reasoning_control: "false"
+            dogfood_test: DeepSeekDogfoodRegressionTest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -182,35 +211,35 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: maven
-      - name: 确认 GLM 与 DeepSeek 安全凭据均已配置
-        id: credentials
+      - name: 确认 ${{ matrix.display_name }} 安全凭据已配置
         shell: bash
         env:
-          GLM_KEY: ${{ secrets.PROJECTFLOW_REAL_MODEL_API_KEY }}
-          DEEPSEEK_KEY: ${{ secrets.PROJECTFLOW_DEEPSEEK_API_KEY }}
+          PROVIDER_KEY: ${{ secrets[matrix.secret_name] }}
         run: |
-          if [ -z "$GLM_KEY" ] || [ -z "$DEEPSEEK_KEY" ]; then
-            echo "BLOCKED: GLM 或 DeepSeek 真实验收 Secret 缺失"
+          if [ -z "$PROVIDER_KEY" ]; then
+            echo "BLOCKED: ${{ matrix.display_name }} 真实验收 Secret 缺失"
             exit 1
           fi
-      - name: 真实 GLM Responses、Ground Truth、项目理解与项目历程验收
+      - name: 真实 ${{ matrix.display_name }}、Ground Truth、项目理解与项目历程验收
         working-directory: backend
         env:
           PROJECTFLOW_RUN_REAL_MODEL: "true"
-          PROJECTFLOW_REAL_MODEL_API_KEY: ${{ secrets.PROJECTFLOW_REAL_MODEL_API_KEY }}
-          PROJECTFLOW_REAL_MODEL_PROVIDER: "GLM"
-          PROJECTFLOW_REAL_MODEL_BASE_URL: "https://ark.cn-beijing.volces.com/api/coding/v3"
-          PROJECTFLOW_REAL_MODEL_NAME: "glm-5.2"
-          PROJECTFLOW_REAL_MODEL_TYPE: "OPENAI"
-          PROJECTFLOW_REAL_MODEL_PROTOCOL: "OPENAI_RESPONSES"
+          PROJECTFLOW_REAL_MODEL_API_KEY: ${{ secrets[matrix.secret_name] }}
+          PROJECTFLOW_REAL_MODEL_PROVIDER: ${{ matrix.provider }}
+          PROJECTFLOW_REAL_MODEL_BASE_URL: ${{ matrix.base_url }}
+          PROJECTFLOW_REAL_MODEL_NAME: ${{ matrix.model }}
+          PROJECTFLOW_REAL_MODEL_TYPE: ${{ matrix.type }}
+          PROJECTFLOW_REAL_MODEL_PROTOCOL: ${{ matrix.protocol }}
           PROJECTFLOW_REAL_MODEL_TIMEOUT_SECONDS: "600"
           # QUALITY_FIRST: reasoning and visible JSON share this loose Provider
           # ceiling from the first request. The ceiling is not a Token target;
           # elapsed time and usage remain diagnostics and never lower effort.
           PROJECTFLOW_REAL_MODEL_MAX_TOKENS: "65536"
-          PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE: "true"
-          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING: "true"
-          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL: "true"
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE: ${{ matrix.supports_json_mode }}
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING: ${{ matrix.supports_reasoning }}
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL: ${{ matrix.supports_reasoning_control }}
+          EVAL_PREFIX: ${{ matrix.id }}
+          DOGFOOD_TEST: ${{ matrix.dogfood_test }}
         run: |
           failures=0
           run_gate() {
@@ -226,61 +255,20 @@ jobs:
             echo "::endgroup::"
           }
           run_gate provider-probe mvn -B -Dtest=ProjectFlowRealProviderProbeIT test
-          run_gate history-v380 mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name=glm-v380 test
-          run_gate understanding-v375 mvn -B -Dtest=ProjectFlowRealModelEvalIT -Dprojectflow.eval.output-name=glm-v375 test
-          run_gate understanding-e2e mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name=glm-understanding test
-          run_gate history-v385-qualification mvn -B -Dtest=ProjectHistoryV385RealOutputEvaluatorTest -Dprojectflow.eval.output-name=glm-v385 test
-          run_gate history-v385-scenarios mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name=glm-v385-scenarios test
-          run_gate history-v385-dogfood mvn -B -Dtest=GLMDogfoodRegressionTest -Dprojectflow.eval.output-name=glm-v385-scenarios test
+          run_gate history-v380 mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-v380" test
+          run_gate understanding-v375 mvn -B -Dtest=ProjectFlowRealModelEvalIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-v375" test
+          run_gate understanding-e2e mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-understanding" test
+          run_gate history-v385-qualification mvn -B -Dtest=ProjectHistoryV385RealOutputEvaluatorTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385" test
+          run_gate history-v385-scenarios mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios" test
+          run_gate history-v385-dogfood mvn -B -Dtest="$DOGFOOD_TEST" -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios" test
           if [ "$failures" -ne 0 ]; then
-            echo "GLM real gates failed: $failures"
-            exit 1
-          fi
-      - name: 真实 DeepSeek Chat、Ground Truth 与项目历程验收
-        if: ${{ !cancelled() && steps.credentials.outcome == 'success' }}
-        working-directory: backend
-        env:
-          PROJECTFLOW_RUN_REAL_MODEL: "true"
-          PROJECTFLOW_REAL_MODEL_API_KEY: ${{ secrets.PROJECTFLOW_DEEPSEEK_API_KEY }}
-          PROJECTFLOW_REAL_MODEL_PROVIDER: "DeepSeek OpenCode Go"
-          PROJECTFLOW_REAL_MODEL_BASE_URL: "https://opencode.ai/zen/go/v1"
-          PROJECTFLOW_REAL_MODEL_NAME: "deepseek-v4-pro"
-          PROJECTFLOW_REAL_MODEL_TYPE: "DEEPSEEK"
-          PROJECTFLOW_REAL_MODEL_PROTOCOL: "OPENAI_CHAT_COMPLETIONS"
-          PROJECTFLOW_REAL_MODEL_TIMEOUT_SECONDS: "600"
-          PROJECTFLOW_REAL_MODEL_MAX_TOKENS: "65536"
-          PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE: "false"
-          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING: "true"
-          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL: "false"
-        run: |
-          failures=0
-          run_gate() {
-            label="$1"
-            shift
-            echo "::group::$label"
-            if "$@"; then
-              echo "$label: PASS"
-            else
-              echo "$label: FAIL"
-              failures=$((failures + 1))
-            fi
-            echo "::endgroup::"
-          }
-          run_gate provider-probe mvn -B -Dtest=ProjectFlowRealProviderProbeIT test
-          run_gate history-v380 mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name=deepseek-v380 test
-          run_gate understanding-v375 mvn -B -Dtest=ProjectFlowRealModelEvalIT -Dprojectflow.eval.output-name=deepseek-v375 test
-          run_gate understanding-e2e mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name=deepseek-understanding test
-          run_gate history-v385-qualification mvn -B -Dtest=ProjectHistoryV385RealOutputEvaluatorTest -Dprojectflow.eval.output-name=deepseek-v385 test
-          run_gate history-v385-scenarios mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name=deepseek-v385-scenarios test
-          run_gate history-v385-dogfood mvn -B -Dtest=DeepSeekDogfoodRegressionTest -Dprojectflow.eval.output-name=deepseek-v385-scenarios test
-          if [ "$failures" -ne 0 ]; then
-            echo "DeepSeek real gates failed: $failures"
+            echo "$EVAL_PREFIX real gates failed: $failures"
             exit 1
           fi
       - name: 保存内部真实模型评测工件
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: projectflow-real-model-eval
+          name: projectflow-real-model-eval-${{ matrix.id }}
           path: backend/target/projectflow-eval
           if-no-files-found: ignore
