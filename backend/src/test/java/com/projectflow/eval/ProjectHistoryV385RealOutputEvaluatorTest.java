@@ -89,6 +89,8 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         ProjectHistoryV385QualityEvaluator.EvaluationReport report =
             ProjectHistoryV385QualityEvaluator.evaluateCases(groundTruth, observations);
         QualificationSummary qualification = qualification(report, runs, elapsedMs(started));
+        assertSafetyGates(report.calibration());
+        assertSafetyGates(report.holdout());
         writeSafeArtifact(config, report, observations, runs, qualification);
         System.out.printf(
             "V385_REAL_PROVIDER_DONE provider=%s model=%s status=%s requests=%d tokens=%d elapsedMs=%d%n",
@@ -97,8 +99,6 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         );
 
         assertThat(report.missingCases()).isEmpty();
-        assertSafetyGates(report.calibration());
-        assertSafetyGates(report.holdout());
         assertThat(report.calibration().passes()).isTrue();
         assertThat(report.holdout().passes()).isTrue();
         assertThat(qualification.calibrationRequestCount()).isPositive();

@@ -22,7 +22,6 @@ final class ProjectHistoryV385ReviewSamples {
             value.put("change", safe(story.change()));
             value.put("after", safe(story.afterState()));
             value.put("reason", safe(story.reason()));
-            value.put("laterOutcome", safe(story.laterOutcome()));
             value.put("role", safe(story.role()));
             value.put("primaryStoryId", safe(story.primaryStoryId()));
             value.put("supportingChangeRefs", story.supportingChangeRefs());
@@ -52,7 +51,6 @@ final class ProjectHistoryV385ReviewSamples {
             value.put("storyCount", chapter.storyCount());
             value.put("rawEventCount", chapter.rawEventCount());
             value.put("coverage", safe(chapter.coverage()));
-            value.put("limitations", chapter.limitations());
             value.put("presentationAuthority", safe(chapter.presentationAuthority()));
             value.put("presentationRevision", requiredRevision(chapter.presentationRevision()));
             value.put("hiddenByDefault", chapter.hiddenByDefault());
