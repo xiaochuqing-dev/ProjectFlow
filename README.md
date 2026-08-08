@@ -2,6 +2,8 @@
 
 ProjectFlow V3.8.5 is a local-first project-history reconstruction and long-term project-memory layer. Its universal product axis is 项目历程, not Capability Map: it turns Git, files, documents, Project Facts, Agent results and optional collaboration metadata into a readable path from source events to human-readable chapters, primary change stories, supporting work, evolution threads and Evidence drill-down.
 
+V3.8.5 RC2 has moved role graphs, Chapter membership and Evidence ownership back to the deterministic engineering layer; GLM and DeepSeek now share one minimal wording-only contract. Local H2, PostgreSQL, frontend, Playwright, Hermes and Obsidian gates pass, but PR #15 remains Draft because the new real-provider runs and genuine 30 Story/8 Chapter human review are not complete.
+
 ProjectFact remains the only persistent strong-fact source. `OBSERVED`/`VERIFIED` stay separate from `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` and `PROCESS_EVIDENCE`; a story or chapter is a replaceable read model and cannot promote a claim. Missing reasons remain UNKNOWN, raw events are retained, and GET reads never scan Git or call a model.
 
 ProjectFlow V3.4.5 established the model-protocol foundation, V3.5.0 added bounded repository intake, V3.6.0 added precise SCIP consumption and the minimum evolution bridge, and V3.7.0 added universal evidence discovery and adaptive planning. V3.7.1 closes the plan-to-execution gap with bounded DOC_READER, Git history, Tag, worktree, manifest and Agent-result providers, complete-JSON context packing, diversity-aware evidence selection, honest dimensional history coverage, discovery caches and outbound secret redaction.

@@ -2,6 +2,8 @@
 
 ## V3.8.5 history projection density
 
+RC2 reads the complete corrected Story graph with `includeHidden=true`, but hidden Stories stay out of default Overview, Chapter, Thread and index lists; their notes remain directly auditable. Projection aborts on revision drift, missing/duplicate refs, Chapter overlap, invalid merge targets or asymmetric Primary/Supporting links. Split and merge fixtures now use stable content selection rather than filesystem enumeration order; local coverage is 25/25.
+
 Project History projection reads the corrected Gateway view and keeps the first note layer human-readable. CORE emits the project overview, history index, readable Chapters, pinned/corrected representative Primary Stories, important conflicts/unknowns and a bounded set of high-value Threads. Supporting Changes and the complete Story/Thread/raw audit inventory remain available through EXTENDED or explicit FULL/AUDIT selection.
 
 Correction metadata is shown as a declaration with source/presentation revision and never imported as a strong fact. Existing frontmatter, managed-block content, stable IDs, redirects, archive/conflict handling and no-op atomic sync remain unchanged.

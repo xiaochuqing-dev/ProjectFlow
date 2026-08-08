@@ -2,6 +2,8 @@
 
 Base path: `/api`
 
+V3.8.5 RC2 adds direct `presentationRevision` parity to History overview, Chapter, Story and Thread responses. Native and Gateway Story list endpoints accept bounded `includeHidden`; default false preserves the public reading layer, while explicit consumers such as Obsidian can retrieve referenced hidden Stories. A client must restart a multi-page read when revisions differ.
+
 ## V3.8.5 presentation corrections
 
 History reads remain persisted-data-only and project-owned. The refresh endpoint is still the only source-discovery/model entry. The following presentation-only endpoints persist auditable `USER_DECLARED_PRESENTATION` declarations; they never change ProjectFact, raw events, Commit metadata or Evidence:

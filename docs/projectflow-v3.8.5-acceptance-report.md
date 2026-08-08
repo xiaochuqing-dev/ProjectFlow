@@ -1,8 +1,8 @@
 # ProjectFlow V3.8.5 验收报告
 
-报告状态：BLOCKED。代码实现、确定性门禁、产品链路和 required CI 已通过；真实 Provider 资格未通过，因此 PR #15 必须保持 Draft，不能合并 master。
+报告状态：BLOCKED。RC2 head 04fa000 的本地确定性门禁已通过；当前 required CI 尚在运行，真实 Provider RC2 重跑因 GitHub Secrets 缺失未执行，人工 30 Story/8 Chapter 仍为 0/0，因此 PR #15 必须保持 Draft，不能合并 master。
 
-更新日期：2026-08-07
+更新日期：2026-08-08
 
 ## 范围
 
@@ -20,11 +20,15 @@ V3.8.5 将 Project History 作为通用阅读轴，保留 Raw Event 与 Evidence
 
 本轮复现并修复了窗口续跑/缓存完整性、Prompt 超限拆分、局部窗口失败隔离、Primary/Supporting 角色图、修正冲突审计事务、Split/Merge 展示不变量和中文优先 fallback 的问题。首次失败与修复后的固定兼容结果记录在 `docs/projectflow-v3.8.5-rc-code-audit-and-fix-report.md`；固定执行器只证明确定性流程，不证明真实模型质量。
 
+RC2 进一步确认真实 Dogfood 的角色图失败来自职责边界：旧模型合同可在窗口内改写全局 role 关系。当前模型只返回 Story/Chapter 措辞和 evidence-backed reason；工程层唯一维护角色图、Chapter membership、生命周期和 Evidence。所有消费者以同一个 corrected view 和 presentationRevision 读取。
+
 ## 确定性与产品门禁
 
 | 门禁 | 实际结果 |
 | --- | --- |
-| Maven 全量测试（H2） | PASS，496 项，0 失败，0 错误，1 跳过（可选 benchmark） |
+| Maven 全量测试（H2） | RC2 PASS，546 项，0 失败，0 错误，5 个条件跳过 |
+| 根启动脚本 | PASS，实际生产构建并确认 8080 backend health 与 3000 frontend 就绪，证据写入 `logs/last-embedded-build.json` |
+| npm audit | 4 high、0 critical；未执行自动修复，保留为发布前依赖风险 |
 | V3.8.5 历程、Ground Truth、修正、Window、Prompt、重建测试 | PASS；固定生产输出比较与安全不变量通过 |
 | Frontend production build / lint | PASS；Next.js 16.2.11 |
 | Frontend contracts | PASS，55/55 |

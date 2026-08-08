@@ -37,6 +37,25 @@ jobs:
           test -f target/surefire-reports/TEST-com.projectflow.service.ProjectHistoryPromptBuilderTest.xml
           test -f target/surefire-reports/TEST-com.projectflow.ProjectHistoryDogfoodAcceptanceTest.xml
           test -f target/surefire-reports/TEST-com.projectflow.ProjectHistoryProductAcceptanceTest.xml
+          for report in \
+            CrossConsumerHistoryConsistencyTest \
+            RealDogfoodRoleGraphConsistencyTest \
+            ModelPortabilityContractTest \
+            ModelOutputMinimalSchemaTest \
+            UnsupportedClaimFailureTaxonomyTest \
+            ProviderNeutralPromptSnapshotTest \
+            ProviderNeutralSemanticValidationTest \
+            StoryHumanLanguageContractTest \
+            CommitHumanSummaryContractTest \
+            ChapterHumanLanguageContractTest \
+            NonCodeLanguageRegressionTest \
+            GenericCommitGroupingTest \
+            PrimarySupportingBidirectionalInvariantTest \
+            CorrectedProjectionConsistencyTest \
+            CorrectedReadRevisionParityTest \
+            HumanReviewSampleManifestTest; do
+            test -f "target/surefire-reports/TEST-com.projectflow.service.${report}.xml"
+          done
       - name: 保存 JUnit 报告
         if: always()
         uses: actions/upload-artifact@v4

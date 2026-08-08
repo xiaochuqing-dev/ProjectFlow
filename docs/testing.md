@@ -2,6 +2,8 @@
 
 ## V3.8.5 human-readable history gates
 
+RC2 adds provider-neutral minimal-schema, semantic validation, role-graph, language, failure-taxonomy, corrected-view parity and cross-consumer contracts. Local closure evidence on 2026-08-08 is H2 546 tests with 0 failures and 5 conditional skips; PostgreSQL 16 Testcontainers 5/5; frontend contracts 58/58; Playwright 9/9; Hermes 10/10; Obsidian 25/25. Real-provider wrapper tests skip without an explicit artifact name and become blocking inside the real workflow.
+
 The V3.8.5 deterministic suite covers Technical Atom compression, Primary/Supporting classification, readable Before/Change/After wording, commit-level summaries, non-code fallback, window planning/cache/checkpoint recovery, cancellation/failure disclosure and presentation correction persistence. It asserts raw-event conservation, valid Evidence, no unsupported reason, no first-layer technical leakage and no mutation of ProjectFact/Event/Evidence.
 
 Correction tests cover rename, summary edit, role changes, merge/split, hide/pin, declared chapter, restore, optimistic conflict and source rewrite conflict. Read consumers are checked for the same corrected view. Obsidian CORE density tests ensure all Story/Thread notes are not emitted by default while explicit extended/full modes remain available.

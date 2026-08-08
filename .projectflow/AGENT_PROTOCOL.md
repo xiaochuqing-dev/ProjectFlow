@@ -2,6 +2,8 @@
 
 V3.8.5 presentation rule: Project History is the universal reading axis. Raw Events remain the complete source inventory; Technical Atoms, Primary/Supporting Changes, Stories, Threads and Chapters are replaceable derived presentation. The first layer must be Chinese-first and outcome-oriented, while engineering detail and Evidence stay reachable on demand.
 
+RC2 execution rule: models may rewrite only bounded Story/Chapter wording and evidence-backed reason fields. Engineering owns role graphs, Chapter membership, lifecycle states and Evidence links. A closure result must separately record deterministic tests, each real Provider run, frozen human samples and genuine human scores; missing Secrets or missing human review is BLOCKED, not PASS. Never persist credentials, Prompt, raw response, reasoning or machine absolute paths in Agent results.
+
 Deterministic code owns event conservation, grouping membership, chronology, transitions, authority, Evidence, rewrite state and bounded execution. Semantic windows may propose wording and presentation roles only after IDs and Evidence are validated. Window cache/checkpoint state must disclose failures, cancellation, skipped work and unprocessed scope. No model call is made per Commit or file.
 
 `USER_DECLARED_PRESENTATION` is an auditable, reversible overlay for title, summary, grouping, role, visibility, pinning and chapter declarations. It never mutates ProjectFact, ProjectHistoryEvent, Commit or Evidence. Gateway, Agent Context, Hermes, Frontend and Obsidian must consume the same corrected view and preserve source/presentation revisions.

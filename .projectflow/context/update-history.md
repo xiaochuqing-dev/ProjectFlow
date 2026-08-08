@@ -1,5 +1,11 @@
 # Update history
 
+## ProjectFlow V3.8.5 RC2 模型与消费者一致性收口 - 2026-08-08
+
+- 模型 schema 缩为 Story/Chapter 措辞，Primary/Supporting、Chapter membership、生命周期和 Evidence 由工程层唯一维护。
+- Frontend、Gateway、Agent、Hermes、Obsidian 统一 corrected view 与 presentationRevision；补齐 hidden/pinned、split/merge 和 revision 漂移保护。
+- 本地 H2 546、PostgreSQL 16、前端 58、Playwright 9、Hermes 10、Obsidian 25 均通过；真实双 Provider 与人工 30/8 仍为 BLOCKED。
+
 ## ProjectFlow V3.8.5 真实资格收口 - 2026-08-07
 
 补充记录真实 Provider 结果：GLM `glm-5.2` Responses 合同通过但 19-case qualification FAIL（20 请求、103,268 token、16 个降级窗口、24 个失败/未处理窗口）；DeepSeek Chat 合同通过但 19-case qualification FAIL（20 请求、79,702 token、14 个降级窗口、24 个失败/未处理窗口）。DeepSeek 11 个真实场景通过 10 个，ProjectFlow Dogfood 因 Primary/Supporting 引用不一致失败；五类非代码场景通过。GLM 真实场景、旧版项目理解/历程入口和人工可读性抽样未运行。PR #15 保持 Draft，未合并、未创建 Tag/Release、未清理分支或 worktree。

@@ -1,6 +1,8 @@
 # ProjectFlow V3.8.5 Dogfood 对比记录
 
-状态：固定兼容模型的完整 Dogfood 对比只属于执行器和数据守恒证据；DeepSeek 真实 Dogfood 场景已运行但 FAIL，GLM 真实 Dogfood 和人工评分未运行。整体资格为 BLOCKED。
+状态：历史固定兼容模型对比仍只属于执行器和数据守恒证据；历史 DeepSeek 真实 Dogfood 10/11 FAIL、GLM NOT_RUN 必须保留。RC2 已修正窗口级模型改写全局角色图的边界，但新双 Provider Dogfood 因 Secrets 缺失尚未运行，整体资格仍为 BLOCKED。
+
+RC2 冻结工程基线保持 216 Commit、2,915 Source Event、337 Story、227 Primary、110 Supporting、9 Chapter。`RealDogfoodRoleGraphConsistencyTest` 证明完整双向角色图通过，并保留一个故意破坏引用的回归反例；真实模型只影响措辞，不能改变这些数量和关系。
 
 ## 数量对比
 

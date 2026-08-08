@@ -1,6 +1,6 @@
 # V3.8.5 验收证据索引
 
-本索引只指向可复核的仓库内证据，不保存凭据、Authorization、完整 Prompt、raw response、reasoning、绝对路径或私有项目内容。当前结论是 BLOCKED：本地实现与 required CI 通过，双真实 Provider 资格失败，人工可读性未运行。
+本索引只指向可复核的仓库内证据，不保存凭据、Authorization、完整 Prompt、raw response、reasoning、绝对路径或私有项目内容。当前结论是 BLOCKED：RC2 本地确定性门禁通过，current required CI 尚在运行；RC2 双真实 Provider 因 Secrets 缺失未运行，人工可读性仍为 0/0。
 
 实现、审计与合同
 
@@ -11,6 +11,15 @@
 - `docs/projectflow-v3.8.5-user-correction-contract.md`
 - `docs/projectflow-v3.8.5-obsidian-history-projection-contract.md`
 - `docs/projectflow-v3.8.5-acceptance-report.md`
+- `docs/projectflow-v3.8.5-rc2-current-state-audit.md`
+- `docs/projectflow-v3.8.5-rc2-provider-failure-taxonomy.md`
+- `docs/projectflow-v3.8.5-rc2-model-portability-contract.md`
+- `docs/projectflow-v3.8.5-rc2-cross-consumer-consistency.md`
+- `docs/projectflow-v3.8.5-rc2-human-readability-review.md`
+- `docs/projectflow-v3.8.5-rc2-real-provider-results.md`
+- `docs/projectflow-v3.8.5-rc2-targeted-reuse-decisions.md`
+- `docs/projectflow-v3.8.5-rc2-final-acceptance.md`
+- `docs/acceptance-evidence/v3.8.5/provider-failure-taxonomy.json`
 
 Ground Truth 与代码评测
 
@@ -22,6 +31,7 @@ Ground Truth 与代码评测
 - `backend/src/test/java/com/projectflow/eval/ProjectHistoryV385RealScenarioEvaluatorTest.java`
 - `.projectflow/agent-results/20260806-v385-history-quality-closure/result.json`
 - `.projectflow/agent-results/20260807-v385-final-qualification/result.json`
+- `.projectflow/agent-results/20260808-v385-rc2-final-closure/result.json`
 
 固定兼容模型证据
 

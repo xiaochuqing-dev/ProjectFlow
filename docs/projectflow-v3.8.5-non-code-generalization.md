@@ -1,6 +1,8 @@
 # ProjectFlow V3.8.5 非代码项目泛化记录
 
-状态：BLOCKED。DeepSeek 真实场景中的五类非代码材料均通过结构与安全检查；GLM 对应场景未运行，且尚未完成人工可读性评分，因此不能宣称最终泛化质量 PASS。
+状态：BLOCKED。历史 DeepSeek 五类非代码材料通过结构与安全检查，GLM 未运行；RC2 新双 Provider 场景因 Secrets 缺失未运行，且人工可读性仍为 0/0，因此不能宣称最终泛化质量 PASS。
+
+RC2 的非代码规则保持 Provider-neutral：模型不再生成 role 或工程结构，确定性语言层根据材料类型生成安全 fallback，不把演示、研究、数据、品牌页或无 Git 版本强行描述成后端、Controller、数据库或发布能力。`NonCodeLanguageRegressionTest` 已通过。
 
 ## 场景结果
 

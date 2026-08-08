@@ -2,6 +2,8 @@
 
 ## V3.8.5 corrected history view
 
+RC2 preserves the corrected `presentationRevision` on compact and full History responses. Story pagination supports `includeHidden=false` by default and an explicit true mode for complete reference-graph consumers. The Gateway does not independently apply corrections or infer Primary/Supporting links.
+
 Gateway history reads now apply the persisted `USER_DECLARED_PRESENTATION` overlay at read time. Responses distinguish automatic text from user-declared text, expose presentation authority/revision, Primary/Supporting role, technical atom and commit-summary drill-down, correction conflicts, unknowns and coverage. The overlay is presentation-only: Gateway never changes ProjectFact, raw events or Evidence and never invokes a model.
 
 `GET /api/projects/{projectId}/project-memory/history/corrections` lists the same bounded correction records used by the history controller. Agent Context, Hermes, frontend and Obsidian consume this Gateway view instead of reading correction or history repositories directly.
