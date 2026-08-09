@@ -28,6 +28,7 @@ public final class ProjectHistoryPromptBuilder {
     private static final String CHAPTERS_MARKER = "\nCHAPTERS_JSON=";
     private static final String OUTPUT_TEMPLATE_MARKER = "\nOUTPUT_TEMPLATE_JSON=";
     private static final String CHAPTER_SYNTHESIS_MARKER = "\nCHAPTER_SYNTHESIS_JSON=";
+    private static final String UNKNOWN_REASON = "原因未知：输入未提供可核验的原因 Evidence。";
     private static final String INSTRUCTIONS = """
         任务：把工程层已经组织好的项目历程改写成普通用户能看懂的中文。只改文字，不改事实或结构。
         只返回输入中的 storyId 和 chapterId，每个 ID 必须且只能返回一次。
@@ -190,7 +191,7 @@ public final class ProjectHistoryPromptBuilder {
         List<StoryOutputTemplate> storyTemplates = stories.stream().map(story -> new StoryOutputTemplate(
             story.storyId(), "", "", "", List.of(),
             story.reasonEligibleEvidenceRefs().isEmpty()
-                ? List.of("原因 UNKNOWN：输入未提供可核验的原因 Evidence。") : List.of()
+                ? List.of(UNKNOWN_REASON) : List.of()
         )).toList();
         List<ChapterOutputTemplate> chapterTemplates = chapters.stream()
             .map(chapter -> new ChapterOutputTemplate(chapter.chapterId(), "", ""))

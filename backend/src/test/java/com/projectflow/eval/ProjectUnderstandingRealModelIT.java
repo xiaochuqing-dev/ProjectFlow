@@ -560,6 +560,8 @@ class ProjectUnderstandingRealModelIT {
                     + ",reasoningChars=" + diagnostics.reasoningLength()
                     + ",finish=" + diagnostics.normalizedFinishReason()
                     + "}";
+            } else if (current instanceof ModelGatewayService.ModelHttpException http) {
+                type += "-" + http.statusCode();
             }
             types.add(type);
             current = current.getCause();

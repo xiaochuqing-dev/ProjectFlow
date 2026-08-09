@@ -39,6 +39,7 @@ class ModelGatewayProtocolMatrixTest {
     private volatile boolean invalidSchemaFirstRequest;
     private volatile boolean reasoningEmptyFirstRequest;
     private volatile boolean transientFailureFirstRequest;
+    private volatile boolean transientFailureOnRecovery;
     private final AtomicInteger providerRequestCount = new AtomicInteger();
     private final AtomicReference<com.sun.net.httpserver.Headers> capturedHeaders = new AtomicReference<>();
     private final AtomicReference<String> capturedQuery = new AtomicReference<>("");
@@ -128,6 +129,20 @@ class ModelGatewayProtocolMatrixTest {
             assertThat(reasoningRecovered.diagnostics().retryType()).isEqualTo("EMPTY_AFTER_REASONING_RETRY");
             assertThat(reasoningRecovered.diagnostics().requestCount()).isEqualTo(2);
             reasoningEmptyFirstRequest = false;
+
+            providerRequestCount.set(0);
+            reasoningEmptyFirstRequest = true;
+            transientFailureOnRecovery = true;
+            var reasoningRecoveredAfterTransportRetry = gateway.callStructured(
+                provider, "最小 ProjectFlow 任务", ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST
+            );
+            assertThat(reasoningRecoveredAfterTransportRetry.diagnostics().retryType())
+                .isEqualTo("EMPTY_AFTER_REASONING_RETRY");
+            assertThat(reasoningRecoveredAfterTransportRetry.diagnostics().requestCount()).isEqualTo(3);
+            assertThat(reasoningRecoveredAfterTransportRetry.diagnostics().transportRetryCount()).isEqualTo(1);
+            assertThat(providerRequestCount.get()).isEqualTo(3);
+            reasoningEmptyFirstRequest = false;
+            transientFailureOnRecovery = false;
 
             providerRequestCount.set(0);
             transientFailureFirstRequest = true;
@@ -312,7 +327,8 @@ class ModelGatewayProtocolMatrixTest {
         capturedHeaders.set(exchange.getRequestHeaders());
         capturedQuery.set(exchange.getRequestURI().getRawQuery() == null ? "" : exchange.getRequestURI().getRawQuery());
         capturedBody.set(objectMapper.readTree(exchange.getRequestBody().readAllBytes()));
-        if (transientFailureFirstRequest && providerRequestCount.get() == 1) {
+        if ((transientFailureFirstRequest && providerRequestCount.get() == 1)
+            || (transientFailureOnRecovery && providerRequestCount.get() == 2)) {
             byte[] error = "{\"error\":{\"type\":\"overloaded_error\",\"message\":\"busy\"}}".getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "application/json");
             exchange.sendResponseHeaders(429, error.length);

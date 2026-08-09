@@ -107,7 +107,8 @@ class ProjectHistoryPromptBuilderTest {
         assertThat(template.path("stories").findValuesAsText("storyId"))
             .containsExactly("story-without-reason", "story-with-reason");
         assertThat(template.path("chapters").findValuesAsText("chapterId")).containsExactly("chapter-one");
-        assertThat(template.path("stories").get(0).path("unknowns").get(0).asText()).contains("UNKNOWN");
+        assertThat(template.path("stories").get(0).path("unknowns").get(0).asText())
+            .contains("原因", "未知");
         assertThat(template.path("stories").get(1).path("unknowns")).isEmpty();
         assertThat(template.path("stories").get(0).path("humanTitle").asText()).isEmpty();
         assertThat(prompt).doesNotContain("DeepSeek", "GLM");

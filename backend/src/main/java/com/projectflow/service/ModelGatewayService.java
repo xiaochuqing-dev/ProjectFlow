@@ -284,7 +284,11 @@ public class ModelGatewayService {
             configuredConnectionTimeout,
             timeout
         );
-        int allowedAttempts = "NONE".equals(parameters.retryType()) ? MAX_TRANSPORT_ATTEMPTS : 1;
+        // A semantic recovery still owns the same single bounded transport
+        // retry as an initial request. This retries only the identical request
+        // after a transport failure or explicitly transient HTTP status; it
+        // does not create another semantic recovery or alter model effort.
+        int allowedAttempts = MAX_TRANSPORT_ATTEMPTS;
         long requestSequenceStartedAt = System.nanoTime();
         for (int attempt = 1; attempt <= allowedAttempts; attempt++) {
             try {
