@@ -69,11 +69,15 @@ class ProjectFlowRuntimeParityTest {
     }
 
     @Test
-    void realWorkflowCollectsBothProviderSuitesBeforeReturningFailure() throws Exception {
+    void realWorkflowCollectsBothProviderSuitesAcrossBoundedSequentialPhases() throws Exception {
         String workflow = Files.readString(Path.of("../.github/workflows/quality-gates.yml"));
 
         assertThat(workflow)
             .contains(
+                "optional-real-provider-qualification:",
+                "optional-real-provider-scenarios:",
+                "needs: optional-real-provider-qualification",
+                "always() && github.event_name == 'workflow_dispatch' && inputs.run_real_model",
                 "fail-fast: false",
                 "- id: glm",
                 "- id: deepseek",
@@ -90,9 +94,13 @@ class ProjectFlowRuntimeParityTest {
                 "run_gate history-v385-qualification",
                 "run_gate history-v385-scenarios",
                 "run_gate history-v385-dogfood",
-                "projectflow-real-model-eval-${{ matrix.id }}"
+                "projectflow-real-model-qualification-${{ matrix.id }}",
+                "projectflow-real-model-scenarios-${{ matrix.id }}"
             )
             .doesNotContain("model: deepseek-v4-pro");
+        assertThat(count(workflow, "timeout-minutes: 360")).isEqualTo(2);
+        assertThat(count(workflow, "fail-fast: false")).isEqualTo(2);
+        assertThat(count(workflow, "reasoning_effort: max")).isEqualTo(2);
         assertThat(count(workflow, "run_gate provider-probe")).isEqualTo(1);
         assertThat(count(workflow, "run_gate history-v385-qualification")).isEqualTo(1);
         assertThat(count(workflow, "run_gate history-v385-scenarios")).isEqualTo(1);
