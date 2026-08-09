@@ -1,6 +1,6 @@
 # ProjectFlow V3.8.5 Dogfood 对比记录
 
-状态：历史固定兼容模型对比仍只属于执行器和数据守恒证据；历史 DeepSeek 真实 Dogfood 10/11 FAIL、GLM NOT_RUN 必须保留。RC2 已修正窗口级模型改写全局角色图的边界，但新双 Provider Dogfood 因 Secrets 缺失尚未运行，整体资格仍为 BLOCKED。
+状态：双 Provider 最终 ProjectFlow Dogfood 自动门禁 PASS；历史固定兼容模型只属于执行器和数据守恒证据，旧 DeepSeek 10/11 FAIL、GLM NOT_RUN 与本轮 DeepSeek attempt 1 波动仍必须保留。真实人工可读性尚未评分，因此整体最终资格仍为 BLOCKED。
 
 RC2 冻结工程基线保持 216 Commit、2,915 Source Event、337 Story、227 Primary、110 Supporting、9 Chapter。`RealDogfoodRoleGraphConsistencyTest` 证明完整双向角色图通过，并保留一个故意破坏引用的回归反例；真实模型只影响措辞，不能改变这些数量和关系。
 
@@ -31,9 +31,9 @@ RC2 冻结工程基线保持 216 Commit、2,915 Source Event、337 Story、227 P
 
 ## 真实 Provider Dogfood
 
-DeepSeek V3.8.5 真实场景工件共 11 个场景、83 个物理请求、1,079,860 token、模型耗时 5,512,516 ms，10 个场景通过，1 个 `projectflow-current-history-dogfood` 失败。失败原因是 `Primary and supporting history references are inconsistent`，因此不能把固定对比表中的数量当作真实 Provider 的最终 ProjectFlow 历史结果。GLM 真实场景未执行。
+workflow `31318477841` 的 GLM `glm-5.2` Responses/high 最终为 11/11，68 个物理请求、871,777 token、模型耗时 5,266,928 ms；`projectflow-current-history-dogfood` PASS。DeepSeek `deepseek-v4-flash` Chat/max attempt 2 最终为 11/11，70 个物理请求、962,976 token、模型耗时 2,158,891 ms；Dogfood PASS。
 
-五类 DeepSeek 非代码项目场景均通过：演示材料、研究报告、数据分析、品牌页、无 Git 版本。17 窗口 continuation、restart/cache、schema failure、取消恢复、Prompt overflow 和 correction 场景也通过；这证明边界流程，但不能抵消 Dogfood 失败或 19-case qualification FAIL。
+DeepSeek attempt 1 为 9/11：17-window 首轮留下 1 failed、1 pending，correction 因 continuation fixture 不可用连带失败；该 attempt 的 Dogfood 与五类非代码仍通过。相同 head 只重跑失败 job 后通过，没有为 ProjectFlow 或 DeepSeek 增加业务特判，也没有放松角色图、Evidence 或 Strong Fact。
 
 ## 代表性 Primary Story
 
@@ -92,8 +92,8 @@ DeepSeek V3.8.5 真实场景工件共 11 个场景、83 个物理请求、1,079,
 
 ## 仍不理想的样例
 
-固定模型仍输出“整理前端区域”“整理 gitignore”“整理 project”“整理 task”“整理 ai review”等对象级模板；Chapter 也含有截短英文提交对象。DeepSeek 非代码候选已经出现较自然的动作和结果，但未完成人工复核。所有候选都只能进入人工池，不被宣称为可读性通过。
+固定模型仍输出“整理前端区域”“整理 gitignore”“整理 project”“整理 task”“整理 ai review”等对象级模板；Chapter 也含有截短英文提交对象。最终真实工件已冻结进 30 Story / 8 Chapter 人工池，但评分仍为空。所有候选都必须保留真实低分，不因自动门禁通过而宣称人工可读性通过。
 
 ## 证据边界
 
-工件不保存完整 Prompt、raw response、reasoning、Key、Authorization 或机器绝对路径。固定模型仅证明请求、解析、角色图、Evidence 校验、checkpoint 和 cache 行为；GLM/DeepSeek 19-case 资格结果均 FAIL，人工分数仍为 NOT_RUN。
+工件不保存完整 Prompt、raw response、reasoning、Key、Authorization 或机器绝对路径。最终 GLM/DeepSeek 19-case qualification 与 Dogfood 自动门禁通过；人工分数仍为 NOT_RUN，PR #15 继续 Draft。

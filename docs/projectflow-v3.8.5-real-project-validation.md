@@ -1,19 +1,20 @@
 # V3.8.5 真实项目与确定性验证
 
-## 已通过的确定性验证
+## 确定性验证
 
-- `ProjectHistoryReconstructionTest`：Git 创建/修改/删除/恢复/重命名、独立成果拆分、文档项目、敏感材料 metadata-only、rewrite、事件守恒、大历史和无变化 cache hit。
-- `ProjectHistoryV385GroundTruthTest`、`ProjectHistoryV385GroundTruthExecutionTest`、`ProjectHistoryCorrectionServiceTest`、Window planner/checkpoint 和 language policy 测试通过。
-- 后端全量 H2：496 项，0 失败，0 错误，1 跳过。
-- 前端 build/lint、55 项 contracts、Playwright 8/8、Hermes 9/9、Obsidian 21/21 通过。
-- GitHub push run `31069320457` 与 PR run `31069362971` 的 required jobs 和 PostgreSQL 16 Testcontainers 通过。
+- `ProjectHistoryReconstructionTest` 覆盖 Git 创建/修改/删除/恢复/重命名、独立成果拆分、文档项目、敏感材料 metadata-only、rewrite、事件守恒、大历史、窗口重试和 cache。
+- Ground Truth、用户修正、Window planner/checkpoint、最小模型合同、Provider-neutral Prompt 与语言策略测试通过。
+- 后端全量 H2：557 项，0 失败，0 错误，6 个条件跳过；真实人工清单合同实际 PASS。
+- Frontend contracts 58/58、Playwright 9/9、build/lint、Hermes 10/10、Obsidian 25/25 通过。
+- GitHub head `74ba013` 的 push run `31317712835` 与 PR run `31317716057` required jobs 和 PostgreSQL 16 Testcontainers 通过。
 
-## 真实 Provider 结果
+## 真实 Provider 与 ProjectFlow Dogfood
 
-- GLM `glm-5.2` Responses 合同通过，但 19-case qualification FAIL；真实场景未运行。
-- DeepSeek Chat 合同通过，19-case qualification FAIL；11 场景中 10/11 通过，ProjectFlow Dogfood 因 Primary/Supporting 引用不一致失败。五类非代码场景、17 窗口 continuation/cache/restart、schema failure、取消恢复和 Prompt overflow 场景通过。
-- 旧版 `ProjectFlowRealModelEvalIT` 与 `ProjectUnderstandingRealModelIT` 本轮没有执行，不将其写成通过。
+- GLM `glm-5.2` Responses/high：Understanding 17/17、19-case qualified、真实场景 11/11、ProjectFlow Dogfood PASS。
+- DeepSeek `deepseek-v4-flash` Chat/max：Understanding 17/17、19-case qualified；scenarios attempt 1 为 9/11，attempt 2 只重跑失败 job 后 11/11，ProjectFlow Dogfood PASS。
+- 两者演示、研究、数据、品牌页和无 Git 版本均通过；Invalid Evidence、跨项目引用、unsupported strong fact、Raw Event 丢失和敏感持久化为 0/false。
+- 旧 qualification FAIL、旧 DeepSeek Dogfood 10/11、Secrets 缺失、run `31294942095` 与 `31303975027` 失败均保留在 RC2 报告。
 
 ## 环境限制与结论
 
-本机 Docker Desktop Linux engine 不可用；PostgreSQL 结果只引用 GitHub Testcontainers，没有用 H2 冒充。人工可读性抽样为 0 Story/0 Chapter，最终质量门禁 BLOCKED。确定性测试证明事实守恒、边界、权限和安全；固定 Gateway 只证明协议与校验契约，不能替代真实模型质量。
+本机 Docker Desktop Linux engine 不可用；PostgreSQL 只引用 GitHub Testcontainers，没有用 H2 冒充。双 Provider 自动化证明事实守恒、协议、边界和真实场景；人工样本虽已冻结 30/8，但评分仍为空。最终质量门禁为 BLOCKED / PENDING_HUMAN_REVIEW。

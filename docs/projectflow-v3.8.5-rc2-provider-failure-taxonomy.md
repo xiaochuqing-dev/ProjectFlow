@@ -6,4 +6,4 @@
 
 代码审计能够确认两个跨案例因素，但不能倒推为每个实例的精确原因：旧 Story schema 属于 D，因为要求模型同时维护文字和全局角色关系；旧 ProjectFlow Dogfood 属于 F，因为窗口级模型被允许改写全局 Primary/Supporting 图。RC2 的处理不是放松 Evidence，而是缩小模型职责、保留 Unknown、由工程层唯一构图。
 
-新真实模型重跑尚未完成。后续工件必须继续记录分类计数；若仍有拒绝，只按实际保留的安全诊断归类。
+真实 run `31318477841` 的最终 19-case 两个 Provider 均为 0 rejected output、0 failed/pending window。此前 run `31303975027` 的 DeepSeek small-script reasoning-only 空 content 按 I 记录为已确认归一化输出失败；当前 run attempt 1 的 17-window 仅能从安全工件确认 15 succeeded、1 failed、1 pending，精确原因不足，按 J 保留，attempt 2 成功不覆盖首次失败。后续若仍有拒绝，只按实际保留的安全诊断归类。

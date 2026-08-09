@@ -1,35 +1,39 @@
 {
   "taskGoal": "按 V3.8.5 RC2 正式执行方案收口真实模型可移植合同、跨消费者一致性、大众可读历程和最终验收，并诚实保留所有阻断。",
   "actualChanges": [
-    "将 Story/Chapter 模型输出缩为措辞和有 Evidence 的原因，role、Primary/Supporting 关系、Chapter membership、生命周期、冲突和 Evidence 归属由工程层唯一维护。",
+    "将 Story/Chapter 模型输出缩为措辞和有 Evidence 的原因，role、Primary/Supporting、Chapter membership、生命周期、冲突和 Evidence 归属由工程层唯一维护。",
     "为 Frontend、Gateway、Agent、Hermes 与 Obsidian 统一 corrected view 和 presentationRevision，补齐 includeHidden、hidden/pinned、split/merge、双向引用与 revision 漂移保护。",
-    "增加 Commit 用户摘要与折叠原始提交详情，第一层不直接显示内部 enum，同时保留文件、原 message 和 Evidence 下钻。",
-    "逐项冻结历史 GLM/DeepSeek 各 12 个 UNSUPPORTED_CLAIM case；因安全工件缺少细分字段，24 项均诚实标记为 J/UNKNOWN，并单列已确认的 D/F 跨案例因素。",
-    "新增 Provider-neutral schema、语义校验、语言、角色图、跨消费者、真实 Dogfood 工件和人工抽样清单合同测试；人工清单没有真实工件时明确跳过而不是伪造通过。",
-    "更新 V3.8.5 全部要求文档并新增八份 RC2 报告；保留历史资格 FAIL、DeepSeek 10/11、人工 0/0 和旧 Obsidian CI failure。"
+    "为 reasoning-controlled 结构化请求增加 Provider-neutral 可见 JSON 合同；首次 reasoning-only 空 content 只允许一次同输入恢复，第二次仍空即失败，不发第三次请求，不持久化 reasoning。",
+    "将真实 qualification 与 scenarios 拆成两个依赖 job，避免 GLM 单 job 接近 GitHub-hosted 6 小时限制；配置、门禁、顺序和失败语义不变。",
+    "安全配置两项 GitHub Repository Secrets；值未进入代码、Commit、PR、日志、报告、Agent Result 或仓库文件。",
+    "最终固定 GLM 为 glm-5.2/Responses/high，DeepSeek 为 deepseek-v4-flash/Chat Completions/max；当前配置不使用 V4 Pro。",
+    "下载并扫描 12 份最终归一化真实模型工件，冻结 30 Story / 8 Chapter 分层人工复核清单和空白工作表；模型自评保持禁用。",
+    "更新 V3.8.5 当前状态、资格、Dogfood、非代码、人工抽样、产品验收、证据索引和 RC2 收口报告；保留所有历史失败与当前 attempt 1 波动。"
   ],
   "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ModelGatewayService.java",
     "backend/src/main/java/com/projectflow/service/ProjectHistoryModelOutputContract.java",
     "backend/src/main/java/com/projectflow/service/ProjectHistoryReconstructionService.java",
     "backend/src/main/java/com/projectflow/service/ProjectHistoryReadService.java",
-    "integrations/obsidian/projectflow_obsidian.py",
-    "integrations/hermes/projectflow_mcp.py",
-    "frontend/src/app/projects/[projectId]/history/page.tsx",
     ".github/workflows/quality-gates.yml",
-    "docs/projectflow-v3.8.5-rc2-final-acceptance.md",
-    "docs/acceptance-evidence/v3.8.5/provider-failure-taxonomy.json"
+    "scripts/freeze_v385_human_review_sample.py",
+    "docs/acceptance-evidence/v3.8.5/real-model/",
+    "docs/acceptance-evidence/v3.8.5/human-review-sample-manifest.json",
+    "docs/acceptance-evidence/v3.8.5/human-review-worksheet.md",
+    "docs/projectflow-v3.8.5-acceptance-report.md",
+    "docs/projectflow-v3.8.5-rc2-final-acceptance.md"
   ],
   "verification": {
-    "backend": "H2 全量 546 项，0 失败，0 错误，5 个条件跳过；新增 HumanReviewSampleManifestTest 单独执行为 1 个条件跳过。PostgreSQL 16 Testcontainers 5/5，通过 failsafe 11 项、0 失败、6 个外部真实依赖条件跳过。",
+    "backend": "H2 全量 557 项，0 失败，0 错误，6 个条件跳过；HumanReviewSampleManifestTest 在真实 30/8 清单存在后实际 PASS。PostgreSQL 16 Testcontainers 由 GitHub required CI 阻断验证。",
     "frontendAndConsumers": "前端 lint/build 通过，contracts 58/58，Playwright 9/9，Hermes 10/10，Obsidian 25/25。",
-    "startupAndSecurity": "根 Start-ProjectFlow.bat 实际重建并确认 backend/frontend 就绪，last-embedded-build 证据已生成；敏感扫描和验收证据校验通过。只读 npm audit 为 4 high、0 critical，未执行自动依赖升级。",
-    "github": "实现提交 04fa000 上 push run 31264425870 与 PR run 31264426989 均通过。真实 workflow 31264440534 因两项 GitHub Secrets 未配置在请求前失败，没有真实模型请求或计费。"
+    "startupAndSecurity": "根 Start-ProjectFlow.bat 从当前工作树完成生产构建并确认 backend/frontend 就绪；12 份正式模型文件的密钥样式和机器绝对路径扫描均为 0，工件安全字段全 false。只读 npm audit 为 4 high、0 critical，未执行自动依赖升级。",
+    "github": "代码 head 74ba013 的 push run 31317712835 与 PR run 31317716057 required jobs 通过。真实 workflow 31318477841：GLM 与 DeepSeek Flash 的 V3.8.0、V3.7.5 38-run、Understanding 17/17、V3.8.5 qualification 通过；GLM scenarios 11/11。DeepSeek attempt 1 scenarios 9/11，attempt 2 只重跑失败 job 后 11/11，整体 success。",
+    "realProviders": "GLM glm-5.2/OPENAI_RESPONSES/high 与 DeepSeek deepseek-v4-flash/OPENAI_CHAT_COMPLETIONS/max 最终均通过 19-case、ProjectFlow Dogfood、五类非代码和 11 个真实场景；Key/Prompt/raw/reasoning/绝对路径未持久化。"
   },
   "unfinished": [
-    "RC2 GLM qualification、19-case、real scenarios、ProjectFlow Dogfood 与非代码真实重跑尚未执行。",
-    "RC2 DeepSeek qualification、19-case、real scenarios、ProjectFlow Dogfood 与非代码真实重跑尚未执行。",
-    "至少 30 个 Story 和 8 个 Chapter 的分层样本尚未冻结，真实人工评分仍为 0/0、NOT_RUN。",
-    "PR #15 必须保持 Draft；未 Ready for Review、未合并 master、未创建 Tag/Release、未做 acceptance backfill、未删除分支或 worktree。",
+    "30 个 Story 和 8 个 Chapter 已冻结，但真实人工评分仍为 0/30、0/8、NOT_RUN；必须由真实人工填写并保留低分。",
+    "PR #15 必须保持 Draft；未 Ready for Review、未合并 master、未验证合并后 master、未完成 acceptance backfill。",
+    "未创建 Tag/Release；未清理分支或 worktree。原主工作树和旧 V3.8.5 worktree 含未知/用户修改，不能破坏性删除。",
     "npm audit 的 4 个 high 需要独立依赖升级与全量回归，不在本轮静默处理。"
   ],
   "sedimentCandidates": []

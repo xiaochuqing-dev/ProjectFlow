@@ -1,5 +1,7 @@
 # ProjectFlow V3.8.5 当前状态审计
 
+历史快照说明：本文件记录 RC2 接管前的初始审计与失败基线，以下 V4 Pro、qualification FAIL、10/11 和 NOT_RUN 不代表当前配置或最终自动化结果。2026-08-10 的当前状态以 `projectflow-v3.8.5-rc2-current-state-audit.md` 和 `projectflow-v3.8.5-acceptance-report.md` 为准；当前 DeepSeek 使用 `deepseek-v4-flash` / max。
+
 审计基线
 
 - 基线 master：`5cb5e49661206feb8f59885bea672c314c9374e8`
@@ -7,7 +9,7 @@
 - 基线产品版本：V3.8.0；本阶段实现将后端和前端版本提升为 V3.8.5
 - 本阶段不创建 Tag、Release、watcher、daemon、Git 客户端或新的运行时依赖
 
-本轮最终审计状态
+RC2 接管前审计状态
 
 - 确定性实现、H2、前端、Playwright、Hermes、Obsidian 和 GitHub required CI 已通过。
 - GLM `glm-5.2` 与 DeepSeek `deepseek-v4-pro` 单请求合同通过，但两份 19-case qualification 均 FAIL；DeepSeek 真实场景为 10/11，ProjectFlow Dogfood 失败。

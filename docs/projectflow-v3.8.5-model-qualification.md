@@ -2,26 +2,29 @@
 
 模型调用只经 `ModelGatewayService`，任务类型为 `PROJECT_HISTORY_SYNTHESIS`。Provider 协议、超时、取消、重试、usage、finish reason 和 schema 诊断由 Gateway 归一化；业务层不拼接 Provider 请求，也不按模型名硬编码语义答案。
 
-RC2 统一采用最小输出合同：Story 只允许 ID、标题、摘要、有 Evidence 的原因和 Unknown；Chapter 只允许 ID、标题、摘要。角色关系、Chapter 成员和状态三段由工程层提供，GLM 与 DeepSeek 不存在专属 Prompt 或 validator 分支。
+统一最小合同只允许 Story 的 ID、标题、摘要、有 Evidence 的原因与 Unknown，以及 Chapter 的 ID、标题与摘要。角色关系、Chapter 成员、状态三段、冲突与 Evidence 归属由工程层提供。首次语义校验失败只允许一次同输入安全重生成；reasoning-only 空 content 也只允许一次同输入恢复，第二次仍空即失败，不发第三次请求。
 
-每个语义窗口最多一次有界请求，单次最多执行 16 个未完成窗口。窗口缓存要求 source fingerprint、strategy/Prompt 版本、window identity、presentation revision 和 Story/Chapter 集合精确一致；失败、取消、运行中、跳过或未处理尾部都会阻止全局 cache hit。Prompt 超限会拆分为可继续的子窗口，局部窗口失败不会阻断独立窗口，系统性 Provider 错误仍可停止剩余调用并保留诊断。
+每轮最多处理 16 个未完成窗口。缓存要求 source fingerprint、strategy/Prompt、window identity、presentation revision 和成员集合精确一致；失败、取消、运行中、跳过或 pending 都阻止全局 cache hit。Prompt 超限确定性拆分；局部失败保留 checkpoint，独立窗口继续。
 
-## 固定兼容结果
+## 最终真实配置
 
-最新固定兼容场景工件 `v385-real-scenarios-openai_chat_completions/history-real-scenarios.json` 为 11/11 PASS、60 个物理请求、12,000 token。它证明 continuation、restart/cache、schema failure、取消、overflow、correction 和五类非代码边界，不证明真实 Provider 质量。
+- GLM：`glm-5.2`、Ark Coding、`OPENAI_RESPONSES`、high。
+- DeepSeek：`deepseek-v4-flash`、OpenCode Go、`OPENAI_CHAT_COMPLETIONS`、max。当前配置不使用 V4 Pro。
+- API Key 只由 GitHub Repository Secrets 注入，不进入仓库、工件或报告。
 
-## 真实合同
+## workflow 31318477841
 
-- GLM `glm-5.2` Responses：1 请求，4,850 token，41,659 ms，schema/security PASS。
-- DeepSeek `deepseek-v4-pro` Chat Completions：1 请求，4,271 token，81,987 ms，schema/security PASS。
+| 门禁 | GLM | DeepSeek Flash |
+| --- | --- | --- |
+| V3.8.0 合同 | PASS，1 请求 / 5,131 token | PASS，1 请求 / 3,846 token |
+| V3.7.5 38-run | 38/38，52 请求 / 521,726 token | 38/38，64 请求 / 663,829 token |
+| Understanding | 17/17 | 17/17 |
+| V3.8.5 qualification | PASS，20 请求 / 97,269 token | PASS，21 请求 / 121,540 token |
+| 失败/未处理窗口 | 0 | 0 |
+| rejected model output | 0 | 0 |
+| validation repair failure | 0 | 0 |
+| 最终 scenarios | 11/11 | 11/11 |
 
-## 真实资格
+DeepSeek scenarios attempt 1 为 9/11；17-window 有 1 failed、1 pending，correction 连带不可用。相同 head 只重跑失败 job 后 attempt 2 为 11/11。该波动被保留，不用固定兼容模型、安全计数或第二次成功覆盖首次失败。
 
-- GLM 19-case：20 请求、103,268 token、616,966 ms；16 个降级窗口、24 个失败/未处理窗口、12 个 UNSUPPORTED_CLAIM 拒绝；qualification FAIL。
-- DeepSeek 19-case：20 请求、79,702 token、1,002,070 ms；14 个降级窗口、24 个失败/未处理窗口、12 个 UNSUPPORTED_CLAIM 拒绝；qualification FAIL。
-- DeepSeek 11 场景：10/11 PASS；ProjectFlow Dogfood 因 Primary/Supporting history references inconsistent 失败。
-- GLM 真实场景、旧版 `ProjectFlowRealModelEvalIT`、`ProjectUnderstandingRealModelIT`：NOT_RUN。
-
-真实资格工件的安全聚合指标均为零违规，但资格仍因失败/降级/拒绝窗口不通过。未把合同 PASS、固定模型 PASS 或安全指标 PASS 写成 Provider qualification PASS。最终状态为 BLOCKED。
-
-RC2 workflow 31264440534 在凭据前置检查处失败，两项 Secret 均未配置；真实步骤未发请求。RC2 新资格结果保持 NOT_RUN，不能用历史合同 PASS 覆盖。
+固定兼容 11/11 仍只证明执行器、窗口、缓存和故障恢复，不作为真实 Provider 资格。双 Provider 自动资格已通过；最终产品状态仍因人工 30/8 未评分而 BLOCKED。

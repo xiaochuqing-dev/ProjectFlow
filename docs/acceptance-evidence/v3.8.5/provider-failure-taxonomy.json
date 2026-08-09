@@ -38,6 +38,33 @@
     { "provider": "DeepSeek", "caseId": "holdout-generic-message", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
     { "provider": "DeepSeek", "caseId": "holdout-agent-evidence", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" }
   ],
+  "rc2ObservedFailures": [
+    {
+      "runId": "31294942095",
+      "provider": "GLM",
+      "scope": "qualification-and-real-scenarios",
+      "finding": "19-case qualification 留下 2 个失败或未处理窗口；11 场景为 8/11。",
+      "taxonomyCode": "J",
+      "causeStatus": "PARTIALLY_CLASSIFIED_FROM_NORMALIZED_ARTIFACT"
+    },
+    {
+      "runId": "31303975027",
+      "provider": "DeepSeek Flash",
+      "scope": "understanding-small-script",
+      "finding": "两次 finish COMPLETE 均存在 reasoning 但可见 content 为空，归一化为 REASONING_EXHAUSTED_OUTPUT；当前统一 Prompt 与一次恢复已在后续 run 验证。",
+      "taxonomyCode": "I",
+      "causeStatus": "CONFIRMED_NORMALIZED_OUTPUT_FAILURE"
+    },
+    {
+      "runId": "31318477841",
+      "runAttempt": 1,
+      "provider": "DeepSeek Flash",
+      "scope": "seventeen-window-restart-cache-and-chapter",
+      "finding": "首轮 16 个目标窗口中 15 succeeded、1 failed，并保留 1 pending；correction 因 continuation fixture 不可用连带失败。相同 head 的失败 job attempt 2 为 11/11。",
+      "taxonomyCode": "J",
+      "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT"
+    }
+  ],
   "confirmedCrossCuttingContributors": [
     {
       "taxonomyCode": "D",

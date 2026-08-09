@@ -1,0 +1,46 @@
+{
+  "version" : "projectflow-v3.8.5-history-real-model-v4",
+  "generatedAt" : "2026-08-09T14:29:29.095337190Z",
+  "promptVersion" : "project-history-synthesis-v8",
+  "provider" : {
+    "model" : "glm-5.2",
+    "protocol" : "OPENAI_RESPONSES",
+    "name" : "GLM",
+    "reasoningEffort" : "high"
+  },
+  "input" : {
+    "promptCharacterCount" : 3116,
+    "chapterCount" : 1,
+    "storyCount" : 2
+  },
+  "contract" : {
+    "rootSchemaViolationCount" : 0,
+    "entitySchemaViolationCount" : 0,
+    "missingEntityCount" : 0,
+    "duplicateEntityCount" : 0,
+    "crossProjectReferenceCount" : 0,
+    "invalidEvidenceRefCount" : 0,
+    "reasonWithoutEvidenceCount" : 0,
+    "missingReasonUnknownCount" : 0,
+    "emptyReadableSummaryCount" : 0,
+    "unsupportedClaimCount" : 0,
+    "returnedStoryCount" : 2,
+    "returnedChapterCount" : 1
+  },
+  "diagnostics" : {
+    "latencyMs" : 84216,
+    "totalTokens" : 5131,
+    "finishReason" : "COMPLETE",
+    "requestCount" : 1,
+    "schemaMatched" : true,
+    "truncated" : false,
+    "reasoningPresent" : false
+  },
+  "security" : {
+    "reasoningPersisted" : false,
+    "apiKeyPersisted" : false,
+    "promptPersisted" : false,
+    "absolutePathPersisted" : false,
+    "rawResponsePersisted" : false
+  }
+}

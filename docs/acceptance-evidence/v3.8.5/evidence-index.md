@@ -1,66 +1,60 @@
 # V3.8.5 验收证据索引
 
-本索引只指向可复核的仓库内证据，不保存凭据、Authorization、完整 Prompt、raw response、reasoning、绝对路径或私有项目内容。当前结论是 BLOCKED：RC2 本地确定性门禁通过，current required CI 尚在运行；RC2 双真实 Provider 因 Secrets 缺失未运行，人工可读性仍为 0/0。
+本索引只指向可复核的仓库内证据，不保存凭据、Authorization、完整 Prompt、raw response、reasoning、机器绝对路径或私有项目内容。当前状态为 BLOCKED / PENDING_HUMAN_REVIEW：自动化双 Provider 门禁已通过，真实人工评分尚未完成。
 
-实现、审计与合同
+## 最终自动化来源
 
-- `docs/projectflow-v3.8.5-current-state-audit.md`
-- `docs/projectflow-v3.8.5-rc-code-audit-and-fix-report.md`
-- `docs/projectflow-v3.8.5-human-readable-history-contract.md`
-- `docs/projectflow-v3.8.5-semantic-compression-architecture.md`
-- `docs/projectflow-v3.8.5-user-correction-contract.md`
-- `docs/projectflow-v3.8.5-obsidian-history-projection-contract.md`
+- 代码 head：`74ba013615932748b4a41077baf8f89af618a5d2`
+- required CI：push run [`31317712835`](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31317712835)、PR run [`31317716057`](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31317716057)，均 PASS
+- 真实 run：[`31318477841`](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31318477841)，attempt 2 PASS
+- attempt 1 的 DeepSeek scenarios 9/11 失败仍保留在 GitHub 同一 run 的 attempt/artifact 历史中；attempt 2 只重跑失败 job
+
+## 正式归一化模型工件
+
+GLM `glm-5.2` / Responses / high：
+
+- `real-model/glm/history-v380-real-model.json`，SHA-256 `34ddf2edf117d80293ee38ece76de6e50139a7f7df2597c1d83984b175109001`
+- `real-model/glm/projectflow-v375-eval-result.json`，SHA-256 `8f3bc2ed54eb0f3e9f67cbc4912df91986532023511fffd60a640ee9fce8e699`
+- `real-model/glm/projectflow-v375-eval-result.md`，SHA-256 `7db7c9f5a444261ec0610034d427b371b9d0b73bafa3a46395dbb2e3532f4275`
+- `real-model/glm/project-understanding-real-e2e.json`，SHA-256 `8bc288805e1e577e1bdd772b91d117026fd546f12f3b0f0f84c1b557ba0e3fb0`
+- `real-model/glm/history-ground-truth-real-result.json`，SHA-256 `6ec6f88ece9294d74cdc098cd1168e7ae2363f607be5ebd4ad556d2250edae10`
+- `real-model/glm/history-real-scenarios.json`，SHA-256 `129e207d5569b15aaa875dc7fd896e893138b825c1382c984f33185e1d3d0425`
+
+DeepSeek `deepseek-v4-flash` / Chat Completions / max：
+
+- `real-model/deepseek/history-v380-real-model.json`，SHA-256 `8f013ec401cdbfa480d24dae8dca1a5dde4153d4538098e392a67fc5ef786fd4`
+- `real-model/deepseek/projectflow-v375-eval-result.json`，SHA-256 `35d6576d4ee979dd27f2c982dc315d8cce7004288d48c42090859f5bb6c10815`
+- `real-model/deepseek/projectflow-v375-eval-result.md`，SHA-256 `453b275518a19f2a1c692551b9305beb5ff42d52142a4f1c7f0bdcc3599bb7a9`
+- `real-model/deepseek/project-understanding-real-e2e.json`，SHA-256 `dcae46cfcc53e7791d723aa1097156b54f15085faad4dd118f7f87a55c24bf23`
+- `real-model/deepseek/history-ground-truth-real-result.json`，SHA-256 `f78f97f3f1ea2e3e96f5c1b0ac3f2fe171f1be39478d419778d61239f291acba`
+- `real-model/deepseek/history-real-scenarios.json`，SHA-256 `e8564cbf4c7cfe4bfa245ba107fc4f004eaf20d29eafd8fdc4877ebf014f1b91`
+
+## 人工复核证据
+
+- `human-review-sample-manifest.json`：30 Story / 8 Chapter，双 Provider 各 15/4；绑定 run、相对工件、实体 ID、内容哈希与 presentation revision；状态 PENDING_HUMAN_REVIEW
+- `human-review-worksheet.md`：逐项展示标题、摘要、Before/Change/After、Reason、Evidence、Unknown/Conflict 与空白人工评分项
+- `backend/src/test/java/com/projectflow/service/HumanReviewSampleManifestTest.java`：真实清单存在时校验数量、Run URL、相对路径、双 Provider、分层覆盖和安全标志
+
+## 关键实现与报告
+
 - `docs/projectflow-v3.8.5-acceptance-report.md`
-- `docs/projectflow-v3.8.5-rc2-current-state-audit.md`
-- `docs/projectflow-v3.8.5-rc2-provider-failure-taxonomy.md`
-- `docs/projectflow-v3.8.5-rc2-model-portability-contract.md`
-- `docs/projectflow-v3.8.5-rc2-cross-consumer-consistency.md`
-- `docs/projectflow-v3.8.5-rc2-human-readability-review.md`
 - `docs/projectflow-v3.8.5-rc2-real-provider-results.md`
-- `docs/projectflow-v3.8.5-rc2-targeted-reuse-decisions.md`
+- `docs/projectflow-v3.8.5-rc2-human-readability-review.md`
+- `docs/projectflow-v3.8.5-rc2-model-portability-contract.md`
+- `docs/projectflow-v3.8.5-rc2-current-state-audit.md`
 - `docs/projectflow-v3.8.5-rc2-final-acceptance.md`
 - `docs/acceptance-evidence/v3.8.5/provider-failure-taxonomy.json`
-
-Ground Truth 与代码评测
-
-- `backend/src/test/resources/projectflow-v385/history-ground-truth.json`
-- `backend/src/test/java/com/projectflow/ProjectHistoryV385GroundTruthTest.java`
-- `backend/src/test/java/com/projectflow/ProjectHistoryV385GroundTruthExecutionTest.java`
-- `backend/src/test/java/com/projectflow/eval/ProjectHistoryV385QualityEvaluator.java`
-- `backend/src/test/java/com/projectflow/eval/ProjectHistoryV385RealOutputEvaluatorTest.java`
-- `backend/src/test/java/com/projectflow/eval/ProjectHistoryV385RealScenarioEvaluatorTest.java`
-- `.projectflow/agent-results/20260806-v385-history-quality-closure/result.json`
-- `.projectflow/agent-results/20260807-v385-final-qualification/result.json`
 - `.projectflow/agent-results/20260808-v385-rc2-final-closure/result.json`
 
-固定兼容模型证据
+## 验证结果
 
-- `backend/target/projectflow-eval/v385-real-scenarios-openai_chat_completions/history-real-scenarios.json`：固定兼容执行器 11/11 场景通过，60 个物理请求，12,000 token；只证明流程、边界和故障恢复。
-- `backend/target/projectflow-eval/history-real/project-history-real-model.json`：固定兼容 Dogfood 合同结果，1 请求；不代表真实 Provider 质量。
-- `backend/target/projectflow-eval/fixed-v385-scenarios/history-real-scenarios.json` 是较早的兼容重跑工件，不作为当前资格结论。
+- `mvn.cmd -q test`：PASS，557 项，0 失败，0 错误，6 个条件跳过
+- `mvn.cmd -q -Dtest=HumanReviewSampleManifestTest test`：PASS
+- Frontend contracts 58/58、Playwright 9/9、生产 build/lint：PASS
+- Hermes 10/10、Obsidian 25/25：PASS
+- 根 `Start-ProjectFlow.bat -NoBrowser`：PASS，当前工作树生产重建并确认前后端就绪
+- 正式 12 个模型文件独立扫描：密钥样式 0、机器绝对路径 0；所有工件安全字段为 false
 
-真实 Provider 工件
+## 历史与范围
 
-- `backend/target/projectflow-eval/glm-v385-contract/project-history-real-model.json`：GLM `glm-5.2` Responses 合同 PASS，1 请求，4,850 token，41,659 ms。
-- `backend/target/projectflow-eval/deepseek-contract/project-history-real-model.json`：DeepSeek Chat 合同 PASS，1 请求，4,271 token，81,987 ms。
-- `backend/target/projectflow-eval/glm-v385/history-ground-truth-real-result.json`：GLM 19-case qualification FAIL，20 请求，103,268 token，616,966 ms，16 个降级窗口，24 个失败/未处理窗口，12 个 UNSUPPORTED_CLAIM 拒绝。
-- `backend/target/projectflow-eval/deepseek-v385/history-ground-truth-real-result.json`：DeepSeek 19-case qualification FAIL，20 请求，79,702 token，1,002,070 ms，14 个降级窗口，24 个失败/未处理窗口，12 个 UNSUPPORTED_CLAIM 拒绝。
-- `backend/target/projectflow-eval/deepseek-v385-scenarios/history-real-scenarios.json`：11 个真实场景 10/11，通过 5 类非代码和恢复类场景；ProjectFlow Dogfood 因 Primary/Supporting 引用不一致失败。
-
-可复核命令与结果
-
-- `backend: mvn.cmd -q test`：PASS，496 项，0 失败，0 错误，1 跳过。
-- `frontend: npm.cmd run build`：PASS；`npm.cmd run lint`：PASS；`npm.cmd run test:contracts`：PASS，55/55。
-- `frontend: npm.cmd run test:e2e`：PASS，8/8，真实前端/后端与固定模型服务。
-- `python -m unittest discover -s integrations/hermes -p 'test_*.py'`：PASS，9/9。
-- `python -m unittest discover -s integrations/obsidian -p 'test_*.py'`：PASS，21/21。
-- `cmd.exe /c Start-ProjectFlow.bat -CheckOnly`：PASS，版本 3.8.5。
-- `docker info`：本机 BLOCKED；GitHub PostgreSQL 16 Testcontainers 独立通过。
-- GitHub push run [`31069320457`](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31069320457)：required jobs PASS。
-- GitHub PR run [`31069362971`](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31069362971)：required jobs PASS，optional-real-provider SKIPPED。
-
-安全与范围
-
-- 本轮扫描覆盖 871 个文本文件；token-like/Bearer 命中均为 0，7 个绝对路径匹配分布在 4 个脱敏/敏感内容测试夹具中。扫描只记录聚合数量和诊断，不保存扫描原文；`git diff --check` 退出码为 0。
-- `.github/workflows/quality-gates.yml` 的 DeepSeek endpoint 已修正为 `https://opencode.ai/zen/go/v1`；不包含任何 Key。
-- PR [#15](https://github.com/xiaochuqing-dev/ProjectFlow/pull/15) 继续 Draft；未执行 merge、Ready for Review、Tag、Release、分支删除或 worktree 清理。
+初始 qualification FAIL、旧 DeepSeek Dogfood 10/11、Secrets 缺失 run `31264440534`、run `31294942095` 双 job 失败、run `31303975027` DeepSeek Understanding 16/17、run `31318477841` attempt 1 scenarios 9/11 和旧 Obsidian CI failure 均在 RC2 报告中保留。PR #15 继续 Draft；人工门禁前未执行 merge、Tag、Release、backfill 或清理。
