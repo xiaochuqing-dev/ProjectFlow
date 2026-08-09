@@ -29,7 +29,21 @@ class HumanReviewSampleManifestTest {
             "等待 GLM 与 DeepSeek RC2 真实工件后冻结人工抽样清单");
 
         JsonNode root = new ObjectMapper().readTree(manifest.toFile());
+        assertThat(root.path("version").asText()).isEqualTo("projectflow-v385-human-review-sample-v1");
+        assertThat(root.path("sourceRunId").asText()).matches("[1-9][0-9]*");
+        assertThat(root.path("sourceRunUrl").asText())
+            .isEqualTo("https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/" + root.path("sourceRunId").asText());
         assertThat(root.path("status").asText()).isIn("PENDING_HUMAN_REVIEW", "REVIEWED");
+        assertThat(root.path("samplingMethod").asText()).contains("fixed stratified selection");
+        assertThat(root.path("security").path("modelSelfScoring").asBoolean(true)).isFalse();
+        assertThat(root.path("security").path("rawPromptStored").asBoolean(true)).isFalse();
+        assertThat(root.path("security").path("rawResponseStored").asBoolean(true)).isFalse();
+        assertThat(root.path("security").path("reasoningStored").asBoolean(true)).isFalse();
+        assertThat(root.path("security").path("credentialsStored").asBoolean(true)).isFalse();
+        if ("PENDING_HUMAN_REVIEW".equals(root.path("status").asText())) {
+            assertThat(root.path("reviewerCount").asInt(-1)).isZero();
+            assertThat(root.path("reviewMode").asText()).isEqualTo("PENDING_SINGLE_HUMAN_REVIEWER");
+        }
         JsonNode stories = root.path("stories");
         JsonNode chapters = root.path("chapters");
         assertThat(stories.isArray()).isTrue();
@@ -55,7 +69,11 @@ class HumanReviewSampleManifestTest {
         assertThat(sample.path("sampleId").asText()).isNotBlank();
         assertThat(sampleIds.add(sample.path("sampleId").asText())).isTrue();
         assertThat(sample.path("entityId").asText()).isNotBlank();
-        assertThat(sample.path("artifact").asText()).isNotBlank();
+        assertThat(sample.path("projectType").asText())
+            .isIn("SOFTWARE_FIXTURE", "PROJECTFLOW_SOFTWARE", "NON_CODE");
+        String artifact = sample.path("artifact").asText();
+        assertThat(artifact).isNotBlank().startsWith("docs/acceptance-evidence/v3.8.5/real-model/");
+        assertThat(artifact).doesNotContain("..", "\\").doesNotMatch("^[A-Za-z]:/.*").doesNotStartWith("/");
         assertThat(sample.path("contentHash").asText()).matches("sha256:[0-9a-f]{64}");
         assertThat(sample.path("presentationRevision").asText()).isNotBlank();
         providers.add(sample.path("provider").asText());
