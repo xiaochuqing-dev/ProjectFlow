@@ -194,8 +194,9 @@ public class ModelGatewayService {
         );
         String retryPrompt = prompt + (reasoningExhausted ? """
 
-            【可见输出恢复】上次 reasoning 疑似占满共享预算且没有形成完整可见结果。请直接生成最终 JSON，
-            不要输出推理过程；保留所有有证据支持的重要条目。
+            【可见输出恢复】上次响应只形成 reasoning，没有形成可见 content。请重新处理同一份有界输入，
+            保持配置的推理强度并为可见结果预留输出空间；结束 reasoning 后必须在 content 中返回完整目标 JSON。
+            不要把 reasoning 原文复制到 content；保留所有有证据支持的重要条目。
             """ : """
 
             【截断恢复】上次最终 JSON 未完整输出。本次预算已按首次结果提高，请直接返回完整目标 JSON，
@@ -275,7 +276,7 @@ public class ModelGatewayService {
         );
         CanonicalModelRequest request = new CanonicalModelRequest(
             provider,
-            "只返回合法 JSON，不要 Markdown 代码块。所有自然语言字段必须使用简体中文；技术名、文件路径和代码标识符保留原文。",
+            structuredSystemPrompt(parameters, capabilities),
             prompt,
             parameters.effectiveMaxTokens(),
             parameters.temperatureSent() ? parameters.effectiveTemperature() : null,
@@ -320,6 +321,16 @@ public class ModelGatewayService {
             }
         }
         throw new IOException("model request failed");
+    }
+
+    private String structuredSystemPrompt(RequestParameters parameters, ModelCapabilities capabilities) {
+        String base = "只返回合法 JSON，不要 Markdown 代码块。所有自然语言字段必须使用简体中文；技术名、文件路径和代码标识符保留原文。";
+        if (requestPolicy.reasoningEffort(capabilities) == null) return base;
+        String reasoningContract = " 保持配置的充分推理强度，在 reasoning 阶段完成判断并正常结束 reasoning，"
+            + "随后必须把完整 JSON 写入可见 content；不得在 content 为空时结束，也不得把 reasoning 原文复制到 content。";
+        return "EMPTY_AFTER_REASONING_RETRY".equals(parameters.retryType())
+            ? base + " 当前是唯一可见输出恢复请求。" + reasoningContract
+            : base + reasoningContract;
     }
 
     private StructuredModelResponse parseCanonicalResponse(

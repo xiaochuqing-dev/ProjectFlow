@@ -16,6 +16,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
+import com.projectflow.entity.ModelProtocol;
+import com.projectflow.service.model.ModelProtocolAdapterRegistry;
+import com.projectflow.service.model.OpenAiChatCompletionsAdapter;
 import com.sun.net.httpserver.HttpServer;
 
 class ModelGatewayServiceTest {
@@ -92,6 +95,45 @@ class ModelGatewayServiceTest {
             assertThat(response.diagnostics().compactRetryAttempted()).isTrue();
             assertThat(response.diagnostics().compactRetrySucceeded()).isTrue();
             assertThat(response.diagnostics().retryType()).isEqualTo("EMPTY_AFTER_REASONING_RETRY");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void maxReasoningRecoveryRequiresASeparateVisibleJsonResultWithinTwoRequests() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        java.util.concurrent.atomic.AtomicReference<JsonNode> recoveryRequest = new java.util.concurrent.atomic.AtomicReference<>();
+        HttpServer server = startMaxReasoningRecoveryServer(calls, recoveryRequest);
+        try {
+            AiProvider provider = flashProvider("http://127.0.0.1:" + server.getAddress().getPort());
+            ModelGatewayService maxGateway = new ModelGatewayService(
+                objectMapper,
+                new AiProviderUrlGuard(),
+                new ModelOutputAdapter(objectMapper),
+                new ModelCapabilityRegistry(),
+                new ModelRequestPolicy("max"),
+                new ModelProtocolAdapterRegistry(List.of(new OpenAiChatCompletionsAdapter(new AiProviderUrlGuard()))),
+                240
+            );
+
+            var response = maxGateway.callStructured(
+                provider,
+                "请根据有界证据生成项目理解 JSON",
+                ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+            );
+
+            assertThat(calls.get()).isEqualTo(2);
+            assertThat(recoveryRequest.get().path("reasoning_effort").asText()).isEqualTo("max");
+            assertThat(recoveryRequest.get().path("max_tokens").asInt()).isEqualTo(65_536);
+            assertThat(recoveryRequest.get().at("/messages/0/content").asText())
+                .contains("充分推理", "结束 reasoning", "可见 content", "不得在 content 为空时结束");
+            assertThat(recoveryRequest.get().at("/messages/1/content").asText())
+                .contains("同一份有界输入", "完整目标 JSON");
+            assertThat(response.diagnostics().reasoningEffort()).isEqualTo("max");
+            assertThat(response.diagnostics().retryType()).isEqualTo("EMPTY_AFTER_REASONING_RETRY");
+            assertThat(response.diagnostics().requestCount()).isEqualTo(2);
+            assertThat(response.diagnostics().compactRetrySucceeded()).isTrue();
         } finally {
             server.stop(0);
         }
@@ -263,6 +305,29 @@ class ModelGatewayServiceTest {
         return provider;
     }
 
+    private AiProvider flashProvider(String baseUrl) {
+        AiProvider provider = new AiProvider(UUID.randomUUID());
+        provider.update(
+            "Compatibility Provider", baseUrl, "test-key", "provider-neutral-flash", AiProviderType.DEEPSEEK,
+            0.1, 65_536, true, List.of("项目分析")
+        );
+        provider.configureProtocol(
+            ModelProtocol.OPENAI_CHAT_COMPLETIONS,
+            null,
+            null,
+            null,
+            null,
+            Map.of(),
+            600,
+            false,
+            true,
+            false,
+            true,
+            true
+        );
+        return provider;
+    }
+
     private HttpServer startServer(AtomicInteger calls, boolean alwaysTruncated) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/chat/completions", exchange -> {
@@ -342,6 +407,28 @@ class ModelGatewayServiceTest {
             String body = call == 1
                 ? "{\"choices\":[{\"finish_reason\":\"length\",\"message\":{\"content\":\"\",\"reasoning_content\":\"已消耗预算\"}}],\"usage\":{\"completion_tokens\":4000}}"
                 : "{\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"content\":\"{\\\"items\\\":[{\\\"name\\\":\\\"恢复成功\\\"}]}\"}}],\"usage\":{\"completion_tokens\":200}}";
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        server.start();
+        return server;
+    }
+
+    private HttpServer startMaxReasoningRecoveryServer(
+        AtomicInteger calls,
+        java.util.concurrent.atomic.AtomicReference<JsonNode> recoveryRequest
+    ) throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/chat/completions", exchange -> {
+            int call = calls.incrementAndGet();
+            JsonNode request = objectMapper.readTree(exchange.getRequestBody());
+            if (call == 2) recoveryRequest.set(request);
+            String body = call == 1
+                ? "{\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"content\":\"\",\"reasoning_content\":\"内部推理不得持久化\"}}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":4603,\"total_tokens\":4703}}"
+                : "{\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"content\":\"{\\\"semanticScout\\\":{\\\"projectShapeHypotheses\\\":[],\\\"evidenceSourceAssessments\\\":[],\\\"applicableDimensions\\\":[],\\\"capabilityDecisions\\\":[],\\\"unknowns\\\":[]},\\\"dynamicProfile\\\":{\\\"summary\\\":\\\"已形成可见结果\\\",\\\"sections\\\":[],\\\"limitations\\\":[]},\\\"analysisPlan\\\":{\\\"requestedCapabilityNames\\\":[],\\\"requestedEvidenceIds\\\":[]}}\"}}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":200,\"total_tokens\":300}}";
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, bytes.length);
