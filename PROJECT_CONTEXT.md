@@ -191,7 +191,7 @@ V3.3.6 compatibility focus:
 - Local fact and Agent-result drafts remain visible but never automatically enter the formal suggestion flow.
 - Confirmed sediments persist source batches and affected files, enter pending capability analysis, and are the direct input to capability analysis.
 - Capability analysis records input sediment IDs and updates their analysis state only after successful card persistence.
-- Empty truncated model output triggers one bounded recovery. Reasoning-capable profiles keep high effort and the configured Provider ceiling; reasoning text is not retained, and external waits do not hold method-level database transactions.
+- Empty truncated model output triggers one bounded recovery. Reasoning-capable profiles keep their configured effort and Provider ceiling; the current RC2 profiles use GLM high and DeepSeek Flash max. Reasoning text is not retained, and external waits do not hold method-level database transactions.
 
 V3.3.5 focus (still applies):
 

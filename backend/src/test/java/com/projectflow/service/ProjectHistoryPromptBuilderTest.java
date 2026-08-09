@@ -38,6 +38,9 @@ class ProjectHistoryPromptBuilderTest {
 
         assertThat(production).isEqualTo(evaluation);
         assertThat(production.promptCharacterCount()).isLessThanOrEqualTo(ProjectHistoryPromptBuilder.MAX_PROMPT_CHARS);
+        assertThat(builder.validationRepair(production.prompt(), "CONTRACT"))
+            .hasSizeLessThanOrEqualTo(ProjectHistoryPromptBuilder.MAX_PROMPT_CHARS)
+            .contains(ProjectHistoryPromptBuilder.VALIDATION_REPAIR_MARKER + "CONTRACT");
         assertThat(production.omittedStoryCount()).isGreaterThan(0);
         assertThat(production.includedStoryIds()).isNotEmpty();
 

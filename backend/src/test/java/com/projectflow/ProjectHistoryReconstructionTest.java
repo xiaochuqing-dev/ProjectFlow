@@ -53,6 +53,7 @@ import com.projectflow.service.ModelGatewayService;
 import com.projectflow.service.ModelOutputAdapter;
 import com.projectflow.service.ModelTaskType;
 import com.projectflow.service.ProjectHistoryCorrectionService;
+import com.projectflow.service.ProjectHistoryPromptBuilder;
 import com.projectflow.service.ProjectHistoryReadService;
 import com.projectflow.service.ProjectHistoryReconstructionService;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryCorrectionRequest;
@@ -780,6 +781,46 @@ class ProjectHistoryReconstructionTest {
     }
 
     @Test
+    void repairsOneSemanticValidationFailureWithoutAcceptingInvalidEvidence() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("model-validation-repair");
+        Files.createDirectories(repository.resolve("src"));
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Files.writeString(repository.resolve("src/Result.java"), "class Result {}\n");
+        commit(repository, "introduce reviewable result");
+        ProjectSpace project = project(userId, "Model Validation Repair", repository);
+        provider(userId);
+
+        AtomicInteger calls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(1, String.class);
+            String valid = historyModelResponse(prompt);
+            if (calls.incrementAndGet() != 1) return modelResponse(valid);
+            JsonNode invalid = objectMapper.readTree(valid);
+            com.fasterxml.jackson.databind.node.ObjectNode story =
+                (com.fasterxml.jackson.databind.node.ObjectNode) invalid.path("stories").get(0);
+            story.put("reason", "未经合格 Evidence 支持的原因");
+            story.set("reasonEvidenceRefs", objectMapper.valueToTree(List.of("fact:" + UUID.randomUUID())));
+            return modelResponse(objectMapper.writeValueAsString(invalid));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        Map<String, Object> diagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(calls.get()).isEqualTo(2);
+        assertThat(diagnostics).containsEntry("modelStatus", "MODEL_VALIDATED")
+            .containsEntry("failedWindowCount", 0)
+            .containsEntry("modelRejectedInvalidEvidenceRefCount", 0)
+            .containsEntry("modelValidationRepairCount", 1)
+            .containsEntry("modelValidationRepairFailureCount", 0);
+        var story = readService.stories(userId, project.getId(), null, false, null, null, 0, 20).items().get(0);
+        assertThat(story.reason()).isBlank();
+        assertThat(story.reasonEvidenceRefs()).isEmpty();
+    }
+
+    @Test
     void modelCannotRewriteEngineeringOwnedPrimarySupportingRoleGraph() throws Exception {
         UUID userId = UUID.randomUUID();
         Path repository = temporaryRoot.resolve("model-role-graph");
@@ -1071,24 +1112,26 @@ class ProjectHistoryReconstructionTest {
                 return modelResponse(historyChapterModelResponse(invocation.getArgument(1, String.class)));
             }
             int call = calls.incrementAndGet();
-            if (call == 2) return modelResponse("{\"stories\":[],\"chapters\":[]}");
+            if (call == 2 || call == 3) return modelResponse("{\"stories\":[],\"chapters\":[]}");
             return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
         });
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         Map<String, Object> failedDiagnostics = readService.overview(userId, project.getId()).diagnostics();
-        assertThat(calls.get()).isEqualTo(3);
+        assertThat(calls.get()).isEqualTo(4);
         assertThat(failedDiagnostics).containsEntry("totalWindowCount", 3)
             .containsEntry("succeededWindowCount", 2)
             .containsEntry("failedWindowCount", 1)
             .containsEntry("pendingWindowCount", 0)
-            .containsEntry("nextWindowOrdinal", 1);
+            .containsEntry("nextWindowOrdinal", 1)
+            .containsEntry("modelValidationRepairCount", 1)
+            .containsEntry("modelValidationRepairFailureCount", 1);
         assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
             .filteredOn(checkpoint -> "SUCCEEDED".equals(checkpoint.getStatus())).hasSize(2);
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         Map<String, Object> recoveredDiagnostics = readService.overview(userId, project.getId()).diagnostics();
-        assertThat(calls.get()).isEqualTo(4);
+        assertThat(calls.get()).isEqualTo(5);
         assertThat(recoveredDiagnostics).containsEntry("succeededWindowCount", 3)
             .containsEntry("failedWindowCount", 0)
             .containsEntry("pendingWindowCount", 0)
@@ -1407,11 +1450,14 @@ class ProjectHistoryReconstructionTest {
         String chaptersMarker = "\nCHAPTERS_JSON=";
         int storiesStart = prompt.indexOf(storiesMarker);
         int chaptersStart = prompt.indexOf(chaptersMarker, storiesStart + storiesMarker.length());
+        int repairStart = prompt.indexOf(ProjectHistoryPromptBuilder.VALIDATION_REPAIR_MARKER, chaptersStart);
         assertThat(storiesStart).isGreaterThanOrEqualTo(0);
         assertThat(chaptersStart).isGreaterThan(storiesStart);
         ObjectMapper mapper = new ObjectMapper();
         JsonNode stories = mapper.readTree(prompt.substring(storiesStart + storiesMarker.length(), chaptersStart));
-        JsonNode chapters = mapper.readTree(prompt.substring(chaptersStart + chaptersMarker.length()));
+        JsonNode chapters = mapper.readTree(prompt.substring(
+            chaptersStart + chaptersMarker.length(), repairStart < 0 ? prompt.length() : repairStart
+        ));
         List<Map<String, Object>> storyOutput = new ArrayList<>();
         for (JsonNode story : stories) {
             String subject = story.path("subject").asText("项目内容");
@@ -1438,8 +1484,11 @@ class ProjectHistoryReconstructionTest {
     private String historyChapterModelResponse(String prompt) throws Exception {
         String marker = "\nCHAPTER_SYNTHESIS_JSON=";
         int start = prompt.indexOf(marker);
+        int repairStart = prompt.indexOf(ProjectHistoryPromptBuilder.VALIDATION_REPAIR_MARKER, start);
         assertThat(start).isGreaterThanOrEqualTo(0);
-        JsonNode chapter = objectMapper.readTree(prompt.substring(start + marker.length()));
+        JsonNode chapter = objectMapper.readTree(prompt.substring(
+            start + marker.length(), repairStart < 0 ? prompt.length() : repairStart
+        ));
         String chapterId = chapter.path("chapterId").asText();
         return objectMapper.writeValueAsString(Map.of("chapters", List.of(Map.of(
             "chapterId", chapterId,

@@ -55,6 +55,7 @@
 
 - 外部 Provider 的真实 max output、JSON mode、reasoning 控制和兼容响应形态可能随模型版本变化；未知 Provider 只能安全退化，仍需真实验收。
 - V3.7.5 兼容模型验收使用 `deepseek-v4-flash`、显式 JSON Mode 与 high reasoning。该能力来自 Provider 配置而非模型名特判；Provider 行为或模型标识变化时仍需重新验收。
+- 当前 V3.8.5 RC2 重跑继续使用 `deepseek-v4-flash`，并按用户明确配置使用 max reasoning；GLM `glm-5.2` 保持 high。该差异只存在于验收 Provider 配置，业务校验和修复合同保持 Provider-neutral。
 - 大输入首次真实返回采用未知集合包装并触发 Schema repair；目标集合递归适配后复验成功，但更多 Provider 私有包装仍可能需要新增无敏感值的 shape diagnostics。
 - 项目仍依赖 Hibernate `ddl-auto=update`。V3.3.8 补齐旧 H2 job status enum、计时列和 nullable worktree flag 修复，但尚无完整版本化迁移工具。
 

@@ -14,9 +14,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v7";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v8";
     public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v2";
     static final int MAX_PROMPT_CHARS = 60_000;
+    public static final String VALIDATION_REPAIR_MARKER = "\nHISTORY_VALIDATION_REPAIR=";
+    private static final String VALIDATION_REPAIR_INSTRUCTIONS = """
+        上一次输出未通过 ProjectFlow 的统一语义安全校验。请从原输入重新生成一次完整 JSON，不要复述或修补上一次输出。
+        只能使用 OUTPUT_TEMPLATE_JSON 中的对象、ID 和字段；每个 required ID 必须且只能返回一次。
+        reasonEvidenceRefs 只能逐项复制对应 Story 的 reasonEligibleEvidenceRefs；没有合格 Evidence 时 reason 留空，并保留“原因未知”。
+        不得返回工程层字段，不得创造 ID、Evidence、原因、冲突、数字或项目状态。只返回严格 JSON。
+        """;
+    private static final int MAX_INITIAL_PROMPT_CHARS = MAX_PROMPT_CHARS
+        - VALIDATION_REPAIR_MARKER.length() - VALIDATION_REPAIR_INSTRUCTIONS.length() - 40;
     static final int MAX_CHAPTER_SYNTHESIS_PROMPT_CHARS = 48_000;
     static final int MAX_CHAPTER_STORY_SUMMARIES = 80;
     static final int MAX_STORY_SECTION_CHARS = 45_000;
@@ -73,6 +82,20 @@ public final class ProjectHistoryPromptBuilder {
         return buildChapter(input);
     }
 
+    /** One bounded Provider-neutral repair instruction; no prior raw output is repeated. */
+    public String validationRepair(String originalPrompt, String validationKind) {
+        String safePrompt = originalPrompt == null ? "" : originalPrompt;
+        String safeKind = switch (validationKind == null ? "" : validationKind) {
+            case "INVALID_EVIDENCE", "CROSS_PROJECT_REFERENCE", "UNSUPPORTED_CLAIM", "CONTRACT" -> validationKind;
+            default -> "CONTRACT";
+        };
+        String repaired = safePrompt + VALIDATION_REPAIR_MARKER + safeKind + "\n" + VALIDATION_REPAIR_INSTRUCTIONS;
+        if (repaired.length() > MAX_PROMPT_CHARS) {
+            throw new IllegalStateException("项目历程安全修复 Prompt 超过有界上限");
+        }
+        return repaired;
+    }
+
     private ChapterSynthesisBuildResult buildChapter(ChapterSynthesisPromptInput input) {
         ChapterSynthesisPromptInput safe = input == null
             ? new ChapterSynthesisPromptInput("", "", "", 0, 0, 0, List.of(), "", List.of())
@@ -125,11 +148,11 @@ public final class ProjectHistoryPromptBuilder {
         List<ChapterPromptInput> selectedChapters = packChapters(safeInput.chapters(), storyIds, selectedStories);
 
         String prompt = render(selectedStories, selectedChapters);
-        while (prompt.length() > MAX_PROMPT_CHARS && !selectedChapters.isEmpty()) {
+        while (prompt.length() > MAX_INITIAL_PROMPT_CHARS && !selectedChapters.isEmpty()) {
             selectedChapters.remove(selectedChapters.size() - 1);
             prompt = render(selectedStories, selectedChapters);
         }
-        while (prompt.length() > MAX_PROMPT_CHARS && !selectedStories.isEmpty()) {
+        while (prompt.length() > MAX_INITIAL_PROMPT_CHARS && !selectedStories.isEmpty()) {
             selectedStories.remove(selectedStories.size() - 1);
             storyIds = selectedStories.stream().map(StoryPromptInput::storyId)
                 .collect(LinkedHashSet::new, Set::add, Set::addAll);
@@ -156,7 +179,7 @@ public final class ProjectHistoryPromptBuilder {
             String serialized = json(story);
             if (serialized.length() > MAX_STORY_RECORD_CHARS) continue;
             int next = sectionChars + serialized.length() + (selected.isEmpty() ? 0 : 1);
-            if (next > MAX_STORY_SECTION_CHARS || baseChars + next > MAX_PROMPT_CHARS) continue;
+            if (next > MAX_STORY_SECTION_CHARS || baseChars + next > MAX_INITIAL_PROMPT_CHARS) continue;
             selected.add(story);
             sectionChars = next;
         }
@@ -178,7 +201,7 @@ public final class ProjectHistoryPromptBuilder {
             String serialized = json(chapter);
             if (serialized.length() > MAX_CHAPTER_RECORD_CHARS) continue;
             int next = chapterChars + serialized.length() + (selected.isEmpty() ? 0 : 1);
-            if (next > MAX_CHAPTER_SECTION_CHARS || baseChars + next > MAX_PROMPT_CHARS) continue;
+            if (next > MAX_CHAPTER_SECTION_CHARS || baseChars + next > MAX_INITIAL_PROMPT_CHARS) continue;
             selected.add(chapter);
             chapterChars = next;
         }

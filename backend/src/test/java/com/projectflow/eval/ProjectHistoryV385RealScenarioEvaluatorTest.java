@@ -61,6 +61,7 @@ import com.projectflow.service.ModelGatewayService;
 import com.projectflow.service.ModelOutputAdapter;
 import com.projectflow.service.ModelTaskType;
 import com.projectflow.service.ProjectHistoryCorrectionService;
+import com.projectflow.service.ProjectHistoryPromptBuilder;
 import com.projectflow.service.ProjectHistoryReadService;
 import com.projectflow.service.ProjectHistoryReconstructionService;
 import com.projectflow.service.SensitiveContentRedactor;
@@ -115,11 +116,20 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         doAnswer(invocation -> {
             String scenario = activeScenario.get();
             ModelTaskType task = invocation.getArgument(2, ModelTaskType.class);
+            String prompt = invocation.getArgument(1, String.class);
+            boolean validationRepair = prompt.contains(ProjectHistoryPromptBuilder.VALIDATION_REPAIR_MARKER);
             ModelGatewayService.StructuredModelResponse actual =
                 (ModelGatewayService.StructuredModelResponse) invocation.callRealMethod();
-            calls.computeIfAbsent(scenario, ignored -> new CallAccumulator()).add(task, actual.diagnostics());
+            calls.computeIfAbsent(scenario, ignored -> new CallAccumulator())
+                .add(task, actual.diagnostics(), validationRepair);
             if (task != ModelTaskType.PROJECT_HISTORY_SYNTHESIS) return actual;
-            int ordinal = storyOrdinal.incrementAndGet();
+            int ordinal = validationRepair ? storyOrdinal.get() : storyOrdinal.incrementAndGet();
+            if (faultMode.get() == FaultMode.SCHEMA_AFTER_REAL_CALL && validationRepair && faultTriggered.get()) {
+                String invalid = "{\"stories\":[],\"chapters\":[]}";
+                return new ModelGatewayService.StructuredModelResponse(
+                    invalid, outputAdapter.parse(invalid), actual.diagnostics()
+                );
+            }
             if (faultTriggered.get() || ordinal != 2) return actual;
             if (faultMode.get() == FaultMode.SCHEMA_AFTER_REAL_CALL) {
                 faultTriggered.set(true);
@@ -205,7 +215,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         }
         CallAccumulator call = calls.getOrDefault(name, new CallAccumulator());
         SafeScenarioRun result = new SafeScenarioRun(
-            name, status, failure, call.storyLogicalCalls, call.chapterLogicalCalls, call.physicalRequests,
+            name, status, failure, call.storyLogicalCalls, call.chapterLogicalCalls,
+            call.validationRepairCalls, call.physicalRequests,
             call.tokens, call.latencyMs, elapsedMs(started), evidence.metrics(), evidence.samples()
         );
         System.out.printf(
@@ -708,7 +719,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             "chapterSynthesisProcessedCount", "chapterSynthesisCacheHitCount", "chapterSynthesisFailedCount",
             "chapterSynthesisPendingCount", "chapterSynthesisOmittedStoryCount",
             "modelRejectedInvalidEvidenceRefCount", "modelRejectedCrossProjectRefCount",
-            "modelRejectedUnsupportedClaimCount", "modelFallback"
+            "modelRejectedUnsupportedClaimCount", "modelValidationRepairCount",
+            "modelValidationRepairFailureCount", "modelFallback"
         )) {
             if (source != null && source.containsKey(key)) result.put(key, source.get(key));
         }
@@ -722,8 +734,9 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         boolean allPassed = !runs.isEmpty() && runs.stream().allMatch(run -> "PASS".equals(run.status()));
         boolean usedBothStages = runs.stream().mapToInt(SafeScenarioRun::storyModelCallCount).sum() > 0
             && runs.stream().mapToInt(SafeScenarioRun::chapterModelCallCount).sum() > 0;
+        int validationRepairs = runs.stream().mapToInt(SafeScenarioRun::validationRepairCount).sum();
         return new QualificationSummary(allPassed && requests > 0 && usedBothStages, requests, tokens, latency,
-            runs.size(), (int) runs.stream().filter(run -> "PASS".equals(run.status())).count());
+            runs.size(), (int) runs.stream().filter(run -> "PASS".equals(run.status())).count(), validationRepairs);
     }
 
     private void writeArtifact(
@@ -843,13 +856,19 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
     private static final class CallAccumulator {
         private int storyLogicalCalls;
         private int chapterLogicalCalls;
+        private int validationRepairCalls;
         private int physicalRequests;
         private long tokens;
         private long latencyMs;
 
-        private void add(ModelTaskType task, ModelGatewayService.ModelCallDiagnostics diagnostics) {
-            if (task == ModelTaskType.PROJECT_HISTORY_SYNTHESIS) storyLogicalCalls++;
-            if (task == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) chapterLogicalCalls++;
+        private void add(
+            ModelTaskType task,
+            ModelGatewayService.ModelCallDiagnostics diagnostics,
+            boolean validationRepair
+        ) {
+            if (validationRepair) validationRepairCalls++;
+            else if (task == ModelTaskType.PROJECT_HISTORY_SYNTHESIS) storyLogicalCalls++;
+            else if (task == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) chapterLogicalCalls++;
             if (diagnostics == null) return;
             physicalRequests += Math.max(0, diagnostics.requestCount());
             tokens += Math.max(0, diagnostics.totalTokens());
@@ -883,6 +902,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         String failure,
         int storyModelCallCount,
         int chapterModelCallCount,
+        int validationRepairCount,
         int physicalRequestCount,
         long tokenCount,
         long modelLatencyMs,
@@ -898,7 +918,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         long tokenCount,
         long modelLatencyMs,
         int scenarioCount,
-        int passedScenarioCount
+        int passedScenarioCount,
+        int validationRepairCount
     ) {
     }
 

@@ -626,9 +626,14 @@ public class ModelGatewayService {
         }
 
         ModelCallDiagnostics withRecovery(String type, boolean succeeded) {
+            return withRecovery(type, succeeded, 1);
+        }
+
+        ModelCallDiagnostics withRecovery(String type, boolean succeeded, int additionalRequestCount) {
             boolean outputRecovery = !"SCHEMA_REPAIR_RETRY".equals(type);
             return copy(
-                promptTokens, completionTokens, totalTokens, latencyMs, requestCount + 1, type,
+                promptTokens, completionTokens, totalTokens, latencyMs,
+                requestCount + Math.max(1, additionalRequestCount), type,
                 truncated, outputRecovery, outputRecovery && succeeded, jsonRepaired, partialResult, recoveredItems,
                 schemaMatched, succeeded ? "" : failureStage, succeeded ? "" : failureCode
             );

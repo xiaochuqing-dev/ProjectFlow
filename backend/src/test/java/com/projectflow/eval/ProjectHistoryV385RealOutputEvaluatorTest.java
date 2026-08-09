@@ -106,6 +106,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         assertThat(qualification.modelDegradedCaseCount()).isZero();
         assertThat(qualification.failedOrPendingWindowCount()).isZero();
         assertThat(qualification.rejectedModelOutputCount()).isZero();
+        assertThat(qualification.validationRepairFailureCount()).isZero();
         assertThat(runs).filteredOn(value -> value.requestCount() > 0)
             .allSatisfy(value -> assertThat(value.modelUsed()).isTrue());
         assertThat(qualification.qualified()).isTrue();
@@ -145,7 +146,9 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
             unprocessedWindowCount, skippedWindowCount, chapterFailedCount, chapterPendingCount,
             number(diagnostics, "modelRejectedInvalidEvidenceRefCount"),
             number(diagnostics, "modelRejectedCrossProjectRefCount"),
-            number(diagnostics, "modelRejectedUnsupportedClaimCount")
+            number(diagnostics, "modelRejectedUnsupportedClaimCount"),
+            number(diagnostics, "modelValidationRepairCount"),
+            number(diagnostics, "modelValidationRepairFailureCount")
         );
     }
 
@@ -167,14 +170,18 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
             + value.chapterFailedCount() + value.chapterPendingCount()).sum();
         int rejected = runs.stream().mapToInt(value -> value.rejectedInvalidEvidenceCount()
             + value.rejectedCrossProjectCount() + value.rejectedUnsupportedClaimCount()).sum();
+        int validationRepairs = runs.stream().mapToInt(SafeCaseRun::validationRepairCount).sum();
+        int validationRepairFailures = runs.stream().mapToInt(SafeCaseRun::validationRepairFailureCount).sum();
         int requests = runs.stream().mapToInt(SafeCaseRun::requestCount).sum();
         long tokens = runs.stream().mapToLong(SafeCaseRun::tokenCount).sum();
         boolean qualified = report.passes() && calibrationRequests > 0 && holdoutRequests > 0
             && modelDegraded == 0 && failedOrPending == 0 && rejected == 0
+            && validationRepairFailures == 0
             && runs.stream().filter(value -> value.requestCount() > 0).allMatch(SafeCaseRun::modelUsed);
         return new QualificationSummary(
             qualified, requests, tokens, elapsedMs, calibrationRequests, holdoutRequests,
-            sourceCoverageIncomplete, refreshDegraded, modelDegraded, failedOrPending, rejected
+            sourceCoverageIncomplete, refreshDegraded, modelDegraded, failedOrPending, rejected,
+            validationRepairs, validationRepairFailures
         );
     }
 
@@ -303,7 +310,9 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         int chapterPendingCount,
         int rejectedInvalidEvidenceCount,
         int rejectedCrossProjectCount,
-        int rejectedUnsupportedClaimCount
+        int rejectedUnsupportedClaimCount,
+        int validationRepairCount,
+        int validationRepairFailureCount
     ) {
     }
 
@@ -318,7 +327,9 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         int refreshDegradedCaseCount,
         int modelDegradedCaseCount,
         int failedOrPendingWindowCount,
-        int rejectedModelOutputCount
+        int rejectedModelOutputCount,
+        int validationRepairCount,
+        int validationRepairFailureCount
     ) {
     }
 }

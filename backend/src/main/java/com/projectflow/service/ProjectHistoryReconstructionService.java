@@ -225,6 +225,11 @@ public class ProjectHistoryReconstructionService {
                 modelResult.unprocessedWindowCount(),
                 modelResult.unprocessedStoryCount()
             );
+            diagnostics.put("modelValidationRepairCount", (int) modelDiagnostics.stream()
+                .filter(value -> "HISTORY_VALIDATION_RETRY".equals(value.retryType())).count());
+            diagnostics.put("modelValidationRepairFailureCount", (int) modelDiagnostics.stream()
+                .filter(value -> "HISTORY_VALIDATION_RETRY".equals(value.retryType()))
+                .filter(value -> !value.compactRetrySucceeded()).count());
             diagnostics.put("presentationRevision", correctionRevision);
             diagnostics.put("totalWindowCount", modelResult.windowCount());
             diagnostics.put("succeededWindowCount", modelResult.succeededWindowCount());
@@ -1287,17 +1292,15 @@ public class ProjectHistoryReconstructionService {
                     continue;
                 }
                 progress.update("HISTORY_MODEL_SYNTHESIS", "正在对已确定成员和 Evidence 的变化故事做有界语义归纳");
-                ModelGatewayService.StructuredModelResponse response = modelGateway.callStructured(
-                    provider, prompt.prompt(), ModelTaskType.PROJECT_HISTORY_SYNTHESIS
-                );
-                if (response == null || response.parsed() == null || response.diagnostics() == null) {
-                    throw new IllegalStateException("模型未返回可诊断的结构化结果");
-                }
-                diagnostics.add(response.diagnostics());
                 Set<String> includedChapters = prompt.includedChapterIds();
-                SnapshotResult parsed = parseModel(
-                    response.parsed().root(), current, prompt.includedStoryIds(), includedChapters, reasonEvidence
+                SnapshotResult promptBase = current;
+                ValidatedHistoryResponse<SnapshotResult> validated = callWithValidationRepair(
+                    provider, prompt.prompt(), ModelTaskType.PROJECT_HISTORY_SYNTHESIS,
+                    root -> parseModel(root, promptBase, prompt.includedStoryIds(), includedChapters, reasonEvidence),
+                    diagnostics
                 );
+                ModelGatewayService.StructuredModelResponse response = validated.response();
+                SnapshotResult parsed = validated.value();
                 ModelBatch effective = batch.withChapterIds(includedChapters);
                 boolean stored = windowCheckpointService.succeed(
                     attempt, writeWindowResult(parsed, effective), response.diagnostics().requestCount(),
@@ -1484,14 +1487,12 @@ public class ProjectHistoryReconstructionService {
                     promptCharacters += prompt.promptCharacterCount();
                     omittedStories += prompt.omittedStoryCount();
                     progress.update("HISTORY_CHAPTER_SYNTHESIS", "正在使用已校验的变化故事摘要归纳大篇章");
-                    ModelGatewayService.StructuredModelResponse response = modelGateway.callStructured(
-                        provider, prompt.prompt(), ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS
+                    ValidatedHistoryResponse<HistoryChapter> validated = callWithValidationRepair(
+                        provider, prompt.prompt(), ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS,
+                        root -> parseChapterSynthesis(root, chapter), diagnostics
                     );
-                    if (response == null || response.parsed() == null || response.diagnostics() == null) {
-                        throw new IllegalStateException("模型未返回可诊断的篇章归纳结果");
-                    }
-                    diagnostics.add(response.diagnostics());
-                    HistoryChapter enhanced = parseChapterSynthesis(response.parsed().root(), chapter);
+                    ModelGatewayService.StructuredModelResponse response = validated.response();
+                    HistoryChapter enhanced = validated.value();
                     boolean stored = windowCheckpointService.succeed(
                         attempt, writeChapterResult(enhanced), response.diagnostics().requestCount(),
                         safeCheckpointDiagnostics(response.diagnostics())
@@ -1740,7 +1741,9 @@ public class ProjectHistoryReconstructionService {
             "latencyMs", diagnostics.latencyMs(),
             "finishReason", diagnostics.normalizedFinishReason(),
             "truncated", diagnostics.truncated(),
-            "schemaMatched", diagnostics.schemaMatched()
+            "schemaMatched", diagnostics.schemaMatched(),
+            "retryType", diagnostics.retryType(),
+            "retrySucceeded", diagnostics.compactRetrySucceeded()
         ));
     }
 
@@ -1914,6 +1917,82 @@ public class ProjectHistoryReconstructionService {
         String safe = value == null ? "" : value.trim();
         if (safe.length() <= limit) return safe;
         return safe.substring(0, Math.max(0, limit - 1)) + "…";
+    }
+
+    private <T> ValidatedHistoryResponse<T> callWithValidationRepair(
+        AiProvider provider,
+        String prompt,
+        ModelTaskType task,
+        HistoryResponseParser<T> parser,
+        List<ModelGatewayService.ModelCallDiagnostics> diagnostics
+    ) throws java.io.IOException, InterruptedException {
+        ModelGatewayService.StructuredModelResponse first = requireStructuredResponse(
+            modelGateway.callStructured(provider, prompt, task)
+        );
+        try {
+            T value = parser.parse(first.parsed().root());
+            diagnostics.add(first.diagnostics());
+            return new ValidatedHistoryResponse<>(first, value);
+        } catch (HistoryValidationException firstFailure) {
+            String repairPrompt = promptBuilder.validationRepair(prompt, firstFailure.kind().name());
+            ModelGatewayService.StructuredModelResponse repaired;
+            try {
+                repaired = requireStructuredResponse(modelGateway.callStructured(provider, repairPrompt, task));
+            } catch (java.io.IOException | InterruptedException repairFailure) {
+                diagnostics.add(failedValidationRepairDiagnostics(first.diagnostics(), repairFailure));
+                throw repairFailure;
+            } catch (RuntimeException repairFailure) {
+                diagnostics.add(failedValidationRepairDiagnostics(first.diagnostics(), repairFailure));
+                throw repairFailure;
+            }
+            try {
+                T value = parser.parse(repaired.parsed().root());
+                ModelGatewayService.StructuredModelResponse combined = repaired.withRecovery(
+                    first.diagnostics(), "HISTORY_VALIDATION_RETRY", true
+                );
+                diagnostics.add(combined.diagnostics());
+                return new ValidatedHistoryResponse<>(combined, value);
+            } catch (HistoryValidationException finalFailure) {
+                ModelGatewayService.StructuredModelResponse combined = repaired.withRecovery(
+                    first.diagnostics(), "HISTORY_VALIDATION_RETRY", false
+                );
+                diagnostics.add(combined.diagnostics().withFailure(
+                    "HISTORY_VALIDATION", "HISTORY_VALIDATION_REPAIR_FAILED"
+                ));
+                throw finalFailure;
+            }
+        }
+    }
+
+    private ModelGatewayService.StructuredModelResponse requireStructuredResponse(
+        ModelGatewayService.StructuredModelResponse response
+    ) {
+        if (response == null || response.parsed() == null || response.diagnostics() == null) {
+            throw new IllegalStateException("模型未返回可诊断的结构化结果");
+        }
+        return response;
+    }
+
+    private ModelGatewayService.ModelCallDiagnostics failedValidationRepairDiagnostics(
+        ModelGatewayService.ModelCallDiagnostics first,
+        Throwable failure
+    ) {
+        ModelGatewayService.ModelCallDiagnostics combined;
+        if (failure instanceof ModelGatewayService.ModelResponseFormatException format
+            && format.diagnostics() != null) {
+            combined = format.diagnostics().combine(first, "HISTORY_VALIDATION_RETRY", false);
+        } else {
+            combined = first.withRecovery(
+                "HISTORY_VALIDATION_RETRY", false, failedModelRequestCount(failure)
+            );
+        }
+        return combined.withFailure("HISTORY_VALIDATION", "HISTORY_VALIDATION_REPAIR_FAILED");
+    }
+
+    private static int failedModelRequestCount(Throwable failure) {
+        if (failure instanceof ModelGatewayService.ModelHttpException http) return http.requestCount();
+        if (failure instanceof ModelGatewayService.ModelTransportException transport) return transport.requestCount();
+        return 1;
     }
 
     private SnapshotResult parseModel(
@@ -2806,6 +2885,17 @@ public class ProjectHistoryReconstructionService {
         private ChapterBatch {
             storyIds = java.util.Collections.unmodifiableSet(new LinkedHashSet<>(storyIds == null ? Set.of() : storyIds));
         }
+    }
+
+    @FunctionalInterface
+    private interface HistoryResponseParser<T> {
+        T parse(JsonNode root);
+    }
+
+    private record ValidatedHistoryResponse<T>(
+        ModelGatewayService.StructuredModelResponse response,
+        T value
+    ) {
     }
 
     private enum ValidationKind {
