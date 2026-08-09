@@ -12,7 +12,8 @@ final class ProjectHistoryV385ReviewSamples {
     private ProjectHistoryV385ReviewSamples() {
     }
 
-    static List<Map<String, Object>> stories(List<ChangeStory> stories, int limit) {
+    static List<Map<String, Object>> stories(List<ChangeStory> stories, int limit, String presentationRevision) {
+        String revision = requiredRevision(presentationRevision);
         return stories.stream().limit(limit).map(story -> {
             Map<String, Object> value = new LinkedHashMap<>();
             value.put("id", safe(story.id()));
@@ -30,7 +31,7 @@ final class ProjectHistoryV385ReviewSamples {
             value.put("unknowns", story.unknowns());
             value.put("conflicts", story.conflicts());
             value.put("presentationAuthority", safe(story.presentationAuthority()));
-            value.put("presentationRevision", requiredRevision(story.presentationRevision()));
+            value.put("presentationRevision", revision);
             value.put("displayStatus", safe(story.displayStatus()));
             value.put("hiddenByDefault", story.hiddenByDefault());
             value.put("pinned", story.pinned());
@@ -38,7 +39,8 @@ final class ProjectHistoryV385ReviewSamples {
         }).toList();
     }
 
-    static List<Map<String, Object>> chapters(List<HistoryChapter> chapters, int limit) {
+    static List<Map<String, Object>> chapters(List<HistoryChapter> chapters, int limit, String presentationRevision) {
+        String revision = requiredRevision(presentationRevision);
         List<Map<String, Object>> samples = new ArrayList<>();
         for (HistoryChapter chapter : chapters.stream().limit(limit).toList()) {
             Map<String, Object> value = new LinkedHashMap<>();
@@ -52,7 +54,7 @@ final class ProjectHistoryV385ReviewSamples {
             value.put("rawEventCount", chapter.rawEventCount());
             value.put("coverage", safe(chapter.coverage()));
             value.put("presentationAuthority", safe(chapter.presentationAuthority()));
-            value.put("presentationRevision", requiredRevision(chapter.presentationRevision()));
+            value.put("presentationRevision", revision);
             value.put("hiddenByDefault", chapter.hiddenByDefault());
             value.put("pinned", chapter.pinned());
             samples.add(Map.copyOf(value));

@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 class ProjectUnderstandingPromptBuilderTest {
     private static final String SCOUT_SNAPSHOT_SHA256 =
-        "b600bb6f0b341b8cddc4c5a191b88e346c59b9d4f0af95c702c909babd4d697e";
+        "f7c7dcf9a400616c426c73d01fff8d0ee81b2776286ae970e7c32b53a220df6c";
     private static final String FINAL_SNAPSHOT_SHA256 =
         "14574307a878b46b2b99689e993522b9c01dee9ee594c4616988d1302687c136";
     private final ProjectUnderstandingPromptBuilder builder = new ProjectUnderstandingPromptBuilder();
@@ -36,6 +36,7 @@ class ProjectUnderstandingPromptBuilderTest {
                 "多个彼此独立的关键 gap",
                 "最终决策核对",
                 "只有当前上下文已有 `tool:manifest`",
+                "projectShapeHypotheses 含 DOCUMENT 或 applicableDimensions 含 DOCUMENT_OVERVIEW",
                 "FRONTEND、BACKEND、INTEGRATION_RELATIONS",
                 "\"capabilityDecisions\"",
                 "\"decision\":\"REQUEST|SKIP\"",

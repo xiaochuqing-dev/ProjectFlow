@@ -132,7 +132,8 @@ public final class ProjectHistoryV385FixtureRunner {
             new ProjectHistoryV385QualityEvaluator.CaseObservation(
             testCase.path("id").asText(), testCase.path("split").asText(),
             corrected.stories(), corrected.chapters(), corrected.threads(), events, resolvedAliases,
-            overview.overview().unknowns(), overview.overview().conflicts(), snapshot.getSourceEventCount(),
+            overview.overview().unknowns(), overview.overview().conflicts(), corrected.presentationRevision(),
+            snapshot.getSourceEventCount(),
             Math.toIntExact(eventRepository.countByProjectIdAndRewriteState(project.getId(), RewriteState.CURRENT)),
             requestCount, tokens
         );

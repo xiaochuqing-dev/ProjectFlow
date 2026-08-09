@@ -260,7 +260,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         metrics.put("supportingCount", stories.stream().filter(ChangeStory::supporting).count());
         metrics.put("currentness", overview.coverage().currentness());
         metrics.put("firstLayerTechnicalLeakRate", rate(firstLayerLeaks(stories, FIRST_LAYER_FORBIDDEN), stories.size()));
-        return new ScenarioEvidence(metrics, ProjectHistoryV385ReviewSamples.stories(stories, 4));
+        return new ScenarioEvidence(metrics, ProjectHistoryV385ReviewSamples.stories(
+            stories, 4, reviewRevision(userId, project.getId())));
     }
 
     private ScenarioEvidence continuationAndChapter(UUID userId) throws Exception {
@@ -272,7 +273,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         Map<String, Object> first = readService.overview(userId, project.getId()).diagnostics();
         require(number(first, "totalWindowCount") == 17, "首次规划不是 17 个窗口");
-        require(number(first, "succeededWindowCount") == 16, "首次没有严格完成前 16 个窗口");
+        require(number(first, "succeededWindowCount") == 16,
+            "首次没有严格完成前 16 个窗口；safeDiagnostics=" + safeDiagnostics(first));
         require(number(first, "pendingWindowCount") == 1, "首次没有保留第 17 个 pending 窗口");
         require(number(first, "nextWindowOrdinal") == 16, "continuation ordinal 未指向第 17 个窗口");
 
@@ -302,7 +304,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         metrics.put("storyCount", stories.size());
         metrics.put("restartServiceInstance", true);
         metrics.put("finalCacheHit", true);
-        return new ScenarioEvidence(metrics, ProjectHistoryV385ReviewSamples.stories(stories, 5));
+        return new ScenarioEvidence(metrics, ProjectHistoryV385ReviewSamples.stories(
+            stories, 5, reviewRevision(userId, project.getId())));
     }
 
     private ScenarioEvidence correctionInvalidatesOnlyOneWindow(UUID userId) throws Exception {
@@ -326,7 +329,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             "fullAutomaticWindowRerun", false,
             "presentationAuthority", corrected.presentationAuthority(),
             "finalCacheHit", true
-        ), ProjectHistoryV385ReviewSamples.stories(List.of(corrected), 1));
+        ), ProjectHistoryV385ReviewSamples.stories(
+            List.of(corrected), 1, reviewRevision(userId, continuationState.projectId())));
     }
 
     private ScenarioEvidence schemaFailureRecovery(UUID userId) throws Exception {
@@ -341,7 +345,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         require(number(recovered, "failedWindowCount") == 0, "schema failure checkpoint 未恢复");
         require(calls.get(activeScenario.get()).storyLogicalCalls == 4, "重试执行了成功窗口或遗漏失败窗口");
         return new ScenarioEvidence(safeDiagnostics(recovered),
-            ProjectHistoryV385ReviewSamples.stories(allStories(userId, project.getId()), 4));
+            ProjectHistoryV385ReviewSamples.stories(
+                allStories(userId, project.getId()), 4, reviewRevision(userId, project.getId())));
     }
 
     private ScenarioEvidence cancellationRecovery(UUID userId) throws Exception {
@@ -369,7 +374,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         metrics.put("cancelledCheckpointObserved", true);
         metrics.put("restartServiceInstance", true);
         return new ScenarioEvidence(metrics,
-            ProjectHistoryV385ReviewSamples.stories(allStories(userId, project.getId()), 4));
+            ProjectHistoryV385ReviewSamples.stories(
+                allStories(userId, project.getId()), 4, reviewRevision(userId, project.getId())));
     }
 
     private ScenarioEvidence promptOverflow(UUID userId) throws Exception {
@@ -388,7 +394,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         require(cached.cacheHit(), "Prompt overflow 子窗口成功后未命中 cache");
         return new ScenarioEvidence(safeDiagnostics(diagnostics),
-            ProjectHistoryV385ReviewSamples.stories(allStories(userId, project.getId()), 5));
+            ProjectHistoryV385ReviewSamples.stories(
+                allStories(userId, project.getId()), 5, reviewRevision(userId, project.getId())));
     }
 
     private ScenarioEvidence dogfood(UUID userId) throws Exception {
@@ -415,13 +422,16 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         double genericRate = rate(genericCount(stories), stories.size());
         double technicalLeakRate = rate(firstLayerLeaks(stories, FIRST_LAYER_FORBIDDEN), stories.size());
         List<Map<String, Object>> supportingConsolidation = supportingConsolidationExamples(stories, 10);
+        String presentationRevision = reviewRevision(userId, project.getId());
 
         List<Map<String, Object>> samples = new ArrayList<>();
-        samples.add(Map.of("sampleType", "primary", "items", ProjectHistoryV385ReviewSamples.stories(primary, 15)));
+        samples.add(Map.of("sampleType", "primary", "items",
+            ProjectHistoryV385ReviewSamples.stories(primary, 15, presentationRevision)));
         samples.add(Map.of("sampleType", "explicit-supporting", "items",
-            ProjectHistoryV385ReviewSamples.stories(supporting, 10)));
+            ProjectHistoryV385ReviewSamples.stories(supporting, 10, presentationRevision)));
         samples.add(Map.of("sampleType", "supporting-consolidation", "items", supportingConsolidation));
-        samples.add(Map.of("sampleType", "chapters", "items", ProjectHistoryV385ReviewSamples.chapters(chapters, 8)));
+        samples.add(Map.of("sampleType", "chapters", "items",
+            ProjectHistoryV385ReviewSamples.chapters(chapters, 8, presentationRevision)));
         samples.add(Map.of("sampleType", "threads", "items", threadSamples(threads, 3)));
         samples.add(Map.of("sampleType", "manual-review-candidates", "items", reviewCandidates(stories, 5)));
         Map<String, Object> metrics = safeDiagnostics(diagnostics);
@@ -547,6 +557,10 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         readService.overview(userId, projectId);
         ProjectHistorySnapshot snapshot = snapshotRepository.findByProjectId(projectId).orElseThrow();
         return correctionService.resolve(projectId, snapshot).stories();
+    }
+
+    private String reviewRevision(UUID userId, UUID projectId) {
+        return correctionService.list(userId, projectId).presentationRevision();
     }
 
     private List<HistoryChapter> allChapters(UUID userId, UUID projectId) {
@@ -692,7 +706,9 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             "skippedWindowCount", "pendingWindowCount", "nextWindowOrdinal", "processedStoryCount",
             "unprocessedStoryCount", "modelWindowCacheHitCount", "chapterSynthesisCount",
             "chapterSynthesisProcessedCount", "chapterSynthesisCacheHitCount", "chapterSynthesisFailedCount",
-            "chapterSynthesisPendingCount", "chapterSynthesisOmittedStoryCount"
+            "chapterSynthesisPendingCount", "chapterSynthesisOmittedStoryCount",
+            "modelRejectedInvalidEvidenceRefCount", "modelRejectedCrossProjectRefCount",
+            "modelRejectedUnsupportedClaimCount", "modelFallback"
         )) {
             if (source != null && source.containsKey(key)) result.put(key, source.get(key));
         }

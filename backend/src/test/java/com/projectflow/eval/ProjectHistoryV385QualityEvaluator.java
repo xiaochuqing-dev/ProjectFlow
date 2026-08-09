@@ -704,6 +704,7 @@ public final class ProjectHistoryV385QualityEvaluator {
         Map<String, ? extends Collection<UUID>> eventAliases,
         List<String> overviewUnknowns,
         List<String> overviewConflicts,
+        String presentationRevision,
         int snapshotSourceEventCount,
         int currentPersistedEventCount,
         int modelRequestCount,
@@ -717,6 +718,7 @@ public final class ProjectHistoryV385QualityEvaluator {
             eventAliases = eventAliases == null ? Map.of() : Map.copyOf(eventAliases);
             overviewUnknowns = List.copyOf(safe(overviewUnknowns));
             overviewConflicts = List.copyOf(safe(overviewConflicts));
+            presentationRevision = presentationRevision == null ? "" : presentationRevision.trim();
         }
     }
 

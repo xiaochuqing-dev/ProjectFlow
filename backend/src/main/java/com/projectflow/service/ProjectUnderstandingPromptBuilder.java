@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ProjectUnderstandingPromptBuilder {
     public static final String CONTRACT_VERSION = "project-understanding-prompt-contract-v3";
-    public static final String SCOUT_PROMPT_VERSION = "semantic-scout-v14";
+    public static final String SCOUT_PROMPT_VERSION = "semantic-scout-v15";
     public static final String FINAL_PROMPT_VERSION = "final-synthesis-v7";
     public static final CompatibilityProfile COMPATIBILITY_PROFILE = new CompatibilityProfile(
         "multi-provider-json-v1",
@@ -124,6 +124,9 @@ public class ProjectUnderstandingPromptBuilder {
             - 文档正文、README 当前性/过时、文档与 manifest/源码冲突依赖 DOC_READER；Agent 自报结果依赖
               AGENT_RESULT；历史覆盖依赖 GIT_HISTORY，长历史的 milestone anchor 还依赖 GIT_TAG。对应 capability
               eligible 且没有同类 `tool:` Evidence 时必须分别 REQUEST，不能互相替代。
+            - projectShapeHypotheses 含 DOCUMENT 或 applicableDimensions 含 DOCUMENT_OVERVIEW，且 DOC_READER
+              eligible、当前上下文没有 `tool:doc_reader` 时，必须为至少一个会影响用户结论的文档 Evidence 给出
+              DOC_READER REQUEST；boundedSample 只能支持“值得深读”的选择，不能冒充正文深读结果。
             - 你自己识别出 FRONTEND 与 BACKEND 同时存在时，核心 view 至少保留 FRONTEND、BACKEND、
               INTEGRATION_RELATIONS；POSSIBLY_STALE 文档至少保留 CURRENT_STATE、LIMITATIONS；明确的文档/规范冲突
               至少保留 CURRENT_STATE、CONFLICTS；明确的多模块结构证据保留 ARCHITECTURE；长历史只保留

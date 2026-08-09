@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v6";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v7";
     public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v2";
     static final int MAX_PROMPT_CHARS = 60_000;
     static final int MAX_CHAPTER_SYNTHESIS_PROMPT_CHARS = 48_000;
@@ -26,6 +26,7 @@ public final class ProjectHistoryPromptBuilder {
 
     private static final String STORIES_MARKER = "\nSTORIES_JSON=";
     private static final String CHAPTERS_MARKER = "\nCHAPTERS_JSON=";
+    private static final String OUTPUT_TEMPLATE_MARKER = "\nOUTPUT_TEMPLATE_JSON=";
     private static final String CHAPTER_SYNTHESIS_MARKER = "\nCHAPTER_SYNTHESIS_JSON=";
     private static final String INSTRUCTIONS = """
         任务：把工程层已经组织好的项目历程改写成普通用户能看懂的中文。只改文字，不改事实或结构。
@@ -186,12 +187,24 @@ public final class ProjectHistoryPromptBuilder {
     private String render(List<StoryPromptInput> stories, List<ChapterPromptInput> chapters) {
         List<String> storyIds = stories.stream().map(StoryPromptInput::storyId).toList();
         List<String> chapterIds = chapters.stream().map(ChapterPromptInput::chapterId).toList();
+        List<StoryOutputTemplate> storyTemplates = stories.stream().map(story -> new StoryOutputTemplate(
+            story.storyId(), "", "", "", List.of(),
+            story.reasonEligibleEvidenceRefs().isEmpty()
+                ? List.of("原因 UNKNOWN：输入未提供可核验的原因 Evidence。") : List.of()
+        )).toList();
+        List<ChapterOutputTemplate> chapterTemplates = chapters.stream()
+            .map(chapter -> new ChapterOutputTemplate(chapter.chapterId(), "", ""))
+            .toList();
         String outputCheck = """
 
             输出前做机械核对：本次必须返回 Story %d 个、Chapter %d 个；requiredStoryIds=%s；requiredChapterIds=%s。
             每个 required ID 恰好一次，且对象只能包含上面列出的可改字段；数量、ID 或字段不一致时先修正再输出。
+            必须复制 OUTPUT_TEMPLATE_JSON 的对象、ID、字段和数组类型，只填写允许的文字；不得删除、增加或重排对象。
+            reasonEvidenceRefs 只能从对应 Story 的 reasonEligibleEvidenceRefs 中选择；没有可核验原因时保留模板中的 UNKNOWN。
             """.formatted(storyIds.size(), chapterIds.size(), json(storyIds), json(chapterIds));
-        return INSTRUCTIONS + outputCheck + STORIES_MARKER + json(stories) + CHAPTERS_MARKER + json(chapters);
+        return INSTRUCTIONS + outputCheck
+            + OUTPUT_TEMPLATE_MARKER + json(new OutputTemplate(storyTemplates, chapterTemplates))
+            + STORIES_MARKER + json(stories) + CHAPTERS_MARKER + json(chapters);
     }
 
     private String json(Object value) {
@@ -280,6 +293,25 @@ public final class ProjectHistoryPromptBuilder {
         List<String> storyRefs,
         List<String> boundarySignals
     ) {
+    }
+
+    private record OutputTemplate(
+        List<StoryOutputTemplate> stories,
+        List<ChapterOutputTemplate> chapters
+    ) {
+    }
+
+    private record StoryOutputTemplate(
+        String storyId,
+        String humanTitle,
+        String oneSentenceSummary,
+        String reason,
+        List<String> reasonEvidenceRefs,
+        List<String> unknowns
+    ) {
+    }
+
+    private record ChapterOutputTemplate(String chapterId, String title, String summary) {
     }
 
     public record PromptBuildResult(

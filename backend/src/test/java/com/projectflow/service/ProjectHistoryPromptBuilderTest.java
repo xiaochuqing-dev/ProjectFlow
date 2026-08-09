@@ -78,4 +78,38 @@ class ProjectHistoryPromptBuilderTest {
         assertThat(production.prompt()).contains("primaryStoryCount", "supportingStoryCount", "membershipFingerprint")
             .doesNotContain("rawEvent", "evidenceRefs", "technicalDetails", "commitSummaries", "file:", "commit:");
     }
+
+    @Test
+    void outputTemplateFreezesEveryRequiredIdAndKeepsUnknownReasonSafeByDefault() throws Exception {
+        var input = new ProjectHistoryPromptBuilder.PromptInput(List.of(
+            new ProjectHistoryPromptBuilder.StoryPromptInput(
+                "story-without-reason", "项目结果", "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z",
+                List.of("MODIFIED"), List.of(), List.of(), List.of("source:one"), List.of(),
+                "此前状态", "形成变化", "当前状态"
+            ),
+            new ProjectHistoryPromptBuilder.StoryPromptInput(
+                "story-with-reason", "项目结果", "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z",
+                List.of("MODIFIED"), List.of(), List.of(), List.of("source:two"), List.of("source:two"),
+                "此前状态", "形成变化", "当前状态"
+            )
+        ), List.of(new ProjectHistoryPromptBuilder.ChapterPromptInput(
+            "chapter-one", "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z",
+            List.of("story-without-reason", "story-with-reason"), List.of("TIME_BOUNDARY")
+        )));
+
+        String prompt = builder.buildProduction(input).prompt();
+        String templateMarker = "\nOUTPUT_TEMPLATE_JSON=";
+        String storiesMarker = "\nSTORIES_JSON=";
+        JsonNode template = mapper.readTree(prompt.substring(
+            prompt.indexOf(templateMarker) + templateMarker.length(), prompt.indexOf(storiesMarker)
+        ));
+
+        assertThat(template.path("stories").findValuesAsText("storyId"))
+            .containsExactly("story-without-reason", "story-with-reason");
+        assertThat(template.path("chapters").findValuesAsText("chapterId")).containsExactly("chapter-one");
+        assertThat(template.path("stories").get(0).path("unknowns").get(0).asText()).contains("UNKNOWN");
+        assertThat(template.path("stories").get(1).path("unknowns")).isEmpty();
+        assertThat(template.path("stories").get(0).path("humanTitle").asText()).isEmpty();
+        assertThat(prompt).doesNotContain("DeepSeek", "GLM");
+    }
 }

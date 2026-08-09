@@ -36,7 +36,7 @@ class ProjectHistoryV385ReviewArtifactTest {
         );
         var observation = new ProjectHistoryV385QualityEvaluator.CaseObservation(
             "holdout-review", "HOLDOUT", List.of(story), List.of(chapter), List.of(), List.of(), Map.of(),
-            List.of(), List.of(), 1, 1, 1, 100
+            List.of(), List.of(), revision, 1, 1, 1, 100
         );
 
         Map<String, Object> candidate = ProjectHistoryV385RealOutputEvaluatorTest

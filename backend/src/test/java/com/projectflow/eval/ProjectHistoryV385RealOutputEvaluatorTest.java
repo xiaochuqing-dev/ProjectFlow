@@ -218,8 +218,10 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         return observations.stream().map(observation -> Map.<String, Object>of(
             "caseId", observation.caseId(),
             "split", observation.split(),
-            "stories", ProjectHistoryV385ReviewSamples.stories(observation.stories(), 3),
-            "chapters", ProjectHistoryV385ReviewSamples.chapters(observation.chapters(), 2)
+            "stories", ProjectHistoryV385ReviewSamples.stories(
+                observation.stories(), 3, observation.presentationRevision()),
+            "chapters", ProjectHistoryV385ReviewSamples.chapters(
+                observation.chapters(), 2, observation.presentationRevision())
         )).toList();
     }
 
