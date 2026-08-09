@@ -104,18 +104,10 @@ class ModelGatewayServiceTest {
     void maxReasoningRecoveryRequiresASeparateVisibleJsonResultWithinTwoRequests() throws Exception {
         AtomicInteger calls = new AtomicInteger();
         java.util.concurrent.atomic.AtomicReference<JsonNode> recoveryRequest = new java.util.concurrent.atomic.AtomicReference<>();
-        HttpServer server = startMaxReasoningRecoveryServer(calls, recoveryRequest);
+        HttpServer server = startMaxReasoningRecoveryServer(calls, recoveryRequest, false);
         try {
             AiProvider provider = flashProvider("http://127.0.0.1:" + server.getAddress().getPort());
-            ModelGatewayService maxGateway = new ModelGatewayService(
-                objectMapper,
-                new AiProviderUrlGuard(),
-                new ModelOutputAdapter(objectMapper),
-                new ModelCapabilityRegistry(),
-                new ModelRequestPolicy("max"),
-                new ModelProtocolAdapterRegistry(List.of(new OpenAiChatCompletionsAdapter(new AiProviderUrlGuard()))),
-                240
-            );
+            ModelGatewayService maxGateway = maxReasoningGateway();
 
             var response = maxGateway.callStructured(
                 provider,
@@ -134,6 +126,34 @@ class ModelGatewayServiceTest {
             assertThat(response.diagnostics().retryType()).isEqualTo("EMPTY_AFTER_REASONING_RETRY");
             assertThat(response.diagnostics().requestCount()).isEqualTo(2);
             assertThat(response.diagnostics().compactRetrySucceeded()).isTrue();
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void maxReasoningRecoveryStopsAfterTheUniqueSecondReasoningOnlyResponse() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        java.util.concurrent.atomic.AtomicReference<JsonNode> recoveryRequest = new java.util.concurrent.atomic.AtomicReference<>();
+        HttpServer server = startMaxReasoningRecoveryServer(calls, recoveryRequest, true);
+        try {
+            AiProvider provider = flashProvider("http://127.0.0.1:" + server.getAddress().getPort());
+
+            assertThatThrownBy(() -> maxReasoningGateway().callStructured(
+                provider,
+                "请根据有界证据生成项目理解 JSON",
+                ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+            )).isInstanceOf(ModelGatewayService.ModelOutputTruncatedException.class)
+                .satisfies(exception -> {
+                    var diagnostics = ((ModelGatewayService.ModelOutputTruncatedException) exception).diagnostics();
+                    assertThat(diagnostics.requestCount()).isEqualTo(2);
+                    assertThat(diagnostics.retryType()).isEqualTo("EMPTY_AFTER_REASONING_RETRY");
+                    assertThat(diagnostics.failureCode()).isEqualTo("REASONING_EXHAUSTED_OUTPUT");
+                    assertThat(diagnostics.reasoningEffort()).isEqualTo("max");
+                    assertThat(diagnostics.compactRetrySucceeded()).isFalse();
+                });
+            assertThat(calls.get()).isEqualTo(2);
+            assertThat(recoveryRequest.get().path("reasoning_effort").asText()).isEqualTo("max");
         } finally {
             server.stop(0);
         }
@@ -328,6 +348,19 @@ class ModelGatewayServiceTest {
         return provider;
     }
 
+    private ModelGatewayService maxReasoningGateway() {
+        AiProviderUrlGuard urlGuard = new AiProviderUrlGuard();
+        return new ModelGatewayService(
+            objectMapper,
+            urlGuard,
+            new ModelOutputAdapter(objectMapper),
+            new ModelCapabilityRegistry(),
+            new ModelRequestPolicy("max"),
+            new ModelProtocolAdapterRegistry(List.of(new OpenAiChatCompletionsAdapter(urlGuard))),
+            240
+        );
+    }
+
     private HttpServer startServer(AtomicInteger calls, boolean alwaysTruncated) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/chat/completions", exchange -> {
@@ -419,14 +452,15 @@ class ModelGatewayServiceTest {
 
     private HttpServer startMaxReasoningRecoveryServer(
         AtomicInteger calls,
-        java.util.concurrent.atomic.AtomicReference<JsonNode> recoveryRequest
+        java.util.concurrent.atomic.AtomicReference<JsonNode> recoveryRequest,
+        boolean alwaysReasoningOnly
     ) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/chat/completions", exchange -> {
             int call = calls.incrementAndGet();
             JsonNode request = objectMapper.readTree(exchange.getRequestBody());
             if (call == 2) recoveryRequest.set(request);
-            String body = call == 1
+            String body = call == 1 || alwaysReasoningOnly
                 ? "{\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"content\":\"\",\"reasoning_content\":\"内部推理不得持久化\"}}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":4603,\"total_tokens\":4703}}"
                 : "{\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"content\":\"{\\\"semanticScout\\\":{\\\"projectShapeHypotheses\\\":[],\\\"evidenceSourceAssessments\\\":[],\\\"applicableDimensions\\\":[],\\\"capabilityDecisions\\\":[],\\\"unknowns\\\":[]},\\\"dynamicProfile\\\":{\\\"summary\\\":\\\"已形成可见结果\\\",\\\"sections\\\":[],\\\"limitations\\\":[]},\\\"analysisPlan\\\":{\\\"requestedCapabilityNames\\\":[],\\\"requestedEvidenceIds\\\":[]}}\"}}],\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":200,\"total_tokens\":300}}";
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
