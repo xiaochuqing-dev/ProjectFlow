@@ -135,6 +135,7 @@ class ProjectUnderstandingRealModelIT {
         artifact.put("provider", config.name());
         artifact.put("protocol", config.protocol().name());
         artifact.put("model", config.model());
+        artifact.put("reasoningEffort", config.reasoningEffort());
         artifact.put("promptVersions", List.of(
             SemanticScoutService.PROMPT_VERSION,
             FinalProfileSynthesisService.PROMPT_VERSION

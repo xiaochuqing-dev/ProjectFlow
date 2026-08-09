@@ -190,6 +190,44 @@ class ModelRequestPolicyTest {
     }
 
     @Test
+    void explicitMaxReasoningIsPreservedAcrossInitialAndRecoveryRequests() {
+        ModelRequestPolicy maxPolicy = new ModelRequestPolicy("max");
+        AiProvider provider = provider(AiProviderType.DEEPSEEK, "provider-neutral-model", 0.1, 65_536);
+        provider.configureProtocol(
+            ModelProtocol.OPENAI_CHAT_COMPLETIONS,
+            null,
+            null,
+            null,
+            null,
+            Map.of(),
+            600,
+            false,
+            true,
+            false,
+            true,
+            true
+        );
+        var capabilities = registry.resolve(provider);
+        var initial = maxPolicy.initial(
+            provider,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "x".repeat(48_000)
+        );
+        var recovery = maxPolicy.recovery(
+            initial,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "EMPTY_AFTER_REASONING_RETRY",
+            0
+        );
+
+        assertThat(maxPolicy.reasoningEffort(capabilities)).isEqualTo("max");
+        assertThat(initial.maxTokenDecision()).contains("reasoning_effort", "max");
+        assertThat(recovery.maxTokenDecision()).contains("保持 max");
+    }
+
+    @Test
     void nonReasoningTruncationRetainsBoundedFiftyPercentIncrease() {
         AiProvider provider = provider("deepseek-chat", 0.2, 32_000);
         var capabilities = registry.resolve(provider);

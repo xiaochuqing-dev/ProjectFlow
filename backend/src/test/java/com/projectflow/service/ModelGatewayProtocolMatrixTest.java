@@ -261,6 +261,19 @@ class ModelGatewayProtocolMatrixTest {
         );
         assertThat(capturedBody.get().path("reasoning_effort").asText()).isEqualTo("high");
         assertThat(capturedBody.get().has("temperature")).isFalse();
+
+        ModelGatewayService maxGateway = new ModelGatewayService(
+            objectMapper, new AiProviderUrlGuard(), new ModelOutputAdapter(objectMapper),
+            new ModelCapabilityRegistry(), new ModelRequestPolicy("max"), registry, 30
+        );
+        providerRequestCount.set(0);
+        var maxResponse = maxGateway.callStructured(
+            chatControlled,
+            "最小兼容任务",
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+        );
+        assertThat(capturedBody.get().path("reasoning_effort").asText()).isEqualTo("max");
+        assertThat(maxResponse.diagnostics().reasoningEffort()).isEqualTo("max");
     }
 
     @AfterEach

@@ -89,7 +89,7 @@ public class ModelGatewayService {
         int requestTimeoutSeconds
     ) {
         this(
-            objectMapper, aiProviderUrlGuard, outputAdapter, new ModelCapabilityRegistry(), new ModelRequestPolicy(),
+            objectMapper, aiProviderUrlGuard, outputAdapter, new ModelCapabilityRegistry(), ModelRequestPolicy.runtimeConfigured(),
             new ModelProtocolAdapterRegistry(List.of(
                 new OpenAiResponsesAdapter(aiProviderUrlGuard),
                 new OpenAiChatCompletionsAdapter(aiProviderUrlGuard),
@@ -280,7 +280,7 @@ public class ModelGatewayService {
             parameters.effectiveMaxTokens(),
             parameters.temperatureSent() ? parameters.effectiveTemperature() : null,
             capabilities.supportsJsonMode() || capabilities.supportsStructuredOutput(),
-            reasoningEffort(provider, task, capabilities, parameters),
+            requestPolicy.reasoningEffort(capabilities),
             configuredConnectionTimeout,
             timeout
         );
@@ -318,22 +318,6 @@ public class ModelGatewayService {
         throw new IOException("model request failed");
     }
 
-    private static String reasoningEffort(
-        AiProvider provider,
-        ModelTaskType task,
-        ModelCapabilities capabilities,
-        RequestParameters parameters
-    ) {
-        if (!capabilities.supportsReasoningControl()) {
-            return null;
-        }
-        return switch (provider.getProtocol()) {
-            case OPENAI_RESPONSES -> "high";
-            case OPENAI_CHAT_COMPLETIONS -> "high";
-            case ANTHROPIC_MESSAGES -> null;
-        };
-    }
-
     private StructuredModelResponse parseCanonicalResponse(
         CanonicalModelResponse response,
         AiProvider provider,
@@ -366,7 +350,8 @@ public class ModelGatewayService {
             provider.getMaxTokens(), parameters.taskRequestedMaxTokens(), parameters.effectiveMaxTokens(),
             parameters.configuredTemperature(), parameters.recommendedTemperature(),
             parameters.effectiveTemperature() == null ? 0 : parameters.effectiveTemperature(), parameters.temperatureSent(),
-            parameters.temperatureDecision(), parameters.maxTokenDecision(), timeoutSeconds, latencyMs, true,
+            parameters.temperatureDecision(), parameters.maxTokenDecision(),
+            reasoningEffortDiagnostic(capabilities), timeoutSeconds, latencyMs, true,
             !content.isBlank(), truncated, !"NONE".equals(parameters.retryType()), false, transportRetryCount,
             false, false, 0, usageSource, response.reasoningPresent(), response.reasoningLength(), reasoningExhausted,
             1 + transportRetryCount, diagnosticRetryType, false, "RESPONSE_PARSE", "", provider.getProtocol().name(),
@@ -456,7 +441,8 @@ public class ModelGatewayService {
             finishReason, promptTokens, completionTokens, totalTokens, provider.getMaxTokens(),
             parameters.taskRequestedMaxTokens(), parameters.effectiveMaxTokens(), parameters.configuredTemperature(),
             parameters.recommendedTemperature(), parameters.effectiveTemperature() == null ? 0 : parameters.effectiveTemperature(),
-            parameters.temperatureSent(), parameters.temperatureDecision(), parameters.maxTokenDecision(), timeoutSeconds, latencyMs,
+            parameters.temperatureSent(), parameters.temperatureDecision(), parameters.maxTokenDecision(),
+            reasoningEffortDiagnostic(capabilities), timeoutSeconds, latencyMs,
             true, !content.isBlank(), truncated, !"NONE".equals(parameters.retryType()), false,
             transportRetryCount, false, false, 0, usageSource, reasoningLength > 0, reasoningLength,
             reasoningExhausted, 1 + transportRetryCount, diagnosticRetryType, false, "RESPONSE_PARSE", "",
@@ -538,6 +524,11 @@ public class ModelGatewayService {
         return length;
     }
 
+    private String reasoningEffortDiagnostic(ModelCapabilities capabilities) {
+        String effort = requestPolicy.reasoningEffort(capabilities);
+        return effort == null ? "" : effort;
+    }
+
     private int estimateTokens(String content) {
         return content == null || content.isBlank() ? 0 : Math.max(1, (int) Math.ceil(content.length() / 4.0));
     }
@@ -580,6 +571,7 @@ public class ModelGatewayService {
         boolean temperatureSent,
         String temperatureDecision,
         String maxTokenDecision,
+        String reasoningEffort,
         long timeoutSeconds,
         long latencyMs,
         boolean requestSucceeded,
@@ -607,7 +599,7 @@ public class ModelGatewayService {
         static ModelCallDiagnostics unknown(ModelOutputAdapter.ParsedOutput parsed) {
             return new ModelCallDiagnostics(
                 "", "", "", "", "UNKNOWN", 0, 0, "", 0, 0, 0, 0, 0, 0,
-                0, 0, 0, false, "", "", 0, 0, true, true, parsed.partial(), false, false,
+                0, 0, 0, false, "", "", "", 0, 0, true, true, parsed.partial(), false, false,
                 0, parsed.repaired(), parsed.partial(), parsed.recoveredItems(), "UNAVAILABLE", false, 0, false,
                 0, "NONE", true, "", "", "UNKNOWN", "UNKNOWN", ""
             );
@@ -669,7 +661,7 @@ public class ModelGatewayService {
                 entryPoint, taskType, providerName, modelName, capabilityProfile, inputSize, promptSize, finishReason,
                 newPromptTokens, newCompletionTokens, newTotalTokens, providerMaxTokens, taskPolicyMaxTokens,
                 effectiveMaxTokens, providerTemperature, recommendedTemperature, effectiveTemperature, temperatureSent,
-                temperatureDecision, maxTokenDecision, timeoutSeconds, newLatency, requestSucceeded, contentPresent,
+                temperatureDecision, maxTokenDecision, reasoningEffort, timeoutSeconds, newLatency, requestSucceeded, contentPresent,
                 newTruncated, retryAttempted, retrySucceeded, transportRetryCount, repaired, partial, recovered,
                 usageSource, reasoningPresent, reasoningLength, reasoningBudgetExhausted, newRequestCount, newRetryType,
                 matched, stage, code, protocol, normalizedFinishReason, requestId

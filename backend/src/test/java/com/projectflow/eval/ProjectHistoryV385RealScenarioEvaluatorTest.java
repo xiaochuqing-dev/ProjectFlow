@@ -740,7 +740,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         artifact.put("version", "projectflow-v3.8.5-real-scenario-qualification-v2");
         artifact.put("generatedAt", Instant.now().toString());
         artifact.put("provider", Map.of(
-            "name", config.name(), "model", config.model(), "protocol", config.protocol().name()
+            "name", config.name(), "model", config.model(), "protocol", config.protocol().name(),
+            "reasoningEffort", config.reasoningEffort()
         ));
         artifact.put("qualification", summary);
         artifact.put("scenarios", runs);

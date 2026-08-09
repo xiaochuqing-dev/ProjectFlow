@@ -213,7 +213,8 @@ class ProjectHistoryRealModelIT {
         artifact.put("generatedAt", Instant.now().toString());
         artifact.put("promptVersion", ProjectHistoryPromptBuilder.PROMPT_VERSION);
         artifact.put("provider", Map.of(
-            "name", config.name(), "model", config.model(), "protocol", config.protocol().name()
+            "name", config.name(), "model", config.model(), "protocol", config.protocol().name(),
+            "reasoningEffort", config.reasoningEffort()
         ));
         artifact.put("input", Map.of(
             "storyCount", prompt.includedStoryIds().size(),

@@ -189,18 +189,20 @@ jobs:
             supports_json_mode: "true"
             supports_reasoning: "true"
             supports_reasoning_control: "true"
+            reasoning_effort: high
             dogfood_test: GLMDogfoodRegressionTest
           - id: deepseek
             display_name: DeepSeek Chat
             secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
             provider: DeepSeek OpenCode Go
             base_url: https://opencode.ai/zen/go/v1
-            model: deepseek-v4-pro
+            model: deepseek-v4-flash
             type: DEEPSEEK
             protocol: OPENAI_CHAT_COMPLETIONS
-            supports_json_mode: "false"
+            supports_json_mode: "true"
             supports_reasoning: "true"
-            supports_reasoning_control: "false"
+            supports_reasoning_control: "true"
+            reasoning_effort: max
             dogfood_test: DeepSeekDogfoodRegressionTest
     steps:
       - uses: actions/checkout@v4
@@ -238,6 +240,7 @@ jobs:
           PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE: ${{ matrix.supports_json_mode }}
           PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING: ${{ matrix.supports_reasoning }}
           PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL: ${{ matrix.supports_reasoning_control }}
+          PROJECTFLOW_MODEL_REASONING_EFFORT: ${{ matrix.reasoning_effort }}
           EVAL_PREFIX: ${{ matrix.id }}
           DOGFOOD_TEST: ${{ matrix.dogfood_test }}
         run: |

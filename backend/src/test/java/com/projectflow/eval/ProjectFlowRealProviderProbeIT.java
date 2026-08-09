@@ -69,6 +69,9 @@ class ProjectFlowRealProviderProbeIT {
         assertThat(diagnostics.requestCount()).isBetween(1, 2);
         assertThat(diagnostics.protocol()).isEqualTo(config.protocol().name());
         assertThat(diagnostics.modelName()).isEqualTo(config.model());
+        assertThat(diagnostics.reasoningEffort()).isEqualTo(
+            config.supportsReasoningControl() ? config.reasoningEffort() : ""
+        );
         assertThat(diagnostics.requestId()).doesNotContain(config.apiKey());
     }
 }
