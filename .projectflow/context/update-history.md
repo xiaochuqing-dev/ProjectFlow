@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.8.5 RC2 大众可读历程最终封板 - 2026-08-10
+
+Round 1 正式记录为 NEEDS_REVISION_NOT_APPROVED，并保持原 30 Story/8 Chapter 文件不变。新增 Provider-neutral 的大众主体归一化与叙述蕴含校验：九种 claim state、受约束主体、原因 Evidence、不同义的 Title/Summary/Before/Change/After、自然未知表述和阶段级 Chapter 都由统一规则校验；模型输入不再包含原始路径、技术详情或 commit 摘要。当前本地后端 584 项、前端 58 项契约、构建、Hermes 与 Obsidian 通过；新的双 Provider workflow、Round 2 冻结和用户批准仍待完成，PR #15 保持 Draft。
+
 ## ProjectFlow V3.8.5 RC2 模型与消费者一致性收口 - 2026-08-08
 
 - 模型 schema 缩为 Story/Chapter 措辞，Primary/Supporting、Chapter membership、生命周期和 Evidence 由工程层唯一维护。

@@ -53,7 +53,7 @@ import com.projectflow.service.ProjectHistorySourceCollector.CollectionOutcome;
  */
 @Service
 public class ProjectHistoryReconstructionService {
-    static final String STRATEGY_VERSION = "project-history-v385-semantic-compression-v1";
+    static final String STRATEGY_VERSION = "project-history-v385-human-narrative-v2";
     static final String PROMPT_VERSION = ProjectHistoryPromptBuilder.PROMPT_VERSION;
     private static final int MODEL_STORY_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
     private static final int MODEL_EVENT_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_EVENT_LIMIT;
@@ -95,6 +95,7 @@ public class ProjectHistoryReconstructionService {
     private final SensitiveContentRedactor redactor;
     private final ProjectHistoryPromptBuilder promptBuilder;
     private final ProjectHistoryLanguageService languageService;
+    private final ProjectHistoryNarrativeEntailmentValidator narrativeValidator;
     private final ProjectHistoryWindowPlanner windowPlanner;
     private final ProjectHistoryCorrectionService correctionService;
     private final ProjectHistoryPresentationInvariantValidator presentationInvariantValidator;
@@ -112,6 +113,7 @@ public class ProjectHistoryReconstructionService {
         SensitiveContentRedactor redactor,
         ProjectHistoryPromptBuilder promptBuilder,
         ProjectHistoryLanguageService languageService,
+        ProjectHistoryNarrativeEntailmentValidator narrativeValidator,
         ProjectHistoryCorrectionService correctionService,
         ProjectHistoryPresentationInvariantValidator presentationInvariantValidator,
         ObjectMapper objectMapper,
@@ -127,6 +129,7 @@ public class ProjectHistoryReconstructionService {
         this.redactor = redactor;
         this.promptBuilder = promptBuilder;
         this.languageService = languageService;
+        this.narrativeValidator = narrativeValidator;
         this.windowPlanner = new ProjectHistoryWindowPlanner();
         this.correctionService = correctionService;
         this.presentationInvariantValidator = presentationInvariantValidator;
@@ -705,8 +708,16 @@ public class ProjectHistoryReconstructionService {
         String object = languageService.readableObject(
             story.primarySubjectKey(), story.technicalDetails(), story.affectedAreas()
         );
-        if (object == null || object.isBlank() || "项目核心结果".equals(object)) {
-            object = story.affectedAreas().stream().findFirst().orElse(story.primarySubjectKey());
+        if (object == null || object.isBlank() || Set.of(
+            "项目核心结果", "项目材料", "项目阶段成果", "阶段成果记录", "项目成果记录"
+        ).contains(object)) {
+            // Internal grouping may retain the stable subject key even when the
+            // first presentation layer deliberately collapses an unsafe/raw
+            // identifier into a generic Chinese label.
+            object = story.primarySubjectKey();
+            if (object == null || object.isBlank()) {
+                object = story.affectedAreas().stream().findFirst().orElse("project-material");
+            }
         }
         return object.trim().toLowerCase(Locale.ROOT);
     }
@@ -978,8 +989,11 @@ public class ProjectHistoryReconstructionService {
         List<String> labels = events.stream()
             .filter(event -> event.category() != Category.FILE_CHANGE)
             .map(EventView::label).filter(value -> !value.isBlank()).distinct().limit(3).toList();
+        ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope narrativeEnvelope = narrativeEnvelope(
+            subjectLabel, outcome, events, hasReasonEligibleEvidence(events)
+        );
         ProjectHistoryLanguageService.Presentation presentation = languageService.fallback(
-            outcome, subjectKey,
+            narrativeEnvelope.claimState(), outcome, subjectKey,
             events.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(), labels,
             transitions.stream().map(Enum::name).toList()
         );
@@ -989,11 +1003,9 @@ public class ProjectHistoryReconstructionService {
         List<String> conflicts = events.stream()
             .filter(event -> event.epistemicStatus() == ProjectFactEpistemicStatus.CONFLICTED)
             .map(event -> "来源对这项结果存在冲突，需在详情中核对。 ").distinct().limit(10).toList();
-        List<String> unknowns = new ArrayList<>();
-        unknowns.add("未发现可独立验证的变更原因；原因保持 UNKNOWN。 ");
-        if (events.stream().anyMatch(event -> event.epistemicStatus() == ProjectFactEpistemicStatus.UNKNOWN)) {
-            unknowns.add("部分来源本身处于 UNKNOWN 状态。 ");
-        }
+        boolean sourceStateUnknown = events.stream()
+            .anyMatch(event -> event.epistemicStatus() == ProjectFactEpistemicStatus.UNKNOWN);
+        List<String> unknowns = narrativeValidator.normalizeUnknowns("", sourceStateUnknown);
         List<String> limitations = events.stream().flatMap(event -> event.limitations().stream()).distinct().limit(20).toList();
         String id = "story-" + ProjectHistorySourceCollector.sha256(subjectKey + "|" + events.get(0).stableKey()).substring(0, 20);
         String humanTitle = presentation.title();
@@ -1296,7 +1308,9 @@ public class ProjectHistoryReconstructionService {
                 SnapshotResult promptBase = current;
                 ValidatedHistoryResponse<SnapshotResult> validated = callWithValidationRepair(
                     provider, prompt.prompt(), ModelTaskType.PROJECT_HISTORY_SYNTHESIS,
-                    root -> parseModel(root, promptBase, prompt.includedStoryIds(), includedChapters, reasonEvidence),
+                    root -> parseModel(
+                        root, promptBase, prompt.includedStoryIds(), includedChapters, reasonEvidence, eventsById
+                    ),
                     diagnostics
                 );
                 ModelGatewayService.StructuredModelResponse response = validated.response();
@@ -1426,11 +1440,18 @@ public class ProjectHistoryReconstructionService {
         HistoryProgress progress,
         boolean allowCalls
     ) {
+        Set<String> primaryStoryIds = input.stories().stream().filter(ChangeStory::primary).map(ChangeStory::id)
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
         List<ChapterBatch> batches = input.chapters().stream()
             .filter(chapter -> !chapter.hiddenByDefault() && !chapter.userDeclared())
             .filter(chapter -> !ProjectHistoryCorrectionService.USER_DECLARED_PRESENTATION.equals(chapter.presentationAuthority()))
             .filter(chapter -> !enhancedChapterIds.contains(chapter.id()))
-            .filter(chapter -> chapter.storyRefs().size() > 1 && enhancedStoryIds.containsAll(chapter.storyRefs()))
+            .filter(chapter -> chapter.storyRefs().size() > 1)
+            .filter(chapter -> {
+                Set<String> chapterPrimaryIds = chapter.storyRefs().stream().filter(primaryStoryIds::contains)
+                    .collect(LinkedHashSet::new, Set::add, Set::addAll);
+                return !chapterPrimaryIds.isEmpty() && enhancedStoryIds.containsAll(chapterPrimaryIds);
+            })
             .map(chapter -> chapterBatch(input, chapter))
             .toList();
         if (batches.isEmpty()) return ChapterSynthesisResult.notRequired(input);
@@ -1484,12 +1505,13 @@ public class ProjectHistoryReconstructionService {
                     HistoryChapter chapter = current.chapters().stream()
                         .filter(value -> value.id().equals(batch.chapterId())).findFirst().orElseThrow();
                     ProjectHistoryPromptBuilder.ChapterSynthesisBuildResult prompt = chapterPrompt(current, chapter);
+                    List<String> primaryWording = primaryChapterWording(current, chapter);
                     promptCharacters += prompt.promptCharacterCount();
                     omittedStories += prompt.omittedStoryCount();
                     progress.update("HISTORY_CHAPTER_SYNTHESIS", "正在使用已校验的变化故事摘要归纳大篇章");
                     ValidatedHistoryResponse<HistoryChapter> validated = callWithValidationRepair(
                         provider, prompt.prompt(), ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS,
-                        root -> parseChapterSynthesis(root, chapter), diagnostics
+                        root -> parseChapterSynthesis(root, chapter, primaryWording), diagnostics
                     );
                     ModelGatewayService.StructuredModelResponse response = validated.response();
                     HistoryChapter enhanced = validated.value();
@@ -1581,13 +1603,13 @@ public class ProjectHistoryReconstructionService {
                     "MODEL_VALIDATED",
                     value.humanTitle(),
                     value.oneSentenceSummary(),
-                    currentStory.beforeState(),
-                    currentStory.change(),
-                    currentStory.afterState(),
+                    value.beforeState(),
+                    value.change(),
+                    value.afterState(),
                     value.reason(),
                     value.reasonEvidenceRefs(),
                     currentStory.conflicts(),
-                    merge(currentStory.unknowns(), value.unknowns(), 20)
+                    value.unknowns()
                 ));
             }
         });
@@ -1655,7 +1677,7 @@ public class ProjectHistoryReconstructionService {
         );
         List<ChangeStory> members = chapter.storyRefs().stream().map(stories::get)
             .filter(java.util.Objects::nonNull).toList();
-        List<ProjectHistoryPromptBuilder.ChapterStorySummaryInput> summaries = members.stream()
+        List<ProjectHistoryPromptBuilder.ChapterStorySummaryInput> summaries = members.stream().filter(ChangeStory::primary)
             .map(story -> new ProjectHistoryPromptBuilder.ChapterStorySummaryInput(
                 story.id(), boundedPromptText(story.humanTitle(), 240), boundedPromptText(story.oneSentenceSummary(), 700),
                 story.role(), story.occurredFrom() == null ? "" : story.occurredFrom().toString(),
@@ -1672,7 +1694,11 @@ public class ProjectHistoryReconstructionService {
         return promptBuilder.buildChapterProduction(input);
     }
 
-    private HistoryChapter parseChapterSynthesis(JsonNode root, HistoryChapter original) {
+    private HistoryChapter parseChapterSynthesis(
+        JsonNode root,
+        HistoryChapter original,
+        List<String> primaryStoryWording
+    ) {
         if (root == null || !root.isObject()) {
             throw new HistoryValidationException(ValidationKind.CONTRACT, "History chapter model output is not an object");
         }
@@ -1691,6 +1717,11 @@ public class ProjectHistoryReconstructionService {
         if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
             throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM,
                 "History chapter model returned an unsupported claim");
+        }
+        try {
+            narrativeValidator.validateChapter(title, summary, primaryStoryWording);
+        } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
+            throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
         }
         return new HistoryChapter(
             original.id(), title, summary, original.from(), original.to(), original.boundarySignals(),
@@ -1888,8 +1919,20 @@ public class ProjectHistoryReconstructionService {
         List<ProjectHistoryPromptBuilder.StoryPromptInput> stories = base.stories().stream()
             .filter(story -> eligibleStories.contains(story.id())).map(story -> {
             List<EventView> members = story.eventRefs().stream().map(views::get).filter(java.util.Objects::nonNull).toList();
+            String subjectLabel = languageService.readableObject(
+                story.primarySubjectKey(),
+                members.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(),
+                members.stream().filter(event -> event.category() != Category.FILE_CHANGE)
+                    .map(EventView::label).filter(value -> value != null && !value.isBlank()).distinct().limit(8).toList()
+            );
+            ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
+                subjectLabel,
+                primaryTransition(storyTransitions(members)),
+                members,
+                !reasonEvidenceByStory.getOrDefault(story.id(), List.of()).isEmpty()
+            );
             return new ProjectHistoryPromptBuilder.StoryPromptInput(
-                story.id(), boundedPromptText(ProjectHistorySourceCollector.subjectLabel(story.primarySubjectKey()), 180),
+                story.id(), boundedPromptText(envelope.subjectLabel(), 180),
                 story.occurredFrom().toString(), story.occurredTo().toString(),
                 members.stream().map(event -> event.transition().name()).distinct().toList(),
                 members.stream().filter(event -> event.category() != Category.FILE_CHANGE)
@@ -1898,11 +1941,10 @@ public class ProjectHistoryReconstructionService {
                 story.evidenceRefs().stream().limit(12).map(value -> boundedPromptText(value, 180)).toList(),
                 reasonEvidenceByStory.getOrDefault(story.id(), List.of()).stream().limit(30).toList(),
                 boundedPromptText(story.beforeState(), 700), boundedPromptText(story.change(), 900),
-                boundedPromptText(story.afterState(), 700), story.role(),
+                boundedPromptText(story.afterState(), 700), envelope.claimState().name(),
+                envelope.allowedClaims(), envelope.forbiddenClaims(), envelope.humanSafeSourceContext(), story.role(),
                 story.primaryStoryId(),
-                story.supportingChangeRefs().stream().limit(40).toList(),
-                story.commitSummaries().stream().limit(12).map(value -> boundedPromptText(value, 450)).toList(),
-                story.technicalDetails().stream().limit(30).map(value -> boundedPromptText(value, 450)).toList()
+                story.supportingChangeRefs().stream().limit(40).toList()
             );
         }).toList();
         List<ProjectHistoryPromptBuilder.ChapterPromptInput> chapters = base.chapters().stream()
@@ -2000,7 +2042,8 @@ public class ProjectHistoryReconstructionService {
         SnapshotResult base,
         Set<String> eligibleStoryIds,
         Set<String> eligibleChapterIds,
-        Map<String, List<String>> reasonEvidenceByStory
+        Map<String, List<String>> reasonEvidenceByStory,
+        Map<UUID, EventView> eventsById
     ) {
         if (root == null || !root.isObject()) {
             throw new HistoryValidationException(ValidationKind.CONTRACT, "History model output is not an object");
@@ -2026,6 +2069,12 @@ public class ProjectHistoryReconstructionService {
             if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
                 throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, "History model returned vague wording");
             }
+            String before = modelText(node, "beforeWording", 1_000);
+            String change = modelText(node, "changeWording", 1_200);
+            String after = modelText(node, "afterWording", 1_000);
+            if (before.isBlank()) before = original.beforeState();
+            if (change.isBlank()) change = original.change();
+            if (after.isBlank()) after = original.afterState();
             List<String> reasonEvidence = stringList(node.path("reasonEvidenceRefs"), 30);
             if (!reasonEvidenceByStory.getOrDefault(id, List.of()).containsAll(reasonEvidence)) {
                 throw new HistoryValidationException(ValidationKind.INVALID_EVIDENCE, "History model returned ineligible reason Evidence");
@@ -2034,14 +2083,41 @@ public class ProjectHistoryReconstructionService {
             if (!reason.isBlank() && reasonEvidence.isEmpty()) {
                 throw new HistoryValidationException(ValidationKind.INVALID_EVIDENCE, "History reason has no Evidence");
             }
-            List<String> unknowns = stringList(node.path("unknowns"), 20);
-            if (reason.isBlank() && unknowns.stream().noneMatch(value -> value.contains("未知") || value.toUpperCase(Locale.ROOT).contains("UNKNOWN"))) {
-                unknowns = append(unknowns, "未发现可验证的变更原因；原因保持 UNKNOWN。 ", 20);
+            String unknownWording = modelText(node, "unknownWording", 500);
+            if (unknownWording.isBlank()) {
+                unknownWording = stringList(node.path("unknowns"), 20).stream().findFirst().orElse("");
+            }
+            List<EventView> members = original.eventRefs().stream().map(eventsById::get)
+                .filter(java.util.Objects::nonNull).toList();
+            String subjectLabel = languageService.readableObject(
+                original.primarySubjectKey(),
+                members.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(),
+                members.stream().filter(event -> event.category() != Category.FILE_CHANGE)
+                    .map(EventView::label).filter(value -> value != null && !value.isBlank()).distinct().limit(8).toList()
+            );
+            ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
+                subjectLabel,
+                primaryTransition(storyTransitions(members)),
+                members,
+                !reasonEvidenceByStory.getOrDefault(id, List.of()).isEmpty()
+            );
+            boolean sourceStateUnknown = members.stream()
+                .anyMatch(event -> event.epistemicStatus() == ProjectFactEpistemicStatus.UNKNOWN);
+            List<String> unknowns = unknownWording.isBlank() && !reason.isBlank() && !sourceStateUnknown
+                ? List.of()
+                : narrativeValidator.normalizeUnknowns(unknownWording, sourceStateUnknown);
+            try {
+                narrativeValidator.validateStory(
+                    envelope, title, summary, before, change, after, reason,
+                    unknowns.stream().findFirst().orElse("")
+                );
+            } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
+                throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
             }
             stories.put(id, copyStory(
                 original, original.laterOutcome(), "INFERRED_NON_AUTHORITATIVE", "MODEL_VALIDATED",
-                title, summary, original.beforeState(), original.change(), original.afterState(), reason, reasonEvidence,
-                original.conflicts(), merge(original.unknowns(), unknowns, 20)
+                title, summary, before, change, after, reason, reasonEvidence,
+                original.conflicts(), unknowns
             ));
         }
         if (!seenStories.equals(eligibleStoryIds)) {
@@ -2068,6 +2144,14 @@ public class ProjectHistoryReconstructionService {
             if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
                 throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, "History model returned an unsupported chapter claim");
             }
+            List<String> primaryWording = original.storyRefs().stream().map(stories::get)
+                .filter(java.util.Objects::nonNull).filter(ChangeStory::primary)
+                .flatMap(story -> Stream.of(story.humanTitle(), story.oneSentenceSummary())).toList();
+            try {
+                narrativeValidator.validateChapter(title, summary, primaryWording);
+            } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
+                throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
+            }
             chapters.put(id, new HistoryChapter(
                 original.id(), title, summary, original.from(), original.to(), original.boundarySignals(),
                 original.storyRefs(), original.storyCount(), original.rawEventCount(), "INFERRED_NON_AUTHORITATIVE",
@@ -2092,6 +2176,47 @@ public class ProjectHistoryReconstructionService {
             result.put(story.id(), reasonEligibleEvidence(story, eventsById))
         );
         return Map.copyOf(result);
+    }
+
+    private ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope narrativeEnvelope(
+        String subjectLabel,
+        Transition transition,
+        List<EventView> events,
+        boolean reasonEligible
+    ) {
+        List<EventView> safeEvents = events == null ? List.of() : events;
+        return narrativeValidator.envelope(new ProjectHistoryNarrativeEntailmentValidator.EvidenceProfile(
+            subjectLabel,
+            transition,
+            safeEvents.stream().map(EventView::category).distinct().toList(),
+            safeEvents.stream().map(EventView::authority).distinct().toList(),
+            safeEvents.stream().map(EventView::epistemicStatus).distinct().toList(),
+            safeEvents.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(),
+            safeEvents.stream().filter(event -> event.category() != Category.FILE_CHANGE)
+                .map(EventView::label).filter(value -> value != null && !value.isBlank()).distinct().limit(8).toList(),
+            reasonEligible
+        ));
+    }
+
+    private static boolean hasReasonEligibleEvidence(List<EventView> events) {
+        return (events == null ? List.<EventView>of() : events).stream().anyMatch(event ->
+            (event.authority() == Authority.FACTUAL_SOURCE && event.epistemicStatus().isStrongFact()
+                || event.authority() == Authority.DECLARED
+                    && event.epistemicStatus() == ProjectFactEpistemicStatus.DECLARED
+                    && Set.of(Category.PULL_REQUEST, Category.ISSUE, Category.USER_DECLARATION).contains(event.category()))
+                && event.evidenceRefs().stream().anyMatch(reference -> reference.startsWith("fact:")
+                    || reference.startsWith("github-pr:") || reference.startsWith("github-issue:")
+                    || reference.startsWith("declaration:"))
+        );
+    }
+
+    private static List<String> primaryChapterWording(SnapshotResult snapshot, HistoryChapter chapter) {
+        Map<String, ChangeStory> stories = snapshot.stories().stream().collect(
+            LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll
+        );
+        return chapter.storyRefs().stream().map(stories::get).filter(java.util.Objects::nonNull)
+            .filter(ChangeStory::primary)
+            .flatMap(story -> Stream.of(story.humanTitle(), story.oneSentenceSummary())).toList();
     }
 
     private static List<String> reasonEligibleEvidence(ChangeStory story, Map<UUID, EventView> eventsById) {
@@ -2148,17 +2273,56 @@ public class ProjectHistoryReconstructionService {
             if (!story.reason().isBlank() && story.reasonEvidenceRefs().isEmpty()) {
                 throw new HistoryValidationException(ValidationKind.INVALID_EVIDENCE, "Reason has no Evidence");
             }
+            if (!ProjectHistoryCorrectionService.USER_DECLARED_PRESENTATION.equals(story.presentationAuthority())) {
+                List<EventView> members = story.eventRefs().stream().map(eventsById::get)
+                    .filter(java.util.Objects::nonNull).toList();
+                String subjectLabel = languageService.readableObject(
+                    story.primarySubjectKey(),
+                    members.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(),
+                    members.stream().filter(event -> event.category() != Category.FILE_CHANGE)
+                        .map(EventView::label).filter(value -> value != null && !value.isBlank()).distinct().limit(8).toList()
+                );
+                ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
+                    subjectLabel, primaryTransition(storyTransitions(members)), members,
+                    !reasonEligibleEvidence(story, eventsById).isEmpty()
+                );
+                try {
+                    narrativeValidator.validateStory(
+                        envelope, story.humanTitle(), story.oneSentenceSummary(), story.beforeState(), story.change(),
+                        story.afterState(), story.reason(), story.unknowns().stream().findFirst().orElse("")
+                    );
+                } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
+                    throw new HistoryValidationException(
+                        ValidationKind.UNSUPPORTED_CLAIM,
+                        "Story " + story.id() + " [" + envelope.claimState().name() + ", title="
+                            + boundedPromptText(story.humanTitle(), 120) + "]: " + violation.getMessage()
+                    );
+                }
+            }
             coveredEvents.addAll(story.eventRefs());
         }
         validateRoleGraph(result.stories());
         if (!coveredEvents.containsAll(semanticEvents)) {
             throw new HistoryValidationException(ValidationKind.CONTRACT, "Semantic event coverage failed");
         }
+        Map<String, ChangeStory> storiesById = result.stories().stream().collect(
+            LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll
+        );
         Set<String> chapterStoryIds = new LinkedHashSet<>();
         for (HistoryChapter chapter : result.chapters()) {
             for (String storyRef : chapter.storyRefs()) {
                 if (!storyIds.contains(storyRef) || !chapterStoryIds.add(storyRef)) {
                     throw new HistoryValidationException(ValidationKind.CROSS_PROJECT_REFERENCE, "Chapter membership is invalid");
+                }
+            }
+            if (!ProjectHistoryCorrectionService.USER_DECLARED_PRESENTATION.equals(chapter.authority())) {
+                List<String> primaryWording = chapter.storyRefs().stream().map(storiesById::get)
+                    .filter(java.util.Objects::nonNull).filter(ChangeStory::primary)
+                    .flatMap(story -> Stream.of(story.humanTitle(), story.oneSentenceSummary())).toList();
+                try {
+                    narrativeValidator.validateChapter(chapter.title(), chapter.summary(), primaryWording);
+                } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
+                    throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
                 }
             }
         }

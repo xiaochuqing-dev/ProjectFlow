@@ -16,7 +16,7 @@ class NonCodeLanguageRegressionTest {
         assertThat(language.readableObject("访谈结论", List.of("research/report.docx"), List.of()))
             .contains("文档");
         assertThat(language.readableObject("销售趋势", List.of("analysis/results.csv"), List.of()))
-            .contains("数据结果");
+            .contains("数据分析结果");
         assertThat(language.readableObject("品牌首页", List.of("site/index.html"), List.of()))
             .contains("页面");
         assertThat(String.join(" ",

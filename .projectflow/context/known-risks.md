@@ -1,6 +1,8 @@
 # Known risks
 
-- V3.8.5 RC2 已将角色图和 Chapter membership 收回工程层，并通过本地 H2、PostgreSQL 16、前端、Playwright、Obsidian/Hermes 门禁。历史 GLM/DeepSeek 19-case 资格 FAIL、DeepSeek 10/11、人工 0/0 和旧 Obsidian CI failure 必须保留；RC2 真实重跑因 GitHub Secrets 缺失尚未执行，人工抽样也未完成，PR #15 仍为 BLOCKED/Draft。
+- V3.8.5 Human Readability Round 1 is NEEDS_REVISION_NOT_APPROVED. Its original 30 Story/8 Chapter files remain frozen. The new implementation has deterministic coverage, but the new dual-Provider Round 2 set and genuine user review remain blocking; automated validators cannot supply human scores.
+
+- V3.8.5 RC2 已将角色图和 Chapter membership 收回工程层。历史 GLM/DeepSeek 19-case 资格 FAIL、DeepSeek 10/11、人工 0/0 和旧 Obsidian CI failure 必须保留；Repository Secrets 现已具备，但本轮 Human Readability 真实重跑与 Round 2 人工抽样尚未完成，PR #15 仍为 BLOCKED/Draft。
 - V3.8.5 用户修正是可审计、可逆的展示覆盖，不改变 ProjectFact、原始事件或 Evidence；跨窗口的模型措辞仍受窗口上限、Provider 兼容性和未处理范围诊断约束。
 - 2026-08-08 的只读 `npm audit` 报告 4 个 high、0 critical，涉及直接依赖 Next/PostCSS 与传递依赖 nanoid/sharp；本轮未运行 `audit fix`，避免在 RC2 夹带未评估的依赖升级，正式发布前仍需单独处置并回归。
 - 2026-08-03 的 `npm audit` 对当前前端依赖图报告 3 个 high，涉及 PostCSS 的 source map 文件读取/路径问题与 Sharp/libvips 继承漏洞，并聚合影响 Next。注册表当前自动修复建议是破坏性的 Next 9.3.3 downgrade，不能用 `npm audit fix --force` 代替兼容性判断；应等待或选择官方兼容修复版本，升级后重跑 lint、contracts、production build、Playwright 和根启动器。

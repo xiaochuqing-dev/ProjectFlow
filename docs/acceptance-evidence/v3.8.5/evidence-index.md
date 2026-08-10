@@ -1,5 +1,19 @@
 # V3.8.5 验收证据索引
 
+## Human Readability Final Closure
+
+- Round 1 original manifest and worksheet remain frozen and are formally NEEDS_REVISION_NOT_APPROVED.
+- `docs/projectflow-v3.8.5-narrative-entailment-contract.md`
+- `docs/projectflow-v3.8.5-human-narrative-contract.md`
+- `docs/projectflow-v3.8.5-chapter-narrative-contract.md`
+- `docs/projectflow-v3.8.5-human-readability-round1-review.md`
+- `docs/projectflow-v3.8.5-human-readability-round2-review.md`
+- `docs/projectflow-v3.8.5-human-readability-targeted-reuse-decisions.md`
+- `docs/projectflow-v3.8.5-human-readability-real-provider-results.md`
+- `docs/projectflow-v3.8.5-human-readability-final-closure-audit.md`
+- `docs/projectflow-v3.8.5-final-acceptance.md`
+- Round 2 manifest and worksheet: pending the new dual-Provider workflow; human fields must remain blank until user review.
+
 本索引只指向可复核的仓库内证据，不保存凭据、Authorization、完整 Prompt、raw response、reasoning、机器绝对路径或私有项目内容。当前状态为 BLOCKED / PENDING_HUMAN_REVIEW：自动化双 Provider 门禁已通过，真实人工评分尚未完成。
 
 ## 最终自动化来源

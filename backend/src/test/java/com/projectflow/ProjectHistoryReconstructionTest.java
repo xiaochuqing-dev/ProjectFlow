@@ -327,8 +327,9 @@ class ProjectHistoryReconstructionTest {
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
 
-        assertThat(capturedPrompt.get()).doesNotContain(windowsPath, unixPath, "C:\\Users\\private-user", "/home/private-user");
-        assertThat(capturedPrompt.get()).contains("ABSOLUTE_PATH_REDACTED");
+        assertThat(capturedPrompt.get()).doesNotContain(
+            windowsPath, unixPath, "C:\\Users\\private-user", "/home/private-user", "ABSOLUTE_PATH_REDACTED"
+        );
         String apiJson = objectMapper.writeValueAsString(readService.events(
             userId, project.getId(), "PROJECT_FACT", null, null, null, null, "CURRENT",
             null, false, null, null, 0, 20
@@ -459,8 +460,8 @@ class ProjectHistoryReconstructionTest {
         assertThat(stories.items()).extracting(item -> item.humanTitle())
             .noneMatch(title -> title.matches(".*(BackendModule|FeaturePage|guide-\\d+|后端区域|前端区域|Controller|Service).*"));
         assertThat(stories.items()).extracting(item -> item.humanTitle())
-            .anyMatch(title -> title.contains("项目材料"))
-            .anyMatch(title -> title.contains("页面内容"))
+            .anyMatch(title -> title.contains("前端项目骨架"))
+            .anyMatch(title -> title.contains("后端项目骨架"))
             .anyMatch(title -> title.contains("项目文档"));
     }
 
@@ -495,7 +496,7 @@ class ProjectHistoryReconstructionTest {
         String firstLayer = visible.stream().map(story -> String.join(" ", story.humanTitle(), story.oneSentenceSummary(),
             story.beforeState(), story.change(), story.afterState())).collect(java.util.stream.Collectors.joining(" "));
         assertThat(visible).allSatisfy(story -> assertThat(story.role()).isEqualTo("PRIMARY"));
-        assertThat(firstLayer).contains("演示文稿", "文档", "数据结果", "视频", "设计稿", "页面")
+        assertThat(firstLayer).contains("演示文稿", "文档", "数据分析结果", "视频", "设计稿", "页面")
             .doesNotContain("能力", "后端", "Controller", "Service", "Repository", "ENGINEERING_GROUPING");
     }
 
@@ -777,7 +778,8 @@ class ProjectHistoryReconstructionTest {
             userId, project.getId(), null, false, null, null, 0, 20
         ).items().get(0);
         assertThat(normalizedUnknown.reason()).isBlank();
-        assertThat(normalizedUnknown.unknowns()).anyMatch(value -> value.contains("UNKNOWN"));
+        assertThat(normalizedUnknown.unknowns()).containsExactly("目前没有足够信息确认为什么做这次调整。")
+            .allSatisfy(value -> assertThat(value).doesNotContain("UNKNOWN", "Evidence", "reason eligibility"));
     }
 
     @Test
@@ -1118,7 +1120,9 @@ class ProjectHistoryReconstructionTest {
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         Map<String, Object> failedDiagnostics = readService.overview(userId, project.getId()).diagnostics();
-        assertThat(calls.get()).isEqualTo(4);
+        assertThat(calls.get()).as("history diagnostics=%s stories=%s", failedDiagnostics,
+            readService.stories(userId, project.getId(), null, false, null, null, 0, 100).items().stream()
+                .limit(5).map(item -> item.primarySubjectKey() + ":" + item.humanTitle()).toList()).isEqualTo(4);
         assertThat(failedDiagnostics).containsEntry("totalWindowCount", 3)
             .containsEntry("succeededWindowCount", 2)
             .containsEntry("failedWindowCount", 1)
@@ -1210,7 +1214,7 @@ class ProjectHistoryReconstructionTest {
     }
 
     @Test
-    void splitsPromptOverflowIntoStableChildWindowsWithoutRepeatingSuccesses() throws Exception {
+    void removesRawTechnicalPayloadBeforePromptBudgetingAndCachesOneStableWindow() throws Exception {
         UUID userId = UUID.randomUUID();
         Path root = temporaryRoot.resolve("window-prompt-overflow");
         Files.createDirectories(root);
@@ -1231,7 +1235,7 @@ class ProjectHistoryReconstructionTest {
 
         Map<String, Object> diagnostics = readService.overview(userId, project.getId()).diagnostics();
         int completedCalls = calls.get();
-        assertThat(completedCalls).isGreaterThan(1).isLessThanOrEqualTo(16);
+        assertThat(completedCalls).isEqualTo(1);
         assertThat(((Number) diagnostics.get("totalWindowCount")).intValue()).isEqualTo(completedCalls);
         assertThat(diagnostics).containsEntry("succeededWindowCount", completedCalls)
             .containsEntry("failedWindowCount", 0)
@@ -1239,9 +1243,10 @@ class ProjectHistoryReconstructionTest {
             .containsEntry("pendingWindowCount", 0);
         assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
             .filteredOn(checkpoint -> checkpoint.getWindowIdentity().startsWith("window-"))
-            .allSatisfy(checkpoint -> {
+            .singleElement()
+            .satisfies(checkpoint -> {
                 assertThat(checkpoint.getStatus()).isEqualTo("SUCCEEDED");
-                assertThat(checkpoint.getWindowIdentity()).containsAnyOf("-a", "-b");
+                assertThat(checkpoint.getWindowIdentity()).doesNotEndWith("-a").doesNotEndWith("-b");
             });
 
         var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
@@ -1250,7 +1255,7 @@ class ProjectHistoryReconstructionTest {
     }
 
     @Test
-    void marksSingleStoryPromptOverflowTerminalAndDoesNotRetryIt() throws Exception {
+    void boundsSingleStoryPayloadBeforeModelAndCachesTheValidatedWindow() throws Exception {
         UUID userId = UUID.randomUUID();
         Path root = temporaryRoot.resolve("single-story-overflow");
         Files.createDirectories(root);
@@ -1259,34 +1264,38 @@ class ProjectHistoryReconstructionTest {
         provider(userId);
 
         AtomicInteger calls = new AtomicInteger();
+        AtomicReference<String> capturedPrompt = new AtomicReference<>();
         when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
             if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
                 return modelResponse(historyChapterModelResponse(invocation.getArgument(1, String.class)));
             }
             calls.incrementAndGet();
-            return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
+            capturedPrompt.set(invocation.getArgument(1, String.class));
+            return modelResponse(historyModelResponse(capturedPrompt.get()));
         });
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         Map<String, Object> diagnostics = readService.overview(userId, project.getId()).diagnostics();
-        assertThat(calls.get()).isZero();
+        assertThat(calls.get()).isEqualTo(1);
+        assertThat(capturedPrompt.get()).hasSizeLessThanOrEqualTo(60_000)
+            .doesNotContain("technicalDetails", "results/项目结果主题", "p".repeat(200), "e".repeat(200));
         assertThat(diagnostics).containsEntry("totalWindowCount", 1)
-            .containsEntry("succeededWindowCount", 0)
-            .containsEntry("skippedWindowCount", 1)
-            .containsEntry("skippedStoryCount", 1)
+            .containsEntry("succeededWindowCount", 1)
+            .containsEntry("skippedWindowCount", 0)
+            .containsEntry("skippedStoryCount", 0)
             .containsEntry("pendingWindowCount", 0)
             .containsEntry("unprocessedStoryCount", 0);
         assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
-            .singleElement().satisfies(checkpoint -> assertThat(checkpoint.getStatus()).isEqualTo("SKIPPED_OVERSIZE"));
+            .singleElement().satisfies(checkpoint -> assertThat(checkpoint.getStatus()).isEqualTo("SUCCEEDED"));
 
         var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         assertThat(cached.cacheHit()).isTrue();
-        assertThat(calls.get()).isZero();
+        assertThat(calls.get()).isEqualTo(1);
         assertThat(readService.overview(userId, project.getId()).diagnostics())
-            .containsEntry("skippedWindowCount", 1)
-            .containsEntry("skippedStoryCount", 1)
+            .containsEntry("skippedWindowCount", 0)
+            .containsEntry("skippedStoryCount", 0)
             .containsEntry("pendingWindowCount", 0)
-            .containsEntry("previousModelStatus", "MODEL_FALLBACK_DETERMINISTIC");
+            .containsEntry("previousModelStatus", "MODEL_VALIDATED");
     }
 
     @Test
@@ -1406,7 +1415,7 @@ class ProjectHistoryReconstructionTest {
             Instant occurredAt = first.plusSeconds(index * 3_600L);
             List<String> paths = new ArrayList<>();
             for (int pathIndex = 0; pathIndex < pathCount; pathIndex++) {
-                paths.add("results/Outcome" + String.format("%05d", index) + "Part"
+                paths.add("results/项目结果主题" + String.format("%05d", index) + "内容"
                     + String.format("%03d", pathIndex) + (payloadWidth <= 0 ? "" : "-" + "p".repeat(payloadWidth)) + ".java");
             }
             List<String> evidence = new ArrayList<>();
@@ -1459,23 +1468,31 @@ class ProjectHistoryReconstructionTest {
             chaptersStart + chaptersMarker.length(), repairStart < 0 ? prompt.length() : repairStart
         ));
         List<Map<String, Object>> storyOutput = new ArrayList<>();
+        Map<String, String> subjectsByStory = new LinkedHashMap<>();
         for (JsonNode story : stories) {
-            String subject = story.path("subject").asText("项目内容");
+            String subject = story.path("subjectDisplayConcept").asText("项目内容");
+            subjectsByStory.put(story.path("storyId").asText(), subject);
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("storyId", story.path("storyId").asText());
             item.put("humanTitle", "调整“" + subject + "”并形成可追溯结果");
             item.put("oneSentenceSummary", "围绕“" + subject + "”的来源事件已按时间归纳为可追溯变化。");
+            item.put("beforeWording", "此前已保留与“" + subject + "”有关的项目记录。");
+            item.put("changeWording", "这一阶段对“" + subject + "”的已有内容进行了调整。");
+            item.put("afterWording", "当前可以继续查看“" + subject + "”的更新记录。");
             item.put("reason", "");
             item.put("reasonEvidenceRefs", List.of());
-            item.put("unknowns", List.of("原因未知"));
+            item.put("unknownWording", "目前没有足够信息确认为什么做这次调整。");
             storyOutput.add(item);
         }
         List<Map<String, Object>> chapterOutput = new ArrayList<>();
         for (JsonNode chapter : chapters) {
+            String primarySubject = chapter.path("storyRefs").isArray() && !chapter.path("storyRefs").isEmpty()
+                ? subjectsByStory.getOrDefault(chapter.path("storyRefs").get(0).asText(), "项目阶段成果")
+                : "项目阶段成果";
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("chapterId", chapter.path("chapterId").asText());
-            item.put("title", "整理项目变化并形成可读时间区间");
-            item.put("summary", "这一时间区间按真实发生顺序汇总有证据支持的变化故事。");
+            item.put("title", "围绕“" + primarySubject + "”推进阶段成果");
+            item.put("summary", "这一时期以“" + primarySubject + "”为主线梳理变化，支撑信息保留在工程详情中。");
             chapterOutput.add(item);
         }
         return mapper.writeValueAsString(Map.of("stories", storyOutput, "chapters", chapterOutput));

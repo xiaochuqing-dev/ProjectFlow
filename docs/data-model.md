@@ -1,5 +1,7 @@
 # Data Model
 
+The final human-readability closure adds no entity, table or migration. Claim state and narrative envelopes are derived at refresh time from existing events and Evidence. Validated wording remains inside the replaceable ProjectHistorySnapshot/checkpoint presentation payload and cannot become ProjectFact.
+
 ## V3.8.5 presentation and checkpoint additions
 
 RC2 does not add a durable fact entity or migrate ProjectFact. `presentationRevision` is a corrected-view consistency token exposed by DTOs, not a new truth source. `HistoryEventResponse.userSummary` is derived display text; `safeSourceLabel`, source revision, paths and Evidence remain available for audit and are never overwritten.

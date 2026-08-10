@@ -17,7 +17,7 @@ class ProjectHistoryLanguagePolicyTest {
     void describesSoftwareAndNonCodeArtifactsWithoutProjectSpecificOrInternalLanguage() {
         assertNeutral("quarterly-review", "slides/quarterly-review.pptx", "演示文稿");
         assertNeutral("research-conclusion", "paper/research-conclusion.md", "文档");
-        assertNeutral("revenue-summary", "analysis/revenue-summary.csv", "数据结果");
+        assertNeutral("revenue-summary", "analysis/revenue-summary.csv", "数据分析结果");
         assertNeutral("final-cut", "media/final-cut.mp4", "视频");
         assertNeutral("brand-system", "design/brand-system.fig", "设计稿");
         assertNeutral("campaign", "site/index.html", "页面");
@@ -28,7 +28,7 @@ class ProjectHistoryLanguagePolicyTest {
         String customerService = language.readableObject(
             "customer-service", List.of("research/customer-service.md"), List.of("customer service findings")
         );
-        assertThat(customerService).containsIgnoringCase("customer service").doesNotContain("项目核心结果");
+        assertThat(customerService).contains("客户服务研究").doesNotContain("customer service", "项目核心结果");
     }
 
     @Test
@@ -57,7 +57,8 @@ class ProjectHistoryLanguagePolicyTest {
             List.of("新增研究结论，形成首个可确认版本", "更新数据图表，形成新的可确认版本"),
             5, 35
         );
-        assertThat(summary).contains("5 项主要结果", "35 项支撑工作").doesNotContain("40 项可读成果");
+        assertThat(summary).contains("成果内容建设", "支撑工作保留在工程详情中")
+            .doesNotContain("5 项主要结果", "35 项支撑工作", "40 项可读成果");
 
         String first = language.chapterTitle(
             List.of("新增季度汇报演示文稿，形成首个可确认版本"),
@@ -67,8 +68,8 @@ class ProjectHistoryLanguagePolicyTest {
             List.of("更新收入分析数据结果，形成新的可确认版本"),
             List.of(Transition.MODIFIED), Instant.EPOCH.plusSeconds(60), Instant.EPOCH.plusSeconds(120)
         );
-        assertThat(first).contains("季度汇报");
-        assertThat(second).contains("收入分析");
+        assertThat(first).contains("内容与呈现");
+        assertThat(second).contains("成果内容建设");
         assertThat(first).isNotEqualTo(second);
     }
 
@@ -92,8 +93,9 @@ class ProjectHistoryLanguagePolicyTest {
             Transition.UNKNOWN_TRANSITION, "research-report", List.of("reports/research-report.md"),
             List.of(), List.of("UNKNOWN_TRANSITION")
         );
-        assertThat(currentFile.title()).contains("文档", "当前可核对的材料版本");
-        assertThat(currentFile.summary()).contains("当前可核对").doesNotContain("能力", "后端");
+        assertThat(currentFile.title()).contains("研究报告", "当前能够确认的变化");
+        assertThat(currentFile.summary()).contains("现有来源记录", "具体范围")
+            .doesNotContain("能力", "后端", "research-report");
     }
 
     private void assertNeutral(String subject, String path, String expectedObject) {

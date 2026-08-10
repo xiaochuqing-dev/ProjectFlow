@@ -1,8 +1,8 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-08-08
+Last updated: 2026-08-10
 
-V3.8.5 RC2 当前状态：工程层唯一维护 Primary/Supporting、Chapter membership、before/change/after 与 Evidence；模型只生成 Story/Chapter 措辞和有 Evidence 的 reason。所有消费者读取同一 corrected view 和 presentationRevision。确定性本地门禁通过，但真实双 Provider RC2 重跑因 GitHub Secrets 未配置而未执行，人工 30 Story/8 Chapter 仍为 NOT_RUN，PR #15 必须保持 Draft。
+V3.8.5 RC2 当前状态：Round 1 为 NEEDS_REVISION_NOT_APPROVED。工程层唯一维护 Primary/Supporting、Chapter membership、Before/Change/After 的事实语义与 Evidence；模型只改写受约束的 Story/Chapter 措辞和有 Evidence 的 reason。Repository Secrets 已具备，下一步是新 GLM/DeepSeek Flash 真实重跑和 Round 2 冻结。用户明确批准 Round 2 前，PR #15 必须保持 Draft，不得宣布最终 PASS。
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 

@@ -4,6 +4,8 @@ V3.8.5 adds deterministic quality gates for multi-level history compression, Chi
 
 RC2 requires the backend job to emit the new portability, minimal-schema, role-graph, language, taxonomy and corrected-view test reports. The optional real-provider job runs both GLM Responses and DeepSeek Chat Completions only when explicitly dispatched with protected Secrets; missing Secrets fails before any request. `DeepSeekDogfoodRegressionTest` and `GLMDogfoodRegressionTest` validate the sanitized scenario artifact after the original real run instead of issuing duplicate calls.
 
+The final closure requires the fourteen human-narrative reports, including the Round 2 freeze test. GLM remains `glm-5.2` over Responses/high. DeepSeek is `deepseek-v4-flash` over Chat Completions/max; V4 Pro is not used. The raw-payload scenario now proves that large technical path/Evidence payloads are removed before prompt budgeting instead of forcing unnecessary child-window calls.
+
 PostgreSQL 16, Playwright and real DeepSeek/GLM History runs remain environment-dependent gates. Docker or Provider unavailability is reported as `BLOCKED`/`NOT_RUN`; H2, fixed compatibility services or deterministic tests are never presented as substitutes for those gates.
 
 V3.8.0 uses full Git checkout for backend/H2 and PostgreSQL jobs because fixed ProjectFlow dogfood must reach the V3.7.5 baseline and its ancestors. The backend job runs the complete suite and explicitly verifies that Frozen Dataset, History Prompt, Dogfood and Product Acceptance reports were emitted; it does not rerun duplicate Maven work.

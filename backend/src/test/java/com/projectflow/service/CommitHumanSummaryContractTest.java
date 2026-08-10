@@ -21,7 +21,7 @@ class CommitHumanSummaryContractTest {
         );
 
         assertThat(summary).contains("完善登录流程", "保留原始提交信息供核对").doesNotContain("fix");
-        assertThat(unknownScope).contains("完善相关功能", "保留原始提交信息供核对")
+        assertThat(unknownScope).contains("完善项目材料", "保留原始提交信息供核对")
             .doesNotContain("update", "Thing.java");
     }
 }

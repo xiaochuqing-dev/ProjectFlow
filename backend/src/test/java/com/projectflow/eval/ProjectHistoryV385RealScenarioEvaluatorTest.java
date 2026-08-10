@@ -173,8 +173,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             () -> schemaFailureRecovery(userId)));
         runs.add(runScenario("user-cancellation-and-restart", FaultMode.CANCEL_AFTER_REAL_CALL,
             () -> cancellationRecovery(userId)));
-        runs.add(runScenario("prompt-overflow-split", FaultMode.NONE,
-            () -> promptOverflow(userId)));
+        runs.add(runScenario("raw-payload-minimization", FaultMode.NONE,
+            () -> rawPayloadMinimization(userId)));
         runs.add(runScenario("projectflow-current-history-dogfood", FaultMode.NONE,
             () -> dogfood(userId)));
 
@@ -389,21 +389,21 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
                 allStories(userId, project.getId()), 4, reviewRevision(userId, project.getId())));
     }
 
-    private ScenarioEvidence promptOverflow(UUID userId) throws Exception {
-        Path root = temporaryRoot.resolve("prompt-overflow-real");
+    private ScenarioEvidence rawPayloadMinimization(UUID userId) throws Exception {
+        Path root = temporaryRoot.resolve("raw-payload-minimization-real");
         Files.createDirectories(root);
-        ProjectSpace project = project(userId, "Prompt overflow real Provider", root);
+        ProjectSpace project = project(userId, "Raw payload minimization real Provider", root);
         historicalFacts(project, 0, 32, 8, 12, 120);
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         Map<String, Object> diagnostics = readService.overview(userId, project.getId()).diagnostics();
         int total = number(diagnostics, "totalWindowCount");
-        require(total > 1 && total <= 16, "Prompt overflow 没有确定性拆成有界子窗口");
-        require(number(diagnostics, "succeededWindowCount") == total, "Prompt overflow 子窗口未全部完成");
-        require(number(diagnostics, "skippedWindowCount") == 0, "Prompt overflow 产生永久 SKIPPED");
-        require(number(diagnostics, "pendingWindowCount") == 0, "Prompt overflow 仍有 pending 子窗口");
-        require(calls.get(activeScenario.get()).storyLogicalCalls == total, "Prompt overflow 子窗口调用数不一致");
+        require(total == 1, "原始技术载荷未在提示词预算前移除");
+        require(number(diagnostics, "succeededWindowCount") == total, "最小化提示词窗口未完成");
+        require(number(diagnostics, "skippedWindowCount") == 0, "最小化提示词产生永久 SKIPPED");
+        require(number(diagnostics, "pendingWindowCount") == 0, "最小化提示词仍有 pending 窗口");
+        require(calls.get(activeScenario.get()).storyLogicalCalls == total, "最小化提示词调用数不一致");
         var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
-        require(cached.cacheHit(), "Prompt overflow 子窗口成功后未命中 cache");
+        require(cached.cacheHit(), "最小化提示词窗口成功后未命中 cache");
         return new ScenarioEvidence(safeDiagnostics(diagnostics),
             ProjectHistoryV385ReviewSamples.stories(
                 allStories(userId, project.getId()), 5, reviewRevision(userId, project.getId())));

@@ -50,7 +50,17 @@ class ProjectHistoryPromptBuilderTest {
         JsonNode packedChapters = mapper.readTree(production.prompt().substring(chaptersStart + 15));
         assertThat(packedStories.size()).isEqualTo(production.includedStoryIds().size());
         assertThat(packedChapters.size()).isEqualTo(production.includedChapterIds().size());
-        assertThat(packedStories).allSatisfy(node -> assertThat(node.path("deterministicAfter").asText()).isNotBlank());
+        assertThat(packedStories).allSatisfy(node -> {
+            assertThat(node.path("deterministicAfter").asText()).isNotBlank();
+            assertThat(node.path("claimState").asText()).isEqualTo("OBSERVED");
+            assertThat(node.path("subjectDisplayConcept").asText()).isNotBlank();
+            assertThat(node.has("sourceLabels")).isFalse();
+            assertThat(node.has("affectedAreas")).isFalse();
+            assertThat(node.has("evidenceRefs")).isFalse();
+            assertThat(node.has("role")).isFalse();
+            assertThat(node.has("primaryStoryId")).isFalse();
+            assertThat(node.has("supportingChangeRefs")).isFalse();
+        });
         assertThat(packedChapters).allSatisfy(node -> assertThat(production.includedStoryIds())
             .containsAll(mapper.convertValue(node.path("storyRefs"), List.class)));
     }
@@ -110,9 +120,12 @@ class ProjectHistoryPromptBuilderTest {
         assertThat(template.path("stories").findValuesAsText("storyId"))
             .containsExactly("story-without-reason", "story-with-reason");
         assertThat(template.path("chapters").findValuesAsText("chapterId")).containsExactly("chapter-one");
-        assertThat(template.path("stories").get(0).path("unknowns").get(0).asText())
-            .contains("原因", "未知");
-        assertThat(template.path("stories").get(1).path("unknowns")).isEmpty();
+        assertThat(template.path("stories").get(0).path("unknownWording").asText())
+            .contains("没有足够信息", "为什么");
+        assertThat(template.path("stories").get(1).path("unknownWording").asText()).isEmpty();
+        assertThat(template.path("stories").get(0).path("beforeWording").asText()).isEmpty();
+        assertThat(template.path("stories").get(0).path("changeWording").asText()).isEmpty();
+        assertThat(template.path("stories").get(0).path("afterWording").asText()).isEmpty();
         assertThat(template.path("stories").get(0).path("humanTitle").asText()).isEmpty();
         assertThat(prompt).doesNotContain("DeepSeek", "GLM");
     }

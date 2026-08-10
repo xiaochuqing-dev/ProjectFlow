@@ -53,7 +53,21 @@ jobs:
             PrimarySupportingBidirectionalInvariantTest \
             CorrectedProjectionConsistencyTest \
             CorrectedReadRevisionParityTest \
-            HumanReviewSampleManifestTest; do
+            HumanReviewSampleManifestTest \
+            ProjectHistoryHumanNarrativeContractTest \
+            ProjectHistoryNarrativeEntailmentTest \
+            ProjectHistoryNarrativeParaphraseValidationTest \
+            ProjectHistoryHumanSubjectLabelTest \
+            ProjectHistoryChapterSemanticSynthesisTest \
+            ProjectHistoryChapterNoRawSubjectLeakTest \
+            ProjectHistoryBeforeChangeAfterNonRepetitionTest \
+            ProjectHistoryUnknownHumanWordingTest \
+            ProjectHistoryPlannedVsImplementedTest \
+            ProjectHistoryDeclaredVsVerifiedTest \
+            ProjectHistoryDogfoodNarrativeEntailmentTest \
+            ProjectHistoryNonCodeHumanLanguageTest \
+            ProjectHistoryCrossProviderNarrativeParityTest \
+            ProjectHistoryHumanReviewRound2ManifestTest; do
             test -f "target/surefire-reports/TEST-com.projectflow.service.${report}.xml"
           done
       - name: 保存 JUnit 报告

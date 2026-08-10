@@ -65,9 +65,10 @@ def parse_args() -> argparse.Namespace:
         description="Freeze a genuine-human review sample from qualified V3.8.5 normalized artifacts."
     )
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--round", type=int, choices=(1, 2), default=1)
     parser.add_argument("--evidence-root", type=Path, default=DEFAULT_EVIDENCE_ROOT)
-    parser.add_argument("--output", type=Path, default=DEFAULT_MANIFEST)
-    parser.add_argument("--worksheet", type=Path, default=DEFAULT_WORKSHEET)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--worksheet", type=Path)
     return parser.parse_args()
 
 
@@ -232,7 +233,7 @@ def inline(value: Any) -> str:
     return " ".join(str(value).replace("\r", " ").replace("\n", " ").split())
 
 
-def worksheet_section(sample: dict[str, Any], entity: dict[str, Any]) -> list[str]:
+def worksheet_section(sample: dict[str, Any], entity: dict[str, Any], review_round: int) -> list[str]:
     lines = [
         f"## {sample['sampleId']}  {sample['provider']}  {sample['kind']}",
         "",
@@ -255,14 +256,32 @@ def worksheet_section(sample: dict[str, Any], entity: dict[str, Any]) -> list[st
             f"Evidence IDs：{inline(entity.get('evidenceRefs'))}",
             f"Unknowns：{inline(entity.get('unknowns'))}",
             f"Conflicts：{inline(entity.get('conflicts'))}",
-            "不看文件名能说清改了什么（是/否）：",
-            "能说清原来状态（是/否）：",
-            "能说清现在状态（是/否）：",
-            "能说清对项目的结果（是/否）：",
-            "英文内部 enum 泄漏（是/否）：",
-            "“当前行为得到更新”式废话（是/否）：",
-            "文件变化冒充项目成果（是/否）：",
         ])
+        if review_round == 2:
+            lines.extend([
+                "第一眼能否理解（是/否）：",
+                "Before 是否自然（是/否）：",
+                "Change 是否自然（是/否）：",
+                "After 是否自然（是/否）：",
+                "Title/Summary/Before/Change/After 是否重复（是/否）：",
+                "技术 token 泄漏（是/否）：",
+                "路径泄漏（是/否）：",
+                "Evidence 是否支撑标题（是/否）：",
+                "Evidence 是否支撑摘要（是/否）：",
+                "是否把 planned 当 implemented（是/否）：",
+                "是否把 declared 当 verified（是/否）：",
+                "是否猜测原因（是/否）：",
+            ])
+        else:
+            lines.extend([
+                "不看文件名能说清改了什么（是/否）：",
+                "能说清原来状态（是/否）：",
+                "能说清现在状态（是/否）：",
+                "能说清对项目的结果（是/否）：",
+                "英文内部 enum 泄漏（是/否）：",
+                "“当前行为得到更新”式废话（是/否）：",
+                "文件变化冒充项目成果（是/否）：",
+            ])
     else:
         lines.extend([
             "Before：不适用（Chapter 是 Story 的时间汇总层）",
@@ -271,10 +290,24 @@ def worksheet_section(sample: dict[str, Any], entity: dict[str, Any]) -> list[st
             "Reason：不适用（Chapter 不新增原因事实）",
             f"时间范围：{inline(entity.get('from'))} 至 {inline(entity.get('to'))}",
             f"Story 数：{inline(entity.get('storyCount'))}",
-            "时间层次清楚（是/否）：",
-            "中心变化清楚（是/否）：",
-            "Supporting 未冒充主要成果（是/否）：",
         ])
+        if review_round == 2:
+            lines.extend([
+                "时间阶段是否清楚（是/否）：",
+                "中心成果是否清楚（是/否）：",
+                "是否像项目阶段而非文件列表（是/否）：",
+                "是否出现 raw subject（是/否）：",
+                "是否出现 truncated slug（是/否）：",
+                "Supporting 是否冒充主要成果（是/否）：",
+                "是否过度统计口吻（是/否）：",
+                "Evidence 是否支撑（是/否）：",
+            ])
+        else:
+            lines.extend([
+                "时间层次清楚（是/否）：",
+                "中心变化清楚（是/否）：",
+                "Supporting 未冒充主要成果（是/否）：",
+            ])
     lines.extend([
         "技术术语泄漏（是/否）：",
         "空泛模板（是/否）：",
@@ -289,6 +322,7 @@ def worksheet_section(sample: dict[str, Any], entity: dict[str, Any]) -> list[st
 
 def write_outputs(
     run_id: str,
+    review_round: int,
     output: Path,
     worksheet: Path,
     stories: list[dict[str, Any]],
@@ -296,13 +330,18 @@ def write_outputs(
     entities: dict[str, dict[str, Any]],
 ) -> None:
     manifest = {
-        "version": "projectflow-v385-human-review-sample-v1",
+        "version": f"projectflow-v385-human-review-sample-v{review_round}",
+        "reviewRound": review_round,
         "status": "PENDING_HUMAN_REVIEW",
         "sourceRunId": run_id,
         "sourceRunUrl": f"https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/{run_id}",
-        "samplingMethod": "fixed stratified selection from qualified normalized GLM and DeepSeek artifacts",
+        "samplingMethod": (
+            "fixed stratified selection from qualified normalized GLM and DeepSeek artifacts"
+            + (" for Human Review Round 2" if review_round == 2 else "")
+        ),
         "reviewerCount": 0,
         "reviewMode": "PENDING_SINGLE_HUMAN_REVIEWER",
+        "round1Status": "NEEDS_REVISION_NOT_APPROVED" if review_round == 2 else "PENDING_HUMAN_REVIEW",
         "stories": stories,
         "chapters": chapters,
         "security": {
@@ -314,11 +353,12 @@ def write_outputs(
         },
     }
     worksheet_lines = [
-        "# ProjectFlow V3.8.5 RC2 人工可读性复核表",
+        f"# ProjectFlow V3.8.5 RC2 人工可读性复核表 Round {review_round}",
         "",
         "状态：PENDING_HUMAN_REVIEW。此文件只冻结样本并提供空白人工评分项；不得由模型代填。",
         "",
         f"来源 Run：{run_id}",
+        *( ["Round 1 结论：NEEDS_REVISION / NOT_APPROVED；原冻结样本和哈希保持不变。"] if review_round == 2 else [] ),
         f"样本：{len(stories)} Story，{len(chapters)} Chapter。",
         "评审模式：待一名真实人工评审；最终报告必须明确 single-reviewer limitation，不冒充多人一致。",
         "评审人：",
@@ -326,7 +366,7 @@ def write_outputs(
         "",
     ]
     for sample in stories + chapters:
-        worksheet_lines.extend(worksheet_section(sample, entities[sample["sampleId"]]))
+        worksheet_lines.extend(worksheet_section(sample, entities[sample["sampleId"]], review_round))
     manifest_text = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
     worksheet_text = "\n".join(worksheet_lines)
     for label, content in (("manifest", manifest_text), ("worksheet", worksheet_text)):
@@ -345,10 +385,18 @@ def main() -> int:
             raise ValueError("run ID must be a positive numeric GitHub Actions run ID")
         evidence_root = args.evidence_root.resolve()
         relative(evidence_root)
-        output = args.output.resolve()
-        worksheet = args.worksheet.resolve()
+        output = (args.output or (
+            DEFAULT_MANIFEST if args.round == 1
+            else DEFAULT_MANIFEST.with_name("human-review-round2-manifest.json")
+        )).resolve()
+        worksheet = (args.worksheet or (
+            DEFAULT_WORKSHEET if args.round == 1
+            else DEFAULT_WORKSHEET.with_name("human-review-round2-worksheet.md")
+        )).resolve()
         relative(output)
         relative(worksheet)
+        if args.round == 2 and (output == DEFAULT_MANIFEST.resolve() or worksheet == DEFAULT_WORKSHEET.resolve()):
+            raise ValueError("Round 2 must not overwrite the frozen Round 1 manifest or worksheet")
         all_stories: list[dict[str, Any]] = []
         all_chapters: list[dict[str, Any]] = []
         all_entities: dict[str, dict[str, Any]] = {}
@@ -359,7 +407,7 @@ def main() -> int:
             all_entities.update(entities)
         if len(all_stories) != 30 or len(all_chapters) != 8:
             raise ValueError("frozen sample must contain exactly 30 Story and 8 Chapter entries")
-        write_outputs(args.run_id, output, worksheet, all_stories, all_chapters, all_entities)
+        write_outputs(args.run_id, args.round, output, worksheet, all_stories, all_chapters, all_entities)
     except (OSError, ValueError) as exception:
         print(f"V385_HUMAN_REVIEW_SAMPLE_FAILED {exception}", file=sys.stderr)
         return 1

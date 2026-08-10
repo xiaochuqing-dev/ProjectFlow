@@ -1,5 +1,9 @@
 # V3.8.5 模型资格与运行边界
 
+## 2026-08-10 Human Readability RC2 重跑
+
+新一轮 workflow_dispatch 将使用 GLM `glm-5.2` / Responses / high 与 DeepSeek `deepseek-v4-flash` / Chat Completions / max。Repository Secrets 仅由 GitHub Actions 注入。当前状态为 PENDING；旧 run `31318477841` 保留为历史证据，不能替代本轮资格与场景结果。
+
 模型调用只经 `ModelGatewayService`，任务类型为 `PROJECT_HISTORY_SYNTHESIS`。Provider 协议、超时、取消、重试、usage、finish reason 和 schema 诊断由 Gateway 归一化；业务层不拼接 Provider 请求，也不按模型名硬编码语义答案。
 
 统一最小合同只允许 Story 的 ID、标题、摘要、有 Evidence 的原因与 Unknown，以及 Chapter 的 ID、标题与摘要。角色关系、Chapter 成员、状态三段、冲突与 Evidence 归属由工程层提供。首次语义校验失败只允许一次同输入安全重生成；reasoning-only 空 content 也只允许一次同输入恢复，第二次仍空即失败，不发第三次请求。

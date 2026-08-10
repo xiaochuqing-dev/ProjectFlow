@@ -2,6 +2,8 @@
 
 ## V3.8.5 corrected history
 
+The final RC2 contract changes no Hermes tool or transport. Hermes reads the persisted validated wording and retains raw subjects, paths, Evidence IDs and internal states below the public first layer.
+
 RC2 exposes the Gateway Story `includeHidden` option without adding write tools. Hermes returns the same corrected titles, summaries, role links and `presentationRevision` as the Gateway; enum-rich engineering detail remains opt-in. Local subprocess coverage is 10/10.
 
 Hermes keeps the history read boundary model-free and now exposes `list_project_history_corrections` alongside the existing overview/chapter/story/thread/event/Evidence tools. Story results include user-readable text first, Primary/Supporting role, presentation authority/revision, correction conflicts and bounded technical drill-down. User declarations remain presentation-only and cannot be written through Hermes.

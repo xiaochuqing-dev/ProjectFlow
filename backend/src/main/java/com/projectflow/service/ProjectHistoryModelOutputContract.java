@@ -6,7 +6,11 @@ import java.util.Set;
 public final class ProjectHistoryModelOutputContract {
     public static final Set<String> ROOT_FIELDS = Set.of("stories", "chapters");
     public static final Set<String> STORY_FIELDS = Set.of(
-        "storyId", "humanTitle", "oneSentenceSummary", "reason", "reasonEvidenceRefs", "unknowns"
+        "storyId", "humanTitle", "oneSentenceSummary", "beforeWording", "changeWording", "afterWording",
+        "reason", "reasonEvidenceRefs", "unknownWording", "unknowns"
+    );
+    public static final Set<String> NARRATIVE_WORDING_FIELDS = Set.of(
+        "humanTitle", "oneSentenceSummary", "beforeWording", "changeWording", "afterWording", "reason", "unknownWording"
     );
     public static final Set<String> CHAPTER_FIELDS = Set.of("chapterId", "title", "summary");
     public static final Set<String> ENGINEERING_OWNED_FIELDS = Set.of(

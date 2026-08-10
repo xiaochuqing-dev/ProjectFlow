@@ -8,21 +8,23 @@ import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v8";
-    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v2";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v9";
+    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v3";
     static final int MAX_PROMPT_CHARS = 60_000;
     public static final String VALIDATION_REPAIR_MARKER = "\nHISTORY_VALIDATION_REPAIR=";
     private static final String VALIDATION_REPAIR_INSTRUCTIONS = """
         上一次输出未通过 ProjectFlow 的统一语义安全校验。请从原输入重新生成一次完整 JSON，不要复述或修补上一次输出。
         只能使用 OUTPUT_TEMPLATE_JSON 中的对象、ID 和字段；每个 required ID 必须且只能返回一次。
         reasonEvidenceRefs 只能逐项复制对应 Story 的 reasonEligibleEvidenceRefs；没有合格 Evidence 时 reason 留空，并保留“原因未知”。
-        不得返回工程层字段，不得创造 ID、Evidence、原因、冲突、数字或项目状态。只返回严格 JSON。
+        Before / Change / After 只能改写 wording，不得改变 verified semantic、claimState 或 allowed claims。
+        不得返回工程层字段，不得创造 ID、Evidence、实体、动作、原因、冲突、数字或项目状态。只返回严格 JSON。
         """;
     private static final int MAX_INITIAL_PROMPT_CHARS = MAX_PROMPT_CHARS
         - VALIDATION_REPAIR_MARKER.length() - VALIDATION_REPAIR_INSTRUCTIONS.length() - 40;
@@ -37,23 +39,25 @@ public final class ProjectHistoryPromptBuilder {
     private static final String CHAPTERS_MARKER = "\nCHAPTERS_JSON=";
     private static final String OUTPUT_TEMPLATE_MARKER = "\nOUTPUT_TEMPLATE_JSON=";
     private static final String CHAPTER_SYNTHESIS_MARKER = "\nCHAPTER_SYNTHESIS_JSON=";
-    private static final String UNKNOWN_REASON = "原因未知：输入未提供可核验的原因 Evidence。";
+    private static final String UNKNOWN_REASON = "目前没有足够信息确认为什么做这次调整。";
     private static final String INSTRUCTIONS = """
         任务：把工程层已经组织好的项目历程改写成普通用户能看懂的中文。只改文字，不改事实或结构。
         只返回输入中的 storyId 和 chapterId，每个 ID 必须且只能返回一次。
-        可改字段只有 Story 的 humanTitle、oneSentenceSummary、reason、reasonEvidenceRefs、unknowns，以及 Chapter 的 title、summary。
-        role、primaryStoryId、supportingChangeRefs、storyRefs、时间、Before / Change / After、laterOutcome、成员和 Evidence 都由工程层固定，禁止返回或改写。
-        humanTitle 要表达“做了什么 + 对象 + 形成的结果”。正例：补充项目使用说明，让读者知道如何开始。反例：整理 readme、优化系统、修改相关文件。
-        Commit message 只是线索。reason 仅在 reasonEvidenceRefs 非空且全部来自该 Story 的 reasonEligibleEvidenceRefs 时填写；否则 reason 留空，并在 unknowns 说明原因未知。
-        不得创造 ID、Evidence、文件、数字、原因或项目状态；不得写重要性、成熟度、里程碑、成功判断、下一步、计划或建议。非软件项目不要使用 Controller、Service、Capability 等软件术语。
+        可改字段只有 Story 的 humanTitle、oneSentenceSummary、beforeWording、changeWording、afterWording、reason、reasonEvidenceRefs、unknownWording，以及 Chapter 的 title、summary。
+        role、primaryStoryId、supportingChangeRefs、storyRefs、时间、verified semantic、claimState、laterOutcome、成员和 Evidence 都由工程层固定，禁止返回或改写。
+        humanTitle 只用一句话表达“做了什么 + 对象 + 形成的结果”；oneSentenceSummary 补充范围或影响；Before 只讲此前状态；Change 只讲本阶段动作；After 只讲最终状态。五段不得复读同一句话。
+        subjectDisplayConcept 是第一层唯一允许的主要对象；不得输出 raw subject、路径、文件名、class、internal slug、截断 token 或输入外的新实体。
+        claimState、allowedClaims 与 forbiddenClaims 是硬边界。PLANNED 不得写成 IMPLEMENTED，DECLARED 不得写成 VERIFIED，CONFIGURED 不得写成已部署，未给验证 Evidence 不得写稳定或生产可用。
+        Commit message 只是线索。reason 仅在 reasonEvidenceRefs 非空且全部来自该 Story 的 reasonEligibleEvidenceRefs 时填写；否则 reason 留空，并用一条自然的 unknownWording 说明原因暂时无法确认。
+        不得创造 ID、Evidence、文件、数字、原因或项目状态；不得写重要性、成熟度、里程碑、成功判断、下一步或建议。非软件项目不要使用 Controller、Service、Capability 等软件术语。
         只返回严格 JSON，不得增加字段：
-        {"stories":[{"storyId":"","humanTitle":"","oneSentenceSummary":"","reason":"","reasonEvidenceRefs":[],"unknowns":[]}],
+        {"stories":[{"storyId":"","humanTitle":"","oneSentenceSummary":"","beforeWording":"","changeWording":"","afterWording":"","reason":"","reasonEvidenceRefs":[],"unknownWording":""}],
          "chapters":[{"chapterId":"","title":"","summary":""}]}
         """;
     private static final String CHAPTER_SYNTHESIS_INSTRUCTIONS = """
         你正在对一个成员关系已经由工程层固定的项目历程篇章做第二阶段归纳。输入只包含已经校验的 Story 展示摘要，不包含 Raw Event、Evidence、文件路径或提交原文。
         只能改进篇章的中文标题和摘要。chapterId 必须原样返回且只能返回一次；不得返回或修改 Story 成员、时间、边界、权威或任何其他字段。
-        标题必须让普通用户看懂这一阶段形成的主要结果；摘要必须区分 Primary 主要结果和 Supporting 支撑工作，不得把测试、配置或验证数量描述为用户成果。
+        标题必须让普通用户看懂这一时期主要推进的方向和阶段结果；摘要先讲阶段成果，再把 Supporting 保留为次要工程信息。不得以数量开头，不得把 Story subject 拼接成标题，不得把文件、测试、配置或验证数量描述为用户成果。
         如果部分 Story 摘要因边界被省略，只能根据输入中的数量和代表摘要保守归纳，不得补造遗漏内容。
         禁止重要性、成熟度、里程碑、成功判断、下一步、计划或建议。禁止创造 ID、Evidence、文件、数字、原因或项目状态。
         只返回严格 JSON，不得增加字段：
@@ -135,7 +139,7 @@ public final class ProjectHistoryPromptBuilder {
         PackedChapterSynthesisInput packed = new PackedChapterSynthesisInput(
             input.chapterId(), input.from(), input.to(), input.storyCount(), input.primaryStoryCount(),
             input.supportingStoryCount(), input.boundarySignals(), input.membershipFingerprint(),
-            selected.size(), Math.max(0, input.storyCount() - selected.size()), selected
+            selected.size(), Math.max(0, input.primaryStoryCount() - selected.size()), selected
         );
         return CHAPTER_SYNTHESIS_INSTRUCTIONS + CHAPTER_SYNTHESIS_MARKER + json(packed);
     }
@@ -212,9 +216,8 @@ public final class ProjectHistoryPromptBuilder {
         List<String> storyIds = stories.stream().map(StoryPromptInput::storyId).toList();
         List<String> chapterIds = chapters.stream().map(ChapterPromptInput::chapterId).toList();
         List<StoryOutputTemplate> storyTemplates = stories.stream().map(story -> new StoryOutputTemplate(
-            story.storyId(), "", "", "", List.of(),
-            story.reasonEligibleEvidenceRefs().isEmpty()
-                ? List.of(UNKNOWN_REASON) : List.of()
+            story.storyId(), "", "", "", "", "", "", List.of(),
+            story.reasonEligibleEvidenceRefs().isEmpty() ? UNKNOWN_REASON : ""
         )).toList();
         List<ChapterOutputTemplate> chapterTemplates = chapters.stream()
             .map(chapter -> new ChapterOutputTemplate(chapter.chapterId(), "", ""))
@@ -224,7 +227,7 @@ public final class ProjectHistoryPromptBuilder {
             输出前做机械核对：本次必须返回 Story %d 个、Chapter %d 个；requiredStoryIds=%s；requiredChapterIds=%s。
             每个 required ID 恰好一次，且对象只能包含上面列出的可改字段；数量、ID 或字段不一致时先修正再输出。
             必须复制 OUTPUT_TEMPLATE_JSON 的对象、ID、字段和数组类型，只填写允许的文字；不得删除、增加或重排对象。
-            reasonEvidenceRefs 只能从对应 Story 的 reasonEligibleEvidenceRefs 中选择；没有可核验原因时保留模板中的 UNKNOWN。
+            reasonEvidenceRefs 只能从对应 Story 的 reasonEligibleEvidenceRefs 中选择；没有可核验原因时保留模板中的自然 unknownWording。
             """.formatted(storyIds.size(), chapterIds.size(), json(storyIds), json(chapterIds));
         return INSTRUCTIONS + outputCheck
             + OUTPUT_TEMPLATE_MARKER + json(new OutputTemplate(storyTemplates, chapterTemplates))
@@ -256,22 +259,24 @@ public final class ProjectHistoryPromptBuilder {
 
     public record StoryPromptInput(
         String storyId,
-        String subject,
+        String subjectDisplayConcept,
         String occurredFrom,
         String occurredTo,
         List<String> transitions,
-        List<String> sourceLabels,
-        List<String> affectedAreas,
-        List<String> evidenceRefs,
+        @JsonIgnore List<String> sourceLabels,
+        @JsonIgnore List<String> affectedAreas,
+        @JsonIgnore List<String> evidenceRefs,
         List<String> reasonEligibleEvidenceRefs,
         String deterministicBefore,
         String deterministicChange,
         String deterministicAfter,
-        String role,
-        String primaryStoryId,
-        List<String> supportingChangeRefs,
-        List<String> commitSummaries,
-        List<String> technicalDetails
+        String claimState,
+        List<String> allowedClaims,
+        List<String> forbiddenClaims,
+        List<String> humanSafeSourceContext,
+        @JsonIgnore String role,
+        @JsonIgnore String primaryStoryId,
+        @JsonIgnore List<String> supportingChangeRefs
     ) {
         public StoryPromptInput(
             String storyId,
@@ -288,8 +293,8 @@ public final class ProjectHistoryPromptBuilder {
             String deterministicAfter
         ) {
             this(storyId, subject, occurredFrom, occurredTo, transitions, sourceLabels, affectedAreas, evidenceRefs,
-                reasonEligibleEvidenceRefs, deterministicBefore, deterministicChange, deterministicAfter, "PRIMARY",
-                "", List.of(), List.of(), List.of());
+                reasonEligibleEvidenceRefs, deterministicBefore, deterministicChange, deterministicAfter, "OBSERVED",
+                List.of(), List.of(), List.of(), "PRIMARY", "", List.of());
         }
 
         public StoryPromptInput {
@@ -298,10 +303,12 @@ public final class ProjectHistoryPromptBuilder {
             affectedAreas = immutable(affectedAreas);
             evidenceRefs = immutable(evidenceRefs);
             reasonEligibleEvidenceRefs = immutable(reasonEligibleEvidenceRefs);
+            allowedClaims = immutable(allowedClaims);
+            forbiddenClaims = immutable(forbiddenClaims);
+            humanSafeSourceContext = immutable(humanSafeSourceContext);
             supportingChangeRefs = immutable(supportingChangeRefs);
-            commitSummaries = immutable(commitSummaries);
-            technicalDetails = immutable(technicalDetails);
             role = role == null || role.isBlank() ? "PRIMARY" : role.trim();
+            claimState = claimState == null || claimState.isBlank() ? "UNKNOWN" : claimState.trim();
             primaryStoryId = primaryStoryId == null ? "" : primaryStoryId.trim();
         }
 
@@ -329,9 +336,12 @@ public final class ProjectHistoryPromptBuilder {
         String storyId,
         String humanTitle,
         String oneSentenceSummary,
+        String beforeWording,
+        String changeWording,
+        String afterWording,
         String reason,
         List<String> reasonEvidenceRefs,
-        List<String> unknowns
+        String unknownWording
     ) {
     }
 

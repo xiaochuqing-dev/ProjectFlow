@@ -1,5 +1,9 @@
 # API Design
 
+## V3.8.5 final narrative fields
+
+The internal model contract adds `beforeWording`, `changeWording`, `afterWording` and `unknownWording`; these are presentation fields only. Public History DTOs keep the existing Before/Change/After locations and engineering-owned identity, role, time, membership and Evidence fields. No new write API or Provider-specific API was added.
+
 Base path: `/api`
 
 V3.8.5 RC2 adds direct `presentationRevision` parity to History overview, Chapter, Story and Thread responses. Native and Gateway Story list endpoints accept bounded `includeHidden`; default false preserves the public reading layer, while explicit consumers such as Obsidian can retrieve referenced hidden Stories. A client must restart a multi-page read when revisions differ.

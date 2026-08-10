@@ -1,5 +1,9 @@
 # V3.8.5 产品验收清单
 
+## 2026-08-10 RC2 最终可读性状态
+
+Round 1 为 NEEDS_REVISION_NOT_APPROVED。新的 Provider-neutral 叙述契约已通过本地确定性门禁，但新双 Provider 真实重跑、Round 2 30 Story/8 Chapter 冻结和用户明确批准尚未完成。因此当前结论仍为 PENDING_HUMAN_REVIEW_ROUND2，不是 PASS；以下旧运行结果只作历史证据。
+
 ## 已通过
 
 - ProjectFact、ProjectHistoryEvent、Evidence 和 rewrite 状态未被历史重建或展示修正覆盖。

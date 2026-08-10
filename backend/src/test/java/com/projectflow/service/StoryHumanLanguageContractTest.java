@@ -20,10 +20,11 @@ class StoryHumanLanguageContractTest {
             Transition.RESTORED, "export", List.of("reports/export.csv"), List.of("restore export"), List.of("RESTORED")
         );
 
-        assertThat(created.title()).contains("新增", "登录流程", "可确认版本");
+        assertThat(created.title()).contains("建立", "登录流程", "初始成果");
         assertThat(created.before()).contains("此前");
-        assertThat(created.after()).contains("变化后");
+        assertThat(created.after()).contains("项目中已有", "继续查看和完善");
         assertThat(restored.title()).contains("恢复", "成果导出", "重新出现");
+        assertThat(created.before()).isNotEqualTo(created.change()).isNotEqualTo(created.after());
         assertThat(String.join(" ", created.title(), created.summary(), created.before(), created.after()))
             .doesNotContain("PRIMARY", "SUPPORTING", "ENGINEERING_GROUPING", "Controller", "相关变化");
     }

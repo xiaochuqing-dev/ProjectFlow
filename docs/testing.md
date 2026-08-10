@@ -2,6 +2,8 @@
 
 ## V3.8.5 human-readable history gates
 
+The final closure adds fourteen named gates for human narrative shape, entailment/paraphrase rejection, subject labels, semantic Chapters, raw-subject leakage, non-repetition, natural unknown wording, planned/implemented and declared/verified separation, Dogfood, non-code language, cross-Provider parity and the frozen Round 2 manifest. The Round 2 test is intentionally red before artifacts exist and must be green in the final commit.
+
 RC2 adds provider-neutral minimal-schema, semantic validation, role-graph, language, failure-taxonomy, corrected-view parity and cross-consumer contracts. Local closure evidence on 2026-08-08 is H2 546 tests with 0 failures and 5 conditional skips; PostgreSQL 16 Testcontainers 5/5; frontend contracts 58/58; Playwright 9/9; Hermes 10/10; Obsidian 25/25. Real-provider wrapper tests skip without an explicit artifact name and become blocking inside the real workflow.
 
 The V3.8.5 deterministic suite covers Technical Atom compression, Primary/Supporting classification, readable Before/Change/After wording, commit-level summaries, non-code fallback, window planning/cache/checkpoint recovery, cancellation/failure disclosure and presentation correction persistence. It asserts raw-event conservation, valid Evidence, no unsupported reason, no first-layer technical leakage and no mutation of ProjectFact/Event/Evidence.
