@@ -19,10 +19,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 class ProjectHistoryHumanReviewRound2ManifestTest {
-    private static final String ROUND1_MANIFEST_SHA256 =
-        "30139c8fda46c3997cbdf0a9fadbf20be4f3e39d14e817ea654f987edb7605fa";
-    private static final String ROUND1_WORKSHEET_SHA256 =
-        "2fb5ff6417b7b4115dee8ffefe06b8cd10bb3c99b83ef02fe42f49e69f6f53d5";
+    private static final String ROUND1_MANIFEST_CANONICAL_LF_SHA256 =
+        "524391f2137a7b72d2920efbefaee1190177bbeb588594ef47fa9099d92554d9";
+    private static final String ROUND1_WORKSHEET_CANONICAL_LF_SHA256 =
+        "dbe05a47548ba72cd2c379c05b987e5915e68c32bb935e5bbd3fcf173c420408";
     private static final Set<String> REQUIRED_COVERAGE = Set.of(
         "projectflow", "non-code", "short-history", "long-history", "generic-commit",
         "multi-commit-one-result", "one-commit-multiple-results", "lifecycle-restore", "rename-move",
@@ -42,8 +42,8 @@ class ProjectHistoryHumanReviewRound2ManifestTest {
         Path manifest = root.resolve("human-review-round2-manifest.json");
         Path worksheet = root.resolve("human-review-round2-worksheet.md");
 
-        assertThat(sha256(round1Manifest)).isEqualTo(ROUND1_MANIFEST_SHA256);
-        assertThat(sha256(round1Worksheet)).isEqualTo(ROUND1_WORKSHEET_SHA256);
+        assertThat(canonicalLfSha256(round1Manifest)).isEqualTo(ROUND1_MANIFEST_CANONICAL_LF_SHA256);
+        assertThat(canonicalLfSha256(round1Worksheet)).isEqualTo(ROUND1_WORKSHEET_CANONICAL_LF_SHA256);
         assertThat(manifest).isRegularFile();
         assertThat(worksheet).isRegularFile();
 
@@ -108,8 +108,12 @@ class ProjectHistoryHumanReviewRound2ManifestTest {
         sample.path("coverageTags").forEach(tag -> coverage.add(tag.asText()));
     }
 
-    private static String sha256(Path path) throws Exception {
-        byte[] digest = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path));
+    private static String canonicalLfSha256(Path path) throws Exception {
+        String normalized = Files.readString(path, StandardCharsets.UTF_8)
+            .replace("\r\n", "\n")
+            .replace('\r', '\n');
+        byte[] digest = MessageDigest.getInstance("SHA-256")
+            .digest(normalized.getBytes(StandardCharsets.UTF_8));
         return java.util.HexFormat.of().formatHex(digest);
     }
 }

@@ -11,6 +11,8 @@ import com.projectflow.entity.ProjectHistoryEvent.Transition;
 
 class ProjectHistoryChapterSemanticSynthesisTest {
     private final ProjectHistoryLanguageService language = new ProjectHistoryLanguageService();
+    private final ProjectHistoryNarrativeEntailmentValidator validator =
+        new ProjectHistoryNarrativeEntailmentValidator();
 
     @Test
     void chapterLeadsWithThePhaseOutcomeAndKeepsCountsAsMetadata() {
@@ -28,5 +30,16 @@ class ProjectHistoryChapterSemanticSynthesisTest {
         assertThat(summary)
             .startsWith("这一时期")
             .doesNotContain("39 项主要结果", "9 项支撑工作", "主要包括");
+    }
+
+    @Test
+    void canonicalPhaseThemeRemainsGroundedWhenItParaphrasesThePrimaryStory() {
+        List<String> stories = List.of("形成研究报告并整理研究结论");
+        String title = language.chapterTitle(
+            stories, List.of(Transition.CREATED), Instant.EPOCH, Instant.EPOCH.plusSeconds(1)
+        );
+        String summary = language.chapterSummary(stories, 1, 0);
+
+        validator.validateChapter(title, summary, language.chapterGrounding(stories));
     }
 }

@@ -1719,7 +1719,7 @@ public class ProjectHistoryReconstructionService {
                 "History chapter model returned an unsupported claim");
         }
         try {
-            narrativeValidator.validateChapter(title, summary, primaryStoryWording);
+            narrativeValidator.validateChapter(title, summary, languageService.chapterGrounding(primaryStoryWording));
         } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
             throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
         }
@@ -2148,7 +2148,7 @@ public class ProjectHistoryReconstructionService {
                 .filter(java.util.Objects::nonNull).filter(ChangeStory::primary)
                 .flatMap(story -> Stream.of(story.humanTitle(), story.oneSentenceSummary())).toList();
             try {
-                narrativeValidator.validateChapter(title, summary, primaryWording);
+                narrativeValidator.validateChapter(title, summary, languageService.chapterGrounding(primaryWording));
             } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
                 throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
             }
@@ -2320,7 +2320,9 @@ public class ProjectHistoryReconstructionService {
                     .filter(java.util.Objects::nonNull).filter(ChangeStory::primary)
                     .flatMap(story -> Stream.of(story.humanTitle(), story.oneSentenceSummary())).toList();
                 try {
-                    narrativeValidator.validateChapter(chapter.title(), chapter.summary(), primaryWording);
+                    narrativeValidator.validateChapter(
+                        chapter.title(), chapter.summary(), languageService.chapterGrounding(primaryWording)
+                    );
                 } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
                     throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
                 }

@@ -2,6 +2,7 @@ package com.projectflow.service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -259,6 +260,13 @@ public final class ProjectHistoryLanguageService {
         String theme = chapterTheme(storyTitles);
         String support = supportingCount <= 0 ? "" : "相关支撑工作保留在工程详情中。";
         return "这一时期主要围绕" + theme + "推进，相关成果逐步形成并得到完善。" + support;
+    }
+
+    public List<String> chapterGrounding(List<String> storyWording) {
+        List<String> values = storyWording == null ? List.of() : storyWording;
+        LinkedHashSet<String> grounding = new LinkedHashSet<>(values);
+        grounding.add(chapterTheme(values));
+        return List.copyOf(grounding);
     }
 
     public String unknownWording(boolean sourceStateUnknown) {
