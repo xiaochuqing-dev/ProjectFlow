@@ -18,6 +18,15 @@ on:
         options:
           - affected
           - full
+      real_model_provider:
+        description: "真实模型 Provider；默认同时验收，也可定向复验"
+        required: false
+        default: both
+        type: choice
+        options:
+          - both
+          - glm
+          - deepseek
 
 permissions:
   contents: read
@@ -234,6 +243,7 @@ jobs:
           java-version: "17"
           cache: maven
       - name: 确认 ${{ matrix.display_name }} 安全凭据已配置
+        if: inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
         shell: bash
         env:
           PROVIDER_KEY: ${{ secrets[matrix.secret_name] }}
@@ -243,6 +253,7 @@ jobs:
             exit 1
           fi
       - name: 真实 ${{ matrix.display_name }} 连接、Ground Truth 与资格验收
+        if: inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
         working-directory: backend
         env:
           PROJECTFLOW_RUN_REAL_MODEL: "true"
@@ -290,7 +301,7 @@ jobs:
             exit 1
           fi
       - name: 保存内部真实模型资格评测工件
-        if: always()
+        if: ${{ always() && (inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id) }}
         uses: actions/upload-artifact@v4
         with:
           name: projectflow-real-model-qualification-${{ matrix.id }}
@@ -343,6 +354,7 @@ jobs:
           java-version: "17"
           cache: maven
       - name: 确认 ${{ matrix.display_name }} 安全凭据已配置
+        if: inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
         shell: bash
         env:
           PROVIDER_KEY: ${{ secrets[matrix.secret_name] }}
@@ -352,6 +364,7 @@ jobs:
             exit 1
           fi
       - name: 真实 ${{ matrix.display_name }} 场景、Dogfood 与非代码验收
+        if: inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
         working-directory: backend
         env:
           PROJECTFLOW_RUN_REAL_MODEL: "true"
@@ -391,7 +404,7 @@ jobs:
             exit 1
           fi
       - name: 保存内部真实模型场景评测工件
-        if: always()
+        if: ${{ always() && (inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id) }}
         uses: actions/upload-artifact@v4
         with:
           name: projectflow-real-model-scenarios-${{ matrix.id }}

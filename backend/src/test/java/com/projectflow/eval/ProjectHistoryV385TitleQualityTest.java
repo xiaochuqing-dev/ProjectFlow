@@ -59,6 +59,22 @@ class ProjectHistoryV385TitleQualityTest {
             "创建并修改了项目成果的方案记录",
             "涵盖项目成果的设计和范围说明的补充。"
         )).isTrue();
+        assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
+            "移除登录流程使其从项目中消失",
+            "登录流程在此阶段被移除。"
+        )).isTrue();
+        assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
+            "恢复登录流程使其重新出现在项目中",
+            "此前移除的登录流程在此阶段恢复。"
+        )).isTrue();
+        assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
+            "从零搭建核心使用体验的初始代码",
+            "本阶段加入了核心使用体验的初始实现。"
+        )).isTrue();
+        assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
+            "建立项目文档并保存为可供后续查看的记录",
+            "项目文档在此阶段形成可查看记录。"
+        )).isTrue();
     }
 
     @Test
