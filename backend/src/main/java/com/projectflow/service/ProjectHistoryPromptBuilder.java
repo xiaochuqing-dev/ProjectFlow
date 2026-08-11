@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Component
 public final class ProjectHistoryPromptBuilder {
     public static final String PROMPT_VERSION = "project-history-synthesis-v9";
-    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v3";
+    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v4";
     static final int MAX_PROMPT_CHARS = 60_000;
     public static final String VALIDATION_REPAIR_MARKER = "\nHISTORY_VALIDATION_REPAIR=";
     private static final String VALIDATION_REPAIR_INSTRUCTIONS = """
@@ -25,6 +25,7 @@ public final class ProjectHistoryPromptBuilder {
         reasonEvidenceRefs 只能逐项复制对应 Story 的 reasonEligibleEvidenceRefs；没有合格 Evidence 时 reason 留空，并保留“原因未知”。
         Before / Change / After 只能改写 wording，不得改变 verified semantic、claimState 或 allowed claims。
         不得返回工程层字段，不得创造 ID、Evidence、实体、动作、原因、冲突、数字或项目状态。只返回严格 JSON。
+        不得使用“相关变化”“工程分组”“形成初始结果”“进入当前时间点可确认的新状态”等空泛或内部模板表达。
         """;
     private static final int MAX_INITIAL_PROMPT_CHARS = MAX_PROMPT_CHARS
         - VALIDATION_REPAIR_MARKER.length() - VALIDATION_REPAIR_INSTRUCTIONS.length() - 40;
@@ -58,6 +59,7 @@ public final class ProjectHistoryPromptBuilder {
         你正在对一个成员关系已经由工程层固定的项目历程篇章做第二阶段归纳。输入只包含已经校验的 Story 展示摘要，不包含 Raw Event、Evidence、文件路径或提交原文。
         只能改进篇章的中文标题和摘要。chapterId 必须原样返回且只能返回一次；不得返回或修改 Story 成员、时间、边界、权威或任何其他字段。
         标题必须让普通用户看懂这一时期主要推进的方向和阶段结果；摘要先讲阶段成果，再把 Supporting 保留为次要工程信息。不得以数量开头，不得把 Story subject 拼接成标题，不得把文件、测试、配置或验证数量描述为用户成果。
+        不得使用“相关变化”“工程分组”“形成初始结果”“进入当前时间点可确认的新状态”等空泛或内部模板表达。
         如果部分 Story 摘要因边界被省略，只能根据输入中的数量和代表摘要保守归纳，不得补造遗漏内容。
         禁止重要性、成熟度、里程碑、成功判断、下一步、计划或建议。禁止创造 ID、Evidence、文件、数字、原因或项目状态。
         只返回严格 JSON，不得增加字段：

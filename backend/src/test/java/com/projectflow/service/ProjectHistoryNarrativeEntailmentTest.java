@@ -55,4 +55,13 @@ class ProjectHistoryNarrativeEntailmentTest {
             List.of("项目成果记录", "原始 phase0 embedded model 说明")
         )).isTrue();
     }
+
+    @Test
+    void rejectsGenericChapterWordingEvenWhenTheSubjectIsGrounded() {
+        assertThatThrownBy(() -> validator.validateChapter(
+            "研究报告相关变化",
+            "这一阶段围绕研究报告整理了相关变化。",
+            List.of("研究报告已建立并持续更新。")
+        )).isInstanceOf(NarrativeViolation.class);
+    }
 }

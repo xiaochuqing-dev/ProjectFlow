@@ -525,8 +525,13 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             Instant occurredAt = first.plusSeconds(index * 3_600L);
             List<String> paths = new ArrayList<>();
             for (int pathIndex = 0; pathIndex < pathCount; pathIndex++) {
-                paths.add("results/Outcome" + String.format("%05d", index) + "Part"
-                    + String.format("%03d", pathIndex) + (payloadWidth <= 0 ? "" : "-" + "p".repeat(payloadWidth)) + ".md");
+                if (payloadWidth <= 0) {
+                    paths.add("results/项目结果主题" + String.format("%05d", index) + "内容"
+                        + String.format("%03d", pathIndex) + ".java");
+                } else {
+                    paths.add("results/Outcome" + String.format("%05d", index) + "Part"
+                        + String.format("%03d", pathIndex) + "-" + "p".repeat(payloadWidth) + ".md");
+                }
             }
             List<String> evidence = new ArrayList<>();
             for (int evidenceIndex = 0; evidenceIndex < evidenceCount; evidenceIndex++) {

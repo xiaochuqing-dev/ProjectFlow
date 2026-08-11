@@ -28,11 +28,13 @@ public final class ProjectHistoryV385QualityEvaluator {
     );
     private static final List<String> ACTION_MARKERS = List.of(
         "新增", "建立", "整理", "完善", "更新", "恢复", "移除", "撤销", "重新", "替换", "拆分", "合并",
-        "调整", "记录", "保留", "隐藏", "统一", "形成", "推进"
+        "调整", "记录", "保留", "隐藏", "统一", "形成", "推进", "实现", "完成", "创建", "编写", "补充", "保存", "应用"
     );
     private static final List<String> RESULT_MARKERS = List.of(
         "结果", "版本", "当前", "可以", "可确认", "可核对", "可阅读", "继续", "重新出现", "不再", "保留",
-        "恢复", "完成", "形成", "统一", "分别查看"
+        "恢复", "完成", "形成", "统一", "分别查看", "代码实现", "实现代码", "实现基础", "基础代码", "功能基础",
+        "变更记录", "现状记录", "结构更新", "更新了结构", "首次创建", "保存了", "保存相关", "工作交接记录",
+        "可供查看", "已有实现", "已有内容"
     );
     private static final List<String> STRONG_CLAIM_MARKERS = List.of(
         "已证明", "已经证明", "确认成功", "全部完成", "完全正确", "验证通过"
@@ -560,8 +562,12 @@ public final class ProjectHistoryV385QualityEvaluator {
     }
 
     private static boolean actionObjectResult(ChangeStory story) {
-        String title = text(story.humanTitle());
-        String firstLayer = title + " " + text(story.oneSentenceSummary());
+        return actionObjectResult(story.humanTitle(), story.oneSentenceSummary());
+    }
+
+    static boolean actionObjectResult(String humanTitle, String oneSentenceSummary) {
+        String title = text(humanTitle);
+        String firstLayer = title + " " + text(oneSentenceSummary);
         boolean action = containsAny(title, ACTION_MARKERS);
         boolean result = containsAny(firstLayer, RESULT_MARKERS);
         String object = title.replaceAll("[，,。.!！？]", "").replaceAll(String.join("|", ACTION_MARKERS), "").trim();

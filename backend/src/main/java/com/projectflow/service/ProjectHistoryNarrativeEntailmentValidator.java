@@ -57,6 +57,10 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
     private static final List<String> IMPLEMENTED_CLAIMS = List.of(
         "已经实现", "实现了", "完成开发", "具备用户", "用户可以", "可直接使用", "新增了登录功能", "搭建了登录流程"
     );
+    private static final List<String> GENERIC_FIRST_LAYER = List.of(
+        "相关变化", "工程分组", "形成初始结果", "进入当前时间点可确认的新状态", "修改 n 个文件",
+        "当前行为得到更新", "项目开始具备这项能力"
+    );
 
     public NarrativeEnvelope envelope(EvidenceProfile profile) {
         EvidenceProfile safe = profile == null ? EvidenceProfile.empty() : profile;
@@ -90,6 +94,9 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         if (containsFirstLayerLeak(firstLayer, safe.humanSafeSourceContext())) {
             throw violation(ViolationKind.FIRST_LAYER_LEAK, "Narrative wording exposes an internal subject or path");
         }
+        if (containsAny(firstLayer, GENERIC_FIRST_LAYER)) {
+            throw violation(ViolationKind.INTERNAL_LANGUAGE, "Narrative wording uses a generic internal template");
+        }
         if (!mentionsSubject(title + " " + summary, safe.subjectLabel())) {
             throw violation(ViolationKind.UNSUPPORTED_OBJECT, "Narrative wording is not anchored to the allowed subject");
         }
@@ -117,6 +124,9 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         String firstLayer = safeTitle + " " + safeSummary;
         if (containsFirstLayerLeak(firstLayer, context)) {
             throw violation(ViolationKind.FIRST_LAYER_LEAK, "Chapter wording exposes an internal subject or path");
+        }
+        if (containsAny(firstLayer, GENERIC_FIRST_LAYER)) {
+            throw violation(ViolationKind.INTERNAL_LANGUAGE, "Chapter wording uses a generic internal template");
         }
         if (safeTitle.contains("在这一阶段继续完善") || safeTitle.matches(".*[^，。]{2,}与[^，。]{2,}等?可确认结果.*")
             || safeSummary.contains("主要包括") || COUNT_LED_CHAPTER.matcher(safeSummary).matches()) {
