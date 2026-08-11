@@ -10,6 +10,14 @@ on:
         required: false
         default: false
         type: boolean
+      real_model_scope:
+        description: "真实模型范围；affected 仅执行本次受影响门禁"
+        required: false
+        default: full
+        type: choice
+        options:
+          - affected
+          - full
 
 permissions:
   contents: read
@@ -270,8 +278,12 @@ jobs:
           }
           run_gate provider-probe mvn -B -Dtest=ProjectFlowRealProviderProbeIT test
           run_gate history-v380 mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-v380" test
-          run_gate understanding-v375 mvn -B -Dtest=ProjectFlowRealModelEvalIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-v375" test
-          run_gate understanding-e2e mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-understanding" test
+          if [ "${{ inputs.real_model_scope }}" = "full" ]; then
+            run_gate understanding-v375 mvn -B -Dtest=ProjectFlowRealModelEvalIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-v375" test
+            run_gate understanding-e2e mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-understanding" test
+          else
+            echo "affected scope: V3.7.5 and Understanding reuse the recorded full baseline"
+          fi
           run_gate history-v385-qualification mvn -B -Dtest=ProjectHistoryV385RealOutputEvaluatorTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385" test
           if [ "$failures" -ne 0 ]; then
             echo "$EVAL_PREFIX qualification gates failed: $failures"

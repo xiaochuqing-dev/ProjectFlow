@@ -43,6 +43,22 @@ class ProjectHistoryV385TitleQualityTest {
             "整理项目成果的设计与范围，留下方案记录",
             "补充了项目成果的设计和范围说明。"
         )).isTrue();
+        assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
+            "创建研究报告并保存内容，使项目中首次出现该报告",
+            "研究报告在此阶段被首次引入项目中。"
+        )).isTrue();
+        assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
+            "撤销研究报告的上一项改动，使报告从项目中移除",
+            "此操作回退了此前对研究报告所做的变更。"
+        )).isTrue();
+        assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
+            "重新应用此前被撤销的研究报告改动，使报告再次出现",
+            "之前被回退的研究报告变更在此阶段被重新恢复。"
+        )).isTrue();
+        assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
+            "创建并修改了项目成果的方案记录",
+            "涵盖项目成果的设计和范围说明的补充。"
+        )).isTrue();
     }
 
     @Test
