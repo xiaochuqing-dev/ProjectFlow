@@ -35,6 +35,14 @@ class ProjectHistoryV385TitleQualityTest {
             "首次创建项目文档并保存工作交接记录",
             "使项目从没有文档变为拥有可供查看的文档记录。"
         )).isTrue();
+        assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
+            "新建项目文档，使项目有文档可看",
+            "此次调整让项目文档从无到有。"
+        )).isTrue();
+        assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
+            "整理项目成果的设计与范围，留下方案记录",
+            "补充了项目成果的设计和范围说明。"
+        )).isTrue();
     }
 
     @Test
@@ -46,6 +54,10 @@ class ProjectHistoryV385TitleQualityTest {
         assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
             "整理项目材料",
             "形成初始结果。"
+        )).isFalse();
+        assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
+            "整理项目材料，留下",
+            "本次涉及项目材料。"
         )).isFalse();
     }
 }
