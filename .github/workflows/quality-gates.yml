@@ -11,11 +11,12 @@ on:
         default: false
         type: boolean
       real_model_scope:
-        description: "真实模型范围；affected 仅执行本次受影响门禁"
+        description: "真实模型范围；correction 只复验纠正与编号占位符链路"
         required: false
         default: full
         type: choice
         options:
+          - correction
           - affected
           - full
       real_model_provider:
@@ -274,6 +275,10 @@ jobs:
           PROJECTFLOW_MODEL_REASONING_EFFORT: ${{ matrix.reasoning_effort }}
           EVAL_PREFIX: ${{ matrix.id }}
         run: |
+          if [ "${{ inputs.real_model_scope }}" = "correction" ]; then
+            echo "correction scope: reuse recorded full qualification baselines; no qualification model call"
+            exit 0
+          fi
           failures=0
           run_gate() {
             label="$1"
@@ -397,8 +402,13 @@ jobs:
             fi
             echo "::endgroup::"
           }
-          run_gate history-v385-scenarios mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios" test
-          run_gate history-v385-dogfood mvn -B -Dtest="$DOGFOOD_TEST" -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios" test
+          if [ "${{ inputs.real_model_scope }}" = "correction" ]; then
+            run_gate history-v385-correction mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.scenario-scope=correction -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios-affected" test
+            echo "correction scope: Dogfood and non-code scenarios reuse the recorded full baseline"
+          else
+            run_gate history-v385-scenarios mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios" test
+            run_gate history-v385-dogfood mvn -B -Dtest="$DOGFOOD_TEST" -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios" test
+          fi
           if [ "$failures" -ne 0 ]; then
             echo "$EVAL_PREFIX scenario gates failed: $failures"
             exit 1

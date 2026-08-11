@@ -31,6 +31,9 @@ class ProjectHistoryHumanSubjectLabelTest {
     void replacesFixtureAndTruncatedSubjectsInsteadOfDisplayingThem() {
         assertThat(language.readableObject("outcome00000 part000", List.of("outcomes/outcome-00000.md"), List.of()))
             .isEqualTo("项目成果记录");
+        assertThat(language.readableObject(
+            "项目结果主题00000内容000", List.of("results/项目结果主题00000内容000.java"), List.of()
+        )).isEqualTo("项目成果记录");
         assertThat(language.readableObject("improve project import and …", List.of("docs/import.md"), List.of()))
             .doesNotContain("improve", "…");
         assertThat(language.readableObject("v3 2 phase0 embedded mo…", List.of("docs/v3-phase0.md"), List.of()))

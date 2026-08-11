@@ -709,7 +709,7 @@ public class ProjectHistoryReconstructionService {
             story.primarySubjectKey(), story.technicalDetails(), story.affectedAreas()
         );
         if (object == null || object.isBlank() || Set.of(
-            "项目核心结果", "项目材料", "项目阶段成果", "阶段成果记录", "项目成果记录"
+            "项目核心结果", "项目材料", "项目阶段成果", "阶段成果记录", "项目成果", "项目成果记录"
         ).contains(object)) {
             // Internal grouping may retain the stable subject key even when the
             // first presentation layer deliberately collapses an unsafe/raw

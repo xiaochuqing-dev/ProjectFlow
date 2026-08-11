@@ -54,6 +54,10 @@ class ProjectHistoryNarrativeEntailmentTest {
             "围绕 phase0 embedded model 整理项目成果记录",
             List.of("项目成果记录", "原始 phase0 embedded model 说明")
         )).isTrue();
+        assertThat(validator.containsFirstLayerLeak(
+            "围绕项目结果主题00000内容000整理当前成果",
+            List.of("项目结果主题00000内容000")
+        )).isTrue();
     }
 
     @Test

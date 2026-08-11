@@ -36,6 +36,9 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
     private static final Pattern FIXTURE_IDENTIFIER = Pattern.compile(
         "(?i).*\\b(?:outcome|part|fixture|phase|embedded|segment)[-_ ]*\\d+\\b.*"
     );
+    private static final Pattern INDEXED_PLACEHOLDER_IDENTIFIER = Pattern.compile(
+        ".*主题[-_ ]*\\d{3,}内容[-_ ]*\\d{3,}.*"
+    );
     private static final Pattern COUNT_LED_CHAPTER = Pattern.compile(
         "^这一(?:阶段|时期)(?:形成|完成|包含)了?\\s*\\d+\\s*项.*"
     );
@@ -155,7 +158,8 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         if (safe.isBlank()) return false;
         if (safe.contains("…") || safe.contains("...") || RELATIVE_PATH.matcher(safe).find()
             || FILE_NAME.matcher(safe).find() || CAMEL_OR_SNAKE.matcher(safe).find()
-            || FIXTURE_IDENTIFIER.matcher(safe).matches()) return true;
+            || FIXTURE_IDENTIFIER.matcher(safe).matches()
+            || INDEXED_PLACEHOLDER_IDENTIFIER.matcher(safe).matches()) return true;
         // Reason/source context may help the model phrase an eligible reason,
         // but it must never whitelist raw technical tokens in the first layer.
         // Only the normalized public subject can authorize an ASCII token.

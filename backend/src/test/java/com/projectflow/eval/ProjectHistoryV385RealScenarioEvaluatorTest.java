@@ -23,6 +23,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
@@ -84,6 +85,9 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
     private static final List<String> NON_CODE_FORBIDDEN = List.of("能力", "后端", "Controller", "Service", "Repository", "DTO");
     private static final List<String> GENERIC_PHRASES = List.of(
         "优化了系统", "改进了功能", "进行了重构", "提升了体验", "修改了相关文件", "项目变化", "相关调整"
+    );
+    private static final Pattern INDEXED_PLACEHOLDER_IDENTIFIER = Pattern.compile(
+        ".*主题[-_ ]*\\d{3,}内容[-_ ]*\\d{3,}.*"
     );
 
     @Autowired ProjectRepository projectRepository;
@@ -155,31 +159,37 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         UUID userId = UUID.randomUUID();
         providerRepository.saveAndFlush(provider(userId, config));
         List<SafeScenarioRun> runs = new ArrayList<>();
-        runs.add(runScenario("non-code-presentation", FaultMode.NONE,
-            () -> nonCode(userId, "presentation", "slides/quarterly-review.md", "整理季度演示并形成清晰叙事", "演示材料已按问题、发现和结论重新排列。")));
-        runs.add(runScenario("non-code-research-report", FaultMode.NONE,
-            () -> nonCode(userId, "research-report", "paper/research-report.md", "补全研究报告并明确结论", "报告章节、引用和结论已经整理。")));
-        runs.add(runScenario("non-code-data-analysis", FaultMode.NONE,
-            () -> nonCode(userId, "data-analysis", "analysis/results.csv", "更新数据分析并解释关键指标", "数据表、图表说明和结论已经同步更新。")));
-        runs.add(runScenario("non-code-brand-page", FaultMode.NONE,
-            () -> nonCode(userId, "brand-page", "site/index.html", "调整品牌展示页并突出核心信息", "展示顺序和主要信息已经重新组织。")));
-        runs.add(runScenario("non-code-no-git-version", FaultMode.NONE,
-            () -> nonCode(userId, "no-git-version", "deliverables/version.txt", "整理交付版本并记录当前内容", "当前交付材料可读取，但没有可还原的 Git 历史。")));
-        runs.add(runScenario("seventeen-window-restart-cache-and-chapter", FaultMode.NONE,
-            () -> continuationAndChapter(userId)));
-        runs.add(runScenario("correction-local-invalidation", FaultMode.NONE,
-            () -> correctionInvalidatesOnlyOneWindow(userId)));
-        runs.add(runScenario("schema-failure-isolation-and-retry", FaultMode.SCHEMA_AFTER_REAL_CALL,
-            () -> schemaFailureRecovery(userId)));
-        runs.add(runScenario("user-cancellation-and-restart", FaultMode.CANCEL_AFTER_REAL_CALL,
-            () -> cancellationRecovery(userId)));
-        runs.add(runScenario("raw-payload-minimization", FaultMode.NONE,
-            () -> rawPayloadMinimization(userId)));
-        runs.add(runScenario("projectflow-current-history-dogfood", FaultMode.NONE,
-            () -> dogfood(userId)));
+        String scenarioScope = scenarioScope();
+        if ("correction".equals(scenarioScope)) {
+            runs.add(runScenario("correction-local-invalidation", FaultMode.NONE,
+                () -> correctionFocused(userId)));
+        } else {
+            runs.add(runScenario("non-code-presentation", FaultMode.NONE,
+                () -> nonCode(userId, "presentation", "slides/quarterly-review.md", "整理季度演示并形成清晰叙事", "演示材料已按问题、发现和结论重新排列。")));
+            runs.add(runScenario("non-code-research-report", FaultMode.NONE,
+                () -> nonCode(userId, "research-report", "paper/research-report.md", "补全研究报告并明确结论", "报告章节、引用和结论已经整理。")));
+            runs.add(runScenario("non-code-data-analysis", FaultMode.NONE,
+                () -> nonCode(userId, "data-analysis", "analysis/results.csv", "更新数据分析并解释关键指标", "数据表、图表说明和结论已经同步更新。")));
+            runs.add(runScenario("non-code-brand-page", FaultMode.NONE,
+                () -> nonCode(userId, "brand-page", "site/index.html", "调整品牌展示页并突出核心信息", "展示顺序和主要信息已经重新组织。")));
+            runs.add(runScenario("non-code-no-git-version", FaultMode.NONE,
+                () -> nonCode(userId, "no-git-version", "deliverables/version.txt", "整理交付版本并记录当前内容", "当前交付材料可读取，但没有可还原的 Git 历史。")));
+            runs.add(runScenario("seventeen-window-restart-cache-and-chapter", FaultMode.NONE,
+                () -> continuationAndChapter(userId)));
+            runs.add(runScenario("correction-local-invalidation", FaultMode.NONE,
+                () -> correctionInvalidatesOnlyOneWindow(userId)));
+            runs.add(runScenario("schema-failure-isolation-and-retry", FaultMode.SCHEMA_AFTER_REAL_CALL,
+                () -> schemaFailureRecovery(userId)));
+            runs.add(runScenario("user-cancellation-and-restart", FaultMode.CANCEL_AFTER_REAL_CALL,
+                () -> cancellationRecovery(userId)));
+            runs.add(runScenario("raw-payload-minimization", FaultMode.NONE,
+                () -> rawPayloadMinimization(userId)));
+            runs.add(runScenario("projectflow-current-history-dogfood", FaultMode.NONE,
+                () -> dogfood(userId)));
+        }
 
-        QualificationSummary summary = qualification(runs);
-        writeArtifact(config, runs, summary);
+        QualificationSummary summary = qualification(runs, scenarioScope);
+        writeArtifact(config, runs, summary, scenarioScope);
         System.out.printf(
             "V385_REAL_SCENARIOS_DONE provider=%s model=%s status=%s scenarios=%d requests=%d tokens=%d elapsedMs=%d%n",
             config.name(), config.model(), summary.qualified() ? "PASS" : "FAIL", runs.size(),
@@ -342,6 +352,51 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             "finalCacheHit", true
         ), ProjectHistoryV385ReviewSamples.stories(
             List.of(corrected), 1, reviewRevision(userId, continuationState.projectId())));
+    }
+
+    private ScenarioEvidence correctionFocused(UUID userId) throws Exception {
+        Path root = temporaryRoot.resolve("correction-focused");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Correction focused", root);
+        historicalFacts(project, 0, 64, 1, 1, 0);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        Map<String, Object> initial = readService.overview(userId, project.getId()).diagnostics();
+        require(number(initial, "totalWindowCount") == 2, "展示标签归一化改变了两窗口规划");
+        require(number(initial, "succeededWindowCount") == 2, "受影响两窗口未全部完成");
+        List<ChangeStory> initialStories = allStories(userId, project.getId());
+        require(initialStories.size() == 64, "展示标签归一化造成 Story 丢失");
+        require(firstLayerLeaks(initialStories, FIRST_LAYER_FORBIDDEN) == 0,
+            "编号占位符或工程术语泄漏到修正前第一层");
+        CallAccumulator call = calls.get(activeScenario.get());
+        require(call != null && call.storyLogicalCalls == 2, "修正前没有严格执行两个 Story 窗口");
+
+        ChangeStory target = initialStories.get(0);
+        ProjectHistorySnapshot snapshot = snapshotRepository.findByProjectId(project.getId()).orElseThrow();
+        String revision = correctionService.list(userId, project.getId()).presentationRevision();
+        correctionService.create(userId, project.getId(), new HistoryCorrectionRequest(
+            "RENAME_STORY", "STORY", target.id(), List.of(),
+            "重新整理项目结果并明确当前状态", "", "", "", revision, snapshot.getSourceEventFingerprint()
+        ));
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        require(call.storyLogicalCalls == 3, "一次展示修正没有只失效目标 Story 窗口");
+        ChangeStory corrected = readService.story(userId, project.getId(), target.id()).story();
+        require("重新整理项目结果并明确当前状态".equals(corrected.humanTitle()), "用户修正未出现在 corrected read model");
+        require(firstLayerLeaks(List.of(corrected), FIRST_LAYER_FORBIDDEN) == 0,
+            "编号占位符或工程术语泄漏到修正后第一层");
+        var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        require(cached.cacheHit(), "修正后的新窗口结果未缓存");
+        require(call.storyLogicalCalls == 3, "修正后的全局 cache hit 重复调用模型");
+        return new ScenarioEvidence(Map.of(
+            "initialStoryCount", initialStories.size(),
+            "initialWindowCount", 2,
+            "invalidatedStoryWindowCount", 1,
+            "indexedPlaceholderLeakCount", 0,
+            "fullAutomaticWindowRerun", false,
+            "presentationAuthority", corrected.presentationAuthority(),
+            "finalCacheHit", true
+        ), ProjectHistoryV385ReviewSamples.stories(
+            List.of(corrected), 1, reviewRevision(userId, project.getId())));
     }
 
     private ScenarioEvidence schemaFailureRecovery(UUID userId) throws Exception {
@@ -627,7 +682,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         for (ChangeStory story : stories) {
             String firstLayer = String.join(" ", story.humanTitle(), story.oneSentenceSummary(), story.beforeState(),
                 story.change(), story.afterState(), story.reason(), story.laterOutcome());
-            if (forbidden.stream().anyMatch(firstLayer::contains)) count++;
+            if (forbidden.stream().anyMatch(firstLayer::contains)
+                || INDEXED_PLACEHOLDER_IDENTIFIER.matcher(firstLayer).matches()) count++;
         }
         return count;
     }
@@ -732,22 +788,30 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         return result;
     }
 
-    private QualificationSummary qualification(List<SafeScenarioRun> runs) {
+    private QualificationSummary qualification(List<SafeScenarioRun> runs, String scenarioScope) {
         int requests = runs.stream().mapToInt(SafeScenarioRun::physicalRequestCount).sum();
         long tokens = runs.stream().mapToLong(SafeScenarioRun::tokenCount).sum();
         long latency = runs.stream().mapToLong(SafeScenarioRun::modelLatencyMs).sum();
         boolean allPassed = !runs.isEmpty() && runs.stream().allMatch(run -> "PASS".equals(run.status()));
-        boolean usedBothStages = runs.stream().mapToInt(SafeScenarioRun::storyModelCallCount).sum() > 0
-            && runs.stream().mapToInt(SafeScenarioRun::chapterModelCallCount).sum() > 0;
+        boolean usedStoryStage = runs.stream().mapToInt(SafeScenarioRun::storyModelCallCount).sum() > 0;
+        boolean requiredStagesUsed = "correction".equals(scenarioScope) ? usedStoryStage
+            : usedStoryStage && runs.stream().mapToInt(SafeScenarioRun::chapterModelCallCount).sum() > 0;
         int validationRepairs = runs.stream().mapToInt(SafeScenarioRun::validationRepairCount).sum();
-        return new QualificationSummary(allPassed && requests > 0 && usedBothStages, requests, tokens, latency,
+        return new QualificationSummary(allPassed && requests > 0 && requiredStagesUsed, requests, tokens, latency,
             runs.size(), (int) runs.stream().filter(run -> "PASS".equals(run.status())).count(), validationRepairs);
+    }
+
+    private String scenarioScope() {
+        String value = System.getProperty("projectflow.eval.scenario-scope", "full").trim().toLowerCase(Locale.ROOT);
+        require(Set.of("full", "correction").contains(value), "不支持的真实场景范围");
+        return value;
     }
 
     private void writeArtifact(
         ProjectFlowRealModelEvalIT.ProviderConfig config,
         List<SafeScenarioRun> runs,
-        QualificationSummary summary
+        QualificationSummary summary,
+        String scenarioScope
     ) throws Exception {
         String defaultName = "v385-real-scenarios-" + config.protocol().name().toLowerCase(Locale.ROOT);
         String outputName = System.getProperty("projectflow.eval.output-name", defaultName)
@@ -757,6 +821,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         Map<String, Object> artifact = new LinkedHashMap<>();
         artifact.put("version", "projectflow-v3.8.5-real-scenario-qualification-v2");
         artifact.put("generatedAt", Instant.now().toString());
+        artifact.put("scenarioScope", scenarioScope);
         artifact.put("provider", Map.of(
             "name", config.name(), "model", config.model(), "protocol", config.protocol().name(),
             "reasoningEffort", config.reasoningEffort()

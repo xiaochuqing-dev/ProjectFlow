@@ -53,6 +53,17 @@ class ProjectHistoryHumanReviewRound2ManifestTest {
         assertThat(value.path("round1Status").asText()).isEqualTo("NEEDS_REVISION_NOT_APPROVED");
         assertThat(value.path("status").asText()).isIn("PENDING_HUMAN_REVIEW", "REVIEWED");
         assertThat(value.path("sourceRunId").asText()).matches("[1-9][0-9]*");
+        for (String provider : Set.of("glm", "deepseek")) {
+            JsonNode source = value.path("providerSourceRuns").path(provider);
+            assertThat(source.path("runId").asText()).matches("[1-9][0-9]*");
+            assertThat(source.path("runUrl").asText()).isEqualTo(
+                "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/" + source.path("runId").asText()
+            );
+            assertThat(source.path("affectedRunId").asText()).matches("[1-9][0-9]*");
+            assertThat(source.path("affectedRunUrl").asText()).isEqualTo(
+                "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/" + source.path("affectedRunId").asText()
+            );
+        }
         assertThat(value.path("samplingMethod").asText()).contains("fixed stratified selection", "Round 2");
         assertThat(value.path("security").path("modelSelfScoring").asBoolean(true)).isFalse();
         assertThat(value.path("security").path("rawPromptStored").asBoolean(true)).isFalse();
@@ -79,6 +90,7 @@ class ProjectHistoryHumanReviewRound2ManifestTest {
         String worksheetText = Files.readString(worksheet, StandardCharsets.UTF_8);
         assertThat(worksheetText).contains(
             "Round 1 结论：NEEDS_REVISION / NOT_APPROVED",
+            "受影响纠正链路来源：",
             "第一眼能否理解（是/否）：", "Before 是否自然（是/否）：",
             "Evidence 是否支撑标题（是/否）：", "是否把 planned 当 implemented（是/否）：",
             "是否把 declared 当 verified（是/否）：", "是否像项目阶段而非文件列表（是/否）：",
@@ -104,6 +116,11 @@ class ProjectHistoryHumanReviewRound2ManifestTest {
             .doesNotContain("..", "\\").doesNotStartWith("/");
         assertThat(sample.path("contentHash").asText()).matches("sha256:[0-9a-f]{64}");
         assertThat(sample.path("presentationRevision").asText()).isNotBlank();
+        boolean correction = StreamSupport.stream(sample.path("coverageTags").spliterator(), false)
+            .anyMatch(tag -> "correction".equals(tag.asText()));
+        if (correction) {
+            assertThat(sample.path("artifact").asText()).endsWith("history-real-scenarios-affected.json");
+        }
         providers.merge(sample.path("provider").asText(), 1, Integer::sum);
         sample.path("coverageTags").forEach(tag -> coverage.add(tag.asText()));
     }

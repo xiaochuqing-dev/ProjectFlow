@@ -18,6 +18,7 @@ SENSITIVE_PATTERN = re.compile(
     r"(?:sk-[A-Za-z0-9_-]{20,}|ark-[A-Za-z0-9-]{20,}|Bearer [A-Za-z0-9._-]{24,})"
 )
 ABSOLUTE_PATH_PATTERN = re.compile(r"(?:(?<![A-Za-z0-9+.-])[A-Za-z]:[\\/]|/(?:Users|home|tmp|var)/)")
+INDEXED_PLACEHOLDER_PATTERN = re.compile(r"主题[-_ ]*\d{3,}内容[-_ ]*\d{3,}")
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,10 @@ def parse_args() -> argparse.Namespace:
         description="Freeze a genuine-human review sample from qualified V3.8.5 normalized artifacts."
     )
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--glm-run-id")
+    parser.add_argument("--deepseek-run-id")
+    parser.add_argument("--glm-affected-run-id")
+    parser.add_argument("--deepseek-affected-run-id")
     parser.add_argument("--round", type=int, choices=(1, 2), default=1)
     parser.add_argument("--evidence-root", type=Path, default=DEFAULT_EVIDENCE_ROOT)
     parser.add_argument("--output", type=Path)
@@ -164,6 +169,8 @@ def sample_entry(
     tags: tuple[str, ...],
     entity: dict[str, Any],
 ) -> dict[str, Any]:
+    if INDEXED_PLACEHOLDER_PATTERN.search(json.dumps(entity, ensure_ascii=False)):
+        raise ValueError(f"{kind} sample contains an indexed placeholder identifier: {source}")
     entity_id = entity.get("id")
     revision = entity.get("presentationRevision")
     if not isinstance(entity_id, str) or not entity_id or not isinstance(revision, str) or not revision:
@@ -186,6 +193,7 @@ def provider_samples(
     evidence_root: Path,
     provider_slug: str,
     provider_name: str,
+    review_round: int,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, dict[str, Any]]]:
     provider_root = evidence_root / provider_slug
     qualification_path = provider_root / "history-ground-truth-real-result.json"
@@ -194,6 +202,11 @@ def provider_samples(
     scenarios = load_json(scenarios_path)
     qualified(qualification, qualification_path)
     qualified(scenarios, scenarios_path)
+    affected_scenarios_path = provider_root / "history-real-scenarios-affected.json"
+    affected_scenarios = None
+    if review_round == 2:
+        affected_scenarios = load_json(affected_scenarios_path)
+        qualified(affected_scenarios, affected_scenarios_path)
 
     stories: list[dict[str, Any]] = []
     chapters: list[dict[str, Any]] = []
@@ -205,9 +218,12 @@ def provider_samples(
         stories.append(entry)
         entities[entry["sampleId"]] = entity
     for spec in SCENARIO_STORIES:
-        entity = scenario_entity(scenarios, spec)
+        use_affected = review_round == 2 and spec.source == "correction-local-invalidation"
+        selected_scenarios = affected_scenarios if use_affected else scenarios
+        selected_path = affected_scenarios_path if use_affected else scenarios_path
+        entity = scenario_entity(selected_scenarios, spec)
         entry = sample_entry("STORY", len(stories) + 1, provider_slug, provider_name,
-            scenarios_path, spec.source, spec.tags, entity)
+            selected_path, spec.source, spec.tags, entity)
         stories.append(entry)
         entities[entry["sampleId"]] = entity
     for spec in QUALIFICATION_CHAPTERS:
@@ -322,6 +338,8 @@ def worksheet_section(sample: dict[str, Any], entity: dict[str, Any], review_rou
 
 def write_outputs(
     run_id: str,
+    provider_run_ids: dict[str, str],
+    affected_run_ids: dict[str, str],
     review_round: int,
     output: Path,
     worksheet: Path,
@@ -335,6 +353,18 @@ def write_outputs(
         "status": "PENDING_HUMAN_REVIEW",
         "sourceRunId": run_id,
         "sourceRunUrl": f"https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/{run_id}",
+        "providerSourceRuns": {
+            provider: {
+                "runId": provider_run_id,
+                "runUrl": f"https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/{provider_run_id}",
+                "affectedRunId": affected_run_ids[provider],
+                "affectedRunUrl": (
+                    "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/"
+                    + affected_run_ids[provider]
+                ),
+            }
+            for provider, provider_run_id in provider_run_ids.items()
+        },
         "samplingMethod": (
             "fixed stratified selection from qualified normalized GLM and DeepSeek artifacts"
             + (" for Human Review Round 2" if review_round == 2 else "")
@@ -358,6 +388,10 @@ def write_outputs(
         "状态：PENDING_HUMAN_REVIEW。此文件只冻结样本并提供空白人工评分项；不得由模型代填。",
         "",
         f"来源 Run：{run_id}",
+        "Provider 来源："
+        f"GLM {provider_run_ids['glm']}；DeepSeek {provider_run_ids['deepseek']}",
+        "受影响纠正链路来源："
+        f"GLM {affected_run_ids['glm']}；DeepSeek {affected_run_ids['deepseek']}",
         *( ["Round 1 结论：NEEDS_REVISION / NOT_APPROVED；原冻结样本和哈希保持不变。"] if review_round == 2 else [] ),
         f"样本：{len(stories)} Story，{len(chapters)} Chapter。",
         "评审模式：待一名真实人工评审；最终报告必须明确 single-reviewer limitation，不冒充多人一致。",
@@ -383,6 +417,20 @@ def main() -> int:
     try:
         if not re.fullmatch(r"[1-9][0-9]*", args.run_id):
             raise ValueError("run ID must be a positive numeric GitHub Actions run ID")
+        provider_run_ids = {
+            "glm": args.glm_run_id or args.run_id,
+            "deepseek": args.deepseek_run_id or args.run_id,
+        }
+        if args.round == 2 and (not args.glm_affected_run_id or not args.deepseek_affected_run_id):
+            raise ValueError("Round 2 requires explicit GLM and DeepSeek affected run IDs")
+        affected_run_ids = {
+            "glm": args.glm_affected_run_id or provider_run_ids["glm"],
+            "deepseek": args.deepseek_affected_run_id or provider_run_ids["deepseek"],
+        }
+        if any(not re.fullmatch(r"[1-9][0-9]*", value) for value in provider_run_ids.values()):
+            raise ValueError("Provider run IDs must be positive numeric GitHub Actions run IDs")
+        if any(not re.fullmatch(r"[1-9][0-9]*", value) for value in affected_run_ids.values()):
+            raise ValueError("Affected run IDs must be positive numeric GitHub Actions run IDs")
         evidence_root = args.evidence_root.resolve()
         relative(evidence_root)
         output = (args.output or (
@@ -401,13 +449,16 @@ def main() -> int:
         all_chapters: list[dict[str, Any]] = []
         all_entities: dict[str, dict[str, Any]] = {}
         for slug, name in (("glm", "GLM"), ("deepseek", "DeepSeek")):
-            stories, chapters, entities = provider_samples(evidence_root, slug, name)
+            stories, chapters, entities = provider_samples(evidence_root, slug, name, args.round)
             all_stories.extend(stories)
             all_chapters.extend(chapters)
             all_entities.update(entities)
         if len(all_stories) != 30 or len(all_chapters) != 8:
             raise ValueError("frozen sample must contain exactly 30 Story and 8 Chapter entries")
-        write_outputs(args.run_id, args.round, output, worksheet, all_stories, all_chapters, all_entities)
+        write_outputs(
+            args.run_id, provider_run_ids, affected_run_ids, args.round, output, worksheet,
+            all_stories, all_chapters, all_entities
+        )
     except (OSError, ValueError) as exception:
         print(f"V385_HUMAN_REVIEW_SAMPLE_FAILED {exception}", file=sys.stderr)
         return 1

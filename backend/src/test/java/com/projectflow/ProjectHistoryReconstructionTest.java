@@ -1388,7 +1388,10 @@ class ProjectHistoryReconstructionTest {
         assertThat(afterCorrection.stream().filter(originalCheckpointIds::contains).count()).isEqualTo(1);
         assertThat(readService.stories(userId, project.getId(), null, false, null, null, 0, 100).items())
             .filteredOn(story -> story.id().equals(target.id()))
-            .singleElement().satisfies(story -> assertThat(story.humanTitle()).isEqualTo("用户确认的结果名称"));
+            .singleElement().satisfies(story -> {
+                assertThat(story.humanTitle()).isEqualTo("用户确认的结果名称");
+                assertThat(story.oneSentenceSummary()).doesNotContain("主题000", "内容000");
+            });
     }
 
     private ProjectSpace project(UUID userId, String name, Path root) {

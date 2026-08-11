@@ -24,6 +24,9 @@ public final class ProjectHistoryHumanSubjectLabelService {
     private static final Pattern FIXTURE_IDENTIFIER = Pattern.compile(
         "(?i).*(?:outcome|part|fixture|phase|embedded|segment)[-_ ]*\\d+.*"
     );
+    private static final Pattern INDEXED_PLACEHOLDER_IDENTIFIER = Pattern.compile(
+        ".*主题[-_ ]*\\d{3,}内容[-_ ]*\\d{3,}.*"
+    );
     private static final Pattern VERSION_DOCUMENT_IDENTIFIER = Pattern.compile(
         "(?i)^v?\\d+(?:[ ._-]+\\d+)+(?:[ ._-]+.*)?$"
     );
@@ -47,7 +50,9 @@ public final class ProjectHistoryHumanSubjectLabelService {
         if (containsAny(combined, "core experience", "core-experience", "核心体验")) return "核心使用体验";
         if (containsAny(combined, "customer service", "customer-service", "客户服务")) return "客户服务研究";
         if (containsAny(combined, "project outcome", "project-outcome", "项目成果")) return "项目成果";
-        if (FIXTURE_IDENTIFIER.matcher(subjectSample).matches() || subjectSample.matches(".*outcome\\d+.*")) {
+        if (FIXTURE_IDENTIFIER.matcher(subjectSample).matches()
+            || INDEXED_PLACEHOLDER_IDENTIFIER.matcher(rawSubject).matches()
+            || subjectSample.matches(".*outcome\\d+.*")) {
             return "项目成果记录";
         }
         if (containsAny(combined, "project import", "project-import", "项目导入")) return "项目导入与资料接入";
@@ -163,6 +168,7 @@ public final class ProjectHistoryHumanSubjectLabelService {
         String safe = text(value);
         return !safe.isBlank() && !safe.contains("…") && !safe.contains("/") && !safe.contains("\\")
             && !FIXTURE_IDENTIFIER.matcher(safe).matches() && !TECHNICAL_TYPE.matcher(safe).matches()
+            && !INDEXED_PLACEHOLDER_IDENTIFIER.matcher(safe).matches()
             && !VERSION_DOCUMENT_IDENTIFIER.matcher(safe.toLowerCase(Locale.ROOT)).matches();
     }
 

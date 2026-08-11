@@ -45,6 +45,9 @@ public final class ProjectHistoryV385QualityEvaluator {
     private static final Pattern SECRET = Pattern.compile(
         "(?i)(?:Bearer\\s+[A-Za-z0-9._-]{16,}|(?:sk|ark)-[A-Za-z0-9_-]{16,}|github_pat_[A-Za-z0-9_]{16,}|api[_-]?key\\s*[:=])"
     );
+    private static final Pattern INDEXED_PLACEHOLDER_IDENTIFIER = Pattern.compile(
+        ".*主题[-_ ]*\\d{3,}内容[-_ ]*\\d{3,}.*"
+    );
 
     private ProjectHistoryV385QualityEvaluator() {
     }
@@ -604,6 +607,7 @@ public final class ProjectHistoryV385QualityEvaluator {
     }
 
     private static boolean containsForbidden(String text, List<String> forbidden, Set<String> allowed) {
+        if (INDEXED_PLACEHOLDER_IDENTIFIER.matcher(text).matches()) return true;
         String lower = text.toLowerCase(Locale.ROOT);
         for (String term : forbidden) {
             if (term == null || term.isBlank()) continue;
