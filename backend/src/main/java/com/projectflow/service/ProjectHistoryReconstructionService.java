@@ -2056,7 +2056,7 @@ public class ProjectHistoryReconstructionService {
         JsonNode storyNodes = root.path("stories");
         if (!storyNodes.isArray()) throw new HistoryValidationException(ValidationKind.CONTRACT, "History model stories are missing");
         for (JsonNode node : storyNodes) {
-            requireAllowedFields(node, ProjectHistoryModelOutputContract.STORY_FIELDS,
+            requireAllowedFields(node, ProjectHistoryModelOutputContract.STORY_COMPATIBILITY_FIELDS,
                 "History model story contains forbidden fields");
             String id = text(node, "storyId");
             ChangeStory original = stories.get(id);

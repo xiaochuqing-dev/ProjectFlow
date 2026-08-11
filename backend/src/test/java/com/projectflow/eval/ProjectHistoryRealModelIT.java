@@ -149,8 +149,15 @@ class ProjectHistoryRealModelIT {
                 invalidEvidenceRefs += refs.stream().filter(ref -> !eligible.contains(ref)).count();
                 String reason = text(story, "reason");
                 if (!reason.isBlank() && refs.isEmpty()) reasonWithoutEvidence++;
-                boolean reasonUnknownDisclosed = strings(story.path("unknowns")).stream()
-                    .anyMatch(value -> value.contains("原因") && (value.contains("未知") || value.contains("没有") || value.contains("缺少")));
+                List<String> unknownWording = new ArrayList<>();
+                String currentUnknown = text(story, "unknownWording");
+                if (!currentUnknown.isBlank()) unknownWording.add(currentUnknown);
+                unknownWording.addAll(strings(story.path("unknowns")));
+                boolean reasonUnknownDisclosed = unknownWording.stream().anyMatch(value ->
+                    (value.contains("原因") || value.contains("为什么"))
+                        && (value.contains("未知") || value.contains("没有") || value.contains("缺少")
+                            || value.contains("不足") || value.contains("无法确认"))
+                );
                 if (eligible.isEmpty() && reason.isBlank() && !reasonUnknownDisclosed) {
                     missingReasonUnknown++;
                 }

@@ -7,6 +7,10 @@ public final class ProjectHistoryModelOutputContract {
     public static final Set<String> ROOT_FIELDS = Set.of("stories", "chapters");
     public static final Set<String> STORY_FIELDS = Set.of(
         "storyId", "humanTitle", "oneSentenceSummary", "beforeWording", "changeWording", "afterWording",
+        "reason", "reasonEvidenceRefs", "unknownWording"
+    );
+    public static final Set<String> STORY_COMPATIBILITY_FIELDS = Set.of(
+        "storyId", "humanTitle", "oneSentenceSummary", "beforeWording", "changeWording", "afterWording",
         "reason", "reasonEvidenceRefs", "unknownWording", "unknowns"
     );
     public static final Set<String> NARRATIVE_WORDING_FIELDS = Set.of(

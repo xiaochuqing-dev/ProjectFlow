@@ -14,8 +14,12 @@ class ProviderNeutralSemanticValidationTest {
         assertThat(ProjectHistoryModelOutputContract.STORY_FIELDS)
             .containsExactlyInAnyOrder(
                 "storyId", "humanTitle", "oneSentenceSummary", "beforeWording", "changeWording", "afterWording",
-                "reason", "reasonEvidenceRefs", "unknownWording", "unknowns"
+                "reason", "reasonEvidenceRefs", "unknownWording"
             );
+        assertThat(ProjectHistoryModelOutputContract.STORY_COMPATIBILITY_FIELDS)
+            .containsAll(ProjectHistoryModelOutputContract.STORY_FIELDS)
+            .contains("unknowns")
+            .doesNotContainAnyElementsOf(ProjectHistoryModelOutputContract.ENGINEERING_OWNED_FIELDS);
         assertThat(ProjectHistoryModelOutputContract.NARRATIVE_WORDING_FIELDS)
             .containsExactlyInAnyOrder(
                 "humanTitle", "oneSentenceSummary", "beforeWording", "changeWording", "afterWording",

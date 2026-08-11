@@ -81,7 +81,7 @@ public enum ModelTaskType {
     PROJECT_HISTORY_SYNTHESIS(
         "项目历程变化故事与篇章归纳", 6_000, 20_000, 0.1, false,
         List.of(), List.of("stories", "chapters"), List.of(),
-        "{\"stories\":[{\"storyId\":\"\",\"humanTitle\":\"\",\"oneSentenceSummary\":\"\",\"beforeWording\":\"\",\"changeWording\":\"\",\"afterWording\":\"\",\"reason\":\"\",\"reasonEvidenceRefs\":[],\"unknownWording\":\"\",\"unknowns\":[]}],\"chapters\":[{\"chapterId\":\"\",\"title\":\"\",\"summary\":\"\"}]}"
+        "{\"stories\":[{\"storyId\":\"\",\"humanTitle\":\"\",\"oneSentenceSummary\":\"\",\"beforeWording\":\"\",\"changeWording\":\"\",\"afterWording\":\"\",\"reason\":\"\",\"reasonEvidenceRefs\":[],\"unknownWording\":\"\"}],\"chapters\":[{\"chapterId\":\"\",\"title\":\"\",\"summary\":\"\"}]}"
     ),
     PROJECT_HISTORY_CHAPTER_SYNTHESIS(
         "项目历程大篇章二阶段归纳", 1_200, 4_000, 0.1, false,

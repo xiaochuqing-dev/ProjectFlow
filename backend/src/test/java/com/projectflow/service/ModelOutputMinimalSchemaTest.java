@@ -20,6 +20,10 @@ class ModelOutputMinimalSchemaTest {
         assertThat(fields(root.path("chapters").get(0))).isEqualTo(ProjectHistoryModelOutputContract.CHAPTER_FIELDS);
         assertThat(ProjectHistoryModelOutputContract.STORY_FIELDS)
             .doesNotContainAnyElementsOf(ProjectHistoryModelOutputContract.ENGINEERING_OWNED_FIELDS);
+        assertThat(ProjectHistoryModelOutputContract.STORY_COMPATIBILITY_FIELDS)
+            .containsAll(ProjectHistoryModelOutputContract.STORY_FIELDS)
+            .contains("unknowns")
+            .doesNotContainAnyElementsOf(ProjectHistoryModelOutputContract.ENGINEERING_OWNED_FIELDS);
         assertThat(ProjectHistoryModelOutputContract.CHAPTER_FIELDS)
             .doesNotContainAnyElementsOf(ProjectHistoryModelOutputContract.ENGINEERING_OWNED_FIELDS);
     }
