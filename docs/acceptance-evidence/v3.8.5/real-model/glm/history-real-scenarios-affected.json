@@ -1,0 +1,70 @@
+{
+  "version" : "projectflow-v3.8.5-real-scenario-qualification-v2",
+  "generatedAt" : "2026-08-11T20:27:40.960037418Z",
+  "scenarioScope" : "correction",
+  "provider" : {
+    "reasoningEffort" : "high",
+    "model" : "glm-5.2",
+    "protocol" : "OPENAI_RESPONSES",
+    "name" : "GLM"
+  },
+  "qualification" : {
+    "qualified" : true,
+    "physicalRequestCount" : 3,
+    "tokenCount" : 68769,
+    "modelLatencyMs" : 273301,
+    "scenarioCount" : 1,
+    "passedScenarioCount" : 1,
+    "validationRepairCount" : 0
+  },
+  "scenarios" : [ {
+    "name" : "correction-local-invalidation",
+    "status" : "PASS",
+    "failure" : "",
+    "storyModelCallCount" : 3,
+    "chapterModelCallCount" : 0,
+    "validationRepairCount" : 0,
+    "physicalRequestCount" : 3,
+    "tokenCount" : 68769,
+    "modelLatencyMs" : 273301,
+    "elapsedMs" : 274678,
+    "metrics" : {
+      "invalidatedStoryWindowCount" : 1,
+      "initialStoryCount" : 64,
+      "indexedPlaceholderLeakCount" : 0,
+      "presentationAuthority" : "USER_DECLARED_PRESENTATION",
+      "finalCacheHit" : true,
+      "fullAutomaticWindowRerun" : false,
+      "initialWindowCount" : 2
+    },
+    "samples" : [ {
+      "evidenceRefs" : [ "fact:83732a99-4a34-4f6d-865d-37d5a399a1bd", "source:outcome-00000-000" ],
+      "change" : "本轮对项目成果记录的相关代码进行了补充和调整。",
+      "id" : "story-af0405cb51ce8cfdb5a7",
+      "presentationRevision" : "presentation:779dd270a5dd1176fcda0f2fdc77f65b",
+      "before" : "项目成果记录在此之前已具备基础代码实现。",
+      "after" : "项目成果记录的代码实现处于已修改状态，尚未有验证证据。",
+      "displayStatus" : "ACTIVE",
+      "conflicts" : [ ],
+      "reasonEvidenceRefs" : [ ],
+      "title" : "重新整理项目结果并明确当前状态",
+      "supportingChangeRefs" : [ ],
+      "role" : "PRIMARY",
+      "unknowns" : [ "本次修改的具体原因暂无足够的可核验信息，暂时无法确认。" ],
+      "pinned" : false,
+      "hiddenByDefault" : false,
+      "summary" : "涵盖项目成果记录功能的一次代码层面更新",
+      "reason" : "",
+      "primaryStoryId" : "",
+      "presentationAuthority" : "USER_DECLARED_PRESENTATION"
+    } ]
+  } ],
+  "security" : {
+    "absolutePathPersisted" : false,
+    "apiKeyPersistedInArtifact" : false,
+    "promptPersisted" : false,
+    "faultInjection" : "after real Provider call, in memory only",
+    "reasoningPersisted" : false,
+    "rawResponsePersisted" : false
+  }
+}

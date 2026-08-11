@@ -1,0 +1,70 @@
+{
+  "version" : "projectflow-v3.8.5-real-scenario-qualification-v2",
+  "generatedAt" : "2026-08-11T20:26:39.796986182Z",
+  "scenarioScope" : "correction",
+  "provider" : {
+    "name" : "DeepSeek OpenCode Go",
+    "reasoningEffort" : "max",
+    "model" : "deepseek-v4-flash",
+    "protocol" : "OPENAI_CHAT_COMPLETIONS"
+  },
+  "qualification" : {
+    "qualified" : true,
+    "physicalRequestCount" : 3,
+    "tokenCount" : 59386,
+    "modelLatencyMs" : 160766,
+    "scenarioCount" : 1,
+    "passedScenarioCount" : 1,
+    "validationRepairCount" : 0
+  },
+  "scenarios" : [ {
+    "name" : "correction-local-invalidation",
+    "status" : "PASS",
+    "failure" : "",
+    "storyModelCallCount" : 3,
+    "chapterModelCallCount" : 0,
+    "validationRepairCount" : 0,
+    "physicalRequestCount" : 3,
+    "tokenCount" : 59386,
+    "modelLatencyMs" : 160766,
+    "elapsedMs" : 162665,
+    "metrics" : {
+      "initialWindowCount" : 2,
+      "invalidatedStoryWindowCount" : 1,
+      "initialStoryCount" : 64,
+      "indexedPlaceholderLeakCount" : 0,
+      "presentationAuthority" : "USER_DECLARED_PRESENTATION",
+      "finalCacheHit" : true,
+      "fullAutomaticWindowRerun" : false
+    },
+    "samples" : [ {
+      "reason" : "",
+      "primaryStoryId" : "",
+      "presentationAuthority" : "USER_DECLARED_PRESENTATION",
+      "evidenceRefs" : [ "fact:01dcd44d-27b1-4b88-b625-2f0168511c7a", "source:outcome-00000-000" ],
+      "change" : "本阶段补充并调整了项目成果记录的实现代码。",
+      "id" : "story-9e55b0e8ea688037235a",
+      "presentationRevision" : "presentation:2ad5063f17630a34f5fb1a0981c35b2a",
+      "before" : "此前项目成果记录已有基础实现。",
+      "after" : "项目成果记录已形成代码实现，但稳定性未经验证。",
+      "displayStatus" : "ACTIVE",
+      "conflicts" : [ ],
+      "reasonEvidenceRefs" : [ ],
+      "title" : "重新整理项目结果并明确当前状态",
+      "supportingChangeRefs" : [ ],
+      "role" : "PRIMARY",
+      "unknowns" : [ "当前缺少可核验的验证证据，具体原因暂无法确认。" ],
+      "pinned" : false,
+      "hiddenByDefault" : false,
+      "summary" : "本次调整范围限于项目成果记录的实现，尚未涉及验证环节。"
+    } ]
+  } ],
+  "security" : {
+    "rawResponsePersisted" : false,
+    "absolutePathPersisted" : false,
+    "apiKeyPersistedInArtifact" : false,
+    "promptPersisted" : false,
+    "faultInjection" : "after real Provider call, in memory only",
+    "reasoningPersisted" : false
+  }
+}

@@ -1,17 +1,17 @@
 {
   "version" : "projectflow-v3.8.5-history-real-model-v4",
-  "generatedAt" : "2026-08-09T14:29:29.095337190Z",
-  "promptVersion" : "project-history-synthesis-v8",
+  "generatedAt" : "2026-08-11T18:35:47.983982613Z",
+  "promptVersion" : "project-history-synthesis-v9",
   "provider" : {
-    "model" : "glm-5.2",
-    "protocol" : "OPENAI_RESPONSES",
+    "reasoningEffort" : "high",
     "name" : "GLM",
-    "reasoningEffort" : "high"
+    "protocol" : "OPENAI_RESPONSES",
+    "model" : "glm-5.2"
   },
   "input" : {
-    "promptCharacterCount" : 3116,
+    "storyCount" : 2,
     "chapterCount" : 1,
-    "storyCount" : 2
+    "promptCharacterCount" : 3194
   },
   "contract" : {
     "rootSchemaViolationCount" : 0,
@@ -28,19 +28,19 @@
     "returnedChapterCount" : 1
   },
   "diagnostics" : {
-    "latencyMs" : 84216,
-    "totalTokens" : 5131,
-    "finishReason" : "COMPLETE",
-    "requestCount" : 1,
-    "schemaMatched" : true,
+    "reasoningPresent" : false,
     "truncated" : false,
-    "reasoningPresent" : false
+    "schemaMatched" : true,
+    "requestCount" : 1,
+    "finishReason" : "COMPLETE",
+    "totalTokens" : 5068,
+    "latencyMs" : 37381
   },
   "security" : {
-    "reasoningPersisted" : false,
-    "apiKeyPersisted" : false,
-    "promptPersisted" : false,
+    "rawResponsePersisted" : false,
     "absolutePathPersisted" : false,
-    "rawResponsePersisted" : false
+    "promptPersisted" : false,
+    "apiKeyPersisted" : false,
+    "reasoningPersisted" : false
   }
 }

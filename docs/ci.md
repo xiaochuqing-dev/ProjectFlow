@@ -1,5 +1,9 @@
 # CI quality gates
 
+The final evidence commit is merge-eligible only when every blocking job is green with the frozen Round 2 files present. Real run `31532558352` proved both affected Provider jobs, frontend, Playwright, sensitive-content, Hermes and Obsidian; its backend/PostgreSQL failures are historical evidence from the earlier head where Round 2 files were still absent. They are not the final CI authority.
+
+`workflow_dispatch` supports `real_model_scope=correction` for the bounded indexed-placeholder/correction chain. In that scope, full qualification, Dogfood and non-code baselines are explicitly reused and no duplicate model call is made; both Providers still receive their exact configured protocol and reasoning effort. The generated affected artifact states `scenarioScope=correction` and cannot be presented as a full 11-scenario run.
+
 V3.8.5 adds deterministic quality gates for multi-level history compression, Chinese-first presentation, Primary/Supporting roles, correction overlays, window checkpoint recovery and Obsidian CORE density. The acceptance artifact records window/cache/checkpoint counts and unprocessed scope without persisting Prompt, raw response, reasoning or credentials.
 
 RC2 requires the backend job to emit the new portability, minimal-schema, role-graph, language, taxonomy and corrected-view test reports. The optional real-provider job runs both GLM Responses and DeepSeek Chat Completions only when explicitly dispatched with protected Secrets; missing Secrets fails before any request. `DeepSeekDogfoodRegressionTest` and `GLMDogfoodRegressionTest` validate the sanitized scenario artifact after the original real run instead of issuing duplicate calls.

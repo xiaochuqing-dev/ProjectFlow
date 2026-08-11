@@ -1,0 +1,35 @@
+{
+  "taskGoal": "继续完成 ProjectFlow V3.8.5 RC2 的双真实模型、大众可读历程和跨消费者一致性封板；真实人工批准前保持 PR #15 为 Draft，不提前宣布 PASS。",
+  "actualChanges": [
+    "确认两项 GitHub Repository Secret 可由 Actions 安全注入，并按用户指定配置运行 GLM glm-5.2 Responses/high 与 DeepSeek deepseek-v4-flash Chat Completions/max；仓库未记录凭据值。",
+    "真实 Round 2 初稿暴露中文编号占位符后停止封板，增加 Provider-neutral 的展示主体归一化、第一层叙述拒绝和质量门禁，同时保留稳定事实主体用于窗口身份与纠正缓存。",
+    "为真实场景增加显式 correction 范围，只复验 64 Story、两个窗口、单窗口纠正与缓存链路；工件声明自身范围，不冒充完整 11 场景运行。",
+    "GLM 与 DeepSeek Flash 的受影响复验均通过，编号占位符泄漏为零；完整资格、11 场景、ProjectFlow Dogfood 和非代码基线分别复用已合格运行。",
+    "保存八份安全规范化真实模型工件，并重新冻结 Round 2 为 30 Story 与 8 Chapter，双 Provider 各 15 Story 与 4 Chapter；所有人工字段保持空白。",
+    "更新资格、真实 Provider、测试、CI、证据索引、产品验收和最终收口报告，明确记录历史波动、当前人工阻断和禁止合并范围。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryHumanSubjectLabelService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryNarrativeEntailmentValidator.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryReconstructionService.java",
+    "backend/src/test/java/com/projectflow/eval/ProjectHistoryV385RealScenarioEvaluatorTest.java",
+    ".github/workflows/quality-gates.yml",
+    "scripts/freeze_v385_human_review_sample.py",
+    "docs/acceptance-evidence/v3.8.5/human-review-round2-manifest.json",
+    "docs/acceptance-evidence/v3.8.5/human-review-round2-worksheet.md",
+    "docs/projectflow-v3.8.5-acceptance-report.md",
+    "docs/projectflow-v3.8.5-human-readability-final-closure-audit.md"
+  ],
+  "verification": {
+    "build": "GitHub run 31532558352 的 frontend production build、contracts 和 Playwright 通过；Hermes、Obsidian 与 sensitive-content 也通过。最终 evidence commit 仍需重新运行全部 required jobs。",
+    "tests": "本地 backend/H2 全量 579 项，0 失败，0 错误，5 个条件跳过；另有 10 项受影响回归通过。GLM 与 DeepSeek Flash 的 correction 真实复验均 1/1 PASS、3 次 Story 请求、64 Story、2 窗口、单窗口失效、cache hit、泄漏 0、repair 0。",
+    "manualCheck": "Round 2 已冻结 30 Story/8 Chapter，双 Provider 各 15/4；人工字段 0 项填写，状态 PENDING_HUMAN_REVIEW。Codex 未代填分数或结论。"
+  },
+  "unfinished": [
+    "用户尚未逐项复核并明确批准 Round 2；V3.8.5 不能宣布 PASS。",
+    "最终 evidence commit 的 GitHub backend/H2、PostgreSQL 16、frontend、Playwright、Hermes、Obsidian 与 sensitive-content required checks 尚待全部转绿。",
+    "PR #15 仍为 Draft；未合并 master、未执行 acceptance backfill、未创建 Tag/Release、未删除分支或 worktree。",
+    "既有 npm audit 4 high、0 critical 需要独立依赖升级与回归，不在本轮静默处理。"
+  ],
+  "sedimentCandidates": []
+}

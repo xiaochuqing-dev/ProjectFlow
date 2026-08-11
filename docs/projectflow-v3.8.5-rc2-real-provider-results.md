@@ -1,25 +1,17 @@
 # ProjectFlow V3.8.5 RC2 真实 Provider 结果
 
-最终自动化状态：PASS。人工可读性仍为 PENDING，因此这不是 V3.8.5 最终 PASS。
+自动真实模型证据已完成；人工可读性仍为 PENDING，因此不是 V3.8.5 最终 PASS。
 
-正式配置来自 workflow，不含凭据值：GLM 使用 `glm-5.2`、`https://ark.cn-beijing.volces.com/api/coding/v3`、`OPENAI_RESPONSES`、high；DeepSeek 使用 `deepseek-v4-flash`、`https://opencode.ai/zen/go/v1`、`OPENAI_CHAT_COMPLETIONS`、max。Key 只由 `PROJECTFLOW_REAL_MODEL_API_KEY` 与 `PROJECTFLOW_DEEPSEEK_API_KEY` Repository Secrets 注入。
+正式配置不含凭据值：GLM 使用 `glm-5.2`、Ark Coding v3、`OPENAI_RESPONSES`、high；DeepSeek 使用 `deepseek-v4-flash`、OpenCode Go `/v1`、`OPENAI_CHAT_COMPLETIONS`、max。Key 只由两项 GitHub Repository Secrets 注入。
 
-最终 run 为 [`31318477841`](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31318477841)，head `74ba013615932748b4a41077baf8f89af618a5d2`。
-
-| 门禁 | GLM | DeepSeek Flash |
+| 证据 | GLM | DeepSeek Flash |
 | --- | --- | --- |
-| V3.8.0 schema/security | PASS；1 请求，5,131 token | PASS；1 请求，3,846 token；reasoning present |
-| V3.7.5 38-run | 38/38；52 请求，521,726 token | 38/38；64 请求，663,829 token |
-| Understanding E2E | 17/17 | 17/17 |
-| V3.8.5 19-case | qualified=true；20 请求，97,269 token，863,220 ms | qualified=true；21 请求，121,540 token，473,875 ms |
-| 19-case 失败/降级/拒绝/修复 | 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 |
-| 最终真实场景 | 11/11；68 请求，871,777 token，5,266,928 ms | 11/11；70 请求，962,976 token，2,158,891 ms |
-| ProjectFlow Dogfood | PASS | PASS |
-| 五类非代码 | 5/5 | 5/5 |
-| 安全持久化 | Key/Prompt/raw/reasoning/绝对路径均 false | Key/Prompt/raw/reasoning/绝对路径均 false |
+| 完整资格 | run `31523413972`，40 请求，156,848 token，repair 6/0 | run `31517037532`，35 请求，133,653 token，repair 1/0 |
+| 完整场景 | 11/11，52 请求，884,266 token | 11/11，59 请求，945,342 token |
+| Dogfood / 非代码 | PASS / 5/5 | PASS / 5/5 |
+| 受影响纠正复验 | run `31532558352`，1/1，3 请求，68,769 token | run `31532558352`，1/1，3 请求，59,386 token |
+| 受影响复验安全结果 | 64 Story、2 窗口、单窗口失效、cache hit、泄漏 0 | 64 Story、2 窗口、单窗口失效、cache hit、泄漏 0 |
 
-DeepSeek 场景 attempt 1 必须保留：9/11，54 个物理请求、826,943 token、1,794,354 ms；17-window 首轮为 15 succeeded、1 failed、1 pending，随后 correction 因 continuation fixture 不可用连带失败。相同代码、相同 Flash/max 配置只重跑失败 job 后 attempt 2 为 11/11；这被记录为真实模型输出波动，不倒推成 Provider 专属业务修复。
+所有正式工件只保存规范化结果，安全字段显示 Key、Prompt、raw response、reasoning 和机器绝对路径未持久化。两份受影响工件 SHA-256 分别为 GLM `0aff9ec06f28c73fd7a445d5e6385d4300bcbcb7b5584e1b4113b292a044e97a`、DeepSeek `97cb5bc097ad86cd5a78271af2e752d04e5be6487ad4ae9571baad2bc158869d`。
 
-历史失败链同样保留：最初 GLM/DeepSeek 19-case qualification 均 FAIL；旧 DeepSeek 场景 10/11 且 Dogfood 角色引用失败；run `31264440534` 因 Secrets 缺失在请求前失败；run `31294942095` 中 GLM qualification FAIL/场景 8/11、DeepSeek Understanding 16/17；run `31303975027` 中 GLM 自动门禁通过、DeepSeek Understanding 16/17，失败为 reasoning 存在但可见 content 为空。当前修复保持 max 思考，并把唯一恢复限制在两次请求内；最终 run 的 DeepSeek Understanding 已为 17/17。
-
-仓库只保存 `docs/acceptance-evidence/v3.8.5/real-model/` 下的归一化结果；不保存完整 Prompt、raw response、reasoning、Key、Authorization、机器绝对路径或私有项目内容。
+历史失败不删除：run `31468663795` 的 DeepSeek 场景为 9/11，run `31517037532` 的较早 GLM 资格失败。当前修复没有模型专属业务分支，也没有降低 Evidence、Strong Fact、ID、角色图或安全门禁。

@@ -1,7 +1,7 @@
 {
   "version" : "projectflow-v3.8.5-history-real-model-v4",
-  "generatedAt" : "2026-08-09T14:28:23.663196555Z",
-  "promptVersion" : "project-history-synthesis-v8",
+  "generatedAt" : "2026-08-11T17:21:37.685820342Z",
+  "promptVersion" : "project-history-synthesis-v9",
   "provider" : {
     "name" : "DeepSeek OpenCode Go",
     "reasoningEffort" : "max",
@@ -9,7 +9,7 @@
     "protocol" : "OPENAI_CHAT_COMPLETIONS"
   },
   "input" : {
-    "promptCharacterCount" : 3116,
+    "promptCharacterCount" : 3194,
     "chapterCount" : 1,
     "storyCount" : 2
   },
@@ -28,13 +28,13 @@
     "returnedChapterCount" : 1
   },
   "diagnostics" : {
-    "latencyMs" : 24106,
-    "totalTokens" : 3846,
+    "reasoningPresent" : true,
+    "latencyMs" : 30706,
+    "totalTokens" : 4954,
     "finishReason" : "COMPLETE",
     "requestCount" : 1,
     "schemaMatched" : true,
-    "truncated" : false,
-    "reasoningPresent" : true
+    "truncated" : false
   },
   "security" : {
     "rawResponsePersisted" : false,

@@ -2,7 +2,9 @@
 
 ## V3.8.5 human-readable history gates
 
-The final closure adds fourteen named gates for human narrative shape, entailment/paraphrase rejection, subject labels, semantic Chapters, raw-subject leakage, non-repetition, natural unknown wording, planned/implemented and declared/verified separation, Dogfood, non-code language, cross-Provider parity and the frozen Round 2 manifest. The Round 2 test is intentionally red before artifacts exist and must be green in the final commit.
+Final closure evidence on 2026-08-12 is backend/H2 579 tests, 0 failures, 0 errors and 5 conditional skips. Round 2 now exists and its manifest gate is green locally: 30 Story/8 Chapter, 15/4 per Provider, immutable Round 1 hashes, blank human fields and affected correction artifacts. The closure adds named gates for narrative shape, entailment/paraphrase rejection, subject labels, semantic Chapters, raw-subject leakage, non-repetition, natural unknown wording, planned/implemented and declared/verified separation, Dogfood, non-code language, cross-Provider parity and the frozen Round 2 manifest.
+
+Real affected validation run `31532558352` passed for GLM and DeepSeek Flash with 64 Story, 2 stable windows, one correction-local invalidation, final cache hit and 0 indexed-placeholder leakage. The full qualification, Dogfood, non-code and 11-scenario baselines remain runs `31523413972` and `31517037532`.
 
 RC2 adds provider-neutral minimal-schema, semantic validation, role-graph, language, failure-taxonomy, corrected-view parity and cross-consumer contracts. Local closure evidence on 2026-08-08 is H2 546 tests with 0 failures and 5 conditional skips; PostgreSQL 16 Testcontainers 5/5; frontend contracts 58/58; Playwright 9/9; Hermes 10/10; Obsidian 25/25. Real-provider wrapper tests skip without an explicit artifact name and become blocking inside the real workflow.
 

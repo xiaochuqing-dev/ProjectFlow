@@ -2,7 +2,7 @@
 
 ProjectFlow V3.8.5 is a local-first project-history reconstruction and long-term project-memory layer. Its universal product axis is 项目历程, not Capability Map: it turns Git, files, documents, Project Facts, Agent results and optional collaboration metadata into a readable path from source events to human-readable chapters, primary change stories, supporting work, evolution threads and Evidence drill-down.
 
-V3.8.5 RC2 has moved role graphs, Chapter membership and Evidence ownership back to the deterministic engineering layer; GLM and DeepSeek share one minimal wording-only contract. Round 1 is formally not approved. Repository Secrets are available for a new GLM/DeepSeek Flash run, but PR #15 remains Draft until that run produces a frozen Round 2 set and the user explicitly approves its genuine 30 Story/8 Chapter review.
+V3.8.5 RC2 has moved role graphs, Chapter membership and Evidence ownership back to the deterministic engineering layer; GLM and DeepSeek share one minimal wording-only contract. Round 1 is formally not approved. The new GLM/DeepSeek Flash qualification, full scenarios and affected correction rerun are complete, and Round 2 is frozen at 30 Story/8 Chapter with blank human fields. PR #15 remains Draft until the user explicitly reviews and approves that Round 2 set.
 
 ProjectFact remains the only persistent strong-fact source. `OBSERVED`/`VERIFIED` stay separate from `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` and `PROCESS_EVIDENCE`; a story or chapter is a replaceable read model and cannot promote a claim. Missing reasons remain UNKNOWN, raw events are retained, and GET reads never scan Git or call a model.
 
