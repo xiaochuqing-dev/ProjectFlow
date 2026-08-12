@@ -1157,6 +1157,7 @@ public class ProjectHistoryReconstructionService {
             groups.add(current);
             signals.put(current.get(0).id(), List.copyOf(currentSignals));
         }
+        groups = splitIndependentCommitOutcomes(groups, events, signals);
         List<HistoryChapter> result = new ArrayList<>();
         for (List<ChangeStory> group : groups) {
             Instant from = group.get(0).occurredFrom();
@@ -1179,6 +1180,84 @@ public class ProjectHistoryReconstructionService {
             ));
         }
         return result;
+    }
+
+    /**
+     * A generic commit can touch several unrelated outcomes. Story ownership is
+     * already fixed at this point, so split only when every Primary shares one
+     * commit and each Supporting story has an explicit owner.
+     */
+    private List<List<ChangeStory>> splitIndependentCommitOutcomes(
+        List<List<ChangeStory>> groups,
+        List<EventView> events,
+        Map<String, List<String>> signals
+    ) {
+        Map<UUID, EventView> eventsById = events.stream().collect(
+            LinkedHashMap::new, (map, event) -> map.put(event.id(), event), Map::putAll
+        );
+        List<List<ChangeStory>> result = new ArrayList<>();
+        for (List<ChangeStory> group : groups) {
+            List<ChangeStory> primaries = group.stream().filter(ChangeStory::primary).toList();
+            if (primaries.size() < 2 || !shareOneCommit(primaries, eventsById)) {
+                result.add(group);
+                continue;
+            }
+            Map<String, List<ChangeStory>> bySubject = new LinkedHashMap<>();
+            Map<String, String> primarySubjects = new LinkedHashMap<>();
+            for (ChangeStory primary : primaries) {
+                String subject = primary.primarySubjectKey();
+                bySubject.computeIfAbsent(subject, ignored -> new ArrayList<>()).add(primary);
+                primarySubjects.put(primary.id(), subject);
+            }
+            if (bySubject.size() < 2) {
+                result.add(group);
+                continue;
+            }
+            boolean completeOwnership = true;
+            for (ChangeStory story : group) {
+                if (story.primary()) continue;
+                String subject = primarySubjects.get(story.primaryStoryId());
+                if (subject == null) {
+                    subject = primaries.stream().filter(primary -> primary.supportingChangeRefs().contains(story.id()))
+                        .map(ChangeStory::primarySubjectKey).findFirst().orElse(null);
+                }
+                if (subject == null) {
+                    completeOwnership = false;
+                    break;
+                }
+                bySubject.get(subject).add(story);
+            }
+            if (!completeOwnership) {
+                result.add(group);
+                continue;
+            }
+            List<String> originalSignals = signals.getOrDefault(group.get(0).id(), List.of());
+            int index = 0;
+            for (List<ChangeStory> members : bySubject.values()) {
+                List<ChangeStory> orderedMembers = members.stream()
+                    .sorted(Comparator.comparing(ChangeStory::occurredFrom).thenComparing(ChangeStory::id)).toList();
+                result.add(orderedMembers);
+                signals.put(
+                    orderedMembers.get(0).id(),
+                    index++ == 0 ? originalSignals : List.of("INDEPENDENT_OUTCOME_BOUNDARY")
+                );
+            }
+        }
+        return result;
+    }
+
+    private static boolean shareOneCommit(List<ChangeStory> stories, Map<UUID, EventView> eventsById) {
+        Set<String> shared = null;
+        for (ChangeStory story : stories) {
+            Set<String> refs = story.eventRefs().stream().map(eventsById::get)
+                .filter(java.util.Objects::nonNull).flatMap(event -> commitRefs(event).stream())
+                .collect(LinkedHashSet::new, Set::add, Set::addAll);
+            if (refs.isEmpty()) return false;
+            if (shared == null) shared = new LinkedHashSet<>(refs);
+            else shared.retainAll(refs);
+            if (shared.isEmpty()) return false;
+        }
+        return shared != null && !shared.isEmpty();
     }
 
     private ModelResult enhanceWithModel(

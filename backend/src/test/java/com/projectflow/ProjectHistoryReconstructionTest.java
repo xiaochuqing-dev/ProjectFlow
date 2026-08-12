@@ -157,6 +157,11 @@ class ProjectHistoryReconstructionTest {
         assertThat(stories.items().stream().map(item -> item.primarySubjectKey()).toList())
             .contains("auth", "export", "cache");
         assertThat(stories.items().stream().map(item -> item.primarySubjectKey()).distinct().count()).isGreaterThanOrEqualTo(3);
+        var chapters = readService.chapters(userId, project.getId(), 0, 20).items();
+        assertThat(chapters).hasSizeGreaterThanOrEqualTo(3);
+        assertThat(chapters).allSatisfy(chapter -> assertThat(chapter.storyRefs().stream()
+            .map(id -> stories.items().stream().filter(story -> story.id().equals(id)).findFirst().orElseThrow())
+            .filter(story -> "PRIMARY".equals(story.role())).count()).isEqualTo(1));
 
         assertThatThrownBy(() -> readService.overview(otherUserId, project.getId()))
             .isInstanceOf(AppException.class)

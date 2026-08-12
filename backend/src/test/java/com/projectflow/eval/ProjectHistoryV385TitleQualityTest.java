@@ -75,6 +75,18 @@ class ProjectHistoryV385TitleQualityTest {
             "建立项目文档并保存为可供后续查看的记录",
             "项目文档在此阶段形成可查看记录。"
         )).isTrue();
+        assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
+            "建立了核心使用体验的初始记录",
+            "为项目首次整理出核心使用体验的说明。"
+        )).isTrue();
+        assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
+            "研究报告经历了修改与拆分，留下了相应的调整记录",
+            "最终状态仍缺少直接资料确认。"
+        )).isTrue();
+        assertThat(ProjectHistoryV385QualityEvaluator.actionObjectResult(
+            "创建项目文档，为项目留下第一份可查看的记录",
+            "本次把相关内容保存下来，供后续查看。"
+        )).isTrue();
     }
 
     @Test

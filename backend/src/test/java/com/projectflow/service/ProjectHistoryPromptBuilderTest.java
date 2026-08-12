@@ -122,7 +122,8 @@ class ProjectHistoryPromptBuilderTest {
         assertThat(template.path("chapters").findValuesAsText("chapterId")).containsExactly("chapter-one");
         assertThat(template.path("stories").get(0).path("unknownWording").asText())
             .contains("没有足够信息", "为什么");
-        assertThat(template.path("stories").get(1).path("unknownWording").asText()).isEmpty();
+        assertThat(template.path("stories").get(1).path("unknownWording").asText())
+            .isEqualTo("目前没有足够信息确认为什么做这次调整。");
         assertThat(template.path("stories").get(0).path("beforeWording").asText()).isEmpty();
         assertThat(template.path("stories").get(0).path("changeWording").asText()).isEmpty();
         assertThat(template.path("stories").get(0).path("afterWording").asText()).isEmpty();

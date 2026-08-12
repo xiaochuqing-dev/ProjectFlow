@@ -15,14 +15,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v10";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v11";
     public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v5";
     static final int MAX_PROMPT_CHARS = 60_000;
     public static final String VALIDATION_REPAIR_MARKER = "\nHISTORY_VALIDATION_REPAIR=";
     private static final String VALIDATION_REPAIR_INSTRUCTIONS = """
         上一次输出未通过 ProjectFlow 的统一语义安全校验。请从原输入重新生成一次完整 JSON，不要复述或修补上一次输出。
         只能使用 OUTPUT_TEMPLATE_JSON 中的对象、ID 和字段；每个 required ID 必须且只能返回一次。
-        reasonEvidenceRefs 只能逐项复制对应 Story 的 reasonEligibleEvidenceRefs；没有合格 Evidence 时 reason 留空，并保留“原因未知”。
+        reasonEvidenceRefs 只能逐项复制对应 Story 的 reasonEligibleEvidenceRefs；没有采用合格 Evidence 时 reason 留空，并保留模板中的“原因未知”。只有 reason 非空且 reasonEvidenceRefs 非空时才可清空 unknownWording。
         Before / Change / After 只能改写 wording，不得改变 verified semantic、claimState 或 allowed claims。
         不得返回工程层字段，不得创造 ID、Evidence、实体、动作、原因、冲突、数字或项目状态。只返回严格 JSON。
         不得使用“相关变化”“工程分组”“形成初始结果”“进入当前时间点可确认的新状态”等空泛或内部模板表达。
@@ -51,7 +51,7 @@ public final class ProjectHistoryPromptBuilder {
         claimState、claimAction、supportedOutcome、supportClass、allowedClaims 与 forbiddenClaims 是硬边界。PLANNED 不得写成 IMPLEMENTED，DECLARED 不得写成 VERIFIED，CONFIGURED 不得写成已部署，未给直接验证 Evidence 不得写稳定或生产可用。
         directSupportSummary 是与当前 subject/action 直接匹配的有界支持；indirectContextSummary 只解释上下文，明确不能提升 Claim。不得因为同 Commit、相邻时间、相同区域或 Supporting Story 把间接上下文借给当前 Claim。
         downgradeReason 必须被遵守：只能在工程层给出的 supportedOutcome 内改写，不得自行提高状态。
-        Commit message 只是线索。reason 仅在 reasonEvidenceRefs 非空且全部来自该 Story 的 reasonEligibleEvidenceRefs 时填写；否则 reason 留空，并用一条自然的 unknownWording 说明原因暂时无法确认。
+        Commit message 只是线索。reason 仅在 reasonEvidenceRefs 非空且全部来自该 Story 的 reasonEligibleEvidenceRefs 时填写；否则 reason 留空，并保留模板中的自然 unknownWording，说明原因暂时无法确认。即使存在可选 Evidence，只要本次没有实际采用，也不得清空 unknownWording。
         不得创造 ID、Evidence、文件、数字、原因或项目状态；不得写重要性、成熟度、里程碑、成功判断、下一步或建议。非软件项目不要使用 Controller、Service、Capability 等软件术语。
         只返回严格 JSON，不得增加字段：
         {"stories":[{"storyId":"","humanTitle":"","oneSentenceSummary":"","beforeWording":"","changeWording":"","afterWording":"","reason":"","reasonEvidenceRefs":[],"unknownWording":""}],
@@ -220,8 +220,7 @@ public final class ProjectHistoryPromptBuilder {
         List<String> storyIds = stories.stream().map(StoryPromptInput::storyId).toList();
         List<String> chapterIds = chapters.stream().map(ChapterPromptInput::chapterId).toList();
         List<StoryOutputTemplate> storyTemplates = stories.stream().map(story -> new StoryOutputTemplate(
-            story.storyId(), "", "", "", "", "", "", List.of(),
-            story.reasonEligibleEvidenceRefs().isEmpty() ? UNKNOWN_REASON : ""
+            story.storyId(), "", "", "", "", "", "", List.of(), UNKNOWN_REASON
         )).toList();
         List<ChapterOutputTemplate> chapterTemplates = chapters.stream()
             .map(chapter -> new ChapterOutputTemplate(chapter.chapterId(), "", ""))
@@ -231,7 +230,7 @@ public final class ProjectHistoryPromptBuilder {
             输出前做机械核对：本次必须返回 Story %d 个、Chapter %d 个；requiredStoryIds=%s；requiredChapterIds=%s。
             每个 required ID 恰好一次，且对象只能包含上面列出的可改字段；数量、ID 或字段不一致时先修正再输出。
             必须复制 OUTPUT_TEMPLATE_JSON 的对象、ID、字段和数组类型，只填写允许的文字；不得删除、增加或重排对象。
-            reasonEvidenceRefs 只能从对应 Story 的 reasonEligibleEvidenceRefs 中选择；没有可核验原因时保留模板中的自然 unknownWording。
+            reasonEvidenceRefs 只能从对应 Story 的 reasonEligibleEvidenceRefs 中选择；没有实际采用可核验原因时保留模板中的自然 unknownWording。只有 reason 与 reasonEvidenceRefs 同时非空时才可清空 unknownWording。
             """.formatted(storyIds.size(), chapterIds.size(), json(storyIds), json(chapterIds));
         return INSTRUCTIONS + outputCheck
             + OUTPUT_TEMPLATE_MARKER + json(new OutputTemplate(storyTemplates, chapterTemplates))
