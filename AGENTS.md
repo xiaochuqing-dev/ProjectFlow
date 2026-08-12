@@ -1,7 +1,7 @@
 <!-- PROJECTFLOW V3.8.5 CONTEXT START -->
 ProjectFlow 当前版本为 V3.8.5。后续 Agent 必须按“真实项目材料 -> 规范化来源事件 -> Technical Atom -> Primary/Supporting Change -> 可读变化故事 -> 动态时间篇章 -> 演变链 -> 原始事件与 Evidence 下钻 -> 当前结果 -> 人与 Agent 继续工作”理解产品。项目历程是通用主轴，Capability 只是部分项目的可选视图。
 
-V3.8.5 RC2 追加规则：模型输出只允许 Story 的 storyId/humanTitle/oneSentenceSummary/beforeWording/changeWording/afterWording/reason/reasonEvidenceRefs/unknownWording 与 Chapter 的 chapterId/title/summary。role、primaryStoryId、supportingChangeRefs、storyRefs、Before/Change/After 的事实语义、冲突、Evidence 归属、时间边界和当前性由工程层唯一维护。Frontend、Gateway、Agent、Hermes、Obsidian 必须消费同一 corrected view，并在 presentationRevision 漂移时停止混合读取。真实 Provider 与 Round 2 人工评分未通过前保持 Draft，不得宣布最终 PASS。
+V3.8.5 RC3 追加规则：每个用户可见强状态 Claim 必须绑定同一 subject/action 的直接 Technical Atom 与 Evidence；同 Commit、同 Story、时间接近、相同区域或 Supporting 关系只提供间接上下文，不能提升状态。`project-area-*` 是宽泛工程区域而非具体功能主体，只能形成 OBSERVED Claim，精确主体仍按直接 Evidence 判定。模型输出仍只允许 Story 的 storyId/humanTitle/oneSentenceSummary/beforeWording/changeWording/afterWording/reason/reasonEvidenceRefs/unknownWording 与 Chapter 的 chapterId/title/summary。工程层唯一维护 Claim state、direct/indirect Evidence、role、primaryStoryId、supportingChangeRefs、storyRefs、事实语义、冲突、时间边界和当前性。Story 与 Chapter 的一次安全重生成必须各自使用原始有界输入和匹配 schema，Chapter repair 禁止引用 Story 专用的 OUTPUT_TEMPLATE_JSON。若 Provider 的标题/摘要组合没有明确动作、对象和受支持结果，必须保留已校验的确定性标题/摘要，并用 `MODEL_VALIDATED_WITH_DETERMINISTIC_TITLE` 与计数 diagnostics 公开该回退。Round 2 已冻结为 NEEDS_REVISION_NOT_APPROVED；真实 Provider 自动门禁和 Round 3 真人评分未通过前，PR #15 保持 Draft，不得宣布最终 PASS。
 
 V3.8.5 大众可读历程与用户修正规则（后续 Agent 必须遵守）：
 - Raw Event、Technical Atom、Primary Story、Supporting Change、Thread 和 Chapter 是分层派生展示；ProjectFact 仍是唯一强事实来源，任何展示修正都不得改写 Fact、Event、Commit 或 Evidence。

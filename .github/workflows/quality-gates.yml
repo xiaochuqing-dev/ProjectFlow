@@ -85,9 +85,13 @@ jobs:
             ProjectHistoryDogfoodNarrativeEntailmentTest \
             ProjectHistoryNonCodeHumanLanguageTest \
             ProjectHistoryCrossProviderNarrativeParityTest \
+            ProjectHistoryClaimEvidenceAttributionContractTest \
             ProjectHistoryHumanReviewRound2ManifestTest; do
             test -f "target/surefire-reports/TEST-com.projectflow.service.${report}.xml"
           done
+          test -f target/surefire-reports/TEST-com.projectflow.service.ProjectHistoryHumanReviewRound3ManifestTest.xml
+          test -f target/surefire-reports/TEST-com.projectflow.ProjectHistoryV385GroundTruthExecutionTest.xml
+          test -f target/surefire-reports/TEST-com.projectflow.eval.ProjectHistoryV385TitleQualityTest.xml
       - name: 保存 JUnit 报告
         if: always()
         uses: actions/upload-artifact@v4

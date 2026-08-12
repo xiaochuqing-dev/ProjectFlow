@@ -2,7 +2,7 @@
 
 Last updated: 2026-08-12
 
-V3.8.5 RC2 当前状态：Round 1 为 NEEDS_REVISION_NOT_APPROVED。新 GLM/DeepSeek Flash 资格、11 场景基线和编号占位符纠正链路复验已经完成；Round 2 已冻结为 30 Story/8 Chapter，人工字段全部空白，状态为 PENDING_HUMAN_REVIEW。工程层继续唯一维护 Primary/Supporting、Chapter membership、Before/Change/After 的事实语义与 Evidence；模型只改写受约束的 Story/Chapter 措辞和有 Evidence 的 reason。用户明确批准 Round 2 前，PR #15 必须保持 Draft，不得宣布最终 PASS、合并、backfill 或清理分支。
+V3.8.5 RC3 当前状态：Round 1 与 Round 2 均为 NEEDS_REVISION_NOT_APPROVED。Round 2 的 ProjectFlow skeleton/login P0 证明 Story-wide Evidence 聚合会让一个主体借用同 Commit 无关代码的实现强度；RC3 已改为 Technical Atom 级 subject/action/state 归因，区分 direct Evidence 与不可提升状态的 indirect context，并对不够精确的 `project-area-*` 主体设置 OBSERVED 上限。Chapter 必须复述具体成果；其一次安全 repair 只允许从 CHAPTER_SYNTHESIS_JSON 按 v6 Chapter schema 重生成，不能套用 Story 的 OUTPUT_TEMPLATE_JSON。Story v12 还会检测模型标题/摘要是否明确包含动作、对象和受支持结果；不满足时保留已验证的确定性标题/摘要并公开回退状态与计数。GLM `glm-5.2` Responses/max 与 DeepSeek Flash Chat/max 的受影响真实复验、Round 3 30 Story/8 Chapter 冻结和最终静态 CI 以验收报告为准。用户明确批准 Round 3 前，PR #15 必须保持 Draft，状态只能是 PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS，不得合并、backfill 或清理分支。
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
@@ -191,7 +191,7 @@ V3.3.6 compatibility focus:
 - Local fact and Agent-result drafts remain visible but never automatically enter the formal suggestion flow.
 - Confirmed sediments persist source batches and affected files, enter pending capability analysis, and are the direct input to capability analysis.
 - Capability analysis records input sediment IDs and updates their analysis state only after successful card persistence.
-- Empty truncated model output triggers one bounded recovery. Reasoning-capable profiles keep their configured effort and Provider ceiling; the current RC2 profiles use GLM high and DeepSeek Flash max. Reasoning text is not retained, and external waits do not hold method-level database transactions.
+- Empty truncated model output triggers one bounded recovery. Reasoning-capable profiles keep their configured effort and Provider ceiling; the current RC3 acceptance profiles use GLM max and DeepSeek Flash max. Reasoning text is not retained, and external waits do not hold method-level database transactions.
 
 V3.3.5 focus (still applies):
 

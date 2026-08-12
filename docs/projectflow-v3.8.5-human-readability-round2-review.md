@@ -14,7 +14,7 @@ Round 2 raw working-file SHA-256 values are manifest `e1aca397b469c4d1e4e4b4f6bb
 
 Round 1 remains immutable and formally NEEDS_REVISION_NOT_APPROVED. Its canonical-LF hashes remain manifest `524391f2137a7b72d2920efbefaee1190177bbeb588594ef47fa9099d92554d9` and worksheet `dbe05a47548ba72cd2c379c05b987e5915e68c32bb935e5bbd3fcf173c420408`.
 
-Automated checks found no indexed placeholder, credential pattern or private absolute path in the Round 2 worksheet. They do not replace human judgment. Round 2 nevertheless has a P0 truthfulness failure: the ProjectFlow skeleton commit `ae9fba1e...` was presented as “编写登录流程代码并形成实现”，并声称此前没有登录实现、本阶段加入了实现登录所需代码。其登录直接证据只有背景图；README、环境配置和同提交的其他代码/配置不能证明登录流程实现。该错误足以让 Round 2 直接判为 NEEDS_REVISION_NOT_APPROVED，不得用平均可读性分数抵消。
+Automated checks found no indexed placeholder, credential pattern or private absolute path in the Round 2 worksheet. They do not replace human judgment. Round 2 nevertheless has a P0 truthfulness failure: GLM sample `glm-story-14`, Story `story-2bda5e730c55c66ee182`, from `projectflow-current-history-dogfood:primary`, presented the ProjectFlow skeleton commit `ae9fba1e60758252635695b797169dfde3c41e0a` as “编写登录流程代码并形成实现”，并声称此前没有登录实现、本阶段加入了实现登录所需代码。它列出的直接文件只有 `frontend/next-env.d.ts`、`next.config.ts`、`package.json` 和 `postcss.config.mjs`；登录背景图、README、环境配置和同提交的其他代码/配置均不能证明登录流程实现。根因是 Story-wide Evidence 聚合让一个来源中的登录语义借用了同 Story/Commit 无关代码的实现强度；旧 Validator 只看总体主题与代码扩展名，没有保存 Technical Atom 对具体 subject/action/state 的直接归属。该错误足以让 Round 2 直接判为 NEEDS_REVISION_NOT_APPROVED，不得用平均可读性分数抵消。
 
 同一冻结包中还保留了需要关注的空泛 Chapter，例如“围绕项目基础建设推进阶段成果”以及“相关成果逐步形成并得到完善”。这些原始失败内容不做手工修文，RC3 通过新合同和 Round 3 新样本重新验收。
 

@@ -1,6 +1,6 @@
 # ProjectFlow V3.8.5 Dogfood 对比记录
 
-状态：双 Provider 最终 ProjectFlow Dogfood 自动门禁 PASS；历史固定兼容模型只属于执行器和数据守恒证据，旧 DeepSeek 10/11 FAIL、GLM NOT_RUN 与本轮 DeepSeek attempt 1 波动仍必须保留。真实人工可读性尚未评分，因此整体最终资格仍为 BLOCKED。
+状态：下述双 Provider 11/11 是 RC2 保留基线，不是 RC3 最终结果。历史固定兼容模型只属于执行器和数据守恒证据，旧 DeepSeek 10/11 FAIL、GLM NOT_RUN、RC2 attempt 1 波动和 RC3 真实失败均必须保留。Round 3 真人可读性尚未评分，因此整体最终资格仍为 `PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS`。
 
 RC2 冻结工程基线保持 216 Commit、2,915 Source Event、337 Story、227 Primary、110 Supporting、9 Chapter。`RealDogfoodRoleGraphConsistencyTest` 证明完整双向角色图通过，并保留一个故意破坏引用的回归反例；真实模型只影响措辞，不能改变这些数量和关系。
 
@@ -92,8 +92,8 @@ DeepSeek attempt 1 为 9/11：17-window 首轮留下 1 failed、1 pending，corr
 
 ## 仍不理想的样例
 
-固定模型仍输出“整理前端区域”“整理 gitignore”“整理 project”“整理 task”“整理 ai review”等对象级模板；Chapter 也含有截短英文提交对象。最终真实工件已冻结进 30 Story / 8 Chapter 人工池，但评分仍为空。所有候选都必须保留真实低分，不因自动门禁通过而宣称人工可读性通过。
+固定模型仍输出“整理前端区域”“整理 gitignore”“整理 project”“整理 task”“整理 ai review”等对象级模板；Chapter 也含有截短英文提交对象。RC2 真实工件曾冻结进 30 Story / 8 Chapter 人工池，但 Round 2 已因 truthfulness P0 判为 `NEEDS_REVISION_NOT_APPROVED`；新的 Round 3 另行冻结且评分必须为空。所有候选都必须保留真实低分，不因自动门禁通过而宣称人工可读性通过。
 
 ## 证据边界
 
-工件不保存完整 Prompt、raw response、reasoning、Key、Authorization 或机器绝对路径。最终 GLM/DeepSeek 19-case qualification 与 Dogfood 自动门禁通过；人工分数仍为 NOT_RUN，PR #15 继续 Draft。
+工件不保存完整 Prompt、raw response、reasoning、Key、Authorization 或机器绝对路径。本文的 GLM/DeepSeek 19-case qualification 与 Dogfood 自动通过只属于 RC2 基线；RC3 结果以当前真实 Provider 报告为准。人工分数仍为 NOT_RUN，PR #15 继续 Draft。

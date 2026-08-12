@@ -33,6 +33,7 @@ Direct Evidence 必须同时满足：
 - REMOVED/RESTORED 必须来自同一 subject 的直接生命周期 Evidence。
 - 同一 Story 出现互相冲突的直接 Evidence 时为 CONFLICTED。
 - 没有直接 Evidence 时为 UNKNOWN；不得用 Supporting 或同 Commit 代码补强。
+- `project-area-*` 只表示宽泛工程区域，不是具体功能 subject。区域内存在代码只能证明 OBSERVED 变化，不能把整个区域提升为 IMPLEMENTED/VERIFIED；精确 subject 的直接实现与独立验证 Evidence 仍可正常提升。
 
 Supporting Story 保留自己的事实表达，但其 Evidence 永远不能把 Primary Story 从弱状态提升为强状态。
 

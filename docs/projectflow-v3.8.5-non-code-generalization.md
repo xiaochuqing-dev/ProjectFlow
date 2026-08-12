@@ -1,6 +1,6 @@
 # ProjectFlow V3.8.5 非代码项目泛化记录
 
-状态：自动化双 Provider 非代码门禁 PASS；真实人工可读性 PENDING，因此不宣称最终泛化质量 PASS。
+状态：RC2 自动化双 Provider 非代码门禁 PASS；RC3 必须随当前双 Provider 场景重新验证。Round 3 真实人工可读性 PENDING，因此不宣称最终泛化质量 PASS。
 
 RC2 保持 Provider-neutral：模型不生成 role 或工程结构；确定性语言层根据材料类型生成安全 fallback，不把演示、研究、数据、品牌页或无 Git 版本强行描述成后端、Controller、数据库或发布能力。Gateway、Agent、Hermes 与 Obsidian 读取同一个 corrected view，GET 不触发模型调用。
 
@@ -16,4 +16,4 @@ RC2 保持 Provider-neutral：模型不生成 role 或工程结构；确定性�
 
 两者最终 5/5，未处理窗口、Invalid Evidence、跨项目引用、unsupported strong fact、raw response、reasoning、Key 和绝对路径持久化均为 0/false。DeepSeek attempt 1 的这五类和 Dogfood 也通过；失败只发生在 17-window 及其 correction 前置依赖，attempt 2 后全部 11/11。
 
-这些结果证明材料类型与安全边界，不等于大众语言已由人工认可。冻结 30 Story / 8 Chapter 已包含非代码分层样本，当前评分为空。PR #15 继续 Draft。
+这些 RC2 结果证明当时的材料类型与安全边界，不等于大众语言已由人工认可。Round 1 和 Round 2 的 30 Story / 8 Chapter 均已冻结并正式不批准；新的 Round 3 仍须包含非代码分层样本且评分为空。PR #15 继续 Draft。

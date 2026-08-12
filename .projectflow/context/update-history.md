@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.8.5 RC3 Evidence 级叙事真实性封板 - 2026-08-12
+
+Round 2 因 GLM `glm-story-14` 把 skeleton/登录规划与同提交无关代码拼成“登录已实现”而正式冻结为 NEEDS_REVISION_NOT_APPROVED，原 artifacts 和哈希未改写。RC3 新增 Technical Atom 级 Claim attribution，按 subject/action 区分 direct Evidence 与不可提升状态的 indirect context，逐 Claim 计算 PLANNED/DECLARED/CONFIGURED/IMPLEMENTED/OBSERVED/VERIFIED/REMOVED/RESTORED/UNKNOWN/CONFLICTED 上限，并让 correction 与 fallback 通过同一真实性门禁。Chapter 现在必须复述具体 Primary 成果；同一泛化提交中的独立 Primary outcome 仅在 Supporting ownership 完整时由工程层确定性拆分。真实运行又发现 Chapter 修复请求误用了 Story 的 OUTPUT_TEMPLATE_JSON 合同、宽泛 `project-area-*` 区域主体会借区域内任意代码达到 IMPLEMENTED，以及 GLM 会偶发给出有动作/对象但没有明确结果的标题。现已分别改为基于原始 CHAPTER_SYNTHESIS_JSON 的 v6 专用 repair、区域级 OBSERVED ceiling，以及 Story v12 的动作/对象/结果门禁与可诊断确定性标题回退。GitHub 还暴露 Round 2 raw hash 受 LF/CRLF checkout 影响；验证现改为 immutable canonical-LF hash 加两个已记录 raw hash 的白名单，未改写冻结文件。冻结 Ground Truth 和阈值未修改；真实运行的首次 DeepSeek 资格失败、10/11 Dogfood 失败、GLM 安全 fallback 与标题波动及后续复验均作为独立 Evidence 保留。Round 3 真人批准、合并、backfill 和清理仍未授权，PR #15 保持 Draft。
+
 ## ProjectFlow V3.8.5 RC2 大众可读历程最终封板 - 2026-08-10
 
 Round 1 正式记录为 NEEDS_REVISION_NOT_APPROVED，并保持原 30 Story/8 Chapter 文件不变。新增 Provider-neutral 的大众主体归一化与叙述蕴含校验：九种 claim state、受约束主体、原因 Evidence、不同义的 Title/Summary/Before/Change/After、自然未知表述和阶段级 Chapter 都由统一规则校验；模型输入不再包含原始路径、技术详情或 commit 摘要。当前本地后端 584 项、前端 58 项契约、构建、Hermes 与 Obsidian 通过；新的双 Provider workflow、Round 2 冻结和用户批准仍待完成，PR #15 保持 Draft。

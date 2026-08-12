@@ -1,53 +1,50 @@
 # ProjectFlow V3.8.5 RC3 当前状态审计
 
-审计时间：2026-08-12（Asia/Shanghai）
+审计日期：2026-08-12。当前结论：PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS。
 
 ## 基线
 
-- GitHub 仓库：xiaochuqing-dev/ProjectFlow。
-- 最新 master：`5cb5e49661206feb8f59885bea672c314c9374e8`。
-- PR #15：OPEN、Draft、未合并；base 为上述 master；head 分支为 `codex/v3.8.5-history-quality`。
-- 审计时 PR head：`46b91dcb9728ec6a33f86193e34a6b4c027bc909`。
-- 最新 PR required CI：run `31534591531`，七个 required job 均成功。正常 PR workflow 中真实 Provider job 按条件跳过。
-- 历史 workflow_dispatch run `31532558352` 整体失败；其中 GLM 与 DeepSeek 的 qualification/scenario job 成功，但 backend 与 PostgreSQL job 因当时缺少 Round 2 artifacts 失败。不得把该 run 整体描述为成功。
-
-## 工作区选择
-
-- 主工作区和旧 V3.8.5 工作树存在用户未提交内容，本轮不触碰。
-- RC3 使用干净工作树 `ProjectFlow-v385-rc2`，其起点与 PR head 完全一致。
-- 后续只更新 PR #15 的既有 head 分支，不新建 PR，不合并，不创建 Tag 或 Release。
+- GitHub 仓库为 `xiaochuqing-dev/ProjectFlow`，远端 `master` 为 `5cb5e49661206feb8f59885bea672c314c9374e8`。
+- PR #15 为 OPEN、Draft、未合并，base 为 `master`，远端 head 分支为 `codex/v3.8.5-history-quality`。
+- RC3 在独立工作树 `ProjectFlow-v385-rc2` 和本地分支 `codex/v3.8.5-rc3-truthfulness` 执行，通过同一远端 head 更新 PR #15。当前生产修复 head 为 `539dfc9802069dec40207179f65b873bf862872c`；验证 head `b9e9c2d` 只增加 Round 2 冻结哈希的 LF/CRLF 跨平台合同。前序修复 head 为 `98d3d4812b207c781594070ef8bac253590d43a2`、`4935884b12ad2be0ea4ab668687d7f0aa21134d4`、`c4e020c1ca85eac8d2d4599838d66eacb8064552` 和 `92053e58b7ead35ffc84cc4db7eeea6bda76e17c`。
+- 主工作树、旧 V3.8.5 工作树和其他 worktree 含独立分支或用户状态，本轮没有改写、重置、删除或清理它们。
+- RC3 启动前最新完整 required CI 为 run `31534591531`。新真实模型 run `31574016609` 的 backend/PostgreSQL 因其 head 尚无 Round 3 文件而按设计失败，不能冒充最终静态 CI；最终 Evidence head 必须重新取得七项 required job 全绿。
 
 ## Round 2 冻结状态
 
-- 原始 Round 2 manifest 和 worksheet 保留为不可变失败证据，不允许改写。
-- manifest 原始字节 SHA-256：`e1aca397b469c4d1e4e4b4f6bb856306b2b3340bcb5df97e80d71a286a247349`。
-- worksheet 原始字节 SHA-256：`8e9c04bde787b6bb6c2528f96e5d296dcf66186f66290298cf18ca21f68d73e7`。
-- 既有规范化 LF hash 仍保留在原验收记录中；RC3 另以原始字节 hash 做防篡改回归。
-- Round 2 正式结论必须从模糊的待审核状态修正为 `NEEDS_REVISION_NOT_APPROVED`，但只更新 review 文档，不修改冻结 artifacts。
+Round 2 正式结论为 `NEEDS_REVISION_NOT_APPROVED`。原 manifest 与 worksheet 不做手工修文，继续作为不可变失败证据：
+
+- manifest raw SHA-256：`e1aca397b469c4d1e4e4b4f6bb856306b2b3340bcb5df97e80d71a286a247349`；canonical-LF：`b2841c74491d172919db4a37e723d6533ad99f77799e0191fd5d2a7bdb90e887`。
+- worksheet raw SHA-256：`8e9c04bde787b6bb6c2528f96e5d296dcf66186f66290298cf18ca21f68d73e7`；canonical-LF：`44655c49ef0d21c58e7aef7df4e1295dba6e48a5ddff3039f4d42edb96824692`。
 
 ## 精确 P0
 
-Round 2 把提交 `ae9fba1e...` 叙述为“编写登录流程代码并形成实现”，并称“此前代码中还没有登录流程的实现”“这一阶段加入了实现登录流程所需的代码”。该提交的真实主题是初始化 ProjectFlow 骨架；与登录直接相关的文件证据只有登录背景图，JWT/Auth/login 的文字主要来自环境配置、README 或规划材料。`next-env.d.ts`、`next.config.ts`、`package.json`、`postcss.config.mjs` 等同提交文件不能证明登录流程已经实现。
+Round 2 的 GLM `glm-story-14`、Story `story-2bda5e730c55c66ee182` 把提交 `ae9fba1e60758252635695b797169dfde3c41e0a` 描述为“编写登录流程代码并形成实现”，并声称登录流程已有代码实现。该提交的主题是初始化 ProjectFlow skeleton；样本列出的 `next-env.d.ts`、`next.config.ts`、`package.json` 和 `postcss.config.mjs` 与登录实现没有直接 subject/action 关系。README、API 设计、认证配置、背景图和同提交的其他代码也不能拼成“登录已实现”。
 
-## 可执行复现与根因
+## 根因
 
-在当前生产代码中，以 Round 2 的登录背景图和四个前端配置文件构造 Evidence Profile：
+旧实现先把 Story 内 Technical Atom 的 subject、来源类别与代码强度扁平聚合，再判断整体状态。一个来源中的“登录”语义因此可以借用同 Story/Commit 中无关代码的 IMPLEMENTED 强度。旧 Validator 只验证总体主题和文件类别，没有保留“哪个 Atom 直接支持哪个 subject/action/state”的归属，所以模型只是把错误上限写成人话，并非唯一根因。
 
-1. Human Subject Label 因 `login-background.png` 得到“登录流程”。
-2. Narrative Entailment Validator 在 Story 全局路径中发现任意代码扩展名，即把该主题判成 `IMPLEMENTED`。
-3. 现有 login/auth 特判只要求主题或任一路径出现登录词；背景图满足主题锚定，无关代码文件满足 implementation anchor，因此特判没有阻止跨证据拼接。
+第二个 Provider-neutral 根因由 run `31574016609` 暴露：Chapter 初次输出未通过具体性校验后，共用的 `validationRepair` 固定要求模型使用 Story 阶段才存在的 `OUTPUT_TEMPLATE_JSON`；Chapter 原始输入只有 `CHAPTER_SYNTHESIS_JSON`。这会让本可修正的 Chapter 请求收到错误协议。RC3 在 `c4e020c` 中把 Chapter repair 单独绑定到原始 Chapter JSON 和仅含 chapterId/title/summary 的 schema，Chapter prompt 从 v5 升至 v6；阈值、Ground Truth 和事实边界均未改变。
 
-根因是 Story 级扁平 Evidence 聚合丢失了“哪一个 Technical Atom 直接支持哪一个 subject/action/state”的结构关系。同 Commit、同 Story 或 Supporting 关系被错误当成可提升状态的直接证据。模型只是把错误的确定性上限写成了人话，并非唯一根因。
+同一 run 的 DeepSeek Dogfood 场景又证明区域级归因仍有上限缺口：`project-area-frontend` 是宽泛工程区域，不是可验证的具体功能主体，但该区域内任意实现类文件仍能让整体 Claim 达到 IMPLEMENTED。于是精确 ae9f 样本虽已不再声称“登录实现”，底层“前端项目骨架”区域 Claim 仍被判 IMPLEMENTED，严格 P0 门禁继续失败。`92053e5` 对所有 `project-area-*` 宽泛主体设置 OBSERVED 上限；代码 Evidence 仍作为直接可观察变化保留，精确主体如 LoginExperience 仍可达到 IMPLEMENTED，因此不是隐藏措辞或模型/仓库特判。
 
-## 范围决策
+第三个 Provider-neutral 文案根因由 run `31580355605` 暴露：GLM 的结构、Evidence、安全和窗口均通过，但两个 Holdout 的最佳 Primary Story 标题/摘要只写了动作与对象，没有明确结果。例如“编写成果导出功能的代码”加“涵盖代码创建与修改”不能回答形成了什么结果。DeepSeek 在同头没有该波动，说明事实边界已稳定，但提示词约束本身不足以保证所有 Provider 的首层标题质量。`539dfc9` 把冻结 Title AOR 语义加入生产 Validator；否则安全的弱标题不被包装成纯模型成功，而是保留已通过同一门禁的确定性标题/摘要，Story 标记为 `MODEL_VALIDATED_WITH_DETERMINISTIC_TITLE`，diagnostics 与安全工件记录累计回退数。Story prompt 升至 v12，旧窗口缓存随版本失效；阈值和 Ground Truth 未改。
 
-RC3 将在现有 Reconstruction、Narrative Entailment、Prompt、Correction 和 Chapter 边界内完成以下最小闭环：
+## RC3 范围决定
 
-- 引入 provider-neutral 的 claim-level attribution：subject、action、state、outcome、直接与间接证据、来源权威、支持等级和降级原因。
-- 状态提升只允许使用与同一主体和动作直接相连的 Technical Atom；同 Commit 和 Supporting Evidence 只提供上下文，不能提升 Primary Claim。
-- 对 planned/configured/implemented/verified/removed/restored/unknown/conflicted 建立确定性上限，并让模型输出与 fallback 共用该上限。
-- correction 只改变展示，不得把原状态提升为更强事实。
-- Chapter 必须复述至少一个 Primary Story 的具体成果；空泛“围绕、推进、完善、建设”不能单独通过。
-- 冻结十类反例、原 ProjectFlow P0 回归、Round 2 hash 回归、Round 3 30 Story/8 Chapter 人工验收包。
+RC3 采用最小 Provider-neutral 修复：Technical Atom 级 Claim attribution、direct/indirect Evidence、逐 Claim 状态上限、宽泛区域主体 OBSERVED ceiling、保守降级、correction 不提升事实、Title AOR 确定性保底及公开计数、Chapter 具体成果门禁、同一泛化提交中独立 Primary outcome 的确定性边界，以及 Story/Chapter 分阶段 repair 合同。没有新增数据库 schema、依赖、Provider 特判或新的模型入口；ProjectFact、Timeline、Capability、Evolution、Gateway、Hermes 与 Obsidian 的事实边界保持不变。
 
-不新增数据库 schema，不改 ProjectFact/Timeline/Capability/Evolution 事实边界，不修改 Round 2 artifacts，不引入新依赖，不做 Stage B 合并或验收回填。
+冻结 Ground Truth 自 RC2 head `46b91dcb9728ec6a33f86193e34a6b4c027bc909` 起没有修改，SHA-256 为 `ab7be7129130645000e9028031132c0b8e9362a7e6d1efb7b9d4abf0318d7d3f`。Title AOR、Chapter precision、Evidence 和安全阈值没有降低。
+
+## 真实运行历史
+
+- run `31571883309`，head `98d3d4812b207c781594070ef8bac253590d43a2`：DeepSeek V3.8.0 出现 1 个 missing-reason-unknown，V3.8.5 Holdout 有 3 个 Title AOR 失败和 1 个 Chapter precision 失败；GLM 与两个场景 job 被取消。该失败和取消保持可追溯。
+- run `31574016609`，head `4935884b12ad2be0ea4ab668687d7f0aa21134d4`：DeepSeek qualification 19/19 通过；GLM 的 19 个评分 case 全部通过且安全计数为 0，但 `cal-conflict-preservation` 与 `holdout-unrelated-commit` 各有一个 Chapter 在错误 repair 合同后进入安全 fallback，因此 qualification 严格判 false。两家 scenarios 均为 10/11，唯一失败都是 Dogfood 的 ae9f 区域 Claim 仍为 IMPLEMENTED。DeepSeek scenarios 为 64 次物理请求、1,030,298 tokens、2,453,365 ms 模型延迟、3 次 repair；GLM scenarios 为 53 次物理请求、808,194 tokens、3,575,463 ms 模型延迟、2 次 repair。两家安全持久化计数均为 0。
+- run `31580355605`，head `92053e58b7ead35ffc84cc4db7eeea6bda76e17c`：DeepSeek qualification 19/19 通过，38 请求、158,776 tokens、670,331 ms、1 次成功 repair。GLM 41 请求、161,970 tokens、1,305,646 ms、5 次成功 repair、0 repair failure、0 安全持久化问题，但 `holdout-rename-move-split-merge` Title AOR 为 0.0000、`holdout-unrelated-commit` 为 0.3333，因此严格 qualification 失败。DeepSeek scenarios 为 10/11；Dogfood 与五类非代码通过，`schema-failure-isolation-and-retry` 因注入局部 schema failure 后独立窗口未继续而失败，55 请求、955,811 tokens、2,059,855 ms、3 次 repair。GLM scenarios 为 11/11，54 请求、842,640 tokens、3,287,611 ms、3 次 repair。两家安全持久化全 false；场景结果不得用于覆盖 qualification 失败。
+- PR run `31583262597` 暴露 Round 2 不同 checkout 换行会得到不同 raw hash；内容本身未变化。`b9e9c2d` 强制 canonical-LF hash 不变，并把 raw bytes 限制在已记录的 LF/CRLF 两个值。后继 PR run `31584325448` 中 Round 2 contract 1/1 通过，backend 597 项只剩尚无 Round 3 文件这一项失败。
+- run `31586433372` 使用 validation head `b9e9c2d`、affected scope 和双 Provider max。DeepSeek qualification 19/19 通过：39 请求、180,073 tokens、843,690 ms、3 次 repair、3 次公开确定性标题回退。GLM qualification 19/19 通过：43 请求、166,130 tokens、1,057,851 ms、7 次 repair、9 次公开确定性标题回退。两家 Title AOR/Chapter precision 均为 1.0、failed/pending window 与 repair failure 均为 0，安全持久化全 false。DeepSeek scenarios attempt 1 为 11/11：60 请求、1,023,867 tokens、2,510,634 ms、3 次 repair、129 次公开确定性标题回退，Dogfood P0 保持 OBSERVED，安全扫描为 0。GLM scenarios attempt 1 为 1/11：首个 non-code presentation 用 1 请求、10,012 tokens、66,455 ms 通过，之后调用不可用。仅重跑该 job 的 attempt 2 为 0/11、0 个成功请求；两个 attempt 的安全工件均未持久化 HTTP 状态，因此不能猜测外部原因，也不能相互覆盖。下一步只运行 correction 最小诊断，并仅输出 HTTP/传输/格式分类与请求数。
+
+## 禁止提前执行
+
+Round 3 真人字段尚未填写前，不得把 PR #15 转 Ready、合并、回填最终 master 元数据、创建 Tag/Release，或清理分支/worktree。自动化通过只允许把状态推进到 `PENDING_HUMAN_REVIEW_ROUND3`，不能写成 V3.8.5 PASS。

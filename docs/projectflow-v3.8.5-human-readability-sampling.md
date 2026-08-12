@@ -1,9 +1,13 @@
-# ProjectFlow V3.8.5 人工可读性抽样记录
+# ProjectFlow V3.8.5 Human Readability Sampling
 
-状态：PENDING_HUMAN_REVIEW。Round 2 已冻结，尚未评分。
+Status: PENDING_ROUND3_FREEZE / PENDING_HUMAN_REVIEW_ROUND3.
 
-固定脚本从 qualified 的 GLM/DeepSeek 规范化工件选择 30 Story 与 8 Chapter，双 Provider 各 15/4。完整资格/场景来源分别为 GLM run `31523413972`、DeepSeek Flash run `31517037532`；纠正样本由 run `31532558352` 的受影响工件覆盖。脚本拒绝未 qualified 工件、敏感值、机器绝对路径和中文编号占位符。
+Round 1 and Round 2 remain immutable NEEDS_REVISION_NOT_APPROVED packages. Round 3 will be generated only from qualified GLM and DeepSeek normalized artifacts produced by the same final code head.
 
-抽样覆盖 ProjectFlow、非代码、长短历史、generic Commit、多 Commit 单成果、单 Commit 多成果、生命周期、rename/move、split/merge、unknown reason、conflict、Supporting 与 correction。清单绑定相对工件路径、实体 ID、内容哈希和 presentation revision。
+The fixed script selects exactly 30 Story and 8 Chapter, balanced at 15 Story/4 Chapter per Provider. Coverage includes ProjectFlow, non-code, short and long history, generic Commit, one Commit with multiple results, multiple Commits with one result, lifecycle, rename/move, split/merge, unknown reason, conflict, Supporting, correction, the ae9f truthfulness P0, README/API plan plus unrelated code, genuine direct implementation and large/non-code Chapters.
 
-当前 Story 评分 0/30、Chapter 评分 0/8、平均分 NOT_RUN。低分不能删除，模型或本 Agent 不得代填。完成单一真实评审后必须披露 single-reviewer limitation；用户批准前 PR #15 保持 Draft。
+The Round 3 manifest binds the exact 40-character Provider source head and the canonical-LF SHA-256 of all six normalized source artifacts. Each entry binds Provider, relative artifact path, source case, stable entity ID, presentation revision, canonical entity hash and coverage tags. The script rejects an absent/invalid source head, unqualified artifacts, sensitive values, machine absolute paths and indexed placeholders. Round 3 does not overwrite either earlier round.
+
+All human yes/no fields, scores, reviewer name, notes and PASS/FAIL fields are blank at freeze time. reviewerCount remains 0 and model self-scoring is false. The worksheet exposes each selected Story's `Narrative Status`, including deterministic-title fallback where relevant, without converting it into a human score. Story and Chapter averages, core-dimension averages and P0 status remain NOT_RUN until the user completes the worksheet.
+
+Final candidate source run `31586433372` executes from validation head `b9e9c2d`; both qualifications and DeepSeek scenarios passed, while its first GLM scenario attempt is retained at 1/11. It cannot become the Round 3 source unless the running same-SHA GLM attempt 2 passes all scenarios. Final paths and hashes will be recorded only after that result. PR #15 remains Draft throughout this stage.

@@ -1,6 +1,6 @@
 # ProjectFlow V3.8.5 RC 代码质量审计与修复记录
 
-状态：RC2 代码审计、本地确定性回归和双真实 Provider 自动化门禁已完成；历史资格失败、旧 DeepSeek Dogfood 10/11、Secrets 缺失 run、后续真实失败与本轮 attempt 1 波动继续保留。30 Story / 8 Chapter 已冻结但尚未人工评分，最终合并未完成，结论为 BLOCKED。
+状态：本文是 RC2 代码审计历史记录。RC2 本地确定性回归和双真实 Provider 自动化门禁曾完成，但 Round 2 后续因 truthfulness P0 正式判为 `NEEDS_REVISION_NOT_APPROVED`。RC3 的真实失败、修复和 Round 3 状态以 RC3 验收报告为准；PR #15 继续 Draft，结论为 `PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS`。
 
 ## 审计范围
 

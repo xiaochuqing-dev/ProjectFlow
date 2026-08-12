@@ -51,7 +51,8 @@ SCENARIO_STORIES = (
     SampleSpec("correction-local-invalidation", 0, ("correction",)),
     SampleSpec("projectflow-current-history-dogfood:primary", 0, ("projectflow", "long-history")),
     SampleSpec("projectflow-current-history-dogfood:truthfulness-p0", 0,
-        ("projectflow", "long-history", "truthfulness-p0")),
+        ("projectflow", "long-history", "truthfulness-p0",
+         "planned-implemented-adversarial", "readme-api-plan-unrelated-code-regression")),
     SampleSpec("projectflow-current-history-dogfood:explicit-supporting", 0,
         ("projectflow", "supporting")),
 )
@@ -69,8 +70,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--glm-run-id")
     parser.add_argument("--deepseek-run-id")
+    parser.add_argument("--glm-scenario-attempt", type=int, default=1)
+    parser.add_argument("--deepseek-scenario-attempt", type=int, default=1)
     parser.add_argument("--glm-affected-run-id")
     parser.add_argument("--deepseek-affected-run-id")
+    parser.add_argument("--source-code-head")
     parser.add_argument("--round", type=int, choices=(1, 2, 3), default=1)
     parser.add_argument("--evidence-root", type=Path, default=DEFAULT_EVIDENCE_ROOT)
     parser.add_argument("--output", type=Path)
@@ -164,6 +168,23 @@ def canonical_hash(entity: dict[str, Any]) -> str:
     return "sha256:" + hashlib.sha256(content).hexdigest()
 
 
+def source_artifact_hashes(evidence_root: Path) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for provider_slug in ("glm", "deepseek"):
+        provider_root = evidence_root / provider_slug
+        for name in (
+            "history-ground-truth-real-result.json",
+            "history-real-scenarios.json",
+            "history-v380-real-model.json",
+        ):
+            path = provider_root / name
+            if not path.is_file():
+                raise ValueError(f"missing normalized artifact: {relative(path)}")
+            normalized = path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
+            result[relative(path)] = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    return result
+
+
 def project_type(tags: tuple[str, ...]) -> str:
     if "non-code" in tags:
         return "NON_CODE"
@@ -188,6 +209,13 @@ def sample_entry(
     revision = entity.get("presentationRevision")
     if not isinstance(entity_id, str) or not entity_id or not isinstance(revision, str) or not revision:
         raise ValueError(f"{kind} sample lacks stable identity or presentation revision: {source}")
+    coverage_tags = list(tags)
+    attribution = entity.get("claimAttribution") if isinstance(entity.get("claimAttribution"), dict) else {}
+    if kind == "STORY" and attribution.get("state") == "CONFIGURED":
+        coverage_tags.append("config-deployment-adversarial")
+    if (kind == "STORY" and attribution.get("state") == "IMPLEMENTED"
+            and attribution.get("action") == "IMPLEMENT"):
+        coverage_tags.append("direct-implementation")
     return {
         "kind": kind,
         "sampleId": f"{provider_slug}-{kind.lower()}-{sequence:02d}",
@@ -198,7 +226,7 @@ def sample_entry(
         "presentationRevision": revision,
         "provider": provider_name,
         "projectType": project_type(tags),
-        "coverageTags": list(tags),
+        "coverageTags": list(dict.fromkeys(coverage_tags)),
     }
 
 
@@ -273,6 +301,7 @@ def worksheet_section(sample: dict[str, Any], entity: dict[str, Any], review_rou
         f"内容哈希：{sample['contentHash']}",
         f"标题：{inline(entity.get('title'))}",
         f"摘要：{inline(entity.get('summary'))}",
+        f"Narrative Status：{inline(entity.get('summaryStatus'))}",
     ]
     if sample["kind"] == "STORY":
         attribution = entity.get("claimAttribution") if isinstance(entity.get("claimAttribution"), dict) else {}
@@ -315,9 +344,12 @@ def worksheet_section(sample: dict[str, Any], entity: dict[str, Any], review_rou
             ])
             if review_round == 3:
                 lines.extend([
-                    "Claim subject/action/state 是否匹配（是/否）：",
+                    "Claim 主体是否有直接 Evidence（是/否）：",
+                    "Claim 动作是否有对应 Evidence（是/否）：",
+                    "Claim state 是否被提升（是/否）：",
                     "直接 Evidence 是否支持标题与摘要（是/否）：",
                     "是否错误借用间接 Evidence 提升状态（是/否）：",
+                    "是否借用了无关文件作为实现 Evidence（是/否）：",
                     "是否存在 planned→implemented（是/否）：",
                     "是否存在 configured→deployed（是/否）：",
                     "是否存在 implemented→verified（是/否）：",
@@ -357,6 +389,7 @@ def worksheet_section(sample: dict[str, Any], entity: dict[str, Any], review_rou
                 lines.extend([
                     "能否复述至少一个具体阶段成果（是/否）：",
                     "是否只靠‘围绕/推进/完善/建设’形成阶段感（是/否）：",
+                    "是否跨了明显无关阶段（是/否）：",
                     "Chapter membership 与时间顺序是否保持（是/否）：",
                     "P0 truthfulness failure（是/否）：",
                 ])
@@ -380,7 +413,10 @@ def worksheet_section(sample: dict[str, Any], entity: dict[str, Any], review_rou
 
 def write_outputs(
     run_id: str,
+    source_code_head: str,
+    artifact_hashes: dict[str, str],
     provider_run_ids: dict[str, str],
+    provider_scenario_attempts: dict[str, int],
     affected_run_ids: dict[str, str],
     review_round: int,
     output: Path,
@@ -392,13 +428,21 @@ def write_outputs(
     manifest = {
         "version": f"projectflow-v385-human-review-sample-v{review_round}",
         "reviewRound": review_round,
-        "status": "PENDING_HUMAN_REVIEW",
+        "status": "PENDING_HUMAN_REVIEW_ROUND3" if review_round == 3 else "PENDING_HUMAN_REVIEW",
         "sourceRunId": run_id,
         "sourceRunUrl": f"https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/{run_id}",
+        **({"sourceCodeHead": source_code_head} if source_code_head else {}),
+        "sourceArtifactCanonicalLfSha256": artifact_hashes,
         "providerSourceRuns": {
             provider: {
                 "runId": provider_run_id,
                 "runUrl": f"https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/{provider_run_id}",
+                "qualificationAttempt": 1,
+                "scenarioAttempt": provider_scenario_attempts[provider],
+                "scenarioRunUrl": (
+                    f"https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/{provider_run_id}"
+                    f"/attempts/{provider_scenario_attempts[provider]}"
+                ),
                 "affectedRunId": affected_run_ids[provider],
                 "affectedRunUrl": (
                     "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/"
@@ -418,7 +462,9 @@ def write_outputs(
             "round2Status": "NEEDS_REVISION_NOT_APPROVED",
             "round2FrozenArtifacts": {
                 "manifestRawSha256": "e1aca397b469c4d1e4e4b4f6bb856306b2b3340bcb5df97e80d71a286a247349",
+                "manifestCanonicalLfSha256": "b2841c74491d172919db4a37e723d6533ad99f77799e0191fd5d2a7bdb90e887",
                 "worksheetRawSha256": "8e9c04bde787b6bb6c2528f96e5d296dcf66186f66290298cf18ca21f68d73e7",
+                "worksheetCanonicalLfSha256": "44655c49ef0d21c58e7aef7df4e1295dba6e48a5ddff3039f4d42edb96824692",
             },
         } if review_round == 3 else {}),
         "stories": stories,
@@ -434,7 +480,9 @@ def write_outputs(
     worksheet_lines = [
         f"# ProjectFlow V3.8.5 {'RC3' if review_round == 3 else 'RC2'} 人工可读性复核表 Round {review_round}",
         "",
-        "状态：PENDING_HUMAN_REVIEW。此文件只冻结样本并提供空白人工评分项；不得由模型代填。",
+        "状态："
+        + ("PENDING_HUMAN_REVIEW_ROUND3" if review_round == 3 else "PENDING_HUMAN_REVIEW")
+        + "。此文件只冻结样本并提供空白人工评分项；不得由模型代填。",
         "",
         f"来源 Run：{run_id}",
         "Provider 来源："
@@ -467,10 +515,21 @@ def main() -> int:
     try:
         if not re.fullmatch(r"[1-9][0-9]*", args.run_id):
             raise ValueError("run ID must be a positive numeric GitHub Actions run ID")
+        source_code_head = (args.source_code_head or "").strip().lower()
+        if args.round == 3 and not re.fullmatch(r"[0-9a-f]{40}", source_code_head):
+            raise ValueError("Round 3 requires the exact 40-character source code head SHA")
+        if source_code_head and not re.fullmatch(r"[0-9a-f]{40}", source_code_head):
+            raise ValueError("source code head must be a 40-character hexadecimal SHA")
         provider_run_ids = {
             "glm": args.glm_run_id or args.run_id,
             "deepseek": args.deepseek_run_id or args.run_id,
         }
+        provider_scenario_attempts = {
+            "glm": args.glm_scenario_attempt,
+            "deepseek": args.deepseek_scenario_attempt,
+        }
+        if any(value < 1 for value in provider_scenario_attempts.values()):
+            raise ValueError("Provider scenario attempts must be positive integers")
         if args.round == 2 and (not args.glm_affected_run_id or not args.deepseek_affected_run_id):
             raise ValueError("Round 2 requires explicit GLM and DeepSeek affected run IDs")
         affected_run_ids = {
@@ -512,8 +571,11 @@ def main() -> int:
             all_entities.update(entities)
         if len(all_stories) != 30 or len(all_chapters) != 8:
             raise ValueError("frozen sample must contain exactly 30 Story and 8 Chapter entries")
+        artifact_hashes = source_artifact_hashes(evidence_root)
         write_outputs(
-            args.run_id, provider_run_ids, affected_run_ids, args.round, output, worksheet,
+            args.run_id, source_code_head, artifact_hashes, provider_run_ids, provider_scenario_attempts,
+            affected_run_ids,
+            args.round, output, worksheet,
             all_stories, all_chapters, all_entities
         )
     except (OSError, ValueError) as exception:

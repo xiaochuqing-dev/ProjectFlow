@@ -125,8 +125,14 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             ModelTaskType task = invocation.getArgument(2, ModelTaskType.class);
             String prompt = invocation.getArgument(1, String.class);
             boolean validationRepair = prompt.contains(ProjectHistoryPromptBuilder.VALIDATION_REPAIR_MARKER);
-            ModelGatewayService.StructuredModelResponse actual =
-                (ModelGatewayService.StructuredModelResponse) invocation.callRealMethod();
+            ModelGatewayService.StructuredModelResponse actual;
+            try {
+                actual = (ModelGatewayService.StructuredModelResponse) invocation.callRealMethod();
+            } catch (Throwable failure) {
+                System.err.println("V385_SAFE_PROVIDER_FAILURE scenario=" + scenario
+                    + " task=" + task.name() + " " + safeProviderFailure(failure));
+                throw failure;
+            }
             calls.computeIfAbsent(scenario, ignored -> new CallAccumulator())
                 .add(task, actual.diagnostics(), validationRepair);
             if (task != ModelTaskType.PROJECT_HISTORY_SYNTHESIS) return actual;
@@ -276,7 +282,9 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         require(stories.stream().anyMatch(story -> !readService.story(userId, project.getId(), story.id()).events().isEmpty()),
             fixtureName + " 无法从 Story 下钻 Evidence");
         CallAccumulator call = calls.get(activeScenario.get());
-        require(call != null && call.storyLogicalCalls > 0, fixtureName + " 未执行真实 Story 模型窗口");
+        require(call != null && call.storyLogicalCalls > 0,
+            fixtureName + " 未执行真实 Story 模型窗口；safeDiagnostics="
+                + safeDiagnostics(overview.diagnostics()));
 
         Map<String, Object> metrics = safeDiagnostics(overview.diagnostics());
         metrics.put("storyCount", stories.size());
@@ -365,8 +373,10 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         Map<String, Object> initial = readService.overview(userId, project.getId()).diagnostics();
-        require(number(initial, "totalWindowCount") == 2, "展示标签归一化改变了两窗口规划");
-        require(number(initial, "succeededWindowCount") == 2, "受影响两窗口未全部完成");
+        require(number(initial, "totalWindowCount") == 2,
+            "展示标签归一化改变了两窗口规划；safeDiagnostics=" + safeDiagnostics(initial));
+        require(number(initial, "succeededWindowCount") == 2,
+            "受影响两窗口未全部完成；safeDiagnostics=" + safeDiagnostics(initial));
         List<ChangeStory> initialStories = allStories(userId, project.getId());
         require(initialStories.size() == 64, "展示标签归一化造成 Story 丢失");
         require(firstLayerLeaks(initialStories, FIRST_LAYER_FORBIDDEN) == 0,
@@ -478,7 +488,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
             diagnostics = readService.overview(userId, project.getId()).diagnostics();
         } while (incomplete(diagnostics) && ++guard < 24);
-        require(!incomplete(diagnostics), "ProjectFlow Dogfood 在 24 次有界刷新内未完成");
+        require(!incomplete(diagnostics),
+            "ProjectFlow Dogfood 在 24 次有界刷新内未完成；safeDiagnostics=" + safeDiagnostics(diagnostics));
         var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         require(cached.cacheHit(), "ProjectFlow Dogfood 完成后未命中全局 cache");
 
@@ -822,6 +833,33 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             if (source != null && source.containsKey(key)) result.put(key, source.get(key));
         }
         return result;
+    }
+
+    private static String safeProviderFailure(Throwable failure) {
+        Throwable current = failure;
+        for (int depth = 0; current != null && depth < 6; depth++, current = current.getCause()) {
+            if (current instanceof ModelGatewayService.ModelHttpException http) {
+                return "code=HTTP_" + http.statusCode() + " requestCount=" + http.requestCount();
+            }
+            if (current instanceof ModelGatewayService.ModelTransportException transport) {
+                return "code=TRANSPORT requestCount=" + transport.requestCount();
+            }
+            if (current instanceof ModelGatewayService.ModelResponseFormatException format) {
+                ModelGatewayService.ModelCallDiagnostics diagnostics = format.diagnostics();
+                String code = diagnostics == null ? "FORMAT_UNKNOWN" : safeFailureCode(diagnostics.failureCode());
+                int requestCount = diagnostics == null ? 0 : diagnostics.requestCount();
+                return "code=" + code + " requestCount=" + requestCount;
+            }
+            if (current instanceof CancellationException) {
+                return "code=CANCELLED requestCount=0";
+            }
+        }
+        return "code=OTHER requestCount=0";
+    }
+
+    private static String safeFailureCode(String value) {
+        if (value == null || !value.matches("[A-Z0-9_]{1,64}")) return "FORMAT_UNKNOWN";
+        return value;
     }
 
     private QualificationSummary qualification(List<SafeScenarioRun> runs, String scenarioScope) {

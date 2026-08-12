@@ -1,21 +1,15 @@
-# ProjectFlow V3.8.5 验收报告
+# ProjectFlow V3.8.5 RC3 Acceptance Report
 
-报告状态：PENDING_HUMAN_REVIEW / NOT PASS。更新日期：2026-08-12。
+Report status: PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS. Updated 2026-08-12.
 
-V3.8.5 RC2 保持 ProjectFact 为唯一强事实来源。工程层拥有 Raw Event、Technical Atom、Primary/Supporting、Chapter membership、Before/Change/After、Evidence 和纠正覆盖；模型只改写有界措辞与有 Evidence 的原因。Frontend、Gateway、Agent、Hermes 与 Obsidian 读取相同 corrected view。
+Remote master remains `5cb5e49661206feb8f59885bea672c314c9374e8`. PR #15 is OPEN, Draft and unmerged. Production behavior is fixed at `539dfc9802069dec40207179f65b873bf862872c`; current PR validation head `b9e9c2d` adds only the cross-platform frozen-file hash contract.
 
-自动化证据：
+Round 1 and Round 2 are both NEEDS_REVISION_NOT_APPROVED. Round 2 raw hashes remain manifest `e1aca397b469c4d1e4e4b4f6bb856306b2b3340bcb5df97e80d71a286a247349` and worksheet `8e9c04bde787b6bb6c2528f96e5d296dcf66186f66290298cf18ca21f68d73e7`; no failed sample was rewritten.
 
-- 本地 backend/H2：579 项，0 失败，0 错误，5 个条件跳过。
-- 真实 GLM 完整基线 run `31523413972`：19-case qualified，11/11 scenarios，ProjectFlow Dogfood 与五类非代码通过。
-- 真实 DeepSeek Flash 完整基线 run `31517037532`：19-case qualified，11/11 scenarios，ProjectFlow Dogfood 与五类非代码通过。
-- 首次 Round 2 候选暴露编号占位符后被拒绝。code head `aee0160` 的受影响 run `31532558352` 中，两家均 1/1 PASS、3 次真实 Story 请求、64 Story、2 窗口、只失效纠正目标窗口、最终 cache hit、泄漏 0、repair 0。
-- run `31532558352` 的 frontend、Playwright、sensitive-content、Hermes 与 Obsidian 通过；该 run 的 backend/PostgreSQL 因当时尚无最终 Round 2 文件而失败，因此不作为最终静态 CI 权威，evidence commit 以自身 PR checks 为准。
+The exact Round 2 P0 joined login planning language from commit `ae9fba1e60758252635695b797169dfde3c41e0a` with unrelated frontend skeleton/configuration files and presented “登录已实现”. RC3 fixes the structural causes: Technical Atom claim ownership, direct/indirect Evidence separation, state ceilings, broad-area OBSERVED ceiling, correction non-promotion, specific Chapter synthesis, independent outcome boundaries, a Chapter-specific repair schema, and an auditable deterministic title pair when safe Provider wording omits its supported result.
 
-Round 2 已冻结为 30 Story/8 Chapter，GLM 与 DeepSeek 各 15/4。canonical-LF manifest SHA-256 为 `b2841c74491d172919db4a37e723d6533ad99f77799e0191fd5d2a7bdb90e887`，worksheet SHA-256 为 `44655c49ef0d21c58e7aef7df4e1295dba6e48a5ddff3039f4d42edb96824692`。reviewerCount=0，所有人工字段为空，modelSelfScoring=false。
+Deterministic evidence includes 119 affected tests with 0 failures/errors and 4 conditional skips, all 19 frozen Ground Truth cases passing, and a current full local backend/H2 run of 602 tests with 0 failures/errors and 11 conditional skips after excluding only local-Docker PostgreSQL and the pending Round 3 manifest. The repository launcher rebuilt and started the `539dfc9` tree successfully and left no port residue. After GitHub exposed CRLF/LF-dependent Round 2 hash assertions, `b9e9c2d` changed the tests to require the immutable canonical-LF hashes while accepting only the two recorded LF/CRLF raw byte hashes; the focused Round 2 contract passes locally. Frozen Ground Truth SHA-256 remains `ab7be7129130645000e9028031132c0b8e9362a7e6d1efb7b9d4abf0318d7d3f`.
 
-Round 1 仍为 NEEDS_REVISION_NOT_APPROVED，原文件和哈希保持不变。run `31468663795` 的 DeepSeek 9/11、run `31517037532` 的较早 GLM 资格失败及其他历史失败继续保留；后续成功不覆盖首次事实。
+Real attempts are preserved: run `31571883309` was cancelled after DeepSeek qualification failed; run `31574016609` exposed two Chapter repair failures and then the same Dogfood area-level P0 for both Providers. Run `31580355605` passed DeepSeek qualification but failed GLM on two Title AOR cases despite zero safety or repair failures; its GLM scenarios passed 11/11 while DeepSeek separately reached 10/11, with Dogfood passing and the injected schema-failure isolation case failing. In corrected run `31586433372`, both Providers pass qualification on validation head `b9e9c2d`, and DeepSeek scenarios pass 11/11 with every safety flag false. GLM scenario attempt 1 is retained at 1/11 and the isolated job retry at 0/11 with zero successful calls. The sanitized evidence does not establish the external HTTP cause, so a minimal safe diagnostic is still required and no final automated result is predeclared.
 
-安全证据只包含规范化输出，不包含完整 Prompt、raw response、reasoning、Key、Authorization、私有绝对路径或私有项目内容。当前没有 Provider 专属业务特判，也没有降低 Evidence 或 Strong Fact 门禁。
-
-最终阻断是用户对 Round 2 的真实人工审核，以及 evidence commit 的全部 GitHub required checks。此前 PR #15 保持 Draft，不合并、不 backfill、不创建 Tag/Release、不删除分支或 worktree。
+Round 3 will be frozen only from qualified same-head normalized artifacts at exactly 30 Story/8 Chapter, 15/4 per Provider, with all human fields blank. The user must then perform the real review. The automated closure cannot declare PASS, ready the PR, merge, backfill acceptance metadata, create a Tag/Release or clean branches/worktrees.

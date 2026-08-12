@@ -1,18 +1,19 @@
-# V3.8.5 产品验收清单
+# V3.8.5 RC3 Product Acceptance
 
-当前结论：PENDING_HUMAN_REVIEW_ROUND2，不是 PASS。
+Current decision: PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS.
 
-已完成：
+Automated implementation completed:
 
-- ProjectFact、ProjectHistoryEvent 与 Evidence 权威边界未改变；Primary/Supporting、Chapter membership、Before/Change/After 和强事实判断由工程层拥有。
-- 本地后端/H2 579 项通过，0 失败，0 错误，5 个条件跳过。
-- GLM `glm-5.2` Responses/high 与 DeepSeek `deepseek-v4-flash` Chat/max 的完整 qualification、11/11 scenarios、ProjectFlow Dogfood 和五类非代码基线通过。
-- 两家在 run `31532558352` 上完成受影响纠正复验：64 Story、2 窗口、单窗口失效、缓存命中、编号占位符泄漏 0。
-- Round 2 已冻结 30 Story/8 Chapter，双 Provider 各 15/4，模型自评关闭，人工字段空白。
+- Claim-level subject/action/state attribution with direct and indirect Evidence.
+- Conservative state ceilings, including OBSERVED for broad `project-area-*` subjects while precise subjects keep normal implementation eligibility.
+- The exact ae9f skeleton/login P0 and nine additional adversarial contracts.
+- Correction and deterministic fallback through the same truthfulness gate.
+- Story v12 action/object/result validation with an explicit deterministic title/summary fallback status and aggregate diagnostic.
+- Specific Chapter wording, deterministic independent-outcome boundaries and Chapter prompt v6 repair from CHAPTER_SYNTHESIS_JSON.
+- Frontend attribution drill-down without changing ProjectFact, raw events, chronology, membership or consumer authority.
 
-当前阻断：
+Before the title-quality follow-up, 119 affected ProjectHistory/Provider-neutral tests had 0 failures/errors and 4 conditional skips; the new targeted title fallback, Prompt and artifact tests also pass. The current full local backend/H2 run is 602 tests, 0 failures/errors and 11 conditional skips after excluding local-Docker PostgreSQL and the pending Round 3 manifest only. The 19 deterministic Ground Truth cases still pass with all safety counters zero. Root `Start-ProjectFlow.bat -NoBrowser` rebuilt and started Next 16.2.11 plus Spring Boot/H2 from `539dfc9`, recorded readiness and exited with no 3000/8080 listener residue.
 
-- 人工评分仍为 0/30 Story、0/8 Chapter、平均分 NOT_RUN；低分和直接失败项必须如实保留。
-- 最终 evidence commit 必须以 GitHub backend/H2、PostgreSQL、frontend、Playwright、Hermes、Obsidian 与 sensitive-content 全绿为合并前置条件。
-- PR #15 保持 Draft；未合并、未 backfill、未创建 Tag/Release、未清理分支或 worktree。
-- npm audit 的既有 4 high、0 critical 不在 RC2 中静默升级。
+Real Provider run `31586433372` passed both 19/19 qualifications and DeepSeek scenarios 11/11. Its GLM scenario attempt 1 ended 1/11 and the isolated retry ended 0/11 with no safe HTTP classification available, so the dual-Provider scenario gate, Round 3 artifacts, final static CI and human scores do not yet exist. Earlier RC3 failures and cancellations remain retained in the Provider report.
+
+The product is therefore blocked from acceptance. PR #15 stays Draft; merge, backfill, Tag, Release and branch/worktree cleanup are not authorized. The existing npm audit 4 high/0 critical risk remains recorded and was not mixed into RC3.

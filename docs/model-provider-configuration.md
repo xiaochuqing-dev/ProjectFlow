@@ -67,6 +67,6 @@ V3.7.5 validates one provider-neutral Strong Fact contract through two official/
 
 The second model is used for contract compatibility, core regression, Holdout and product-chain acceptance. ProjectFlow does not call both models for every user request and does not treat agreement as evidence. Provider probes establish only connectivity and structured protocol compatibility; dated evaluation reports establish bounded product acceptance.
 
-## V3.8.5 RC2 real-model profile
+## V3.8.5 RC3 real-model profile
 
-The current RC2 workflow keeps GLM `glm-5.2` on Ark Coding OpenAI Responses with high reasoning. DeepSeek uses `deepseek-v4-flash` on the OpenCode Go OpenAI Chat Completions-compatible endpoint with explicit JSON Mode and max reasoning. These are acceptance configuration values, not business-code model-name branches. Keys are supplied only through the protected `PROJECTFLOW_REAL_MODEL_API_KEY` and `PROJECTFLOW_DEEPSEEK_API_KEY` Repository Secrets.
+The current RC3 workflow keeps GLM `glm-5.2` on Ark Coding OpenAI Responses and DeepSeek `deepseek-v4-flash` on the OpenCode Go OpenAI Chat Completions-compatible endpoint. Both acceptance profiles explicitly declare JSON Mode/reasoning control and use max reasoning. These are acceptance configuration values, not business-code model-name branches. Keys are supplied only through the protected `PROJECTFLOW_REAL_MODEL_API_KEY` and `PROJECTFLOW_DEEPSEEK_API_KEY` Repository Secrets.
