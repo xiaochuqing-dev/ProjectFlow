@@ -20,8 +20,8 @@ class ChapterHumanLanguageContractTest {
         );
         String summary = language.chapterSummary(List.of("登录入口", "登录回归测试"), 1, 1);
 
-        assertThat(title).contains("项目基础建设").doesNotContain("登录入口、登录回归测试", "整理项目材料并形成阶段结果");
-        assertThat(summary).contains("项目基础建设", "支撑工作保留在工程详情中")
+        assertThat(title).contains("新增登录入口").doesNotContain("登录入口、登录回归测试", "整理项目材料并形成阶段结果");
+        assertThat(summary).contains("登录入口", "登录回归测试", "支撑工作保留在工程详情中")
             .doesNotContain("1 项主要结果", "1 项支撑工作");
         assertThat(title + summary).doesNotContain("PRIMARY", "SUPPORTING", "ENGINEERING_GROUPING");
     }

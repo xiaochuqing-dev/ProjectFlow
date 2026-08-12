@@ -68,4 +68,22 @@ class ProjectHistoryNarrativeEntailmentTest {
             List.of("研究报告已建立并持续更新。")
         )).isInstanceOf(NarrativeViolation.class);
     }
+
+    @Test
+    void rejectsVagueChapterThatOnlySaysAThemeWasAdvancedAndImproved() {
+        assertThatThrownBy(() -> validator.validateChapter(
+            "围绕项目基础建设推进阶段成果",
+            "这一时期主要围绕项目基础建设推进，相关成果逐步形成并得到完善。",
+            List.of("建立前端项目骨架，补充本地启动配置。")
+        )).isInstanceOf(NarrativeViolation.class);
+    }
+
+    @Test
+    void acceptsChapterThatNamesAConcretePrimaryOutcome() {
+        validator.validateChapter(
+            "建立前端项目骨架并补充启动配置",
+            "这一时期建立了前端项目骨架，并补充本地启动所需的配置记录。",
+            List.of("建立前端项目骨架，补充本地启动配置。")
+        );
+    }
 }

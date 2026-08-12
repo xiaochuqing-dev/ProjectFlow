@@ -57,7 +57,7 @@ class ProjectHistoryLanguagePolicyTest {
             List.of("新增研究结论，形成首个可确认版本", "更新数据图表，形成新的可确认版本"),
             5, 35
         );
-        assertThat(summary).contains("成果内容建设", "支撑工作保留在工程详情中")
+        assertThat(summary).contains("新增研究结论", "更新数据图表", "支撑工作保留在工程详情中")
             .doesNotContain("5 项主要结果", "35 项支撑工作", "40 项可读成果");
 
         String first = language.chapterTitle(
@@ -68,8 +68,8 @@ class ProjectHistoryLanguagePolicyTest {
             List.of("更新收入分析数据结果，形成新的可确认版本"),
             List.of(Transition.MODIFIED), Instant.EPOCH.plusSeconds(60), Instant.EPOCH.plusSeconds(120)
         );
-        assertThat(first).contains("内容与呈现");
-        assertThat(second).contains("成果内容建设");
+        assertThat(first).contains("新增季度汇报演示文稿");
+        assertThat(second).contains("更新收入分析数据结果");
         assertThat(first).isNotEqualTo(second);
     }
 

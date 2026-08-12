@@ -886,7 +886,7 @@ public class ProjectHistoryReconstructionService {
             story.technicalAtomRefs(), story.commitSummaries(), story.technicalDetails(), story.presentationAuthority(),
             story.presentationRevision(), story.automaticTitle(), story.automaticSummary(), story.userCorrectionRefs(),
             story.hiddenByDefault(), story.pinned(), story.mergedIntoStoryId(), story.displayStatus(),
-            story.correctionConflicts()
+            story.correctionConflicts(), story.claimAttribution()
         );
     }
 
@@ -918,7 +918,7 @@ public class ProjectHistoryReconstructionService {
             role, primaryStoryId, supportingChangeRefs, original.technicalAtomRefs(), original.commitSummaries(),
             original.technicalDetails(), presentationAuthority, presentationRevision,
             original.automaticTitle(), original.automaticSummary(), userCorrectionRefs, hiddenByDefault, pinned,
-            mergedIntoStoryId, displayStatus, correctionConflicts
+            mergedIntoStoryId, displayStatus, correctionConflicts, original.claimAttribution()
         );
     }
 
@@ -990,7 +990,7 @@ public class ProjectHistoryReconstructionService {
             .filter(event -> event.category() != Category.FILE_CHANGE)
             .map(EventView::label).filter(value -> !value.isBlank()).distinct().limit(3).toList();
         ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope narrativeEnvelope = narrativeEnvelope(
-            subjectLabel, outcome, events, hasReasonEligibleEvidence(events)
+            subjectKey, subjectLabel, outcome, events, hasReasonEligibleEvidence(events)
         );
         ProjectHistoryLanguageService.Presentation presentation = languageService.fallback(
             narrativeEnvelope.claimState(), outcome, subjectKey,
@@ -1022,7 +1022,8 @@ public class ProjectHistoryReconstructionService {
             conflicts, List.copyOf(unknowns), from, to, evidence.size(), eventRefs.size(), "ENGINEERING_GROUPING",
             "DETERMINISTIC", complete ? "FULL_WITHIN_DISCOVERED_SOURCES" : "PARTIAL", limitations, eventRefs, evidence,
             "PRIMARY", "", List.of(), atomRefs, commitSummaries, technicalDetails, "AUTOMATIC", "",
-            humanTitle, summary, List.of(), false, false, "", "ACTIVE", List.of()
+            humanTitle, summary, List.of(), false, false, "", "ACTIVE", List.of(),
+            claimAttribution(narrativeEnvelope)
         );
         return new StoryEnvelope(story, transitions);
     }
@@ -1926,7 +1927,7 @@ public class ProjectHistoryReconstructionService {
                     .map(EventView::label).filter(value -> value != null && !value.isBlank()).distinct().limit(8).toList()
             );
             ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
-                subjectLabel,
+                story.primarySubjectKey(), subjectLabel,
                 primaryTransition(storyTransitions(members)),
                 members,
                 !reasonEvidenceByStory.getOrDefault(story.id(), List.of()).isEmpty()
@@ -1942,6 +1943,9 @@ public class ProjectHistoryReconstructionService {
                 reasonEvidenceByStory.getOrDefault(story.id(), List.of()).stream().limit(30).toList(),
                 boundedPromptText(story.beforeState(), 700), boundedPromptText(story.change(), 900),
                 boundedPromptText(story.afterState(), 700), envelope.claimState().name(),
+                envelope.claimAction(), boundedPromptText(envelope.supportedOutcome(), 300),
+                envelope.directSupportSummary(), envelope.indirectContextSummary(), envelope.supportClass(),
+                boundedPromptText(envelope.downgradeReason(), 300),
                 envelope.allowedClaims(), envelope.forbiddenClaims(), envelope.humanSafeSourceContext(), story.role(),
                 story.primaryStoryId(),
                 story.supportingChangeRefs().stream().limit(40).toList()
@@ -2096,7 +2100,7 @@ public class ProjectHistoryReconstructionService {
                     .map(EventView::label).filter(value -> value != null && !value.isBlank()).distinct().limit(8).toList()
             );
             ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
-                subjectLabel,
+                original.primarySubjectKey(), subjectLabel,
                 primaryTransition(storyTransitions(members)),
                 members,
                 !reasonEvidenceByStory.getOrDefault(id, List.of()).isEmpty()
@@ -2179,6 +2183,7 @@ public class ProjectHistoryReconstructionService {
     }
 
     private ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope narrativeEnvelope(
+        String subjectKey,
         String subjectLabel,
         Transition transition,
         List<EventView> events,
@@ -2186,14 +2191,13 @@ public class ProjectHistoryReconstructionService {
     ) {
         List<EventView> safeEvents = events == null ? List.of() : events;
         return narrativeValidator.envelope(new ProjectHistoryNarrativeEntailmentValidator.EvidenceProfile(
+            subjectKey,
             subjectLabel,
             transition,
-            safeEvents.stream().map(EventView::category).distinct().toList(),
-            safeEvents.stream().map(EventView::authority).distinct().toList(),
-            safeEvents.stream().map(EventView::epistemicStatus).distinct().toList(),
-            safeEvents.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(),
-            safeEvents.stream().filter(event -> event.category() != Category.FILE_CHANGE)
-                .map(EventView::label).filter(value -> value != null && !value.isBlank()).distinct().limit(8).toList(),
+            safeEvents.stream().map(event -> new ProjectHistoryNarrativeEntailmentValidator.EvidenceAtom(
+                event.stableKey(), event.subjectKeys(), event.category(), event.transition(), event.authority(),
+                event.epistemicStatus(), event.paths(), event.label(), event.evidenceRefs()
+            )).toList(),
             reasonEligible
         ));
     }
@@ -2207,6 +2211,16 @@ public class ProjectHistoryReconstructionService {
                 && event.evidenceRefs().stream().anyMatch(reference -> reference.startsWith("fact:")
                     || reference.startsWith("github-pr:") || reference.startsWith("github-issue:")
                     || reference.startsWith("declaration:"))
+        );
+    }
+
+    private static ClaimAttribution claimAttribution(
+        ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope
+    ) {
+        return new ClaimAttribution(
+            envelope.subjectLabel(), envelope.claimAction(), envelope.claimState().name(), envelope.supportedOutcome(),
+            envelope.directEvidenceRefs(), envelope.indirectEvidenceRefs(), envelope.sourceAuthorities(),
+            envelope.supportClass(), envelope.downgradeReason()
         );
     }
 
@@ -2283,7 +2297,7 @@ public class ProjectHistoryReconstructionService {
                         .map(EventView::label).filter(value -> value != null && !value.isBlank()).distinct().limit(8).toList()
                 );
                 ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
-                    subjectLabel, primaryTransition(storyTransitions(members)), members,
+                    story.primarySubjectKey(), subjectLabel, primaryTransition(storyTransitions(members)), members,
                     !reasonEligibleEvidence(story, eventsById).isEmpty()
                 );
                 try {
@@ -2726,7 +2740,7 @@ public class ProjectHistoryReconstructionService {
             original.commitSummaries(), original.technicalDetails(), original.presentationAuthority(),
             original.presentationRevision(), original.automaticTitle(), original.automaticSummary(),
             original.userCorrectionRefs(), original.hiddenByDefault(), original.pinned(), original.mergedIntoStoryId(),
-            original.displayStatus(), original.correctionConflicts()
+            original.displayStatus(), original.correctionConflicts(), original.claimAttribution()
         );
     }
 

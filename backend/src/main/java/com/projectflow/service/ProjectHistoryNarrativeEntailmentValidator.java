@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.projectflow.entity.ProjectFactEpistemicStatus;
@@ -22,6 +23,7 @@ import com.projectflow.entity.ProjectHistoryEvent.Transition;
  */
 @Component
 public final class ProjectHistoryNarrativeEntailmentValidator {
+    private final ProjectHistoryClaimEvidenceAttributionService attributionService;
     private static final Pattern RELATIVE_PATH = Pattern.compile(
         "(?i)(?:^|[\\s（(])(?:[.A-Za-z0-9_-]+/)+[.A-Za-z0-9_-]+"
     );
@@ -42,15 +44,6 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
     private static final Pattern COUNT_LED_CHAPTER = Pattern.compile(
         "^这一(?:阶段|时期)(?:形成|完成|包含)了?\\s*\\d+\\s*项.*"
     );
-    private static final Set<String> CODE_EXTENSIONS = Set.of(
-        "java", "kt", "kts", "go", "rs", "py", "js", "jsx", "ts", "tsx", "vue", "svelte", "cs", "cpp", "c", "h"
-    );
-    private static final Set<String> CONFIG_EXTENSIONS = Set.of(
-        "yml", "yaml", "toml", "ini", "properties", "conf", "config", "env"
-    );
-    private static final Set<String> DOCUMENT_EXTENSIONS = Set.of(
-        "md", "mdx", "txt", "rst", "adoc", "pdf", "doc", "docx", "ppt", "pptx"
-    );
     private static final List<String> PRODUCTION_CLAIMS = List.of(
         "生产可用", "生产环境稳定", "生产部署", "完成部署", "部署完成", "已经上线", "正式上线", "稳定运行", "完全可靠", "成熟可用"
     );
@@ -58,19 +51,43 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         "验证通过", "已经验证", "已验证", "确认无误", "测试证明", "自动化验证通过"
     );
     private static final List<String> IMPLEMENTED_CLAIMS = List.of(
-        "已经实现", "实现了", "完成开发", "具备用户", "用户可以", "可直接使用", "新增了登录功能", "搭建了登录流程"
+        "已经实现", "实现了", "形成实现", "代码实现", "实现所需的代码", "已有代码实现", "完成开发",
+        "具备用户", "用户可以", "可直接使用", "新增了登录功能", "搭建了登录流程"
     );
     private static final List<String> GENERIC_FIRST_LAYER = List.of(
         "相关变化", "工程分组", "形成初始结果", "进入当前时间点可确认的新状态", "修改 n 个文件",
         "当前行为得到更新", "项目开始具备这项能力"
     );
+    private static final List<String> VAGUE_CHAPTER_LANGUAGE = List.of(
+        "围绕项目基础建设推进阶段成果", "相关成果逐步形成并得到完善", "完成相关建设", "持续推进相关工作"
+    );
+
+    public ProjectHistoryNarrativeEntailmentValidator() {
+        this(new ProjectHistoryClaimEvidenceAttributionService());
+    }
+
+    @Autowired
+    ProjectHistoryNarrativeEntailmentValidator(ProjectHistoryClaimEvidenceAttributionService attributionService) {
+        this.attributionService = attributionService;
+    }
 
     public NarrativeEnvelope envelope(EvidenceProfile profile) {
         EvidenceProfile safe = profile == null ? EvidenceProfile.empty() : profile;
-        ClaimState state = classify(safe);
+        ProjectHistoryClaimEvidenceAttributionService.Attribution attribution = attributionService.attribute(safe);
+        ClaimState state = attribution.state();
         return new NarrativeEnvelope(
             state,
+            attribution.subjectKey(),
             text(safe.subjectLabel()).isBlank() ? "项目材料" : text(safe.subjectLabel()),
+            attribution.action(),
+            attribution.outcome(),
+            attribution.directEvidenceRefs(),
+            attribution.indirectEvidenceRefs(),
+            attribution.sourceAuthorities(),
+            attribution.supportClass(),
+            attribution.downgradeReason(),
+            attribution.directSupportSummary(),
+            attribution.indirectContextSummary(),
             allowedClaims(state),
             forbiddenClaims(state),
             humanSafeContext(safe),
@@ -100,6 +117,9 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         if (containsAny(firstLayer, GENERIC_FIRST_LAYER)) {
             throw violation(ViolationKind.INTERNAL_LANGUAGE, "Narrative wording uses a generic internal template");
         }
+        if (safe.claimState() == ClaimState.CONFLICTED && containsPositiveOutcome(firstLayer)) {
+            throw violation(ViolationKind.STATE_UPGRADE, "Conflicted Evidence cannot produce a positive outcome");
+        }
         if (!mentionsSubject(title + " " + summary, safe.subjectLabel())) {
             throw violation(ViolationKind.UNSUPPORTED_OBJECT, "Narrative wording is not anchored to the allowed subject");
         }
@@ -125,17 +145,23 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
             throw violation(ViolationKind.CONTRACT, "Chapter wording is incomplete");
         }
         String firstLayer = safeTitle + " " + safeSummary;
-        if (containsFirstLayerLeak(firstLayer, context)) {
-            throw violation(ViolationKind.FIRST_LAYER_LEAK, "Chapter wording exposes an internal subject or path");
+        if (containsChapterFirstLayerLeak(firstLayer, context)) {
+            throw violation(ViolationKind.FIRST_LAYER_LEAK,
+                "Chapter wording exposes an internal subject or path: "
+                    + firstLayerLeakKind(firstLayer, context, true));
         }
         if (containsAny(firstLayer, GENERIC_FIRST_LAYER)) {
             throw violation(ViolationKind.INTERNAL_LANGUAGE, "Chapter wording uses a generic internal template");
+        }
+        if (containsAny(firstLayer, VAGUE_CHAPTER_LANGUAGE)
+            || vagueChapter(safeTitle, safeSummary, context)) {
+            throw violation(ViolationKind.INTERNAL_LANGUAGE, "Chapter wording does not name a concrete supported outcome");
         }
         if (safeTitle.contains("在这一阶段继续完善") || safeTitle.matches(".*[^，。]{2,}与[^，。]{2,}等?可确认结果.*")
             || safeSummary.contains("主要包括") || COUNT_LED_CHAPTER.matcher(safeSummary).matches()) {
             throw violation(ViolationKind.SUBJECT_CONCATENATION, "Chapter wording is a subject list instead of a phase narrative");
         }
-        if (!context.isEmpty() && !sharesHanBigram(firstLayer, String.join(" ", context))) {
+        if (!context.isEmpty() && !sharesConcreteOutcome(firstLayer, context)) {
             throw violation(ViolationKind.UNSUPPORTED_OBJECT, "Chapter wording is not supported by its Primary stories");
         }
         if (containsAffirmedAny(firstLayer, PRODUCTION_CLAIMS)) {
@@ -154,6 +180,14 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
     }
 
     public boolean containsFirstLayerLeak(String value, List<String> allowedContext) {
+        return containsFirstLayerLeak(value, allowedContext, false);
+    }
+
+    private static boolean containsChapterFirstLayerLeak(String value, List<String> allowedContext) {
+        return containsFirstLayerLeak(value, allowedContext, true);
+    }
+
+    private static boolean containsFirstLayerLeak(String value, List<String> allowedContext, boolean allPublicContext) {
         String safe = text(value);
         if (safe.isBlank()) return false;
         if (safe.contains("…") || safe.contains("...") || RELATIVE_PATH.matcher(safe).find()
@@ -163,8 +197,7 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         // Reason/source context may help the model phrase an eligible reason,
         // but it must never whitelist raw technical tokens in the first layer.
         // Only the normalized public subject can authorize an ASCII token.
-        String publicSubject = values(allowedContext).stream().findFirst().orElse("");
-        Set<String> allowedAscii = asciiTokens(publicSubject);
+        Set<String> allowedAscii = allowedAscii(allowedContext, allPublicContext);
         Matcher enumMatcher = INTERNAL_ENUM.matcher(safe);
         while (enumMatcher.find()) if (!allowedAscii.contains(enumMatcher.group().toLowerCase(Locale.ROOT))) return true;
         Matcher tokenMatcher = ASCII_TOKEN.matcher(safe);
@@ -173,6 +206,34 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
             if (!allowedAscii.contains(token)) return true;
         }
         return false;
+    }
+
+    private static String firstLayerLeakKind(String value, List<String> allowedContext, boolean allPublicContext) {
+        String safe = text(value);
+        if (safe.contains("…") || safe.contains("...")) return "TRUNCATION";
+        if (RELATIVE_PATH.matcher(safe).find()) return "RELATIVE_PATH";
+        if (FILE_NAME.matcher(safe).find()) return "FILE_NAME";
+        if (CAMEL_OR_SNAKE.matcher(safe).find()) return "TECHNICAL_IDENTIFIER";
+        if (FIXTURE_IDENTIFIER.matcher(safe).matches()) return "FIXTURE_IDENTIFIER";
+        if (INDEXED_PLACEHOLDER_IDENTIFIER.matcher(safe).matches()) return "INDEXED_PLACEHOLDER";
+        Set<String> allowedAscii = allowedAscii(allowedContext, allPublicContext);
+        Matcher enumMatcher = INTERNAL_ENUM.matcher(safe);
+        while (enumMatcher.find()) {
+            if (!allowedAscii.contains(enumMatcher.group().toLowerCase(Locale.ROOT))) return "INTERNAL_ENUM";
+        }
+        Matcher tokenMatcher = ASCII_TOKEN.matcher(safe);
+        while (tokenMatcher.find()) {
+            if (!allowedAscii.contains(tokenMatcher.group().toLowerCase(Locale.ROOT))) return "ASCII_TOKEN";
+        }
+        return "UNKNOWN";
+    }
+
+    private static Set<String> allowedAscii(List<String> allowedContext, boolean allPublicContext) {
+        List<String> context = values(allowedContext);
+        if (!allPublicContext) return asciiTokens(context.stream().findFirst().orElse(""));
+        LinkedHashSet<String> result = new LinkedHashSet<>();
+        context.forEach(value -> result.addAll(asciiTokens(value)));
+        return Set.copyOf(result);
     }
 
     public double repetitionRate(List<String> fields) {
@@ -191,67 +252,27 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         return pairs == 0 ? 0.0 : (double) repeated / pairs;
     }
 
-    private static ClaimState classify(EvidenceProfile profile) {
-        Transition transition = profile.transition() == null ? Transition.UNKNOWN_TRANSITION : profile.transition();
-        if (transition == Transition.REMOVED || transition == Transition.REVERTED) return ClaimState.REMOVED;
-        if (transition == Transition.RESTORED || transition == Transition.REAPPLIED) return ClaimState.RESTORED;
-
-        List<String> paths = values(profile.paths());
-        String labels = String.join(" ", values(profile.sourceLabels())).toLowerCase(Locale.ROOT);
-        boolean hasStrong = values(profile.epistemicStatuses()).stream().anyMatch(ProjectFactEpistemicStatus::isStrongFact);
-        boolean hasDeclared = values(profile.authorities()).contains(Authority.DECLARED)
-            || values(profile.epistemicStatuses()).contains(ProjectFactEpistemicStatus.DECLARED);
-        boolean planned = containsAny(labels, "plan", "roadmap", "proposal", "will support", "计划", "规划", "后续", "方案");
-        boolean validation = values(profile.categories()).contains(Category.VALIDATION) && hasStrong;
-        boolean documentsOnly = !paths.isEmpty() && paths.stream().allMatch(path -> DOCUMENT_EXTENSIONS.contains(extension(path)));
-        boolean configsOnly = !paths.isEmpty() && paths.stream().allMatch(ProjectHistoryNarrativeEntailmentValidator::configurationPath);
-        boolean implementationAnchor = directImplementationAnchor(profile.subjectLabel(), paths, values(profile.sourceLabels()));
-        boolean artifact = containsAny(text(profile.subjectLabel()),
-            "报告", "数据", "演示文稿", "设计稿", "页面", "视频", "文档", "说明", "成果记录", "项目骨架", "配置示例", "忽略规则"
-        );
-
-        if (planned) return ClaimState.PLANNED;
-        if (hasDeclared && !hasStrong) return ClaimState.DECLARED;
-        if (documentsOnly && !artifact) return ClaimState.DECLARED;
-        if (validation && implementationAnchor) return ClaimState.VERIFIED;
-        if (configsOnly) return ClaimState.CONFIGURED;
-        if (implementationAnchor && !containsAny(text(profile.subjectLabel()), "项目骨架")) return ClaimState.IMPLEMENTED;
-        if (hasStrong || artifact) return ClaimState.OBSERVED;
-        return ClaimState.UNKNOWN;
-    }
-
-    private static boolean directImplementationAnchor(String subjectLabel, List<String> paths, List<String> sourceLabels) {
-        String subject = text(subjectLabel).toLowerCase(Locale.ROOT);
-        String pathText = String.join(" ", paths).replace('\\', '/').toLowerCase(Locale.ROOT);
-        String labelText = String.join(" ", sourceLabels).toLowerCase(Locale.ROOT);
-        boolean code = paths.stream().anyMatch(path -> CODE_EXTENSIONS.contains(extension(path)));
-        if (!code) return false;
-        if (containsAny(subject, "登录", "认证")) {
-            return containsAny(pathText, "/auth", "auth/", "login", "signin", "sign-in", "oauth")
-                || containsAny(labelText, "实现登录", "login flow", "auth flow", "登录页面", "登录接口");
-        }
-        return true;
-    }
-
-    private static boolean configurationPath(String path) {
-        String safe = text(path).replace('\\', '/').toLowerCase(Locale.ROOT);
-        String extension = extension(safe);
-        return CONFIG_EXTENSIONS.contains(extension) || safe.endsWith(".env.example") || safe.endsWith(".gitignore")
-            || safe.endsWith("package.json") || safe.endsWith("pom.xml") || safe.contains("/config/");
-    }
-
     private static boolean stateUpgrade(String wording, ClaimState state) {
         if (containsAffirmedAny(wording, PRODUCTION_CLAIMS)) return true;
         return switch (state) {
-            case PLANNED, DECLARED -> containsAffirmedAny(wording, IMPLEMENTED_CLAIMS)
+            case PLANNED, DECLARED, CONFIGURED, OBSERVED, UNKNOWN, CONFLICTED -> containsAffirmedAny(wording, IMPLEMENTED_CLAIMS)
                 || containsAffirmedAny(wording, VERIFIED_CLAIMS);
-            case CONFIGURED -> containsAffirmedAny(wording, List.of("部署完成", "完成部署", "用户可以", "可直接使用"))
-                || containsAffirmedAny(wording, VERIFIED_CLAIMS);
-            case IMPLEMENTED, OBSERVED, REMOVED, RESTORED -> containsAffirmedAny(wording, VERIFIED_CLAIMS);
-            case UNKNOWN -> containsAffirmedAny(wording, IMPLEMENTED_CLAIMS)
-                || containsAffirmedAny(wording, VERIFIED_CLAIMS);
+            case IMPLEMENTED, REMOVED, RESTORED -> containsAffirmedAny(wording, VERIFIED_CLAIMS);
             case VERIFIED -> false;
         };
+    }
+
+    public void validateStateCeiling(ClaimState state, String... wording) {
+        String combined = String.join(" ", wording == null ? new String[0] : wording);
+        if (stateUpgrade(combined, state == null ? ClaimState.UNKNOWN : state)) {
+            throw violation(ViolationKind.STATE_UPGRADE, "Presentation correction is stronger than its Evidence state");
+        }
+    }
+
+    private static boolean containsPositiveOutcome(String wording) {
+        return containsAffirmedAny(wording, IMPLEMENTED_CLAIMS)
+            || containsAffirmedAny(wording, VERIFIED_CLAIMS)
+            || containsAffirmedAny(wording, List.of("已经完成", "形成成果", "可以使用", "当前可用"));
     }
 
     private static boolean containsAffirmedAny(String value, List<String> markers) {
@@ -286,7 +307,7 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
     private static List<String> humanSafeContext(EvidenceProfile profile) {
         LinkedHashSet<String> result = new LinkedHashSet<>();
         result.add(text(profile.subjectLabel()));
-        values(profile.sourceLabels()).stream().map(ProjectHistoryNarrativeEntailmentValidator::text)
+        profile.atoms().stream().map(EvidenceAtom::sourceLabel).map(ProjectHistoryNarrativeEntailmentValidator::text)
             .filter(value -> containsHan(value) && !value.contains("/") && !value.contains("\\") && !value.contains("…"))
             .filter(value -> !FIXTURE_IDENTIFIER.matcher(value).matches())
             .limit(5).forEach(result::add);
@@ -304,13 +325,15 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
             case REMOVED -> List.of("只能表达内容已移除或回退");
             case RESTORED -> List.of("只能表达此前内容已恢复或重新出现");
             case UNKNOWN -> List.of("只能保守表达已有记录", "不能表达实现或验证完成");
+            case CONFLICTED -> List.of("只能表达来源存在冲突", "不能形成正向完成结论");
         };
     }
 
     private static List<String> forbiddenClaims(ClaimState state) {
         List<String> result = new ArrayList<>(PRODUCTION_CLAIMS);
         if (state != ClaimState.VERIFIED) result.addAll(VERIFIED_CLAIMS);
-        if (state == ClaimState.PLANNED || state == ClaimState.DECLARED || state == ClaimState.UNKNOWN) {
+        if (state == ClaimState.PLANNED || state == ClaimState.DECLARED || state == ClaimState.CONFIGURED
+            || state == ClaimState.OBSERVED || state == ClaimState.UNKNOWN || state == ClaimState.CONFLICTED) {
             result.addAll(IMPLEMENTED_CLAIMS);
         }
         return List.copyOf(new LinkedHashSet<>(result));
@@ -320,6 +343,31 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         Set<String> leftValues = hanBigrams(left);
         leftValues.retainAll(hanBigrams(right));
         return !leftValues.isEmpty();
+    }
+
+    private static boolean sharesConcreteOutcome(String chapterWording, List<String> primaryWording) {
+        Set<String> chapter = meaningfulHanBigrams(chapterWording);
+        if (chapter.isEmpty()) return false;
+        for (String wording : primaryWording) {
+            Set<String> primary = meaningfulHanBigrams(wording);
+            primary.retainAll(chapter);
+            if (primary.size() >= 2) return true;
+        }
+        return false;
+    }
+
+    private static boolean vagueChapter(String title, String summary, List<String> primaryWording) {
+        String combined = title + " " + summary;
+        boolean vagueVerb = containsAny(combined, "围绕", "推进", "逐步形成", "得到完善", "相关建设");
+        return vagueVerb && !sharesConcreteOutcome(combined, primaryWording);
+    }
+
+    private static Set<String> meaningfulHanBigrams(String value) {
+        Set<String> result = hanBigrams(value);
+        result.removeAll(Set.of(
+            "这一", "阶段", "时期", "围绕", "推进", "相关", "成果", "形成", "逐步", "得到", "完善", "项目", "主要"
+        ));
+        return result;
     }
 
     private static double bigramSimilarity(String left, String right) {
@@ -400,7 +448,8 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         VERIFIED,
         REMOVED,
         RESTORED,
-        UNKNOWN
+        UNKNOWN,
+        CONFLICTED
     }
 
     public enum ViolationKind {
@@ -414,32 +463,111 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         SUBJECT_CONCATENATION
     }
 
+    public record EvidenceAtom(
+        String atomRef,
+        List<String> subjectKeys,
+        Category category,
+        Transition transition,
+        Authority authority,
+        ProjectFactEpistemicStatus epistemicStatus,
+        List<String> paths,
+        String sourceLabel,
+        List<String> evidenceRefs
+    ) {
+        public EvidenceAtom {
+            atomRef = text(atomRef);
+            subjectKeys = values(subjectKeys);
+            category = category == null ? Category.EXTERNAL : category;
+            transition = transition == null ? Transition.UNKNOWN_TRANSITION : transition;
+            authority = authority == null ? Authority.UNKNOWN : authority;
+            epistemicStatus = epistemicStatus == null ? ProjectFactEpistemicStatus.UNKNOWN : epistemicStatus;
+            paths = values(paths);
+            sourceLabel = text(sourceLabel);
+            evidenceRefs = values(evidenceRefs);
+        }
+    }
+
     public record EvidenceProfile(
+        String subjectKey,
         String subjectLabel,
         Transition transition,
-        List<Category> categories,
-        List<Authority> authorities,
-        List<ProjectFactEpistemicStatus> epistemicStatuses,
-        List<String> paths,
-        List<String> sourceLabels,
+        List<EvidenceAtom> atoms,
         boolean reasonEligible
     ) {
         public EvidenceProfile {
-            categories = values(categories);
-            authorities = values(authorities);
-            epistemicStatuses = values(epistemicStatuses);
-            paths = values(paths);
-            sourceLabels = values(sourceLabels);
+            subjectKey = text(subjectKey);
+            subjectLabel = text(subjectLabel);
+            transition = transition == null ? Transition.UNKNOWN_TRANSITION : transition;
+            atoms = values(atoms);
+        }
+
+        public EvidenceProfile(
+            String subjectLabel,
+            Transition transition,
+            List<Category> categories,
+            List<Authority> authorities,
+            List<ProjectFactEpistemicStatus> epistemicStatuses,
+            List<String> paths,
+            List<String> sourceLabels,
+            boolean reasonEligible
+        ) {
+            this(legacySubjectKey(paths, subjectLabel), subjectLabel, transition,
+                legacyAtoms(transition, categories, authorities, epistemicStatuses, paths, sourceLabels), reasonEligible);
         }
 
         public static EvidenceProfile empty() {
-            return new EvidenceProfile("项目材料", Transition.UNKNOWN_TRANSITION, List.of(), List.of(), List.of(), List.of(), List.of(), false);
+            return new EvidenceProfile("project-material", "项目材料", Transition.UNKNOWN_TRANSITION, List.of(), false);
+        }
+
+        private static String legacySubjectKey(List<String> paths, String subjectLabel) {
+            List<String> safePaths = values(paths);
+            return safePaths.isEmpty()
+                ? text(subjectLabel).toLowerCase(Locale.ROOT).replaceAll("\\s+", "-")
+                : ProjectHistorySourceCollector.historySubjectKey(safePaths.get(0));
+        }
+
+        private static List<EvidenceAtom> legacyAtoms(
+            Transition transition,
+            List<Category> categories,
+            List<Authority> authorities,
+            List<ProjectFactEpistemicStatus> statuses,
+            List<String> paths,
+            List<String> sourceLabels
+        ) {
+            List<String> safePaths = values(paths);
+            Category category = first(categories, Category.EXTERNAL);
+            Authority authority = first(authorities, Authority.UNKNOWN);
+            ProjectFactEpistemicStatus status = first(statuses, ProjectFactEpistemicStatus.UNKNOWN);
+            String label = values(sourceLabels).stream().findFirst().orElse("");
+            if (safePaths.isEmpty()) {
+                return List.of(new EvidenceAtom("legacy", List.of(), category, transition, authority, status,
+                    List.of(), label, List.of()));
+            }
+            return safePaths.stream().map(path -> {
+                String key = ProjectHistorySourceCollector.historySubjectKey(path);
+                return new EvidenceAtom("legacy:" + key + ":" + path, List.of(key), category, transition,
+                    authority, status, List.of(path), label, List.of());
+            }).toList();
+        }
+
+        private static <T> T first(List<T> values, T fallback) {
+            return values == null ? fallback : values.stream().filter(java.util.Objects::nonNull).findFirst().orElse(fallback);
         }
     }
 
     public record NarrativeEnvelope(
         ClaimState claimState,
+        String subjectKey,
         String subjectLabel,
+        String claimAction,
+        String supportedOutcome,
+        List<String> directEvidenceRefs,
+        List<String> indirectEvidenceRefs,
+        List<String> sourceAuthorities,
+        String supportClass,
+        String downgradeReason,
+        List<String> directSupportSummary,
+        List<String> indirectContextSummary,
         List<String> allowedClaims,
         List<String> forbiddenClaims,
         List<String> humanSafeSourceContext,

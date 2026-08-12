@@ -15,11 +15,13 @@ class ProviderNeutralPromptSnapshotTest {
         String prompt = builder.buildProduction(new ProjectHistoryPromptBuilder.PromptInput(List.of(), List.of())).prompt();
         String instructions = prompt.substring(0, prompt.indexOf("\nSTORIES_JSON="));
 
-        assertThat(ProjectHistoryPromptBuilder.PROMPT_VERSION).isEqualTo("project-history-synthesis-v9");
+        assertThat(ProjectHistoryPromptBuilder.PROMPT_VERSION).isEqualTo("project-history-synthesis-v10");
         assertThat(instructions).contains(
             "可改字段只有 Story 的 humanTitle、oneSentenceSummary、beforeWording、changeWording、afterWording、reason、reasonEvidenceRefs、unknownWording",
             "role、primaryStoryId、supportingChangeRefs、storyRefs、时间、verified semantic、claimState",
             "PLANNED 不得写成 IMPLEMENTED",
+            "directSupportSummary 是与当前 subject/action 直接匹配的有界支持",
+            "不得因为同 Commit、相邻时间、相同区域或 Supporting Story 把间接上下文借给当前 Claim",
             "五段不得复读同一句话",
             "输出前做机械核对",
             "requiredStoryIds=[]",

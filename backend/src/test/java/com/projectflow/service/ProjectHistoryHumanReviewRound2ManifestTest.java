@@ -23,6 +23,10 @@ class ProjectHistoryHumanReviewRound2ManifestTest {
         "524391f2137a7b72d2920efbefaee1190177bbeb588594ef47fa9099d92554d9";
     private static final String ROUND1_WORKSHEET_CANONICAL_LF_SHA256 =
         "dbe05a47548ba72cd2c379c05b987e5915e68c32bb935e5bbd3fcf173c420408";
+    private static final String ROUND2_MANIFEST_RAW_SHA256 =
+        "e1aca397b469c4d1e4e4b4f6bb856306b2b3340bcb5df97e80d71a286a247349";
+    private static final String ROUND2_WORKSHEET_RAW_SHA256 =
+        "8e9c04bde787b6bb6c2528f96e5d296dcf66186f66290298cf18ca21f68d73e7";
     private static final Set<String> REQUIRED_COVERAGE = Set.of(
         "projectflow", "non-code", "short-history", "long-history", "generic-commit",
         "multi-commit-one-result", "one-commit-multiple-results", "lifecycle-restore", "rename-move",
@@ -46,6 +50,8 @@ class ProjectHistoryHumanReviewRound2ManifestTest {
         assertThat(canonicalLfSha256(round1Worksheet)).isEqualTo(ROUND1_WORKSHEET_CANONICAL_LF_SHA256);
         assertThat(manifest).isRegularFile();
         assertThat(worksheet).isRegularFile();
+        assertThat(rawSha256(manifest)).isEqualTo(ROUND2_MANIFEST_RAW_SHA256);
+        assertThat(rawSha256(worksheet)).isEqualTo(ROUND2_WORKSHEET_RAW_SHA256);
 
         JsonNode value = new ObjectMapper().readTree(manifest.toFile());
         assertThat(value.path("version").asText()).isEqualTo("projectflow-v385-human-review-sample-v2");
@@ -131,6 +137,11 @@ class ProjectHistoryHumanReviewRound2ManifestTest {
             .replace('\r', '\n');
         byte[] digest = MessageDigest.getInstance("SHA-256")
             .digest(normalized.getBytes(StandardCharsets.UTF_8));
+        return java.util.HexFormat.of().formatHex(digest);
+    }
+
+    private static String rawSha256(Path path) throws Exception {
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path));
         return java.util.HexFormat.of().formatHex(digest);
     }
 }

@@ -100,7 +100,7 @@ class ProjectFlowRuntimeParityTest {
             .doesNotContain("model: deepseek-v4-pro");
         assertThat(count(workflow, "timeout-minutes: 360")).isEqualTo(2);
         assertThat(count(workflow, "fail-fast: false")).isEqualTo(2);
-        assertThat(count(workflow, "reasoning_effort: max")).isEqualTo(2);
+        assertThat(count(workflow, "reasoning_effort: max")).isEqualTo(4);
         assertThat(count(workflow, "run_gate provider-probe")).isEqualTo(1);
         assertThat(count(workflow, "run_gate history-v385-qualification")).isEqualTo(1);
         assertThat(count(workflow, "run_gate history-v385-scenarios")).isEqualTo(1);

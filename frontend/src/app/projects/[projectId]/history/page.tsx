@@ -329,7 +329,13 @@ function StoryView({
             <div><dt className="font-medium text-body">摘要状态</dt><dd className="mt-1">{story.summaryStatus}</dd></div>
             <div><dt className="font-medium text-body">展示角色</dt><dd className="mt-1">{story.role ?? "PRIMARY"}</dd></div>
             <div><dt className="font-medium text-body">展示权威</dt><dd className="mt-1">{story.presentationAuthority ?? "AUTOMATIC"}</dd></div>
+            {story.claimAttribution ? <div><dt className="font-medium text-body">Claim 状态</dt><dd className="mt-1">{story.claimAttribution.state} · {story.claimAttribution.action}</dd></div> : null}
+            {story.claimAttribution ? <div><dt className="font-medium text-body">支持等级</dt><dd className="mt-1">{story.claimAttribution.supportClass}</dd></div> : null}
           </dl>
+          {story.claimAttribution ? <p className="mt-4 text-xs text-muted">支持结果：{story.claimAttribution.outcome}</p> : null}
+          {story.claimAttribution?.downgradeReason ? <p className="mt-2 text-xs text-amber-800">降级原因：{story.claimAttribution.downgradeReason}</p> : null}
+          {story.claimAttribution?.directEvidenceRefs.length ? <p className="mt-3 break-words text-xs text-muted">直接 Evidence：{story.claimAttribution.directEvidenceRefs.join("、")}</p> : null}
+          {story.claimAttribution?.indirectEvidenceRefs.length ? <p className="mt-2 break-words text-xs text-muted">间接上下文（不能提升状态）：{story.claimAttribution.indirectEvidenceRefs.join("、")}</p> : null}
           <p className="mt-4 text-xs text-muted">自动标题：{story.automaticTitle ?? story.humanTitle}</p>
           <p className="mt-2 text-xs text-muted">自动摘要：{story.automaticSummary ?? story.oneSentenceSummary}</p>
           {story.technicalAtomRefs?.length ? <p className="mt-3 text-xs text-muted">Technical Atom：{story.technicalAtomRefs.join("、")}</p> : null}

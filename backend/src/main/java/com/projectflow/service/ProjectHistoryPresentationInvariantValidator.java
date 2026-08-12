@@ -11,10 +11,21 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ProjectHistoryPresentationInvariantValidator {
+    private final ProjectHistoryNarrativeEntailmentValidator narrativeValidator;
+
+    public ProjectHistoryPresentationInvariantValidator() {
+        this(new ProjectHistoryNarrativeEntailmentValidator());
+    }
+
+    @Autowired
+    ProjectHistoryPresentationInvariantValidator(ProjectHistoryNarrativeEntailmentValidator narrativeValidator) {
+        this.narrativeValidator = narrativeValidator;
+    }
 
     public void validateCorrectedHistory(
         Map<String, ChangeStory> stories,
@@ -22,6 +33,17 @@ public class ProjectHistoryPresentationInvariantValidator {
         Map<String, EvolutionThread> threads
     ) {
         validateRoleGraph(stories.values().stream().filter(story -> !merged(story)).toList());
+        for (ChangeStory story : stories.values()) {
+            if (!story.userDeclared() || merged(story)) continue;
+            try {
+                narrativeValidator.validateStateCeiling(
+                    claimState(story.claimAttribution().state()), story.humanTitle(), story.oneSentenceSummary()
+                );
+            } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
+                throw violation(ViolationKind.UNSUPPORTED_CLAIM,
+                    "Corrected history presentation exceeds its Evidence state");
+            }
+        }
         Set<String> activeStoryIds = stories.values().stream()
             .filter(story -> !merged(story))
             .map(ChangeStory::id).collect(Collectors.toCollection(LinkedHashSet::new));
@@ -149,6 +171,16 @@ public class ProjectHistoryPresentationInvariantValidator {
 
     private static boolean merged(ChangeStory story) {
         return "MERGED".equalsIgnoreCase(story.displayStatus());
+    }
+
+    private static ProjectHistoryNarrativeEntailmentValidator.ClaimState claimState(String value) {
+        try {
+            return ProjectHistoryNarrativeEntailmentValidator.ClaimState.valueOf(
+                value == null ? "UNKNOWN" : value.trim().toUpperCase(java.util.Locale.ROOT)
+            );
+        } catch (IllegalArgumentException exception) {
+            return ProjectHistoryNarrativeEntailmentValidator.ClaimState.UNKNOWN;
+        }
     }
 
     private static Violation violation(ViolationKind kind, String message) {

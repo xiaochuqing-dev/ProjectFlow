@@ -3071,6 +3071,19 @@ export type ProjectHistoryStory = {
   mergedIntoStoryId?: string;
   displayStatus?: string;
   correctionConflicts?: string[];
+  claimAttribution?: ProjectHistoryClaimAttribution;
+};
+
+export type ProjectHistoryClaimAttribution = {
+  subject: string;
+  action: string;
+  state: string;
+  outcome: string;
+  directEvidenceRefs: string[];
+  indirectEvidenceRefs: string[];
+  sourceAuthorities: string[];
+  supportClass: string;
+  downgradeReason: string;
 };
 
 export type ProjectHistoryThread = {

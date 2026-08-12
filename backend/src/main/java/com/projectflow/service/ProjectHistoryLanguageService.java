@@ -173,6 +173,14 @@ public final class ProjectHistoryLanguageService {
                 object + "的当前状态仍需要更多来源确认。",
                 object
             );
+            case CONFLICTED -> new Presentation(
+                "记录" + object + "的来源冲突，暂不形成完成结论",
+                "现有来源对" + object + "给出了互相冲突的记录，当前不能确认最终状态。",
+                "此前状态缺少一致的来源说明。",
+                "这一阶段保留了与" + object + "有关但互相冲突的记录。",
+                object + "的结果仍需核对，当前不作为已完成事实。",
+                object
+            );
             case REMOVED, RESTORED, OBSERVED -> observed;
         };
     }
@@ -244,22 +252,25 @@ public final class ProjectHistoryLanguageService {
     }
 
     public String chapterTitle(List<String> storyTitles, List<Transition> transitions, Instant from, Instant to) {
-        String theme = chapterTheme(storyTitles);
-        if (transitions != null && !transitions.isEmpty()
-            && transitions.stream().allMatch(value -> value == Transition.CREATED)) {
-            return "建立" + theme + "，形成这一阶段的基础";
-        }
+        List<String> outcomes = concreteChapterOutcomes(storyTitles);
+        String first = outcomes.stream().findFirst().orElse("记录这一时期可确认的项目变化");
+        if (startsWithAction(first)) return first;
         if (transitions != null && transitions.stream().anyMatch(value ->
-            value == Transition.RESTORED || value == Transition.REAPPLIED)) {
-            return "恢复" + theme + "，让相关成果重新可见";
-        }
-        return "围绕" + theme + "推进阶段成果";
+            value == Transition.RESTORED || value == Transition.REAPPLIED)) return "恢复" + first;
+        if (transitions != null && !transitions.isEmpty()
+            && transitions.stream().allMatch(value -> value == Transition.CREATED)) return "建立" + first;
+        return "完善" + first;
     }
 
     public String chapterSummary(List<String> storyTitles, int primaryCount, int supportingCount) {
-        String theme = chapterTheme(storyTitles);
+        List<String> outcomes = concreteChapterOutcomes(storyTitles);
+        String first = outcomes.stream().findFirst().orElse("记录可确认的项目变化");
+        String second = outcomes.stream().skip(1).findFirst().orElse("");
+        String result = "这一时期" + sentenceAction(first);
+        if (!second.isBlank()) result += "，并" + sentenceAction(second);
+        result += "。";
         String support = supportingCount <= 0 ? "" : "相关支撑工作保留在工程详情中。";
-        return "这一时期主要围绕" + theme + "推进，相关成果逐步形成并得到完善。" + support;
+        return result + support;
     }
 
     public List<String> chapterGrounding(List<String> storyWording) {
@@ -298,6 +309,52 @@ public final class ProjectHistoryLanguageService {
         if (best >= 0 && scores[best] > 0) return themes.get(best);
         return values.stream().map(subjectLabels::safeFocus)
             .filter(value -> !value.isBlank() && !"项目阶段成果".equals(value)).findFirst().orElse("项目阶段成果");
+    }
+
+    private List<String> concreteChapterOutcomes(List<String> storyTitles) {
+        LinkedHashSet<String> outcomes = new LinkedHashSet<>();
+        for (String title : storyTitles == null ? List.<String>of() : storyTitles) {
+            String value = title == null ? "" : title.trim();
+            if (value.isBlank()) continue;
+            int boundary = firstBoundary(value);
+            if (boundary > 0) value = value.substring(0, boundary).trim();
+            if (value.contains("…") || value.contains("/") || value.contains("\\")
+                || value.codePoints().anyMatch(codePoint -> codePoint < 128 && Character.isLetterOrDigit(codePoint))) {
+                String focus = subjectLabels.safeFocus(value);
+                value = "项目阶段成果".equals(focus) ? "记录可确认的项目变化" : focus;
+            }
+            value = value.replaceFirst("^(围绕|推进|继续完善|整理项目材料并)", "").trim();
+            if (!value.isBlank() && !containsAny(value, "相关变化", "阶段成果", "项目材料")) outcomes.add(value);
+            if (outcomes.size() >= 2) break;
+        }
+        if (outcomes.isEmpty()) outcomes.add("记录可确认的项目变化");
+        return List.copyOf(outcomes);
+    }
+
+    private static int firstBoundary(String value) {
+        int result = -1;
+        for (char marker : new char[] {'，', '。', '；', ':', '：'}) {
+            int index = value.indexOf(marker);
+            if (index > 0 && (result < 0 || index < result)) result = index;
+        }
+        return result;
+    }
+
+    private static boolean startsWithAction(String value) {
+        return containsAnyAtStart(value,
+            "新增", "建立", "完成", "更新", "完善", "移除", "恢复", "调整", "替换", "拆分", "合并",
+            "撤销", "重新加入", "记录", "规划", "说明", "补充", "实现", "验证", "整理", "形成", "编写"
+        );
+    }
+
+    private static String sentenceAction(String value) {
+        return startsWithAction(value) ? value : "完成" + value;
+    }
+
+    private static boolean containsAnyAtStart(String value, String... markers) {
+        String safe = value == null ? "" : value.trim();
+        for (String marker : markers) if (safe.startsWith(marker)) return true;
+        return false;
     }
 
     private boolean supportPath(String path) {

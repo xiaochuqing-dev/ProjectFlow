@@ -14,6 +14,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public final class ProjectHistoryHumanSubjectLabelService {
+    private static final Set<String> AUTH_SUBJECT_KEYS = Set.of(
+        "auth", "authentication", "login", "sign-in", "signin", "oauth"
+    );
     private static final Set<String> SLIDE_EXTENSIONS = Set.of("ppt", "pptx", "key", "odp");
     private static final Set<String> DOCUMENT_EXTENSIONS = Set.of(
         "doc", "docx", "pdf", "md", "mdx", "txt", "rst", "adoc", "tex"
@@ -21,6 +24,9 @@ public final class ProjectHistoryHumanSubjectLabelService {
     private static final Set<String> DATA_EXTENSIONS = Set.of("csv", "tsv", "xls", "xlsx", "json", "parquet", "arrow");
     private static final Set<String> VIDEO_EXTENSIONS = Set.of("mp4", "mov", "mkv", "webm", "avi");
     private static final Set<String> DESIGN_EXTENSIONS = Set.of("fig", "sketch", "psd", "ai", "xd", "svg", "png", "jpg", "jpeg");
+    private static final Set<String> CODE_EXTENSIONS = Set.of(
+        "java", "kt", "kts", "go", "rs", "py", "js", "jsx", "ts", "tsx", "vue", "svelte", "cs", "cpp", "c", "h"
+    );
     private static final Pattern FIXTURE_IDENTIFIER = Pattern.compile(
         "(?i).*(?:outcome|part|fixture|phase|embedded|segment)[-_ ]*\\d+.*"
     );
@@ -42,34 +48,41 @@ public final class ProjectHistoryHumanSubjectLabelService {
         String pathSample = String.join(" ", safePaths).toLowerCase(Locale.ROOT);
         String labelSample = String.join(" ", safeLabels).toLowerCase(Locale.ROOT);
         String combined = subjectSample + " " + pathSample + " " + labelSample;
+        String semanticText = subjectSample + " " + labelSample;
+        String skeleton = skeletonLabel(safePaths);
+        Set<String> pathSubjectKeys = safePaths.stream()
+            .map(ProjectHistorySourceCollector::historySubjectKey)
+            .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        boolean subjectPathAnchored = pathSubjectKeys.contains(subjectSample);
+        boolean authPathAnchored = safePaths.stream().anyMatch(path -> CODE_EXTENSIONS.contains(extension(path)))
+            && pathSubjectKeys.stream().anyMatch(AUTH_SUBJECT_KEYS::contains);
+
+        // Broad area owners must stay broad. A single filename inside a bulk
+        // Story cannot rename the whole area to that file's product concept.
+        if (subjectSample.startsWith("project-area-") && !skeleton.isBlank()) return skeleton;
 
         if (isEnvironmentExample(combined)) return "环境配置示例";
         if (containsAny(combined, ".gitignore", "gitignore", "ignore rules", "忽略规则")) return "版本库忽略规则";
-        if (containsAny(combined, "readme", "getting started", "使用说明")) return "项目使用说明";
-        if (containsAny(combined, "research report", "research-report", "researchreport", "研究报告")) return "研究报告";
-        if (containsAny(combined, "core experience", "core-experience", "核心体验")) return "核心使用体验";
-        if (containsAny(combined, "customer service", "customer-service", "客户服务")) return "客户服务研究";
-        if (containsAny(combined, "project outcome", "project-outcome", "项目成果")) return "项目成果";
+        if (containsAny(semanticText, "readme", "getting started", "使用说明")) return "项目使用说明";
+        if (containsAny(semanticText, "research report", "research-report", "researchreport", "研究报告")) return "研究报告";
+        if (containsAny(semanticText, "core experience", "core-experience", "核心体验")) return "核心使用体验";
+        if (containsAny(semanticText, "customer service", "customer-service", "客户服务")) return "客户服务研究";
+        if (containsAny(semanticText, "project outcome", "project-outcome", "项目成果")) return "项目成果";
         if (FIXTURE_IDENTIFIER.matcher(subjectSample).matches()
             || INDEXED_PLACEHOLDER_IDENTIFIER.matcher(rawSubject).matches()
             || subjectSample.matches(".*outcome\\d+.*")) {
             return "项目成果记录";
         }
-        if (containsAny(combined, "project import", "project-import", "项目导入")) return "项目导入与资料接入";
-        if (containsAny(combined, "ui design direction", "design direction", "界面设计方向")) return "界面设计方向";
-        if (containsAny(combined, "project-history", "project history", "timeline", "项目历程")) return "项目历程";
-        if (containsAny(combined, "export", "download", "导出")) return "成果导出";
-
-        String skeleton = skeletonLabel(safePaths);
-        boolean loginRequested = containsAny(subjectSample, "auth", "login", "sign-in", "signin", "oauth", "登录");
-        boolean loginAnchored = containsAny(pathSample, "/auth", "auth/", "login", "sign-in", "signin", "oauth")
-            || containsAny(labelSample, "实现登录", "login flow", "auth flow", "登录页面", "登录接口");
-        if (loginRequested || loginAnchored || containsAny(combined, "邮箱登录")) {
-            if (loginAnchored) return "登录流程";
-            if (!skeleton.isBlank()) return skeleton;
-            if (documentOnly(safePaths)) return "项目设计说明";
-            return "项目材料";
+        if (containsAny(semanticText, "project import", "project-import", "项目导入")) return "项目导入与资料接入";
+        if (containsAny(semanticText, "ui design direction", "design direction", "界面设计方向")) return "界面设计方向";
+        if (containsAny(semanticText, "project-history", "project history", "timeline", "项目历程")) return "项目历程";
+        if (containsAny(semanticText, "export", "download", "导出")) return "成果导出";
+        if (authPathAnchored && (AUTH_SUBJECT_KEYS.contains(subjectSample) || genericSubject(subjectSample))) {
+            return "登录流程";
         }
+
+        if (!subjectPathAnchored && !skeleton.isBlank()) return skeleton;
+
         if (!skeleton.isBlank() && genericSubject(subjectSample)) return skeleton;
 
         if (VERSION_DOCUMENT_IDENTIFIER.matcher(subjectSample).matches()
@@ -85,6 +98,12 @@ public final class ProjectHistoryHumanSubjectLabelService {
         String artifact = artifactLabel(rawSubject, safePaths);
         if (!artifact.isBlank()) return artifact;
         if (!skeleton.isBlank()) return skeleton;
+
+        String sourceObject = sourceObject(safeLabels);
+        if (!sourceObject.isBlank()) return sourceObject;
+        if (subjectPathAnchored && safePaths.stream().anyMatch(path -> CODE_EXTENSIONS.contains(extension(path)))) {
+            return "源码功能";
+        }
 
         String human = humanize(rawSubject);
         if (containsHan(human) && safeHumanLabel(human)) return boundedWords(human, 28);
@@ -130,6 +149,21 @@ public final class ProjectHistoryHumanSubjectLabelService {
 
     private static String named(String candidate, String fallback) {
         return candidate == null || candidate.isBlank() ? fallback : boundedWords(candidate, 20) + fallbackSuffix(candidate, fallback);
+    }
+
+    private static String sourceObject(List<String> labels) {
+        for (String label : labels) {
+            String safe = text(label);
+            if (!containsHan(safe) || safe.contains("/") || safe.contains("\\")
+                || safe.codePoints().anyMatch(codePoint -> codePoint < 128 && Character.isLetterOrDigit(codePoint))) continue;
+            safe = safe.replaceFirst(
+                "^(新增|建立|完成|更新|完善|移除|恢复|重命名|调整|替换|拆分|合并|撤销|重新加入|记录|规划|说明|补充|实现|验证|整理|编写)", ""
+            ).trim();
+            int boundary = safe.indexOf('，');
+            if (boundary > 0) safe = safe.substring(0, boundary).trim();
+            if (safeHumanLabel(safe)) return boundedWords(safe, 24);
+        }
+        return "";
     }
 
     private static String fallbackSuffix(String candidate, String fallback) {

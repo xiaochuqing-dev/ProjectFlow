@@ -106,6 +106,43 @@ public final class ProjectHistoryDtos {
         }
     }
 
+    public record ClaimAttribution(
+        String subject,
+        String action,
+        String state,
+        String outcome,
+        List<String> directEvidenceRefs,
+        List<String> indirectEvidenceRefs,
+        List<String> sourceAuthorities,
+        String supportClass,
+        String downgradeReason
+    ) {
+        public ClaimAttribution {
+            subject = text(subject, "项目材料");
+            action = text(action, "UNKNOWN");
+            state = text(state, "UNKNOWN").toUpperCase(java.util.Locale.ROOT);
+            outcome = text(outcome, "缺少足够的直接证据");
+            directEvidenceRefs = immutable(directEvidenceRefs);
+            indirectEvidenceRefs = immutable(indirectEvidenceRefs);
+            sourceAuthorities = immutable(sourceAuthorities);
+            supportClass = text(supportClass, "INSUFFICIENT").toUpperCase(java.util.Locale.ROOT);
+            downgradeReason = downgradeReason == null ? "" : downgradeReason.trim();
+        }
+
+        public static ClaimAttribution empty() {
+            return new ClaimAttribution("项目材料", "UNKNOWN", "UNKNOWN", "缺少足够的直接证据",
+                List.of(), List.of(), List.of(), "INSUFFICIENT", "缺少可归因的直接 Evidence。");
+        }
+
+        private static String text(String value, String fallback) {
+            return value == null || value.isBlank() ? fallback : value.trim();
+        }
+
+        private static List<String> immutable(List<String> values) {
+            return values == null ? List.of() : List.copyOf(values);
+        }
+    }
+
     public record ChangeStory(
         String id,
         String primarySubjectKey,
@@ -145,7 +182,8 @@ public final class ProjectHistoryDtos {
         boolean pinned,
         String mergedIntoStoryId,
         String displayStatus,
-        List<String> correctionConflicts
+        List<String> correctionConflicts,
+        ClaimAttribution claimAttribution
     ) {
         public ChangeStory(
             String id,
@@ -176,7 +214,56 @@ public final class ProjectHistoryDtos {
                 reason, reasonEvidenceRefs, laterOutcome, conflicts, unknowns, occurredFrom, occurredTo, evidenceCount,
                 rawEventCount, authority, summaryStatus, coverage, limitations, eventRefs, evidenceRefs, "PRIMARY", "",
                 List.of(), List.of(), List.of(), List.of(), "AUTOMATIC", "", humanTitle, oneSentenceSummary, List.of(),
-                false, false, "", "ACTIVE", List.of());
+                false, false, "", "ACTIVE", List.of(), ClaimAttribution.empty());
+        }
+
+        public ChangeStory(
+            String id,
+            String primarySubjectKey,
+            String humanTitle,
+            String oneSentenceSummary,
+            String beforeState,
+            String change,
+            String afterState,
+            List<String> affectedAreas,
+            String reason,
+            List<String> reasonEvidenceRefs,
+            String laterOutcome,
+            List<String> conflicts,
+            List<String> unknowns,
+            Instant occurredFrom,
+            Instant occurredTo,
+            int evidenceCount,
+            int rawEventCount,
+            String authority,
+            String summaryStatus,
+            String coverage,
+            List<String> limitations,
+            List<UUID> eventRefs,
+            List<String> evidenceRefs,
+            String role,
+            String primaryStoryId,
+            List<String> supportingChangeRefs,
+            List<String> technicalAtomRefs,
+            List<String> commitSummaries,
+            List<String> technicalDetails,
+            String presentationAuthority,
+            String presentationRevision,
+            String automaticTitle,
+            String automaticSummary,
+            List<String> userCorrectionRefs,
+            boolean hiddenByDefault,
+            boolean pinned,
+            String mergedIntoStoryId,
+            String displayStatus,
+            List<String> correctionConflicts
+        ) {
+            this(id, primarySubjectKey, humanTitle, oneSentenceSummary, beforeState, change, afterState, affectedAreas,
+                reason, reasonEvidenceRefs, laterOutcome, conflicts, unknowns, occurredFrom, occurredTo, evidenceCount,
+                rawEventCount, authority, summaryStatus, coverage, limitations, eventRefs, evidenceRefs, role,
+                primaryStoryId, supportingChangeRefs, technicalAtomRefs, commitSummaries, technicalDetails,
+                presentationAuthority, presentationRevision, automaticTitle, automaticSummary, userCorrectionRefs,
+                hiddenByDefault, pinned, mergedIntoStoryId, displayStatus, correctionConflicts, ClaimAttribution.empty());
         }
 
         public ChangeStory {
@@ -193,6 +280,7 @@ public final class ProjectHistoryDtos {
             technicalDetails = immutable(technicalDetails);
             userCorrectionRefs = immutable(userCorrectionRefs);
             correctionConflicts = immutable(correctionConflicts);
+            claimAttribution = claimAttribution == null ? ClaimAttribution.empty() : claimAttribution;
             role = role == null || role.isBlank() ? "PRIMARY" : role.trim().toUpperCase(java.util.Locale.ROOT);
             primaryStoryId = primaryStoryId == null ? "" : primaryStoryId.trim();
             presentationAuthority = text(presentationAuthority, "AUTOMATIC");
@@ -206,6 +294,17 @@ public final class ProjectHistoryDtos {
         public boolean primary() { return "PRIMARY".equals(role); }
         public boolean supporting() { return "SUPPORTING".equals(role); }
         public boolean userDeclared() { return "USER_DECLARED_PRESENTATION".equals(presentationAuthority); }
+
+        public ChangeStory withClaimAttribution(ClaimAttribution value) {
+            return new ChangeStory(
+                id, primarySubjectKey, humanTitle, oneSentenceSummary, beforeState, change, afterState, affectedAreas,
+                reason, reasonEvidenceRefs, laterOutcome, conflicts, unknowns, occurredFrom, occurredTo, evidenceCount,
+                rawEventCount, authority, summaryStatus, coverage, limitations, eventRefs, evidenceRefs, role,
+                primaryStoryId, supportingChangeRefs, technicalAtomRefs, commitSummaries, technicalDetails,
+                presentationAuthority, presentationRevision, automaticTitle, automaticSummary, userCorrectionRefs,
+                hiddenByDefault, pinned, mergedIntoStoryId, displayStatus, correctionConflicts, value
+            );
+        }
 
         private static String text(String value, String fallback) {
             return value == null || value.isBlank() ? fallback : value.trim();

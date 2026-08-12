@@ -26,9 +26,10 @@ class ProjectHistoryChapterSemanticSynthesisTest {
         String title = language.chapterTitle(stories, List.of(Transition.CREATED), Instant.EPOCH, Instant.EPOCH.plusSeconds(1));
         String summary = language.chapterSummary(stories, 39, 9);
 
-        assertThat(title).contains("项目基础").doesNotContain("env", "gitignore", "与");
+        assertThat(title).contains("建立环境配置示例").doesNotContain("env", "gitignore", "与");
         assertThat(summary)
-            .startsWith("这一时期")
+            .startsWith("这一时期建立环境配置示例")
+            .contains("建立前端项目骨架")
             .doesNotContain("39 项主要结果", "9 项支撑工作", "主要包括");
     }
 

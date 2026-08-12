@@ -35,6 +35,7 @@ final class ProjectHistoryV385ReviewSamples {
             value.put("displayStatus", safe(story.displayStatus()));
             value.put("hiddenByDefault", story.hiddenByDefault());
             value.put("pinned", story.pinned());
+            value.put("claimAttribution", story.claimAttribution());
             return Map.copyOf(value);
         }).toList();
     }

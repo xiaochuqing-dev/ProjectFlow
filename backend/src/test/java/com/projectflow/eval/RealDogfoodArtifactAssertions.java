@@ -32,5 +32,18 @@ final class RealDogfoodArtifactAssertions {
         assertThat(dogfood).as("ProjectFlow dogfood scenario").isNotNull();
         assertThat(dogfood.path("status").asText()).isEqualTo("PASS");
         assertThat(dogfood.path("failure").asText()).isBlank();
+        assertThat(dogfood.path("metrics").path("truthfulnessP0Found").asBoolean()).isTrue();
+        assertThat(dogfood.path("metrics").path("truthfulnessP0ClaimState").asText())
+            .isNotIn("IMPLEMENTED", "VERIFIED", "MISSING");
+        JsonNode truthfulnessP0 = null;
+        for (JsonNode sample : dogfood.path("samples")) {
+            if ("truthfulness-p0".equals(sample.path("sampleType").asText())) {
+                truthfulnessP0 = sample.path("items").path(0);
+                break;
+            }
+        }
+        assertThat(truthfulnessP0).as("ae9f truthfulness P0 sample").isNotNull();
+        assertThat(truthfulnessP0.path("claimAttribution").path("state").asText())
+            .isNotIn("IMPLEMENTED", "VERIFIED", "");
     }
 }

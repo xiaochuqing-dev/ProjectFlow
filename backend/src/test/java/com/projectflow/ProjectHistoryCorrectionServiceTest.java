@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.dto.ProjectHistoryDtos.ChangeStory;
+import com.projectflow.dto.ProjectHistoryDtos.ClaimAttribution;
 import com.projectflow.dto.ProjectHistoryDtos.EvolutionThread;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryChapter;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryCorrectionRequest;
@@ -156,6 +157,19 @@ class ProjectHistoryCorrectionServiceTest {
         assertThat(persisted.getStoriesJson()).isEqualTo(storiesBefore);
         assertThat(persisted.getChaptersJson()).isEqualTo(chaptersBefore);
         assertThat(correctionRepository.findByProjectIdOrderByCreatedAtAsc(project.getId())).hasSize(5);
+    }
+
+    @Test
+    void plannedStoryCorrectionCannotClaimImplementationOrVerification() {
+        assertThatThrownBy(() -> correctionService.create(
+            ownerId,
+            project.getId(),
+            request("RENAME_STORY", "story-a", List.of(),
+                "登录流程已经实现并验证通过", "", "", "", "")
+        )).isInstanceOf(AppException.class)
+            .hasMessageContaining("展示修正不能把现有证据状态提升为更强事实");
+
+        assertThat(correctionRepository.findByProjectIdOrderByCreatedAtAsc(project.getId())).isEmpty();
     }
 
     @Test
@@ -716,6 +730,10 @@ class ProjectHistoryCorrectionServiceTest {
             occurredAt, occurredAt, events.size(), events.size(), "ENGINEERING_GROUPING", "DETERMINISTIC",
             "FULL_WITHIN_DISCOVERED_SOURCES", List.of(), events,
             events.stream().map(value -> "event:" + value).toList()
-        );
+        ).withClaimAttribution(new ClaimAttribution(
+            "登录流程", "PLAN", "PLANNED", "登录流程已有规划记录，不能确认已经实现",
+            events.stream().map(value -> "event:" + value).toList(), List.of(), List.of("DECLARED"), "DIRECT",
+            "规划 Evidence 不证明实际实现。"
+        ));
     }
 }

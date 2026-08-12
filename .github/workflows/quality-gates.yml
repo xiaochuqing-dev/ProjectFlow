@@ -221,7 +221,7 @@ jobs:
             supports_json_mode: "true"
             supports_reasoning: "true"
             supports_reasoning_control: "true"
-            reasoning_effort: high
+            reasoning_effort: max
           - id: deepseek
             display_name: DeepSeek Chat
             secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
@@ -334,7 +334,7 @@ jobs:
             supports_json_mode: "true"
             supports_reasoning: "true"
             supports_reasoning_control: "true"
-            reasoning_effort: high
+            reasoning_effort: max
             dogfood_test: GLMDogfoodRegressionTest
           - id: deepseek
             display_name: DeepSeek Chat

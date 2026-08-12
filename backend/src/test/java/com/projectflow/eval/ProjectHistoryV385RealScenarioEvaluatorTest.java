@@ -76,6 +76,9 @@ import com.projectflow.service.SensitiveContentRedactor;
 @SpringBootTest
 @ActiveProfiles("test")
 class ProjectHistoryV385RealScenarioEvaluatorTest {
+    private static final String TRUTHFULNESS_P0_COMMIT =
+        "commit:ae9fba1e60758252635695b797169dfde3c41e0a";
+    private static final String TRUTHFULNESS_P0_FRONTEND_SKELETON = "file:frontend/next-env.d.ts";
     private static final List<String> FIRST_LAYER_FORBIDDEN = List.of(
         "src/main/java", "frontend/src", "backend/src", "Controller", "Repository", "DTO", "Entity",
         "Service", "Mapper", "Handler", "PRIMARY", "SUPPORTING", "ENGINEERING_GROUPING",
@@ -489,6 +492,9 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         double technicalLeakRate = rate(firstLayerLeaks(stories, FIRST_LAYER_FORBIDDEN), stories.size());
         List<Map<String, Object>> supportingConsolidation = supportingConsolidationExamples(stories, 10);
         String presentationRevision = reviewRevision(userId, project.getId());
+        ChangeStory truthfulnessP0 = stories.stream()
+            .filter(ProjectHistoryV385RealScenarioEvaluatorTest::isTruthfulnessP0)
+            .findFirst().orElse(null);
 
         List<Map<String, Object>> samples = new ArrayList<>();
         samples.add(Map.of("sampleType", "primary", "items",
@@ -500,6 +506,9 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             ProjectHistoryV385ReviewSamples.chapters(chapters, 8, presentationRevision)));
         samples.add(Map.of("sampleType", "threads", "items", threadSamples(threads, 3)));
         samples.add(Map.of("sampleType", "manual-review-candidates", "items", reviewCandidates(stories, 5)));
+        samples.add(Map.of("sampleType", "truthfulness-p0", "items", truthfulnessP0 == null
+            ? List.of()
+            : ProjectHistoryV385ReviewSamples.stories(List.of(truthfulnessP0), 1, presentationRevision)));
         Map<String, Object> metrics = safeDiagnostics(diagnostics);
         metrics.put("commitCount", commitCount);
         metrics.put("sourceEventCount", overview.sourceEventCount());
@@ -513,6 +522,9 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         metrics.put("threadCount", threads.size());
         metrics.put("genericTemplateRate", genericRate);
         metrics.put("firstLayerTechnicalLeakRate", technicalLeakRate);
+        metrics.put("truthfulnessP0Found", truthfulnessP0 != null);
+        metrics.put("truthfulnessP0ClaimState", truthfulnessP0 == null
+            ? "MISSING" : truthfulnessP0.claimAttribution().state());
         metrics.put("finalCacheHit", true);
         List<String> failures = new ArrayList<>();
         if (primary.size() < 15) failures.add("ProjectFlow Dogfood 不足 15 个代表性 Primary Story");
@@ -523,7 +535,31 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         if (!Boolean.TRUE.equals(overview.diagnostics().get("eventConservation"))) failures.add("ProjectFlow Dogfood 原始事件不守恒");
         if (genericRate > 0.05) failures.add("ProjectFlow Dogfood generic template rate 超过 0.05");
         if (technicalLeakRate > 0.05) failures.add("ProjectFlow Dogfood technical leak rate 超过 0.05");
+        if (truthfulnessP0 == null) {
+            failures.add("ProjectFlow Dogfood 缺少 ae9f 前端骨架真实性 P0 样本");
+        } else {
+            String state = truthfulnessP0.claimAttribution().state();
+            if (Set.of("IMPLEMENTED", "VERIFIED").contains(state)) {
+                failures.add("ae9f 前端骨架被错误提升为已实现或已验证");
+            }
+            String narrative = String.join(" ", truthfulnessP0.humanTitle(), truthfulnessP0.oneSentenceSummary(),
+                truthfulnessP0.change(), truthfulnessP0.afterState());
+            if (unsupportedLoginImplementation(narrative)) {
+                failures.add("ae9f 前端骨架被错误叙述为登录流程实现");
+            }
+        }
         return new ScenarioEvidence(metrics, samples, failures);
+    }
+
+    private static boolean isTruthfulnessP0(ChangeStory story) {
+        Set<String> refs = new LinkedHashSet<>(story.evidenceRefs());
+        return refs.contains(TRUTHFULNESS_P0_COMMIT) && refs.contains(TRUTHFULNESS_P0_FRONTEND_SKELETON);
+    }
+
+    private static boolean unsupportedLoginImplementation(String narrative) {
+        if (narrative == null || !narrative.contains("登录")) return false;
+        return List.of("实现登录", "登录流程已有代码实现", "登录功能", "具备用户登录", "完成登录")
+            .stream().anyMatch(narrative::contains);
     }
 
     private ProjectSpace threeWindowProject(UUID userId, String name) throws Exception {

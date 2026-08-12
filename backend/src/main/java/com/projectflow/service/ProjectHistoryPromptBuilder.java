@@ -15,8 +15,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v9";
-    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v4";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v10";
+    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v5";
     static final int MAX_PROMPT_CHARS = 60_000;
     public static final String VALIDATION_REPAIR_MARKER = "\nHISTORY_VALIDATION_REPAIR=";
     private static final String VALIDATION_REPAIR_INSTRUCTIONS = """
@@ -48,7 +48,9 @@ public final class ProjectHistoryPromptBuilder {
         role、primaryStoryId、supportingChangeRefs、storyRefs、时间、verified semantic、claimState、laterOutcome、成员和 Evidence 都由工程层固定，禁止返回或改写。
         humanTitle 只用一句话表达“做了什么 + 对象 + 形成的结果”；oneSentenceSummary 补充范围或影响；Before 只讲此前状态；Change 只讲本阶段动作；After 只讲最终状态。五段不得复读同一句话。
         subjectDisplayConcept 是第一层唯一允许的主要对象；不得输出 raw subject、路径、文件名、class、internal slug、截断 token 或输入外的新实体。
-        claimState、allowedClaims 与 forbiddenClaims 是硬边界。PLANNED 不得写成 IMPLEMENTED，DECLARED 不得写成 VERIFIED，CONFIGURED 不得写成已部署，未给验证 Evidence 不得写稳定或生产可用。
+        claimState、claimAction、supportedOutcome、supportClass、allowedClaims 与 forbiddenClaims 是硬边界。PLANNED 不得写成 IMPLEMENTED，DECLARED 不得写成 VERIFIED，CONFIGURED 不得写成已部署，未给直接验证 Evidence 不得写稳定或生产可用。
+        directSupportSummary 是与当前 subject/action 直接匹配的有界支持；indirectContextSummary 只解释上下文，明确不能提升 Claim。不得因为同 Commit、相邻时间、相同区域或 Supporting Story 把间接上下文借给当前 Claim。
+        downgradeReason 必须被遵守：只能在工程层给出的 supportedOutcome 内改写，不得自行提高状态。
         Commit message 只是线索。reason 仅在 reasonEvidenceRefs 非空且全部来自该 Story 的 reasonEligibleEvidenceRefs 时填写；否则 reason 留空，并用一条自然的 unknownWording 说明原因暂时无法确认。
         不得创造 ID、Evidence、文件、数字、原因或项目状态；不得写重要性、成熟度、里程碑、成功判断、下一步或建议。非软件项目不要使用 Controller、Service、Capability 等软件术语。
         只返回严格 JSON，不得增加字段：
@@ -58,8 +60,8 @@ public final class ProjectHistoryPromptBuilder {
     private static final String CHAPTER_SYNTHESIS_INSTRUCTIONS = """
         你正在对一个成员关系已经由工程层固定的项目历程篇章做第二阶段归纳。输入只包含已经校验的 Story 展示摘要，不包含 Raw Event、Evidence、文件路径或提交原文。
         只能改进篇章的中文标题和摘要。chapterId 必须原样返回且只能返回一次；不得返回或修改 Story 成员、时间、边界、权威或任何其他字段。
-        标题必须让普通用户看懂这一时期主要推进的方向和阶段结果；摘要先讲阶段成果，再把 Supporting 保留为次要工程信息。不得以数量开头，不得把 Story subject 拼接成标题，不得把文件、测试、配置或验证数量描述为用户成果。
-        不得使用“相关变化”“工程分组”“形成初始结果”“进入当前时间点可确认的新状态”等空泛或内部模板表达。
+        标题必须直接写出至少一个 Primary Story 已支持的具体动作、对象和结果；摘要必须让普通用户能够复述这一时期实际完成了什么，再把 Supporting 保留为次要工程信息。不得以数量开头，不得把 Story subject 拼接成标题，不得把文件、测试、配置或验证数量描述为用户成果。
+        不得仅用“围绕某主题推进”“相关成果逐步形成并得到完善”“完成相关建设”等空泛句式。不得使用“相关变化”“工程分组”“形成初始结果”“进入当前时间点可确认的新状态”等内部模板表达。
         如果部分 Story 摘要因边界被省略，只能根据输入中的数量和代表摘要保守归纳，不得补造遗漏内容。
         禁止重要性、成熟度、里程碑、成功判断、下一步、计划或建议。禁止创造 ID、Evidence、文件、数字、原因或项目状态。
         只返回严格 JSON，不得增加字段：
@@ -273,6 +275,12 @@ public final class ProjectHistoryPromptBuilder {
         String deterministicChange,
         String deterministicAfter,
         String claimState,
+        String claimAction,
+        String supportedOutcome,
+        List<String> directSupportSummary,
+        List<String> indirectContextSummary,
+        String supportClass,
+        String downgradeReason,
         List<String> allowedClaims,
         List<String> forbiddenClaims,
         List<String> humanSafeSourceContext,
@@ -296,6 +304,7 @@ public final class ProjectHistoryPromptBuilder {
         ) {
             this(storyId, subject, occurredFrom, occurredTo, transitions, sourceLabels, affectedAreas, evidenceRefs,
                 reasonEligibleEvidenceRefs, deterministicBefore, deterministicChange, deterministicAfter, "OBSERVED",
+                "OBSERVE", "只能描述直接观察到的变化", List.of(), List.of(), "DIRECT", "",
                 List.of(), List.of(), List.of(), "PRIMARY", "", List.of());
         }
 
@@ -305,12 +314,18 @@ public final class ProjectHistoryPromptBuilder {
             affectedAreas = immutable(affectedAreas);
             evidenceRefs = immutable(evidenceRefs);
             reasonEligibleEvidenceRefs = immutable(reasonEligibleEvidenceRefs);
+            directSupportSummary = immutable(directSupportSummary);
+            indirectContextSummary = immutable(indirectContextSummary);
             allowedClaims = immutable(allowedClaims);
             forbiddenClaims = immutable(forbiddenClaims);
             humanSafeSourceContext = immutable(humanSafeSourceContext);
             supportingChangeRefs = immutable(supportingChangeRefs);
             role = role == null || role.isBlank() ? "PRIMARY" : role.trim();
             claimState = claimState == null || claimState.isBlank() ? "UNKNOWN" : claimState.trim();
+            claimAction = claimAction == null || claimAction.isBlank() ? "UNKNOWN" : claimAction.trim();
+            supportedOutcome = supportedOutcome == null ? "" : supportedOutcome.trim();
+            supportClass = supportClass == null || supportClass.isBlank() ? "INSUFFICIENT" : supportClass.trim();
+            downgradeReason = downgradeReason == null ? "" : downgradeReason.trim();
             primaryStoryId = primaryStoryId == null ? "" : primaryStoryId.trim();
         }
 

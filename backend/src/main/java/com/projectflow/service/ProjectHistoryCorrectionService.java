@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -62,6 +63,7 @@ public class ProjectHistoryCorrectionService {
     private final ProjectHistoryCorrectionRepository correctionRepository;
     private final ProjectHistoryEventRepository eventRepository;
     private final ProjectHistoryPresentationInvariantValidator presentationInvariantValidator;
+    private final ProjectHistoryNarrativeEntailmentValidator narrativeValidator;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate conflictTransactionTemplate;
 
@@ -71,6 +73,7 @@ public class ProjectHistoryCorrectionService {
         ProjectHistoryCorrectionRepository correctionRepository,
         ProjectHistoryEventRepository eventRepository,
         ProjectHistoryPresentationInvariantValidator presentationInvariantValidator,
+        ProjectHistoryNarrativeEntailmentValidator narrativeValidator,
         ObjectMapper objectMapper,
         PlatformTransactionManager transactionManager
     ) {
@@ -79,6 +82,7 @@ public class ProjectHistoryCorrectionService {
         this.correctionRepository = correctionRepository;
         this.eventRepository = eventRepository;
         this.presentationInvariantValidator = presentationInvariantValidator;
+        this.narrativeValidator = narrativeValidator;
         this.objectMapper = objectMapper;
         this.conflictTransactionTemplate = new TransactionTemplate(transactionManager);
         this.conflictTransactionTemplate.setPropagationBehavior(
@@ -538,6 +542,8 @@ public class ProjectHistoryCorrectionService {
         boolean secondary
     ) {
         EventSlice slice = eventSlice(eventIds, events);
+        List<ProjectHistoryEvent> selectedEvents = eventIds.stream().map(events::get)
+            .filter(java.util.Objects::nonNull).toList();
         List<String> reasonEvidence = original.reasonEvidenceRefs().stream()
             .filter(slice.evidenceRefs()::contains).distinct().toList();
         List<String> limitations = union(slice.limitations(), slice.complete()
@@ -563,7 +569,7 @@ public class ProjectHistoryCorrectionService {
             secondary ? splitAutomaticSummary(original.automaticSummary()) : original.automaticSummary(),
             append(original.userCorrectionRefs(), correction.getId().toString()), original.hiddenByDefault(),
             secondary ? false : original.pinned(),
-            "", "ACTIVE", original.correctionConflicts()
+            "", "ACTIVE", original.correctionConflicts(), claimAttribution(original, selectedEvents)
         );
     }
 
@@ -604,7 +610,8 @@ public class ProjectHistoryCorrectionService {
             USER_DECLARED_PRESENTATION, correction.getId().toString(), left.automaticTitle(), left.automaticSummary(),
             append(sources.stream().flatMap(story -> story.userCorrectionRefs().stream()).distinct().toList(), correction.getId().toString()),
             left.hiddenByDefault(), sources.stream().anyMatch(ChangeStory::pinned), "", "ACTIVE",
-            sources.stream().flatMap(story -> story.correctionConflicts().stream()).distinct().toList()
+            sources.stream().flatMap(story -> story.correctionConflicts().stream()).distinct().toList(),
+            mergedAttribution(sources)
         );
     }
 
@@ -800,7 +807,7 @@ public class ProjectHistoryCorrectionService {
             story.technicalAtomRefs(), story.commitSummaries(), story.technicalDetails(), USER_DECLARED_PRESENTATION,
             correction.getId().toString(), story.automaticTitle(), story.automaticSummary(),
             append(story.userCorrectionRefs(), correction.getId().toString()), story.hiddenByDefault(), story.pinned(),
-            story.mergedIntoStoryId(), story.displayStatus(), story.correctionConflicts()
+            story.mergedIntoStoryId(), story.displayStatus(), story.correctionConflicts(), story.claimAttribution()
         );
     }
 
@@ -829,7 +836,7 @@ public class ProjectHistoryCorrectionService {
             story.supportingChangeRefs(), story.technicalAtomRefs(), story.commitSummaries(), story.technicalDetails(),
             USER_DECLARED_PRESENTATION, correction.getId().toString(), story.automaticTitle(), story.automaticSummary(),
             append(story.userCorrectionRefs(), correction.getId().toString()), hidden, pinned, mergedInto, status,
-            story.correctionConflicts()
+            story.correctionConflicts(), story.claimAttribution()
         );
     }
 
@@ -906,7 +913,7 @@ public class ProjectHistoryCorrectionService {
             value.evidenceRefs(), value.role(), value.primaryStoryId(), append(value.supportingChangeRefs(), support), value.technicalAtomRefs(),
             value.commitSummaries(), value.technicalDetails(), USER_DECLARED_PRESENTATION, correction.getId().toString(), value.automaticTitle(),
             value.automaticSummary(), append(value.userCorrectionRefs(), correction.getId().toString()), value.hiddenByDefault(), value.pinned(), value.mergedIntoStoryId(),
-            value.displayStatus(), value.correctionConflicts()));
+            value.displayStatus(), value.correctionConflicts(), value.claimAttribution()));
     }
 
     private void removeFromSupporting(Map<String, ChangeStory> stories, String support) {
@@ -919,7 +926,8 @@ public class ProjectHistoryCorrectionService {
                 value.authority(), value.summaryStatus(), value.coverage(), value.limitations(), value.eventRefs(), value.evidenceRefs(),
                 value.role(), value.primaryStoryId(), refs, value.technicalAtomRefs(), value.commitSummaries(), value.technicalDetails(),
                 value.presentationAuthority(), value.presentationRevision(), value.automaticTitle(), value.automaticSummary(), value.userCorrectionRefs(),
-                value.hiddenByDefault(), value.pinned(), value.mergedIntoStoryId(), value.displayStatus(), value.correctionConflicts());
+                value.hiddenByDefault(), value.pinned(), value.mergedIntoStoryId(), value.displayStatus(), value.correctionConflicts(),
+                value.claimAttribution());
         });
     }
 
@@ -1006,6 +1014,60 @@ public class ProjectHistoryCorrectionService {
             && !request.effectiveRole().isBlank()
             && !Set.of("PRIMARY", "SUPPORTING").contains(request.effectiveRole().trim().toUpperCase(Locale.ROOT))) {
             throw bad("INVALID_HISTORY_CORRECTION_ROLE", "角色只能是 PRIMARY 或 SUPPORTING");
+        }
+        validatePresentationCeiling(type, request, stories, chapters);
+    }
+
+    private void validatePresentationCeiling(
+        String type,
+        HistoryCorrectionRequest request,
+        List<ChangeStory> stories,
+        List<HistoryChapter> chapters
+    ) {
+        List<ChangeStory> targets;
+        if (Set.of("RENAME_STORY", "EDIT_SUMMARY", "SPLIT_STORY").contains(type)) {
+            targets = stories.stream().filter(story -> story.id().equals(safe(request.targetId()))).toList();
+        } else if ("MERGE_STORIES".equals(type)) {
+            Set<String> ids = new LinkedHashSet<>(correctionTargets(type, request));
+            targets = stories.stream().filter(story -> ids.contains(story.id())).toList();
+        } else if ("DECLARE_CHAPTER".equals(type)) {
+            Set<String> ids = new LinkedHashSet<>(request.safeTargetIds());
+            targets = stories.stream().filter(story -> ids.contains(story.id())).toList();
+        } else if ("RENAME_CHAPTER".equals(type)) {
+            HistoryChapter chapter = chapters.stream().filter(value -> value.id().equals(
+                    effectiveChapterId(type, request, safe(request.targetId()))))
+                .findFirst().orElse(null);
+            Set<String> ids = chapter == null ? Set.of() : new LinkedHashSet<>(chapter.storyRefs());
+            targets = stories.stream().filter(story -> ids.contains(story.id())).toList();
+        } else {
+            return;
+        }
+        ProjectHistoryNarrativeEntailmentValidator.ClaimState ceiling = correctionCeiling(targets);
+        try {
+            narrativeValidator.validateStateCeiling(
+                ceiling, request.effectiveTitle(), request.effectiveSummary(),
+                request.effectiveSecondaryTitle(), request.effectiveSecondarySummary()
+            );
+        } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
+            throw bad("PROJECT_HISTORY_CORRECTION_STATE_UPGRADE", "展示修正不能把现有证据状态提升为更强事实");
+        }
+    }
+
+    private static ProjectHistoryNarrativeEntailmentValidator.ClaimState correctionCeiling(List<ChangeStory> stories) {
+        if (stories == null || stories.isEmpty()) return ProjectHistoryNarrativeEntailmentValidator.ClaimState.UNKNOWN;
+        List<ProjectHistoryNarrativeEntailmentValidator.ClaimState> states = stories.stream()
+            .map(ChangeStory::claimAttribution)
+            .map(ClaimAttribution::state)
+            .map(ProjectHistoryCorrectionService::claimState)
+            .distinct().toList();
+        return states.size() == 1 ? states.get(0) : ProjectHistoryNarrativeEntailmentValidator.ClaimState.UNKNOWN;
+    }
+
+    private static ProjectHistoryNarrativeEntailmentValidator.ClaimState claimState(String value) {
+        try {
+            return ProjectHistoryNarrativeEntailmentValidator.ClaimState.valueOf(safe(value).toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            return ProjectHistoryNarrativeEntailmentValidator.ClaimState.UNKNOWN;
         }
     }
 
@@ -1353,7 +1415,41 @@ public class ProjectHistoryCorrectionService {
             story.authority(), story.summaryStatus(), story.coverage(), story.limitations(), story.eventRefs(), story.evidenceRefs(), story.role(),
             story.primaryStoryId(), story.supportingChangeRefs(), story.technicalAtomRefs(), story.commitSummaries(), story.technicalDetails(),
             story.presentationAuthority(), story.presentationRevision(), story.automaticTitle(), story.automaticSummary(), story.userCorrectionRefs(),
-            story.hiddenByDefault(), story.pinned(), story.mergedIntoStoryId(), "CONFLICT", union(story.correctionConflicts(), List.of(correctionId + ":" + reason)));
+            story.hiddenByDefault(), story.pinned(), story.mergedIntoStoryId(), "CONFLICT", union(story.correctionConflicts(), List.of(correctionId + ":" + reason)),
+            story.claimAttribution());
+    }
+
+    private ClaimAttribution claimAttribution(ChangeStory original, List<ProjectHistoryEvent> events) {
+        var envelope = narrativeValidator.envelope(new ProjectHistoryNarrativeEntailmentValidator.EvidenceProfile(
+            original.primarySubjectKey(), original.claimAttribution().subject(),
+            com.projectflow.entity.ProjectHistoryEvent.Transition.UNKNOWN_TRANSITION,
+            (events == null ? List.<ProjectHistoryEvent>of() : events).stream().map(event ->
+                new ProjectHistoryNarrativeEntailmentValidator.EvidenceAtom(
+                    event.getStableEventKey(), strings(event.getSubjectKeysJson()), event.getCategory(), event.getTransition(),
+                    event.getAuthority(), event.getEpistemicStatus(), strings(event.getAffectedPathsJson()),
+                    event.getSafeSourceLabel(), strings(event.getEvidenceRefsJson())
+                )
+            ).toList(),
+            false
+        ));
+        return new ClaimAttribution(
+            envelope.subjectLabel(), envelope.claimAction(), envelope.claimState().name(), envelope.supportedOutcome(),
+            envelope.directEvidenceRefs(), envelope.indirectEvidenceRefs(), envelope.sourceAuthorities(),
+            envelope.supportClass(), envelope.downgradeReason()
+        );
+    }
+
+    private static ClaimAttribution mergedAttribution(List<ChangeStory> sources) {
+        List<String> indirect = (sources == null ? List.<ChangeStory>of() : sources).stream()
+            .flatMap(story -> Stream.concat(
+                story.claimAttribution().directEvidenceRefs().stream(),
+                story.claimAttribution().indirectEvidenceRefs().stream()
+            )).distinct().limit(100).toList();
+        return new ClaimAttribution(
+            "用户合并的展示结果", "DECLARE", "UNKNOWN", "合并只改变展示，不能形成新的工程事实",
+            List.of(), indirect, List.of("USER_DECLARED_PRESENTATION"), "INDIRECT_ONLY",
+            "多个 Story 的 Evidence 不能在展示合并时互相借用或提升状态。"
+        );
     }
 
     private HistoryChapter addChapterConflict(HistoryChapter chapter, String correctionId, String reason) {
