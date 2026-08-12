@@ -36,5 +36,19 @@ class ProviderNeutralPromptSnapshotTest {
             "只能使用 OUTPUT_TEMPLATE_JSON 中的对象、ID 和字段",
             "没有采用合格 Evidence 时 reason 留空"
         ).doesNotContain("DeepSeek", "GLM", "上一次输出内容");
+
+        var chapterPrompt = builder.buildChapterProduction(new ProjectHistoryPromptBuilder.ChapterSynthesisPromptInput(
+            "chapter-one", "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z", 0, 0, 0,
+            List.of(), "membership-fingerprint", List.of()
+        )).prompt();
+        String chapterRepair = builder.validationRepair(chapterPrompt, "CONTRACT");
+        assertThat(ProjectHistoryPromptBuilder.CHAPTER_PROMPT_VERSION)
+            .isEqualTo("project-history-chapter-synthesis-v6");
+        assertThat(chapterRepair).contains(
+            "CHAPTER_SYNTHESIS_JSON=",
+            "从原始 CHAPTER_SYNTHESIS_JSON 重新生成",
+            "只能包含 chapterId、title、summary",
+            "title 必须直接写出至少一个 Primary Story 已支持的具体动作、对象和结果"
+        ).doesNotContain("只能使用 OUTPUT_TEMPLATE_JSON", "DeepSeek", "GLM");
     }
 }

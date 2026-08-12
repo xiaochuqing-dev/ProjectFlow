@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Component
 public final class ProjectHistoryPromptBuilder {
     public static final String PROMPT_VERSION = "project-history-synthesis-v11";
-    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v5";
+    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v6";
     static final int MAX_PROMPT_CHARS = 60_000;
     public static final String VALIDATION_REPAIR_MARKER = "\nHISTORY_VALIDATION_REPAIR=";
     private static final String VALIDATION_REPAIR_INSTRUCTIONS = """
@@ -26,6 +26,14 @@ public final class ProjectHistoryPromptBuilder {
         Before / Change / After 只能改写 wording，不得改变 verified semantic、claimState 或 allowed claims。
         不得返回工程层字段，不得创造 ID、Evidence、实体、动作、原因、冲突、数字或项目状态。只返回严格 JSON。
         不得使用“相关变化”“工程分组”“形成初始结果”“进入当前时间点可确认的新状态”等空泛或内部模板表达。
+        """;
+    private static final String CHAPTER_VALIDATION_REPAIR_INSTRUCTIONS = """
+        上一次篇章输出未通过 ProjectFlow 的统一语义安全校验。请从原始 CHAPTER_SYNTHESIS_JSON 重新生成一次完整 JSON，不要复述或修补上一次输出。
+        只能返回一个篇章对象，且只能包含 chapterId、title、summary；chapterId 必须与原输入完全一致。不得返回或修改 Story 成员、时间、边界或其他字段。
+        title 必须直接写出至少一个 Primary Story 已支持的具体动作、对象和结果；summary 必须说明这一时期实际完成了什么，并把 Supporting 信息保持为次要说明。
+        不得使用“围绕”“推进”“完善”“建设”等空泛词替代具体结果，不得返回列表、路径、成熟度、原因、计划或项目状态。
+        只返回严格 JSON，不得增加字段：
+        {"chapters":[{"chapterId":"","title":"","summary":""}]}
         """;
     private static final int MAX_INITIAL_PROMPT_CHARS = MAX_PROMPT_CHARS
         - VALIDATION_REPAIR_MARKER.length() - VALIDATION_REPAIR_INSTRUCTIONS.length() - 40;
@@ -97,7 +105,10 @@ public final class ProjectHistoryPromptBuilder {
             case "INVALID_EVIDENCE", "CROSS_PROJECT_REFERENCE", "UNSUPPORTED_CLAIM", "CONTRACT" -> validationKind;
             default -> "CONTRACT";
         };
-        String repaired = safePrompt + VALIDATION_REPAIR_MARKER + safeKind + "\n" + VALIDATION_REPAIR_INSTRUCTIONS;
+        String repairInstructions = safePrompt.contains(CHAPTER_SYNTHESIS_MARKER)
+            ? CHAPTER_VALIDATION_REPAIR_INSTRUCTIONS
+            : VALIDATION_REPAIR_INSTRUCTIONS;
+        String repaired = safePrompt + VALIDATION_REPAIR_MARKER + safeKind + "\n" + repairInstructions;
         if (repaired.length() > MAX_PROMPT_CHARS) {
             throw new IllegalStateException("项目历程安全修复 Prompt 超过有界上限");
         }

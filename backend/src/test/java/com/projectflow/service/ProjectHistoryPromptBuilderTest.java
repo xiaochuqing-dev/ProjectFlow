@@ -93,6 +93,32 @@ class ProjectHistoryPromptBuilderTest {
     }
 
     @Test
+    void chapterValidationRepairUsesTheChapterContractInsteadOfTheStoryTemplate() {
+        var chapter = builder.buildChapterProduction(new ProjectHistoryPromptBuilder.ChapterSynthesisPromptInput(
+            "chapter-one", "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z", 1, 1, 0,
+            List.of("TIME_BOUNDARY"), "membership-fingerprint", List.of(
+                new ProjectHistoryPromptBuilder.ChapterStorySummaryInput(
+                    "story-one", "形成登录入口", "用户可以打开登录入口。", "PRIMARY",
+                    "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z"
+                )
+            )
+        ));
+
+        String repair = builder.validationRepair(chapter.prompt(), "CONTRACT");
+
+        assertThat(repair)
+            .hasSizeLessThanOrEqualTo(ProjectHistoryPromptBuilder.MAX_PROMPT_CHARS)
+            .contains(
+                "CHAPTER_SYNTHESIS_JSON=",
+                ProjectHistoryPromptBuilder.VALIDATION_REPAIR_MARKER + "CONTRACT",
+                "从原始 CHAPTER_SYNTHESIS_JSON 重新生成",
+                "只能包含 chapterId、title、summary",
+                "{\"chapters\":[{\"chapterId\":\"\",\"title\":\"\",\"summary\":\"\"}]}"
+            )
+            .doesNotContain("只能使用 OUTPUT_TEMPLATE_JSON");
+    }
+
+    @Test
     void outputTemplateFreezesEveryRequiredIdAndKeepsUnknownReasonSafeByDefault() throws Exception {
         var input = new ProjectHistoryPromptBuilder.PromptInput(List.of(
             new ProjectHistoryPromptBuilder.StoryPromptInput(
