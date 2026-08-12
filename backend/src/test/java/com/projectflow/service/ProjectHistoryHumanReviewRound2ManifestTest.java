@@ -23,10 +23,14 @@ class ProjectHistoryHumanReviewRound2ManifestTest {
         "524391f2137a7b72d2920efbefaee1190177bbeb588594ef47fa9099d92554d9";
     private static final String ROUND1_WORKSHEET_CANONICAL_LF_SHA256 =
         "dbe05a47548ba72cd2c379c05b987e5915e68c32bb935e5bbd3fcf173c420408";
-    private static final String ROUND2_MANIFEST_RAW_SHA256 =
+    private static final String ROUND2_MANIFEST_CRLF_SHA256 =
         "e1aca397b469c4d1e4e4b4f6bb856306b2b3340bcb5df97e80d71a286a247349";
-    private static final String ROUND2_WORKSHEET_RAW_SHA256 =
+    private static final String ROUND2_MANIFEST_CANONICAL_LF_SHA256 =
+        "b2841c74491d172919db4a37e723d6533ad99f77799e0191fd5d2a7bdb90e887";
+    private static final String ROUND2_WORKSHEET_CRLF_SHA256 =
         "8e9c04bde787b6bb6c2528f96e5d296dcf66186f66290298cf18ca21f68d73e7";
+    private static final String ROUND2_WORKSHEET_CANONICAL_LF_SHA256 =
+        "44655c49ef0d21c58e7aef7df4e1295dba6e48a5ddff3039f4d42edb96824692";
     private static final Set<String> REQUIRED_COVERAGE = Set.of(
         "projectflow", "non-code", "short-history", "long-history", "generic-commit",
         "multi-commit-one-result", "one-commit-multiple-results", "lifecycle-restore", "rename-move",
@@ -50,8 +54,12 @@ class ProjectHistoryHumanReviewRound2ManifestTest {
         assertThat(canonicalLfSha256(round1Worksheet)).isEqualTo(ROUND1_WORKSHEET_CANONICAL_LF_SHA256);
         assertThat(manifest).isRegularFile();
         assertThat(worksheet).isRegularFile();
-        assertThat(rawSha256(manifest)).isEqualTo(ROUND2_MANIFEST_RAW_SHA256);
-        assertThat(rawSha256(worksheet)).isEqualTo(ROUND2_WORKSHEET_RAW_SHA256);
+        assertThat(canonicalLfSha256(manifest)).isEqualTo(ROUND2_MANIFEST_CANONICAL_LF_SHA256);
+        assertThat(canonicalLfSha256(worksheet)).isEqualTo(ROUND2_WORKSHEET_CANONICAL_LF_SHA256);
+        assertThat(rawSha256(manifest)).isIn(
+            ROUND2_MANIFEST_CRLF_SHA256, ROUND2_MANIFEST_CANONICAL_LF_SHA256);
+        assertThat(rawSha256(worksheet)).isIn(
+            ROUND2_WORKSHEET_CRLF_SHA256, ROUND2_WORKSHEET_CANONICAL_LF_SHA256);
 
         JsonNode value = new ObjectMapper().readTree(manifest.toFile());
         assertThat(value.path("version").asText()).isEqualTo("projectflow-v385-human-review-sample-v2");

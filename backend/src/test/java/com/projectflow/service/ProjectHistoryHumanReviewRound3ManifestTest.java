@@ -19,10 +19,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 class ProjectHistoryHumanReviewRound3ManifestTest {
-    private static final String ROUND2_MANIFEST_RAW_SHA256 =
+    private static final String ROUND2_MANIFEST_CRLF_SHA256 =
         "e1aca397b469c4d1e4e4b4f6bb856306b2b3340bcb5df97e80d71a286a247349";
-    private static final String ROUND2_WORKSHEET_RAW_SHA256 =
+    private static final String ROUND2_MANIFEST_CANONICAL_LF_SHA256 =
+        "b2841c74491d172919db4a37e723d6533ad99f77799e0191fd5d2a7bdb90e887";
+    private static final String ROUND2_WORKSHEET_CRLF_SHA256 =
         "8e9c04bde787b6bb6c2528f96e5d296dcf66186f66290298cf18ca21f68d73e7";
+    private static final String ROUND2_WORKSHEET_CANONICAL_LF_SHA256 =
+        "44655c49ef0d21c58e7aef7df4e1295dba6e48a5ddff3039f4d42edb96824692";
     private static final Pattern FILLED_SCORE = Pattern.compile("(?m)^人工可读性评分（1-5）：\\s*[1-5]\\s*$");
     private static final Pattern FILLED_RESULT = Pattern.compile("(?m)^结论（PASS/FAIL）：\\s*(?:PASS|FAIL)\\s*$");
     private static final Pattern SENSITIVE = Pattern.compile(
@@ -32,10 +36,14 @@ class ProjectHistoryHumanReviewRound3ManifestTest {
     @Test
     void freezesRound3WithTruthfulnessP0AndBlankHumanFields() throws Exception {
         Path root = Path.of("..", "docs", "acceptance-evidence", "v3.8.5").normalize();
-        assertThat(rawSha256(root.resolve("human-review-round2-manifest.json")))
-            .isEqualTo(ROUND2_MANIFEST_RAW_SHA256);
-        assertThat(rawSha256(root.resolve("human-review-round2-worksheet.md")))
-            .isEqualTo(ROUND2_WORKSHEET_RAW_SHA256);
+        Path round2Manifest = root.resolve("human-review-round2-manifest.json");
+        Path round2Worksheet = root.resolve("human-review-round2-worksheet.md");
+        assertThat(canonicalLfSha256(round2Manifest)).isEqualTo(ROUND2_MANIFEST_CANONICAL_LF_SHA256);
+        assertThat(canonicalLfSha256(round2Worksheet)).isEqualTo(ROUND2_WORKSHEET_CANONICAL_LF_SHA256);
+        assertThat(rawSha256(round2Manifest)).isIn(
+            ROUND2_MANIFEST_CRLF_SHA256, ROUND2_MANIFEST_CANONICAL_LF_SHA256);
+        assertThat(rawSha256(round2Worksheet)).isIn(
+            ROUND2_WORKSHEET_CRLF_SHA256, ROUND2_WORKSHEET_CANONICAL_LF_SHA256);
 
         Path manifestPath = root.resolve("human-review-round3-manifest.json");
         Path worksheetPath = root.resolve("human-review-round3-worksheet.md");
@@ -101,6 +109,15 @@ class ProjectHistoryHumanReviewRound3ManifestTest {
 
     private static String rawSha256(Path path) throws Exception {
         byte[] digest = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path));
+        return java.util.HexFormat.of().formatHex(digest);
+    }
+
+    private static String canonicalLfSha256(Path path) throws Exception {
+        String normalized = Files.readString(path, StandardCharsets.UTF_8)
+            .replace("\r\n", "\n")
+            .replace('\r', '\n');
+        byte[] digest = MessageDigest.getInstance("SHA-256")
+            .digest(normalized.getBytes(StandardCharsets.UTF_8));
         return java.util.HexFormat.of().formatHex(digest);
     }
 }
