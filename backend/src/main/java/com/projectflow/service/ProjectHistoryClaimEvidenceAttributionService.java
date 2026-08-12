@@ -50,7 +50,10 @@ final class ProjectHistoryClaimEvidenceAttributionService {
         List<ClassifiedAtom> classified = direct.stream()
             .map(atom -> new ClassifiedAtom(atom, evidenceClass(atom)))
             .toList();
-        ClaimState state = state(classified);
+        ClaimState strongestState = state(classified);
+        boolean broadAreaCeiling = subjectKey.startsWith("project-area-")
+            && Set.of(ClaimState.IMPLEMENTED, ClaimState.VERIFIED).contains(strongestState);
+        ClaimState state = broadAreaCeiling ? ClaimState.OBSERVED : strongestState;
         String action = action(state);
         String outcome = outcome(state, safe.subjectLabel());
         List<String> directRefs = evidenceRefs(direct, true);
@@ -58,7 +61,9 @@ final class ProjectHistoryClaimEvidenceAttributionService {
         indirectSet.removeAll(directRefs);
         List<String> indirectRefs = List.copyOf(indirectSet);
         String supportClass = supportClass(state, direct);
-        String downgradeReason = downgradeReason(state, direct, indirect, classified);
+        String downgradeReason = broadAreaCeiling
+            ? "项目区域级 Evidence 只能证明该区域有可观察变化，不能证明某个具体功能已经实现或验证。"
+            : downgradeReason(state, direct, indirect, classified);
         return new Attribution(
             subjectKey,
             safe.subjectLabel(),

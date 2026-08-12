@@ -151,13 +151,30 @@ class ProjectHistoryClaimEvidenceAttributionContractTest {
             atom("package", "project-area-frontend", Category.FILE_CHANGE,
                 "frontend/package.json", "file:frontend/package.json"),
             atom("postcss", "project-area-frontend", Category.FILE_CHANGE,
-                "frontend/postcss.config.mjs", "file:frontend/postcss.config.mjs")
+                "frontend/postcss.config.mjs", "file:frontend/postcss.config.mjs"),
+            atom("layout", "project-area-frontend", Category.FILE_CHANGE,
+                "frontend/src/app/layout.tsx", "file:frontend/src/app/layout.tsx"),
+            atom("page", "project-area-frontend", Category.FILE_CHANGE,
+                "frontend/src/app/page.tsx", "file:frontend/src/app/page.tsx")
         );
         var envelope = envelope("project-area-frontend", "前端项目骨架", atoms);
 
-        assertThat(envelope.claimState()).isNotIn(ClaimState.IMPLEMENTED, ClaimState.VERIFIED);
+        assertThat(envelope.claimState()).isEqualTo(ClaimState.OBSERVED);
+        assertThat(envelope.downgradeReason()).contains("项目区域级 Evidence", "具体功能");
         assertThatThrownBy(() -> validate(envelope, "前端项目骨架已经实现登录流程。"))
             .isInstanceOf(NarrativeViolation.class);
+    }
+
+    @Test
+    void preciseSubjectKeepsDirectImplementationStrength() {
+        var envelope = envelope("login-experience", "登录流程", List.of(
+            atom("login", "login-experience", Category.FILE_CHANGE,
+                "frontend/src/app/login/LoginExperience.tsx", "file:frontend/src/app/login/LoginExperience.tsx")
+        ));
+
+        assertThat(envelope.claimState()).isEqualTo(ClaimState.IMPLEMENTED);
+        assertThat(envelope.directEvidenceRefs())
+            .containsExactly("file:frontend/src/app/login/LoginExperience.tsx");
     }
 
     private ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope(
