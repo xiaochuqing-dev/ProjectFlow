@@ -228,6 +228,9 @@ public class ProjectHistoryReconstructionService {
                 modelResult.unprocessedWindowCount(),
                 modelResult.unprocessedStoryCount()
             );
+            diagnostics.put("modelDeterministicTitleFallbackCount", (int) finalResult.stories().stream()
+                .filter(story -> "MODEL_VALIDATED_WITH_DETERMINISTIC_TITLE".equals(story.summaryStatus()))
+                .count());
             diagnostics.put("modelValidationRepairCount", (int) modelDiagnostics.stream()
                 .filter(value -> "HISTORY_VALIDATION_RETRY".equals(value.retryType())).count());
             diagnostics.put("modelValidationRepairFailureCount", (int) modelDiagnostics.stream()
@@ -817,6 +820,7 @@ public class ProjectHistoryReconstructionService {
             for (String field : List.of(
                 "storyCount", "threadCount", "reconstructionMode", "reusedStoryCount", "recomputedStoryCount",
                 "modelEnhancedStoryCount", "boundedDeterministicStoryCount", "eventConservation",
+                "modelDeterministicTitleFallbackCount",
                 "modelRejectedInvalidEvidenceRefCount", "modelRejectedCrossProjectRefCount",
                 "modelRejectedUnsupportedClaimCount", "modelPromptCharacterCount", "modelPromptOmittedStoryCount",
                 "modelPromptOmittedChapterCount", "modelWindowCount", "modelProcessedWindowCount",
@@ -1680,7 +1684,8 @@ public class ProjectHistoryReconstructionService {
                     currentStory,
                     currentStory.laterOutcome(),
                     "INFERRED_NON_AUTHORITATIVE",
-                    "MODEL_VALIDATED",
+                    value.summaryStatus() == null || value.summaryStatus().isBlank()
+                        ? "MODEL_VALIDATED" : value.summaryStatus(),
                     value.humanTitle(),
                     value.oneSentenceSummary(),
                     value.beforeState(),
@@ -2152,6 +2157,18 @@ public class ProjectHistoryReconstructionService {
             if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
                 throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, "History model returned vague wording");
             }
+            boolean deterministicTitleFallback = false;
+            if (!narrativeValidator.hasActionObjectResult(title, summary)) {
+                title = original.humanTitle();
+                summary = original.oneSentenceSummary();
+                deterministicTitleFallback = true;
+                if (!narrativeValidator.hasActionObjectResult(title, summary)) {
+                    throw new HistoryValidationException(
+                        ValidationKind.UNSUPPORTED_CLAIM,
+                        "History title does not state an action, object and supported result"
+                    );
+                }
+            }
             String before = modelText(node, "beforeWording", 1_000);
             String change = modelText(node, "changeWording", 1_200);
             String after = modelText(node, "afterWording", 1_000);
@@ -2198,7 +2215,8 @@ public class ProjectHistoryReconstructionService {
                 throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
             }
             stories.put(id, copyStory(
-                original, original.laterOutcome(), "INFERRED_NON_AUTHORITATIVE", "MODEL_VALIDATED",
+                original, original.laterOutcome(), "INFERRED_NON_AUTHORITATIVE",
+                deterministicTitleFallback ? "MODEL_VALIDATED_WITH_DETERMINISTIC_TITLE" : "MODEL_VALIDATED",
                 title, summary, before, change, after, reason, reasonEvidence,
                 original.conflicts(), unknowns
             ));

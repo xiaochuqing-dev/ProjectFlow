@@ -58,6 +58,17 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         "相关变化", "工程分组", "形成初始结果", "进入当前时间点可确认的新状态", "修改 n 个文件",
         "当前行为得到更新", "项目开始具备这项能力"
     );
+    private static final List<String> TITLE_ACTION_MARKERS = List.of(
+        "新增", "新建", "建立", "整理", "完善", "更新", "恢复", "移除", "撤销", "重新", "替换", "拆分", "合并",
+        "调整", "记录", "保留", "隐藏", "统一", "形成", "推进", "实现", "完成", "创建", "编写", "补充", "保存", "应用", "搭建"
+    );
+    private static final List<String> TITLE_RESULT_MARKERS = List.of(
+        "结果", "版本", "当前", "可以", "可确认", "可核对", "可阅读", "继续", "重新出现", "不再", "保留",
+        "恢复", "完成", "形成", "统一", "分别查看", "代码实现", "实现代码", "实现基础", "基础代码", "功能基础",
+        "变更记录", "现状记录", "结构更新", "更新了结构", "首次创建", "保存了", "保存相关", "工作交接记录",
+        "可供查看", "可供后续查看", "可看", "从无到有", "首次出现", "再次出现", "从项目中移除", "消失", "方案记录", "初始代码",
+        "已有实现", "已有内容", "初始记录", "调整记录", "可查看"
+    );
     private static final List<String> VAGUE_CHAPTER_LANGUAGE = List.of(
         "围绕项目基础建设推进阶段成果", "相关成果逐步形成并得到完善", "完成相关建设", "持续推进相关工作"
     );
@@ -135,6 +146,23 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         if (repetitionRate(fields) > 0.0) {
             throw violation(ViolationKind.REPETITION, "Narrative fields repeat the same wording");
         }
+    }
+
+    /**
+     * Provider-neutral first-layer quality boundary. A model title must name an
+     * action and object, while the title/summary pair must state a supported
+     * result. Callers may retain the already validated deterministic pair when
+     * a Provider returns weaker wording.
+     */
+    public boolean hasActionObjectResult(String title, String summary) {
+        String safeTitle = text(title);
+        String firstLayer = safeTitle + " " + text(summary);
+        boolean action = containsAny(safeTitle, TITLE_ACTION_MARKERS);
+        boolean result = containsAny(firstLayer, TITLE_RESULT_MARKERS);
+        String object = safeTitle.replaceAll("[，,。.!！？]", "");
+        for (String marker : TITLE_ACTION_MARKERS) object = object.replace(marker, "");
+        return action && result && object.trim().length() >= 2
+            && !containsAny(firstLayer, GENERIC_FIRST_LAYER);
     }
 
     public void validateChapter(String title, String summary, List<String> primaryStoryWording) {

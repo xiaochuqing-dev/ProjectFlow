@@ -86,4 +86,20 @@ class ProjectHistoryNarrativeEntailmentTest {
             List.of("建立前端项目骨架，补充本地启动配置。")
         );
     }
+
+    @Test
+    void detectsProviderTitlesThatOmitAnExplicitSupportedResult() {
+        assertThat(validator.hasActionObjectResult(
+            "对研究报告执行了创建、修改、拆分与移除等操作并留下变化记录",
+            "涉及研究报告在7月初的多项变动，具体效果尚需更多来源确认"
+        )).isFalse();
+        assertThat(validator.hasActionObjectResult(
+            "编写成果导出功能的代码",
+            "涵盖成果导出功能的代码创建与修改"
+        )).isFalse();
+        assertThat(validator.hasActionObjectResult(
+            "调整研究报告并形成可核对的变更记录",
+            "研究报告的结构变化已保留供后续核对"
+        )).isTrue();
+    }
 }

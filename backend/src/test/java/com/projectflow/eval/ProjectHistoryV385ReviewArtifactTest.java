@@ -45,6 +45,7 @@ class ProjectHistoryV385ReviewArtifactTest {
         Map<?, ?> chapterSample = (Map<?, ?>) ((List<?>) candidate.get("chapters")).get(0);
 
         assertThat(storySample.get("presentationRevision")).isEqualTo(revision);
+        assertThat(storySample.get("summaryStatus")).isEqualTo("MODEL_VALIDATED");
         assertThat(storySample.get("reason")).isEqualTo("来源记录说明了整理原因。");
         assertThat(storySample.get("before")).isEqualTo("此前结果分散。");
         assertThat(storySample.get("after")).isEqualTo("现在可以按时间阅读。");

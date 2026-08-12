@@ -31,6 +31,7 @@ final class ProjectHistoryV385ReviewSamples {
             value.put("unknowns", story.unknowns());
             value.put("conflicts", story.conflicts());
             value.put("presentationAuthority", safe(story.presentationAuthority()));
+            value.put("summaryStatus", safe(story.summaryStatus()));
             value.put("presentationRevision", revision);
             value.put("displayStatus", safe(story.displayStatus()));
             value.put("hiddenByDefault", story.hiddenByDefault());

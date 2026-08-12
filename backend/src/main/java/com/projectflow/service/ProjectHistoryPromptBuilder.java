@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v11";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v12";
     public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v6";
     static final int MAX_PROMPT_CHARS = 60_000;
     public static final String VALIDATION_REPAIR_MARKER = "\nHISTORY_VALIDATION_REPAIR=";
@@ -24,6 +24,7 @@ public final class ProjectHistoryPromptBuilder {
         只能使用 OUTPUT_TEMPLATE_JSON 中的对象、ID 和字段；每个 required ID 必须且只能返回一次。
         reasonEvidenceRefs 只能逐项复制对应 Story 的 reasonEligibleEvidenceRefs；没有采用合格 Evidence 时 reason 留空，并保留模板中的“原因未知”。只有 reason 非空且 reasonEvidenceRefs 非空时才可清空 unknownWording。
         Before / Change / After 只能改写 wording，不得改变 verified semantic、claimState 或 allowed claims。
+        humanTitle 必须明确写出动作和对象，并由 humanTitle 与 oneSentenceSummary 共同写出已经受支持的结果；“编写某功能代码”“留下变化记录”等没有明确结果的表达不合格。
         不得返回工程层字段，不得创造 ID、Evidence、实体、动作、原因、冲突、数字或项目状态。只返回严格 JSON。
         不得使用“相关变化”“工程分组”“形成初始结果”“进入当前时间点可确认的新状态”等空泛或内部模板表达。
         """;

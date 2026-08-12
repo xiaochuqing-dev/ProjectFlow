@@ -147,6 +147,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
             number(diagnostics, "modelRejectedInvalidEvidenceRefCount"),
             number(diagnostics, "modelRejectedCrossProjectRefCount"),
             number(diagnostics, "modelRejectedUnsupportedClaimCount"),
+            number(diagnostics, "modelDeterministicTitleFallbackCount"),
             number(diagnostics, "modelValidationRepairCount"),
             number(diagnostics, "modelValidationRepairFailureCount")
         );
@@ -170,6 +171,8 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
             + value.chapterFailedCount() + value.chapterPendingCount()).sum();
         int rejected = runs.stream().mapToInt(value -> value.rejectedInvalidEvidenceCount()
             + value.rejectedCrossProjectCount() + value.rejectedUnsupportedClaimCount()).sum();
+        int deterministicTitleFallbacks = runs.stream()
+            .mapToInt(SafeCaseRun::deterministicTitleFallbackCount).sum();
         int validationRepairs = runs.stream().mapToInt(SafeCaseRun::validationRepairCount).sum();
         int validationRepairFailures = runs.stream().mapToInt(SafeCaseRun::validationRepairFailureCount).sum();
         int requests = runs.stream().mapToInt(SafeCaseRun::requestCount).sum();
@@ -181,7 +184,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         return new QualificationSummary(
             qualified, requests, tokens, elapsedMs, calibrationRequests, holdoutRequests,
             sourceCoverageIncomplete, refreshDegraded, modelDegraded, failedOrPending, rejected,
-            validationRepairs, validationRepairFailures
+            deterministicTitleFallbacks, validationRepairs, validationRepairFailures
         );
     }
 
@@ -198,7 +201,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         Path output = Path.of("target", "projectflow-eval", outputName);
         Files.createDirectories(output);
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("version", "projectflow-v3.8.5-history-real-output-v3");
+        artifact.put("version", "projectflow-v3.8.5-history-real-output-v4");
         artifact.put("generatedAt", Instant.now().toString());
         artifact.put("provider", Map.of(
             "name", config.name(), "model", config.model(), "protocol", config.protocol().name(),
@@ -311,6 +314,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         int rejectedInvalidEvidenceCount,
         int rejectedCrossProjectCount,
         int rejectedUnsupportedClaimCount,
+        int deterministicTitleFallbackCount,
         int validationRepairCount,
         int validationRepairFailureCount
     ) {
@@ -328,6 +332,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         int modelDegradedCaseCount,
         int failedOrPendingWindowCount,
         int rejectedModelOutputCount,
+        int deterministicTitleFallbackCount,
         int validationRepairCount,
         int validationRepairFailureCount
     ) {

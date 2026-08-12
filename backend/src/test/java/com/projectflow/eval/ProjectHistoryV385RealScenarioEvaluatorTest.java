@@ -817,7 +817,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             "chapterSynthesisPendingCount", "chapterSynthesisOmittedStoryCount",
             "modelRejectedInvalidEvidenceRefCount", "modelRejectedCrossProjectRefCount",
             "modelRejectedUnsupportedClaimCount", "modelValidationRepairCount",
-            "modelValidationRepairFailureCount", "modelFallback"
+            "modelValidationRepairFailureCount", "modelDeterministicTitleFallbackCount", "modelFallback"
         )) {
             if (source != null && source.containsKey(key)) result.put(key, source.get(key));
         }
@@ -833,8 +833,11 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         boolean requiredStagesUsed = "correction".equals(scenarioScope) ? usedStoryStage
             : usedStoryStage && runs.stream().mapToInt(SafeScenarioRun::chapterModelCallCount).sum() > 0;
         int validationRepairs = runs.stream().mapToInt(SafeScenarioRun::validationRepairCount).sum();
+        int deterministicTitleFallbacks = runs.stream()
+            .mapToInt(run -> number(run.metrics(), "modelDeterministicTitleFallbackCount")).sum();
         return new QualificationSummary(allPassed && requests > 0 && requiredStagesUsed, requests, tokens, latency,
-            runs.size(), (int) runs.stream().filter(run -> "PASS".equals(run.status())).count(), validationRepairs);
+            runs.size(), (int) runs.stream().filter(run -> "PASS".equals(run.status())).count(),
+            deterministicTitleFallbacks, validationRepairs);
     }
 
     private String scenarioScope() {
@@ -855,7 +858,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         Path output = Path.of("target", "projectflow-eval", outputName);
         Files.createDirectories(output);
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("version", "projectflow-v3.8.5-real-scenario-qualification-v2");
+        artifact.put("version", "projectflow-v3.8.5-real-scenario-qualification-v3");
         artifact.put("generatedAt", Instant.now().toString());
         artifact.put("scenarioScope", scenarioScope);
         artifact.put("provider", Map.of(
@@ -1025,6 +1028,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         long modelLatencyMs,
         int scenarioCount,
         int passedScenarioCount,
+        int deterministicTitleFallbackCount,
         int validationRepairCount
     ) {
     }

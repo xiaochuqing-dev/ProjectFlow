@@ -828,6 +828,53 @@ class ProjectHistoryReconstructionTest {
     }
 
     @Test
+    void retainsDeterministicTitlePairWhenProviderOmitsTheSupportedResult() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("model-title-result-fallback");
+        Files.createDirectories(repository.resolve("src"));
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Files.writeString(repository.resolve("src/AuthFlow.java"), "class AuthFlow {}\n");
+        commit(repository, "implement login flow");
+        ProjectSpace project = project(userId, "Model Title Result Fallback", repository);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        var deterministic = readService.stories(
+            userId, project.getId(), null, false, null, null, 0, 20
+        ).items().get(0);
+
+        provider(userId);
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            JsonNode valid = objectMapper.readTree(historyModelResponse(invocation.getArgument(1, String.class)));
+            com.fasterxml.jackson.databind.node.ObjectNode story =
+                (com.fasterxml.jackson.databind.node.ObjectNode) valid.path("stories").get(0);
+            String generatedTitle = story.path("humanTitle").asText();
+            int subjectStart = generatedTitle.indexOf('“');
+            int subjectEnd = generatedTitle.lastIndexOf('”');
+            assertThat(subjectStart).isGreaterThanOrEqualTo(0);
+            assertThat(subjectEnd).isGreaterThan(subjectStart);
+            String subject = generatedTitle.substring(subjectStart, subjectEnd + 1);
+            story.put("humanTitle", "编写" + subject + "的代码");
+            story.put("oneSentenceSummary", "涵盖" + subject + "的代码创建与修改。");
+            return modelResponse(objectMapper.writeValueAsString(valid));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+
+        var finalStory = readService.stories(
+            userId, project.getId(), null, false, null, null, 0, 20
+        ).items().get(0);
+        assertThat(finalStory.humanTitle()).isEqualTo(deterministic.humanTitle());
+        assertThat(finalStory.oneSentenceSummary()).isEqualTo(deterministic.oneSentenceSummary());
+        assertThat(finalStory.summaryStatus()).isEqualTo("MODEL_VALIDATED_WITH_DETERMINISTIC_TITLE");
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("modelStatus", "MODEL_VALIDATED")
+            .containsEntry("modelDeterministicTitleFallbackCount", 1)
+            .containsEntry("modelValidationRepairFailureCount", 0);
+    }
+
+    @Test
     void modelCannotRewriteEngineeringOwnedPrimarySupportingRoleGraph() throws Exception {
         UUID userId = UUID.randomUUID();
         Path repository = temporaryRoot.resolve("model-role-graph");
