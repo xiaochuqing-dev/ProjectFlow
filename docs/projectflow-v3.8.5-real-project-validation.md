@@ -4,8 +4,9 @@
 
 - ProjectFlow 当前历史 run `31574016609` 在两家 Provider 上都复现同一确定性 P0：ae9f 的宽泛 `project-area-frontend` Story 被提升为 IMPLEMENTED。两家均为 10/11 scenarios，证明问题不依赖模型措辞。
 - head `92053e58` 给宽泛区域主体设置 OBSERVED 上限，并保留精确主体的 IMPLEMENTED 能力。119 项 affected ProjectHistory/Provider-neutral 回归为 0 失败/错误、4 条件跳过；全部 19 个冻结 Ground Truth case 通过。
-- 根启动器从 `539dfc9` 当前工作树完成 Next 16.2.11 生产构建、Spring Boot/H2 启动和双端就绪验证，Build ID 为 `XXi5IxRJDs40sepsAtxeK`；正常退出后 3000/8080 无监听残留，证据写入 `logs/last-embedded-build.json`。
+- 根启动器从诊断 head `f3d5204` 加当前文档工作树完成 Next 16.2.11 生产构建、Spring Boot/H2 启动和双端就绪验证，Build ID 为 `20JnrO0wTzUPAG3ebVDwu`；正常退出后 3000/8080 无监听残留，证据写入 `logs/last-embedded-build.json`。
 - 当前生产 head `539dfc9` 新增 Story v12 结果门禁、确定性标题/摘要保留和公开回退计数。run `31586433372` 的双 Provider qualification 与 DeepSeek 11/11 scenarios 已通过；GLM scenarios attempt 1 为 1/11、隔离重跑为 0/11，且安全工件未保留 HTTP 状态。完成最小安全诊断并取得 GLM 11/11 前，不得把该 run 写成完整 PASS。
+- correction-only run `31592405476` 已把 GLM 直接失败分类为 `HTTP 429`：attempt 1、2、3 都是两个 Story 窗口各执行两次有界请求后失败、0 个成功调用。日志没有响应正文或凭证；必须先恢复外部容量并通过低成本探测，再运行完整 GLM 11/11，不能把 429 猜成具体额度原因。
 
 ## 确定性验证
 

@@ -2,7 +2,7 @@
 
 - V3.8.5 Human Readability Round 1 与 Round 2 均为 NEEDS_REVISION_NOT_APPROVED，原 30 Story/8 Chapter 文件和哈希保持冻结。RC3 自动门禁不能提供真人评分；新的 Round 3 仍必须由用户逐项审核，任一 P0 truthfulness failure 都直接阻止 PASS。
 
-- V3.8.5 RC3 已把 subject/action/state 与 direct/indirect Evidence 归因收回工程层，并禁止同 Commit 或 Supporting Evidence 提升其他 Claim。run `31574016609` 暴露 Chapter repair 误用 Story schema 以及宽泛 `project-area-*` 主体被区域内任意代码提升为 IMPLEMENTED；run `31580355605` 又暴露 GLM 偶发标题缺少明确结果。现已分别用 Chapter prompt v6、OBSERVED ceiling 与 Story v12 的可诊断确定性标题回退修复，但必须由新代码头双 Provider 重验。历史 GLM/DeepSeek qualification、DeepSeek 9/11 与 10/11、Round 2 登录 P0、当前真实模型 fallback 波动和旧 Obsidian CI failure 必须保留；PR #15 在 Round 3 真人批准前仍为 BLOCKED/Draft。
+- V3.8.5 RC3 已把 subject/action/state 与 direct/indirect Evidence 归因收回工程层，并禁止同 Commit 或 Supporting Evidence 提升其他 Claim。run `31574016609` 暴露 Chapter repair 误用 Story schema 以及宽泛 `project-area-*` 主体被区域内任意代码提升为 IMPLEMENTED；run `31580355605` 又暴露 GLM 偶发标题缺少明确结果。现已分别用 Chapter prompt v6、OBSERVED ceiling 与 Story v12 的可诊断确定性标题回退修复。run `31586433372` 的双 Provider qualification 与 DeepSeek 11/11 scenarios 已通过，但 GLM scenarios 为 1/11 后重跑 0/11；correction-only run `31592405476` 连续三次把两窗口失败安全分类为 HTTP 429。该外部可用性恢复前不能冻结 Round 3。所有旧失败、fallback、Round 2 登录 P0 与 CI 历史必须保留；PR #15 仍为 BLOCKED/Draft。
 - V3.8.5 用户修正是可审计、可逆的展示覆盖，不改变 ProjectFact、原始事件或 Evidence；跨窗口的模型措辞仍受窗口上限、Provider 兼容性和未处理范围诊断约束。
 - 2026-08-08 的只读 `npm audit` 报告 4 个 high、0 critical，涉及直接依赖 Next/PostCSS 与传递依赖 nanoid/sharp；本轮未运行 `audit fix`，避免在 RC2 夹带未评估的依赖升级，正式发布前仍需单独处置并回归。
 - 2026-08-03 的 `npm audit` 对当前前端依赖图报告 3 个 high，涉及 PostCSS 的 source map 文件读取/路径问题与 Sharp/libvips 继承漏洞，并聚合影响 Next。注册表当前自动修复建议是破坏性的 Next 9.3.3 downgrade，不能用 `npm audit fix --force` 代替兼容性判断；应等待或选择官方兼容修复版本，升级后重跑 lint、contracts、production build、Playwright 和根启动器。
