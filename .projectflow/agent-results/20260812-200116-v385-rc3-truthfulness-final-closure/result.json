@@ -33,7 +33,7 @@
     "affected": "119 项，0 失败，0 错误，4 个条件跳过；19 个冻结 Ground Truth case 全部通过。",
     "backendH2": "602 项，0 失败，0 错误，11 个条件跳过；仅排除本机 Docker PostgreSQL 与尚不存在的 Round 3 清单合同，Maven 干净退出。",
     "startup": "根启动器完成 Next 16.2.11 生产构建、Spring Boot/H2 启动和双端就绪；Build ID 20JnrO0wTzUPAG3ebVDwu，退出后无 3000/8080 监听。",
-    "githubStatic": "诊断 head 的 browser、frontend、Hermes、Obsidian 和 sensitive-content 通过；backend/H2 与 PostgreSQL 只因 Round 3 文件尚未生成而失败。"
+    "githubStatic": "阻塞证据 head e0fd50e 的 push run 31594703405 与 PR run 31594709131：browser、frontend、Hermes、Obsidian、sensitive-content 通过；backend/H2 与 PostgreSQL 都是 597 项中仅 Round 3 manifest 合同 1 项失败。"
   },
   "realProviderRuns": [
     "31571883309：DeepSeek qualification 失败后其余相关 job 被取消。",
@@ -45,8 +45,8 @@
   "humanReviewStatus": "PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS；Round 3 人工字段未生成、未填写、未评分。",
   "round2Decision": "NEEDS_REVISION_NOT_APPROVED；原文件与 raw/canonical-LF 哈希保持冻结。",
   "round3Status": "BLOCKED_BEFORE_FREEZE：冻结脚本与合同已完成，但缺少合格 GLM 11/11，同头 30 Story/8 Chapter 包未生成。",
-  "currentHead": "f3d520432a0be857cd21255051c796b28359fbfb，加本次仅报告与 Agent result 的未提交收尾。",
-  "requiredCI": "最终 evidence-head required CI 尚未运行；不得引用诊断 head 的预期 Round 3 缺文件失败作为通过。",
+  "currentHead": "e0fd50ed98e75c38fe1d762c89b501344b496c04，加本次仅记录 CI 的报告后继；生产行为未变化。",
+  "requiredCI": "push run 31594703405 与 PR run 31594709131 的非后端门禁通过；backend/H2 与 PostgreSQL 仅 Round 3 manifest 合同失败。最终全绿 CI 尚不存在，不得写成通过。",
   "knownRisks": [
     "GLM Actions Secret 当前连续返回 HTTP 429；安全诊断不能区分短期限流与额度耗尽。",
     "Round 3 必须在 GLM 恢复并通过完整场景后重新冻结，不能复用 RC2 GLM 场景。",

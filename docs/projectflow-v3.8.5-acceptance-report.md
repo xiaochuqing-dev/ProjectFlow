@@ -14,4 +14,6 @@ Real attempts are preserved: run `31571883309` was cancelled after DeepSeek qual
 
 Correction-only diagnostic run `31592405476` then classified both GLM Story-window failures as `HTTP 429` after two bounded requests each. Job-only attempts 2 and 3 reproduced the same result after separate cooldowns. No response body or secret was exposed. The dual-Provider scenario gate remains incomplete until external capacity recovers, a correction probe passes and the full GLM 11-scenario run passes; a later success will not erase these failures.
 
+Blocked-evidence head `e0fd50ed98e75c38fe1d762c89b501344b496c04` was checked by push run `31594703405` and PR run `31594709131`. Both passed frontend, browser, Hermes, Obsidian and sensitive-content. Backend/H2 and PostgreSQL each had exactly one failure out of 597: the Round 3 manifest contract, because the file was deliberately not generated without GLM 11/11. These runs prove the remaining static red state is the honest freeze gate; they are not final green CI.
+
 Round 3 will be frozen only from qualified same-head normalized artifacts at exactly 30 Story/8 Chapter, 15/4 per Provider, with all human fields blank. The user must then perform the real review. The automated closure cannot declare PASS, ready the PR, merge, backfill acceptance metadata, create a Tag/Release or clean branches/worktrees.

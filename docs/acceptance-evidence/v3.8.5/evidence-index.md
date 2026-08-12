@@ -32,8 +32,8 @@ Round 3 设计为 30 Story / 8 Chapter，双 Provider 各 15/4，人工字段全
 
 - 本地 backend/H2：602 项，0 失败，0 错误，11 个条件跳过；只排除本机 Docker PostgreSQL 与尚不存在的 Round 3 清单合同，Maven 以 0 退出。
 - 根 `Start-ProjectFlow.bat -NoBrowser`：Next 16.2.11、Spring Boot/H2、双端就绪通过；Build ID `20JnrO0wTzUPAG3ebVDwu`，退出后 3000/8080 无监听。
-- run `31592405476` 的 browser、frontend、Hermes、Obsidian、sensitive-content 通过；backend/H2 与 PostgreSQL 仅因 Round 3 文件未生成而失败。
-- 最终 evidence-head required CI 尚不存在，不能写成通过。
+- 阻塞证据 head `e0fd50ed98e75c38fe1d762c89b501344b496c04` 的 push run `31594703405` 与 PR run `31594709131`：browser、frontend、Hermes、Obsidian、sensitive-content 通过；backend/H2 与 PostgreSQL 都是 597 项中仅 `ProjectHistoryHumanReviewRound3ManifestTest` 1 项失败。
+- required CI 因 Round 3 未冻结保持红色，不能写成通过；报告提交是文档/Agent result 后继，不改变生产行为或这一门禁结论。
 
 ## 当前阻塞与权限
 
