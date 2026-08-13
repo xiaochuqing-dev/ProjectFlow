@@ -2,8 +2,8 @@
 
 Decision: PENDING_HUMAN_REVIEW_ROUND3. V3.8.5 is NOT PASS.
 
-Round 1 and Round 2 are immutable NEEDS_REVISION_NOT_APPROVED evidence. RC3 production behavior is at `539dfc9802069dec40207179f65b873bf862872c`; validation head `b9e9c2d` additionally makes the recorded Round 2 LF/CRLF hashes portable without changing either frozen file. Run `31586433372` passed both 19/19 qualifications and DeepSeek scenarios 11/11, but GLM scenarios ended 1/11 and 0/11. Correction-only run `31592405476` then reproduced `HTTP 429` in three attempts, so the GLM 11/11 gate, Round 3 freeze and final evidence-head CI are not complete.
+Round 1 and Round 2 remain immutable NEEDS_REVISION_NOT_APPROVED evidence. On 2026-08-14, correction probe run `31733370522` confirmed that GLM capacity had recovered. Same-head affected run `31733839404` at `73d11250cddce3594d5ddb4ef54cd8c6d652dac7` then passed both 19/19 qualifications and both 11/11 scenario suites with max reasoning. The ProjectFlow Dogfood truthfulness P0 stayed OBSERVED for both Providers; persisted secret, prompt, raw response, reasoning and absolute-path flags are false.
 
-Even after automated gates succeed, Round 3 human fields must remain blank until the user reviews them. Only explicit user approval after the frozen thresholds pass can authorize ready/merge, acceptance backfill, final master CI and branch/worktree cleanup.
+Round 3 is frozen as 30 Story and 8 Chapter entries, balanced 15/4 per Provider. Its manifest binds the same code head, run and six canonical-LF artifact hashes. All human fields remain blank and reviewerCount is 0. Automated closure therefore stops at PENDING_HUMAN_REVIEW_ROUND3; only explicit user approval after the frozen thresholds pass can authorize ready/merge, acceptance backfill, final master CI and branch/worktree cleanup.
 
 PR #15 is OPEN, Draft and unmerged. No Tag or Release exists for this closure.

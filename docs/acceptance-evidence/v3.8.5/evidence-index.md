@@ -11,30 +11,32 @@
 
 ## RC3 真实 Provider
 
-- run `31586433372`，validation head `b9e9c2de9a76b1b351f0e8db3651a46214c5433c`：GLM 与 DeepSeek qualification 均为 19/19；DeepSeek scenarios attempt 1 为 11/11。
-- 同一 run 的 GLM scenarios attempt 1 为 1/11，仅重跑 job 的 attempt 2 为 0/11；两次失败均保留。
-- correction-only 诊断 run `31592405476`，head `f3d520432a0be857cd21255051c796b28359fbfb`：attempt 1、2、3 均为两个 Story 窗口各在两次有界请求后 `HTTP 429`，0 个成功模型调用。日志只记录安全分类和请求数。
-- 资格与 DeepSeek 场景候选工件已重新下载、扫描并核对哈希；未发现 Key、Authorization、Prompt、raw response、reasoning、raw payload 或机器绝对路径。由于缺少合格 GLM 11/11，候选文件没有覆盖仓库内 RC2 规范化工件。
+- 旧失败链 `31586433372` 与 correction-only `31592405476` 原样保留，不被后续成功覆盖。
+- correction 探针 run `31733370522`，head `73d11250cddce3594d5ddb4ef54cd8c6d652dac7`：GLM 资格与 correction 场景均通过，确认额度恢复。
+- 正式 affected run `31733839404`，同一 head、双 Provider、max：GLM 与 DeepSeek qualification 均为 19/19，scenarios 均为 11/11。
+- GLM scenarios：52 次物理请求、798,608 tokens、1 次 repair、153 次公开确定性标题回退；DeepSeek scenarios：57 次物理请求、1,002,415 tokens、2 次 repair、44 次公开确定性标题回退。
+- 两家 Dogfood 均找到旧 ae9f P0 且 Claim state 为 OBSERVED；非法 Evidence、跨项目引用、不受支持强事实均为 0。六份工件未发现 Key、Authorization、Prompt、raw response、reasoning、raw payload 或机器绝对路径。
 
-候选 canonical-LF SHA-256：
+Round 3 来源工件 canonical-LF SHA-256：
 
-- GLM Ground Truth：`1b5a47aebb088208c2ef6743faa4fedb3b98afbaa8f14bc965b56563596a588d`
-- GLM V3.8.0：`b250c29e0c412b187589a3196a28a06f4e6e99f4239f1f2efdedca0f46c7fa7b`
-- DeepSeek Ground Truth：`42a12a276f867d28ab84b5283138c870f030a10cabd9f4a4834c391645774efd`
-- DeepSeek V3.8.0：`f66db5c47ed342fc4cc58583691c7724928b295db0db956284d63d563f7731b8`
-- DeepSeek scenarios：`639a24891a0917b4a9498c262664ceb457caa8fc2111e40db98ec1454c357d27`
+- GLM Ground Truth：`bad38011a54fecf4575722503a417c526381e299cb42e9372b583765943e4971`
+- GLM scenarios：`be43f2218a40100ad1de104f187ae87d0b75bc0d18ffb1071f572a508e6db638`
+- GLM V3.8.0：`7ebf202f48723b9506607ce2bb524b444c25ed3f446c997bae32f96a778f1eb2`
+- DeepSeek Ground Truth：`6a6797602298cb9fe42bfe8c2ccd2ffeaf3d98be1ba502e17aae8781d2e4715f`
+- DeepSeek scenarios：`bbb47df770581e9bceacbee465494fabe3952aaf3ecd6542faa2fdea74172ee9`
+- DeepSeek V3.8.0：`7a8a103eb61522eadd529b136fa59e95c5752cbb76599237be33160b0c5d8cfe`
 
 ## Round 3
 
-Round 3 设计为 30 Story / 8 Chapter，双 Provider 各 15/4，人工字段全部空白且 reviewerCount=0。冻结脚本和合同已完成，但因 GLM 11/11 未通过，`human-review-round3-manifest.json` 与 `human-review-round3-worksheet.md` 没有生成。不得用 RC2 GLM 场景或失败工件拼接样本。
+Round 3 已冻结为 30 Story / 8 Chapter，双 Provider 各 15/4，人工字段全部空白且 reviewerCount=0。manifest/worksheet canonical-LF SHA-256 分别为 `f316b71a6bec24f7ba40c2da81ef210b101b3ca238c688793fa32d48be877c1b` 与 `4d57d7d1fa5bb975465db9be413f70cf943ca7c9c70d8174ba0d4dcdd7d85ca6`。清单合同 1/1 通过。
 
 ## 确定性验证
 
-- 本地 backend/H2：602 项，0 失败，0 错误，11 个条件跳过；只排除本机 Docker PostgreSQL 与尚不存在的 Round 3 清单合同，Maven 以 0 退出。
-- 根 `Start-ProjectFlow.bat -NoBrowser`：Next 16.2.11、Spring Boot/H2、双端就绪通过；Build ID `20JnrO0wTzUPAG3ebVDwu`，退出后 3000/8080 无监听。
+- 本地 backend/H2：597 项，0 失败，0 错误，5 个条件跳过；Maven 以 0 退出，耗时 5 分 24 秒。
+- 根 `Start-ProjectFlow.bat -NoBrowser`：Next 16.2.11、Spring Boot/H2、双端就绪通过；Build ID `yFBn3UKDWR9I_MD9j1vq0`，readyAt `2026-08-14T04:15:07.3018054+08:00`，退出后 3000/8080 无监听。
 - 阻塞证据 head `e0fd50ed98e75c38fe1d762c89b501344b496c04` 的 push run `31594703405` 与 PR run `31594709131`：browser、frontend、Hermes、Obsidian、sensitive-content 通过；backend/H2 与 PostgreSQL 都是 597 项中仅 `ProjectHistoryHumanReviewRound3ManifestTest` 1 项失败。
-- required CI 因 Round 3 未冻结保持红色，不能写成通过；报告提交是文档/Agent result 后继，不改变生产行为或这一门禁结论。
+- 当前 run `31733839404` 的静态 backend/PostgreSQL 失败仍只来自运行开始时尚无 Round 3 文件；最终 Evidence head 推送后必须重新取得 required CI 全绿。
 
 ## 当前阻塞与权限
 
-唯一外部执行阻塞是 GLM `HTTP 429`。恢复可用的 GitHub Actions Secret 后，先运行 correction 探针；通过后再运行完整 GLM 11/11，复制并扫描六份同头工件，冻结 Round 3，再运行最终静态 CI。用户完成真实人工评分并明确批准前，不得 Ready、merge、backfill、Tag、Release 或清理分支/worktree。
+外部 GLM 执行阻塞已解除，自动化剩余门禁是最终 Evidence head 的静态 CI。人工门禁仍未开始：用户完成真实评分并明确批准前，不得 Ready、merge、backfill、Tag、Release 或清理分支/worktree。

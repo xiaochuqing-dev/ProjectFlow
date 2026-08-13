@@ -30,8 +30,8 @@ class ProjectHistoryHumanReviewRound3ManifestTest {
     private static final Pattern FILLED_SCORE = Pattern.compile("(?m)^人工可读性评分（1-5）：\\s*[1-5]\\s*$");
     private static final Pattern FILLED_RESULT = Pattern.compile("(?m)^结论（PASS/FAIL）：\\s*(?:PASS|FAIL)\\s*$");
     private static final Pattern FILLED_BOOLEAN = Pattern.compile("(?m)^.*（是/否）：\\s*(?:是|否)\\s*$");
-    private static final Pattern FILLED_REVIEWER = Pattern.compile("(?m)^评审人：\\s*\\S+.*$");
-    private static final Pattern FILLED_NOTE = Pattern.compile("(?m)^评审备注：\\s*\\S+.*$");
+    private static final Pattern FILLED_REVIEWER = Pattern.compile("(?m)^评审人：[ \\t]*\\S+.*$");
+    private static final Pattern FILLED_NOTE = Pattern.compile("(?m)^评审备注：[ \\t]*\\S+.*$");
     private static final Pattern SENSITIVE = Pattern.compile(
         "(?i)(?:sk-[A-Za-z0-9_-]{20,}|ark-[A-Za-z0-9-]{20,}|Bearer [A-Za-z0-9._-]{24,})"
     );
@@ -58,7 +58,7 @@ class ProjectHistoryHumanReviewRound3ManifestTest {
         assertThat(manifest.path("status").asText()).isEqualTo("PENDING_HUMAN_REVIEW_ROUND3");
         assertThat(manifest.path("sourceCodeHead").asText()).matches("[0-9a-f]{40}");
         assertThat(manifest.path("providerSourceRuns").path("glm").path("qualificationAttempt").asInt()).isEqualTo(1);
-        assertThat(manifest.path("providerSourceRuns").path("glm").path("scenarioAttempt").asInt()).isEqualTo(2);
+        assertThat(manifest.path("providerSourceRuns").path("glm").path("scenarioAttempt").asInt()).isEqualTo(1);
         assertThat(manifest.path("providerSourceRuns").path("deepseek").path("qualificationAttempt").asInt()).isEqualTo(1);
         assertThat(manifest.path("providerSourceRuns").path("deepseek").path("scenarioAttempt").asInt()).isEqualTo(1);
         assertThat(manifest.path("sourceArtifactCanonicalLfSha256")).hasSize(6);

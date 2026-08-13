@@ -1,0 +1,618 @@
+{
+  "version": "projectflow-v385-human-review-sample-v3",
+  "reviewRound": 3,
+  "status": "PENDING_HUMAN_REVIEW_ROUND3",
+  "sourceRunId": "31733839404",
+  "sourceRunUrl": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31733839404",
+  "sourceCodeHead": "73d11250cddce3594d5ddb4ef54cd8c6d652dac7",
+  "sourceArtifactCanonicalLfSha256": {
+    "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json": "bad38011a54fecf4575722503a417c526381e299cb42e9372b583765943e4971",
+    "docs/acceptance-evidence/v3.8.5/real-model/glm/history-real-scenarios.json": "be43f2218a40100ad1de104f187ae87d0b75bc0d18ffb1071f572a508e6db638",
+    "docs/acceptance-evidence/v3.8.5/real-model/glm/history-v380-real-model.json": "7ebf202f48723b9506607ce2bb524b444c25ed3f446c997bae32f96a778f1eb2",
+    "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json": "6a6797602298cb9fe42bfe8c2ccd2ffeaf3d98be1ba502e17aae8781d2e4715f",
+    "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-real-scenarios.json": "bbb47df770581e9bceacbee465494fabe3952aaf3ecd6542faa2fdea74172ee9",
+    "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-v380-real-model.json": "7a8a103eb61522eadd529b136fa59e95c5752cbb76599237be33160b0c5d8cfe"
+  },
+  "providerSourceRuns": {
+    "glm": {
+      "runId": "31733839404",
+      "runUrl": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31733839404",
+      "qualificationAttempt": 1,
+      "scenarioAttempt": 1,
+      "scenarioRunUrl": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31733839404/attempts/1",
+      "affectedRunId": "31733839404",
+      "affectedRunUrl": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31733839404"
+    },
+    "deepseek": {
+      "runId": "31733839404",
+      "runUrl": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31733839404",
+      "qualificationAttempt": 1,
+      "scenarioAttempt": 1,
+      "scenarioRunUrl": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31733839404/attempts/1",
+      "affectedRunId": "31733839404",
+      "affectedRunUrl": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/31733839404"
+    }
+  },
+  "samplingMethod": "fixed stratified selection from qualified normalized GLM and DeepSeek artifacts for Human Review Round 3",
+  "reviewerCount": 0,
+  "reviewMode": "PENDING_SINGLE_HUMAN_REVIEWER",
+  "round1Status": "NEEDS_REVISION_NOT_APPROVED",
+  "round2Status": "NEEDS_REVISION_NOT_APPROVED",
+  "round2FrozenArtifacts": {
+    "manifestRawSha256": "e1aca397b469c4d1e4e4b4f6bb856306b2b3340bcb5df97e80d71a286a247349",
+    "manifestCanonicalLfSha256": "b2841c74491d172919db4a37e723d6533ad99f77799e0191fd5d2a7bdb90e887",
+    "worksheetRawSha256": "8e9c04bde787b6bb6c2528f96e5d296dcf66186f66290298cf18ca21f68d73e7",
+    "worksheetCanonicalLfSha256": "44655c49ef0d21c58e7aef7df4e1295dba6e48a5ddff3039f4d42edb96824692"
+  },
+  "stories": [
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-01",
+      "entityId": "story-28f751897195d5e7e4f7",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json",
+      "source": "cal-small-five-commit-project",
+      "contentHash": "sha256:ff6f2490fe8098ebf2bd653376116a17f027cf4b680a36e602ee09d60636b68d",
+      "presentationRevision": "presentation:635cf521f84a5f9addc694e685a723bd",
+      "provider": "GLM",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "short-history",
+        "direct-implementation"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-02",
+      "entityId": "story-6dc09019be0291dc801e",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json",
+      "source": "cal-create-modify-delete-restore",
+      "contentHash": "sha256:de25b60edd7fd9efa17d8715303985ee9ab88b9bd20c0e55854dc96ac6b1b3c7",
+      "presentationRevision": "presentation:2a48dcd6287e112f24f346be457b93e1",
+      "provider": "GLM",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "lifecycle-restore"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-03",
+      "entityId": "story-d48a17fa22100acf388c",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json",
+      "source": "cal-multi-commit-one-change",
+      "contentHash": "sha256:84fff68099d7d1e722ed3fa4e3deed9700ff1d7a3658365d9185066f86e2e041",
+      "presentationRevision": "presentation:8e766c4f1563b83b235e61690297e1f5",
+      "provider": "GLM",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "multi-commit-one-result",
+        "direct-implementation"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-04",
+      "entityId": "story-226e41826fc697f3939a",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json",
+      "source": "cal-primary-supporting",
+      "contentHash": "sha256:475924032826e7fe39b149f39e7eb3fea24f3943fc6584ed773086ef51e4bbba",
+      "presentationRevision": "presentation:366e78f27b318c8b6c21f734657c3edb",
+      "provider": "GLM",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "supporting",
+        "direct-implementation"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-05",
+      "entityId": "story-b46d3e15f2a40b8ef421",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json",
+      "source": "cal-non-code-project",
+      "contentHash": "sha256:e822a71d470cf60c467dffcc8efb0411768feb7e152a63f1b204eaa4d1964e65",
+      "presentationRevision": "presentation:9c3d83aa3f0aa860c972a2b576629d28",
+      "provider": "GLM",
+      "projectType": "NON_CODE",
+      "coverageTags": [
+        "non-code"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-06",
+      "entityId": "story-71eebd7c9e2b4a95c2c0",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json",
+      "source": "cal-reason-unknown",
+      "contentHash": "sha256:9a1c04b44a70769dfd889be74ea520a999a88dceb07a1b4f988831046c3eb3bd",
+      "presentationRevision": "presentation:02e0a1b95b959eae96d60553c6f09baa",
+      "provider": "GLM",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "unknown-reason"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-07",
+      "entityId": "story-40c8ada6ad384612f21a",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json",
+      "source": "cal-conflict-preservation",
+      "contentHash": "sha256:49518892311ef670d8089aaf58856178a692552fcd480868d7c245a8c1d46933",
+      "presentationRevision": "presentation:334c6421fb6c2d52afd416ebc04bcaa3",
+      "provider": "GLM",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "conflict"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-08",
+      "entityId": "story-f451be71707185a294f1",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json",
+      "source": "holdout-chaotic-history",
+      "contentHash": "sha256:cde2ff909442a1e737b221a455187d91e57d8c74b0aa766418bf08dc33090dff",
+      "presentationRevision": "presentation:3bb0c39e6ca7e62b563ff183f781a16b",
+      "provider": "GLM",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "long-history"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-09",
+      "entityId": "story-80872ee4a9e0c9e65f45",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json",
+      "source": "holdout-rename-move-split-merge",
+      "contentHash": "sha256:2a143621be2fb1623ccdd64373aa96aa0a3036aef36ae47d206247dca6087662",
+      "presentationRevision": "presentation:b86f4b37585eba0815905501ead1d862",
+      "provider": "GLM",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "rename-move",
+        "split-merge"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-10",
+      "entityId": "story-0f95442cff982c56dc90",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json",
+      "source": "holdout-unrelated-commit",
+      "contentHash": "sha256:d53e899c1efdd1ef31460e675c563b5a6c0d288854f24acd640d1f1f8d56e974",
+      "presentationRevision": "presentation:c1123393a82b96e92456a5fb228ea279",
+      "provider": "GLM",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "one-commit-multiple-results",
+        "direct-implementation"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-11",
+      "entityId": "story-bcf88f58035abe7827b9",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json",
+      "source": "holdout-generic-message",
+      "contentHash": "sha256:ed61f687e50ea886448a995722dd87f88d5022525a89c66bcdd6645d18ccfc2e",
+      "presentationRevision": "presentation:b307af36980b5609473233f90e4e0327",
+      "provider": "GLM",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "generic-commit",
+        "direct-implementation"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-12",
+      "entityId": "story-4a432a1da4462a0cdab7",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-real-scenarios.json",
+      "source": "correction-local-invalidation",
+      "contentHash": "sha256:6fd6bd178aad8dae58869089b0f3392d89de07f7ad0c0f7758ad8282cbc3b0e5",
+      "presentationRevision": "presentation:ac0e46fa77b157f6706adacf2ed3c0b3",
+      "provider": "GLM",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "correction"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-13",
+      "entityId": "story-1e8b47f1a6c3e74e27f3",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-real-scenarios.json",
+      "source": "projectflow-current-history-dogfood:primary",
+      "contentHash": "sha256:89ffd678cd54d72dd86b50e9f903219fbfed3e563a47d361653a16b6899758ff",
+      "presentationRevision": "presentation:ab53de30df40e37c490bd03fcaba95fb",
+      "provider": "GLM",
+      "projectType": "PROJECTFLOW_SOFTWARE",
+      "coverageTags": [
+        "projectflow",
+        "long-history"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-14",
+      "entityId": "story-23a2b3c3fc4a7626323c",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-real-scenarios.json",
+      "source": "projectflow-current-history-dogfood:truthfulness-p0",
+      "contentHash": "sha256:e9b1969b7212e7549815dd25190467285520e923774961cd7b24733b1d277359",
+      "presentationRevision": "presentation:ab53de30df40e37c490bd03fcaba95fb",
+      "provider": "GLM",
+      "projectType": "PROJECTFLOW_SOFTWARE",
+      "coverageTags": [
+        "projectflow",
+        "long-history",
+        "truthfulness-p0",
+        "planned-implemented-adversarial",
+        "readme-api-plan-unrelated-code-regression"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "glm-story-15",
+      "entityId": "story-4af0716d7c42bdaa816d",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-real-scenarios.json",
+      "source": "projectflow-current-history-dogfood:explicit-supporting",
+      "contentHash": "sha256:445533ce1830a7982cfa6743bd87cc0bbb6c7544d326a388c2a731c3358938dd",
+      "presentationRevision": "presentation:ab53de30df40e37c490bd03fcaba95fb",
+      "provider": "GLM",
+      "projectType": "PROJECTFLOW_SOFTWARE",
+      "coverageTags": [
+        "projectflow",
+        "supporting"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-01",
+      "entityId": "story-38520b5b3f9b4bed00e2",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json",
+      "source": "cal-small-five-commit-project",
+      "contentHash": "sha256:b2b60608e50027941b8c699fbe6d797f0294c74d0561ac5fa9972ed8a57330de",
+      "presentationRevision": "presentation:f89a34f410154891e8f695c693d03412",
+      "provider": "DeepSeek",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "short-history",
+        "direct-implementation"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-02",
+      "entityId": "story-b9ebab98806c0bfaee33",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json",
+      "source": "cal-create-modify-delete-restore",
+      "contentHash": "sha256:e541ba13230b4a571193a437b7286cdb9c5ee3490c5108528fbf232e73b6a178",
+      "presentationRevision": "presentation:0aa4bee0689ca11d1dff071e62e5f0d3",
+      "provider": "DeepSeek",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "lifecycle-restore"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-03",
+      "entityId": "story-578d5bdca8f33b134feb",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json",
+      "source": "cal-multi-commit-one-change",
+      "contentHash": "sha256:5fe4025ce0b3b62a88a6d481129f64501571d7ba0cb5aa867bf42ca5e561d3b1",
+      "presentationRevision": "presentation:be45a56086935999aff2b83f60a293af",
+      "provider": "DeepSeek",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "multi-commit-one-result",
+        "direct-implementation"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-04",
+      "entityId": "story-ef5c0feebcacdd83fa0e",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json",
+      "source": "cal-primary-supporting",
+      "contentHash": "sha256:bd0b606c6c183eb16b8133753c8a7eaa3cbfa9c61de9a9278e36333714d54091",
+      "presentationRevision": "presentation:4cfa3987a48e5d91991e938c947a6945",
+      "provider": "DeepSeek",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "supporting",
+        "direct-implementation"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-05",
+      "entityId": "story-9edc863ee9646c016d41",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json",
+      "source": "cal-non-code-project",
+      "contentHash": "sha256:453a9849eb7753cc4362c86b24ae63357884f672896a59bb09825f2f427f949b",
+      "presentationRevision": "presentation:1d134fa61b719e664f7420c4532d07cd",
+      "provider": "DeepSeek",
+      "projectType": "NON_CODE",
+      "coverageTags": [
+        "non-code"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-06",
+      "entityId": "story-b88cc4be5b9b6717187e",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json",
+      "source": "cal-reason-unknown",
+      "contentHash": "sha256:bdcee9d56321b0c524d6dcc3f64d58cf331f5d9d2189f8835f36f42b0e815313",
+      "presentationRevision": "presentation:4963840c96233e3ba14b461351bb4acc",
+      "provider": "DeepSeek",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "unknown-reason"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-07",
+      "entityId": "story-2d6ba1241b39989412dc",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json",
+      "source": "cal-conflict-preservation",
+      "contentHash": "sha256:9151d40d4bf94d982ecb0d06cef7403e7664e0480755ac7255c59299e7fd0829",
+      "presentationRevision": "presentation:7011e6af56502afca045cffa1874f132",
+      "provider": "DeepSeek",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "conflict"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-08",
+      "entityId": "story-f92e94a9963c9b5ea731",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json",
+      "source": "holdout-chaotic-history",
+      "contentHash": "sha256:b0a8321c3b0d2a82432b7b87213ec1dda5656dbf93624331519b954c8f7aa484",
+      "presentationRevision": "presentation:1153807bdf22ff7048b232d1630bbc69",
+      "provider": "DeepSeek",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "long-history"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-09",
+      "entityId": "story-777535334045f4c4702b",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json",
+      "source": "holdout-rename-move-split-merge",
+      "contentHash": "sha256:2330072db5cf6eb0e49ecbbe2fc6fbfd78bff9e19407f292df851c5841b17741",
+      "presentationRevision": "presentation:442177d5454b842c431ca4b4732689bb",
+      "provider": "DeepSeek",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "rename-move",
+        "split-merge"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-10",
+      "entityId": "story-a91effbc873f746206b1",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json",
+      "source": "holdout-unrelated-commit",
+      "contentHash": "sha256:eb7842af792f895f8b0ad4b665fa0b71b6a27c4a2fb9ef7cf3ca70838978a90a",
+      "presentationRevision": "presentation:e4b0ecd99cfb1cafcadc583446e5de8f",
+      "provider": "DeepSeek",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "one-commit-multiple-results"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-11",
+      "entityId": "story-5e145eddc03263b94edf",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json",
+      "source": "holdout-generic-message",
+      "contentHash": "sha256:10a9837afd386fa13cd85edbe43fdea18cd18c38bfd9d0648a6015cc45799ced",
+      "presentationRevision": "presentation:1279e4c5447b0dfe6b64f592fd71a122",
+      "provider": "DeepSeek",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "generic-commit",
+        "direct-implementation"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-12",
+      "entityId": "story-6fe7368378289a7078bc",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-real-scenarios.json",
+      "source": "correction-local-invalidation",
+      "contentHash": "sha256:3b98dec1c070cc18c20949c03309435631843cd07d5991c108d9c7f88c889920",
+      "presentationRevision": "presentation:fbf12998250dc101558f88a581913a13",
+      "provider": "DeepSeek",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "correction"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-13",
+      "entityId": "story-013997910b8b8bc3ca6f",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-real-scenarios.json",
+      "source": "projectflow-current-history-dogfood:primary",
+      "contentHash": "sha256:52263bb29242f1d04b8f9e440c077363b2ea17b9c089bdc5393a7071f07a8744",
+      "presentationRevision": "presentation:34f357b43f2d78db4cc050ea5e523ec6",
+      "provider": "DeepSeek",
+      "projectType": "PROJECTFLOW_SOFTWARE",
+      "coverageTags": [
+        "projectflow",
+        "long-history",
+        "config-deployment-adversarial"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-14",
+      "entityId": "story-2fa600139deddee13676",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-real-scenarios.json",
+      "source": "projectflow-current-history-dogfood:truthfulness-p0",
+      "contentHash": "sha256:d7f7cb51505ca9a7dd47023aca87bd5b3f59c7d60e669ef4104ab95c685c6652",
+      "presentationRevision": "presentation:34f357b43f2d78db4cc050ea5e523ec6",
+      "provider": "DeepSeek",
+      "projectType": "PROJECTFLOW_SOFTWARE",
+      "coverageTags": [
+        "projectflow",
+        "long-history",
+        "truthfulness-p0",
+        "planned-implemented-adversarial",
+        "readme-api-plan-unrelated-code-regression"
+      ]
+    },
+    {
+      "kind": "STORY",
+      "sampleId": "deepseek-story-15",
+      "entityId": "story-316d31ed31b5fa5d0475",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-real-scenarios.json",
+      "source": "projectflow-current-history-dogfood:explicit-supporting",
+      "contentHash": "sha256:91c1cd5982ed4936724d126bb2b48864a93ecafbf565789121f30e5901d7f5f7",
+      "presentationRevision": "presentation:34f357b43f2d78db4cc050ea5e523ec6",
+      "provider": "DeepSeek",
+      "projectType": "PROJECTFLOW_SOFTWARE",
+      "coverageTags": [
+        "projectflow",
+        "supporting"
+      ]
+    }
+  ],
+  "chapters": [
+    {
+      "kind": "CHAPTER",
+      "sampleId": "glm-chapter-01",
+      "entityId": "chapter-1b3aa057a5ff8febf2f6",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json",
+      "source": "cal-small-five-commit-project",
+      "contentHash": "sha256:b189bc6015a8caad9a110823b61c0cff4565b817a2a75cf8a3e4259d62f64fef",
+      "presentationRevision": "presentation:635cf521f84a5f9addc694e685a723bd",
+      "provider": "GLM",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "short-history"
+      ]
+    },
+    {
+      "kind": "CHAPTER",
+      "sampleId": "glm-chapter-02",
+      "entityId": "chapter-e4901b637b56db4bcd02",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json",
+      "source": "cal-non-code-project",
+      "contentHash": "sha256:1f612539666e27894ff7da62f7e04f2a52966015c11c7ce02820cad684a8fe65",
+      "presentationRevision": "presentation:9c3d83aa3f0aa860c972a2b576629d28",
+      "provider": "GLM",
+      "projectType": "NON_CODE",
+      "coverageTags": [
+        "non-code"
+      ]
+    },
+    {
+      "kind": "CHAPTER",
+      "sampleId": "glm-chapter-03",
+      "entityId": "chapter-a619d3aadbbd5b7318c6",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-real-scenarios.json",
+      "source": "projectflow-current-history-dogfood:chapters",
+      "contentHash": "sha256:25ea97dd5939f5b0728a229c064c48a29face77ec7d7292962c5659fc60a20c1",
+      "presentationRevision": "presentation:ab53de30df40e37c490bd03fcaba95fb",
+      "provider": "GLM",
+      "projectType": "PROJECTFLOW_SOFTWARE",
+      "coverageTags": [
+        "projectflow",
+        "long-history"
+      ]
+    },
+    {
+      "kind": "CHAPTER",
+      "sampleId": "glm-chapter-04",
+      "entityId": "chapter-56bd018635c44d296dce",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/glm/history-real-scenarios.json",
+      "source": "projectflow-current-history-dogfood:chapters",
+      "contentHash": "sha256:7079140be9891e10b148b0d760c681a60165a52919ec469943a2942fc25a32d1",
+      "presentationRevision": "presentation:ab53de30df40e37c490bd03fcaba95fb",
+      "provider": "GLM",
+      "projectType": "PROJECTFLOW_SOFTWARE",
+      "coverageTags": [
+        "projectflow",
+        "long-history"
+      ]
+    },
+    {
+      "kind": "CHAPTER",
+      "sampleId": "deepseek-chapter-01",
+      "entityId": "chapter-7d5fe7a51dd5c9831165",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json",
+      "source": "cal-small-five-commit-project",
+      "contentHash": "sha256:720ba53b92f7a9e5cd0f28b3fd8e1b92d1c312d5c1e7daf8f2fd934bb6f90632",
+      "presentationRevision": "presentation:f89a34f410154891e8f695c693d03412",
+      "provider": "DeepSeek",
+      "projectType": "SOFTWARE_FIXTURE",
+      "coverageTags": [
+        "short-history"
+      ]
+    },
+    {
+      "kind": "CHAPTER",
+      "sampleId": "deepseek-chapter-02",
+      "entityId": "chapter-23283dedede81bf5ca7f",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json",
+      "source": "cal-non-code-project",
+      "contentHash": "sha256:1bcf08320f8c8f9721ba234148353908e1892e266685695af1ff58dfbc90b7d1",
+      "presentationRevision": "presentation:1d134fa61b719e664f7420c4532d07cd",
+      "provider": "DeepSeek",
+      "projectType": "NON_CODE",
+      "coverageTags": [
+        "non-code"
+      ]
+    },
+    {
+      "kind": "CHAPTER",
+      "sampleId": "deepseek-chapter-03",
+      "entityId": "chapter-bc567929bf695afaa989",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-real-scenarios.json",
+      "source": "projectflow-current-history-dogfood:chapters",
+      "contentHash": "sha256:15e12440053dad4b5d8b3d0c120fccc905394f427227c9ef804c1b129de82b80",
+      "presentationRevision": "presentation:34f357b43f2d78db4cc050ea5e523ec6",
+      "provider": "DeepSeek",
+      "projectType": "PROJECTFLOW_SOFTWARE",
+      "coverageTags": [
+        "projectflow",
+        "long-history"
+      ]
+    },
+    {
+      "kind": "CHAPTER",
+      "sampleId": "deepseek-chapter-04",
+      "entityId": "chapter-bb68f6cd3df5f747cb3c",
+      "artifact": "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-real-scenarios.json",
+      "source": "projectflow-current-history-dogfood:chapters",
+      "contentHash": "sha256:001109cfa21ff4cc214463a0d6c20ddd7c0be3cc33a0319bfd5f2c415b6813ea",
+      "presentationRevision": "presentation:34f357b43f2d78db4cc050ea5e523ec6",
+      "provider": "DeepSeek",
+      "projectType": "PROJECTFLOW_SOFTWARE",
+      "coverageTags": [
+        "projectflow",
+        "long-history"
+      ]
+    }
+  ],
+  "security": {
+    "modelSelfScoring": false,
+    "rawPromptStored": false,
+    "rawResponseStored": false,
+    "reasoningStored": false,
+    "credentialsStored": false
+  }
+}

@@ -1,12 +1,12 @@
 # ProjectFlow V3.8.5 RC3 当前状态审计
 
-审计日期：2026-08-12。当前结论：PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS。
+审计日期：2026-08-14。当前结论：PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS。
 
 ## 基线
 
 - GitHub 仓库为 `xiaochuqing-dev/ProjectFlow`，远端 `master` 为 `5cb5e49661206feb8f59885bea672c314c9374e8`。
 - PR #15 为 OPEN、Draft、未合并，base 为 `master`，远端 head 分支为 `codex/v3.8.5-history-quality`。
-- RC3 在独立工作树 `ProjectFlow-v385-rc2` 和本地分支 `codex/v3.8.5-rc3-truthfulness` 执行，通过同一远端 head 更新 PR #15。当前生产修复 head 为 `539dfc9802069dec40207179f65b873bf862872c`；验证 head `b9e9c2d` 只增加 Round 2 冻结哈希的 LF/CRLF 跨平台合同。前序修复 head 为 `98d3d4812b207c781594070ef8bac253590d43a2`、`4935884b12ad2be0ea4ab668687d7f0aa21134d4`、`c4e020c1ca85eac8d2d4599838d66eacb8064552` 和 `92053e58b7ead35ffc84cc4db7eeea6bda76e17c`。
+- RC3 在独立工作树 `ProjectFlow-v385-rc2` 和本地分支 `codex/v3.8.5-rc3-truthfulness` 执行，通过同一远端 head 更新 PR #15。当前生产修复 head 为 `539dfc9802069dec40207179f65b873bf862872c`；Round 3 Provider 来源 head 为 `73d11250cddce3594d5ddb4ef54cd8c6d652dac7`。前序修复与失败证据继续保留。
 - 主工作树、旧 V3.8.5 工作树和其他 worktree 含独立分支或用户状态，本轮没有改写、重置、删除或清理它们。
 - RC3 启动前最新完整 required CI 为 run `31534591531`。新真实模型 run `31574016609` 的 backend/PostgreSQL 因其 head 尚无 Round 3 文件而按设计失败，不能冒充最终静态 CI；最终 Evidence head 必须重新取得七项 required job 全绿。
 
@@ -46,6 +46,12 @@ RC3 采用最小 Provider-neutral 修复：Technical Atom 级 Claim attribution�
 - run `31586433372` 使用 validation head `b9e9c2d`、affected scope 和双 Provider max。DeepSeek qualification 19/19 通过：39 请求、180,073 tokens、843,690 ms、3 次 repair、3 次公开确定性标题回退。GLM qualification 19/19 通过：43 请求、166,130 tokens、1,057,851 ms、7 次 repair、9 次公开确定性标题回退。两家 Title AOR/Chapter precision 均为 1.0、failed/pending window 与 repair failure 均为 0，安全持久化全 false。DeepSeek scenarios attempt 1 为 11/11：60 请求、1,023,867 tokens、2,510,634 ms、3 次 repair、129 次公开确定性标题回退，Dogfood P0 保持 OBSERVED，安全扫描为 0。GLM scenarios attempt 1 为 1/11：首个 non-code presentation 用 1 请求、10,012 tokens、66,455 ms 通过，之后调用不可用。仅重跑该 job 的 attempt 2 为 0/11、0 个成功请求；两个 attempt 的安全工件均未持久化 HTTP 状态，因此不能猜测外部原因，也不能相互覆盖。下一步只运行 correction 最小诊断，并仅输出 HTTP/传输/格式分类与请求数。
 - correction-only 诊断 run `31592405476`，head `f3d520432a0be857cd21255051c796b28359fbfb`：两个 Story 窗口分别在两次有界请求后得到 `HTTP 429`，安全日志只包含场景、任务、状态码分类和请求数。由此排除本地 Schema/Prompt 解析为本次直接失败点，但 429 究竟是短期限流还是额度状态仍不能从正文推断。该 run 的 browser、frontend、Hermes、Obsidian、sensitive jobs 通过；backend/H2 与 PostgreSQL 只因 Round 3 清单尚未冻结而失败。
 - 同一 correction-only run 的 job-only attempt 2 与更长冷却后的 attempt 3 都仍是两个窗口各 `HTTP 429`、每个窗口两次请求、0 个成功模型调用。重复结果排除单次网络抖动，但在不读取响应正文的边界内仍不能区分 Provider 的速率窗口与额度耗尽；完整 11 场景继续暂停，避免无意义消耗。
+- 2026-08-14 correction 探针 run `31733370522` 在同一来源 head 上通过 GLM 资格与 correction 场景，确认 GLM 容量恢复。
+- 正式 affected run `31733839404` 使用双 Provider max：GLM 与 DeepSeek qualification 均为 19/19，scenarios 均为 11/11。GLM scenarios 为 52 请求、798,608 tokens、1 次 repair；DeepSeek scenarios 为 57 请求、1,002,415 tokens、2 次 repair。两家 Dogfood 的旧 ae9f P0 均为 OBSERVED，非法 Evidence、跨项目引用和不受支持强事实均为 0，安全持久化字段全 false。
+
+## Round 3 冻结
+
+六份同头真实 Provider 工件完成安全扫描与 canonical-LF 哈希绑定后，Round 3 已冻结为 30 Story / 8 Chapter，双 Provider 各 15/4。manifest 与 worksheet canonical-LF SHA-256 分别为 `f316b71a6bec24f7ba40c2da81ef210b101b3ca238c688793fa32d48be877c1b` 与 `4d57d7d1fa5bb975465db9be413f70cf943ca7c9c70d8174ba0d4dcdd7d85ca6`。reviewerCount 为 0，姓名、评分、布尔判断、备注和 PASS/FAIL 均为空；自动化不得替真人填写。
 
 ## 禁止提前执行
 
