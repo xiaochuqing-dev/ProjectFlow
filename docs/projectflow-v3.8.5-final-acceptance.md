@@ -6,4 +6,6 @@ Round 1 and Round 2 remain immutable NEEDS_REVISION_NOT_APPROVED evidence. On 20
 
 Round 3 is frozen as 30 Story and 8 Chapter entries, balanced 15/4 per Provider. Its manifest binds the same code head, run and six canonical-LF artifact hashes. All human fields remain blank and reviewerCount is 0. Automated closure therefore stops at PENDING_HUMAN_REVIEW_ROUND3; only explicit user approval after the frozen thresholds pass can authorize ready/merge, acceptance backfill, final master CI and branch/worktree cleanup.
 
+Evidence head `49622f16aebf77e892c70a5b091f17c2b8ebaa6c` passed push run `31740051324` and PR run `31740054761`, including backend/H2, PostgreSQL, browser, frontend, Hermes, Obsidian and sensitive-content.
+
 PR #15 is OPEN, Draft and unmerged. No Tag or Release exists for this closure.

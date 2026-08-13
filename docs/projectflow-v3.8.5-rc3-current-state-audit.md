@@ -48,6 +48,7 @@ RC3 采用最小 Provider-neutral 修复：Technical Atom 级 Claim attribution�
 - 同一 correction-only run 的 job-only attempt 2 与更长冷却后的 attempt 3 都仍是两个窗口各 `HTTP 429`、每个窗口两次请求、0 个成功模型调用。重复结果排除单次网络抖动，但在不读取响应正文的边界内仍不能区分 Provider 的速率窗口与额度耗尽；完整 11 场景继续暂停，避免无意义消耗。
 - 2026-08-14 correction 探针 run `31733370522` 在同一来源 head 上通过 GLM 资格与 correction 场景，确认 GLM 容量恢复。
 - 正式 affected run `31733839404` 使用双 Provider max：GLM 与 DeepSeek qualification 均为 19/19，scenarios 均为 11/11。GLM scenarios 为 52 请求、798,608 tokens、1 次 repair；DeepSeek scenarios 为 57 请求、1,002,415 tokens、2 次 repair。两家 Dogfood 的旧 ae9f P0 均为 OBSERVED，非法 Evidence、跨项目引用和不受支持强事实均为 0，安全持久化字段全 false。
+- Evidence head `49622f16aebf77e892c70a5b091f17c2b8ebaa6c` 的 push run `31740051324` 与 PR run `31740054761` 均成功，七项 required job 全绿。
 
 ## Round 3 冻结
 

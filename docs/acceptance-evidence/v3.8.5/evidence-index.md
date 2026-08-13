@@ -35,8 +35,8 @@ Round 3 已冻结为 30 Story / 8 Chapter，双 Provider 各 15/4，人工字段
 - 本地 backend/H2：597 项，0 失败，0 错误，5 个条件跳过；Maven 以 0 退出，耗时 5 分 24 秒。
 - 根 `Start-ProjectFlow.bat -NoBrowser`：Next 16.2.11、Spring Boot/H2、双端就绪通过；Build ID `yFBn3UKDWR9I_MD9j1vq0`，readyAt `2026-08-14T04:15:07.3018054+08:00`，退出后 3000/8080 无监听。
 - 阻塞证据 head `e0fd50ed98e75c38fe1d762c89b501344b496c04` 的 push run `31594703405` 与 PR run `31594709131`：browser、frontend、Hermes、Obsidian、sensitive-content 通过；backend/H2 与 PostgreSQL 都是 597 项中仅 `ProjectHistoryHumanReviewRound3ManifestTest` 1 项失败。
-- 当前 run `31733839404` 的静态 backend/PostgreSQL 失败仍只来自运行开始时尚无 Round 3 文件；最终 Evidence head 推送后必须重新取得 required CI 全绿。
+- Evidence head `49622f16aebf77e892c70a5b091f17c2b8ebaa6c` 的 push run `31740051324` 与 PR run `31740054761` 均成功；backend/H2、PostgreSQL、browser、frontend、Hermes、Obsidian、sensitive-content 全绿。真实 Provider job 按非手动触发设计跳过。
 
 ## 当前阻塞与权限
 
-外部 GLM 执行阻塞已解除，自动化剩余门禁是最终 Evidence head 的静态 CI。人工门禁仍未开始：用户完成真实评分并明确批准前，不得 Ready、merge、backfill、Tag、Release 或清理分支/worktree。
+外部 GLM 阻塞与最终静态 CI 均已关闭。人工门禁仍未开始：用户完成真实评分并明确批准前，不得 Ready、merge、backfill、Tag、Release 或清理分支/worktree。
