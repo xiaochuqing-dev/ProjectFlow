@@ -2,9 +2,11 @@ package com.projectflow.service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -252,22 +254,47 @@ public final class ProjectHistoryLanguageService {
     }
 
     public String chapterTitle(List<String> storyTitles, List<Transition> transitions, Instant from, Instant to) {
-        List<String> outcomes = concreteChapterOutcomes(storyTitles);
+        return chapterTitle(storyTitles, transitions, from, to, 1);
+    }
+
+    public String chapterTitle(
+        List<String> storyTitles,
+        List<Transition> transitions,
+        Instant from,
+        Instant to,
+        int titleClusterCount
+    ) {
+        List<String> outcomes = concreteChapterOutcomes(storyTitles, Math.max(2, titleClusterCount));
         String first = outcomes.stream().findFirst().orElse("记录这一时期可确认的项目变化");
-        if (startsWithAction(first)) return first;
-        if (transitions != null && transitions.stream().anyMatch(value ->
-            value == Transition.RESTORED || value == Transition.REAPPLIED)) return "恢复" + first;
-        if (transitions != null && !transitions.isEmpty()
-            && transitions.stream().allMatch(value -> value == Transition.CREATED)) return "建立" + first;
-        return "完善" + first;
+        String title;
+        if (startsWithAction(first)) title = first;
+        else if (transitions != null && transitions.stream().anyMatch(value ->
+            value == Transition.RESTORED || value == Transition.REAPPLIED)) title = "恢复" + first;
+        else if (transitions != null && !transitions.isEmpty()
+            && transitions.stream().allMatch(value -> value == Transition.CREATED)) title = "建立" + first;
+        else title = "完善" + first;
+        if (titleClusterCount > 1 && outcomes.size() > 1) {
+            title += "，并" + sentenceAction(outcomes.get(1));
+        }
+        return title;
     }
 
     public String chapterSummary(List<String> storyTitles, int primaryCount, int supportingCount) {
-        List<String> outcomes = concreteChapterOutcomes(storyTitles);
+        return chapterSummary(storyTitles, primaryCount, supportingCount, 2);
+    }
+
+    public String chapterSummary(
+        List<String> storyTitles,
+        int primaryCount,
+        int supportingCount,
+        int representativeOutcomeLimit
+    ) {
+        List<String> outcomes = concreteChapterOutcomes(storyTitles, Math.max(1, representativeOutcomeLimit));
         String first = outcomes.stream().findFirst().orElse("记录可确认的项目变化");
-        String second = outcomes.stream().skip(1).findFirst().orElse("");
         String result = "这一时期" + sentenceAction(first);
-        if (!second.isBlank()) result += "，并" + sentenceAction(second);
+        for (String outcome : outcomes.stream().skip(1).toList()) {
+            result += "，并" + sentenceAction(outcome);
+        }
         result += "。";
         String support = supportingCount <= 0 ? "" : "相关支撑工作保留在工程详情中。";
         return result + support;
@@ -291,27 +318,16 @@ public final class ProjectHistoryLanguageService {
 
     private String chapterTheme(List<String> storyTitles) {
         List<String> values = storyTitles == null ? List.of() : storyTitles;
-        List<String> themes = List.of(
-            "项目基础建设", "项目资料接入与理解", "项目历程与证据化理解", "内容与呈现", "成果内容建设", "质量与安全验证"
-        );
-        int[] scores = new int[themes.size()];
-        for (String title : values) {
-            String value = title == null ? "" : title.toLowerCase(Locale.ROOT);
-            if (containsAny(value, "环境配置", "项目骨架", "忽略规则", "使用说明", "登录流程", "登录入口", "运行环境")) scores[0]++;
-            if (containsAny(value, "项目导入", "资料接入", "上下文", "项目文档", "阶段文档")) scores[1]++;
-            if (containsAny(value, "项目历程", "证据", "事实", "多模型", "历史理解", "历程")) scores[2]++;
-            if (containsAny(value, "界面", "视觉", "设计", "页面", "品牌", "演示")) scores[3]++;
-            if (containsAny(value, "研究报告", "研究结论", "数据分析", "数据图表", "收入分析", "项目成果", "成果记录", "内容")) scores[4]++;
-            if (containsAny(value, "测试", "验证", "质量", "安全", "回归")) scores[5]++;
-        }
-        int best = -1;
-        for (int index = 0; index < scores.length; index++) if (best < 0 || scores[index] > scores[best]) best = index;
-        if (best >= 0 && scores[best] > 0) return themes.get(best);
-        return values.stream().map(subjectLabels::safeFocus)
-            .filter(value -> !value.isBlank() && !"项目阶段成果".equals(value)).findFirst().orElse("项目阶段成果");
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        values.stream().map(subjectLabels::safeFocus)
+            .filter(value -> !value.isBlank() && !"项目阶段成果".equals(value))
+            .forEach(value -> counts.merge(value, 1, Integer::sum));
+        return counts.entrySet().stream()
+            .sorted(Map.Entry.<String, Integer>comparingByValue().reversed().thenComparing(Map.Entry::getKey))
+            .map(Map.Entry::getKey).findFirst().orElse("项目阶段成果");
     }
 
-    private List<String> concreteChapterOutcomes(List<String> storyTitles) {
+    private List<String> concreteChapterOutcomes(List<String> storyTitles, int limit) {
         LinkedHashSet<String> outcomes = new LinkedHashSet<>();
         for (String title : storyTitles == null ? List.<String>of() : storyTitles) {
             String value = title == null ? "" : title.trim();
@@ -321,11 +337,17 @@ public final class ProjectHistoryLanguageService {
             if (value.contains("…") || value.contains("/") || value.contains("\\")
                 || value.codePoints().anyMatch(codePoint -> codePoint < 128 && Character.isLetterOrDigit(codePoint))) {
                 String focus = subjectLabels.safeFocus(value);
-                value = "项目阶段成果".equals(focus) ? "记录可确认的项目变化" : focus;
+                if (focus.codePoints().anyMatch(codePoint ->
+                    codePoint < 128 && Character.isLetterOrDigit(codePoint))) {
+                    continue;
+                }
+                value = "项目阶段成果".equals(focus) ? "记录当前可确认的项目变化" : focus;
             }
             value = value.replaceFirst("^(围绕|推进|继续完善|整理项目材料并)", "").trim();
-            if (!value.isBlank() && !containsAny(value, "相关变化", "阶段成果", "项目材料")) outcomes.add(value);
-            if (outcomes.size() >= 2) break;
+            if (value.contains("项目材料")) value = "记录当前可确认的项目材料变化";
+            else if (containsAny(value, "相关变化", "阶段成果")) value = "记录当前可确认的项目变化";
+            if (!value.isBlank()) outcomes.add(value);
+            if (outcomes.size() >= Math.max(1, limit)) break;
         }
         if (outcomes.isEmpty()) outcomes.add("记录可确认的项目变化");
         return List.copyOf(outcomes);

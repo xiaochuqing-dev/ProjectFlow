@@ -76,7 +76,9 @@ class ProjectHistoryPromptBuilderTest {
         }
         var input = new ProjectHistoryPromptBuilder.ChapterSynthesisPromptInput(
             "chapter-large", "2026-01-01T00:00:00Z", "2026-02-01T00:00:00Z", 200, 160, 40,
-            List.of("DENSITY_BOUNDARY"), "membership-fingerprint", stories
+            List.of("DENSITY_BOUNDARY"), "membership-fingerprint", List.of(cluster("cluster-main")),
+            List.of("cluster-main"), List.of("cluster-main"), 0.80, List.of(), List.of(),
+            List.of("不得提高状态"), stories
         );
 
         var production = builder.buildChapterProduction(input);
@@ -86,9 +88,12 @@ class ProjectHistoryPromptBuilderTest {
         assertThat(production.promptCharacterCount())
             .isLessThanOrEqualTo(ProjectHistoryPromptBuilder.MAX_CHAPTER_SYNTHESIS_PROMPT_CHARS);
         assertThat(production.includedStoryIds()).hasSize(ProjectHistoryPromptBuilder.MAX_CHAPTER_STORY_SUMMARIES)
-            .contains("story-0", "story-199");
-        assertThat(production.omittedStoryCount()).isEqualTo(120);
-        assertThat(production.prompt()).contains("primaryStoryCount", "supportingStoryCount", "membershipFingerprint")
+            .doesNotContain("story-0");
+        assertThat(production.omittedStoryCount()).isEqualTo(80);
+        assertThat(production.prompt()).contains(
+            "primaryStoryCount", "supportingStoryCount", "membershipFingerprint", "representativeClusters",
+            "requiredRepresentativeClusterIds", "dominantClusterIds", "cluster-main"
+        )
             .doesNotContain("rawEvent", "evidenceRefs", "technicalDetails", "commitSummaries", "file:", "commit:");
     }
 
@@ -112,10 +117,19 @@ class ProjectHistoryPromptBuilderTest {
                 "CHAPTER_SYNTHESIS_JSON=",
                 ProjectHistoryPromptBuilder.VALIDATION_REPAIR_MARKER + "CONTRACT",
                 "从原始 CHAPTER_SYNTHESIS_JSON 重新生成",
-                "只能包含 chapterId、title、summary",
-                "{\"chapters\":[{\"chapterId\":\"\",\"title\":\"\",\"summary\":\"\"}]}"
+                "只能包含 chapterId、representedClusterIds、title、summary",
+                "representedClusterIds 必须逐项复制 requiredRepresentativeClusterIds",
+                "{\"chapters\":[{\"chapterId\":\"\",\"representedClusterIds\":[],\"title\":\"\",\"summary\":\"\"}]}"
             )
             .doesNotContain("只能使用 OUTPUT_TEMPLATE_JSON");
+    }
+
+    private static ProjectHistoryPromptBuilder.ChapterRepresentativeClusterInput cluster(String id) {
+        return new ProjectHistoryPromptBuilder.ChapterRepresentativeClusterInput(
+            id, "登录流程", "DOMINANT", 4.0, 8, 2, List.of("story-one"),
+            List.of("建立登录流程并形成登录入口"), List.of("IMPLEMENTED"), "IMPLEMENTED",
+            List.of(), List.of()
+        );
     }
 
     @Test

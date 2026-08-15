@@ -1123,19 +1123,28 @@ class ProjectHistoryReconstructionTest {
         assertThat(storyCalls.get()).isEqualTo(4);
         assertThat(chapterCalls.get()).isEqualTo(chapters.size());
         assertThat(large).hasSize(2).allSatisfy(chapter -> {
-            assertThat(chapter.title()).startsWith("归纳跨窗口阶段");
+            assertThat(chapter.title()).contains("项目成果记录", "可追溯结果")
+                .doesNotContain("环境配置示例", "版本库忽略规则");
+            assertThat(chapter.summary()).contains("项目成果记录", "可追溯结果");
             assertThat(chapter.authority()).isEqualTo("INFERRED_NON_AUTHORITATIVE");
             assertThat(chapter.storyRefs()).doesNotHaveDuplicates().hasSize(40);
         });
         assertThat(chapterPrompts).hasSize(chapters.size()).allSatisfy(prompt -> assertThat(prompt)
             .hasSizeLessThanOrEqualTo(48_000)
-            .contains("CHAPTER_SYNTHESIS_JSON", "primaryStoryCount", "supportingStoryCount")
+            .contains(
+                "CHAPTER_SYNTHESIS_JSON", "primaryStoryCount", "supportingStoryCount",
+                "representativeClusters", "requiredRepresentativeClusterIds", "dominantClusterIds"
+            )
             .doesNotContain("evidenceRefs", "technicalDetails", "commitSummaries", "results/Outcome", "fact:"));
         assertThat(readService.overview(userId, project.getId()).diagnostics())
             .containsEntry("chapterSynthesisCount", chapters.size())
             .containsEntry("chapterSynthesisProcessedCount", chapters.size())
             .containsEntry("chapterSynthesisFailedCount", 0)
-            .containsEntry("chapterSynthesisPendingCount", 0);
+            .containsEntry("chapterSynthesisPendingCount", 0)
+            .containsEntry("chaptersWithMinorClusterTitleRisk", 0)
+            .containsEntry("chapterOverlapCount", 0)
+            .containsEntry("orphanSupportingCount", 0)
+            .containsEntry("userDeclaredChapterMutationCount", 0);
         assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
             .filteredOn(checkpoint -> checkpoint.getWindowIdentity().startsWith("chapter-summary-"))
             .hasSize(chapters.size()).allSatisfy(checkpoint -> {
@@ -1149,6 +1158,45 @@ class ProjectHistoryReconstructionTest {
         assertThat(chapterCalls.get()).isEqualTo(chapters.size());
         assertThat(readService.overview(userId, project.getId()).diagnostics())
             .containsEntry("chapterSynthesisCacheHitCount", chapters.size());
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void chapterRepairFailureKeepsTheValidatedRepresentativeDeterministicResult() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path root = temporaryRoot.resolve("chapter-representation-repair-failure");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Chapter Repair Failure", root);
+        historicalFacts(project, 80, 1, 1, 0);
+        provider(userId);
+
+        AtomicInteger chapterCalls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+                chapterCalls.incrementAndGet();
+                return modelResponse("""
+                    {"chapters":[{"chapterId":"unknown-chapter","representedClusterIds":["unknown-cluster"],
+                    "title":"未经校验的模型标题","summary":"未经校验的模型摘要"}]}
+                    """);
+            }
+            return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var chapters = readService.chapters(userId, project.getId(), 0, 20).items();
+        var deterministic = chapters.stream()
+            .filter(chapter -> "ENGINEERING_REPRESENTATION_PLAN".equals(chapter.authority())).toList();
+        Map<String, Object> diagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(chapterCalls.get()).isGreaterThanOrEqualTo(2);
+        assertThat(deterministic).isNotEmpty().allSatisfy(chapter -> {
+            assertThat(chapter.title()).contains("项目成果记录").doesNotContain("未经校验");
+            assertThat(chapter.summary()).contains("项目成果记录").doesNotContain("未经校验");
+        });
+        assertThat(((Number) diagnostics.get("chapterSynthesisFailedCount")).intValue()).isGreaterThan(0);
+        assertThat(((Number) diagnostics.get("chaptersUsingDeterministicFallback")).intValue()).isGreaterThan(0);
+        assertThat(diagnostics).containsEntry("chaptersWithMinorClusterTitleRisk", 0)
+            .containsEntry("unsupportedClaimCount", 0);
     }
 
     @Test
@@ -1523,10 +1571,8 @@ class ProjectHistoryReconstructionTest {
             chaptersStart + chaptersMarker.length(), repairStart < 0 ? prompt.length() : repairStart
         ));
         List<Map<String, Object>> storyOutput = new ArrayList<>();
-        Map<String, String> subjectsByStory = new LinkedHashMap<>();
         for (JsonNode story : stories) {
             String subject = story.path("subjectDisplayConcept").asText("项目内容");
-            subjectsByStory.put(story.path("storyId").asText(), subject);
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("storyId", story.path("storyId").asText());
             item.put("humanTitle", "调整“" + subject + "”并形成可追溯结果");
@@ -1541,13 +1587,10 @@ class ProjectHistoryReconstructionTest {
         }
         List<Map<String, Object>> chapterOutput = new ArrayList<>();
         for (JsonNode chapter : chapters) {
-            String primarySubject = chapter.path("storyRefs").isArray() && !chapter.path("storyRefs").isEmpty()
-                ? subjectsByStory.getOrDefault(chapter.path("storyRefs").get(0).asText(), "项目阶段成果")
-                : "项目阶段成果";
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("chapterId", chapter.path("chapterId").asText());
-            item.put("title", "围绕“" + primarySubject + "”推进阶段成果");
-            item.put("summary", "这一时期以“" + primarySubject + "”为主线梳理变化，支撑信息保留在工程详情中。");
+            item.put("title", representativeChapterTitle(chapter));
+            item.put("summary", representativeChapterSummary(chapter));
             chapterOutput.add(item);
         }
         return mapper.writeValueAsString(Map.of("stories", storyOutput, "chapters", chapterOutput));
@@ -1562,11 +1605,42 @@ class ProjectHistoryReconstructionTest {
             start + marker.length(), repairStart < 0 ? prompt.length() : repairStart
         ));
         String chapterId = chapter.path("chapterId").asText();
-        return objectMapper.writeValueAsString(Map.of("chapters", List.of(Map.of(
-            "chapterId", chapterId,
-            "title", "归纳跨窗口阶段并形成主要结果",
-            "summary", "这一阶段按已校验的故事摘要归纳主要结果，并将支撑工作保留在详情中。"
-        ))));
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put("chapterId", chapterId);
+        output.put("representedClusterIds", objectMapper.convertValue(
+            chapter.path("requiredRepresentativeClusterIds"), List.class
+        ));
+        output.put("title", representativeChapterTitle(chapter));
+        output.put("summary", representativeChapterSummary(chapter));
+        return objectMapper.writeValueAsString(Map.of("chapters", List.of(output)));
+    }
+
+    private static String representativeChapterTitle(JsonNode chapter) {
+        JsonNode clusters = chapter.path("representativeClusters");
+        for (JsonNode cluster : clusters) {
+            if (!"MINOR".equals(cluster.path("role").asText())
+                && cluster.path("representativeOutcomes").isArray()
+                && !cluster.path("representativeOutcomes").isEmpty()) {
+                return cluster.path("representativeOutcomes").get(0).asText();
+            }
+        }
+        return "记录项目阶段成果并形成可查看结果";
+    }
+
+    private static String representativeChapterSummary(JsonNode chapter) {
+        List<String> outcomes = new ArrayList<>();
+        for (JsonNode cluster : chapter.path("representativeClusters")) {
+            if (cluster.path("representativeOutcomes").isArray()
+                && !cluster.path("representativeOutcomes").isEmpty()) {
+                String value = cluster.path("representativeOutcomes").get(0).asText().trim()
+                    .replaceAll("[。；;！!？?]+$", "");
+                if (!value.isBlank()) outcomes.add(value);
+            }
+        }
+        if (outcomes.isEmpty()) return "这一时期记录项目阶段成果并形成可查看结果。";
+        return "这一时期" + outcomes.get(0)
+            + outcomes.stream().skip(1).map(value -> "，并" + value).collect(java.util.stream.Collectors.joining())
+            + "。";
     }
 
     private void fastImport(Path root, int commits) throws Exception {

@@ -11,7 +11,7 @@ on:
         default: false
         type: boolean
       real_model_scope:
-        description: "真实模型范围；correction 只复验纠正与编号占位符链路"
+        description: "真实模型范围；affected 复验 Chapter 代表性、非代码、repair 与 ProjectFlow Dogfood"
         required: false
         default: full
         type: choice
@@ -77,6 +77,7 @@ jobs:
             ProjectHistoryNarrativeParaphraseValidationTest \
             ProjectHistoryHumanSubjectLabelTest \
             ProjectHistoryChapterSemanticSynthesisTest \
+            ProjectHistoryChapterRepresentationPlannerTest \
             ProjectHistoryChapterNoRawSubjectLeakTest \
             ProjectHistoryBeforeChangeAfterNonRepetitionTest \
             ProjectHistoryUnknownHumanWordingTest \
@@ -297,12 +298,12 @@ jobs:
             echo "::endgroup::"
           }
           run_gate provider-probe mvn -B -Dtest=ProjectFlowRealProviderProbeIT test
-          run_gate history-v380 mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-v380" test
           if [ "${{ inputs.real_model_scope }}" = "full" ]; then
+            run_gate history-v380 mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-v380" test
             run_gate understanding-v375 mvn -B -Dtest=ProjectFlowRealModelEvalIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-v375" test
             run_gate understanding-e2e mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-understanding" test
           else
-            echo "affected scope: V3.7.5 and Understanding reuse the recorded full baseline"
+            echo "affected scope: V3.8.0, V3.7.5 and Understanding reuse the recorded full baseline"
           fi
           run_gate history-v385-qualification mvn -B -Dtest=ProjectHistoryV385RealOutputEvaluatorTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385" test
           if [ "$failures" -ne 0 ]; then
@@ -409,6 +410,9 @@ jobs:
           if [ "${{ inputs.real_model_scope }}" = "correction" ]; then
             run_gate history-v385-correction mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.scenario-scope=correction -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios-affected" test
             echo "correction scope: Dogfood and non-code scenarios reuse the recorded full baseline"
+          elif [ "${{ inputs.real_model_scope }}" = "affected" ]; then
+            run_gate history-v385-chapter-affected mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.scenario-scope=chapter -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-chapter-affected" test
+            echo "affected scope: Chapter suite includes ProjectFlow Dogfood; unchanged V3.7.5/Understanding baselines are reused"
           else
             run_gate history-v385-scenarios mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios" test
             run_gate history-v385-dogfood mvn -B -Dtest="$DOGFOOD_TEST" -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios" test

@@ -53,7 +53,7 @@ import com.projectflow.service.ProjectHistorySourceCollector.CollectionOutcome;
  */
 @Service
 public class ProjectHistoryReconstructionService {
-    static final String STRATEGY_VERSION = "project-history-v385-human-narrative-v2";
+    static final String STRATEGY_VERSION = "project-history-v385-chapter-representation-v1";
     static final String PROMPT_VERSION = ProjectHistoryPromptBuilder.PROMPT_VERSION;
     private static final int MODEL_STORY_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
     private static final int MODEL_EVENT_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_EVENT_LIMIT;
@@ -73,7 +73,9 @@ public class ProjectHistoryReconstructionService {
     private static final Set<String> WEAK_TEXT = Set.of(
         "优化了系统", "改进了功能", "进行了重构", "提升了体验", "修改了相关文件", "项目变化", "相关调整"
     );
-    private static final Set<String> MODEL_CHAPTER_SYNTHESIS_FIELDS = Set.of("chapterId", "title", "summary");
+    private static final Set<String> MODEL_CHAPTER_SYNTHESIS_FIELDS = Set.of(
+        "chapterId", "representedClusterIds", "title", "summary"
+    );
     private static final Set<Transition> STORY_BOUNDARIES = Set.of(
         Transition.REMOVED, Transition.RESTORED, Transition.REPLACED,
         Transition.REVERTED, Transition.REAPPLIED, Transition.SPLIT, Transition.MERGED
@@ -96,6 +98,7 @@ public class ProjectHistoryReconstructionService {
     private final ProjectHistoryPromptBuilder promptBuilder;
     private final ProjectHistoryLanguageService languageService;
     private final ProjectHistoryNarrativeEntailmentValidator narrativeValidator;
+    private final ProjectHistoryChapterRepresentationPlanner chapterRepresentationPlanner;
     private final ProjectHistoryWindowPlanner windowPlanner;
     private final ProjectHistoryCorrectionService correctionService;
     private final ProjectHistoryPresentationInvariantValidator presentationInvariantValidator;
@@ -130,6 +133,7 @@ public class ProjectHistoryReconstructionService {
         this.promptBuilder = promptBuilder;
         this.languageService = languageService;
         this.narrativeValidator = narrativeValidator;
+        this.chapterRepresentationPlanner = new ProjectHistoryChapterRepresentationPlanner(languageService);
         this.windowPlanner = new ProjectHistoryWindowPlanner();
         this.correctionService = correctionService;
         this.presentationInvariantValidator = presentationInvariantValidator;
@@ -253,6 +257,7 @@ public class ProjectHistoryReconstructionService {
             diagnostics.put("chapterSynthesisPendingCount", modelResult.chapterSynthesisPendingCount());
             diagnostics.put("chapterSynthesisPromptCharacterCount", modelResult.chapterSynthesisPromptCharacterCount());
             diagnostics.put("chapterSynthesisOmittedStoryCount", modelResult.chapterSynthesisOmittedStoryCount());
+            putChapterRepresentationDiagnostics(finalResult, diagnostics);
             if (modelResult.failureSummary() != null && !modelResult.failureSummary().isBlank()) {
                 diagnostics.put("modelFallback", modelResult.failureSummary());
             }
@@ -830,7 +835,15 @@ public class ProjectHistoryReconstructionService {
                 "processedStoryCount", "unprocessedStoryCount"
                 , "chapterSynthesisCount", "chapterSynthesisProcessedCount", "chapterSynthesisCacheHitCount",
                 "chapterSynthesisFailedCount", "chapterSynthesisPendingCount", "chapterSynthesisPromptCharacterCount",
-                "chapterSynthesisOmittedStoryCount"
+                "chapterSynthesisOmittedStoryCount", "chapterRepresentationPlanVersion", "chapterCount",
+                "primaryStoryCount", "supportingStoryCount", "chapterPrimaryStoryCount",
+                "chapterSupportingStoryCount", "representativeClusterCount",
+                "dominantClusterCount", "selectedRepresentativeClusterCount", "representativePrimaryCoverage",
+                "largestChapterStoryCount", "medianChapterStoryCount", "largeChapterCount", "chaptersNeedingSplit",
+                "chaptersUsingDeterministicFallback", "chaptersUsingModelValidatedWording",
+                "chaptersWithMinorClusterTitleRisk", "technicalLeakCount", "unsupportedClaimCount",
+                "chapterOverlapCount", "orphanSupportingCount", "reasonWithoutEvidenceCount",
+                "userDeclaredChapterMutationCount"
             )) {
                 JsonNode value = previous.get(field);
                 if (value != null && !value.isNull()) target.put(field, objectMapper.convertValue(value, Object.class));
@@ -1162,28 +1175,66 @@ public class ProjectHistoryReconstructionService {
             signals.put(current.get(0).id(), List.copyOf(currentSignals));
         }
         groups = splitIndependentCommitOutcomes(groups, events, signals);
+        groups = splitChapterRepresentationBoundaries(groups, signals);
         List<HistoryChapter> result = new ArrayList<>();
         for (List<ChangeStory> group : groups) {
             Instant from = group.get(0).occurredFrom();
             Instant to = group.get(group.size() - 1).occurredTo();
-            List<String> titles = group.stream().filter(ChangeStory::primary).map(ChangeStory::humanTitle).distinct().limit(6).toList();
+            ProjectHistoryChapterRepresentationPlanner.Plan representation = chapterRepresentationPlanner.plan(group);
+            List<String> outcomes = representation.representativeOutcomes();
+            if (outcomes.isEmpty()) {
+                outcomes = group.stream().filter(ChangeStory::primary).map(ChangeStory::humanTitle)
+                    .filter(value -> value != null && !value.isBlank()).distinct().limit(4).toList();
+            }
             List<Transition> transitions = group.stream().flatMap(story -> story.eventRefs().stream()
                 .map(id -> events.stream().filter(event -> event.id().equals(id)).findFirst().orElse(null)))
                 .filter(java.util.Objects::nonNull).map(EventView::transition).distinct().toList();
             Set<UUID> rawEvents = new LinkedHashSet<>();
             group.forEach(story -> rawEvents.addAll(story.eventRefs()));
             String id = "chapter-" + ProjectHistorySourceCollector.sha256(group.get(0).id()).substring(0, 20);
-            String title = languageService.chapterTitle(titles, transitions, from, to);
+            int titleClusterCount = Math.max(1, representation.dominantClusterCount());
+            String title = languageService.chapterTitle(outcomes, transitions, from, to, titleClusterCount);
             int chapterPrimaryCount = (int) group.stream().filter(ChangeStory::primary).count();
             int chapterSupportingCount = Math.max(0, group.size() - chapterPrimaryCount);
-            String summary = languageService.chapterSummary(titles, chapterPrimaryCount, chapterSupportingCount);
+            String summary = languageService.chapterSummary(
+                outcomes, chapterPrimaryCount, chapterSupportingCount,
+                Math.max(1, representation.selectedClusters().size())
+            );
+            List<String> limitations = new ArrayList<>();
+            if (representation.coherenceRisk()) {
+                limitations.add("当前来源未提供足够强的阶段边界，已在最小安全粒度内保守保留多个代表成果。");
+            }
+            if (representation.representativePrimaryCoverage() < 0.60) {
+                limitations.add("代表成果未覆盖全部主要变化，完整成员仍可在篇章详情中核对。");
+            }
             result.add(new HistoryChapter(
                 id, title, summary, from, to, signals.getOrDefault(group.get(0).id(), List.of()),
                 group.stream().map(ChangeStory::id).toList(), group.size(), rawEvents.size(),
-                "ENGINEERING_GROUPING", "FULL_WITHIN_DISCOVERED_SOURCES", List.of()
+                "ENGINEERING_REPRESENTATION_PLAN", "FULL_WITHIN_DISCOVERED_SOURCES", List.copyOf(limitations)
             ));
         }
         return result;
+    }
+
+    private List<List<ChangeStory>> splitChapterRepresentationBoundaries(
+        List<List<ChangeStory>> groups,
+        Map<String, List<String>> signals
+    ) {
+        List<List<ChangeStory>> result = new ArrayList<>();
+        for (List<ChangeStory> group : groups) {
+            List<List<ChangeStory>> represented = chapterRepresentationPlanner.split(group);
+            List<String> originalSignals = signals.getOrDefault(group.get(0).id(), List.of());
+            for (int index = 0; index < represented.size(); index++) {
+                List<ChangeStory> members = represented.get(index);
+                result.add(members);
+                if (index == 0) {
+                    signals.put(members.get(0).id(), originalSignals);
+                } else {
+                    signals.put(members.get(0).id(), List.of("REPRESENTATION_BOUNDARY"));
+                }
+            }
+        }
+        return List.copyOf(result);
     }
 
     /**
@@ -1588,14 +1639,14 @@ public class ProjectHistoryReconstructionService {
                 try {
                     HistoryChapter chapter = current.chapters().stream()
                         .filter(value -> value.id().equals(batch.chapterId())).findFirst().orElseThrow();
+                    ProjectHistoryChapterRepresentationPlanner.Plan representation = chapterRepresentationPlan(current, chapter);
                     ProjectHistoryPromptBuilder.ChapterSynthesisBuildResult prompt = chapterPrompt(current, chapter);
-                    List<String> primaryWording = primaryChapterWording(current, chapter);
                     promptCharacters += prompt.promptCharacterCount();
                     omittedStories += prompt.omittedStoryCount();
                     progress.update("HISTORY_CHAPTER_SYNTHESIS", "正在使用已校验的变化故事摘要归纳大篇章");
                     ValidatedHistoryResponse<HistoryChapter> validated = callWithValidationRepair(
                         provider, prompt.prompt(), ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS,
-                        root -> parseChapterSynthesis(root, chapter, primaryWording), diagnostics
+                        root -> parseChapterSynthesis(root, chapter, representation), diagnostics
                     );
                     ModelGatewayService.StructuredModelResponse response = validated.response();
                     HistoryChapter enhanced = validated.value();
@@ -1736,7 +1787,10 @@ public class ProjectHistoryReconstructionService {
         Map<String, ChangeStory> stories = snapshot.stories().stream().collect(
             LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll
         );
+        ProjectHistoryChapterRepresentationPlanner.Plan representation = chapterRepresentationPlan(snapshot, chapter);
         StringBuilder fingerprintInput = new StringBuilder(chapter.id()).append('|')
+            .append(ProjectHistoryChapterRepresentationPlanner.PLAN_VERSION).append('|')
+            .append(representation.fingerprint()).append('|')
             .append(String.join("|", chapter.storyRefs()));
         chapter.storyRefs().stream().map(stories::get).filter(java.util.Objects::nonNull).forEach(story ->
             fingerprintInput.append('|').append(story.id()).append('|').append(story.humanTitle())
@@ -1762,7 +1816,12 @@ public class ProjectHistoryReconstructionService {
         );
         List<ChangeStory> members = chapter.storyRefs().stream().map(stories::get)
             .filter(java.util.Objects::nonNull).toList();
-        List<ProjectHistoryPromptBuilder.ChapterStorySummaryInput> summaries = members.stream().filter(ChangeStory::primary)
+        ProjectHistoryChapterRepresentationPlanner.Plan representation = chapterRepresentationPlanner.plan(members);
+        Set<String> representativeStoryIds = representation.selectedClusters().stream()
+            .flatMap(cluster -> cluster.representativeStoryIds().stream())
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        List<ProjectHistoryPromptBuilder.ChapterStorySummaryInput> summaries = members.stream()
+            .filter(ChangeStory::primary).filter(story -> representativeStoryIds.contains(story.id()))
             .map(story -> new ProjectHistoryPromptBuilder.ChapterStorySummaryInput(
                 story.id(), boundedPromptText(story.humanTitle(), 240), boundedPromptText(story.oneSentenceSummary(), 700),
                 story.role(), story.occurredFrom() == null ? "" : story.occurredFrom().toString(),
@@ -1774,15 +1833,126 @@ public class ProjectHistoryReconstructionService {
                 chapter.id(), chapter.from() == null ? "" : chapter.from().toString(),
                 chapter.to() == null ? "" : chapter.to().toString(), chapter.storyRefs().size(), primaryCount,
                 Math.max(0, chapter.storyRefs().size() - primaryCount), chapter.boundarySignals(),
-                ProjectHistorySourceCollector.sha256(String.join("|", chapter.storyRefs())), summaries
+                ProjectHistorySourceCollector.sha256(String.join("|", chapter.storyRefs())),
+                chapterRepresentativeClusterInputs(representation), representation.requiredRepresentativeClusterIds(),
+                representation.dominantClusterIds(), representation.representativePrimaryCoverage(),
+                representation.unknowns(), representation.conflicts(), chapterForbiddenOverclaims(representation), summaries
             );
         return promptBuilder.buildChapterProduction(input);
+    }
+
+    private ProjectHistoryChapterRepresentationPlanner.Plan chapterRepresentationPlan(
+        SnapshotResult snapshot,
+        HistoryChapter chapter
+    ) {
+        Map<String, ChangeStory> stories = snapshot.stories().stream().collect(
+            LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll
+        );
+        return chapterRepresentationPlanner.plan(
+            chapter.storyRefs().stream().map(stories::get).filter(java.util.Objects::nonNull).toList()
+        );
+    }
+
+    private List<ProjectHistoryPromptBuilder.ChapterRepresentativeClusterInput> chapterRepresentativeClusterInputs(
+        ProjectHistoryChapterRepresentationPlanner.Plan representation
+    ) {
+        return representation.selectedClusters().stream().map(cluster ->
+            new ProjectHistoryPromptBuilder.ChapterRepresentativeClusterInput(
+                cluster.id(), boundedPromptText(cluster.humanLabel(), 180), cluster.role(), cluster.weight(),
+                cluster.primaryStoryCount(), cluster.supportingStoryCount(), cluster.representativeStoryIds(),
+                cluster.representativeOutcomes().stream().map(value -> boundedPromptText(value, 300)).toList(),
+                cluster.allowedClaimStates(), cluster.claimCeiling(),
+                cluster.unknowns().stream().map(value -> boundedPromptText(value, 300)).limit(8).toList(),
+                cluster.conflicts().stream().map(value -> boundedPromptText(value, 300)).limit(8).toList()
+            )
+        ).toList();
+    }
+
+    private static List<String> chapterForbiddenOverclaims(
+        ProjectHistoryChapterRepresentationPlanner.Plan representation
+    ) {
+        LinkedHashSet<String> result = new LinkedHashSet<>(List.of(
+            "不得表达生产可用、正式上线、稳定运行或项目成功",
+            "不得把 Supporting、测试、配置或文件数量写成用户成果"
+        ));
+        boolean allVerified = representation.selectedClusters().stream()
+            .allMatch(cluster -> "VERIFIED".equals(cluster.claimCeiling()));
+        boolean anyImplemented = representation.selectedClusters().stream().anyMatch(cluster ->
+            Set.of("IMPLEMENTED", "VERIFIED", "REMOVED", "RESTORED").contains(cluster.claimCeiling())
+        );
+        if (!allVerified) result.add("没有对应验证状态的成果簇不得写成验证通过");
+        if (!anyImplemented) result.add("不得把规划、声明、配置或观察状态写成已经实现");
+        return List.copyOf(result);
+    }
+
+    private void validateChapterRepresentation(
+        String title,
+        String summary,
+        ProjectHistoryChapterRepresentationPlanner.Plan representation
+    ) {
+        if (representation == null || representation.selectedClusters().isEmpty()) {
+            throw new HistoryValidationException(
+                ValidationKind.CONTRACT, "History chapter has no deterministic representative cluster plan"
+            );
+        }
+        List<String> allGrounding = representation.selectedClusters().stream()
+            .flatMap(cluster -> cluster.grounding().stream()).distinct().toList();
+        try {
+            narrativeValidator.validateChapter(title, summary, languageService.chapterGrounding(allGrounding));
+        } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
+            throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
+        }
+        boolean dominantTitle = representation.selectedClusters().stream()
+            .filter(cluster -> representation.dominantClusterIds().contains(cluster.id()))
+            .anyMatch(cluster -> narrativeValidator.representsChapterOutcome(title, cluster.grounding()));
+        if (!dominantTitle) {
+            throw new HistoryValidationException(
+                ValidationKind.UNSUPPORTED_CLAIM, "History chapter title represents only a minor or unknown cluster"
+            );
+        }
+        for (ProjectHistoryChapterRepresentationPlanner.Cluster cluster : representation.selectedClusters()) {
+            if (!narrativeValidator.representsChapterOutcome(summary, cluster.grounding())) {
+                throw new HistoryValidationException(
+                    ValidationKind.UNSUPPORTED_CLAIM,
+                    "History chapter summary omitted representative cluster " + cluster.id()
+                );
+            }
+            String clusterWording = matchingChapterClauses(title, summary, cluster);
+            try {
+                narrativeValidator.validateStateCeiling(chapterClaimState(cluster.claimCeiling()), clusterWording);
+            } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
+                throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
+            }
+        }
+    }
+
+    private String matchingChapterClauses(
+        String title,
+        String summary,
+        ProjectHistoryChapterRepresentationPlanner.Cluster cluster
+    ) {
+        List<String> matches = Stream.of(title, summary)
+            .flatMap(value -> Stream.of((value == null ? "" : value).split("[。；;！!?，,]")))
+            .map(String::trim).filter(value -> !value.isBlank())
+            .filter(value -> narrativeValidator.representsChapterOutcome(value, cluster.grounding()))
+            .toList();
+        return matches.isEmpty() ? summary : String.join("。", matches);
+    }
+
+    private static ProjectHistoryNarrativeEntailmentValidator.ClaimState chapterClaimState(String value) {
+        try {
+            return ProjectHistoryNarrativeEntailmentValidator.ClaimState.valueOf(
+                value == null ? "UNKNOWN" : value.toUpperCase(Locale.ROOT)
+            );
+        } catch (IllegalArgumentException ignored) {
+            return ProjectHistoryNarrativeEntailmentValidator.ClaimState.UNKNOWN;
+        }
     }
 
     private HistoryChapter parseChapterSynthesis(
         JsonNode root,
         HistoryChapter original,
-        List<String> primaryStoryWording
+        ProjectHistoryChapterRepresentationPlanner.Plan representation
     ) {
         if (root == null || !root.isObject()) {
             throw new HistoryValidationException(ValidationKind.CONTRACT, "History chapter model output is not an object");
@@ -1797,17 +1967,20 @@ public class ProjectHistoryReconstructionService {
         if (!original.id().equals(text(node, "chapterId"))) {
             throw new HistoryValidationException(ValidationKind.CROSS_PROJECT_REFERENCE, "Unknown chapter ID");
         }
+        List<String> representedClusterIds = stringList(node.path("representedClusterIds"), 12);
+        if (!representedClusterIds.equals(representation.requiredRepresentativeClusterIds())) {
+            throw new HistoryValidationException(
+                ValidationKind.CROSS_PROJECT_REFERENCE,
+                "History chapter model changed required representative cluster IDs"
+            );
+        }
         String title = modelText(node, "title", 240);
         String summary = modelText(node, "summary", 1_500);
         if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
             throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM,
                 "History chapter model returned an unsupported claim");
         }
-        try {
-            narrativeValidator.validateChapter(title, summary, languageService.chapterGrounding(primaryStoryWording));
-        } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
-            throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
-        }
+        validateChapterRepresentation(title, summary, representation);
         return new HistoryChapter(
             original.id(), title, summary, original.from(), original.to(), original.boundarySignals(),
             original.storyRefs(), original.storyCount(), original.rawEventCount(), "INFERRED_NON_AUTHORITATIVE",
@@ -2037,9 +2210,15 @@ public class ProjectHistoryReconstructionService {
         }).toList();
         List<ProjectHistoryPromptBuilder.ChapterPromptInput> chapters = base.chapters().stream()
             .filter(chapter -> eligibleChapters.contains(chapter.id()))
-            .map(chapter -> new ProjectHistoryPromptBuilder.ChapterPromptInput(
-                chapter.id(), chapter.from().toString(), chapter.to().toString(), chapter.storyRefs(), chapter.boundarySignals()
-            )).toList();
+            .map(chapter -> {
+                ProjectHistoryChapterRepresentationPlanner.Plan representation = chapterRepresentationPlan(base, chapter);
+                return new ProjectHistoryPromptBuilder.ChapterPromptInput(
+                    chapter.id(), chapter.from().toString(), chapter.to().toString(), chapter.storyRefs(),
+                    chapter.boundarySignals(), chapterRepresentativeClusterInputs(representation),
+                    representation.requiredRepresentativeClusterIds(), representation.dominantClusterIds(),
+                    representation.representativePrimaryCoverage()
+                );
+            }).toList();
         return promptBuilder.buildProduction(new ProjectHistoryPromptBuilder.PromptInput(stories, chapters));
     }
 
@@ -2245,18 +2424,14 @@ public class ProjectHistoryReconstructionService {
             if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
                 throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, "History model returned an unsupported chapter claim");
             }
-            List<String> primaryWording = original.storyRefs().stream().map(stories::get)
-                .filter(java.util.Objects::nonNull).filter(ChangeStory::primary)
-                .flatMap(story -> Stream.of(story.humanTitle(), story.oneSentenceSummary())).toList();
-            try {
-                narrativeValidator.validateChapter(title, summary, languageService.chapterGrounding(primaryWording));
-            } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
-                throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
-            }
+            ProjectHistoryChapterRepresentationPlanner.Plan representation = chapterRepresentationPlan(base, original);
+            validateChapterRepresentation(title, summary, representation);
             chapters.put(id, new HistoryChapter(
                 original.id(), title, summary, original.from(), original.to(), original.boundarySignals(),
                 original.storyRefs(), original.storyCount(), original.rawEventCount(), "INFERRED_NON_AUTHORITATIVE",
-                original.coverage(), original.limitations()
+                original.coverage(), original.limitations(), original.presentationAuthority(),
+                original.presentationRevision(), original.userDeclared(), original.userCorrectionRefs(),
+                original.hiddenByDefault(), original.pinned()
             ));
         }
         if (!seenChapters.equals(eligibleChapterIds)) {
@@ -2319,15 +2494,6 @@ public class ProjectHistoryReconstructionService {
             envelope.directEvidenceRefs(), envelope.indirectEvidenceRefs(), envelope.sourceAuthorities(),
             envelope.supportClass(), envelope.downgradeReason()
         );
-    }
-
-    private static List<String> primaryChapterWording(SnapshotResult snapshot, HistoryChapter chapter) {
-        Map<String, ChangeStory> stories = snapshot.stories().stream().collect(
-            LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll
-        );
-        return chapter.storyRefs().stream().map(stories::get).filter(java.util.Objects::nonNull)
-            .filter(ChangeStory::primary)
-            .flatMap(story -> Stream.of(story.humanTitle(), story.oneSentenceSummary())).toList();
     }
 
     private static List<String> reasonEligibleEvidence(ChangeStory story, Map<UUID, EventView> eventsById) {
@@ -2530,6 +2696,97 @@ public class ProjectHistoryReconstructionService {
             indices.add((int) Math.round((double) index * (chapters.size() - 1) / (limit - 1)));
         }
         return indices.stream().sorted().map(chapters::get).toList();
+    }
+
+    private void putChapterRepresentationDiagnostics(SnapshotResult snapshot, Map<String, Object> diagnostics) {
+        Map<String, ChangeStory> stories = snapshot.stories().stream().collect(
+            LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll
+        );
+        int clusterCount = 0;
+        int dominantCount = 0;
+        int selectedCount = 0;
+        int primaryCount = 0;
+        int supportingCount = 0;
+        int needsSplit = 0;
+        int deterministicFallback = 0;
+        int modelValidated = 0;
+        int minorTitleRisk = 0;
+        int technicalLeaks = 0;
+        int unsupportedClaims = 0;
+        double weightedCoverage = 0.0;
+        List<Integer> chapterSizes = new ArrayList<>();
+        Set<String> seenStoryIds = new LinkedHashSet<>();
+        int overlapCount = 0;
+        for (HistoryChapter chapter : snapshot.chapters()) {
+            List<ChangeStory> members = chapter.storyRefs().stream().map(stories::get)
+                .filter(java.util.Objects::nonNull).toList();
+            ProjectHistoryChapterRepresentationPlanner.Plan plan = chapterRepresentationPlanner.plan(members);
+            clusterCount += plan.clusters().size();
+            dominantCount += plan.dominantClusterCount();
+            selectedCount += plan.selectedClusters().size();
+            primaryCount += plan.primaryStoryCount();
+            supportingCount += plan.supportingStoryCount();
+            weightedCoverage += plan.representativePrimaryCoverage() * plan.primaryStoryCount();
+            if (plan.needsSplit()) needsSplit++;
+            if ("INFERRED_NON_AUTHORITATIVE".equals(chapter.authority())) modelValidated++;
+            else deterministicFallback++;
+            chapterSizes.add(chapter.storyRefs().size());
+            for (String storyId : chapter.storyRefs()) if (!seenStoryIds.add(storyId)) overlapCount++;
+
+            boolean representsDominant = plan.selectedClusters().stream()
+                .filter(cluster -> plan.dominantClusterIds().contains(cluster.id()))
+                .anyMatch(cluster -> narrativeValidator.representsChapterOutcome(chapter.title(), cluster.grounding()));
+            boolean representsMinor = plan.selectedClusters().stream()
+                .filter(cluster -> !plan.dominantClusterIds().contains(cluster.id()))
+                .anyMatch(cluster -> narrativeValidator.representsChapterOutcome(chapter.title(), cluster.grounding()));
+            if (!representsDominant && representsMinor) minorTitleRisk++;
+            List<String> grounding = plan.selectedClusters().stream().flatMap(cluster -> cluster.grounding().stream())
+                .distinct().toList();
+            if (narrativeValidator.containsFirstLayerLeak(
+                chapter.title() + " " + chapter.summary(), languageService.chapterGrounding(grounding)
+            )) technicalLeaks++;
+            try {
+                validateChapterRepresentation(chapter.title(), chapter.summary(), plan);
+            } catch (HistoryValidationException ignored) {
+                unsupportedClaims++;
+            }
+        }
+        List<Integer> sortedSizes = chapterSizes.stream().sorted().toList();
+        double medianSize = sortedSizes.isEmpty() ? 0.0
+            : sortedSizes.size() % 2 == 1 ? sortedSizes.get(sortedSizes.size() / 2)
+            : (sortedSizes.get(sortedSizes.size() / 2 - 1) + sortedSizes.get(sortedSizes.size() / 2)) / 2.0;
+        Set<String> primaryIds = snapshot.stories().stream().filter(ChangeStory::primary).map(ChangeStory::id)
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        int orphanSupporting = (int) snapshot.stories().stream().filter(ChangeStory::supporting)
+            .filter(story -> story.primaryStoryId().isBlank() || !primaryIds.contains(story.primaryStoryId()))
+            .count();
+        int reasonWithoutEvidence = (int) snapshot.stories().stream()
+            .filter(story -> story.reason() != null && !story.reason().isBlank() && story.reasonEvidenceRefs().isEmpty())
+            .count();
+
+        diagnostics.put("chapterRepresentationPlanVersion", ProjectHistoryChapterRepresentationPlanner.PLAN_VERSION);
+        diagnostics.put("chapterCount", snapshot.chapters().size());
+        diagnostics.put("primaryStoryCount", primaryCount);
+        diagnostics.put("supportingStoryCount", supportingCount);
+        diagnostics.put("chapterPrimaryStoryCount", primaryCount);
+        diagnostics.put("chapterSupportingStoryCount", supportingCount);
+        diagnostics.put("representativeClusterCount", clusterCount);
+        diagnostics.put("dominantClusterCount", dominantCount);
+        diagnostics.put("selectedRepresentativeClusterCount", selectedCount);
+        diagnostics.put("representativePrimaryCoverage", primaryCount == 0 ? 0.0 : weightedCoverage / primaryCount);
+        diagnostics.put("largestChapterStoryCount", sortedSizes.stream().mapToInt(Integer::intValue).max().orElse(0));
+        diagnostics.put("medianChapterStoryCount", medianSize);
+        diagnostics.put("largeChapterCount", sortedSizes.stream().filter(value -> value >= 12).count());
+        diagnostics.put("chaptersNeedingSplit", needsSplit);
+        diagnostics.put("chaptersUsingDeterministicFallback", deterministicFallback);
+        diagnostics.put("chaptersUsingModelValidatedWording", modelValidated);
+        diagnostics.put("chaptersWithMinorClusterTitleRisk", minorTitleRisk);
+        diagnostics.put("technicalLeakCount", technicalLeaks);
+        diagnostics.put("unsupportedClaimCount", unsupportedClaims);
+        diagnostics.put("chapterOverlapCount", overlapCount);
+        diagnostics.put("orphanSupportingCount", orphanSupporting);
+        diagnostics.put("reasonWithoutEvidenceCount", reasonWithoutEvidence);
+        diagnostics.put("userDeclaredChapterMutationCount", 0);
     }
 
     private Map<String, Object> diagnostics(

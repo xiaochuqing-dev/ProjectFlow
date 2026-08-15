@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Component
 public final class ProjectHistoryPromptBuilder {
     public static final String PROMPT_VERSION = "project-history-synthesis-v12";
-    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v6";
+    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v7";
     static final int MAX_PROMPT_CHARS = 60_000;
     public static final String VALIDATION_REPAIR_MARKER = "\nHISTORY_VALIDATION_REPAIR=";
     private static final String VALIDATION_REPAIR_INSTRUCTIONS = """
@@ -30,11 +30,12 @@ public final class ProjectHistoryPromptBuilder {
         """;
     private static final String CHAPTER_VALIDATION_REPAIR_INSTRUCTIONS = """
         上一次篇章输出未通过 ProjectFlow 的统一语义安全校验。请从原始 CHAPTER_SYNTHESIS_JSON 重新生成一次完整 JSON，不要复述或修补上一次输出。
-        只能返回一个篇章对象，且只能包含 chapterId、title、summary；chapterId 必须与原输入完全一致。不得返回或修改 Story 成员、时间、边界或其他字段。
-        title 必须直接写出至少一个 Primary Story 已支持的具体动作、对象和结果；summary 必须说明这一时期实际完成了什么，并把 Supporting 信息保持为次要说明。
+        只能返回一个篇章对象，且只能包含 chapterId、representedClusterIds、title、summary；chapterId 必须与原输入完全一致。不得返回或修改 Story 成员、时间、边界或其他字段。
+        representedClusterIds 必须逐项复制 requiredRepresentativeClusterIds，不能遗漏、增加或重排。title 必须代表 dominantClusterIds 中至少一个主成果簇；summary 必须覆盖每个 required Representative Cluster，并把 Supporting 信息保持为次要说明。
+        每个成果簇只能使用其 representativeOutcomes、allowedClaimStates、unknowns 与 conflicts 中允许的表达；不得把一个成果簇的状态或结果借给另一个成果簇。
         不得使用“围绕”“推进”“完善”“建设”等空泛词替代具体结果，不得返回列表、路径、成熟度、原因、计划或项目状态。
         只返回严格 JSON，不得增加字段：
-        {"chapters":[{"chapterId":"","title":"","summary":""}]}
+        {"chapters":[{"chapterId":"","representedClusterIds":[],"title":"","summary":""}]}
         """;
     private static final int MAX_INITIAL_PROMPT_CHARS = MAX_PROMPT_CHARS
         - VALIDATION_REPAIR_MARKER.length() - VALIDATION_REPAIR_INSTRUCTIONS.length() - 40;
@@ -61,6 +62,7 @@ public final class ProjectHistoryPromptBuilder {
         directSupportSummary 是与当前 subject/action 直接匹配的有界支持；indirectContextSummary 只解释上下文，明确不能提升 Claim。不得因为同 Commit、相邻时间、相同区域或 Supporting Story 把间接上下文借给当前 Claim。
         downgradeReason 必须被遵守：只能在工程层给出的 supportedOutcome 内改写，不得自行提高状态。
         Commit message 只是线索。reason 仅在 reasonEvidenceRefs 非空且全部来自该 Story 的 reasonEligibleEvidenceRefs 时填写；否则 reason 留空，并保留模板中的自然 unknownWording，说明原因暂时无法确认。即使存在可选 Evidence，只要本次没有实际采用，也不得清空 unknownWording。
+        Chapter 输入中的 representativeClusters、requiredRepresentativeClusterIds 与 dominantClusterIds 由工程层固定。篇章标题必须代表 dominant cluster，篇章摘要必须覆盖每个 required cluster；不得重新聚类、改变权重或用 minor cluster 代替整个时期。
         不得创造 ID、Evidence、文件、数字、原因或项目状态；不得写重要性、成熟度、里程碑、成功判断、下一步或建议。非软件项目不要使用 Controller、Service、Capability 等软件术语。
         只返回严格 JSON，不得增加字段：
         {"stories":[{"storyId":"","humanTitle":"","oneSentenceSummary":"","beforeWording":"","changeWording":"","afterWording":"","reason":"","reasonEvidenceRefs":[],"unknownWording":""}],
@@ -68,13 +70,15 @@ public final class ProjectHistoryPromptBuilder {
         """;
     private static final String CHAPTER_SYNTHESIS_INSTRUCTIONS = """
         你正在对一个成员关系已经由工程层固定的项目历程篇章做第二阶段归纳。输入只包含已经校验的 Story 展示摘要，不包含 Raw Event、Evidence、文件路径或提交原文。
-        只能改进篇章的中文标题和摘要。chapterId 必须原样返回且只能返回一次；不得返回或修改 Story 成员、时间、边界、权威或任何其他字段。
-        标题必须直接写出至少一个 Primary Story 已支持的具体动作、对象和结果；摘要必须让普通用户能够复述这一时期实际完成了什么，再把 Supporting 保留为次要工程信息。不得以数量开头，不得把 Story subject 拼接成标题，不得把文件、测试、配置或验证数量描述为用户成果。
+        工程层已经给出 representativeClusters、requiredRepresentativeClusterIds 与 dominantClusterIds。模型不得重新聚类、改变权重、改变 Story 归属或挑选一个方便命名的 minor cluster 代替整个篇章。
+        只能改进篇章的中文标题和摘要。chapterId 必须原样返回且只能返回一次；representedClusterIds 必须逐项复制 requiredRepresentativeClusterIds，不能遗漏、增加或重排；不得返回或修改 Story 成员、时间、边界、权威或任何其他字段。
+        标题必须直接代表 dominantClusterIds 中至少一个主成果簇；两个 co-dominant 主成果可自然形成双中心标题。摘要必须覆盖全部 required Representative Cluster，让普通用户能够复述这一时期实际完成了什么，再把 Supporting 保留为次要工程信息。不得以数量开头，不得把 Story subject 拼接成标题，不得把文件、测试、配置或验证数量描述为用户成果。
+        representativeOutcomes、representativeStorySummaries、allowedClaimStates、unknowns、conflicts 与 forbiddenOverclaims 是硬边界。不得把一个成果簇的状态、结果或 Evidence 强度借给另一个成果簇，也不得引入 represented cluster 之外的新结果。
         不得仅用“围绕某主题推进”“相关成果逐步形成并得到完善”“完成相关建设”等空泛句式。不得使用“相关变化”“工程分组”“形成初始结果”“进入当前时间点可确认的新状态”等内部模板表达。
-        如果部分 Story 摘要因边界被省略，只能根据输入中的数量和代表摘要保守归纳，不得补造遗漏内容。
+        如果部分 Story 摘要因边界被省略，只能根据工程层成果簇及代表摘要保守归纳，不得补造遗漏内容。
         禁止重要性、成熟度、里程碑、成功判断、下一步、计划或建议。禁止创造 ID、Evidence、文件、数字、原因或项目状态。
         只返回严格 JSON，不得增加字段：
-        {"chapters":[{"chapterId":"","title":"","summary":""}]}
+        {"chapters":[{"chapterId":"","representedClusterIds":[],"title":"","summary":""}]}
         """;
 
     private final ObjectMapper objectMapper;
@@ -118,7 +122,8 @@ public final class ProjectHistoryPromptBuilder {
 
     private ChapterSynthesisBuildResult buildChapter(ChapterSynthesisPromptInput input) {
         ChapterSynthesisPromptInput safe = input == null
-            ? new ChapterSynthesisPromptInput("", "", "", 0, 0, 0, List.of(), "", List.of())
+            ? new ChapterSynthesisPromptInput("", "", "", 0, 0, 0, List.of(), "", List.of(),
+                List.of(), List.of(), 0.0, List.of(), List.of(), List.of(), List.of())
             : input;
         List<ChapterStorySummaryInput> candidates = representativeStorySummaries(safe.storySummaries());
         List<ChapterStorySummaryInput> selected = new ArrayList<>();
@@ -134,12 +139,14 @@ public final class ProjectHistoryPromptBuilder {
         Set<String> included = selected.stream().map(ChapterStorySummaryInput::storyId)
             .collect(LinkedHashSet::new, Set::add, Set::addAll);
         return new ChapterSynthesisBuildResult(
-            prompt, ordered(included), prompt.length(), Math.max(0, values(safe.storySummaries()).size() - selected.size())
+            prompt, ordered(included), prompt.length(), Math.max(0, safe.primaryStoryCount() - selected.size())
         );
     }
 
     private List<ChapterStorySummaryInput> representativeStorySummaries(List<ChapterStorySummaryInput> input) {
-        List<ChapterStorySummaryInput> values = values(input);
+        List<ChapterStorySummaryInput> values = values(input).stream()
+            .filter(value -> value != null && "PRIMARY".equalsIgnoreCase(text(value.role())))
+            .toList();
         if (values.size() <= MAX_CHAPTER_STORY_SUMMARIES) return new ArrayList<>(values);
         LinkedHashSet<Integer> indices = new LinkedHashSet<>();
         for (int index = 0; index < MAX_CHAPTER_STORY_SUMMARIES; index++) {
@@ -155,6 +162,8 @@ public final class ProjectHistoryPromptBuilder {
         PackedChapterSynthesisInput packed = new PackedChapterSynthesisInput(
             input.chapterId(), input.from(), input.to(), input.storyCount(), input.primaryStoryCount(),
             input.supportingStoryCount(), input.boundarySignals(), input.membershipFingerprint(),
+            input.representativeClusters(), input.requiredRepresentativeClusterIds(), input.dominantClusterIds(),
+            input.representativePrimaryCoverage(), input.unknowns(), input.conflicts(), input.forbiddenOverclaims(),
             selected.size(), Math.max(0, input.primaryStoryCount() - selected.size()), selected
         );
         return CHAPTER_SYNTHESIS_INSTRUCTIONS + CHAPTER_SYNTHESIS_MARKER + json(packed);
@@ -350,8 +359,30 @@ public final class ProjectHistoryPromptBuilder {
         String from,
         String to,
         List<String> storyRefs,
-        List<String> boundarySignals
+        List<String> boundarySignals,
+        List<ChapterRepresentativeClusterInput> representativeClusters,
+        List<String> requiredRepresentativeClusterIds,
+        List<String> dominantClusterIds,
+        double representativePrimaryCoverage
     ) {
+        public ChapterPromptInput(
+            String chapterId,
+            String from,
+            String to,
+            List<String> storyRefs,
+            List<String> boundarySignals
+        ) {
+            this(chapterId, from, to, storyRefs, boundarySignals, List.of(), List.of(), List.of(), 0.0);
+        }
+
+        public ChapterPromptInput {
+            storyRefs = storyRefs == null ? List.of() : List.copyOf(storyRefs);
+            boundarySignals = boundarySignals == null ? List.of() : List.copyOf(boundarySignals);
+            representativeClusters = representativeClusters == null ? List.of() : List.copyOf(representativeClusters);
+            requiredRepresentativeClusterIds = requiredRepresentativeClusterIds == null
+                ? List.of() : List.copyOf(requiredRepresentativeClusterIds);
+            dominantClusterIds = dominantClusterIds == null ? List.of() : List.copyOf(dominantClusterIds);
+        }
     }
 
     private record OutputTemplate(
@@ -395,11 +426,64 @@ public final class ProjectHistoryPromptBuilder {
         int supportingStoryCount,
         List<String> boundarySignals,
         String membershipFingerprint,
+        List<ChapterRepresentativeClusterInput> representativeClusters,
+        List<String> requiredRepresentativeClusterIds,
+        List<String> dominantClusterIds,
+        double representativePrimaryCoverage,
+        List<String> unknowns,
+        List<String> conflicts,
+        List<String> forbiddenOverclaims,
         List<ChapterStorySummaryInput> storySummaries
     ) {
+        public ChapterSynthesisPromptInput(
+            String chapterId,
+            String from,
+            String to,
+            int storyCount,
+            int primaryStoryCount,
+            int supportingStoryCount,
+            List<String> boundarySignals,
+            String membershipFingerprint,
+            List<ChapterStorySummaryInput> storySummaries
+        ) {
+            this(chapterId, from, to, storyCount, primaryStoryCount, supportingStoryCount, boundarySignals,
+                membershipFingerprint, List.of(), List.of(), List.of(), 0.0, List.of(), List.of(), List.of(),
+                storySummaries);
+        }
+
         public ChapterSynthesisPromptInput {
             boundarySignals = boundarySignals == null ? List.of() : List.copyOf(boundarySignals);
+            representativeClusters = representativeClusters == null ? List.of() : List.copyOf(representativeClusters);
+            requiredRepresentativeClusterIds = requiredRepresentativeClusterIds == null
+                ? List.of() : List.copyOf(requiredRepresentativeClusterIds);
+            dominantClusterIds = dominantClusterIds == null ? List.of() : List.copyOf(dominantClusterIds);
+            unknowns = unknowns == null ? List.of() : List.copyOf(unknowns);
+            conflicts = conflicts == null ? List.of() : List.copyOf(conflicts);
+            forbiddenOverclaims = forbiddenOverclaims == null ? List.of() : List.copyOf(forbiddenOverclaims);
             storySummaries = storySummaries == null ? List.of() : List.copyOf(storySummaries);
+        }
+    }
+
+    public record ChapterRepresentativeClusterInput(
+        String clusterId,
+        String humanLabel,
+        String role,
+        double weight,
+        int primaryStoryCount,
+        int supportingStoryCount,
+        List<String> representativeStoryIds,
+        List<String> representativeOutcomes,
+        List<String> allowedClaimStates,
+        String claimCeiling,
+        List<String> unknowns,
+        List<String> conflicts
+    ) {
+        public ChapterRepresentativeClusterInput {
+            representativeStoryIds = representativeStoryIds == null ? List.of() : List.copyOf(representativeStoryIds);
+            representativeOutcomes = representativeOutcomes == null ? List.of() : List.copyOf(representativeOutcomes);
+            allowedClaimStates = allowedClaimStates == null ? List.of() : List.copyOf(allowedClaimStates);
+            unknowns = unknowns == null ? List.of() : List.copyOf(unknowns);
+            conflicts = conflicts == null ? List.of() : List.copyOf(conflicts);
         }
     }
 
@@ -422,6 +506,13 @@ public final class ProjectHistoryPromptBuilder {
         int supportingStoryCount,
         List<String> boundarySignals,
         String membershipFingerprint,
+        List<ChapterRepresentativeClusterInput> representativeClusters,
+        List<String> requiredRepresentativeClusterIds,
+        List<String> dominantClusterIds,
+        double representativePrimaryCoverage,
+        List<String> unknowns,
+        List<String> conflicts,
+        List<String> forbiddenOverclaims,
         int includedStorySummaryCount,
         int omittedStorySummaryCount,
         List<ChapterStorySummaryInput> storySummaries

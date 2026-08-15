@@ -197,6 +197,14 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         }
     }
 
+    /**
+     * Used by the Chapter representation gate to prove that wording covers a
+     * specific precomputed outcome cluster rather than any convenient Story.
+     */
+    public boolean representsChapterOutcome(String wording, List<String> clusterGrounding) {
+        return sharesConcreteOutcome(text(wording), values(clusterGrounding));
+    }
+
     public List<String> normalizeUnknowns(String modelUnknown, boolean sourceStateUnknown) {
         String value = text(modelUnknown);
         if (value.isBlank() || value.contains("UNKNOWN") || value.contains("Evidence")) {

@@ -86,7 +86,7 @@ public enum ModelTaskType {
     PROJECT_HISTORY_CHAPTER_SYNTHESIS(
         "项目历程大篇章二阶段归纳", 1_200, 4_000, 0.1, false,
         List.of(), List.of("chapters"), List.of(),
-        "{\"chapters\":[{\"chapterId\":\"\",\"title\":\"\",\"summary\":\"\"}]}"
+        "{\"chapters\":[{\"chapterId\":\"\",\"representedClusterIds\":[],\"title\":\"\",\"summary\":\"\"}]}"
     ),
     LEGACY_STRUCTURED(
         "兼容结构化调用", 2_048, 20_000, 0.2, false,

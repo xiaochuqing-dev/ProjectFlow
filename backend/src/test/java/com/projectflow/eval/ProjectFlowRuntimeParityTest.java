@@ -92,6 +92,8 @@ class ProjectFlowRuntimeParityTest {
                 "dogfood_test: GLMDogfoodRegressionTest",
                 "dogfood_test: DeepSeekDogfoodRegressionTest",
                 "run_gate history-v385-qualification",
+                "run_gate history-v385-chapter-affected",
+                "-Dprojectflow.eval.scenario-scope=chapter",
                 "run_gate history-v385-scenarios",
                 "run_gate history-v385-dogfood",
                 "projectflow-real-model-qualification-${{ matrix.id }}",

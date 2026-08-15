@@ -44,12 +44,15 @@ class ProviderNeutralPromptSnapshotTest {
         )).prompt();
         String chapterRepair = builder.validationRepair(chapterPrompt, "CONTRACT");
         assertThat(ProjectHistoryPromptBuilder.CHAPTER_PROMPT_VERSION)
-            .isEqualTo("project-history-chapter-synthesis-v6");
+            .isEqualTo("project-history-chapter-synthesis-v7");
+        assertThat(ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS.minimalSchema())
+            .contains("representedClusterIds");
         assertThat(chapterRepair).contains(
             "CHAPTER_SYNTHESIS_JSON=",
             "从原始 CHAPTER_SYNTHESIS_JSON 重新生成",
-            "只能包含 chapterId、title、summary",
-            "title 必须直接写出至少一个 Primary Story 已支持的具体动作、对象和结果"
+            "只能包含 chapterId、representedClusterIds、title、summary",
+            "representedClusterIds 必须逐项复制 requiredRepresentativeClusterIds",
+            "title 必须代表 dominantClusterIds 中至少一个主成果簇"
         ).doesNotContain("只能使用 OUTPUT_TEMPLATE_JSON", "DeepSeek", "GLM");
     }
 }

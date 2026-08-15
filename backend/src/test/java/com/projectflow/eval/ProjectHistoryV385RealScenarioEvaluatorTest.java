@@ -135,6 +135,15 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             }
             calls.computeIfAbsent(scenario, ignored -> new CallAccumulator())
                 .add(task, actual.diagnostics(), validationRepair);
+            if (task == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS
+                && faultMode.get() == FaultMode.CHAPTER_SCHEMA_AFTER_REAL_CALL) {
+                faultTriggered.set(true);
+                String invalid = "{\"chapters\":[{\"chapterId\":\"unknown\",\"representedClusterIds\":[\"unknown\"],"
+                    + "\"title\":\"未经校验的模型标题\",\"summary\":\"未经校验的模型摘要\"}]}";
+                return new ModelGatewayService.StructuredModelResponse(
+                    invalid, outputAdapter.parse(invalid), actual.diagnostics()
+                );
+            }
             if (task != ModelTaskType.PROJECT_HISTORY_SYNTHESIS) return actual;
             int ordinal = validationRepair ? storyOrdinal.get() : storyOrdinal.incrementAndGet();
             if (faultMode.get() == FaultMode.SCHEMA_AFTER_REAL_CALL && validationRepair && faultTriggered.get()) {
@@ -172,6 +181,25 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         if ("correction".equals(scenarioScope)) {
             runs.add(runScenario("correction-local-invalidation", FaultMode.NONE,
                 () -> correctionFocused(userId)));
+        } else if ("chapter".equals(scenarioScope)) {
+            runs.add(runScenario("chapter-large-coherent", FaultMode.NONE,
+                () -> chapterLargeCoherent(userId)));
+            runs.add(runScenario("chapter-large-heterogeneous", FaultMode.NONE,
+                () -> chapterLargeHeterogeneous(userId)));
+            runs.add(runScenario("chapter-repair-safety", FaultMode.CHAPTER_SCHEMA_AFTER_REAL_CALL,
+                () -> chapterRepairSafety(userId)));
+            runs.add(runScenario("chapter-review-fixtures", FaultMode.NONE,
+                () -> chapterReviewFixtures(userId)));
+            runs.add(runScenario("correction-local-invalidation", FaultMode.NONE,
+                () -> correctionFocused(userId)));
+            runs.add(runScenario("non-code-presentation", FaultMode.NONE,
+                () -> nonCode(userId, "presentation", "slides/quarterly-review.md", "整理季度演示并形成清晰叙事", "演示材料已按问题、发现和结论重新排列。")));
+            runs.add(runScenario("non-code-research-report", FaultMode.NONE,
+                () -> nonCode(userId, "research-report", "paper/research-report.md", "补全研究报告并明确结论", "报告章节、引用和结论已经整理。")));
+            runs.add(runScenario("non-code-data-analysis", FaultMode.NONE,
+                () -> nonCode(userId, "data-analysis", "analysis/results.csv", "更新数据分析并解释关键指标", "数据表、图表说明和结论已经同步更新。")));
+            runs.add(runScenario("projectflow-current-history-dogfood", FaultMode.NONE,
+                () -> dogfood(userId)));
         } else {
             runs.add(runScenario("non-code-presentation", FaultMode.NONE,
                 () -> nonCode(userId, "presentation", "slides/quarterly-review.md", "整理季度演示并形成清晰叙事", "演示材料已按问题、发现和结论重新排列。")));
@@ -292,8 +320,215 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         metrics.put("supportingCount", stories.stream().filter(ChangeStory::supporting).count());
         metrics.put("currentness", overview.coverage().currentness());
         metrics.put("firstLayerTechnicalLeakRate", rate(firstLayerLeaks(stories, FIRST_LAYER_FORBIDDEN), stories.size()));
-        return new ScenarioEvidence(metrics, ProjectHistoryV385ReviewSamples.stories(
-            stories, 4, reviewRevision(userId, project.getId())));
+        String revision = reviewRevision(userId, project.getId());
+        List<Map<String, Object>> samples = List.of(
+            Map.of("sampleType", "stories", "items",
+                ProjectHistoryV385ReviewSamples.stories(stories, 4, revision)),
+            Map.of("sampleType", "chapter-representativeness", "items",
+                ProjectHistoryV385ReviewSamples.chapterRepresentativeness(
+                    allChapters(userId, project.getId()), stories, 2, revision
+                ))
+        );
+        return new ScenarioEvidence(metrics, samples);
+    }
+
+    private ScenarioEvidence chapterLargeCoherent(UUID userId) throws Exception {
+        Path root = temporaryRoot.resolve("chapter-large-coherent-real");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Large coherent Chapter", root);
+        historicalFacts(project, 0, 100, 1, 1, 0);
+
+        Map<String, Object> diagnostics = completeRefresh(userId, project.getId(), 12);
+        List<HistoryChapter> chapters = allChapters(userId, project.getId());
+        require(calls.get(activeScenario.get()).chapterLogicalCalls > 0,
+            "大 coherent Chapter 未执行 Representation Plan 模型润色");
+        require(number(diagnostics, "chaptersNeedingSplit") == 0, "coherent Chapter 被标记为仍需拆分");
+        require(number(diagnostics, "chaptersWithMinorClusterTitleRisk") == 0, "coherent Chapter 标题由 minor cluster 劫持");
+        require(number(diagnostics, "unsupportedClaimCount") == 0, "coherent Chapter 产生不受支持的状态表达");
+        require(decimal(diagnostics, "representativePrimaryCoverage") >= 0.72,
+            "coherent Chapter 代表 Primary 覆盖不足");
+        require(chapters.stream().anyMatch(chapter -> chapter.storyRefs().size() >= 32),
+            "coherent fixture 未形成大 Chapter");
+        Map<String, Object> metrics = safeDiagnostics(diagnostics);
+        metrics.put("finalCacheHit", reconstructionService.refresh(
+            userId, project.getId(), UUID.randomUUID(), false
+        ).cacheHit());
+        return new ScenarioEvidence(metrics, List.of(Map.of(
+            "sampleType", "chapter-representativeness",
+            "items", ProjectHistoryV385ReviewSamples.chapterRepresentativeness(
+                chapters, allStories(userId, project.getId()), 4, reviewRevision(userId, project.getId())
+            )
+        )));
+    }
+
+    private ScenarioEvidence chapterLargeHeterogeneous(UUID userId) throws Exception {
+        Path root = temporaryRoot.resolve("chapter-large-heterogeneous-real");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Large heterogeneous Chapter", root);
+        Instant first = Instant.parse("2026-01-01T00:00:00Z");
+        for (int index = 0; index < 6; index++) {
+            fact(project, "建立身份验证流程并形成登录入口", "身份验证流程已形成可核对的登录结果。",
+                "identity/login-flow-" + index + ".java", first.plusSeconds(index * 86_400L));
+        }
+        for (int index = 0; index < 6; index++) {
+            fact(project, "形成财务报表导出并支持下载", "财务报表已形成独立的导出结果。",
+                "finance/report-export-" + index + ".java", first.plusSeconds((14L + index) * 86_400L));
+        }
+
+        Map<String, Object> diagnostics = completeRefresh(userId, project.getId(), 12);
+        List<HistoryChapter> chapters = allChapters(userId, project.getId());
+        List<ChangeStory> stories = allStories(userId, project.getId());
+        require(chapters.size() >= 2, "异质成果被强行保留在同一个 Chapter");
+        require(chapters.stream().anyMatch(chapter -> chapter.boundarySignals().contains("REPRESENTATION_BOUNDARY")),
+            "异质成果未记录 REPRESENTATION_BOUNDARY");
+        require(number(diagnostics, "chaptersNeedingSplit") == 0, "异质 Chapter 拆分后仍存在待拆阶段");
+        require(number(diagnostics, "chapterOverlapCount") == 0, "异质 Chapter 拆分产生 Story 重叠");
+        require(number(diagnostics, "chaptersWithMinorClusterTitleRisk") == 0,
+            "异质 Chapter 拆分后仍由 minor cluster 命名");
+        Map<String, Object> metrics = safeDiagnostics(diagnostics);
+        metrics.put("representationBoundaryCount", chapters.stream()
+            .filter(chapter -> chapter.boundarySignals().contains("REPRESENTATION_BOUNDARY")).count());
+        return new ScenarioEvidence(metrics, List.of(Map.of(
+            "sampleType", "chapter-representativeness",
+            "items", ProjectHistoryV385ReviewSamples.chapterRepresentativeness(
+                chapters, stories, 4, reviewRevision(userId, project.getId())
+            )
+        )));
+    }
+
+    private ScenarioEvidence chapterRepairSafety(UUID userId) throws Exception {
+        Path root = temporaryRoot.resolve("chapter-repair-safety-real");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Chapter repair safety", root);
+        historicalFacts(project, 0, 100, 1, 1, 0);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        Map<String, Object> failed = readService.overview(userId, project.getId()).diagnostics();
+        List<HistoryChapter> preserved = allChapters(userId, project.getId()).stream()
+            .filter(chapter -> chapter.authority().startsWith("ENGINEERING_"))
+            .toList();
+        List<ChangeStory> preservedStories = allStories(userId, project.getId());
+        String preservedRevision = reviewRevision(userId, project.getId());
+        require(number(failed, "chapterSynthesisFailedCount") > 0, "Chapter repair 失败未记录 failed checkpoint");
+        require(!preserved.isEmpty(), "Chapter repair 失败未保留 deterministic Chapter");
+        require(preserved.stream().noneMatch(chapter ->
+            (chapter.title() + chapter.summary()).contains("未经校验")), "未校验模型文案进入快照");
+
+        faultMode.set(FaultMode.NONE);
+        Map<String, Object> recovered = completeRefresh(userId, project.getId(), 12);
+        require(number(recovered, "chapterSynthesisFailedCount") == 0, "Chapter repair checkpoint 未安全恢复");
+        require(number(recovered, "chaptersWithMinorClusterTitleRisk") == 0, "恢复后 Chapter 标题代表性不合格");
+        require(number(recovered, "unsupportedClaimCount") == 0, "恢复后 Chapter Claim 越界");
+        Map<String, Object> metrics = safeDiagnostics(recovered);
+        metrics.put("repairFailurePreservedDeterministic", true);
+        metrics.put("invalidModelWordingPersisted", false);
+        return new ScenarioEvidence(metrics, List.of(Map.of(
+            "sampleType", "deterministic-fallback",
+            "items", ProjectHistoryV385ReviewSamples.chapterRepresentativeness(
+                preserved, preservedStories, 4, preservedRevision
+            )
+        )));
+    }
+
+    private ScenarioEvidence chapterReviewFixtures(UUID userId) throws Exception {
+        List<Map<String, Object>> samples = new ArrayList<>();
+        Map<String, Object> metrics = new LinkedHashMap<>();
+        Instant first = Instant.parse("2026-02-01T00:00:00Z");
+
+        Path minorRoot = temporaryRoot.resolve("chapter-minor-first-real");
+        Files.createDirectories(minorRoot);
+        ProjectSpace minorProject = project(userId, "Minor-first Chapter", minorRoot);
+        fact(minorProject, "补充项目使用说明并形成启动指引", "使用说明记录了启动步骤。",
+            "docs/README.md", first);
+        for (int index = 0; index < 8; index++) {
+            fact(minorProject, "建立身份验证流程并形成登录入口", "身份验证流程已形成可核对的登录结果。",
+                "identity/login-flow-" + index + ".java", first.plusSeconds((index + 1L) * 86_400L));
+        }
+        Map<String, Object> minorDiagnostics = completeRefresh(userId, minorProject.getId(), 12);
+        List<ChangeStory> minorStories = allStories(userId, minorProject.getId());
+        List<HistoryChapter> minorChapters = allChapters(userId, minorProject.getId());
+        require(number(minorDiagnostics, "chaptersWithMinorClusterTitleRisk") == 0,
+            "minor-first Story 劫持了 Chapter 标题");
+        samples.add(Map.of("sampleType", "minor-first", "items",
+            ProjectHistoryV385ReviewSamples.chapterRepresentativeness(
+                minorChapters, minorStories, 2, reviewRevision(userId, minorProject.getId())
+            )));
+
+        Path supportingRoot = temporaryRoot.resolve("chapter-supporting-heavy-real");
+        Files.createDirectories(supportingRoot);
+        ProjectSpace supportingProject = project(userId, "Supporting-heavy Chapter", supportingRoot);
+        fact(supportingProject, "建立登录流程并形成可用入口", "登录流程形成了可核对的主要结果。",
+            "src/login/LoginFlow.java", first);
+        for (int index = 0; index < 12; index++) {
+            fact(supportingProject, "补充登录流程核对记录", "核对材料补充了登录流程的支撑信息。",
+                "tests/login/LoginFlowTest-" + index + ".java", first.plusSeconds((index + 1L) * 3_600L));
+        }
+        Map<String, Object> supportingDiagnostics = completeRefresh(userId, supportingProject.getId(), 12);
+        List<ChangeStory> supportingStories = allStories(userId, supportingProject.getId());
+        List<HistoryChapter> supportingChapters = allChapters(userId, supportingProject.getId());
+        long supportingCount = supportingStories.stream().filter(ChangeStory::supporting).count();
+        long primaryCount = supportingStories.stream().filter(ChangeStory::primary).count();
+        require(supportingCount > primaryCount, "Supporting-heavy fixture 未形成支撑变化占多数的 Chapter");
+        require(number(supportingDiagnostics, "chaptersWithMinorClusterTitleRisk") == 0,
+            "Supporting 数量劫持了 Chapter 中心");
+        samples.add(Map.of("sampleType", "supporting-heavy", "items",
+            ProjectHistoryV385ReviewSamples.chapterRepresentativeness(
+                supportingChapters, supportingStories, 2, reviewRevision(userId, supportingProject.getId())
+            )));
+
+        Path shortRoot = temporaryRoot.resolve("chapter-short-and-declared-real");
+        Files.createDirectories(shortRoot);
+        ProjectSpace shortProject = project(userId, "Short and declared Chapter", shortRoot);
+        fact(shortProject, "整理发布说明并明确交付范围", "发布说明记录了本次交付范围。",
+            "release/release-notes.md", first);
+        fact(shortProject, "整理交付清单并记录核对项", "交付清单记录了需要核对的材料。",
+            "release/delivery-checklist.md", first.plusSeconds(86_400L));
+        fact(shortProject, "记录发布核对结果", "核对结果保留了当前可确认状态。",
+            "release/verification-notes.md", first.plusSeconds(2L * 86_400L));
+        completeRefresh(userId, shortProject.getId(), 12);
+        List<ChangeStory> shortStories = allStories(userId, shortProject.getId());
+        List<HistoryChapter> automaticShort = allChapters(userId, shortProject.getId());
+        String shortRevision = reviewRevision(userId, shortProject.getId());
+        samples.add(Map.of("sampleType", "short-coherent", "items",
+            ProjectHistoryV385ReviewSamples.chapterRepresentativeness(
+                automaticShort, shortStories, 1, shortRevision
+            )));
+        ProjectHistorySnapshot shortSnapshot = snapshotRepository.findByProjectId(shortProject.getId()).orElseThrow();
+        correctionService.create(userId, shortProject.getId(), new HistoryCorrectionRequest(
+            "DECLARE_CHAPTER", "CHAPTER", "", shortStories.stream().map(ChangeStory::id).toList(),
+            "发布准备与交付核对阶段", "这一阶段记录了发布说明、交付清单和核对结果。", "", "",
+            shortRevision, shortSnapshot.getSourceEventFingerprint()
+        ));
+        List<HistoryChapter> declared = allChapters(userId, shortProject.getId()).stream()
+            .filter(HistoryChapter::userDeclared).toList();
+        require(declared.size() == 1, "用户声明 Chapter 未保留为独立展示覆盖层");
+        require("发布准备与交付核对阶段".equals(declared.get(0).title()), "用户声明 Chapter 标题被自动覆盖");
+        samples.add(Map.of("sampleType", "user-declared", "items",
+            ProjectHistoryV385ReviewSamples.chapterRepresentativeness(
+                declared, allStories(userId, shortProject.getId()), 1,
+                reviewRevision(userId, shortProject.getId())
+            )));
+
+        CallAccumulator call = calls.get(activeScenario.get());
+        require(call != null && call.storyLogicalCalls >= 3 && call.chapterLogicalCalls >= 3,
+            "Chapter review fixtures 未经过真实 Story/Chapter 模型边界");
+        metrics.put("minorFirstRiskCount", number(minorDiagnostics, "chaptersWithMinorClusterTitleRisk"));
+        metrics.put("supportingPrimaryCount", primaryCount);
+        metrics.put("supportingStoryCount", supportingCount);
+        metrics.put("shortChapterCount", automaticShort.size());
+        metrics.put("userDeclaredChapterMutationCount", 0);
+        return new ScenarioEvidence(metrics, List.copyOf(samples));
+    }
+
+    private Map<String, Object> completeRefresh(UUID userId, UUID projectId, int maxRefreshes) throws Exception {
+        Map<String, Object> diagnostics = Map.of();
+        int attempts = 0;
+        do {
+            reconstructionService.refresh(userId, projectId, UUID.randomUUID(), false);
+            diagnostics = readService.overview(userId, projectId).diagnostics();
+        } while (incomplete(diagnostics) && ++attempts < maxRefreshes);
+        require(!incomplete(diagnostics), "Chapter fixture 未在有界刷新内完成");
+        return diagnostics;
     }
 
     private ScenarioEvidence continuationAndChapter(UUID userId) throws Exception {
@@ -515,6 +750,10 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         samples.add(Map.of("sampleType", "supporting-consolidation", "items", supportingConsolidation));
         samples.add(Map.of("sampleType", "chapters", "items",
             ProjectHistoryV385ReviewSamples.chapters(chapters, 8, presentationRevision)));
+        samples.add(Map.of("sampleType", "chapter-representativeness", "items",
+            ProjectHistoryV385ReviewSamples.chapterRepresentativeness(
+                chapters, stories, 8, presentationRevision
+            )));
         samples.add(Map.of("sampleType", "threads", "items", threadSamples(threads, 3)));
         samples.add(Map.of("sampleType", "manual-review-candidates", "items", reviewCandidates(stories, 5)));
         samples.add(Map.of("sampleType", "truthfulness-p0", "items", truthfulnessP0 == null
@@ -531,6 +770,13 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         metrics.put("hiddenOrMergedCount", stories.stream().filter(story -> story.hiddenByDefault() || !story.mergedIntoStoryId().isBlank()).count());
         metrics.put("chapterCount", chapters.size());
         metrics.put("threadCount", threads.size());
+        metrics.put("chapterGenericTitleRate", rate(chapters.stream().filter(chapter ->
+            GENERIC_PHRASES.stream().anyMatch(phrase -> chapter.title().contains(phrase))
+                || chapter.title().contains("持续完善项目成果")
+        ).count(), chapters.size()));
+        metrics.put("correctionConflictCount", stories.stream().mapToLong(story -> story.correctionConflicts().size()).sum()
+            + chapters.stream().mapToLong(chapter -> chapter.limitations().stream()
+                .filter(value -> value.contains("修正") || value.contains("冲突")).count()).sum());
         metrics.put("genericTemplateRate", genericRate);
         metrics.put("firstLayerTechnicalLeakRate", technicalLeakRate);
         metrics.put("truthfulnessP0Found", truthfulnessP0 != null);
@@ -546,6 +792,13 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         if (!Boolean.TRUE.equals(overview.diagnostics().get("eventConservation"))) failures.add("ProjectFlow Dogfood 原始事件不守恒");
         if (genericRate > 0.05) failures.add("ProjectFlow Dogfood generic template rate 超过 0.05");
         if (technicalLeakRate > 0.05) failures.add("ProjectFlow Dogfood technical leak rate 超过 0.05");
+        if (number(diagnostics, "chaptersWithMinorClusterTitleRisk") > 0) {
+            failures.add("ProjectFlow Dogfood 存在标题只代表 minor cluster 的 Chapter");
+        }
+        if (number(diagnostics, "technicalLeakCount") > 0) failures.add("ProjectFlow Chapter 第一层存在技术泄漏");
+        if (number(diagnostics, "unsupportedClaimCount") > 0) failures.add("ProjectFlow Chapter 存在不受支持 Claim");
+        if (number(diagnostics, "chapterOverlapCount") > 0) failures.add("ProjectFlow Chapter Story membership 重叠");
+        if (number(diagnostics, "orphanSupportingCount") > 0) failures.add("ProjectFlow 存在孤儿 Supporting Story");
         if (truthfulnessP0 == null) {
             failures.add("ProjectFlow Dogfood 缺少 ae9f 前端骨架真实性 P0 样本");
         } else {
@@ -828,7 +1081,15 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             "chapterSynthesisPendingCount", "chapterSynthesisOmittedStoryCount",
             "modelRejectedInvalidEvidenceRefCount", "modelRejectedCrossProjectRefCount",
             "modelRejectedUnsupportedClaimCount", "modelValidationRepairCount",
-            "modelValidationRepairFailureCount", "modelDeterministicTitleFallbackCount", "modelFallback"
+            "modelValidationRepairFailureCount", "modelDeterministicTitleFallbackCount", "modelFallback",
+            "chapterRepresentationPlanVersion", "chapterCount", "primaryStoryCount", "supportingStoryCount",
+            "chapterPrimaryStoryCount", "chapterSupportingStoryCount", "representativeClusterCount", "dominantClusterCount",
+            "selectedRepresentativeClusterCount", "representativePrimaryCoverage", "largestChapterStoryCount",
+            "medianChapterStoryCount", "largeChapterCount", "chaptersNeedingSplit",
+            "chaptersUsingDeterministicFallback", "chaptersUsingModelValidatedWording",
+            "chaptersWithMinorClusterTitleRisk", "technicalLeakCount", "unsupportedClaimCount",
+            "chapterOverlapCount", "orphanSupportingCount", "reasonWithoutEvidenceCount",
+            "userDeclaredChapterMutationCount"
         )) {
             if (source != null && source.containsKey(key)) result.put(key, source.get(key));
         }
@@ -880,7 +1141,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
 
     private String scenarioScope() {
         String value = System.getProperty("projectflow.eval.scenario-scope", "full").trim().toLowerCase(Locale.ROOT);
-        require(Set.of("full", "correction").contains(value), "不支持的真实场景范围");
+        require(Set.of("full", "correction", "chapter").contains(value), "不支持的真实场景范围");
         return value;
     }
 
@@ -896,7 +1157,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         Path output = Path.of("target", "projectflow-eval", outputName);
         Files.createDirectories(output);
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("version", "projectflow-v3.8.5-real-scenario-qualification-v3");
+        artifact.put("version", "projectflow-v3.8.5-real-scenario-qualification-v4");
         artifact.put("generatedAt", Instant.now().toString());
         artifact.put("scenarioScope", scenarioScope);
         artifact.put("provider", Map.of(
@@ -950,6 +1211,17 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         }
     }
 
+    private static double decimal(Map<String, Object> values, String key) {
+        Object value = values == null ? null : values.get(key);
+        if (value instanceof Number number) return number.doubleValue();
+        if (value == null) return 0.0;
+        try {
+            return Double.parseDouble(value.toString());
+        } catch (NumberFormatException ignored) {
+            return 0.0;
+        }
+    }
+
     private static double rate(long numerator, long denominator) {
         return denominator <= 0 ? 0 : (double) numerator / denominator;
     }
@@ -992,7 +1264,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
     private enum FaultMode {
         NONE,
         SCHEMA_AFTER_REAL_CALL,
-        CANCEL_AFTER_REAL_CALL
+        CANCEL_AFTER_REAL_CALL,
+        CHAPTER_SCHEMA_AFTER_REAL_CALL
     }
 
     @FunctionalInterface
