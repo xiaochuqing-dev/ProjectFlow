@@ -15,29 +15,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v13";
-    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v8";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v14";
+    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v9";
     static final int MAX_PROMPT_CHARS = 60_000;
     public static final String VALIDATION_REPAIR_MARKER = "\nHISTORY_VALIDATION_REPAIR=";
     private static final String VALIDATION_REPAIR_INSTRUCTIONS = """
-        上一次输出未通过 ProjectFlow 的统一语义安全校验。本次不要重新发挥：必须原样复制 REQUIRED_OUTPUT_TEMPLATE_JSON；若末尾未重复该对象，则原样复制原输入中的 OUTPUT_TEMPLATE_JSON。
-        只能使用 OUTPUT_TEMPLATE_JSON 中的对象、ID 和字段；每个 required ID 必须且只能返回一次。
-        reasonEvidenceRefs 只能逐项复制对应 Story 的 reasonEligibleEvidenceRefs；没有采用合格 Evidence 时 reason 留空，并保留模板中的“原因未知”。只有 reason 非空且 reasonEvidenceRefs 非空时才可清空 unknownWording。
-        Before / Change / After 只能改写 wording，不得改变 verified semantic、claimState 或 allowed claims。
-        humanTitle 必须明确写出动作和对象，并由 humanTitle 与 oneSentenceSummary 共同写出已经受支持的结果；“编写某功能代码”“留下变化记录”等没有明确结果的表达不合格。
-        OUTPUT_TEMPLATE_JSON 已预填工程层确定性安全草稿；如果不能在硬边界内明确改进某个字段，就原样保留该字段，不得改写固定 ID。
-        不得返回工程层字段，不得创造 ID、Evidence、实体、动作、原因、冲突、数字或项目状态。只返回严格 JSON。
-        不得使用“相关变化”“工程分组”“形成初始结果”“进入当前时间点可确认的新状态”等空泛或内部模板表达。
+        上一次输出未通过 ProjectFlow 的统一语义安全校验。本次不再重新分析或改写。
+        必须原样返回 REQUIRED_OUTPUT_TEMPLATE_JSON 的完整 JSON 对象；不得增加、删除、重排或改写任何对象、ID、字段、数组或文字。
+        REQUIRED_OUTPUT_TEMPLATE_JSON 已由工程层生成并通过同一 Validator；它保留了安全的 Story 措辞、未知原因和 Evidence 边界。
+        只返回该 JSON 对象，不要 Markdown、解释、前后缀或第二个 JSON。
         """;
     private static final String CHAPTER_VALIDATION_REPAIR_INSTRUCTIONS = """
-        上一次篇章输出未通过 ProjectFlow 的统一语义安全校验。本次不要重新发挥：必须把 CHAPTER_SYNTHESIS_JSON.deterministicFallback 原样包装为 chapters 数组中的唯一对象。
-        只能返回一个篇章对象，且只能包含 chapterId、representedClusterIds、title、summary；chapterId 必须与原输入完全一致。不得返回或修改 Story 成员、时间、边界或其他字段。
-        representedClusterIds 必须逐项复制 requiredRepresentativeClusterIds，不能遗漏、增加或重排。title 必须代表 dominantClusterIds 中至少一个主成果簇；summary 必须覆盖每个 required Representative Cluster，并把 Supporting 信息保持为次要说明。
-        CHAPTER_SYNTHESIS_JSON.deterministicFallback 是已通过同一 Validator 的安全草稿；任何字段无法可靠改进时，原样返回整个 deterministicFallback。
-        每个成果簇只能使用其 representativeOutcomes、allowedClaimStates、unknowns 与 conflicts 中允许的表达；不得把一个成果簇的状态或结果借给另一个成果簇。
-        不得使用“围绕”“推进”“完善”“建设”等空泛词替代具体结果，不得返回列表、路径、成熟度、原因、计划或项目状态。
-        只返回严格 JSON，不得增加字段：
-        {"chapters":[{"chapterId":"","representedClusterIds":[],"title":"","summary":""}]}
+        上一次篇章输出未通过 ProjectFlow 的统一语义安全校验。本次不再重新分析或改写。
+        必须原样返回 REQUIRED_OUTPUT_TEMPLATE_JSON 的完整 JSON 对象；不得增加、删除、重排或改写 chapterId、representedClusterIds、title、summary 或任何文字。
+        REQUIRED_OUTPUT_TEMPLATE_JSON 已把工程层 deterministicFallback 包装为唯一篇章，并通过同一 Validator；它保持 required Representative Cluster、dominant cluster 与 Supporting 的边界。
+        只返回该 JSON 对象，不要 Markdown、解释、前后缀或第二个 JSON。
         """;
     private static final int MAX_INITIAL_PROMPT_CHARS = MAX_PROMPT_CHARS
         - VALIDATION_REPAIR_MARKER.length() - VALIDATION_REPAIR_INSTRUCTIONS.length() - 40;
@@ -114,15 +106,11 @@ public final class ProjectHistoryPromptBuilder {
             case "INVALID_EVIDENCE", "CROSS_PROJECT_REFERENCE", "UNSUPPORTED_CLAIM", "CONTRACT" -> validationKind;
             default -> "CONTRACT";
         };
-        String repairInstructions = safePrompt.contains(CHAPTER_SYNTHESIS_MARKER)
-            ? CHAPTER_VALIDATION_REPAIR_INSTRUCTIONS
-            : VALIDATION_REPAIR_INSTRUCTIONS;
-        String repaired = safePrompt + VALIDATION_REPAIR_MARKER + safeKind + "\n" + repairInstructions;
-        String exactTemplate = outputTemplate(safePrompt);
-        String reminder = exactTemplate.isBlank() ? "" : "\nREQUIRED_OUTPUT_TEMPLATE_JSON=" + exactTemplate;
-        if (!reminder.isBlank() && repaired.length() + reminder.length() <= MAX_PROMPT_CHARS) {
-            repaired += reminder;
-        }
+        boolean chapter = safePrompt.contains(CHAPTER_SYNTHESIS_MARKER);
+        String repairInstructions = chapter ? CHAPTER_VALIDATION_REPAIR_INSTRUCTIONS : VALIDATION_REPAIR_INSTRUCTIONS;
+        String exactTemplate = chapter ? chapterOutputTemplate(safePrompt) : outputTemplate(safePrompt);
+        String repaired = VALIDATION_REPAIR_MARKER + safeKind + "\n" + repairInstructions
+            + "\nREQUIRED_OUTPUT_TEMPLATE_JSON=" + exactTemplate;
         if (repaired.length() > MAX_PROMPT_CHARS) {
             throw new IllegalStateException("项目历程安全修复 Prompt 超过有界上限");
         }
@@ -413,6 +401,21 @@ public final class ProjectHistoryPromptBuilder {
         start += OUTPUT_TEMPLATE_MARKER.length();
         int end = prompt.indexOf(STORIES_MARKER, start);
         return end <= start ? "" : prompt.substring(start, end);
+    }
+
+    private String chapterOutputTemplate(String prompt) {
+        int start = prompt.indexOf(CHAPTER_SYNTHESIS_MARKER);
+        if (start < 0) return "";
+        try {
+            var packed = objectMapper.readTree(prompt.substring(start + CHAPTER_SYNTHESIS_MARKER.length()));
+            var fallback = packed.path("deterministicFallback");
+            if (!fallback.isObject()) return "";
+            var output = objectMapper.createObjectNode();
+            output.putArray("chapters").add(fallback.deepCopy());
+            return objectMapper.writeValueAsString(output);
+        } catch (JsonProcessingException exception) {
+            return "";
+        }
     }
 
     private record OutputTemplate(

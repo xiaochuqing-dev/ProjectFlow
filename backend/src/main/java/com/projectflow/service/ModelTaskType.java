@@ -226,7 +226,55 @@ public enum ModelTaskType {
 
     public JsonNode normalizeRoot(JsonNode root) {
         if (this == LEGACY_STRUCTURED) return root;
+        if (this == PROJECT_HISTORY_SYNTHESIS) return normalizeHistorySynthesisRoot(root);
+        if (this == PROJECT_HISTORY_CHAPTER_SYNTHESIS) return normalizeHistoryChapterRoot(root);
         return collectionOutput ? root : normalizeObjectRoot(root);
+    }
+
+    /**
+     * Provider-neutral shape repair only. Missing empty containers and a direct
+     * single-object encoding carry no new project semantics; the history parser
+     * still validates every required ID, field and claim before acceptance.
+     */
+    private JsonNode normalizeHistorySynthesisRoot(JsonNode root) {
+        JsonNode current = normalizeObjectRoot(root);
+        if (current != null && current.isArray()
+            && current.size() > 0
+            && current.path(0).path("storyId").isTextual()) {
+            ObjectNode wrapped = JsonNodeFactory.instance.objectNode();
+            wrapped.set("stories", current.deepCopy());
+            wrapped.putArray("chapters");
+            return wrapped;
+        }
+        if (current == null || !current.isObject()) return current;
+        if (current.path("storyId").isTextual()) {
+            ObjectNode wrapped = JsonNodeFactory.instance.objectNode();
+            wrapped.putArray("stories").add(current.deepCopy());
+            wrapped.putArray("chapters");
+            return wrapped;
+        }
+        if (!current.path("stories").isArray() && !current.path("chapters").isArray()) return current;
+        ObjectNode normalized = current.deepCopy();
+        if (!normalized.path("stories").isArray()) normalized.putArray("stories");
+        if (!normalized.path("chapters").isArray()) normalized.putArray("chapters");
+        return normalized;
+    }
+
+    private JsonNode normalizeHistoryChapterRoot(JsonNode root) {
+        JsonNode current = normalizeObjectRoot(root);
+        if (current != null && current.isArray()
+            && current.size() > 0
+            && current.path(0).path("chapterId").isTextual()) {
+            ObjectNode wrapped = JsonNodeFactory.instance.objectNode();
+            wrapped.set("chapters", current.deepCopy());
+            return wrapped;
+        }
+        if (current != null && current.isObject() && current.path("chapterId").isTextual()) {
+            ObjectNode wrapped = JsonNodeFactory.instance.objectNode();
+            wrapped.putArray("chapters").add(current.deepCopy());
+            return wrapped;
+        }
+        return current;
     }
 
     private JsonNode normalizeObjectRoot(JsonNode root) {

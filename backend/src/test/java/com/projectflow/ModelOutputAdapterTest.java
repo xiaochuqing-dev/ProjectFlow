@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.service.ModelOutputAdapter;
+import com.projectflow.service.ModelTaskType;
 
 class ModelOutputAdapterTest {
     private final ModelOutputAdapter adapter = new ModelOutputAdapter(new ObjectMapper());
@@ -18,6 +19,33 @@ class ModelOutputAdapterTest {
         assertThat(adapter.items(object.root(), "capabilities")).hasSize(1);
         assertThat(adapter.items(array.root(), "capabilities")).hasSize(1);
         assertThat(object.repaired()).isFalse();
+    }
+
+    @Test
+    void normalizesHistorySingleObjectsAndOmittedEmptyContainersWithoutInventingContent() throws Exception {
+        var story = adapter.parse(
+            "{\"storyId\":\"story-one\",\"humanTitle\":\"形成入口\"}",
+            ModelTaskType.PROJECT_HISTORY_SYNTHESIS
+        );
+        var chapter = adapter.parse(
+            "{\"chapterId\":\"chapter-one\",\"representedClusterIds\":[\"cluster-one\"],"
+                + "\"title\":\"形成入口\",\"summary\":\"入口已经形成。\"}",
+            ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS
+        );
+        var storiesOnly = adapter.parse(
+            "{\"stories\":[{\"storyId\":\"story-two\"}]}",
+            ModelTaskType.PROJECT_HISTORY_SYNTHESIS
+        );
+
+        assertThat(story.root().path("stories")).singleElement()
+            .satisfies(value -> assertThat(value.path("storyId").asText()).isEqualTo("story-one"));
+        assertThat(story.root().path("chapters")).isEmpty();
+        assertThat(chapter.root().path("chapters")).singleElement()
+            .satisfies(value -> assertThat(value.path("chapterId").asText()).isEqualTo("chapter-one"));
+        assertThat(storiesOnly.root().path("stories")).hasSize(1);
+        assertThat(storiesOnly.root().path("chapters")).isEmpty();
+        assertThat(ModelTaskType.PROJECT_HISTORY_SYNTHESIS.schemaMatches(story.root(), adapter)).isTrue();
+        assertThat(ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS.schemaMatches(chapter.root(), adapter)).isTrue();
     }
 
     @Test

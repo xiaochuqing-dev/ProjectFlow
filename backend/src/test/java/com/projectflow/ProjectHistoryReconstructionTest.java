@@ -1612,6 +1612,14 @@ class ProjectHistoryReconstructionTest {
     }
 
     private String historyModelResponse(String prompt) throws Exception {
+        String requiredTemplateMarker = "\nREQUIRED_OUTPUT_TEMPLATE_JSON=";
+        int requiredTemplateStart = prompt.indexOf(requiredTemplateMarker);
+        if (requiredTemplateStart >= 0) {
+            JsonNode template = objectMapper.readTree(prompt.substring(
+                requiredTemplateStart + requiredTemplateMarker.length()
+            ));
+            return objectMapper.writeValueAsString(template);
+        }
         String storiesMarker = "\nSTORIES_JSON=";
         String chaptersMarker = "\nCHAPTERS_JSON=";
         int storiesStart = prompt.indexOf(storiesMarker);
@@ -1651,6 +1659,14 @@ class ProjectHistoryReconstructionTest {
     }
 
     private String historyChapterModelResponse(String prompt) throws Exception {
+        String requiredTemplateMarker = "\nREQUIRED_OUTPUT_TEMPLATE_JSON=";
+        int requiredTemplateStart = prompt.indexOf(requiredTemplateMarker);
+        if (requiredTemplateStart >= 0) {
+            JsonNode template = objectMapper.readTree(prompt.substring(
+                requiredTemplateStart + requiredTemplateMarker.length()
+            ));
+            return objectMapper.writeValueAsString(template);
+        }
         String marker = "\nCHAPTER_SYNTHESIS_JSON=";
         int start = prompt.indexOf(marker);
         int repairStart = prompt.indexOf(ProjectHistoryPromptBuilder.VALIDATION_REPAIR_MARKER, start);

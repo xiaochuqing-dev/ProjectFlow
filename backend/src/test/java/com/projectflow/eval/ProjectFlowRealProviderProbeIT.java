@@ -58,12 +58,13 @@ class ProjectFlowRealProviderProbeIT {
 
         var response = gateway.callStructured(
             provider,
-            "这是最小兼容性检查。只返回 {\"ok\":true}。",
-            ModelTaskType.PROVIDER_CONNECTION_TEST
+            "基于事实‘ProjectFlow 使用 ProjectFact 保存已发生开发结果’，只返回 {\"summary\":\"\",\"architecture\":\"\"}，两项都填简短中文。",
+            ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST
         );
         var diagnostics = response.diagnostics();
 
-        assertThat(response.parsed().root().path("ok").asBoolean()).isTrue();
+        assertThat(response.parsed().root().path("summary").asText()).isNotBlank();
+        assertThat(response.parsed().root().path("architecture").asText()).isNotBlank();
         assertThat(diagnostics.requestSucceeded()).isTrue();
         assertThat(diagnostics.schemaMatched()).isTrue();
         assertThat(diagnostics.requestCount()).isBetween(1, 2);

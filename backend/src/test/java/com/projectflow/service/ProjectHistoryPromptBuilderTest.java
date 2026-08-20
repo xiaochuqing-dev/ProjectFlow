@@ -116,15 +116,12 @@ class ProjectHistoryPromptBuilderTest {
         assertThat(repair)
             .hasSizeLessThanOrEqualTo(ProjectHistoryPromptBuilder.MAX_PROMPT_CHARS)
             .contains(
-                "CHAPTER_SYNTHESIS_JSON=",
                 ProjectHistoryPromptBuilder.VALIDATION_REPAIR_MARKER + "CONTRACT",
-                "必须把 CHAPTER_SYNTHESIS_JSON.deterministicFallback 原样包装",
-                "只能包含 chapterId、representedClusterIds、title、summary",
-                "representedClusterIds 必须逐项复制 requiredRepresentativeClusterIds",
-                "原样返回整个 deterministicFallback",
-                "{\"chapters\":[{\"chapterId\":\"\",\"representedClusterIds\":[],\"title\":\"\",\"summary\":\"\"}]}"
+                "必须原样返回 REQUIRED_OUTPUT_TEMPLATE_JSON",
+                "REQUIRED_OUTPUT_TEMPLATE_JSON={\"chapters\":[{\"chapterId\":\"chapter-one\"",
+                "\"representedClusterIds\":[]"
             )
-            .doesNotContain("只能使用 OUTPUT_TEMPLATE_JSON");
+            .doesNotContain("CHAPTER_SYNTHESIS_JSON=", "只能使用 OUTPUT_TEMPLATE_JSON");
     }
 
     private static ProjectHistoryPromptBuilder.ChapterRepresentativeClusterInput cluster(String id) {

@@ -15,7 +15,7 @@ class ProviderNeutralPromptSnapshotTest {
         String prompt = builder.buildProduction(new ProjectHistoryPromptBuilder.PromptInput(List.of(), List.of())).prompt();
         String instructions = prompt.substring(0, prompt.indexOf("\nSTORIES_JSON="));
 
-        assertThat(ProjectHistoryPromptBuilder.PROMPT_VERSION).isEqualTo("project-history-synthesis-v13");
+        assertThat(ProjectHistoryPromptBuilder.PROMPT_VERSION).isEqualTo("project-history-synthesis-v14");
         assertThat(instructions).contains(
             "可改字段只有 Story 的 humanTitle、oneSentenceSummary、beforeWording、changeWording、afterWording、reason、reasonEvidenceRefs、unknownWording",
             "role、primaryStoryId、supportingChangeRefs、storyRefs、时间、verified semantic、claimState",
@@ -34,10 +34,10 @@ class ProviderNeutralPromptSnapshotTest {
         String repair = builder.validationRepair(prompt, "INVALID_EVIDENCE");
         assertThat(repair).contains(
             ProjectHistoryPromptBuilder.VALIDATION_REPAIR_MARKER + "INVALID_EVIDENCE",
-            "只能使用 OUTPUT_TEMPLATE_JSON 中的对象、ID 和字段",
-            "没有采用合格 Evidence 时 reason 留空",
-            "humanTitle 必须明确写出动作和对象"
-        ).doesNotContain("DeepSeek", "GLM", "上一次输出内容");
+            "必须原样返回 REQUIRED_OUTPUT_TEMPLATE_JSON",
+            "不再重新分析或改写",
+            "已由工程层生成并通过同一 Validator"
+        ).doesNotContain("STORIES_JSON=", "CHAPTERS_JSON=", "DeepSeek", "GLM", "上一次输出内容");
 
         var chapterPrompt = builder.buildChapterProduction(new ProjectHistoryPromptBuilder.ChapterSynthesisPromptInput(
             "chapter-one", "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z", 0, 0, 0,
@@ -45,16 +45,13 @@ class ProviderNeutralPromptSnapshotTest {
         )).prompt();
         String chapterRepair = builder.validationRepair(chapterPrompt, "CONTRACT");
         assertThat(ProjectHistoryPromptBuilder.CHAPTER_PROMPT_VERSION)
-            .isEqualTo("project-history-chapter-synthesis-v8");
+            .isEqualTo("project-history-chapter-synthesis-v9");
         assertThat(ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS.minimalSchema())
             .contains("representedClusterIds");
         assertThat(chapterRepair).contains(
-            "CHAPTER_SYNTHESIS_JSON=",
-            "必须把 CHAPTER_SYNTHESIS_JSON.deterministicFallback 原样包装",
-            "只能包含 chapterId、representedClusterIds、title、summary",
-            "representedClusterIds 必须逐项复制 requiredRepresentativeClusterIds",
-            "deterministicFallback 是已通过同一 Validator 的安全草稿",
-            "title 必须代表 dominantClusterIds 中至少一个主成果簇"
-        ).doesNotContain("只能使用 OUTPUT_TEMPLATE_JSON", "DeepSeek", "GLM");
+            "必须原样返回 REQUIRED_OUTPUT_TEMPLATE_JSON",
+            "已把工程层 deterministicFallback 包装为唯一篇章",
+            "REQUIRED_OUTPUT_TEMPLATE_JSON={\"chapters\":[{\"chapterId\":\"chapter-one\""
+        ).doesNotContain("CHAPTER_SYNTHESIS_JSON=", "只能使用 OUTPUT_TEMPLATE_JSON", "DeepSeek", "GLM");
     }
 }
