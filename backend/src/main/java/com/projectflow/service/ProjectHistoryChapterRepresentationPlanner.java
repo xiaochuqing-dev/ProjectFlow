@@ -21,7 +21,7 @@ import java.util.stream.Stream;
  * Story presentation. It never changes facts, Evidence, roles or Claim state.
  */
 public final class ProjectHistoryChapterRepresentationPlanner {
-    public static final String PLAN_VERSION = "project-history-chapter-representation-v1";
+    public static final String PLAN_VERSION = "project-history-chapter-representation-v2";
     static final int MAX_REPRESENTATIVE_CLUSTERS = 4;
     static final int MAX_REPRESENTATIVE_STORIES_PER_CLUSTER = 3;
     static final int MIN_PRIMARY_PER_SPLIT = 4;
@@ -315,7 +315,10 @@ public final class ProjectHistoryChapterRepresentationPlanner {
 
     private String family(ChangeStory story) {
         String label = label(story);
-        String value = GENERIC_LABELS.contains(label) ? safe(story.primarySubjectKey()) : label;
+        // Generic presentation labels are deliberately one low-weight digest
+        // family. Splitting them again by internal subject keys lets dozens of
+        // tiny document/material clusters dilute the real phase outcomes.
+        String value = label;
         if (value.isBlank()) value = story.affectedAreas().stream().findFirst().orElse("project-material");
         value = value.replaceAll("(?i)[0-9a-f]{12,}", " ").replaceAll("\\d+", " ")
             .replaceAll("[\\s_-]+", " ").trim().toLowerCase(Locale.ROOT);

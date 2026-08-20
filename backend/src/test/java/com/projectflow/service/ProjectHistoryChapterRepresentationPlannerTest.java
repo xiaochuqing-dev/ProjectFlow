@@ -278,6 +278,27 @@ class ProjectHistoryChapterRepresentationPlannerTest {
     }
 
     @Test
+    void genericDocumentSubjectsFormOneLowWeightDigestInsteadOfDilutingCoverage() {
+        List<ChangeStory> stories = new ArrayList<>(
+            stories("auth", "建立登录流程并形成登录入口", 6, 0, "IMPLEMENTED")
+        );
+        for (int index = 0; index < 20; index++) {
+            stories.add(story("document-" + index, "v1." + index,
+                "记录项目阶段文档并保留核对材料", index, "OBSERVED", "PRIMARY", ""));
+        }
+
+        var plan = planner.plan(stories);
+
+        assertThat(plan.clusters()).filteredOn(cluster -> "阶段成果记录".equals(cluster.humanLabel()))
+            .singleElement().satisfies(cluster -> {
+                assertThat(cluster.primaryStoryCount()).isEqualTo(20);
+                assertThat(cluster.role()).isEqualTo("MINOR");
+            });
+        assertThat(plan.selectedClusters().get(0).humanLabel()).contains("登录");
+        assertThat(plan.representativePrimaryCoverage()).isGreaterThanOrEqualTo(0.72);
+    }
+
+    @Test
     void frontendBackendAndCombinedSkeletonSubjectsShareOneSemanticFamily() {
         assertThat(ProjectHistoryChapterRepresentationPlanner.semanticFamily("前端项目骨架"))
             .isEqualTo("项目骨架");
