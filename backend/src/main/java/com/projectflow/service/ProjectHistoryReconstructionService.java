@@ -1480,7 +1480,7 @@ public class ProjectHistoryReconstructionService {
                 rejectedUnsupportedClaim += exception.kind() == ValidationKind.UNSUPPORTED_CLAIM ? 1 : 0;
                 failureSummary = "模型归纳未通过结构、ID、Evidence 或安全校验，已保留确定性历程：" + safeError(exception);
                 windowCheckpointService.fail(
-                    attempt, failureSummary, "{\"validation\":\"REJECTED\",\"scope\":\"WINDOW\"}"
+                    attempt, failureSummary, failureCheckpointDiagnostics("WINDOW", exception)
                 );
                 // A malformed response is local to this bounded window. Keep
                 // processing independent windows; a later refresh retries only
@@ -1490,7 +1490,7 @@ public class ProjectHistoryReconstructionService {
                 incomplete = true;
                 failureSummary = "模型归纳调用失败，已保留确定性历程：" + safeError(exception);
                 windowCheckpointService.fail(
-                    attempt, failureSummary, "{\"status\":\"FAILED\",\"scope\":\"WINDOW\"}"
+                    attempt, failureSummary, failureCheckpointDiagnostics("WINDOW", exception)
                 );
                 if (systemicProviderFailure(exception)) {
                     systemicFailure = true;
@@ -1669,12 +1669,12 @@ public class ProjectHistoryReconstructionService {
                 } catch (HistoryValidationException exception) {
                     failureSummary = "篇章二阶段归纳未通过结构、ID 或安全校验，已保留确定性标题：" + safeError(exception);
                     windowCheckpointService.fail(
-                        attempt, failureSummary, "{\"validation\":\"REJECTED\",\"scope\":\"CHAPTER\"}"
+                        attempt, failureSummary, failureCheckpointDiagnostics("CHAPTER", exception)
                     );
                 } catch (Exception exception) {
                     failureSummary = "篇章二阶段归纳调用失败，已保留确定性标题：" + safeError(exception);
                     windowCheckpointService.fail(
-                        attempt, failureSummary, "{\"status\":\"FAILED\",\"scope\":\"CHAPTER\"}"
+                        attempt, failureSummary, failureCheckpointDiagnostics("CHAPTER", exception)
                     );
                     if (systemicProviderFailure(exception)) {
                         systemicFailure = true;
@@ -2468,6 +2468,53 @@ public class ProjectHistoryReconstructionService {
             )).toList(),
             reasonEligible
         ));
+    }
+
+    /** Persist only bounded enum-like failure facts; never retain model text or request content. */
+    private String failureCheckpointDiagnostics(String scope, Exception failure) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("status", "FAILED");
+        values.put("scope", "CHAPTER".equals(scope) ? "CHAPTER" : "WINDOW");
+        if (failure instanceof HistoryValidationException validation) {
+            values.put("failureClass", "HISTORY_VALIDATION");
+            values.put("validationKind", validation.kind().name());
+            return json(values);
+        }
+        if (failure instanceof ModelGatewayService.ModelResponseFormatException format) {
+            values.put("failureClass", "MODEL_RESPONSE_FORMAT");
+            ModelGatewayService.ModelCallDiagnostics diagnostics = format.diagnostics();
+            if (diagnostics != null) {
+                values.put("failureStage", safeDiagnosticToken(diagnostics.failureStage()));
+                values.put("failureCode", safeDiagnosticToken(diagnostics.failureCode()));
+                values.put("retryType", safeDiagnosticToken(diagnostics.retryType()));
+                values.put("requestCount", Math.max(0, diagnostics.requestCount()));
+                values.put("finishReason", safeDiagnosticToken(diagnostics.normalizedFinishReason()));
+                values.put("truncated", diagnostics.truncated());
+                values.put("schemaMatched", diagnostics.schemaMatched());
+            }
+            return json(values);
+        }
+        if (failure instanceof ModelGatewayService.ModelHttpException http) {
+            values.put("failureClass", "MODEL_HTTP");
+            values.put("failureCode", "HTTP_" + http.statusCode());
+            values.put("requestCount", http.requestCount());
+            return json(values);
+        }
+        if (failure instanceof ModelGatewayService.ModelTransportException transport) {
+            values.put("failureClass", "MODEL_TRANSPORT");
+            values.put("failureCode", "TRANSPORT");
+            values.put("requestCount", transport.requestCount());
+            return json(values);
+        }
+        values.put("failureClass", "OTHER");
+        values.put("failureCode", "OTHER");
+        return json(values);
+    }
+
+    private static String safeDiagnosticToken(String value) {
+        if (value == null || value.isBlank()) return "";
+        String safe = value.trim().replaceAll("[^A-Za-z0-9_:,.-]", "_");
+        return safe.length() <= 160 ? safe : safe.substring(0, 160);
     }
 
     private static boolean hasReasonEligibleEvidence(List<EventView> events) {

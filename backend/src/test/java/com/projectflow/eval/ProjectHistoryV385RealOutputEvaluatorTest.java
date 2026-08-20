@@ -28,6 +28,7 @@ import com.projectflow.repository.AiProviderRepository;
 import com.projectflow.repository.ProjectFactRepository;
 import com.projectflow.repository.ProjectHistoryEventRepository;
 import com.projectflow.repository.ProjectHistorySnapshotRepository;
+import com.projectflow.repository.ProjectHistoryWindowCheckpointRepository;
 import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.service.ProjectHistoryCorrectionService;
@@ -45,6 +46,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
     @Autowired ProjectFactRepository factRepository;
     @Autowired ProjectHistoryEventRepository eventRepository;
     @Autowired ProjectHistorySnapshotRepository snapshotRepository;
+    @Autowired ProjectHistoryWindowCheckpointRepository checkpointRepository;
     @Autowired AiProviderRepository providerRepository;
     @Autowired ProjectHistoryReconstructionService reconstructionService;
     @Autowired ProjectHistoryCorrectionService correctionService;
@@ -84,6 +86,10 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
                 "V385_REAL_CASE_DONE split=%s status=%s requests=%d tokens=%d elapsedMs=%d%n",
                 run.split(), run.modelStatus(), run.requestCount(), run.tokenCount(), run.latencyMs()
             );
+            if (!run.failureDiagnostics().isEmpty()) {
+                System.out.printf("V385_REAL_CASE_FAILURES case=%s diagnostics=%s%n",
+                    run.caseId(), run.failureDiagnostics());
+            }
         }
 
         ProjectHistoryV385QualityEvaluator.EvaluationReport report =
@@ -149,8 +155,36 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
             number(diagnostics, "modelRejectedUnsupportedClaimCount"),
             number(diagnostics, "modelDeterministicTitleFallbackCount"),
             number(diagnostics, "modelValidationRepairCount"),
-            number(diagnostics, "modelValidationRepairFailureCount")
+            number(diagnostics, "modelValidationRepairFailureCount"),
+            safeFailureDiagnostics(execution.projectId())
         );
+    }
+
+    private List<SafeFailureDiagnostic> safeFailureDiagnostics(UUID projectId) {
+        return checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(projectId).stream()
+            .filter(checkpoint -> "FAILED".equals(checkpoint.getStatus()))
+            .map(checkpoint -> {
+                try {
+                    JsonNode value = objectMapper.readTree(checkpoint.getDiagnosticsJson());
+                    return new SafeFailureDiagnostic(
+                        safeToken(value.path("scope").asText()),
+                        safeToken(value.path("failureClass").asText()),
+                        safeToken(value.path("failureStage").asText()),
+                        safeToken(value.path("failureCode").asText()),
+                        safeToken(value.path("validationKind").asText()),
+                        Math.max(0, value.path("requestCount").asInt(0))
+                    );
+                } catch (Exception ignored) {
+                    return new SafeFailureDiagnostic("", "DIAGNOSTIC_PARSE_FAILURE", "", "", "", 0);
+                }
+            })
+            .toList();
+    }
+
+    private static String safeToken(String value) {
+        if (value == null || value.isBlank()) return "";
+        String safe = value.trim().replaceAll("[^A-Za-z0-9_:,.-]", "_");
+        return safe.length() <= 160 ? safe : safe.substring(0, 160);
     }
 
     private QualificationSummary qualification(
@@ -201,7 +235,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         Path output = Path.of("target", "projectflow-eval", outputName);
         Files.createDirectories(output);
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("version", "projectflow-v3.8.5-history-real-output-v4");
+        artifact.put("version", "projectflow-v3.8.5-history-real-output-v5");
         artifact.put("generatedAt", Instant.now().toString());
         artifact.put("provider", Map.of(
             "name", config.name(), "model", config.model(), "protocol", config.protocol().name(),
@@ -316,7 +350,21 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         int rejectedUnsupportedClaimCount,
         int deterministicTitleFallbackCount,
         int validationRepairCount,
-        int validationRepairFailureCount
+        int validationRepairFailureCount,
+        List<SafeFailureDiagnostic> failureDiagnostics
+    ) {
+        private SafeCaseRun {
+            failureDiagnostics = failureDiagnostics == null ? List.of() : List.copyOf(failureDiagnostics);
+        }
+    }
+
+    private record SafeFailureDiagnostic(
+        String scope,
+        String failureClass,
+        String failureStage,
+        String failureCode,
+        String validationKind,
+        int requestCount
     ) {
     }
 

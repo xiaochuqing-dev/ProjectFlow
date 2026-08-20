@@ -198,11 +198,10 @@ public class AiProviderService {
         try {
             ModelGatewayService.StructuredModelResponse response = modelGatewayService.callStructured(
                 provider,
-                "基于事实‘ProjectFlow 使用 ProjectFact 保存已发生开发结果’，只返回 {\"summary\":\"\",\"architecture\":\"\"}，两项都填简短中文。",
+                "基于事实‘ProjectFlow 使用 ProjectFact 保存已发生开发结果’，只返回 {\"summary\":\"\"}，填入一句简短中文。",
                 ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST
             );
-            boolean projectFlowOk = response.parsed().root().has("summary")
-                && response.parsed().root().has("architecture");
+            boolean projectFlowOk = !response.parsed().root().path("summary").asText("").isBlank();
             ModelGatewayService.ModelCallDiagnostics diagnostics = response.diagnostics();
             return testResult(
                 provider, projectFlowOk, true,

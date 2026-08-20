@@ -1280,6 +1280,11 @@ class ProjectHistoryReconstructionTest {
             .containsEntry("modelValidationRepairFailureCount", 1);
         assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
             .filteredOn(checkpoint -> "SUCCEEDED".equals(checkpoint.getStatus())).hasSize(2);
+        assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
+            .filteredOn(checkpoint -> "FAILED".equals(checkpoint.getStatus()))
+            .singleElement().satisfies(checkpoint -> assertThat(checkpoint.getDiagnosticsJson())
+                .contains("\"failureClass\":\"HISTORY_VALIDATION\"")
+                .contains("\"validationKind\":\"CONTRACT\""));
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         Map<String, Object> recoveredDiagnostics = readService.overview(userId, project.getId()).diagnostics();
@@ -1315,6 +1320,11 @@ class ProjectHistoryReconstructionTest {
             .containsEntry("nextWindowOrdinal", 1)
             .containsEntry("modelStatus", "MODEL_PARTIAL_FALLBACK_PROVIDER_STOPPED");
         assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId())).hasSize(2);
+        assertThat(checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()))
+            .filteredOn(checkpoint -> "FAILED".equals(checkpoint.getStatus()))
+            .singleElement().satisfies(checkpoint -> assertThat(checkpoint.getDiagnosticsJson())
+                .contains("\"failureClass\":\"MODEL_HTTP\"")
+                .contains("\"failureCode\":\"HTTP_401\""));
     }
 
     @Test

@@ -18,8 +18,8 @@ public enum ModelTaskType {
     ),
     PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST(
         "Provider ProjectFlow 最小任务测试", 512, 1_024, 0.0, false,
-        List.of(), List.of("summary", "architecture"), List.of(),
-        "{\"summary\":\"\",\"architecture\":\"\"}"
+        List.of(), List.of("summary"), List.of(),
+        "{\"summary\":\"\"}"
     ),
     DEVELOPMENT_SEGMENT_MERGE(
         "分析新变化 / 开发推进段归并", 6_000, 20_000, 0.2, true,

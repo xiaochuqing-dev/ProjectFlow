@@ -138,7 +138,7 @@ public final class ProjectHistoryV385FixtureRunner {
             requestCount, tokens
         );
         return new FixtureExecution(
-            observation,
+            project.getId(), observation,
             outcomes.stream().anyMatch(ProjectHistoryReconstructionService.HistoryRefreshOutcome::modelUsed),
             outcomes.stream().anyMatch(ProjectHistoryReconstructionService.HistoryRefreshOutcome::degraded),
             outcomes.get(outcomes.size() - 1).cacheHit(),
@@ -643,6 +643,7 @@ public final class ProjectHistoryV385FixtureRunner {
     }
 
     public record FixtureExecution(
+        UUID projectId,
         ProjectHistoryV385QualityEvaluator.CaseObservation observation,
         boolean modelUsed,
         boolean degraded,

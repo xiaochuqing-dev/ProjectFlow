@@ -32,7 +32,7 @@ class AiProviderServiceProbeTest {
         AiProvider provider = provider();
         when(repository.findByIdAndUserId(provider.getId(), provider.getUserId())).thenReturn(Optional.of(provider));
 
-        String content = "{\"summary\":\"已记录开发事实\",\"architecture\":\"ProjectFact 是事实来源\"}";
+        String content = "{\"summary\":\"ProjectFact 保存已发生的开发事实\"}";
         ModelOutputAdapter.ParsedOutput parsed = new ModelOutputAdapter(mapper).parse(
             content,
             ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST

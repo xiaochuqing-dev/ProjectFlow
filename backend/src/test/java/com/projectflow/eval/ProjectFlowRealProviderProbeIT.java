@@ -58,13 +58,12 @@ class ProjectFlowRealProviderProbeIT {
 
         var response = gateway.callStructured(
             provider,
-            "基于事实‘ProjectFlow 使用 ProjectFact 保存已发生开发结果’，只返回 {\"summary\":\"\",\"architecture\":\"\"}，两项都填简短中文。",
+            "基于事实‘ProjectFlow 使用 ProjectFact 保存已发生开发结果’，只返回 {\"summary\":\"\"}，填入一句简短中文。",
             ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST
         );
         var diagnostics = response.diagnostics();
 
         assertThat(response.parsed().root().path("summary").asText()).isNotBlank();
-        assertThat(response.parsed().root().path("architecture").asText()).isNotBlank();
         assertThat(diagnostics.requestSucceeded()).isTrue();
         assertThat(diagnostics.schemaMatched()).isTrue();
         assertThat(diagnostics.requestCount()).isBetween(1, 2);
