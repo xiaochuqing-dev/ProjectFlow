@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       run_real_model:
-        description: "使用 Secrets 执行 GLM 与 DeepSeek V3.8.5 真实验收"
+        description: "使用 OpenCode Go Secret 执行 GPT 5.6 Luna、DeepSeek V4 Flash 和 Qwen3.7 Plus 真实验收"
         required: false
         default: false
         type: boolean
@@ -20,14 +20,16 @@ on:
           - affected
           - full
       real_model_provider:
-        description: "真实模型 Provider；默认同时验收，也可定向复验"
+        description: "真实模型 Provider；默认验收全部三种模型，也可定向复验"
         required: false
-        default: both
+        default: all
         type: choice
         options:
+          - all
           - both
-          - glm
+          - luna
           - deepseek
+          - qwen
 
 permissions:
   contents: read
@@ -215,12 +217,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - id: glm
-            display_name: GLM Responses
-            secret_name: PROJECTFLOW_REAL_MODEL_API_KEY
-            provider: GLM
-            base_url: https://ark.cn-beijing.volces.com/api/coding/v3
-            model: glm-5.2
+          - id: luna
+            display_name: GPT 5.6 Luna Responses
+            secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
+            provider: GPT 5.6 Luna OpenCode Go
+            base_url: https://opencode.ai/zen/go/v1
+            model: gpt-5.6-luna
             type: OPENAI
             protocol: OPENAI_RESPONSES
             supports_json_mode: "true"
@@ -228,7 +230,7 @@ jobs:
             supports_reasoning_control: "true"
             reasoning_effort: max
           - id: deepseek
-            display_name: DeepSeek Chat
+            display_name: DeepSeek V4 Flash Chat
             secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
             provider: DeepSeek OpenCode Go
             base_url: https://opencode.ai/zen/go/v1
@@ -236,6 +238,18 @@ jobs:
             type: DEEPSEEK
             protocol: OPENAI_CHAT_COMPLETIONS
             supports_json_mode: "true"
+            supports_reasoning: "true"
+            supports_reasoning_control: "true"
+            reasoning_effort: max
+          - id: qwen
+            display_name: Qwen3.7 Plus Messages
+            secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
+            provider: Qwen3.7 Plus OpenCode Go
+            base_url: https://opencode.ai/zen/go/v1
+            model: qwen3.7-plus
+            type: ANTHROPIC
+            protocol: ANTHROPIC_MESSAGES
+            supports_json_mode: "false"
             supports_reasoning: "true"
             supports_reasoning_control: "true"
             reasoning_effort: max
@@ -249,7 +263,7 @@ jobs:
           java-version: "17"
           cache: maven
       - name: 确认 ${{ matrix.display_name }} 安全凭据已配置
-        if: inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
+        if: inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
         shell: bash
         env:
           PROVIDER_KEY: ${{ secrets[matrix.secret_name] }}
@@ -259,7 +273,7 @@ jobs:
             exit 1
           fi
       - name: 真实 ${{ matrix.display_name }} 连接、Ground Truth 与资格验收
-        if: inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
+        if: inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
         working-directory: backend
         env:
           PROJECTFLOW_RUN_REAL_MODEL: "true"
@@ -311,7 +325,7 @@ jobs:
             exit 1
           fi
       - name: 保存内部真实模型资格评测工件
-        if: ${{ always() && (inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id) }}
+        if: ${{ always() && (inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id) }}
         uses: actions/upload-artifact@v4
         with:
           name: projectflow-real-model-qualification-${{ matrix.id }}
@@ -328,21 +342,21 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - id: glm
-            display_name: GLM Responses
-            secret_name: PROJECTFLOW_REAL_MODEL_API_KEY
-            provider: GLM
-            base_url: https://ark.cn-beijing.volces.com/api/coding/v3
-            model: glm-5.2
+          - id: luna
+            display_name: GPT 5.6 Luna Responses
+            secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
+            provider: GPT 5.6 Luna OpenCode Go
+            base_url: https://opencode.ai/zen/go/v1
+            model: gpt-5.6-luna
             type: OPENAI
             protocol: OPENAI_RESPONSES
             supports_json_mode: "true"
             supports_reasoning: "true"
             supports_reasoning_control: "true"
             reasoning_effort: max
-            dogfood_test: GLMDogfoodRegressionTest
+            dogfood_test: LunaDogfoodRegressionTest
           - id: deepseek
-            display_name: DeepSeek Chat
+            display_name: DeepSeek V4 Flash Chat
             secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
             provider: DeepSeek OpenCode Go
             base_url: https://opencode.ai/zen/go/v1
@@ -354,6 +368,19 @@ jobs:
             supports_reasoning_control: "true"
             reasoning_effort: max
             dogfood_test: DeepSeekDogfoodRegressionTest
+          - id: qwen
+            display_name: Qwen3.7 Plus Messages
+            secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
+            provider: Qwen3.7 Plus OpenCode Go
+            base_url: https://opencode.ai/zen/go/v1
+            model: qwen3.7-plus
+            type: ANTHROPIC
+            protocol: ANTHROPIC_MESSAGES
+            supports_json_mode: "false"
+            supports_reasoning: "true"
+            supports_reasoning_control: "true"
+            reasoning_effort: max
+            dogfood_test: QwenDogfoodRegressionTest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -364,7 +391,7 @@ jobs:
           java-version: "17"
           cache: maven
       - name: 确认 ${{ matrix.display_name }} 安全凭据已配置
-        if: inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
+        if: inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
         shell: bash
         env:
           PROVIDER_KEY: ${{ secrets[matrix.secret_name] }}
@@ -374,7 +401,7 @@ jobs:
             exit 1
           fi
       - name: 真实 ${{ matrix.display_name }} 场景、Dogfood 与非代码验收
-        if: inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
+        if: inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
         working-directory: backend
         env:
           PROJECTFLOW_RUN_REAL_MODEL: "true"
@@ -422,7 +449,7 @@ jobs:
             exit 1
           fi
       - name: 保存内部真实模型场景评测工件
-        if: ${{ always() && (inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id) }}
+        if: ${{ always() && (inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id) }}
         uses: actions/upload-artifact@v4
         with:
           name: projectflow-real-model-scenarios-${{ matrix.id }}

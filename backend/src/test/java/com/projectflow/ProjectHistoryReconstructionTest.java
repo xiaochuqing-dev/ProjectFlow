@@ -990,7 +990,7 @@ class ProjectHistoryReconstructionTest {
     }
 
     @Test
-    void keepsMoreThanOneThousandEventsAcrossThreeHundredCommitsAndCapsModelAtOneBoundedBatch() throws Exception {
+    void keepsMoreThanOneThousandEventsAcrossThreeHundredCommitsAndCapsStoryModelAtOneBoundedBatch() throws Exception {
         UUID userId = UUID.randomUUID();
         Path repository = temporaryRoot.resolve("large-history");
         Files.createDirectories(repository);
@@ -999,16 +999,23 @@ class ProjectHistoryReconstructionTest {
         ProjectSpace project = project(userId, "Large History", repository);
         provider(userId);
 
-        AtomicInteger calls = new AtomicInteger();
+        AtomicInteger storyCalls = new AtomicInteger();
+        AtomicInteger chapterCalls = new AtomicInteger();
         when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
-            calls.incrementAndGet();
-            return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
+            String prompt = invocation.getArgument(1, String.class);
+            if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+                chapterCalls.incrementAndGet();
+                return modelResponse(historyChapterModelResponse(prompt));
+            }
+            storyCalls.incrementAndGet();
+            return modelResponse(historyModelResponse(prompt));
         });
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
 
         var overview = readService.overview(userId, project.getId());
-        assertThat(calls.get()).as("history diagnostics: %s", overview.diagnostics()).isEqualTo(1);
+        assertThat(storyCalls.get()).as("history diagnostics: %s", overview.diagnostics()).isEqualTo(1);
+        assertThat(chapterCalls.get()).isLessThanOrEqualTo(4);
         assertThat(overview.sourceEventCount()).isGreaterThan(1_000);
         assertThat(overview.coverage().complete()).isTrue();
         assertThat(((Number) overview.diagnostics().get("boundedDeterministicStoryCount")).intValue()).isGreaterThan(0);
@@ -1158,6 +1165,47 @@ class ProjectHistoryReconstructionTest {
         assertThat(chapterCalls.get()).isEqualTo(chapters.size());
         assertThat(readService.overview(userId, project.getId()).diagnostics())
             .containsEntry("chapterSynthesisCacheHitCount", chapters.size());
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void routesAutomaticChapterWordingOnlyThroughTheRepresentationPlanStage() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path root = temporaryRoot.resolve("chapter-plan-only-stage");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "Chapter Plan Only Stage", root);
+        historicalFacts(project, 3, 1, 1, 0);
+        provider(userId);
+
+        AtomicInteger storyCalls = new AtomicInteger();
+        AtomicInteger chapterCalls = new AtomicInteger();
+        AtomicReference<String> storyPrompt = new AtomicReference<>();
+        AtomicReference<String> chapterPrompt = new AtomicReference<>();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(1, String.class);
+            ModelTaskType task = invocation.getArgument(2, ModelTaskType.class);
+            if (task == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+                chapterCalls.incrementAndGet();
+                chapterPrompt.set(prompt);
+                return modelResponse(historyChapterModelResponse(prompt));
+            }
+            storyCalls.incrementAndGet();
+            storyPrompt.set(prompt);
+            return modelResponse(historyModelResponse(prompt));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        assertThat(storyCalls.get()).isEqualTo(1);
+        assertThat(chapterCalls.get()).isEqualTo(1);
+        assertThat(storyPrompt.get()).contains("requiredChapterIds=[]", "\"chapters\":[]");
+        assertThat(chapterPrompt.get()).contains(
+            "CHAPTER_SYNTHESIS_JSON", "requiredRepresentativeClusterIds", "deterministicFallback"
+        );
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("chapterSynthesisCount", 1)
+            .containsEntry("chapterSynthesisProcessedCount", 1)
+            .containsEntry("chapterSynthesisFailedCount", 0);
     }
 
     @Test
@@ -1417,7 +1465,8 @@ class ProjectHistoryReconstructionTest {
         });
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
-        var originalCheckpoints = checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId());
+        var originalCheckpoints = checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()).stream()
+            .filter(value -> value.getWindowIdentity().startsWith("window-")).toList();
         List<UUID> originalCheckpointIds = originalCheckpoints.stream().map(value -> value.getId()).toList();
         List<String> originalCacheKeys = originalCheckpoints.stream().map(value -> value.getCacheKey()).toList();
         assertThat(calls.get()).isEqualTo(2);
@@ -1464,13 +1513,17 @@ class ProjectHistoryReconstructionTest {
 
         AtomicInteger calls = new AtomicInteger();
         when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+                return modelResponse(historyChapterModelResponse(invocation.getArgument(1, String.class)));
+            }
             calls.incrementAndGet();
             return modelResponse(historyModelResponse(invocation.getArgument(1, String.class)));
         });
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         List<UUID> originalCheckpointIds = checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId())
-            .stream().map(value -> value.getId()).toList();
+            .stream().filter(value -> value.getWindowIdentity().startsWith("window-"))
+            .map(value -> value.getId()).toList();
         var target = readService.stories(userId, project.getId(), null, false, null, null, 0, 1).items().get(0);
         ProjectHistorySnapshot snapshot = snapshotRepository.findByProjectId(project.getId()).orElseThrow();
         String revision = correctionService.list(userId, project.getId()).presentationRevision();
@@ -1482,7 +1535,8 @@ class ProjectHistoryReconstructionTest {
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
 
         List<UUID> afterCorrection = checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId())
-            .stream().map(value -> value.getId()).toList();
+            .stream().filter(value -> value.getWindowIdentity().startsWith("window-"))
+            .map(value -> value.getId()).toList();
         assertThat(calls.get()).isEqualTo(3);
         assertThat(afterCorrection).hasSize(2);
         assertThat(afterCorrection.stream().filter(originalCheckpointIds::contains).count()).isEqualTo(1);

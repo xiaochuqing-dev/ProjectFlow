@@ -21,15 +21,15 @@ public class ModelCapabilityRegistry {
             || model.matches(".*(^|[-_])r1($|[-_]).*")
             || glm5;
         boolean knownChat = model.contains("chat");
+        boolean supportsReasoning = provider.getSupportsReasoning() != null ? provider.getSupportsReasoning() : reasoning;
         boolean supportsTemperature = provider.getSupportsTemperature() != null
-            ? provider.getSupportsTemperature() : !reasoning;
+            ? provider.getSupportsTemperature() : !supportsReasoning;
         boolean protocolJson = provider.getProtocol() == ModelProtocol.OPENAI_CHAT_COMPLETIONS;
         boolean defaultJsonMode = protocolJson && deepSeek && !reasoning && knownChat;
         boolean supportsJsonMode = provider.getSupportsJsonMode() != null
             ? provider.getSupportsJsonMode() : defaultJsonMode;
         boolean supportsStructuredOutput = provider.getSupportsStructuredOutput() != null
             ? provider.getSupportsStructuredOutput() : provider.getProtocol() == ModelProtocol.OPENAI_RESPONSES;
-        boolean supportsReasoning = provider.getSupportsReasoning() != null ? provider.getSupportsReasoning() : reasoning;
         boolean supportsReasoningControl = provider.getSupportsReasoningControl() != null
             ? provider.getSupportsReasoningControl() : false;
         String profile = deepSeek

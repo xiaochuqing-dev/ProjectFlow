@@ -1418,7 +1418,7 @@ public class ProjectHistoryReconstructionService {
                     continue;
                 }
                 ProjectHistoryPromptBuilder.PromptBuildResult prompt = modelPrompt(
-                    current, events, batch.storyIds(), batch.chapterIds(), reasonEvidence
+                    current, events, batch.storyIds(), reasonEvidence
                 );
                 promptCharacterCount += prompt.promptCharacterCount();
                 promptOmittedStories += prompt.omittedStoryCount();
@@ -1836,7 +1836,8 @@ public class ProjectHistoryReconstructionService {
                 ProjectHistorySourceCollector.sha256(String.join("|", chapter.storyRefs())),
                 chapterRepresentativeClusterInputs(representation), representation.requiredRepresentativeClusterIds(),
                 representation.dominantClusterIds(), representation.representativePrimaryCoverage(),
-                representation.unknowns(), representation.conflicts(), chapterForbiddenOverclaims(representation), summaries
+                representation.unknowns(), representation.conflicts(), chapterForbiddenOverclaims(representation), summaries,
+                boundedPromptText(chapter.title(), 240), boundedPromptText(chapter.summary(), 1_500)
             );
         return promptBuilder.buildChapterProduction(input);
     }
@@ -2117,7 +2118,7 @@ public class ProjectHistoryReconstructionService {
         Map<String, List<String>> reasonEvidence
     ) {
         ProjectHistoryPromptBuilder.PromptBuildResult prompt = modelPrompt(
-            base, events, batch.storyIds(), batch.chapterIds(), reasonEvidence
+            base, events, batch.storyIds(), reasonEvidence
         );
         if (prompt.includedStoryIds().containsAll(batch.storyIds())) return List.of(batch);
         if (batch.storyIds().size() <= 1) {
@@ -2169,7 +2170,6 @@ public class ProjectHistoryReconstructionService {
         SnapshotResult base,
         List<ProjectHistoryEvent> events,
         Set<String> eligibleStories,
-        Set<String> eligibleChapters,
         Map<String, List<String>> reasonEvidenceByStory
     ) {
         Map<UUID, EventView> views = new LinkedHashMap<>();
@@ -2205,21 +2205,13 @@ public class ProjectHistoryReconstructionService {
                 boundedPromptText(envelope.downgradeReason(), 300),
                 envelope.allowedClaims(), envelope.forbiddenClaims(), envelope.humanSafeSourceContext(), story.role(),
                 story.primaryStoryId(),
-                story.supportingChangeRefs().stream().limit(40).toList()
+                story.supportingChangeRefs().stream().limit(40).toList(),
+                boundedPromptText(story.humanTitle(), 240), boundedPromptText(story.oneSentenceSummary(), 1_000)
             );
         }).toList();
-        List<ProjectHistoryPromptBuilder.ChapterPromptInput> chapters = base.chapters().stream()
-            .filter(chapter -> eligibleChapters.contains(chapter.id()))
-            .map(chapter -> {
-                ProjectHistoryChapterRepresentationPlanner.Plan representation = chapterRepresentationPlan(base, chapter);
-                return new ProjectHistoryPromptBuilder.ChapterPromptInput(
-                    chapter.id(), chapter.from().toString(), chapter.to().toString(), chapter.storyRefs(),
-                    chapter.boundarySignals(), chapterRepresentativeClusterInputs(representation),
-                    representation.requiredRepresentativeClusterIds(), representation.dominantClusterIds(),
-                    representation.representativePrimaryCoverage()
-                );
-            }).toList();
-        return promptBuilder.buildProduction(new ProjectHistoryPromptBuilder.PromptInput(stories, chapters));
+        // Chapter wording is finalized only by the second-stage Representation
+        // Plan prompt, where exact representative cluster IDs are validated.
+        return promptBuilder.buildProduction(new ProjectHistoryPromptBuilder.PromptInput(stories, List.of()));
     }
 
     private static String boundedPromptText(String value, int limit) {
@@ -2235,9 +2227,13 @@ public class ProjectHistoryReconstructionService {
         HistoryResponseParser<T> parser,
         List<ModelGatewayService.ModelCallDiagnostics> diagnostics
     ) throws java.io.IOException, InterruptedException {
-        ModelGatewayService.StructuredModelResponse first = requireStructuredResponse(
-            modelGateway.callStructured(provider, prompt, task)
-        );
+        ModelGatewayService.StructuredModelResponse first;
+        try {
+            first = requireStructuredResponse(modelGateway.callStructured(provider, prompt, task));
+        } catch (ModelGatewayService.ModelResponseFormatException failure) {
+            if (failure.diagnostics() != null) diagnostics.add(failure.diagnostics());
+            throw failure;
+        }
         try {
             T value = parser.parse(first.parsed().root());
             diagnostics.add(first.diagnostics());

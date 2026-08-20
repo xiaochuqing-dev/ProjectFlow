@@ -15,23 +15,25 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v12";
-    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v7";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v13";
+    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v8";
     static final int MAX_PROMPT_CHARS = 60_000;
     public static final String VALIDATION_REPAIR_MARKER = "\nHISTORY_VALIDATION_REPAIR=";
     private static final String VALIDATION_REPAIR_INSTRUCTIONS = """
-        上一次输出未通过 ProjectFlow 的统一语义安全校验。请从原输入重新生成一次完整 JSON，不要复述或修补上一次输出。
+        上一次输出未通过 ProjectFlow 的统一语义安全校验。本次不要重新发挥：必须原样复制 REQUIRED_OUTPUT_TEMPLATE_JSON；若末尾未重复该对象，则原样复制原输入中的 OUTPUT_TEMPLATE_JSON。
         只能使用 OUTPUT_TEMPLATE_JSON 中的对象、ID 和字段；每个 required ID 必须且只能返回一次。
         reasonEvidenceRefs 只能逐项复制对应 Story 的 reasonEligibleEvidenceRefs；没有采用合格 Evidence 时 reason 留空，并保留模板中的“原因未知”。只有 reason 非空且 reasonEvidenceRefs 非空时才可清空 unknownWording。
         Before / Change / After 只能改写 wording，不得改变 verified semantic、claimState 或 allowed claims。
         humanTitle 必须明确写出动作和对象，并由 humanTitle 与 oneSentenceSummary 共同写出已经受支持的结果；“编写某功能代码”“留下变化记录”等没有明确结果的表达不合格。
+        OUTPUT_TEMPLATE_JSON 已预填工程层确定性安全草稿；如果不能在硬边界内明确改进某个字段，就原样保留该字段，不得改写固定 ID。
         不得返回工程层字段，不得创造 ID、Evidence、实体、动作、原因、冲突、数字或项目状态。只返回严格 JSON。
         不得使用“相关变化”“工程分组”“形成初始结果”“进入当前时间点可确认的新状态”等空泛或内部模板表达。
         """;
     private static final String CHAPTER_VALIDATION_REPAIR_INSTRUCTIONS = """
-        上一次篇章输出未通过 ProjectFlow 的统一语义安全校验。请从原始 CHAPTER_SYNTHESIS_JSON 重新生成一次完整 JSON，不要复述或修补上一次输出。
+        上一次篇章输出未通过 ProjectFlow 的统一语义安全校验。本次不要重新发挥：必须把 CHAPTER_SYNTHESIS_JSON.deterministicFallback 原样包装为 chapters 数组中的唯一对象。
         只能返回一个篇章对象，且只能包含 chapterId、representedClusterIds、title、summary；chapterId 必须与原输入完全一致。不得返回或修改 Story 成员、时间、边界或其他字段。
         representedClusterIds 必须逐项复制 requiredRepresentativeClusterIds，不能遗漏、增加或重排。title 必须代表 dominantClusterIds 中至少一个主成果簇；summary 必须覆盖每个 required Representative Cluster，并把 Supporting 信息保持为次要说明。
+        CHAPTER_SYNTHESIS_JSON.deterministicFallback 是已通过同一 Validator 的安全草稿；任何字段无法可靠改进时，原样返回整个 deterministicFallback。
         每个成果簇只能使用其 representativeOutcomes、allowedClaimStates、unknowns 与 conflicts 中允许的表达；不得把一个成果簇的状态或结果借给另一个成果簇。
         不得使用“围绕”“推进”“完善”“建设”等空泛词替代具体结果，不得返回列表、路径、成熟度、原因、计划或项目状态。
         只返回严格 JSON，不得增加字段：
@@ -57,6 +59,7 @@ public final class ProjectHistoryPromptBuilder {
         可改字段只有 Story 的 humanTitle、oneSentenceSummary、beforeWording、changeWording、afterWording、reason、reasonEvidenceRefs、unknownWording，以及 Chapter 的 title、summary。
         role、primaryStoryId、supportingChangeRefs、storyRefs、时间、verified semantic、claimState、laterOutcome、成员和 Evidence 都由工程层固定，禁止返回或改写。
         humanTitle 只用一句话表达“做了什么 + 对象 + 形成的结果”；oneSentenceSummary 补充范围或影响；Before 只讲此前状态；Change 只讲本阶段动作；After 只讲最终状态。五段不得复读同一句话。
+        OUTPUT_TEMPLATE_JSON 已预填工程层确定性安全草稿。只有在不改变 ID、事实、状态和 Evidence 的前提下才能改进文字；不确定时逐字段原样保留预填内容。
         subjectDisplayConcept 是第一层唯一允许的主要对象；不得输出 raw subject、路径、文件名、class、internal slug、截断 token 或输入外的新实体。
         claimState、claimAction、supportedOutcome、supportClass、allowedClaims 与 forbiddenClaims 是硬边界。PLANNED 不得写成 IMPLEMENTED，DECLARED 不得写成 VERIFIED，CONFIGURED 不得写成已部署，未给直接验证 Evidence 不得写稳定或生产可用。
         directSupportSummary 是与当前 subject/action 直接匹配的有界支持；indirectContextSummary 只解释上下文，明确不能提升 Claim。不得因为同 Commit、相邻时间、相同区域或 Supporting Story 把间接上下文借给当前 Claim。
@@ -74,6 +77,7 @@ public final class ProjectHistoryPromptBuilder {
         只能改进篇章的中文标题和摘要。chapterId 必须原样返回且只能返回一次；representedClusterIds 必须逐项复制 requiredRepresentativeClusterIds，不能遗漏、增加或重排；不得返回或修改 Story 成员、时间、边界、权威或任何其他字段。
         标题必须直接代表 dominantClusterIds 中至少一个主成果簇；两个 co-dominant 主成果可自然形成双中心标题。摘要必须覆盖全部 required Representative Cluster，让普通用户能够复述这一时期实际完成了什么，再把 Supporting 保留为次要工程信息。不得以数量开头，不得把 Story subject 拼接成标题，不得把文件、测试、配置或验证数量描述为用户成果。
         representativeOutcomes、representativeStorySummaries、allowedClaimStates、unknowns、conflicts 与 forbiddenOverclaims 是硬边界。不得把一个成果簇的状态、结果或 Evidence 强度借给另一个成果簇，也不得引入 represented cluster 之外的新结果。
+        deterministicFallback 是工程层已验证的完整输出草稿。只有能同时满足全部成果簇和状态上限时才改写；任何不确定都必须原样返回 deterministicFallback。
         不得仅用“围绕某主题推进”“相关成果逐步形成并得到完善”“完成相关建设”等空泛句式。不得使用“相关变化”“工程分组”“形成初始结果”“进入当前时间点可确认的新状态”等内部模板表达。
         如果部分 Story 摘要因边界被省略，只能根据工程层成果簇及代表摘要保守归纳，不得补造遗漏内容。
         禁止重要性、成熟度、里程碑、成功判断、下一步、计划或建议。禁止创造 ID、Evidence、文件、数字、原因或项目状态。
@@ -114,6 +118,11 @@ public final class ProjectHistoryPromptBuilder {
             ? CHAPTER_VALIDATION_REPAIR_INSTRUCTIONS
             : VALIDATION_REPAIR_INSTRUCTIONS;
         String repaired = safePrompt + VALIDATION_REPAIR_MARKER + safeKind + "\n" + repairInstructions;
+        String exactTemplate = outputTemplate(safePrompt);
+        String reminder = exactTemplate.isBlank() ? "" : "\nREQUIRED_OUTPUT_TEMPLATE_JSON=" + exactTemplate;
+        if (!reminder.isBlank() && repaired.length() + reminder.length() <= MAX_PROMPT_CHARS) {
+            repaired += reminder;
+        }
         if (repaired.length() > MAX_PROMPT_CHARS) {
             throw new IllegalStateException("项目历程安全修复 Prompt 超过有界上限");
         }
@@ -123,7 +132,7 @@ public final class ProjectHistoryPromptBuilder {
     private ChapterSynthesisBuildResult buildChapter(ChapterSynthesisPromptInput input) {
         ChapterSynthesisPromptInput safe = input == null
             ? new ChapterSynthesisPromptInput("", "", "", 0, 0, 0, List.of(), "", List.of(),
-                List.of(), List.of(), 0.0, List.of(), List.of(), List.of(), List.of())
+                List.of(), List.of(), 0.0, List.of(), List.of(), List.of(), List.of(), "", "")
             : input;
         List<ChapterStorySummaryInput> candidates = representativeStorySummaries(safe.storySummaries());
         List<ChapterStorySummaryInput> selected = new ArrayList<>();
@@ -159,11 +168,16 @@ public final class ProjectHistoryPromptBuilder {
         ChapterSynthesisPromptInput input,
         List<ChapterStorySummaryInput> selected
     ) {
+        ChapterSynthesisOutputTemplate deterministicFallback = new ChapterSynthesisOutputTemplate(
+            input.chapterId(), input.requiredRepresentativeClusterIds(),
+            text(input.deterministicTitle()), text(input.deterministicSummary())
+        );
         PackedChapterSynthesisInput packed = new PackedChapterSynthesisInput(
             input.chapterId(), input.from(), input.to(), input.storyCount(), input.primaryStoryCount(),
             input.supportingStoryCount(), input.boundarySignals(), input.membershipFingerprint(),
             input.representativeClusters(), input.requiredRepresentativeClusterIds(), input.dominantClusterIds(),
             input.representativePrimaryCoverage(), input.unknowns(), input.conflicts(), input.forbiddenOverclaims(),
+            deterministicFallback,
             selected.size(), Math.max(0, input.primaryStoryCount() - selected.size()), selected
         );
         return CHAPTER_SYNTHESIS_INSTRUCTIONS + CHAPTER_SYNTHESIS_MARKER + json(packed);
@@ -241,10 +255,14 @@ public final class ProjectHistoryPromptBuilder {
         List<String> storyIds = stories.stream().map(StoryPromptInput::storyId).toList();
         List<String> chapterIds = chapters.stream().map(ChapterPromptInput::chapterId).toList();
         List<StoryOutputTemplate> storyTemplates = stories.stream().map(story -> new StoryOutputTemplate(
-            story.storyId(), "", "", "", "", "", "", List.of(), UNKNOWN_REASON
+            story.storyId(), text(story.deterministicHumanTitle()), text(story.deterministicOneSentenceSummary()),
+            text(story.deterministicBefore()), text(story.deterministicChange()), text(story.deterministicAfter()),
+            "", List.of(), UNKNOWN_REASON
         )).toList();
         List<ChapterOutputTemplate> chapterTemplates = chapters.stream()
-            .map(chapter -> new ChapterOutputTemplate(chapter.chapterId(), "", ""))
+            .map(chapter -> new ChapterOutputTemplate(
+                chapter.chapterId(), text(chapter.deterministicTitle()), text(chapter.deterministicSummary())
+            ))
             .toList();
         String outputCheck = """
 
@@ -306,7 +324,9 @@ public final class ProjectHistoryPromptBuilder {
         List<String> humanSafeSourceContext,
         @JsonIgnore String role,
         @JsonIgnore String primaryStoryId,
-        @JsonIgnore List<String> supportingChangeRefs
+        @JsonIgnore List<String> supportingChangeRefs,
+        String deterministicHumanTitle,
+        String deterministicOneSentenceSummary
     ) {
         public StoryPromptInput(
             String storyId,
@@ -325,7 +345,7 @@ public final class ProjectHistoryPromptBuilder {
             this(storyId, subject, occurredFrom, occurredTo, transitions, sourceLabels, affectedAreas, evidenceRefs,
                 reasonEligibleEvidenceRefs, deterministicBefore, deterministicChange, deterministicAfter, "OBSERVED",
                 "OBSERVE", "只能描述直接观察到的变化", List.of(), List.of(), "DIRECT", "",
-                List.of(), List.of(), List.of(), "PRIMARY", "", List.of());
+                List.of(), List.of(), List.of(), "PRIMARY", "", List.of(), "", "");
         }
 
         public StoryPromptInput {
@@ -363,7 +383,9 @@ public final class ProjectHistoryPromptBuilder {
         List<ChapterRepresentativeClusterInput> representativeClusters,
         List<String> requiredRepresentativeClusterIds,
         List<String> dominantClusterIds,
-        double representativePrimaryCoverage
+        double representativePrimaryCoverage,
+        String deterministicTitle,
+        String deterministicSummary
     ) {
         public ChapterPromptInput(
             String chapterId,
@@ -372,7 +394,7 @@ public final class ProjectHistoryPromptBuilder {
             List<String> storyRefs,
             List<String> boundarySignals
         ) {
-            this(chapterId, from, to, storyRefs, boundarySignals, List.of(), List.of(), List.of(), 0.0);
+            this(chapterId, from, to, storyRefs, boundarySignals, List.of(), List.of(), List.of(), 0.0, "", "");
         }
 
         public ChapterPromptInput {
@@ -383,6 +405,14 @@ public final class ProjectHistoryPromptBuilder {
                 ? List.of() : List.copyOf(requiredRepresentativeClusterIds);
             dominantClusterIds = dominantClusterIds == null ? List.of() : List.copyOf(dominantClusterIds);
         }
+    }
+
+    private static String outputTemplate(String prompt) {
+        int start = prompt.indexOf(OUTPUT_TEMPLATE_MARKER);
+        if (start < 0) return "";
+        start += OUTPUT_TEMPLATE_MARKER.length();
+        int end = prompt.indexOf(STORIES_MARKER, start);
+        return end <= start ? "" : prompt.substring(start, end);
     }
 
     private record OutputTemplate(
@@ -433,7 +463,9 @@ public final class ProjectHistoryPromptBuilder {
         List<String> unknowns,
         List<String> conflicts,
         List<String> forbiddenOverclaims,
-        List<ChapterStorySummaryInput> storySummaries
+        List<ChapterStorySummaryInput> storySummaries,
+        String deterministicTitle,
+        String deterministicSummary
     ) {
         public ChapterSynthesisPromptInput(
             String chapterId,
@@ -448,7 +480,7 @@ public final class ProjectHistoryPromptBuilder {
         ) {
             this(chapterId, from, to, storyCount, primaryStoryCount, supportingStoryCount, boundarySignals,
                 membershipFingerprint, List.of(), List.of(), List.of(), 0.0, List.of(), List.of(), List.of(),
-                storySummaries);
+                storySummaries, "", "");
         }
 
         public ChapterSynthesisPromptInput {
@@ -513,9 +545,18 @@ public final class ProjectHistoryPromptBuilder {
         List<String> unknowns,
         List<String> conflicts,
         List<String> forbiddenOverclaims,
+        ChapterSynthesisOutputTemplate deterministicFallback,
         int includedStorySummaryCount,
         int omittedStorySummaryCount,
         List<ChapterStorySummaryInput> storySummaries
+    ) {
+    }
+
+    private record ChapterSynthesisOutputTemplate(
+        String chapterId,
+        List<String> representedClusterIds,
+        String title,
+        String summary
     ) {
     }
 

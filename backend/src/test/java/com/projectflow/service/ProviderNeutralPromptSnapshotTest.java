@@ -15,7 +15,7 @@ class ProviderNeutralPromptSnapshotTest {
         String prompt = builder.buildProduction(new ProjectHistoryPromptBuilder.PromptInput(List.of(), List.of())).prompt();
         String instructions = prompt.substring(0, prompt.indexOf("\nSTORIES_JSON="));
 
-        assertThat(ProjectHistoryPromptBuilder.PROMPT_VERSION).isEqualTo("project-history-synthesis-v12");
+        assertThat(ProjectHistoryPromptBuilder.PROMPT_VERSION).isEqualTo("project-history-synthesis-v13");
         assertThat(instructions).contains(
             "可改字段只有 Story 的 humanTitle、oneSentenceSummary、beforeWording、changeWording、afterWording、reason、reasonEvidenceRefs、unknownWording",
             "role、primaryStoryId、supportingChangeRefs、storyRefs、时间、verified semantic、claimState",
@@ -23,6 +23,7 @@ class ProviderNeutralPromptSnapshotTest {
             "directSupportSummary 是与当前 subject/action 直接匹配的有界支持",
             "不得因为同 Commit、相邻时间、相同区域或 Supporting Story 把间接上下文借给当前 Claim",
             "五段不得复读同一句话",
+            "OUTPUT_TEMPLATE_JSON 已预填工程层确定性安全草稿",
             "输出前做机械核对",
             "requiredStoryIds=[]",
             "OUTPUT_TEMPLATE_JSON={\"stories\":[],\"chapters\":[]}",
@@ -44,14 +45,15 @@ class ProviderNeutralPromptSnapshotTest {
         )).prompt();
         String chapterRepair = builder.validationRepair(chapterPrompt, "CONTRACT");
         assertThat(ProjectHistoryPromptBuilder.CHAPTER_PROMPT_VERSION)
-            .isEqualTo("project-history-chapter-synthesis-v7");
+            .isEqualTo("project-history-chapter-synthesis-v8");
         assertThat(ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS.minimalSchema())
             .contains("representedClusterIds");
         assertThat(chapterRepair).contains(
             "CHAPTER_SYNTHESIS_JSON=",
-            "从原始 CHAPTER_SYNTHESIS_JSON 重新生成",
+            "必须把 CHAPTER_SYNTHESIS_JSON.deterministicFallback 原样包装",
             "只能包含 chapterId、representedClusterIds、title、summary",
             "representedClusterIds 必须逐项复制 requiredRepresentativeClusterIds",
+            "deterministicFallback 是已通过同一 Validator 的安全草稿",
             "title 必须代表 dominantClusterIds 中至少一个主成果簇"
         ).doesNotContain("只能使用 OUTPUT_TEMPLATE_JSON", "DeepSeek", "GLM");
     }

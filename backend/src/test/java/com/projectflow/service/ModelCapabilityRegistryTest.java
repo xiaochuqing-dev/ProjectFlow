@@ -3,12 +3,14 @@ package com.projectflow.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
+import com.projectflow.entity.ModelProtocol;
 
 class ModelCapabilityRegistryTest {
     private final ModelCapabilityRegistry registry = new ModelCapabilityRegistry();
@@ -62,6 +64,22 @@ class ModelCapabilityRegistryTest {
         assertThat(capabilities.supportsReasoning()).isTrue();
         assertThat(capabilities.supportsTemperature()).isFalse();
         assertThat(capabilities.supportsStructuredOutput()).isTrue();
+    }
+
+    @Test
+    void explicitMessagesReasoningCapabilityOmitsTemperatureUnlessExplicitlyOverridden() {
+        AiProvider provider = provider(AiProviderType.ANTHROPIC, "qwen3.7-plus", 65_536);
+        provider.configureProtocol(
+            ModelProtocol.ANTHROPIC_MESSAGES, null, null, null, null, Map.of(), 600,
+            null, false, false, true, true
+        );
+
+        var capabilities = registry.resolve(provider);
+
+        assertThat(capabilities.profile()).isEqualTo("ANTHROPIC_MESSAGES_STANDARD");
+        assertThat(capabilities.supportsReasoning()).isTrue();
+        assertThat(capabilities.supportsReasoningControl()).isTrue();
+        assertThat(capabilities.supportsTemperature()).isFalse();
     }
 
     private AiProvider provider(AiProviderType type, String model, int maxTokens) {

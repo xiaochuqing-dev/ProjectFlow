@@ -228,6 +228,44 @@ class ModelRequestPolicyTest {
     }
 
     @Test
+    void messagesMaxReasoningIsPreservedAcrossInitialAndRecoveryRequests() {
+        ModelRequestPolicy maxPolicy = new ModelRequestPolicy("max");
+        AiProvider provider = provider(AiProviderType.ANTHROPIC, "qwen3.7-plus", 0.1, 65_536);
+        provider.configureProtocol(
+            ModelProtocol.ANTHROPIC_MESSAGES,
+            null,
+            null,
+            null,
+            null,
+            Map.of(),
+            600,
+            false,
+            false,
+            false,
+            true,
+            true
+        );
+        var capabilities = registry.resolve(provider);
+        var initial = maxPolicy.initial(
+            provider,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "x".repeat(48_000)
+        );
+        var recovery = maxPolicy.recovery(
+            initial,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "EMPTY_AFTER_REASONING_RETRY",
+            0
+        );
+
+        assertThat(maxPolicy.reasoningEffort(capabilities)).isEqualTo("max");
+        assertThat(initial.maxTokenDecision()).contains("Messages thinking budget", "max");
+        assertThat(recovery.maxTokenDecision()).contains("Messages thinking budget", "保持 max");
+    }
+
+    @Test
     void nonReasoningTruncationRetainsBoundedFiftyPercentIncrease() {
         AiProvider provider = provider("deepseek-chat", 0.2, 32_000);
         var capabilities = registry.resolve(provider);

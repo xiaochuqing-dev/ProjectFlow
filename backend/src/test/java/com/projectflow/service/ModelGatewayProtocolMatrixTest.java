@@ -289,6 +289,36 @@ class ModelGatewayProtocolMatrixTest {
         );
         assertThat(capturedBody.get().path("reasoning_effort").asText()).isEqualTo("max");
         assertThat(maxResponse.diagnostics().reasoningEffort()).isEqualTo("max");
+
+        AiProvider messagesControlled = provider(ModelProtocol.ANTHROPIC_MESSAGES);
+        messagesControlled.update(
+            "matrix", serverBase, "test-key", "qwen3.7-plus", AiProviderType.ANTHROPIC,
+            0.1, 65_536, true, List.of("TEST")
+        );
+        messagesControlled.configureProtocol(
+            ModelProtocol.ANTHROPIC_MESSAGES,
+            null,
+            AiProviderAuthMode.PROTOCOL_DEFAULT,
+            null,
+            null,
+            Map.of(),
+            30,
+            false,
+            false,
+            false,
+            true,
+            true
+        );
+        providerRequestCount.set(0);
+        var messagesMaxResponse = maxGateway.callStructured(
+            messagesControlled,
+            "最小兼容任务",
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT
+        );
+        assertThat(capturedBody.get().path("thinking").path("type").asText()).isEqualTo("enabled");
+        assertThat(capturedBody.get().path("thinking").path("budget_tokens").asLong()).isEqualTo(31_999L);
+        assertThat(capturedBody.get().has("temperature")).isFalse();
+        assertThat(messagesMaxResponse.diagnostics().reasoningEffort()).isEqualTo("max");
     }
 
     @AfterEach

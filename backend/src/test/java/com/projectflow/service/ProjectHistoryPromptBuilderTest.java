@@ -78,7 +78,8 @@ class ProjectHistoryPromptBuilderTest {
             "chapter-large", "2026-01-01T00:00:00Z", "2026-02-01T00:00:00Z", 200, 160, 40,
             List.of("DENSITY_BOUNDARY"), "membership-fingerprint", List.of(cluster("cluster-main")),
             List.of("cluster-main"), List.of("cluster-main"), 0.80, List.of(), List.of(),
-            List.of("不得提高状态"), stories
+            List.of("不得提高状态"), stories,
+            "建立登录流程", "登录入口已经形成，并保留了相应支撑说明。"
         );
 
         var production = builder.buildChapterProduction(input);
@@ -92,7 +93,8 @@ class ProjectHistoryPromptBuilderTest {
         assertThat(production.omittedStoryCount()).isEqualTo(80);
         assertThat(production.prompt()).contains(
             "primaryStoryCount", "supportingStoryCount", "membershipFingerprint", "representativeClusters",
-            "requiredRepresentativeClusterIds", "dominantClusterIds", "cluster-main"
+            "requiredRepresentativeClusterIds", "dominantClusterIds", "deterministicFallback", "cluster-main",
+            "建立登录流程", "登录入口已经形成"
         )
             .doesNotContain("rawEvent", "evidenceRefs", "technicalDetails", "commitSummaries", "file:", "commit:");
     }
@@ -116,9 +118,10 @@ class ProjectHistoryPromptBuilderTest {
             .contains(
                 "CHAPTER_SYNTHESIS_JSON=",
                 ProjectHistoryPromptBuilder.VALIDATION_REPAIR_MARKER + "CONTRACT",
-                "从原始 CHAPTER_SYNTHESIS_JSON 重新生成",
+                "必须把 CHAPTER_SYNTHESIS_JSON.deterministicFallback 原样包装",
                 "只能包含 chapterId、representedClusterIds、title、summary",
                 "representedClusterIds 必须逐项复制 requiredRepresentativeClusterIds",
+                "原样返回整个 deterministicFallback",
                 "{\"chapters\":[{\"chapterId\":\"\",\"representedClusterIds\":[],\"title\":\"\",\"summary\":\"\"}]}"
             )
             .doesNotContain("只能使用 OUTPUT_TEMPLATE_JSON");
@@ -138,7 +141,10 @@ class ProjectHistoryPromptBuilderTest {
             new ProjectHistoryPromptBuilder.StoryPromptInput(
                 "story-without-reason", "项目结果", "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z",
                 List.of("MODIFIED"), List.of(), List.of(), List.of("source:one"), List.of(),
-                "此前状态", "形成变化", "当前状态"
+                "此前状态", "形成变化", "当前状态", "OBSERVED", "OBSERVE", "只能描述可观察变化",
+                List.of(), List.of(), "DIRECT", "原因证据缺失", List.of(), List.of(), List.of(),
+                "PRIMARY", "", List.of(),
+                "调整项目结果并保留未知原因", "项目结果已发生可观察变化，原因仍待核对。"
             ),
             new ProjectHistoryPromptBuilder.StoryPromptInput(
                 "story-with-reason", "项目结果", "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z",
@@ -164,10 +170,15 @@ class ProjectHistoryPromptBuilderTest {
             .contains("没有足够信息", "为什么");
         assertThat(template.path("stories").get(1).path("unknownWording").asText())
             .isEqualTo("目前没有足够信息确认为什么做这次调整。");
-        assertThat(template.path("stories").get(0).path("beforeWording").asText()).isEmpty();
-        assertThat(template.path("stories").get(0).path("changeWording").asText()).isEmpty();
-        assertThat(template.path("stories").get(0).path("afterWording").asText()).isEmpty();
-        assertThat(template.path("stories").get(0).path("humanTitle").asText()).isEmpty();
+        assertThat(template.path("stories").get(0).path("beforeWording").asText()).isEqualTo("此前状态");
+        assertThat(template.path("stories").get(0).path("changeWording").asText()).isEqualTo("形成变化");
+        assertThat(template.path("stories").get(0).path("afterWording").asText()).isEqualTo("当前状态");
+        assertThat(template.path("stories").get(0).path("humanTitle").asText())
+            .isEqualTo("调整项目结果并保留未知原因");
+        assertThat(template.path("stories").get(0).path("oneSentenceSummary").asText())
+            .isEqualTo("项目结果已发生可观察变化，原因仍待核对。");
+        assertThat(builder.validationRepair(prompt, "CROSS_PROJECT_REFERENCE"))
+            .contains("REQUIRED_OUTPUT_TEMPLATE_JSON=", "story-without-reason", "chapter-one");
         assertThat(prompt).doesNotContain("DeepSeek", "GLM");
     }
 }

@@ -71,6 +71,9 @@ public class ModelRequestPolicy {
         } else if (reasoningEffort != null
             && "OPENAI_CHAT_COMPLETIONS".equals(capabilities.providerResponseShape())) {
             maxTokenReason += "；Provider 显式支持 Chat reasoning_effort，结构化请求使用 " + reasoningEffort;
+        } else if (reasoningEffort != null
+            && "ANTHROPIC_MESSAGES".equals(capabilities.providerResponseShape())) {
+            maxTokenReason += "；Provider 显式支持 Messages thinking budget，结构化请求使用 " + reasoningEffort;
         }
         return new RequestParameters(
             taskRequested, effective, provider.getTemperature(), task.recommendedTemperature(), effectiveTemperature,
@@ -123,6 +126,9 @@ public class ModelRequestPolicy {
         } else if (reasoningEffort != null
             && "OPENAI_CHAT_COMPLETIONS".equals(capabilities.providerResponseShape())) {
             reason += "；Chat reasoning_effort 保持 " + reasoningEffort + "，优先完整语义判断";
+        } else if (reasoningEffort != null
+            && "ANTHROPIC_MESSAGES".equals(capabilities.providerResponseShape())) {
+            reason += "；Messages thinking budget 保持 " + reasoningEffort + "，优先完整语义判断";
         }
         return new RequestParameters(
             requested, effective, initial.configuredTemperature(), initial.recommendedTemperature(),
@@ -151,6 +157,8 @@ public class ModelRequestPolicy {
         }
         return switch (capabilities.providerResponseShape()) {
             case "OPENAI_RESPONSES", "OPENAI_CHAT_COMPLETIONS" -> configuredReasoningEffort;
+            case "ANTHROPIC_MESSAGES" -> Set.of("high", "max").contains(configuredReasoningEffort)
+                ? configuredReasoningEffort : null;
             default -> null;
         };
     }
