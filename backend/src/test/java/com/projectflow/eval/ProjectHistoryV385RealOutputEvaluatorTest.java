@@ -76,15 +76,16 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         System.out.printf("V385_REAL_PROVIDER_START provider=%s model=%s protocol=%s%n",
             config.name(), config.model(), config.protocol());
         for (JsonNode testCase : groundTruth.path("cases")) {
-            ProjectHistoryV385FixtureRunner.FixtureExecution execution = runner.execute(
+            ProjectHistoryV385FixtureRunner.FixtureExecution execution = runner.executeWithOneFailedWindowRetry(
                 userId, testCase, temporaryRoot.resolve("case-" + ++ordinal)
             );
             observations.add(execution.observation());
             SafeCaseRun run = safeRun(execution);
             runs.add(run);
             System.out.printf(
-                "V385_REAL_CASE_DONE split=%s status=%s requests=%d tokens=%d elapsedMs=%d%n",
-                run.split(), run.modelStatus(), run.requestCount(), run.tokenCount(), run.latencyMs()
+                "V385_REAL_CASE_DONE split=%s status=%s requests=%d tokens=%d elapsedMs=%d retryRefreshes=%d recovered=%s%n",
+                run.split(), run.modelStatus(), run.requestCount(), run.tokenCount(), run.latencyMs(),
+                run.retryRefreshCount(), run.recoveredAfterRetry()
             );
             if (!run.failureDiagnostics().isEmpty()) {
                 System.out.printf("V385_REAL_CASE_FAILURES case=%s diagnostics=%s%n",
@@ -113,6 +114,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         assertThat(qualification.failedOrPendingWindowCount()).isZero();
         assertThat(qualification.rejectedModelOutputCount()).isZero();
         assertThat(qualification.validationRepairFailureCount()).isZero();
+        assertThat(qualification.unresolvedAfterRetryCaseCount()).isZero();
         assertThat(runs).filteredOn(value -> value.requestCount() > 0)
             .allSatisfy(value -> assertThat(value.modelUsed()).isTrue());
         assertThat(qualification.qualified()).isTrue();
@@ -133,6 +135,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
 
     private SafeCaseRun safeRun(ProjectHistoryV385FixtureRunner.FixtureExecution execution) {
         Map<String, Object> diagnostics = execution.diagnostics();
+        Map<String, Object> initialDiagnostics = execution.initialDiagnostics();
         ProjectHistoryV385QualityEvaluator.CaseObservation observation = execution.observation();
         String modelStatus = text(diagnostics.get("modelStatus"));
         int failedWindowCount = number(diagnostics, "failedWindowCount");
@@ -150,6 +153,11 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
             ),
             execution.cacheHit(), modelStatus, failedWindowCount,
             unprocessedWindowCount, skippedWindowCount, chapterFailedCount, chapterPendingCount,
+            text(initialDiagnostics.get("modelStatus")),
+            failedOrPendingWindowCount(initialDiagnostics),
+            number(initialDiagnostics, "modelValidationRepairCount"),
+            number(initialDiagnostics, "modelValidationRepairFailureCount"),
+            execution.retryRefreshCount(), execution.recoveredAfterRetry(),
             number(diagnostics, "modelRejectedInvalidEvidenceRefCount"),
             number(diagnostics, "modelRejectedCrossProjectRefCount"),
             number(diagnostics, "modelRejectedUnsupportedClaimCount"),
@@ -212,16 +220,26 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
             .mapToInt(SafeCaseRun::deterministicTitleFallbackCount).sum();
         int validationRepairs = runs.stream().mapToInt(SafeCaseRun::validationRepairCount).sum();
         int validationRepairFailures = runs.stream().mapToInt(SafeCaseRun::validationRepairFailureCount).sum();
+        int initialFailedOrPending = runs.stream().mapToInt(SafeCaseRun::initialFailedOrPendingWindowCount).sum();
+        int initialValidationRepairFailures = runs.stream()
+            .mapToInt(SafeCaseRun::initialValidationRepairFailureCount).sum();
+        int retryRefreshes = runs.stream().mapToInt(SafeCaseRun::retryRefreshCount).sum();
+        int retryAttemptedCases = (int) runs.stream().filter(value -> value.retryRefreshCount() > 0).count();
+        int recoveredAfterRetry = (int) runs.stream().filter(SafeCaseRun::recoveredAfterRetry).count();
+        int unresolvedAfterRetry = (int) runs.stream()
+            .filter(value -> value.retryRefreshCount() > 0 && !value.recoveredAfterRetry()).count();
         int requests = runs.stream().mapToInt(SafeCaseRun::requestCount).sum();
         long tokens = runs.stream().mapToLong(SafeCaseRun::tokenCount).sum();
         boolean qualified = report.passes() && calibrationRequests > 0 && holdoutRequests > 0
             && modelDegraded == 0 && failedOrPending == 0 && rejected == 0
-            && validationRepairFailures == 0
+            && validationRepairFailures == 0 && unresolvedAfterRetry == 0
             && runs.stream().filter(value -> value.requestCount() > 0).allMatch(SafeCaseRun::modelUsed);
         return new QualificationSummary(
             qualified, requests, tokens, elapsedMs, calibrationRequests, holdoutRequests,
             sourceCoverageIncomplete, refreshDegraded, modelDegraded, failedOrPending, rejected,
-            deterministicTitleFallbacks, validationRepairs, validationRepairFailures
+            deterministicTitleFallbacks, validationRepairs, validationRepairFailures,
+            initialFailedOrPending, initialValidationRepairFailures, retryRefreshes,
+            retryAttemptedCases, recoveredAfterRetry, unresolvedAfterRetry
         );
     }
 
@@ -238,7 +256,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         Path output = Path.of("target", "projectflow-eval", outputName);
         Files.createDirectories(output);
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("version", "projectflow-v3.8.5-history-real-output-v5");
+        artifact.put("version", "projectflow-v3.8.5-history-real-output-v6");
         artifact.put("generatedAt", Instant.now().toString());
         artifact.put("provider", Map.of(
             "name", config.name(), "model", config.model(), "protocol", config.protocol().name(),
@@ -306,6 +324,14 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         return value == null ? "" : value.toString();
     }
 
+    static int failedOrPendingWindowCount(Map<String, Object> diagnostics) {
+        return number(diagnostics, "failedWindowCount")
+            + number(diagnostics, "modelUnprocessedWindowCount")
+            + number(diagnostics, "skippedWindowCount")
+            + number(diagnostics, "chapterSynthesisFailedCount")
+            + number(diagnostics, "chapterSynthesisPendingCount");
+    }
+
     private static boolean booleanValue(Map<String, Object> values, String key, boolean fallback) {
         Object value = values.get(key);
         if (value instanceof Boolean bool) return bool;
@@ -348,6 +374,12 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         int skippedWindowCount,
         int chapterFailedCount,
         int chapterPendingCount,
+        String initialModelStatus,
+        int initialFailedOrPendingWindowCount,
+        int initialValidationRepairCount,
+        int initialValidationRepairFailureCount,
+        int retryRefreshCount,
+        boolean recoveredAfterRetry,
         int rejectedInvalidEvidenceCount,
         int rejectedCrossProjectCount,
         int rejectedUnsupportedClaimCount,
@@ -388,7 +420,13 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         int rejectedModelOutputCount,
         int deterministicTitleFallbackCount,
         int validationRepairCount,
-        int validationRepairFailureCount
+        int validationRepairFailureCount,
+        int initialFailedOrPendingWindowCount,
+        int initialValidationRepairFailureCount,
+        int retryRefreshCount,
+        int retryAttemptedCaseCount,
+        int recoveredAfterRetryCaseCount,
+        int unresolvedAfterRetryCaseCount
     ) {
     }
 }

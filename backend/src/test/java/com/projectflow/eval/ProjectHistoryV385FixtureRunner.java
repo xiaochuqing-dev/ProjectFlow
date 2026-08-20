@@ -88,6 +88,23 @@ public final class ProjectHistoryV385FixtureRunner {
         JsonNode testCase,
         Path caseRoot
     ) throws Exception {
+        return execute(userId, testCase, caseRoot, false);
+    }
+
+    public FixtureExecution executeWithOneFailedWindowRetry(
+        UUID userId,
+        JsonNode testCase,
+        Path caseRoot
+    ) throws Exception {
+        return execute(userId, testCase, caseRoot, true);
+    }
+
+    private FixtureExecution execute(
+        UUID userId,
+        JsonNode testCase,
+        Path caseRoot,
+        boolean allowOneFailedWindowRetry
+    ) throws Exception {
         Files.createDirectories(caseRoot);
         ProjectSpace project = project(userId, caseRoot);
         AliasRegistry aliases = new AliasRegistry();
@@ -116,6 +133,12 @@ public final class ProjectHistoryV385FixtureRunner {
             default -> throw new IllegalArgumentException("Unknown history fixture: " + fixtureHash);
         }
         outcomes.add(reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false));
+        Map<String, Object> initialDiagnostics = snapshotDiagnostics(project.getId());
+        int retryRefreshCount = 0;
+        if (allowOneFailedWindowRetry && needsFailedWindowRetry(initialDiagnostics)) {
+            outcomes.add(reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false));
+            retryRefreshCount = 1;
+        }
 
         ProjectHistorySnapshot snapshot = snapshotRepository.findByProjectId(project.getId()).orElseThrow();
         ProjectHistoryCorrectionService.CorrectedHistory corrected = correctionService.resolve(project.getId(), snapshot);
@@ -137,14 +160,68 @@ public final class ProjectHistoryV385FixtureRunner {
             Math.toIntExact(eventRepository.countByProjectIdAndRewriteState(project.getId(), RewriteState.CURRENT)),
             requestCount, tokens
         );
+        Map<String, Object> finalDiagnostics = Map.copyOf(overview.diagnostics());
+        boolean recoveredAfterRetry = retryRefreshCount == 1
+            && !needsFailedWindowRetry(finalDiagnostics)
+            && validatedModelStatus(finalDiagnostics);
         return new FixtureExecution(
             project.getId(), observation,
             outcomes.stream().anyMatch(ProjectHistoryReconstructionService.HistoryRefreshOutcome::modelUsed),
             outcomes.stream().anyMatch(ProjectHistoryReconstructionService.HistoryRefreshOutcome::degraded),
             outcomes.get(outcomes.size() - 1).cacheHit(),
             latencyMs,
-            Map.copyOf(overview.diagnostics())
+            finalDiagnostics,
+            initialDiagnostics,
+            retryRefreshCount,
+            recoveredAfterRetry
         );
+    }
+
+    private Map<String, Object> snapshotDiagnostics(UUID projectId) {
+        ProjectHistorySnapshot snapshot = snapshotRepository.findByProjectId(projectId).orElse(null);
+        if (snapshot == null || snapshot.getDiagnosticsJson() == null || snapshot.getDiagnosticsJson().isBlank()) {
+            return Map.of();
+        }
+        try {
+            JsonNode root = objectMapper.readTree(snapshot.getDiagnosticsJson());
+            if (root == null || !root.isObject()) return Map.of();
+            Map<String, Object> result = new LinkedHashMap<>();
+            root.fields().forEachRemaining(entry -> {
+                JsonNode value = entry.getValue();
+                if (value.isBoolean()) result.put(entry.getKey(), value.booleanValue());
+                else if (value.isIntegralNumber()) result.put(entry.getKey(), value.longValue());
+                else if (value.isFloatingPointNumber()) result.put(entry.getKey(), value.doubleValue());
+                else if (value.isTextual()) result.put(entry.getKey(), value.textValue());
+            });
+            return Map.copyOf(result);
+        } catch (Exception ignored) {
+            return Map.of("diagnosticsReadable", false);
+        }
+    }
+
+    static boolean needsFailedWindowRetry(Map<String, Object> diagnostics) {
+        return diagnosticNumber(diagnostics, "failedWindowCount") > 0
+            || diagnosticNumber(diagnostics, "modelUnprocessedWindowCount") > 0
+            || diagnosticNumber(diagnostics, "pendingWindowCount") > 0
+            || diagnosticNumber(diagnostics, "chapterSynthesisFailedCount") > 0
+            || diagnosticNumber(diagnostics, "chapterSynthesisPendingCount") > 0;
+    }
+
+    private static boolean validatedModelStatus(Map<String, Object> diagnostics) {
+        String status = String.valueOf(diagnostics.getOrDefault("modelStatus", ""));
+        return "MODEL_VALIDATED".equals(status) || "MODEL_VALIDATED_INCREMENTAL".equals(status);
+    }
+
+    private static int diagnosticNumber(Map<String, Object> diagnostics, String key) {
+        if (diagnostics == null) return 0;
+        Object value = diagnostics.get(key);
+        if (value instanceof Number number) return Math.max(0, number.intValue());
+        if (value == null) return 0;
+        try {
+            return Math.max(0, Integer.parseInt(value.toString()));
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
     }
 
     private ProjectSpace project(UUID userId, Path root) {
@@ -649,10 +726,15 @@ public final class ProjectHistoryV385FixtureRunner {
         boolean degraded,
         boolean cacheHit,
         long modelLatencyMs,
-        Map<String, Object> diagnostics
+        Map<String, Object> diagnostics,
+        Map<String, Object> initialDiagnostics,
+        int retryRefreshCount,
+        boolean recoveredAfterRetry
     ) {
         public FixtureExecution {
             diagnostics = diagnostics == null ? Map.of() : Map.copyOf(diagnostics);
+            initialDiagnostics = initialDiagnostics == null ? Map.of() : Map.copyOf(initialDiagnostics);
+            retryRefreshCount = Math.max(0, retryRefreshCount);
         }
     }
 
