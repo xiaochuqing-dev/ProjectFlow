@@ -1284,7 +1284,8 @@ class ProjectHistoryReconstructionTest {
             .filteredOn(checkpoint -> "FAILED".equals(checkpoint.getStatus()))
             .singleElement().satisfies(checkpoint -> assertThat(checkpoint.getDiagnosticsJson())
                 .contains("\"failureClass\":\"HISTORY_VALIDATION\"")
-                .contains("\"validationKind\":\"CONTRACT\""));
+                .contains("\"validationKind\":\"CONTRACT\"")
+                .contains("\"validationCode\":\"STORIES_OMITTED\""));
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         Map<String, Object> recoveredDiagnostics = readService.overview(userId, project.getId()).diagnostics();

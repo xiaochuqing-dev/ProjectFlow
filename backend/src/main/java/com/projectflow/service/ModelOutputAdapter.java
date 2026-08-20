@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
@@ -21,6 +22,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public class ModelOutputAdapter {
     private static final Pattern CODE_FENCE = Pattern.compile("(?is)```(?:json)?\\s*|```");
     private static final Pattern TRAILING_COMMA = Pattern.compile(",(\\s*[}\\]])");
+    private static final Set<String> EMBEDDED_HISTORY_JSON_FIELDS = Set.of(
+        "stories", "chapters", "result", "output", "data", "response", "json"
+    );
 
     private final ObjectMapper objectMapper;
 
@@ -38,12 +42,16 @@ public class ModelOutputAdapter {
         }
         String withoutFence = CODE_FENCE.matcher(rawContent).replaceAll("").trim();
         List<String> candidates = balancedJsonCandidates(withoutFence);
+        if (candidates.isEmpty() && withoutFence.startsWith("\"") && withoutFence.endsWith("\"")) {
+            candidates = List.of(withoutFence);
+        }
         ParsedCandidate best = null;
         IOException parseFailure = null;
         for (String candidate : candidates) {
             try {
                 JsonNode parsed = objectMapper.readTree(candidate);
-                JsonNode normalizedRoot = normalizeTargetRoot(task.normalizeRoot(parsed), task);
+                JsonNode decoded = decodeEmbeddedHistoryJson(parsed, task, 0);
+                JsonNode normalizedRoot = normalizeTargetRoot(task.normalizeRoot(decoded), task);
                 int score = task.schemaScore(normalizedRoot, this);
                 ParsedCandidate current = new ParsedCandidate(
                     normalizedRoot, score, !withoutFence.equals(candidate) || normalizedRoot != parsed
@@ -55,7 +63,8 @@ public class ModelOutputAdapter {
                 if (normalized.equals(candidate)) continue;
                 try {
                     JsonNode parsed = objectMapper.readTree(normalized);
-                    JsonNode normalizedRoot = normalizeTargetRoot(task.normalizeRoot(parsed), task);
+                    JsonNode decoded = decodeEmbeddedHistoryJson(parsed, task, 0);
+                    JsonNode normalizedRoot = normalizeTargetRoot(task.normalizeRoot(decoded), task);
                     int score = task.schemaScore(normalizedRoot, this);
                     ParsedCandidate current = new ParsedCandidate(normalizedRoot, score, true);
                     if (best == null || current.score() > best.score()) best = current;
@@ -162,6 +171,53 @@ public class ModelOutputAdapter {
             if (value != null && !value.isNull() && !value.isMissingNode()) return value;
         }
         return null;
+    }
+
+    /** Decode only JSON-shaped transport wrappers used around history containers. */
+    private JsonNode decodeEmbeddedHistoryJson(JsonNode node, ModelTaskType task, int depth) {
+        if (!historyTask(task) || node == null || depth >= 4) return node;
+        if (node.isTextual()) {
+            String value = node.asText("").trim();
+            if (!jsonContainer(value)) return node;
+            try {
+                return decodeEmbeddedHistoryJson(objectMapper.readTree(value), task, depth + 1);
+            } catch (IOException ignored) {
+                return node;
+            }
+        }
+        if (node.isArray()) {
+            ArrayNode copy = null;
+            for (int index = 0; index < node.size(); index++) {
+                JsonNode child = node.get(index);
+                JsonNode decoded = decodeEmbeddedHistoryJson(child, task, depth + 1);
+                if (decoded == child) continue;
+                if (copy == null) copy = ((ArrayNode) node).deepCopy();
+                copy.set(index, decoded);
+            }
+            return copy == null ? node : copy;
+        }
+        if (!node.isObject()) return node;
+        ObjectNode copy = null;
+        for (String field : EMBEDDED_HISTORY_JSON_FIELDS) {
+            JsonNode child = node.get(field);
+            if (child == null) continue;
+            JsonNode decoded = decodeEmbeddedHistoryJson(child, task, depth + 1);
+            if (decoded == child) continue;
+            if (copy == null) copy = ((ObjectNode) node).deepCopy();
+            copy.set(field, decoded);
+        }
+        return copy == null ? node : copy;
+    }
+
+    private static boolean historyTask(ModelTaskType task) {
+        return task == ModelTaskType.PROJECT_HISTORY_SYNTHESIS
+            || task == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS;
+    }
+
+    private static boolean jsonContainer(String value) {
+        if (value == null || value.length() < 2) return false;
+        return (value.startsWith("{") && value.endsWith("}"))
+            || (value.startsWith("[") && value.endsWith("]"));
     }
 
     private List<String> balancedJsonCandidates(String content) {

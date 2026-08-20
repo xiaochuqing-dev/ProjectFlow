@@ -255,8 +255,18 @@ public enum ModelTaskType {
         }
         if (!current.path("stories").isArray() && !current.path("chapters").isArray()) return current;
         ObjectNode normalized = current.deepCopy();
-        if (!normalized.path("stories").isArray()) normalized.putArray("stories");
-        if (!normalized.path("chapters").isArray()) normalized.putArray("chapters");
+        JsonNode stories = normalized.path("stories");
+        if (stories.isObject() && stories.path("storyId").isTextual()) {
+            normalized.putArray("stories").add(stories.deepCopy());
+        } else if (!stories.isArray()) {
+            normalized.putArray("stories");
+        }
+        JsonNode chapters = normalized.path("chapters");
+        if (chapters.isObject() && chapters.path("chapterId").isTextual()) {
+            normalized.putArray("chapters").add(chapters.deepCopy());
+        } else if (!chapters.isArray()) {
+            normalized.putArray("chapters");
+        }
         return normalized;
     }
 
@@ -273,6 +283,13 @@ public enum ModelTaskType {
             ObjectNode wrapped = JsonNodeFactory.instance.objectNode();
             wrapped.putArray("chapters").add(current.deepCopy());
             return wrapped;
+        }
+        if (current != null && current.isObject()
+            && current.path("chapters").isObject()
+            && current.path("chapters").path("chapterId").isTextual()) {
+            ObjectNode normalized = current.deepCopy();
+            normalized.putArray("chapters").add(current.path("chapters").deepCopy());
+            return normalized;
         }
         return current;
     }

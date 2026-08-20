@@ -2,6 +2,9 @@ package com.projectflow;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,6 +49,43 @@ class ModelOutputAdapterTest {
         assertThat(storiesOnly.root().path("chapters")).isEmpty();
         assertThat(ModelTaskType.PROJECT_HISTORY_SYNTHESIS.schemaMatches(story.root(), adapter)).isTrue();
         assertThat(ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS.schemaMatches(chapter.root(), adapter)).isTrue();
+    }
+
+    @Test
+    void decodesStringifiedHistoryContainersAndWrapsSingleContainerObjectsWithoutChangingFields() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        String storyObject = "{\"storyId\":\"story-one\",\"humanTitle\":\"形成入口\"}";
+        String chapterObject = "{\"chapterId\":\"chapter-one\",\"representedClusterIds\":[\"cluster-one\"],"
+            + "\"title\":\"形成入口\",\"summary\":\"入口已经形成。\"}";
+        String encodedWrapper = mapper.writeValueAsString(
+            Map.of("result", mapper.writeValueAsString(Map.of("chapters", List.of(mapper.readTree(chapterObject)))))
+        );
+
+        var stringifiedStory = adapter.parse(
+            mapper.writeValueAsString(Map.of("stories", storyObject, "chapters", "[]")),
+            ModelTaskType.PROJECT_HISTORY_SYNTHESIS
+        );
+        var stringifiedChapterWrapper = adapter.parse(
+            encodedWrapper,
+            ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS
+        );
+        var singleContainers = adapter.parse(
+            "{\"stories\":" + storyObject + ",\"chapters\":[]}",
+            ModelTaskType.PROJECT_HISTORY_SYNTHESIS
+        );
+        var singleChapterContainer = adapter.parse(
+            "{\"chapters\":" + chapterObject + "}",
+            ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS
+        );
+
+        assertThat(stringifiedStory.root().path("stories")).singleElement()
+            .satisfies(value -> assertThat(value.path("storyId").asText()).isEqualTo("story-one"));
+        assertThat(stringifiedChapterWrapper.root().path("chapters")).singleElement()
+            .satisfies(value -> assertThat(value.path("chapterId").asText()).isEqualTo("chapter-one"));
+        assertThat(singleContainers.root().path("stories")).singleElement();
+        assertThat(singleChapterContainer.root().path("chapters")).singleElement();
+        assertThat(stringifiedStory.repaired()).isTrue();
+        assertThat(stringifiedChapterWrapper.repaired()).isTrue();
     }
 
     @Test

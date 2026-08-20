@@ -172,10 +172,11 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
                         safeToken(value.path("failureStage").asText()),
                         safeToken(value.path("failureCode").asText()),
                         safeToken(value.path("validationKind").asText()),
+                        safeToken(value.path("validationCode").asText()),
                         Math.max(0, value.path("requestCount").asInt(0))
                     );
                 } catch (Exception ignored) {
-                    return new SafeFailureDiagnostic("", "DIAGNOSTIC_PARSE_FAILURE", "", "", "", 0);
+                    return new SafeFailureDiagnostic("", "DIAGNOSTIC_PARSE_FAILURE", "", "", "", "", 0);
                 }
             })
             .toList();
@@ -364,6 +365,7 @@ class ProjectHistoryV385RealOutputEvaluatorTest {
         String failureStage,
         String failureCode,
         String validationKind,
+        String validationCode,
         int requestCount
     ) {
     }

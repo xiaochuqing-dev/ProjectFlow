@@ -2478,6 +2478,7 @@ public class ProjectHistoryReconstructionService {
         if (failure instanceof HistoryValidationException validation) {
             values.put("failureClass", "HISTORY_VALIDATION");
             values.put("validationKind", validation.kind().name());
+            values.put("validationCode", validationDiagnosticCode(validation));
             return json(values);
         }
         if (failure instanceof ModelGatewayService.ModelResponseFormatException format) {
@@ -2515,6 +2516,22 @@ public class ProjectHistoryReconstructionService {
         if (value == null || value.isBlank()) return "";
         String safe = value.trim().replaceAll("[^A-Za-z0-9_:,.-]", "_");
         return safe.length() <= 160 ? safe : safe.substring(0, 160);
+    }
+
+    private static String validationDiagnosticCode(HistoryValidationException failure) {
+        String message = failure == null || failure.getMessage() == null ? "" : failure.getMessage();
+        if (message.contains("output is not an object")) return "OUTPUT_NOT_OBJECT";
+        if (message.contains("root contains unsupported fields")) return "ROOT_UNSUPPORTED_FIELDS";
+        if (message.contains("stories are missing")) return "STORIES_MISSING";
+        if (message.contains("story contains forbidden fields")) return "STORY_UNSUPPORTED_FIELDS";
+        if (message.contains("Duplicate story ID")) return "DUPLICATE_STORY_ID";
+        if (message.contains("omitted stories")) return "STORIES_OMITTED";
+        if (message.contains("chapters are missing")) return "CHAPTERS_MISSING";
+        if (message.contains("chapter contains forbidden fields")) return "CHAPTER_UNSUPPORTED_FIELDS";
+        if (message.contains("must return one chapter")) return "CHAPTER_CARDINALITY";
+        if (message.contains("changed required representative cluster IDs")) return "CLUSTER_ID_MISMATCH";
+        if (message.contains("omitted chapters")) return "CHAPTERS_OMITTED";
+        return failure.kind().name();
     }
 
     private static boolean hasReasonEligibleEvidence(List<EventView> events) {
