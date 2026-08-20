@@ -112,6 +112,8 @@ class ProjectFlowRuntimeParityTest {
         assertThat(count(workflow, "- id: luna")).isEqualTo(2);
         assertThat(count(workflow, "- id: deepseek")).isEqualTo(2);
         assertThat(count(workflow, "- id: qwen")).isEqualTo(2);
+        assertThat(count(workflow, "base_url: https://opencode.ai/zen/go/v1")).isEqualTo(4);
+        assertThat(count(workflow, "base_url: https://opencode.ai/zen/go\n")).isEqualTo(2);
         assertThat(count(workflow, "run_gate provider-probe")).isEqualTo(1);
         assertThat(count(workflow, "run_gate history-v385-qualification")).isEqualTo(1);
         assertThat(count(workflow, "run_gate history-v385-scenarios")).isEqualTo(1);

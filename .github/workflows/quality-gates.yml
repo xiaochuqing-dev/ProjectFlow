@@ -245,7 +245,7 @@ jobs:
             display_name: Qwen3.7 Plus Messages
             secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
             provider: Qwen3.7 Plus OpenCode Go
-            base_url: https://opencode.ai/zen/go/v1
+            base_url: https://opencode.ai/zen/go
             model: qwen3.7-plus
             type: ANTHROPIC
             protocol: ANTHROPIC_MESSAGES
@@ -372,7 +372,7 @@ jobs:
             display_name: Qwen3.7 Plus Messages
             secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
             provider: Qwen3.7 Plus OpenCode Go
-            base_url: https://opencode.ai/zen/go/v1
+            base_url: https://opencode.ai/zen/go
             model: qwen3.7-plus
             type: ANTHROPIC
             protocol: ANTHROPIC_MESSAGES
