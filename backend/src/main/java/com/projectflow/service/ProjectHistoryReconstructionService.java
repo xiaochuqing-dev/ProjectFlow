@@ -2493,6 +2493,11 @@ public class ProjectHistoryReconstructionService {
                 values.put("truncated", diagnostics.truncated());
                 values.put("schemaMatched", diagnostics.schemaMatched());
             }
+            if (format.getCause() instanceof ModelGatewayService.ModelResponseFormatException repairFailure
+                && repairFailure.diagnostics() != null) {
+                values.put("repairFailureStage", safeDiagnosticToken(repairFailure.diagnostics().failureStage()));
+                values.put("repairFailureCode", safeDiagnosticToken(repairFailure.diagnostics().failureCode()));
+            }
             return json(values);
         }
         if (failure instanceof ModelGatewayService.ModelHttpException http) {

@@ -112,6 +112,9 @@ class ProjectHistoryPromptBuilderTest {
         ));
 
         String repair = builder.validationRepair(chapter.prompt(), "CONTRACT");
+        String schemaRepair = ProjectHistoryPromptBuilder.schemaRepair(
+            chapter.prompt(), ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS, mapper
+        );
 
         assertThat(repair)
             .hasSizeLessThanOrEqualTo(ProjectHistoryPromptBuilder.MAX_PROMPT_CHARS)
@@ -122,6 +125,7 @@ class ProjectHistoryPromptBuilderTest {
                 "\"representedClusterIds\":[]"
             )
             .doesNotContain("CHAPTER_SYNTHESIS_JSON=", "只能使用 OUTPUT_TEMPLATE_JSON");
+        assertThat(schemaRepair).isEqualTo(repair);
     }
 
     private static ProjectHistoryPromptBuilder.ChapterRepresentativeClusterInput cluster(String id) {

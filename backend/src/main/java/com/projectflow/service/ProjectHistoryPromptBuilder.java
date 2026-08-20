@@ -107,8 +107,34 @@ public final class ProjectHistoryPromptBuilder {
             default -> "CONTRACT";
         };
         boolean chapter = safePrompt.contains(CHAPTER_SYNTHESIS_MARKER);
+        return exactTemplateRepair(safePrompt, safeKind, chapter, objectMapper);
+    }
+
+    /**
+     * History schema recovery must use the engineering-owned output template,
+     * not ask a Provider to reconstruct required IDs from its malformed output.
+     */
+    static String schemaRepair(String originalPrompt, ModelTaskType task, ObjectMapper objectMapper) {
+        String safePrompt = originalPrompt == null ? "" : originalPrompt;
+        boolean chapter = task == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS;
+        if (!chapter && task != ModelTaskType.PROJECT_HISTORY_SYNTHESIS) return "";
+        String exactTemplate = chapter
+            ? chapterOutputTemplate(safePrompt, objectMapper)
+            : outputTemplate(safePrompt);
+        if (exactTemplate.isBlank()) return "";
+        return exactTemplateRepair(safePrompt, "CONTRACT", chapter, objectMapper);
+    }
+
+    private static String exactTemplateRepair(
+        String safePrompt,
+        String safeKind,
+        boolean chapter,
+        ObjectMapper objectMapper
+    ) {
         String repairInstructions = chapter ? CHAPTER_VALIDATION_REPAIR_INSTRUCTIONS : VALIDATION_REPAIR_INSTRUCTIONS;
-        String exactTemplate = chapter ? chapterOutputTemplate(safePrompt) : outputTemplate(safePrompt);
+        String exactTemplate = chapter
+            ? chapterOutputTemplate(safePrompt, objectMapper)
+            : outputTemplate(safePrompt);
         String repaired = VALIDATION_REPAIR_MARKER + safeKind + "\n" + repairInstructions
             + "\nREQUIRED_OUTPUT_TEMPLATE_JSON=" + exactTemplate;
         if (repaired.length() > MAX_PROMPT_CHARS) {
@@ -403,7 +429,7 @@ public final class ProjectHistoryPromptBuilder {
         return end <= start ? "" : prompt.substring(start, end);
     }
 
-    private String chapterOutputTemplate(String prompt) {
+    private static String chapterOutputTemplate(String prompt, ObjectMapper objectMapper) {
         int start = prompt.indexOf(CHAPTER_SYNTHESIS_MARKER);
         if (start < 0) return "";
         try {

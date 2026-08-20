@@ -133,7 +133,7 @@ public class ModelGatewayService {
         try {
             firstResponse = sendStructuredRequest(provider, prompt, task, capabilities, initialParameters);
         } catch (ModelSchemaMismatchException mismatch) {
-            return repairSchema(provider, task, capabilities, initialParameters, mismatch);
+            return repairSchema(provider, prompt, task, capabilities, initialParameters, mismatch);
         } catch (ModelOutputTruncatedException exhausted) {
             return retryExhaustedOutput(provider, prompt, task, capabilities, initialParameters, exhausted, null);
         }
@@ -143,6 +143,7 @@ public class ModelGatewayService {
 
     private StructuredModelResponse repairSchema(
         AiProvider provider,
+        String originalPrompt,
         ModelTaskType task,
         ModelCapabilities capabilities,
         RequestParameters initialParameters,
@@ -151,14 +152,17 @@ public class ModelGatewayService {
         RequestParameters retryParameters = requestPolicy.recovery(
             initialParameters, capabilities, task, "SCHEMA_REPAIR_RETRY", firstFailure.rawContent().length()
         );
-        String repairPrompt = """
-            上一次模型结果是可读取的 JSON，但不符合目标业务 Schema。不要重新分析事实，只把已有结果转换为下面结构。
-            只返回转换后的 JSON；缺失字段使用空字符串或空数组，不要补造证据。已有非空数组必须逐项保留，
-            不得为了满足结构把它们替换为空；尤其保留 Evidence ID、project shape、applicable view、claim、
-            capabilityDecisions/toolRequests、unknown、conflict、warning 和 selfCheck 的原有语义。
-            目标 Schema：%s
-            待转换结果：%s
-            """.formatted(task.minimalSchema(), bounded(firstFailure.rawContent(), 30_000));
+        String repairPrompt = ProjectHistoryPromptBuilder.schemaRepair(originalPrompt, task, objectMapper);
+        if (repairPrompt.isBlank()) {
+            repairPrompt = """
+                上一次模型结果是可读取的 JSON，但不符合目标业务 Schema。不要重新分析事实，只把已有结果转换为下面结构。
+                只返回转换后的 JSON；缺失字段使用空字符串或空数组，不要补造证据。已有非空数组必须逐项保留，
+                不得为了满足结构把它们替换为空；尤其保留 Evidence ID、project shape、applicable view、claim、
+                capabilityDecisions/toolRequests、unknown、conflict、warning 和 selfCheck 的原有语义。
+                目标 Schema：%s
+                待转换结果：%s
+                """.formatted(task.minimalSchema(), bounded(firstFailure.rawContent(), 30_000));
+        }
         try {
             StructuredModelResponse repaired = sendStructuredRequest(provider, repairPrompt, task, capabilities, retryParameters);
             return repaired.withRecovery(firstFailure.diagnostics(), "SCHEMA_REPAIR_RETRY", true);
