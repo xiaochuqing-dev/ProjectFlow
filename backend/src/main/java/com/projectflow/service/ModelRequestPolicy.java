@@ -103,11 +103,18 @@ public class ModelRequestPolicy {
                     + Math.max(1_024, initial.taskRequestedMaxTokens() / 2);
         }
         if (capabilities.supportsReasoning() && "SCHEMA_REPAIR_RETRY".equals(retryType)) {
-            requested = Math.max(requested, task.maximumUsefulOutputTokens());
+            // Schema repair keeps the configured reasoning tier. Models whose
+            // thinking and visible JSON share max_tokens therefore need the
+            // same user-bounded Provider allowance as the first request; a
+            // small ordinary-output budget can be consumed entirely by max
+            // reasoning before the exact repair JSON becomes visible.
+            requested = capabilities.maxOutputTokens();
         }
         int effective = Math.min(capabilities.maxOutputTokens(), requested);
         String reason = switch (retryType) {
-            case "SCHEMA_REPAIR_RETRY" -> "仅重编码已有语义为目标 Schema，预算按目标结构和原内容规模计算";
+            case "SCHEMA_REPAIR_RETRY" -> capabilities.supportsReasoning()
+                ? "仅重编码已有语义为目标 Schema；reasoning 与可见 JSON 共享空间，保持 Provider 有界上限"
+                : "仅重编码已有语义为目标 Schema，预算按目标结构和原内容规模计算";
             case "EMPTY_AFTER_REASONING_RETRY" -> capabilities.supportsReasoningControl()
                 && "OPENAI_CHAT_COMPLETIONS".equals(capabilities.providerResponseShape())
                     ? "Chat " + configuredReasoningEffort + " reasoning 疑似占满共享预算，唯一恢复请求使用 Provider 明确上限"

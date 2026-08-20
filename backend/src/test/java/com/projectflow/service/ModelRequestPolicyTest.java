@@ -122,6 +122,45 @@ class ModelRequestPolicyTest {
     }
 
     @Test
+    void maxReasoningSchemaRepairKeepsProviderAllowanceForVisibleJson() {
+        ModelRequestPolicy maxPolicy = new ModelRequestPolicy("max");
+        AiProvider provider = provider(AiProviderType.DEEPSEEK, "provider-neutral-model", 0.1, 65_536);
+        provider.configureProtocol(
+            ModelProtocol.OPENAI_CHAT_COMPLETIONS,
+            null,
+            null,
+            null,
+            null,
+            Map.of(),
+            600,
+            false,
+            true,
+            false,
+            true,
+            true
+        );
+        var capabilities = registry.resolve(provider);
+        var initial = maxPolicy.initial(
+            provider,
+            capabilities,
+            ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST,
+            "只返回一个很小的 JSON"
+        );
+
+        var repair = maxPolicy.recovery(
+            initial,
+            capabilities,
+            ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST,
+            "SCHEMA_REPAIR_RETRY",
+            64
+        );
+
+        assertThat(repair.taskRequestedMaxTokens()).isEqualTo(65_536);
+        assertThat(repair.effectiveMaxTokens()).isEqualTo(65_536);
+        assertThat(repair.maxTokenDecision()).contains("Provider 有界上限", "保持 max");
+    }
+
+    @Test
     void reasoningUsesBoundedProviderHeadroomFromTheFirstRequestAndRecovery() {
         AiProvider provider = provider(AiProviderType.OPENAI, "glm-5.2", 0.9, 65_536);
         var capabilities = registry.resolve(provider);
