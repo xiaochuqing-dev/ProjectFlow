@@ -69,7 +69,7 @@ class ProjectFlowRuntimeParityTest {
     }
 
     @Test
-    void realWorkflowCollectsBothProviderSuitesAcrossBoundedSequentialPhases() throws Exception {
+    void realWorkflowCollectsThreeProviderSuitesAcrossBoundedSequentialPhases() throws Exception {
         String workflow = Files.readString(Path.of("../.github/workflows/quality-gates.yml"));
 
         assertThat(workflow)
@@ -79,18 +79,24 @@ class ProjectFlowRuntimeParityTest {
                 "needs: optional-real-provider-qualification",
                 "always() && github.event_name == 'workflow_dispatch' && inputs.run_real_model",
                 "fail-fast: false",
-                "- id: glm",
+                "- id: luna",
                 "- id: deepseek",
-                "secret_name: PROJECTFLOW_REAL_MODEL_API_KEY",
+                "- id: qwen",
                 "secret_name: PROJECTFLOW_DEEPSEEK_API_KEY",
                 "PROJECTFLOW_REAL_MODEL_API_KEY: ${{ secrets[matrix.secret_name] }}",
+                "model: gpt-5.6-luna",
                 "model: deepseek-v4-flash",
+                "model: qwen3.7-plus",
+                "protocol: OPENAI_RESPONSES",
+                "protocol: OPENAI_CHAT_COMPLETIONS",
+                "protocol: ANTHROPIC_MESSAGES",
                 "supports_json_mode: \"true\"",
                 "supports_reasoning_control: \"true\"",
                 "reasoning_effort: max",
                 "PROJECTFLOW_MODEL_REASONING_EFFORT: ${{ matrix.reasoning_effort }}",
-                "dogfood_test: GLMDogfoodRegressionTest",
+                "dogfood_test: LunaDogfoodRegressionTest",
                 "dogfood_test: DeepSeekDogfoodRegressionTest",
+                "dogfood_test: QwenDogfoodRegressionTest",
                 "run_gate history-v385-qualification",
                 "run_gate history-v385-chapter-affected",
                 "-Dprojectflow.eval.scenario-scope=chapter",
@@ -99,10 +105,13 @@ class ProjectFlowRuntimeParityTest {
                 "projectflow-real-model-qualification-${{ matrix.id }}",
                 "projectflow-real-model-scenarios-${{ matrix.id }}"
             )
-            .doesNotContain("model: deepseek-v4-pro");
+            .doesNotContain("model: deepseek-v4-pro", "model: glm-5.2", "- id: glm");
         assertThat(count(workflow, "timeout-minutes: 360")).isEqualTo(2);
         assertThat(count(workflow, "fail-fast: false")).isEqualTo(2);
-        assertThat(count(workflow, "reasoning_effort: max")).isEqualTo(4);
+        assertThat(count(workflow, "reasoning_effort: max")).isEqualTo(6);
+        assertThat(count(workflow, "- id: luna")).isEqualTo(2);
+        assertThat(count(workflow, "- id: deepseek")).isEqualTo(2);
+        assertThat(count(workflow, "- id: qwen")).isEqualTo(2);
         assertThat(count(workflow, "run_gate provider-probe")).isEqualTo(1);
         assertThat(count(workflow, "run_gate history-v385-qualification")).isEqualTo(1);
         assertThat(count(workflow, "run_gate history-v385-scenarios")).isEqualTo(1);

@@ -45,17 +45,13 @@ class ChapterSpec:
 
 
 CHAPTER_SPECS = (
-    ChapterSpec("glm", "projectflow-current-history-dogfood", "chapter-representativeness", "largest",
+    ChapterSpec("luna", "projectflow-current-history-dogfood", "chapter-representativeness", "largest",
         ("projectflow", "large-coherent-long-history")),
-    ChapterSpec("glm", "chapter-large-coherent", "chapter-representativeness", "largest",
+    ChapterSpec("luna", "chapter-large-coherent", "chapter-representativeness", "largest",
         ("large-coherent",)),
-    ChapterSpec("glm", "chapter-large-heterogeneous", "chapter-representativeness", "representation-boundary",
+    ChapterSpec("luna", "chapter-large-heterogeneous", "chapter-representativeness", "representation-boundary",
         ("large-heterogeneous", "representation-boundary")),
-    ChapterSpec("glm", "chapter-review-fixtures", "minor-first", "first", ("minor-first",)),
-    ChapterSpec("glm", "non-code-presentation", "chapter-representativeness", "first",
-        ("non-code", "presentation")),
-    ChapterSpec("glm", "chapter-repair-safety", "deterministic-fallback", "largest",
-        ("deterministic-fallback", "repair")),
+    ChapterSpec("luna", "chapter-review-fixtures", "minor-first", "first", ("minor-first",)),
     ChapterSpec("deepseek", "projectflow-current-history-dogfood", "chapter-representativeness", "largest",
         ("projectflow", "large-coherent-long-history")),
     ChapterSpec("deepseek", "chapter-review-fixtures", "supporting-heavy", "largest", ("supporting-heavy",)),
@@ -63,8 +59,12 @@ CHAPTER_SPECS = (
         ("non-code", "report-document")),
     ChapterSpec("deepseek", "non-code-data-analysis", "chapter-representativeness", "first",
         ("non-code", "data-analysis")),
-    ChapterSpec("deepseek", "chapter-review-fixtures", "short-coherent", "first", ("short-coherent",)),
-    ChapterSpec("deepseek", "chapter-review-fixtures", "user-declared", "first",
+    ChapterSpec("qwen", "non-code-presentation", "chapter-representativeness", "first",
+        ("non-code", "presentation")),
+    ChapterSpec("qwen", "chapter-repair-safety", "deterministic-fallback", "largest",
+        ("deterministic-fallback", "repair")),
+    ChapterSpec("qwen", "chapter-review-fixtures", "short-coherent", "first", ("short-coherent",)),
+    ChapterSpec("qwen", "chapter-review-fixtures", "user-declared", "first",
         ("correction", "user-declared")),
 )
 
@@ -91,8 +91,9 @@ def provider_profile(value: dict[str, Any], slug: str, path: Path) -> dict[str, 
     if not isinstance(profile, dict):
         raise ValueError(f"Provider profile is missing: {relative(path)}")
     expected = {
-        "glm": ("glm-5.2", "OPENAI_RESPONSES", "max"),
+        "luna": ("gpt-5.6-luna", "OPENAI_RESPONSES", "max"),
         "deepseek": ("deepseek-v4-flash", "OPENAI_CHAT_COMPLETIONS", "max"),
+        "qwen": ("qwen3.7-plus", "ANTHROPIC_MESSAGES", "max"),
     }[slug]
     actual = (profile.get("model"), profile.get("protocol"), profile.get("reasoningEffort"))
     if actual != expected:
@@ -183,12 +184,24 @@ def current_story_candidates(evidence_root: Path) -> tuple[
     entries: list[dict[str, Any]] = []
     entities: dict[str, dict[str, Any]] = {}
     profiles: dict[str, dict[str, Any]] = {}
-    for slug, name in (("glm", "GLM"), ("deepseek", "DeepSeek")):
+    # Luna replaces the retired GLM slot for the frozen Round 3 Story inputs.
+    # The alias preserves the immutable Round 3 sample IDs while recording the
+    # actual current Provider on every changed-subset entry.
+    for slug, frozen_slug, name in (
+        ("luna", "glm", "GPT 5.6 Luna"),
+        ("deepseek", "deepseek", "DeepSeek V4 Flash"),
+    ):
         stories, _, selected = provider_samples(evidence_root, slug, name, 3)
-        entries.extend(stories)
-        entities.update(selected)
+        for entry in stories:
+            source_sample_id = entry["sampleId"]
+            sample_id = source_sample_id.replace(f"{slug}-story-", f"{frozen_slug}-story-", 1)
+            entry["sampleId"] = sample_id
+            entries.append(entry)
+            entities[sample_id] = selected[source_sample_id]
         scenario_path = evidence_root / slug / "history-real-scenarios.json"
         profiles[slug] = provider_profile(load_json(scenario_path), slug, scenario_path)
+    qwen_path = evidence_root / "qwen" / "history-real-scenarios.json"
+    profiles["qwen"] = provider_profile(load_json(qwen_path), "qwen", qwen_path)
     if len(entries) != 30:
         raise ValueError(f"Final Story regression must resolve 30 Round 3 inputs, got {len(entries)}")
     return entries, entities, profiles
@@ -269,11 +282,16 @@ def chapter_entries(
 ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
     artifacts = {
         slug: load_json(evidence_root / slug / "history-real-scenarios.json")
-        for slug in ("glm", "deepseek")
+        for slug in ("luna", "deepseek", "qwen")
     }
     result: list[dict[str, Any]] = []
     entities: dict[str, dict[str, Any]] = {}
-    provider_counts = {"glm": 0, "deepseek": 0}
+    provider_counts = {"luna": 0, "deepseek": 0, "qwen": 0}
+    provider_names = {
+        "luna": "GPT 5.6 Luna",
+        "deepseek": "DeepSeek V4 Flash",
+        "qwen": "Qwen3.7 Plus",
+    }
     for sequence, spec in enumerate(CHAPTER_SPECS, start=1):
         source = f"{spec.scenario}:{spec.sample_type}"
         entity = select_chapter(
@@ -284,7 +302,7 @@ def chapter_entries(
         sample_id = f"{spec.provider}-final-chapter-{provider_counts[spec.provider]:02d}"
         entry = {
             "sampleId": sample_id,
-            "provider": "GLM" if spec.provider == "glm" else "DeepSeek",
+            "provider": provider_names[spec.provider],
             "model": profiles[spec.provider]["model"],
             "protocol": profiles[spec.provider]["protocol"],
             "reasoningEffort": profiles[spec.provider]["reasoningEffort"],
@@ -297,14 +315,14 @@ def chapter_entries(
         }
         result.append(entry)
         entities[sample_id] = entity
-    if len(result) < 8 or len(result) > 12 or provider_counts != {"glm": 6, "deepseek": 6}:
+    if len(result) < 8 or len(result) > 12 or provider_counts != {"luna": 4, "deepseek": 4, "qwen": 4}:
         raise ValueError(f"Final Chapter sample must be 8-12 and balanced; got {len(result)} {provider_counts}")
     return result, entities
 
 
 def artifact_hashes(evidence_root: Path) -> dict[str, str]:
     result: dict[str, str] = {}
-    for slug in ("glm", "deepseek"):
+    for slug in ("luna", "deepseek", "qwen"):
         for name in ("history-ground-truth-real-result.json", "history-real-scenarios.json"):
             path = evidence_root / slug / name
             if not path.is_file():
@@ -407,7 +425,7 @@ def write_outputs(args: argparse.Namespace) -> tuple[int, int]:
     }:
         raise ValueError("Final Chapter package must not overwrite Round 3")
 
-    for slug in ("glm", "deepseek"):
+    for slug in ("luna", "deepseek", "qwen"):
         for name in ("history-ground-truth-real-result.json", "history-real-scenarios.json"):
             path = evidence_root / slug / name
             value = load_json(path)
@@ -467,13 +485,13 @@ def write_outputs(args: argparse.Namespace) -> tuple[int, int]:
     worksheet_lines = [
         "# ProjectFlow V3.8.5 Final Chapter Representativeness 人工复核表",
         "",
-        "状态：HUMAN_REVIEW_REQUIRED / V3.8.5 NOT PASS。此文件只冻结工程样本；不得由 Codex、GLM 或 DeepSeek 代填。",
+        "状态：HUMAN_REVIEW_REQUIRED / V3.8.5 NOT PASS。此文件只冻结工程样本；不得由 Codex 或任何验证模型代填。",
         f"来源 Run：{args.run_id}",
         f"来源 Head：{source_head}",
         "Round 1：NEEDS_REVISION_NOT_APPROVED；Round 2：NEEDS_REVISION_NOT_APPROVED；Round 3 保持冻结且 reviewerCount=0。",
         f"Story regression：30 个 Round 3 输入中，{regression['changedPresentationCount']} 个展示内容变化，"
         f"Truth/Evidence semantic change 为 0。变化子集必须由同一真实评审人复核。",
-        f"Final Chapter 样本：{len(chapters)} 个，GLM 6 个、DeepSeek 6 个。",
+        f"Final Chapter 样本：{len(chapters)} 个，GPT 5.6 Luna 4 个、DeepSeek V4 Flash 4 个、Qwen3.7 Plus 4 个。",
         "评审模式：待一名真实人工评审；最终结论必须披露 single-reviewer limitation。",
         "评审人：",
         "",

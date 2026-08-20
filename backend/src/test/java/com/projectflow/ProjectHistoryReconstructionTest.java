@@ -990,7 +990,7 @@ class ProjectHistoryReconstructionTest {
     }
 
     @Test
-    void keepsMoreThanOneThousandEventsAcrossThreeHundredCommitsAndCapsStoryModelAtOneBoundedBatch() throws Exception {
+    void keepsMoreThanOneThousandEventsAcrossThreeHundredCommitsAndCapsModelAtOneBoundedBatch() throws Exception {
         UUID userId = UUID.randomUUID();
         Path repository = temporaryRoot.resolve("large-history");
         Files.createDirectories(repository);

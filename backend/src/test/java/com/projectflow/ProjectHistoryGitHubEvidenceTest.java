@@ -70,7 +70,7 @@ class ProjectHistoryGitHubEvidenceTest {
         provider(userId);
         when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
             String prompt = invocation.getArgument(1, String.class);
-            capturedPrompt.set(prompt);
+            capturedPrompt.compareAndSet(null, prompt);
             String response = historyResponse(prompt);
             return new ModelGatewayService.StructuredModelResponse(response, outputAdapter.parse(response));
         });
