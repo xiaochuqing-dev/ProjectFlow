@@ -3,7 +3,10 @@ package com.projectflow.service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -198,15 +201,24 @@ public class ModelOutputAdapter {
         }
         if (!node.isObject()) return node;
         ObjectNode copy = null;
-        for (String field : EMBEDDED_HISTORY_JSON_FIELDS) {
-            JsonNode child = node.get(field);
-            if (child == null) continue;
+        Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
+        while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> field = fields.next();
+            JsonNode child = field.getValue();
+            if (!embeddedHistoryJsonField(field.getKey())) continue;
             JsonNode decoded = decodeEmbeddedHistoryJson(child, task, depth + 1);
             if (decoded == child) continue;
             if (copy == null) copy = ((ObjectNode) node).deepCopy();
-            copy.set(field, decoded);
+            copy.set(field.getKey(), decoded);
         }
         return copy == null ? node : copy;
+    }
+
+    private static boolean embeddedHistoryJsonField(String field) {
+        String normalized = field == null ? "" : field.trim().toLowerCase(Locale.ROOT);
+        return EMBEDDED_HISTORY_JSON_FIELDS.contains(normalized)
+            || normalized.endsWith("json")
+            || normalized.contains("output_template");
     }
 
     private static boolean historyTask(ModelTaskType task) {
@@ -385,9 +397,53 @@ public class ModelOutputAdapter {
     }
 
     private JsonNode normalizeTargetRoot(JsonNode root, ModelTaskType task) {
+        if (historyTask(task)) {
+            JsonNode history = findHistoryRoot(root, task, 0);
+            return history == null ? root : history;
+        }
         if (!task.collectionOutput()) return root;
         JsonNode collection = findTargetCollection(root, task, 0);
         return collection == null ? root : collection;
+    }
+
+    /**
+     * Compatible relays sometimes add a harmless status sibling or name the
+     * exact repair template as a JSON wrapper. Only the required history
+     * containers are unwrapped; downstream history validation still owns every
+     * item field, ID, Evidence reference and claim.
+     */
+    private JsonNode findHistoryRoot(JsonNode node, ModelTaskType task, int depth) {
+        if (node == null || depth > 5) return null;
+        JsonNode normalized = task.normalizeRoot(node);
+        JsonNode best = historyContainers(normalized, task);
+        int bestScore = best == null ? 0 : task.schemaScore(best, this);
+        if (node.isContainerNode()) {
+            for (JsonNode child : node) {
+                JsonNode candidate = findHistoryRoot(child, task, depth + 1);
+                if (candidate == null) continue;
+                int score = task.schemaScore(candidate, this);
+                if (score > bestScore) {
+                    best = candidate;
+                    bestScore = score;
+                }
+            }
+        }
+        return best;
+    }
+
+    private JsonNode historyContainers(JsonNode root, ModelTaskType task) {
+        if (root == null || !root.isObject()) return null;
+        if (task == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+            if (!root.path("chapters").isArray()) return null;
+            ObjectNode clean = objectMapper.createObjectNode();
+            clean.set("chapters", root.path("chapters").deepCopy());
+            return clean;
+        }
+        if (!root.path("stories").isArray() || !root.path("chapters").isArray()) return null;
+        ObjectNode clean = objectMapper.createObjectNode();
+        clean.set("stories", root.path("stories").deepCopy());
+        clean.set("chapters", root.path("chapters").deepCopy());
+        return clean;
     }
 
     private JsonNode findTargetCollection(JsonNode node, ModelTaskType task, int depth) {

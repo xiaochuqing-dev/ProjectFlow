@@ -146,6 +146,17 @@ public enum ModelTaskType {
         }
         JsonNode normalized = normalizeObjectRoot(root);
         if (!normalized.isObject()) return 0;
+        if (this == PROJECT_HISTORY_SYNTHESIS) {
+            JsonNode stories = normalized.path("stories");
+            JsonNode chapters = normalized.path("chapters");
+            if (!stories.isArray() || !chapters.isArray()) return 0;
+            return 100 + Math.min(stories.size(), 100) * 4 + Math.min(chapters.size(), 20);
+        }
+        if (this == PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+            JsonNode chapters = normalized.path("chapters");
+            if (!chapters.isArray()) return 0;
+            return 100 + Math.min(chapters.size(), 20) * 4;
+        }
         int matches = 0;
         for (String field : requiredObjectFields) {
             JsonNode value = normalized.get(field);

@@ -89,6 +89,38 @@ class ModelOutputAdapterTest {
     }
 
     @Test
+    void unwrapsNamedExactHistoryTemplateWithMetadataWithoutKeepingWrapperFields() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        String exact = "{\"chapters\":[{\"chapterId\":\"chapter-one\","
+            + "\"representedClusterIds\":[\"cluster-one\"],\"title\":\"形成入口\","
+            + "\"summary\":\"入口已经形成。\"}]}";
+        String response = mapper.writeValueAsString(Map.of(
+            "status", "ok",
+            "REQUIRED_OUTPUT_TEMPLATE_JSON", exact
+        ));
+
+        var parsed = adapter.parse(response, ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS);
+
+        assertThat(parsed.root().fieldNames()).toIterable().containsExactly("chapters");
+        assertThat(parsed.root().path("chapters")).singleElement()
+            .satisfies(value -> assertThat(value.path("chapterId").asText()).isEqualTo("chapter-one"));
+        assertThat(ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS.schemaMatches(parsed.root(), adapter)).isTrue();
+    }
+
+    @Test
+    void prefersCompleteHistoryContainerOverEarlierSingleStoryCandidate() throws Exception {
+        String response = "示例：{\"storyId\":\"story-one\",\"humanTitle\":\"示例\"}\n正式："
+            + "{\"stories\":[{\"storyId\":\"story-one\"},{\"storyId\":\"story-two\"}],"
+            + "\"chapters\":[]}";
+
+        var parsed = adapter.parse(response, ModelTaskType.PROJECT_HISTORY_SYNTHESIS);
+
+        assertThat(parsed.root().path("stories")).hasSize(2);
+        assertThat(parsed.root().path("stories").findValuesAsText("storyId"))
+            .containsExactly("story-one", "story-two");
+    }
+
+    @Test
     void removesMarkdownAndExplanationText() throws Exception {
         var result = adapter.parse("模型分析如下：\n```json\n{\"cards\":[{\"title\":\"证据归并\"}]}\n```\n请确认");
 
