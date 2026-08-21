@@ -120,6 +120,28 @@ class ModelOutputAdapterTest {
     }
 
     @Test
+    void decodesStringifiedJsonForExactObjectTaskWithoutInventingMissingFields() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        String exact = mapper.writeValueAsString(Map.of("summary", "ProjectFact 保存已发生的开发结果。"));
+        String wrapped = mapper.writeValueAsString(Map.of(
+            "status", "ok",
+            "result", exact
+        ));
+
+        var direct = adapter.parse(mapper.writeValueAsString(exact),
+            ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST);
+        var nested = adapter.parse(wrapped, ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST);
+        var unrelated = adapter.parse("{\"result\":\"普通文本\"}",
+            ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST);
+
+        assertThat(direct.root().path("summary").asText()).isEqualTo("ProjectFact 保存已发生的开发结果。");
+        assertThat(nested.root().path("summary").asText()).isEqualTo("ProjectFact 保存已发生的开发结果。");
+        assertThat(ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST.schemaMatches(direct.root(), adapter)).isTrue();
+        assertThat(ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST.schemaMatches(nested.root(), adapter)).isTrue();
+        assertThat(ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST.schemaMatches(unrelated.root(), adapter)).isFalse();
+    }
+
+    @Test
     void unwrapsNamedExactHistoryTemplateWithMetadataWithoutKeepingWrapperFields() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         String exact = "{\"chapters\":[{\"chapterId\":\"chapter-one\","

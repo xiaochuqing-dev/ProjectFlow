@@ -25,6 +25,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public class ModelOutputAdapter {
     private static final Pattern CODE_FENCE = Pattern.compile("(?is)```(?:json)?\\s*|```");
     private static final Pattern TRAILING_COMMA = Pattern.compile(",(\\s*[}\\]])");
+    private static final Set<String> EMBEDDED_JSON_WRAPPER_FIELDS = Set.of(
+        "result", "output", "data", "response", "json"
+    );
     private static final Set<String> EMBEDDED_HISTORY_JSON_FIELDS = Set.of(
         "stories", "chapters", "result", "output", "data", "response", "json"
     );
@@ -53,7 +56,7 @@ public class ModelOutputAdapter {
         for (String candidate : candidates) {
             try {
                 JsonNode parsed = objectMapper.readTree(candidate);
-                JsonNode decoded = decodeEmbeddedHistoryJson(parsed, task, 0);
+                JsonNode decoded = decodeEmbeddedStructuredJson(parsed, task, 0);
                 JsonNode normalizedRoot = normalizeTargetRoot(task.normalizeRoot(decoded), task);
                 int score = task.schemaScore(normalizedRoot, this);
                 ParsedCandidate current = new ParsedCandidate(
@@ -66,7 +69,7 @@ public class ModelOutputAdapter {
                 if (normalized.equals(candidate)) continue;
                 try {
                     JsonNode parsed = objectMapper.readTree(normalized);
-                    JsonNode decoded = decodeEmbeddedHistoryJson(parsed, task, 0);
+                    JsonNode decoded = decodeEmbeddedStructuredJson(parsed, task, 0);
                     JsonNode normalizedRoot = normalizeTargetRoot(task.normalizeRoot(decoded), task);
                     int score = task.schemaScore(normalizedRoot, this);
                     ParsedCandidate current = new ParsedCandidate(normalizedRoot, score, true);
@@ -176,23 +179,24 @@ public class ModelOutputAdapter {
         return null;
     }
 
-    /** Decode only JSON-shaped transport wrappers used around history containers. */
-    private JsonNode decodeEmbeddedHistoryJson(JsonNode node, ModelTaskType task, int depth) {
-        if (!historyTask(task) || node == null || depth >= 4) return node;
+    /** Decode only JSON-shaped transport wrappers; task validation still owns acceptance. */
+    private JsonNode decodeEmbeddedStructuredJson(JsonNode node, ModelTaskType task, int depth) {
+        if (node == null || depth >= 4) return node;
         if (node.isTextual()) {
             String value = node.asText("").trim();
             if (!jsonContainer(value)) return node;
             try {
-                return decodeEmbeddedHistoryJson(objectMapper.readTree(value), task, depth + 1);
+                return decodeEmbeddedStructuredJson(objectMapper.readTree(value), task, depth + 1);
             } catch (IOException ignored) {
                 return node;
             }
         }
         if (node.isArray()) {
+            if (!historyTask(task)) return node;
             ArrayNode copy = null;
             for (int index = 0; index < node.size(); index++) {
                 JsonNode child = node.get(index);
-                JsonNode decoded = decodeEmbeddedHistoryJson(child, task, depth + 1);
+                JsonNode decoded = decodeEmbeddedStructuredJson(child, task, depth + 1);
                 if (decoded == child) continue;
                 if (copy == null) copy = ((ArrayNode) node).deepCopy();
                 copy.set(index, decoded);
@@ -205,8 +209,8 @@ public class ModelOutputAdapter {
         while (fields.hasNext()) {
             Map.Entry<String, JsonNode> field = fields.next();
             JsonNode child = field.getValue();
-            if (!embeddedHistoryJsonField(field.getKey())) continue;
-            JsonNode decoded = decodeEmbeddedHistoryJson(child, task, depth + 1);
+            if (!embeddedStructuredJsonField(field.getKey(), task)) continue;
+            JsonNode decoded = decodeEmbeddedStructuredJson(child, task, depth + 1);
             if (decoded == child) continue;
             if (copy == null) copy = ((ObjectNode) node).deepCopy();
             copy.set(field.getKey(), decoded);
@@ -214,11 +218,13 @@ public class ModelOutputAdapter {
         return copy == null ? node : copy;
     }
 
-    private static boolean embeddedHistoryJsonField(String field) {
+    private static boolean embeddedStructuredJsonField(String field, ModelTaskType task) {
         String normalized = field == null ? "" : field.trim().toLowerCase(Locale.ROOT);
-        return EMBEDDED_HISTORY_JSON_FIELDS.contains(normalized)
-            || normalized.endsWith("json")
-            || normalized.contains("output_template");
+        if (EMBEDDED_JSON_WRAPPER_FIELDS.contains(normalized)) return true;
+        return historyTask(task)
+            && (EMBEDDED_HISTORY_JSON_FIELDS.contains(normalized)
+                || normalized.endsWith("json")
+                || normalized.contains("output_template"));
     }
 
     private static boolean historyTask(ModelTaskType task) {
@@ -397,13 +403,36 @@ public class ModelOutputAdapter {
     }
 
     private JsonNode normalizeTargetRoot(JsonNode root, ModelTaskType task) {
+        if (task == ModelTaskType.LEGACY_STRUCTURED) return root;
         if (historyTask(task)) {
             JsonNode history = findHistoryRoot(root, task, 0);
             return history == null ? root : history;
         }
-        if (!task.collectionOutput()) return root;
+        if (!task.collectionOutput()) {
+            JsonNode object = findTargetObject(root, task, 0);
+            return object == null ? root : object;
+        }
         JsonNode collection = findTargetCollection(root, task, 0);
         return collection == null ? root : collection;
+    }
+
+    private JsonNode findTargetObject(JsonNode node, ModelTaskType task, int depth) {
+        if (node == null || depth > 5) return null;
+        JsonNode normalized = task.normalizeRoot(node);
+        JsonNode best = normalized != null && normalized.isObject() ? normalized : null;
+        int bestScore = best == null ? 0 : task.schemaScore(best, this);
+        if (node.isContainerNode()) {
+            for (JsonNode child : node) {
+                JsonNode candidate = findTargetObject(child, task, depth + 1);
+                if (candidate == null) continue;
+                int score = task.schemaScore(candidate, this);
+                if (score > bestScore) {
+                    best = candidate;
+                    bestScore = score;
+                }
+            }
+        }
+        return bestScore > 0 ? best : null;
     }
 
     /**
