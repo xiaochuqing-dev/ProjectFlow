@@ -12,6 +12,8 @@ assert.match(read("start.bat"), /Start-ProjectFlow\.bat/i, "legacy start.bat sho
 
 const embeddedLauncher = read("start-projectflow-embedded.ps1");
 assert.match(embeddedLauncher, /package-lock\.json/, "embedded launcher should fingerprint frontend dependencies");
+assert.match(embeddedLauncher, /System\.Security\.Cryptography\.SHA256/, "embedded launcher should hash without depending on an optional PowerShell cmdlet");
+assert.doesNotMatch(embeddedLauncher, /Get-FileHash/, "embedded launcher should run in bundled PowerShell environments without Get-FileHash");
 assert.match(embeddedLauncher, /Arguments @\("ci"\)/, "embedded launcher should install missing or changed frontend dependencies");
 assert.match(embeddedLauncher, /Arguments @\("run", "build"\)/, "embedded launcher should rebuild the production frontend");
 assert.match(embeddedLauncher, /last-embedded-build\.json/, "embedded launcher should record runtime build evidence");
