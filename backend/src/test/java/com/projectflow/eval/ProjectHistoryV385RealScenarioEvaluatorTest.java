@@ -129,8 +129,11 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             try {
                 actual = (ModelGatewayService.StructuredModelResponse) invocation.callRealMethod();
             } catch (Throwable failure) {
+                calls.computeIfAbsent(scenario, ignored -> new CallAccumulator())
+                    .addFailure(task, failureDiagnostics(failure), validationRepair, failedRequestCount(failure));
                 System.err.println("V385_SAFE_PROVIDER_FAILURE scenario=" + scenario
-                    + " task=" + task.name() + " " + safeProviderFailure(failure));
+                    + " task=" + task.name() + " validationRepair=" + validationRepair
+                    + " " + safeProviderFailure(failure));
                 throw failure;
             }
             calls.computeIfAbsent(scenario, ignored -> new CallAccumulator())
@@ -521,11 +524,20 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
     }
 
     private Map<String, Object> completeRefresh(UUID userId, UUID projectId, int maxRefreshes) throws Exception {
-        Map<String, Object> diagnostics = Map.of();
+        Map<String, Object> diagnostics;
+        try {
+            diagnostics = readService.overview(userId, projectId).diagnostics();
+        } catch (RuntimeException missingSnapshot) {
+            diagnostics = Map.of();
+        }
+        String previousFailedProgress = failedProgress(diagnostics);
         int attempts = 0;
         do {
             reconstructionService.refresh(userId, projectId, UUID.randomUUID(), false);
             diagnostics = readService.overview(userId, projectId).diagnostics();
+            String currentFailedProgress = failedProgress(diagnostics);
+            if (!currentFailedProgress.isBlank() && currentFailedProgress.equals(previousFailedProgress)) break;
+            previousFailedProgress = currentFailedProgress;
         } while (incomplete(diagnostics) && ++attempts < maxRefreshes);
         require(!incomplete(diagnostics), "Chapter fixture 未在有界刷新内完成");
         return diagnostics;
@@ -717,14 +729,16 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         int commitCount = Integer.parseInt(git(source, "rev-list", "--count", "HEAD").trim());
         require(commitCount > 197, "当前 ProjectFlow checkout 未包含 V3.8.5 完整历史");
         ProjectSpace project = project(userId, "ProjectFlow V3.8.5 Dogfood", source);
-        Map<String, Object> diagnostics = Map.of();
-        int guard = 0;
-        do {
-            reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
-            diagnostics = readService.overview(userId, project.getId()).diagnostics();
-        } while (incomplete(diagnostics) && ++guard < 24);
-        require(!incomplete(diagnostics),
-            "ProjectFlow Dogfood 在 24 次有界刷新内未完成；safeDiagnostics=" + safeDiagnostics(diagnostics));
+        Map<String, Object> diagnostics;
+        try {
+            diagnostics = completeRefresh(userId, project.getId(), 24);
+        } catch (AssertionError failure) {
+            Map<String, Object> current = readService.overview(userId, project.getId()).diagnostics();
+            throw new AssertionError(
+                "ProjectFlow Dogfood 在有界刷新或一次同状态失败重试内未完成；safeDiagnostics="
+                    + safeDiagnostics(current), failure
+            );
+        }
         var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         require(cached.cacheHit(), "ProjectFlow Dogfood 完成后未命中全局 cache");
 
@@ -1118,6 +1132,27 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         return "code=OTHER requestCount=0";
     }
 
+    private static ModelGatewayService.ModelCallDiagnostics failureDiagnostics(Throwable failure) {
+        Throwable current = failure;
+        for (int depth = 0; current != null && depth < 8; depth++, current = current.getCause()) {
+            if (current instanceof ModelGatewayService.ModelResponseFormatException format
+                && format.diagnostics() != null) return format.diagnostics();
+        }
+        return null;
+    }
+
+    private static int failedRequestCount(Throwable failure) {
+        Throwable current = failure;
+        for (int depth = 0; current != null && depth < 8; depth++, current = current.getCause()) {
+            if (current instanceof ModelGatewayService.ModelHttpException http) return http.requestCount();
+            if (current instanceof ModelGatewayService.ModelTransportException transport) return transport.requestCount();
+            if (current instanceof ModelGatewayService.ModelResponseFormatException format
+                && format.diagnostics() != null) return format.diagnostics().requestCount();
+            if (current instanceof CancellationException) return 0;
+        }
+        return 0;
+    }
+
     private static String safeFailureCode(String value) {
         if (value == null || !value.matches("[A-Z0-9_]{1,64}")) return "FORMAT_UNKNOWN";
         return value;
@@ -1198,6 +1233,20 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         return number(diagnostics, "pendingWindowCount") > 0
             || number(diagnostics, "failedWindowCount") > 0
             || chapterIncomplete(diagnostics);
+    }
+
+    private static String failedProgress(Map<String, Object> diagnostics) {
+        int failedWindows = number(diagnostics, "failedWindowCount");
+        int failedChapters = number(diagnostics, "chapterSynthesisFailedCount");
+        if (failedWindows + failedChapters == 0) return "";
+        return String.join(":",
+            Integer.toString(number(diagnostics, "succeededWindowCount")),
+            Integer.toString(failedWindows),
+            Integer.toString(number(diagnostics, "pendingWindowCount")),
+            Integer.toString(number(diagnostics, "chapterSynthesisProcessedCount")),
+            Integer.toString(failedChapters),
+            Integer.toString(number(diagnostics, "chapterSynthesisPendingCount"))
+        );
     }
 
     private static int number(Map<String, Object> values, String key) {
@@ -1293,6 +1342,24 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             physicalRequests += Math.max(0, diagnostics.requestCount());
             tokens += Math.max(0, diagnostics.totalTokens());
             latencyMs += Math.max(0, diagnostics.latencyMs());
+        }
+
+        private void addFailure(
+            ModelTaskType task,
+            ModelGatewayService.ModelCallDiagnostics diagnostics,
+            boolean validationRepair,
+            int requestCount
+        ) {
+            if (validationRepair) validationRepairCalls++;
+            else if (task == ModelTaskType.PROJECT_HISTORY_SYNTHESIS) storyLogicalCalls++;
+            else if (task == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) chapterLogicalCalls++;
+            if (diagnostics != null) {
+                physicalRequests += Math.max(0, diagnostics.requestCount());
+                tokens += Math.max(0, diagnostics.totalTokens());
+                latencyMs += Math.max(0, diagnostics.latencyMs());
+            } else {
+                physicalRequests += Math.max(0, requestCount);
+            }
         }
     }
 

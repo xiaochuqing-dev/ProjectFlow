@@ -89,6 +89,37 @@ class ModelOutputAdapterTest {
     }
 
     @Test
+    void normalizesIdKeyedHistoryMapsAndKnownNarrativeAliasesWithoutChangingItemContent() throws Exception {
+        var history = adapter.parse(
+            "{\"storyNarratives\":{\"story-one\":{\"humanTitle\":\"形成入口\"}},"
+                + "\"chapter_narratives\":{\"chapter-one\":{\"title\":\"入口阶段\",\"summary\":\"入口已经形成。\"}}}",
+            ModelTaskType.PROJECT_HISTORY_SYNTHESIS
+        );
+        var chapter = adapter.parse(
+            "{\"historyChapters\":{\"chapter-two\":{\"representedClusterIds\":[\"cluster-one\"],"
+                + "\"title\":\"交付阶段\",\"summary\":\"交付结果已经形成。\"}}}",
+            ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS
+        );
+
+        assertThat(history.root().path("stories")).singleElement().satisfies(value -> {
+            assertThat(value.path("storyId").asText()).isEqualTo("story-one");
+            assertThat(value.path("humanTitle").asText()).isEqualTo("形成入口");
+        });
+        assertThat(history.root().path("chapters")).singleElement().satisfies(value -> {
+            assertThat(value.path("chapterId").asText()).isEqualTo("chapter-one");
+            assertThat(value.path("title").asText()).isEqualTo("入口阶段");
+        });
+        assertThat(chapter.root().path("chapters")).singleElement().satisfies(value -> {
+            assertThat(value.path("chapterId").asText()).isEqualTo("chapter-two");
+            assertThat(value.path("representedClusterIds").path(0).asText()).isEqualTo("cluster-one");
+        });
+        assertThat(ModelTaskType.PROJECT_HISTORY_SYNTHESIS.schemaMatches(history.root(), adapter)).isTrue();
+        assertThat(ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS.schemaMatches(chapter.root(), adapter)).isTrue();
+        assertThat(history.repaired()).isTrue();
+        assertThat(chapter.repaired()).isTrue();
+    }
+
+    @Test
     void unwrapsNamedExactHistoryTemplateWithMetadataWithoutKeepingWrapperFields() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         String exact = "{\"chapters\":[{\"chapterId\":\"chapter-one\","
