@@ -58,7 +58,8 @@ class ProjectFlowRealProviderProbeIT {
 
         var response = gateway.callStructured(
             provider,
-            "基于事实‘ProjectFlow 使用 ProjectFact 保存已发生开发结果’，只返回 {\"summary\":\"\"}，填入一句简短中文。",
+            "请用一句简短中文概括以下事实：ProjectFlow 使用 ProjectFact 保存已发生的开发结果。"
+                + "输出一个 JSON 对象，其中只包含名为 summary 的字符串字段。",
             ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST
         );
         var diagnostics = response.diagnostics();
