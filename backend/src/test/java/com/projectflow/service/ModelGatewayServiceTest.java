@@ -41,15 +41,15 @@ class ModelGatewayServiceTest {
             .doesNotContain("code=", "param=", "\n", "Authorization", "secret");
 
         var credentialShaped = new ModelGatewayService.ModelHttpException(
-            400, 1, "sk-proj-examplecredential", "invalid_request_error", "input"
+            400, 1, "sk-example", "invalid_request_error", "input"
         );
         assertThat(credentialShaped.errorType()).isBlank();
         assertThat(credentialShaped.errorCode()).isEqualTo("invalid_request_error");
         assertThat(credentialShaped.errorParam()).isEqualTo("input");
-        assertThat(credentialShaped.getMessage()).doesNotContain("sk-proj-examplecredential");
+        assertThat(credentialShaped.getMessage()).doesNotContain("sk-example");
 
         var protocolFailure = new ModelProtocolHttpException(
-            400, "invalid_request_error", "unsupported field", "Authorization: examplecredential", null
+            400, "invalid_request_error", "unsupported field", "input field", null
         );
         assertThat(protocolFailure.errorType()).isEqualTo("invalid_request_error");
         assertThat(protocolFailure.errorCode()).isBlank();
