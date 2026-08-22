@@ -18,6 +18,7 @@ import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
 import com.projectflow.entity.ModelProtocol;
 import com.projectflow.service.model.ModelProtocolAdapterRegistry;
+import com.projectflow.service.model.ModelProtocolHttpException;
 import com.projectflow.service.model.OpenAiChatCompletionsAdapter;
 import com.sun.net.httpserver.HttpServer;
 
@@ -34,12 +35,25 @@ class ModelGatewayServiceTest {
         );
 
         assertThat(failure.errorType()).isEqualTo("invalid_request_error");
-        assertThat(failure.errorCode()).isEqualTo("unsupported_field");
-        assertThat(failure.errorParam()).isEqualTo("text.format_Authorization:_secret");
-        assertThat(failure.getMessage()).contains(
-            "model HTTP 400", "type=invalid_request_error", "code=unsupported_field",
-            "param=text.format_Authorization:_secret"
-        ).doesNotContain("\n", "Authorization: secret");
+        assertThat(failure.errorCode()).isBlank();
+        assertThat(failure.errorParam()).isBlank();
+        assertThat(failure.getMessage()).contains("model HTTP 400", "type=invalid_request_error")
+            .doesNotContain("code=", "param=", "\n", "Authorization", "secret");
+
+        var credentialShaped = new ModelGatewayService.ModelHttpException(
+            400, 1, "sk-proj-examplecredential", "invalid_request_error", "input"
+        );
+        assertThat(credentialShaped.errorType()).isBlank();
+        assertThat(credentialShaped.errorCode()).isEqualTo("invalid_request_error");
+        assertThat(credentialShaped.errorParam()).isEqualTo("input");
+        assertThat(credentialShaped.getMessage()).doesNotContain("sk-proj-examplecredential");
+
+        var protocolFailure = new ModelProtocolHttpException(
+            400, "invalid_request_error", "unsupported field", "Authorization: examplecredential", null
+        );
+        assertThat(protocolFailure.errorType()).isEqualTo("invalid_request_error");
+        assertThat(protocolFailure.errorCode()).isBlank();
+        assertThat(protocolFailure.errorParam()).isBlank();
     }
 
     @Test

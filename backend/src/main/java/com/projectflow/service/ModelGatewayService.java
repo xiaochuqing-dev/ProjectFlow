@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Semaphore;
+import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -696,6 +697,10 @@ public class ModelGatewayService {
     }
 
     public static final class ModelHttpException extends IOException {
+        private static final Pattern SAFE_HTTP_TOKEN = Pattern.compile("[a-z][a-z0-9_.:-]{0,63}");
+        private static final Pattern CREDENTIAL_SHAPED_HTTP_TOKEN = Pattern.compile(
+            "(?:^|[_.:-])(?:sk|pk|rk|ark|bearer|token|secret|authorization|password|credential)(?:$|[_.:-])"
+        );
         private final int statusCode;
         private final int requestCount;
         private final String errorType;
@@ -738,8 +743,10 @@ public class ModelGatewayService {
 
         private static String safeHttpToken(String value) {
             if (value == null || value.isBlank()) return "";
-            String safe = value.trim().replaceAll("[^A-Za-z0-9_.:-]", "_");
-            return safe.length() <= 120 ? safe : safe.substring(0, 120);
+            String safe = value.trim();
+            if (!SAFE_HTTP_TOKEN.matcher(safe).matches()
+                || CREDENTIAL_SHAPED_HTTP_TOKEN.matcher(safe).find()) return "";
+            return safe;
         }
     }
 

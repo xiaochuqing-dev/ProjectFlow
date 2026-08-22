@@ -1,8 +1,13 @@
 package com.projectflow.service.model;
 
 import java.io.IOException;
+import java.util.regex.Pattern;
 
 public final class ModelProtocolHttpException extends IOException {
+    private static final Pattern SAFE_TOKEN = Pattern.compile("[a-z][a-z0-9_.:-]{0,63}");
+    private static final Pattern CREDENTIAL_SHAPED = Pattern.compile(
+        "(?:^|[_.:-])(?:sk|pk|rk|ark|bearer|token|secret|authorization|password|credential)(?:$|[_.:-])"
+    );
     private final int statusCode;
     private final String errorType;
     private final String errorCode;
@@ -33,7 +38,8 @@ public final class ModelProtocolHttpException extends IOException {
 
     private static String safeToken(String value) {
         if (value == null || value.isBlank()) return "";
-        String safe = value.trim().replaceAll("[^A-Za-z0-9_.:-]", "_");
-        return safe.length() <= 120 ? safe : safe.substring(0, 120);
+        String safe = value.trim();
+        if (!SAFE_TOKEN.matcher(safe).matches() || CREDENTIAL_SHAPED.matcher(safe).find()) return "";
+        return safe;
     }
 }
