@@ -623,16 +623,18 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         Map<String, Object> initial = readService.overview(userId, project.getId()).diagnostics();
-        require(number(initial, "totalWindowCount") == 2,
-            "展示标签归一化改变了两窗口规划；safeDiagnostics=" + safeDiagnostics(initial));
-        require(number(initial, "succeededWindowCount") == 2,
-            "受影响两窗口未全部完成；safeDiagnostics=" + safeDiagnostics(initial));
+        int initialWindowCount = (64 + ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT - 1)
+            / ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
+        require(number(initial, "totalWindowCount") == initialWindowCount,
+            "展示标签归一化改变了窗口规划；safeDiagnostics=" + safeDiagnostics(initial));
+        require(number(initial, "succeededWindowCount") == initialWindowCount,
+            "受影响窗口未全部完成；safeDiagnostics=" + safeDiagnostics(initial));
         List<ChangeStory> initialStories = allStories(userId, project.getId());
         require(initialStories.size() == 64, "展示标签归一化造成 Story 丢失");
         require(firstLayerLeaks(initialStories, FIRST_LAYER_FORBIDDEN) == 0,
             "编号占位符或工程术语泄漏到修正前第一层");
         CallAccumulator call = calls.get(activeScenario.get());
-        require(call != null && call.storyLogicalCalls == 2, "修正前没有严格执行两个 Story 窗口");
+        require(call != null && call.storyLogicalCalls == initialWindowCount, "修正前没有严格执行全部 Story 窗口");
 
         ChangeStory target = initialStories.get(0);
         ProjectHistorySnapshot snapshot = snapshotRepository.findByProjectId(project.getId()).orElseThrow();
@@ -642,17 +644,17 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             "重新整理项目结果并明确当前状态", "", "", "", revision, snapshot.getSourceEventFingerprint()
         ));
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
-        require(call.storyLogicalCalls == 3, "一次展示修正没有只失效目标 Story 窗口");
+        require(call.storyLogicalCalls == initialWindowCount + 1, "一次展示修正没有只失效目标 Story 窗口");
         ChangeStory corrected = readService.story(userId, project.getId(), target.id()).story();
         require("重新整理项目结果并明确当前状态".equals(corrected.humanTitle()), "用户修正未出现在 corrected read model");
         require(firstLayerLeaks(List.of(corrected), FIRST_LAYER_FORBIDDEN) == 0,
             "编号占位符或工程术语泄漏到修正后第一层");
         var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         require(cached.cacheHit(), "修正后的新窗口结果未缓存");
-        require(call.storyLogicalCalls == 3, "修正后的全局 cache hit 重复调用模型");
+        require(call.storyLogicalCalls == initialWindowCount + 1, "修正后的全局 cache hit 重复调用模型");
         return new ScenarioEvidence(Map.of(
             "initialStoryCount", initialStories.size(),
-            "initialWindowCount", 2,
+            "initialWindowCount", initialWindowCount,
             "invalidatedStoryWindowCount", 1,
             "indexedPlaceholderLeakCount", 0,
             "fullAutomaticWindowRerun", false,

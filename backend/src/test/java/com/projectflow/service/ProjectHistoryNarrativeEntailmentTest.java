@@ -102,4 +102,16 @@ class ProjectHistoryNarrativeEntailmentTest {
             "研究报告的结构变化已保留供后续核对"
         )).isTrue();
     }
+
+    @Test
+    void acceptsConservativeDeterministicOutcomesForPlannedAndConfiguredStories() {
+        assertThat(validator.hasActionObjectResult(
+            "规划项目交付节奏，明确后续建设方向",
+            "现有材料记录了项目交付节奏的目标和范围，但还不能确认已经实现。"
+        )).isTrue();
+        assertThat(validator.hasActionObjectResult(
+            "补充环境配置示例，完善项目配置基础",
+            "这一阶段增加了环境配置示例，为后续本地设置提供参考。"
+        )).isTrue();
+    }
 }
