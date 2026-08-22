@@ -56,6 +56,7 @@ import com.projectflow.service.ProjectHistoryCorrectionService;
 import com.projectflow.service.ProjectHistoryPromptBuilder;
 import com.projectflow.service.ProjectHistoryReadService;
 import com.projectflow.service.ProjectHistoryReconstructionService;
+import com.projectflow.service.ProjectHistoryWindowPlanner;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryCorrectionRequest;
 import com.projectflow.support.AppException;
 
@@ -1036,7 +1037,8 @@ class ProjectHistoryReconstructionTest {
         Path root = temporaryRoot.resolve("forty-window-history");
         Files.createDirectories(root);
         ProjectSpace project = project(userId, "Forty Window History", root);
-        historicalFacts(project, 40 * 32, 1, 1, 0);
+        int storyLimit = ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
+        historicalFacts(project, 40 * storyLimit, 1, 1, 0);
         provider(userId);
 
         AtomicInteger calls = new AtomicInteger();
@@ -1081,7 +1083,7 @@ class ProjectHistoryReconstructionTest {
             .containsEntry("nextWindowOrdinal", -1)
             .containsEntry("unprocessedStoryCount", 0);
         assertThat(readService.stories(userId, project.getId(), null, false, null, null, 0, 1).totalElements())
-            .isEqualTo(40L * 32L);
+            .isEqualTo(40L * storyLimit);
 
         int guard = 0;
         while (((Number) readService.overview(userId, project.getId()).diagnostics()
@@ -1127,7 +1129,10 @@ class ProjectHistoryReconstructionTest {
         var chapters = readService.chapters(userId, project.getId(), 0, 100).items();
         List<com.projectflow.dto.ProjectHistoryDtos.HistoryChapter> large = chapters.stream()
             .filter(chapter -> chapter.storyRefs().size() == 40).toList();
-        assertThat(storyCalls.get()).isEqualTo(4);
+        assertThat(storyCalls.get()).isEqualTo(
+            (100 + ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT - 1)
+                / ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT
+        );
         assertThat(chapterCalls.get()).isEqualTo(chapters.size());
         assertThat(large).hasSize(2).allSatisfy(chapter -> {
             assertThat(chapter.title()).contains("项目成果记录", "可追溯结果")
@@ -1161,7 +1166,10 @@ class ProjectHistoryReconstructionTest {
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
 
-        assertThat(storyCalls.get()).isEqualTo(4);
+        assertThat(storyCalls.get()).isEqualTo(
+            (100 + ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT - 1)
+                / ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT
+        );
         assertThat(chapterCalls.get()).isEqualTo(chapters.size());
         assertThat(readService.overview(userId, project.getId()).diagnostics())
             .containsEntry("chapterSynthesisCacheHitCount", chapters.size());
@@ -1253,7 +1261,7 @@ class ProjectHistoryReconstructionTest {
         Path root = temporaryRoot.resolve("window-local-failure");
         Files.createDirectories(root);
         ProjectSpace project = project(userId, "Window Local Failure", root);
-        historicalFacts(project, 3 * 32, 1, 1, 0);
+        historicalFacts(project, 3 * ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT, 1, 1, 0);
         provider(userId);
 
         AtomicInteger calls = new AtomicInteger();
@@ -1302,7 +1310,7 @@ class ProjectHistoryReconstructionTest {
         Path root = temporaryRoot.resolve("window-systemic-failure");
         Files.createDirectories(root);
         ProjectSpace project = project(userId, "Window Systemic Failure", root);
-        historicalFacts(project, 3 * 32, 1, 1, 0);
+        historicalFacts(project, 3 * ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT, 1, 1, 0);
         provider(userId);
 
         AtomicInteger calls = new AtomicInteger();
@@ -1335,7 +1343,7 @@ class ProjectHistoryReconstructionTest {
         Path root = temporaryRoot.resolve("window-cancellation");
         Files.createDirectories(root);
         ProjectSpace project = project(userId, "Window Cancellation", root);
-        historicalFacts(project, 3 * 32, 1, 1, 0);
+        historicalFacts(project, 3 * ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT, 1, 1, 0);
         provider(userId);
 
         AtomicInteger calls = new AtomicInteger();
@@ -1378,7 +1386,7 @@ class ProjectHistoryReconstructionTest {
         Path root = temporaryRoot.resolve("window-prompt-overflow");
         Files.createDirectories(root);
         ProjectSpace project = project(userId, "Window Prompt Overflow", root);
-        historicalFacts(project, 32, 8, 12, 120);
+        historicalFacts(project, ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT, 8, 12, 120);
         provider(userId);
 
         AtomicInteger calls = new AtomicInteger();
@@ -1463,7 +1471,8 @@ class ProjectHistoryReconstructionTest {
         Path root = temporaryRoot.resolve("window-source-append");
         Files.createDirectories(root);
         ProjectSpace project = project(userId, "Window Source Append", root);
-        historicalFacts(project, 64, 1, 1, 0);
+        int storyLimit = ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
+        historicalFacts(project, 2 * storyLimit, 1, 1, 0);
         provider(userId);
 
         AtomicInteger calls = new AtomicInteger();
@@ -1493,7 +1502,7 @@ class ProjectHistoryReconstructionTest {
         stalePresentationCache.storeValidatedResult(objectMapper.writeValueAsString(cachedPresentation));
         checkpointRepository.saveAndFlush(stalePresentationCache);
 
-        historicalFacts(project, 64, 1, 1, 1, 0);
+        historicalFacts(project, 2 * storyLimit, 1, 1, 1, 0);
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
 
         var appendedCheckpoints = checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId());
@@ -1519,7 +1528,7 @@ class ProjectHistoryReconstructionTest {
         Path root = temporaryRoot.resolve("window-correction-revision");
         Files.createDirectories(root);
         ProjectSpace project = project(userId, "Window Correction Revision", root);
-        historicalFacts(project, 64, 1, 1, 0);
+        historicalFacts(project, 2 * ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT, 1, 1, 0);
         provider(userId);
 
         AtomicInteger calls = new AtomicInteger();

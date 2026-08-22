@@ -19,16 +19,20 @@ class ProjectHistoryWindowPlannerTest {
     @Test
     void preservesStoryOrderAndSplitsOnStoryAndEventBounds() {
         List<ChangeStory> stories = new ArrayList<>();
-        for (int index = 0; index < 33; index++) stories.add(story("story-" + index, 1));
+        int storyLimit = ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
+        for (int index = 0; index < storyLimit + 1; index++) stories.add(story("story-" + index, 1));
 
         List<ProjectHistoryWindowPlanner.Window> windows = planner.planAll(
             stories, ids(stories), "source-v1", "strategy-v1", "prompt-v1", "correction-v1"
         );
 
         assertThat(windows).hasSize(2);
-        assertThat(windows.get(0).storyIds()).containsExactlyElementsOf(stories.subList(0, 32).stream().map(ChangeStory::id).toList());
-        assertThat(windows.get(1).storyIds()).containsExactly("story-32");
-        assertThat(windows.stream().mapToInt(ProjectHistoryWindowPlanner.Window::eventCount).sum()).isEqualTo(33);
+        assertThat(windows.get(0).storyIds()).containsExactlyElementsOf(
+            stories.subList(0, storyLimit).stream().map(ChangeStory::id).toList()
+        );
+        assertThat(windows.get(1).storyIds()).containsExactly("story-" + storyLimit);
+        assertThat(windows.stream().mapToInt(ProjectHistoryWindowPlanner.Window::eventCount).sum())
+            .isEqualTo(storyLimit + 1);
     }
 
     @Test
@@ -58,7 +62,11 @@ class ProjectHistoryWindowPlannerTest {
     @Test
     void eventLimitStartsTheNextWindowWithoutDroppingTheBoundaryStory() {
         List<ChangeStory> stories = new ArrayList<>();
-        for (int index = 0; index < 31; index++) stories.add(story("event-story-" + index, 12));
+        int eventsPerStory = ProjectHistoryWindowPlanner.DEFAULT_EVENT_LIMIT
+            / (ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT - 1);
+        for (int index = 0; index < ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT; index++) {
+            stories.add(story("event-story-" + index, eventsPerStory));
+        }
 
         List<ProjectHistoryWindowPlanner.Window> windows = planner.planAll(
             stories, ids(stories), "source-v1", "strategy-v1", "prompt-v1", "correction-v1"
@@ -66,7 +74,9 @@ class ProjectHistoryWindowPlannerTest {
 
         assertThat(windows).hasSize(2);
         assertThat(windows.get(0).eventCount()).isEqualTo(ProjectHistoryWindowPlanner.DEFAULT_EVENT_LIMIT);
-        assertThat(windows.get(1).storyIds()).containsExactly("event-story-30");
+        assertThat(windows.get(1).storyIds()).containsExactly(
+            "event-story-" + (ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT - 1)
+        );
         assertThat(windows.stream().flatMap(window -> window.storyIds().stream()).toList())
             .containsExactlyElementsOf(stories.stream().map(ChangeStory::id).toList());
     }

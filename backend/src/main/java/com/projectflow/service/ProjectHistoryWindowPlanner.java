@@ -13,7 +13,10 @@ import com.projectflow.dto.ProjectHistoryDtos.ChangeStory;
 
 /** Creates bounded, stable semantic windows without one request per Commit. */
 public final class ProjectHistoryWindowPlanner {
-    public static final int DEFAULT_STORY_LIMIT = 32;
+    // Exact Story output is substantially larger than its compressed input.
+    // Keep each semantic request small enough that compatible reasoning models
+    // can return every required ID without omitting the tail of the window.
+    public static final int DEFAULT_STORY_LIMIT = 16;
     public static final int DEFAULT_EVENT_LIMIT = 360;
     public static final int MAX_WINDOWS = 16;
 

@@ -37,6 +37,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.dto.ProjectHistoryDtos.ChangeStory;
 import com.projectflow.dto.ProjectHistoryDtos.EvolutionThread;
@@ -65,6 +66,7 @@ import com.projectflow.service.ProjectHistoryCorrectionService;
 import com.projectflow.service.ProjectHistoryPromptBuilder;
 import com.projectflow.service.ProjectHistoryReadService;
 import com.projectflow.service.ProjectHistoryReconstructionService;
+import com.projectflow.service.ProjectHistoryWindowPlanner;
 import com.projectflow.service.SensitiveContentRedactor;
 
 /**
@@ -547,7 +549,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         Path root = temporaryRoot.resolve("seventeen-window-continuation");
         Files.createDirectories(root);
         ProjectSpace project = project(userId, "Seventeen window continuation", root);
-        historicalFacts(project, 0, 17 * 32, 1, 1, 0);
+        int storyLimit = ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
+        historicalFacts(project, 0, 17 * storyLimit, 1, 1, 0);
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         Map<String, Object> first = readService.overview(userId, project.getId()).diagnostics();
@@ -576,7 +579,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         require(calls.get(activeScenario.get()).storyLogicalCalls == 17, "已成功窗口被重复调用");
 
         List<ChangeStory> stories = allStories(userId, project.getId());
-        require(stories.size() == 17 * 32, "17 个窗口的 Story 出现丢失");
+        require(stories.size() == 17 * storyLimit, "17 个窗口的 Story 出现丢失");
         require(validRoleGraph(stories), "17 个窗口完成后的角色图不合法");
         continuationState = new ContinuationState(project.getId(), restarted, stories.get(0).id());
         Map<String, Object> metrics = safeDiagnostics(afterRestart);
@@ -708,7 +711,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         Path root = temporaryRoot.resolve("raw-payload-minimization-real");
         Files.createDirectories(root);
         ProjectSpace project = project(userId, "Raw payload minimization real Provider", root);
-        historicalFacts(project, 0, 32, 8, 12, 120);
+        historicalFacts(project, 0, ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT, 8, 12, 120);
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         Map<String, Object> diagnostics = readService.overview(userId, project.getId()).diagnostics();
         int total = number(diagnostics, "totalWindowCount");
@@ -734,10 +737,11 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             diagnostics = completeRefresh(userId, project.getId(), 24);
         } catch (AssertionError failure) {
             Map<String, Object> current = readService.overview(userId, project.getId()).diagnostics();
-            throw new AssertionError(
-                "ProjectFlow Dogfood 在有界刷新或一次同状态失败重试内未完成；safeDiagnostics="
-                    + safeDiagnostics(current), failure
-            );
+            Map<String, Object> metrics = safeDiagnostics(current);
+            metrics.put("failedCheckpointDiagnostics", safeCheckpointFailures(project.getId()));
+            return new ScenarioEvidence(metrics, List.of(), List.of(
+                "ProjectFlow Dogfood 在有界刷新或一次同状态失败重试内未完成"
+            ));
         }
         var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         require(cached.cacheHit(), "ProjectFlow Dogfood 完成后未命中全局 cache");
@@ -844,8 +848,40 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         Path root = temporaryRoot.resolve(name);
         Files.createDirectories(root);
         ProjectSpace project = project(userId, name, root);
-        historicalFacts(project, 0, 3 * 32, 1, 1, 0);
+        historicalFacts(project, 0, 3 * ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT, 1, 1, 0);
         return project;
+    }
+
+    private List<Map<String, Object>> safeCheckpointFailures(UUID projectId) {
+        return checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(projectId).stream()
+            .filter(checkpoint -> "FAILED".equals(checkpoint.getStatus()))
+            .map(checkpoint -> {
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("storyCount", Math.max(0, checkpoint.getStoryCount()));
+                result.put("eventCount", Math.max(0, checkpoint.getEventCount()));
+                try {
+                    JsonNode value = objectMapper.readTree(checkpoint.getDiagnosticsJson());
+                    for (String key : List.of(
+                        "scope", "failureClass", "failureStage", "failureCode", "repairFailureStage",
+                        "repairFailureCode", "validationKind", "validationCode", "retryType", "finishReason"
+                    )) {
+                        result.put(key, safeDiagnosticToken(value.path(key).asText()));
+                    }
+                    result.put("requestCount", Math.max(0, value.path("requestCount").asInt(0)));
+                    result.put("truncated", value.path("truncated").asBoolean(false));
+                    result.put("schemaMatched", value.path("schemaMatched").asBoolean(false));
+                } catch (Exception ignored) {
+                    result.put("failureClass", "DIAGNOSTIC_PARSE_FAILURE");
+                }
+                return Map.copyOf(result);
+            })
+            .toList();
+    }
+
+    private static String safeDiagnosticToken(String value) {
+        if (value == null || value.isBlank()) return "";
+        String safe = value.trim().replaceAll("[^A-Za-z0-9_:,.-]", "_");
+        return safe.length() <= 160 ? safe : safe.substring(0, 160);
     }
 
     private ProjectSpace project(UUID userId, String name, Path root) {
