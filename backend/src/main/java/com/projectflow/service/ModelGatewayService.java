@@ -316,7 +316,9 @@ public class ModelGatewayService {
                         pauseBeforeRetry(attempt);
                         continue;
                     }
-                    throw new ModelHttpException(http.statusCode(), attempt);
+                    throw new ModelHttpException(
+                        http.statusCode(), attempt, http.errorType(), http.errorCode(), http.errorParam()
+                    );
                 }
                 if (attempt >= allowedAttempts) {
                     throw new ModelTransportException(exception, attempt);
@@ -696,14 +698,49 @@ public class ModelGatewayService {
     public static final class ModelHttpException extends IOException {
         private final int statusCode;
         private final int requestCount;
+        private final String errorType;
+        private final String errorCode;
+        private final String errorParam;
         public ModelHttpException(int statusCode) { this(statusCode, 1); }
         public ModelHttpException(int statusCode, int requestCount) {
-            super("model HTTP " + statusCode);
+            this(statusCode, requestCount, "", "", "");
+        }
+        public ModelHttpException(
+            int statusCode,
+            int requestCount,
+            String errorType,
+            String errorCode,
+            String errorParam
+        ) {
+            super(httpFailureMessage(statusCode, errorType, errorCode, errorParam));
             this.statusCode = statusCode;
             this.requestCount = Math.max(1, requestCount);
+            this.errorType = safeHttpToken(errorType);
+            this.errorCode = safeHttpToken(errorCode);
+            this.errorParam = safeHttpToken(errorParam);
         }
         public int statusCode() { return statusCode; }
         public int requestCount() { return requestCount; }
+        public String errorType() { return errorType; }
+        public String errorCode() { return errorCode; }
+        public String errorParam() { return errorParam; }
+
+        private static String httpFailureMessage(int statusCode, String type, String code, String param) {
+            StringBuilder result = new StringBuilder("model HTTP ").append(statusCode);
+            String safeType = safeHttpToken(type);
+            String safeCode = safeHttpToken(code);
+            String safeParam = safeHttpToken(param);
+            if (!safeType.isBlank()) result.append(" type=").append(safeType);
+            if (!safeCode.isBlank()) result.append(" code=").append(safeCode);
+            if (!safeParam.isBlank()) result.append(" param=").append(safeParam);
+            return result.toString();
+        }
+
+        private static String safeHttpToken(String value) {
+            if (value == null || value.isBlank()) return "";
+            String safe = value.trim().replaceAll("[^A-Za-z0-9_.:-]", "_");
+            return safe.length() <= 120 ? safe : safe.substring(0, 120);
+        }
     }
 
     public static final class ModelTransportException extends IOException {

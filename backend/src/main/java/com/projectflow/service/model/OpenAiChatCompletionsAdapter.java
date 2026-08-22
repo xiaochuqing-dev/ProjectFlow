@@ -70,7 +70,10 @@ public class OpenAiChatCompletionsAdapter implements ModelProtocolAdapter {
                 reasoningLength > 0, reasoningLength
             );
         } catch (OpenAIServiceException exception) {
-            throw new ModelProtocolHttpException(exception.statusCode(), exception);
+            throw new ModelProtocolHttpException(
+                exception.statusCode(), exception.type().orElse(""), exception.code().orElse(""),
+                exception.param().orElse(""), exception
+            );
         } catch (RuntimeException exception) {
             Throwable root = exception;
             while (root.getCause() != null && root.getCause() != root) root = root.getCause();

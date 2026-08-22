@@ -28,6 +28,21 @@ class ModelGatewayServiceTest {
     );
 
     @Test
+    void exposesOnlyBoundedSafeProviderHttpErrorTokens() {
+        var failure = new ModelGatewayService.ModelHttpException(
+            400, 1, "invalid_request_error", "unsupported field", "text.format\nAuthorization: secret"
+        );
+
+        assertThat(failure.errorType()).isEqualTo("invalid_request_error");
+        assertThat(failure.errorCode()).isEqualTo("unsupported_field");
+        assertThat(failure.errorParam()).isEqualTo("text.format_Authorization:_secret");
+        assertThat(failure.getMessage()).contains(
+            "model HTTP 400", "type=invalid_request_error", "code=unsupported_field",
+            "param=text.format_Authorization:_secret"
+        ).doesNotContain("\n", "Authorization: secret");
+    }
+
+    @Test
     void exposesFinishReasonUsageAndEffectiveParameters() throws Exception {
         String responseBody = objectMapper.writeValueAsString(Map.of(
             "choices", List.of(Map.of("finish_reason", "length", "message", Map.of("content", "{\"items\":[]}"))),
