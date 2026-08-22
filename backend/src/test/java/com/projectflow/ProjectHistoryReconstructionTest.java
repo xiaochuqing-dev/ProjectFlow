@@ -876,6 +876,58 @@ class ProjectHistoryReconstructionTest {
     }
 
     @Test
+    void regroundsSingleStoryChapterAfterAValidModelParaphrase() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("single-story-chapter-grounding");
+        Files.createDirectories(repository.resolve("src"));
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Files.writeString(repository.resolve("src/AuthFlow.java"), "class AuthFlow {}\n");
+        commit(repository, "implement login flow");
+        ProjectSpace project = project(userId, "Single Story Chapter Grounding", repository);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        var deterministicChapter = readService.chapters(userId, project.getId(), 0, 20).items().get(0);
+
+        provider(userId);
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            JsonNode valid = objectMapper.readTree(historyModelResponse(invocation.getArgument(1, String.class)));
+            com.fasterxml.jackson.databind.node.ObjectNode story =
+                (com.fasterxml.jackson.databind.node.ObjectNode) valid.path("stories").get(0);
+            String generatedTitle = story.path("humanTitle").asText();
+            int subjectStart = generatedTitle.indexOf('“');
+            int subjectEnd = generatedTitle.lastIndexOf('”');
+            assertThat(subjectStart).isGreaterThanOrEqualTo(0);
+            assertThat(subjectEnd).isGreaterThan(subjectStart);
+            String subject = generatedTitle.substring(subjectStart + 1, subjectEnd).replaceAll("[^\\p{IsHan}]", "");
+            String anchor = subject.length() >= 2 ? subject.substring(0, 2) : subject;
+            assertThat(anchor).hasSize(2);
+            story.put("humanTitle", "规划" + anchor + "方向并形成建设方向");
+            story.put("oneSentenceSummary", anchor + "方向已有方案记录，可供后续查看。");
+            return modelResponse(objectMapper.writeValueAsString(valid));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+
+        var finalStory = readService.stories(
+            userId, project.getId(), null, false, null, null, 0, 20
+        ).items().get(0);
+        var finalChapter = readService.chapters(userId, project.getId(), 0, 20).items().get(0);
+        assertThat(finalStory.humanTitle()).startsWith("规划").endsWith("建设方向");
+        assertThat(finalStory.summaryStatus()).isEqualTo("MODEL_VALIDATED");
+        assertThat(finalChapter.title()).isNotEqualTo(deterministicChapter.title())
+            .contains(finalStory.humanTitle());
+        assertThat(finalChapter.authority()).isEqualTo("ENGINEERING_REPRESENTATION_PLAN");
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("modelStatus", "MODEL_VALIDATED")
+            .containsEntry("failedWindowCount", 0)
+            .containsEntry("modelChapterGroundingFallbackCount", 1)
+            .containsEntry("chaptersUsingDeterministicFallback", 1)
+            .containsEntry("unsupportedClaimCount", 0);
+    }
+
+    @Test
     void modelCannotRewriteEngineeringOwnedPrimarySupportingRoleGraph() throws Exception {
         UUID userId = UUID.randomUUID();
         Path repository = temporaryRoot.resolve("model-role-graph");

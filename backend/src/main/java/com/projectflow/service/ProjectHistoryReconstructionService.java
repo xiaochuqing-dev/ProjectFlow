@@ -202,7 +202,10 @@ public class ProjectHistoryReconstructionService {
                 userId, projectId, deterministic, completedPersistence.currentEvents(),
                 modelDiagnostics, safeProgress
             );
-            SnapshotResult finalResult = modelResult.result();
+            ChapterGroundingResult chapterGrounding = groundChaptersAfterStoryEnhancement(
+                modelResult.result(), completedPersistence.currentEvents()
+            );
+            SnapshotResult finalResult = chapterGrounding.result();
             validate(finalResult, completedPersistence.currentEvents());
             boolean degraded = !completedCollection.complete() || modelResult.failed() || modelResult.incomplete();
             Map<String, Object> diagnostics = diagnostics(
@@ -235,6 +238,7 @@ public class ProjectHistoryReconstructionService {
             diagnostics.put("modelDeterministicTitleFallbackCount", (int) finalResult.stories().stream()
                 .filter(story -> "MODEL_VALIDATED_WITH_DETERMINISTIC_TITLE".equals(story.summaryStatus()))
                 .count());
+            diagnostics.put("modelChapterGroundingFallbackCount", chapterGrounding.fallbackCount());
             diagnostics.put("modelValidationRepairCount", (int) modelDiagnostics.stream()
                 .filter(value -> "HISTORY_VALIDATION_RETRY".equals(value.retryType())).count());
             diagnostics.put("modelValidationRepairFailureCount", (int) modelDiagnostics.stream()
@@ -825,7 +829,7 @@ public class ProjectHistoryReconstructionService {
             for (String field : List.of(
                 "storyCount", "threadCount", "reconstructionMode", "reusedStoryCount", "recomputedStoryCount",
                 "modelEnhancedStoryCount", "boundedDeterministicStoryCount", "eventConservation",
-                "modelDeterministicTitleFallbackCount",
+                "modelDeterministicTitleFallbackCount", "modelChapterGroundingFallbackCount",
                 "modelRejectedInvalidEvidenceRefCount", "modelRejectedCrossProjectRefCount",
                 "modelRejectedUnsupportedClaimCount", "modelPromptCharacterCount", "modelPromptOmittedStoryCount",
                 "modelPromptOmittedChapterCount", "modelWindowCount", "modelProcessedWindowCount",
@@ -2581,6 +2585,77 @@ public class ProjectHistoryReconstructionService {
             .distinct().toList();
     }
 
+    /**
+     * Story wording is model-owned presentation, while Chapter membership is
+     * engineering-owned structure. A single-Story Chapter does not need the
+     * second-stage Chapter model call, so its earlier deterministic wording can
+     * become stale after a valid Story paraphrase. Keep every structural field
+     * unchanged and rebuild only that stale presentation from the now-current
+     * Primary wording before the whole-snapshot validator runs.
+     */
+    private ChapterGroundingResult groundChaptersAfterStoryEnhancement(
+        SnapshotResult input,
+        List<ProjectHistoryEvent> events
+    ) {
+        Map<String, ChangeStory> storiesById = input.stories().stream().collect(
+            LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll
+        );
+        Map<UUID, EventView> eventsById = new LinkedHashMap<>();
+        events.stream().map(this::view).forEach(event -> eventsById.put(event.id(), event));
+        List<HistoryChapter> chapters = new ArrayList<>();
+        int fallbackCount = 0;
+        for (HistoryChapter chapter : input.chapters()) {
+            if (chapter.userDeclared()
+                || ProjectHistoryCorrectionService.USER_DECLARED_PRESENTATION.equals(chapter.authority())
+                || ProjectHistoryCorrectionService.USER_DECLARED_PRESENTATION.equals(chapter.presentationAuthority())) {
+                chapters.add(chapter);
+                continue;
+            }
+            List<ChangeStory> members = chapter.storyRefs().stream().map(storiesById::get)
+                .filter(java.util.Objects::nonNull).toList();
+            List<String> primaryWording = members.stream().filter(ChangeStory::primary)
+                .flatMap(story -> Stream.of(story.humanTitle(), story.oneSentenceSummary())).toList();
+            try {
+                narrativeValidator.validateChapter(
+                    chapter.title(), chapter.summary(), languageService.chapterGrounding(primaryWording)
+                );
+                chapters.add(chapter);
+                continue;
+            } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation ignored) {
+                // The deterministic representation below is validated against
+                // the same current Story wording before it can replace anything.
+            }
+            ProjectHistoryChapterRepresentationPlanner.Plan representation = chapterRepresentationPlanner.plan(members);
+            List<String> outcomes = representation.representativeOutcomes();
+            if (outcomes.isEmpty()) {
+                outcomes = members.stream().filter(ChangeStory::primary).map(ChangeStory::humanTitle)
+                    .filter(value -> value != null && !value.isBlank()).distinct().limit(4).toList();
+            }
+            List<Transition> transitions = members.stream().flatMap(story -> story.eventRefs().stream())
+                .map(eventsById::get).filter(java.util.Objects::nonNull).map(EventView::transition).distinct().toList();
+            String title = languageService.chapterTitle(
+                outcomes, transitions, chapter.from(), chapter.to(), Math.max(1, representation.dominantClusterCount())
+            );
+            int primaryCount = (int) members.stream().filter(ChangeStory::primary).count();
+            String summary = languageService.chapterSummary(
+                outcomes, primaryCount, Math.max(0, members.size() - primaryCount),
+                Math.max(1, representation.selectedClusters().size())
+            );
+            validateChapterRepresentation(title, summary, representation);
+            chapters.add(new HistoryChapter(
+                chapter.id(), title, summary, chapter.from(), chapter.to(), chapter.boundarySignals(),
+                chapter.storyRefs(), chapter.storyCount(), chapter.rawEventCount(), "ENGINEERING_REPRESENTATION_PLAN",
+                chapter.coverage(), chapter.limitations(), chapter.presentationAuthority(),
+                chapter.presentationRevision(), chapter.userDeclared(), chapter.userCorrectionRefs(),
+                chapter.hiddenByDefault(), chapter.pinned()
+            ));
+            fallbackCount++;
+        }
+        return new ChapterGroundingResult(
+            new SnapshotResult(List.copyOf(chapters), input.stories(), input.threads()), fallbackCount
+        );
+    }
+
     private void validate(SnapshotResult result, List<ProjectHistoryEvent> events) {
         Map<UUID, EventView> eventsById = new LinkedHashMap<>();
         events.stream().map(this::view).forEach(event -> eventsById.put(event.id(), event));
@@ -3353,6 +3428,9 @@ public class ProjectHistoryReconstructionService {
         List<ChangeStory> stories,
         List<EvolutionThread> threads
     ) {
+    }
+
+    private record ChapterGroundingResult(SnapshotResult result, int fallbackCount) {
     }
 
     private record DeterministicResult(
