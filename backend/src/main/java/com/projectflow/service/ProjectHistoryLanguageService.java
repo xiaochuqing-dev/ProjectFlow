@@ -300,6 +300,52 @@ public final class ProjectHistoryLanguageService {
         return result + support;
     }
 
+    /**
+     * Builds a Chapter title from outcomes that were already selected by the
+     * representation planner. Unlike the general Story-title synthesizer, this
+     * path must not replace a required public outcome with a generic subject
+     * focus: the representation validator needs the selected cluster's actual
+     * wording to remain auditable.
+     */
+    public String chapterRepresentativeTitle(
+        List<String> representativeOutcomes,
+        List<Transition> transitions,
+        int titleClusterCount
+    ) {
+        List<String> outcomes = exactChapterOutcomes(
+            representativeOutcomes, Math.max(1, titleClusterCount)
+        );
+        String first = outcomes.stream().findFirst().orElse("记录这一时期可确认的项目变化");
+        String title;
+        if (startsWithAction(first)) title = first;
+        else if (transitions != null && transitions.stream().anyMatch(value ->
+            value == Transition.RESTORED || value == Transition.REAPPLIED)) title = "恢复" + first;
+        else if (transitions != null && !transitions.isEmpty()
+            && transitions.stream().allMatch(value -> value == Transition.CREATED)) title = "建立" + first;
+        else title = "完善" + first;
+        for (String outcome : outcomes.stream().skip(1).toList()) {
+            title += "，并" + sentenceAction(outcome);
+        }
+        return title;
+    }
+
+    /**
+     * Keeps one auditable wording anchor for every already selected cluster.
+     * General Chapter synthesis may normalize raw Story titles; doing so again
+     * here can erase the very outcome the representation plan requires.
+     */
+    public String chapterRepresentativeSummary(List<String> representativeOutcomes, int supportingCount) {
+        List<String> outcomes = exactChapterOutcomes(representativeOutcomes, Integer.MAX_VALUE);
+        String first = outcomes.stream().findFirst().orElse("记录可确认的项目变化");
+        String result = "这一时期" + sentenceAction(first);
+        for (String outcome : outcomes.stream().skip(1).toList()) {
+            result += "，并" + sentenceAction(outcome);
+        }
+        result += "。";
+        String support = supportingCount <= 0 ? "" : "相关支撑工作保留在工程详情中。";
+        return result + support;
+    }
+
     public List<String> chapterGrounding(List<String> storyWording) {
         List<String> values = storyWording == null ? List.of() : storyWording;
         LinkedHashSet<String> grounding = new LinkedHashSet<>(values);
@@ -350,6 +396,17 @@ public final class ProjectHistoryLanguageService {
             if (outcomes.size() >= Math.max(1, limit)) break;
         }
         if (outcomes.isEmpty()) outcomes.add("记录可确认的项目变化");
+        return List.copyOf(outcomes);
+    }
+
+    private static List<String> exactChapterOutcomes(List<String> values, int limit) {
+        LinkedHashSet<String> outcomes = new LinkedHashSet<>();
+        for (String candidate : values == null ? List.<String>of() : values) {
+            String value = candidate == null ? "" : candidate.trim()
+                .replaceFirst("[。；;！!？?]+$", "").trim();
+            if (!value.isBlank()) outcomes.add(value);
+            if (outcomes.size() >= Math.max(1, limit)) break;
+        }
         return List.copyOf(outcomes);
     }
 

@@ -1408,13 +1408,9 @@ public class ProjectHistoryReconstructionService {
             group.forEach(story -> rawEvents.addAll(story.eventRefs()));
             String id = "chapter-" + ProjectHistorySourceCollector.sha256(group.get(0).id()).substring(0, 20);
             int titleClusterCount = Math.max(1, representation.dominantClusterCount());
-            String title = languageService.chapterTitle(outcomes, transitions, from, to, titleClusterCount);
-            int chapterPrimaryCount = (int) group.stream().filter(ChangeStory::primary).count();
-            int chapterSupportingCount = Math.max(0, group.size() - chapterPrimaryCount);
-            String summary = languageService.chapterSummary(
-                outcomes, chapterPrimaryCount, chapterSupportingCount,
-                Math.max(1, representation.selectedClusters().size())
-            );
+            String title = languageService.chapterRepresentativeTitle(outcomes, transitions, titleClusterCount);
+            int chapterSupportingCount = (int) group.stream().filter(ChangeStory::supporting).count();
+            String summary = languageService.chapterRepresentativeSummary(outcomes, chapterSupportingCount);
             List<String> limitations = new ArrayList<>();
             if (representation.coherenceRisk()) {
                 limitations.add("当前来源未提供足够强的阶段边界，已在最小安全粒度内保守保留多个代表成果。");
@@ -2800,9 +2796,11 @@ public class ProjectHistoryReconstructionService {
      * Story wording is model-owned presentation, while Chapter membership is
      * engineering-owned structure. A single-Story Chapter does not need the
      * second-stage Chapter model call, so its earlier deterministic wording can
-     * become stale after a valid Story paraphrase. Keep every structural field
-     * unchanged and rebuild only that stale presentation from the now-current
-     * Primary wording before the whole-snapshot validator runs.
+     * become stale after a valid Story paraphrase. Narrative-level grounding is
+     * not sufficient here: an old Chapter may still mention any Primary Story
+     * while omitting the current representative cluster or naming only a minor
+     * cluster. Keep every structural field unchanged and rebuild only Chapters
+     * that fail the complete current representation plan.
      */
     private ChapterGroundingResult groundChaptersAfterStoryEnhancement(
         SnapshotResult input,
@@ -2824,19 +2822,15 @@ public class ProjectHistoryReconstructionService {
             }
             List<ChangeStory> members = chapter.storyRefs().stream().map(storiesById::get)
                 .filter(java.util.Objects::nonNull).toList();
-            List<String> primaryWording = members.stream().filter(ChangeStory::primary)
-                .flatMap(story -> Stream.of(story.humanTitle(), story.oneSentenceSummary())).toList();
+            ProjectHistoryChapterRepresentationPlanner.Plan representation = chapterRepresentationPlanner.plan(members);
             try {
-                narrativeValidator.validateChapter(
-                    chapter.title(), chapter.summary(), languageService.chapterGrounding(primaryWording)
-                );
+                validateChapterRepresentation(chapter.title(), chapter.summary(), representation);
                 chapters.add(chapter);
                 continue;
-            } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation ignored) {
+            } catch (HistoryValidationException ignored) {
                 // The deterministic representation below is validated against
                 // the same current Story wording before it can replace anything.
             }
-            ProjectHistoryChapterRepresentationPlanner.Plan representation = chapterRepresentationPlanner.plan(members);
             List<String> outcomes = representation.representativeOutcomes();
             if (outcomes.isEmpty()) {
                 outcomes = members.stream().filter(ChangeStory::primary).map(ChangeStory::humanTitle)
@@ -2844,13 +2838,12 @@ public class ProjectHistoryReconstructionService {
             }
             List<Transition> transitions = members.stream().flatMap(story -> story.eventRefs().stream())
                 .map(eventsById::get).filter(java.util.Objects::nonNull).map(EventView::transition).distinct().toList();
-            String title = languageService.chapterTitle(
-                outcomes, transitions, chapter.from(), chapter.to(), Math.max(1, representation.dominantClusterCount())
+            String title = languageService.chapterRepresentativeTitle(
+                outcomes, transitions, Math.max(1, representation.dominantClusterCount())
             );
             int primaryCount = (int) members.stream().filter(ChangeStory::primary).count();
-            String summary = languageService.chapterSummary(
-                outcomes, primaryCount, Math.max(0, members.size() - primaryCount),
-                Math.max(1, representation.selectedClusters().size())
+            String summary = languageService.chapterRepresentativeSummary(
+                outcomes, Math.max(0, members.size() - primaryCount)
             );
             validateChapterRepresentation(title, summary, representation);
             chapters.add(new HistoryChapter(

@@ -31,6 +31,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.projectflow.dto.ProjectHistoryDtos.ChangeStory;
+import com.projectflow.dto.ProjectHistoryDtos.ClaimAttribution;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryChapter;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryCorrectionRequest;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
 import com.projectflow.entity.EvidenceConfidence;
@@ -61,7 +65,6 @@ import com.projectflow.service.ProjectHistoryPromptBuilder;
 import com.projectflow.service.ProjectHistoryReadService;
 import com.projectflow.service.ProjectHistoryReconstructionService;
 import com.projectflow.service.ProjectHistoryWindowPlanner;
-import com.projectflow.dto.ProjectHistoryDtos.HistoryCorrectionRequest;
 import com.projectflow.support.AppException;
 
 @SpringBootTest
@@ -1007,6 +1010,70 @@ class ProjectHistoryReconstructionTest {
     }
 
     @Test
+    void regroundsNarrativeValidChapterWhenItNoLongerRepresentsTheDominantCluster() throws Exception {
+        List<ChangeStory> stories = new ArrayList<>();
+        for (int index = 0; index < 6; index++) {
+            stories.add(representationStory(
+                "auth-" + index,
+                "authentication-flow",
+                "实现登录流程，形成可使用的功能",
+                index,
+                "IMPLEMENTED"
+            ));
+        }
+        ChangeStory minor = representationStory(
+            "readme",
+            "readme",
+            "完善项目使用说明，更新已有内容",
+            7,
+            "OBSERVED"
+        );
+        stories.add(minor);
+        HistoryChapter stale = new HistoryChapter(
+            "chapter-stale-representation",
+            minor.humanTitle(),
+            "这一时期完善项目使用说明，形成清晰的阅读指引。",
+            stories.get(0).occurredFrom(), minor.occurredTo(), List.of("SOURCE_BOUNDARY"),
+            stories.stream().map(ChangeStory::id).toList(), stories.size(), stories.size(),
+            "ENGINEERING_GROUPING", "FULL_WITHIN_DISCOVERED_SOURCES", List.of()
+        );
+
+        GroundedChapters grounded = groundChapters(stories, stale);
+
+        assertThat(grounded.fallbackCount()).isEqualTo(1);
+        assertThat(grounded.chapters()).singleElement().satisfies(chapter -> {
+            assertThat(chapter.title()).contains("登录流程").doesNotContain("项目使用说明");
+            assertThat(chapter.authority()).isEqualTo("ENGINEERING_REPRESENTATION_PLAN");
+        });
+    }
+
+    @Test
+    void regroundsARepresentativeOutcomeWithoutReplacingItsPublicWordingWithAGenericFocus() throws Exception {
+        ChangeStory report = representationStory(
+            "dated-review-report",
+            "project-code-review-report-2026-07-10",
+            "整理项目代码审查报告 2026 07 10文档，记录当前能够确认的变化",
+            0,
+            "OBSERVED"
+        );
+        HistoryChapter stale = new HistoryChapter(
+            "chapter-stale-generic-focus",
+            "整理旧的展示文本",
+            "这一时期整理旧的展示文本并保留记录。",
+            report.occurredFrom(), report.occurredTo(), List.of("SOURCE_BOUNDARY"),
+            List.of(report.id()), 1, 1,
+            "ENGINEERING_GROUPING", "FULL_WITHIN_DISCOVERED_SOURCES", List.of()
+        );
+
+        GroundedChapters grounded = groundChapters(List.of(report), stale);
+
+        assertThat(grounded.chapters()).singleElement().satisfies(chapter -> {
+            assertThat(chapter.title()).contains("代码审查报告");
+            assertThat(chapter.summary()).contains("代码审查报告 2026 07 10文档");
+        });
+    }
+
+    @Test
     void modelCannotRewriteEngineeringOwnedPrimarySupportingRoleGraph() throws Exception {
         UUID userId = UUID.randomUUID();
         Path repository = temporaryRoot.resolve("model-role-graph");
@@ -1896,6 +1963,56 @@ class ProjectHistoryReconstructionTest {
         String commandOutput = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         if (process.waitFor() != 0) throw new AssertionError("git fast-import failed: " + commandOutput);
         git(root, "reset", "--hard", "master");
+    }
+
+    private static ChangeStory representationStory(
+        String id,
+        String subject,
+        String title,
+        int dayOffset,
+        String claimState
+    ) {
+        Instant occurredAt = Instant.parse("2026-01-01T00:00:00Z").plusSeconds(dayOffset * 86_400L);
+        UUID eventId = UUID.nameUUIDFromBytes(("event:" + id).getBytes(StandardCharsets.UTF_8));
+        String evidence = "file:results/" + id + ".java";
+        ChangeStory story = new ChangeStory(
+            id, subject, title, title + "。", "此前尚未形成该结果。", title + "。", "当前保留这一结果。",
+            List.of("results"), "", List.of(), "", List.of(), List.of(), occurredAt, occurredAt,
+            1, 1, "ENGINEERING_GROUPING", "DETERMINISTIC", "FULL_WITHIN_DISCOVERED_SOURCES", List.of(),
+            List.of(eventId), List.of(evidence), "PRIMARY", "", List.of(), List.of(), List.of(),
+            List.of("results/" + id + ".java"), "AUTOMATIC", "", title, title + "。", List.of(),
+            false, false, "", "ACTIVE", List.of()
+        );
+        return story.withClaimAttribution(new ClaimAttribution(
+            subject, "IMPLEMENTED".equals(claimState) ? "IMPLEMENT" : "OBSERVE", claimState, title,
+            List.of(evidence), List.of(), List.of("SOURCE_BACKED"), "DIRECT", ""
+        ));
+    }
+
+    private GroundedChapters groundChapters(List<ChangeStory> stories, HistoryChapter chapter) throws Exception {
+        Class<?> snapshotType = java.util.Arrays.stream(ProjectHistoryReconstructionService.class.getDeclaredClasses())
+            .filter(type -> type.getSimpleName().equals("SnapshotResult")).findFirst().orElseThrow();
+        var snapshotConstructor = snapshotType.getDeclaredConstructor(List.class, List.class, List.class);
+        snapshotConstructor.setAccessible(true);
+        Object snapshot = snapshotConstructor.newInstance(List.of(chapter), stories, List.of());
+        var groundingMethod = ProjectHistoryReconstructionService.class.getDeclaredMethod(
+            "groundChaptersAfterStoryEnhancement", snapshotType, List.class
+        );
+        groundingMethod.setAccessible(true);
+        Object grounded = groundingMethod.invoke(reconstructionService, snapshot, List.of());
+        var fallbackAccessor = grounded.getClass().getDeclaredMethod("fallbackCount");
+        fallbackAccessor.setAccessible(true);
+        var resultAccessor = grounded.getClass().getDeclaredMethod("result");
+        resultAccessor.setAccessible(true);
+        Object result = resultAccessor.invoke(grounded);
+        var chaptersAccessor = snapshotType.getDeclaredMethod("chapters");
+        chaptersAccessor.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        List<HistoryChapter> chapters = (List<HistoryChapter>) chaptersAccessor.invoke(result);
+        return new GroundedChapters(chapters, (int) fallbackAccessor.invoke(grounded));
+    }
+
+    private record GroundedChapters(List<HistoryChapter> chapters, int fallbackCount) {
     }
 
     private void commit(Path root, String message) throws Exception {
