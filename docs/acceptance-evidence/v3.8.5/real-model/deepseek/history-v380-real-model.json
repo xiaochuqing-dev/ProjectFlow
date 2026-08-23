@@ -1,0 +1,46 @@
+{
+  "version" : "projectflow-v3.8.5-history-real-model-v4",
+  "generatedAt" : "2026-08-13T19:03:32.367183696Z",
+  "promptVersion" : "project-history-synthesis-v12",
+  "provider" : {
+    "protocol" : "OPENAI_CHAT_COMPLETIONS",
+    "model" : "deepseek-v4-flash",
+    "reasoningEffort" : "max",
+    "name" : "DeepSeek OpenCode Go"
+  },
+  "input" : {
+    "promptCharacterCount" : 3897,
+    "storyCount" : 2,
+    "chapterCount" : 1
+  },
+  "contract" : {
+    "rootSchemaViolationCount" : 0,
+    "entitySchemaViolationCount" : 0,
+    "missingEntityCount" : 0,
+    "duplicateEntityCount" : 0,
+    "crossProjectReferenceCount" : 0,
+    "invalidEvidenceRefCount" : 0,
+    "reasonWithoutEvidenceCount" : 0,
+    "missingReasonUnknownCount" : 0,
+    "emptyReadableSummaryCount" : 0,
+    "unsupportedClaimCount" : 0,
+    "returnedStoryCount" : 2,
+    "returnedChapterCount" : 1
+  },
+  "diagnostics" : {
+    "totalTokens" : 3419,
+    "latencyMs" : 16395,
+    "reasoningPresent" : true,
+    "truncated" : false,
+    "schemaMatched" : true,
+    "requestCount" : 1,
+    "finishReason" : "COMPLETE"
+  },
+  "security" : {
+    "apiKeyPersisted" : false,
+    "reasoningPersisted" : false,
+    "rawResponsePersisted" : false,
+    "absolutePathPersisted" : false,
+    "promptPersisted" : false
+  }
+}

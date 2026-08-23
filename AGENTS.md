@@ -1,5 +1,19 @@
+<!-- PROJECTFLOW V3.8.5 CONTEXT START -->
+ProjectFlow 当前版本为 V3.8.5。后续 Agent 必须按“真实项目材料 -> 规范化来源事件 -> Technical Atom -> Primary/Supporting Change -> 可读变化故事 -> 动态时间篇章 -> 演变链 -> 原始事件与 Evidence 下钻 -> 当前结果 -> 人与 Agent 继续工作”理解产品。项目历程是通用主轴，Capability 只是部分项目的可选视图。
+
+2026-08-24 最终签字规则：项目所有者已明确批准 V3.8.5 合并并要求不再等待本轮量化人工评分。必须把该结论写成 `PASS_BY_EXPLICIT_OWNER_OVERRIDE`，不得伪造 Story/Chapter 1-5 分或声称原定量阈值已经得到证明。Round 1/2/3 与 Final Chapter 冻结工件继续原样、人工字段继续空白；独立签字证据为 `docs/acceptance-evidence/v3.8.5/final-human-signoff.json`，`reviewerCount=1` 且必须披露 single-reviewer、最终批准未重确认项目计数和 P0 只按“没有新报告”记录的限制。PR #15 的 Ready、merge、backfill 与 V3.9 进入已获用户授权，但仍须完成各步真实 CI；继续禁止 Tag 和 Release。
+
+V3.8.5 RC3 追加规则：每个用户可见强状态 Claim 必须绑定同一 subject/action 的直接 Technical Atom 与 Evidence；同 Commit、同 Story、时间接近、相同区域或 Supporting 关系只提供间接上下文，不能提升状态。`project-area-*` 是宽泛工程区域而非具体功能主体，只能形成 OBSERVED Claim，精确主体仍按直接 Evidence 判定。模型输出仍只允许 Story 的 storyId/humanTitle/oneSentenceSummary/beforeWording/changeWording/afterWording/reason/reasonEvidenceRefs/unknownWording 与 Chapter 的 chapterId/title/summary。工程层唯一维护 Claim state、direct/indirect Evidence、role、primaryStoryId、supportingChangeRefs、storyRefs、事实语义、冲突、时间边界和当前性。Story 与 Chapter 的一次安全重生成必须各自使用原始有界输入和匹配 schema，Chapter repair 禁止引用 Story 专用的 OUTPUT_TEMPLATE_JSON。若 Provider 的标题/摘要组合没有明确动作、对象和受支持结果，必须保留已校验的确定性标题/摘要，并用 `MODEL_VALIDATED_WITH_DETERMINISTIC_TITLE` 与计数 diagnostics 公开该回退。Round 2 已冻结为 NEEDS_REVISION_NOT_APPROVED；2026-08-24 之前的自动门禁仍不能代替真人，之后只允许按上述独立 owner-override 签字推进，不能反向改写旧 Gate。
+
+V3.8.5 大众可读历程与用户修正规则（后续 Agent 必须遵守）：
+- Raw Event、Technical Atom、Primary Story、Supporting Change、Thread 和 Chapter 是分层派生展示；ProjectFact 仍是唯一强事实来源，任何展示修正都不得改写 Fact、Event、Commit 或 Evidence。
+- 默认第一层必须表达动作、可理解对象和有证据支持的结果；路径、类名、SHA、Evidence ID、内部枚举和泛化模板只能在工程详情中出现。Before/Change/After、后续结果、未知、冲突和覆盖限制必须保持可达。
+- 确定性分组负责成员、角色、时间、transition、authority、Evidence 和事件守恒；模型只能在已知 ID、受约束主体和有界 Evidence 状态内改写标题、摘要与 Before/Change/After 措辞，失败时显式降级。
+- 历史语义使用稳定、有界、多窗口、可缓存、可断点的执行。窗口 cache key 绑定来源指纹、strategy/Prompt 版本、窗口身份和展示修正 revision；失败、取消、跳过和未处理范围不得伪装成完整成功。
+- 用户修正使用 `USER_DECLARED_PRESENTATION`，必须持久、可审计、可回退并处理来源重写/乐观冲突；Gateway、Agent Context、Hermes、Frontend 和 Obsidian 读取同一修正后视图。
+- Obsidian CORE 只投影概览、索引、可读篇章、置顶/修正结果和少量高价值 Thread；全部 Story/Thread 与审计投影只能显式选择。V3.8.5 不新增 Tag、Release、daemon、watcher、最终 GUI 或通用 RAG。
+
 <!-- PROJECTFLOW V3.8.0 CONTEXT START -->
-ProjectFlow 当前版本为 V3.8.0。后续 Agent 必须按“真实项目材料 -> 规范化来源事件 -> 动态时间篇章 -> 变化故事 -> 演变链 -> 原始事件与 Evidence 下钻 -> 当前结果 -> 人与 Agent 继续工作”理解产品。项目历程是通用主轴，Capability 只是部分项目的可选视图。
 
 V3.8.0 项目历程重建规则（后续 Agent 必须遵守）：
 - ProjectFact 仍是唯一强事实来源。ProjectHistoryEvent 是来源事件库存，ProjectHistorySnapshot、Chapter、Story、Thread 都是可替换派生读模型，不能反向晋升或改写事实。

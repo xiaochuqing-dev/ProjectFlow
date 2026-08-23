@@ -135,6 +135,7 @@ class ProjectUnderstandingRealModelIT {
         artifact.put("provider", config.name());
         artifact.put("protocol", config.protocol().name());
         artifact.put("model", config.model());
+        artifact.put("reasoningEffort", config.reasoningEffort());
         artifact.put("promptVersions", List.of(
             SemanticScoutService.PROMPT_VERSION,
             FinalProfileSynthesisService.PROMPT_VERSION
@@ -559,6 +560,8 @@ class ProjectUnderstandingRealModelIT {
                     + ",reasoningChars=" + diagnostics.reasoningLength()
                     + ",finish=" + diagnostics.normalizedFinishReason()
                     + "}";
+            } else if (current instanceof ModelGatewayService.ModelHttpException http) {
+                type += "-" + http.statusCode();
             }
             types.add(type);
             current = current.getCause();

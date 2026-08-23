@@ -1198,7 +1198,8 @@ class ProjectFlowRealModelEvalIT {
             integerEnvironment("PROJECTFLOW_REAL_MODEL_MAX_TOKENS", 16_000),
             booleanEnvironment("PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE", false),
             nullableBooleanEnvironment("PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING"),
-            booleanEnvironment("PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL", false)
+            booleanEnvironment("PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL", false),
+            reasoningEffortEnvironment()
         );
     }
 
@@ -1222,6 +1223,11 @@ class ProjectFlowRealModelEvalIT {
         String value = System.getenv(name);
         if (value == null || value.isBlank()) return fallback;
         return Boolean.parseBoolean(value.strip());
+    }
+
+    private static String reasoningEffortEnvironment() {
+        return environmentOrDefault("PROJECTFLOW_MODEL_REASONING_EFFORT", "high")
+            .toLowerCase(Locale.ROOT);
     }
 
     private static Boolean nullableBooleanEnvironment(String name) {
@@ -1268,7 +1274,8 @@ class ProjectFlowRealModelEvalIT {
                 Math.max(4_000, result.getInt(8)),
                 result.getBoolean(9),
                 (Boolean) result.getObject(10),
-                result.getBoolean(11)
+                result.getBoolean(11),
+                reasoningEffortEnvironment()
             );
         }
     }
@@ -1354,7 +1361,8 @@ class ProjectFlowRealModelEvalIT {
         int maxTokens,
         boolean supportsJsonMode,
         Boolean supportsReasoning,
-        boolean supportsReasoningControl
+        boolean supportsReasoningControl,
+        String reasoningEffort
     ) {
     }
 

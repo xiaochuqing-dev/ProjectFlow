@@ -28,6 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.dto.ProjectMemoryGatewayDtos.MemorySearchResultResponse;
+import com.projectflow.dto.ProjectHistoryDtos.ChangeStory;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryChapter;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryOverviewResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.AnalysisToolEvidenceResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectEvidenceSourceResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectStructureIndexResponse;
@@ -63,6 +66,7 @@ public class ProjectAgentHistoryService {
     private final ProjectUnderstandingSnapshotRepository understandingRepository;
     private final ProjectStructureIndexRepository structureRepository;
     private final ProjectMemorySearchService memorySearchService;
+    private final ProjectHistoryReadService historyReadService;
     private final ObjectMapper objectMapper;
     private final SensitiveContentRedactor redactor;
 
@@ -75,6 +79,7 @@ public class ProjectAgentHistoryService {
         ProjectUnderstandingSnapshotRepository understandingRepository,
         ProjectStructureIndexRepository structureRepository,
         ProjectMemorySearchService memorySearchService,
+        ProjectHistoryReadService historyReadService,
         ObjectMapper objectMapper,
         SensitiveContentRedactor redactor
     ) {
@@ -85,6 +90,7 @@ public class ProjectAgentHistoryService {
         this.understandingRepository = understandingRepository;
         this.structureRepository = structureRepository;
         this.memorySearchService = memorySearchService;
+        this.historyReadService = historyReadService;
         this.objectMapper = objectMapper;
         this.redactor = redactor;
     }
@@ -101,7 +107,7 @@ public class ProjectAgentHistoryService {
     ) {
         this(
             projectRepository, memoryRepository, factRepository, candidateRepository,
-            understandingRepository, null, memorySearchService, objectMapper,
+            understandingRepository, null, memorySearchService, null, objectMapper,
             new SensitiveContentRedactor()
         );
     }
@@ -295,6 +301,13 @@ public class ProjectAgentHistoryService {
                 + ",coverage=" + snapshot.historicalCoverage().overallCoverage()
                 + ",from=" + snapshot.historicalCoverage().earliestEvidenceAt()
                 + ",to=" + snapshot.historicalCoverage().latestEvidenceAt();
+        if (historyReadService != null) {
+            try {
+                history = correctedHistoryNarrative(userId, projectId, history, limitations);
+            } catch (RuntimeException exception) {
+                limitations.add("项目历程展示层暂时无法读取，保留原有持久化历史覆盖诊断");
+            }
+        }
         List<String> unreadScope = unreadScope(scope, evidence, ranges, snapshot, knowledge.size(), availableKnowledgeCount);
         List<String> deepReadTargets = evidence.stream()
             .filter(item -> !"COMPLETED".equalsIgnoreCase(item.deepReadStatus())
@@ -513,6 +526,64 @@ public class ProjectAgentHistoryService {
     private ProjectSpace ownedProject(UUID userId, UUID projectId) {
         return projectRepository.findByIdAndUserId(projectId, userId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "项目不存在", HttpStatus.NOT_FOUND));
+    }
+
+    /**
+     * The first history section of an Agent package is the corrected reading
+     * view.  Engineering references remain compact and explicitly marked as
+     * drill-down material so a user declaration cannot be mistaken for a fact.
+     */
+    private String correctedHistoryNarrative(UUID userId, UUID projectId, String fallback, List<String> limitations) {
+        HistoryOverviewResponse overview = historyReadService.overview(userId, projectId);
+        List<HistoryChapter> chapters = historyReadService.chapters(userId, projectId, 0, 12).items();
+        List<ChangeStory> stories = historyReadService.stories(userId, projectId, null, false, null, null, 0, 16).items();
+        StringBuilder text = new StringBuilder();
+        text.append("项目历程（优先展示用户可读叙事；用户声明只覆盖展示，不改变事实）：\n");
+        text.append("来源修订：").append(overview.projectRevision()).append("；展示修订：")
+            .append(overview.presentationRevision()).append("\n");
+        text.append("最早状态：").append(bounded(overview.overview().earliestConfirmedState(), 500)).append("\n");
+        text.append("当前状态：").append(bounded(overview.overview().currentState(), 500)).append("\n");
+        if (!chapters.isEmpty()) {
+            text.append("篇章：\n");
+            for (HistoryChapter chapter : chapters) {
+                text.append("- ").append(bounded(chapter.title(), 180)).append("：")
+                    .append(bounded(chapter.summary(), 420)).append("（故事 ").append(chapter.storyCount()).append("）\n");
+            }
+        }
+        if (!stories.isEmpty()) {
+            text.append("变化故事：\n");
+            for (ChangeStory story : stories) {
+                text.append("- ").append(bounded(story.humanTitle(), 180)).append("：")
+                    .append(bounded(story.oneSentenceSummary(), 420)).append("\n")
+                    .append("  此前：").append(bounded(story.beforeState(), 260))
+                    .append("；变化：").append(bounded(story.change(), 260))
+                    .append("；之后：").append(bounded(story.afterState(), 260)).append("\n")
+                    .append("  展示来源：").append(presentationLabel(story.presentationAuthority()))
+                    .append("；阅读位置：").append(roleLabel(story.role()))
+                    .append("；证据下钻：").append(story.evidenceRefs().stream().limit(8).toList()).append("\n");
+                if (!story.technicalDetails().isEmpty() || !story.technicalAtomRefs().isEmpty()) {
+                    text.append("  工程下钻：atoms=").append(story.technicalAtomRefs().stream().limit(8).toList())
+                        .append("；details=").append(story.technicalDetails().stream().limit(4).map(item -> bounded(item, 240)).toList()).append("\n");
+                }
+                if (!story.unknowns().isEmpty() || !story.correctionConflicts().isEmpty()) {
+                    text.append("  未知/冲突：").append(story.unknowns().stream().limit(4).toList())
+                        .append(story.correctionConflicts().stream().limit(4).toList()).append("\n");
+                }
+            }
+        }
+        if (overview.coverage() != null && !overview.coverage().limitations().isEmpty()) {
+            limitations.addAll(overview.coverage().limitations().stream().limit(4).toList());
+        }
+        String result = text.toString();
+        return result.isBlank() ? fallback : bounded(result, 9_000);
+    }
+
+    private static String presentationLabel(String authority) {
+        return "USER_DECLARED_PRESENTATION".equals(authority) ? "经过用户修改" : "自动整理";
+    }
+
+    private static String roleLabel(String role) {
+        return "SUPPORTING".equals(role) ? "支撑工作" : "主要变化";
     }
 
     private AgentContextPackageResponse packageResponse(

@@ -122,6 +122,45 @@ class ModelRequestPolicyTest {
     }
 
     @Test
+    void maxReasoningSchemaRepairKeepsProviderAllowanceForVisibleJson() {
+        ModelRequestPolicy maxPolicy = new ModelRequestPolicy("max");
+        AiProvider provider = provider(AiProviderType.DEEPSEEK, "provider-neutral-model", 0.1, 65_536);
+        provider.configureProtocol(
+            ModelProtocol.OPENAI_CHAT_COMPLETIONS,
+            null,
+            null,
+            null,
+            null,
+            Map.of(),
+            600,
+            false,
+            true,
+            false,
+            true,
+            true
+        );
+        var capabilities = registry.resolve(provider);
+        var initial = maxPolicy.initial(
+            provider,
+            capabilities,
+            ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST,
+            "只返回一个很小的 JSON"
+        );
+
+        var repair = maxPolicy.recovery(
+            initial,
+            capabilities,
+            ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST,
+            "SCHEMA_REPAIR_RETRY",
+            64
+        );
+
+        assertThat(repair.taskRequestedMaxTokens()).isEqualTo(65_536);
+        assertThat(repair.effectiveMaxTokens()).isEqualTo(65_536);
+        assertThat(repair.maxTokenDecision()).contains("Provider 有界上限", "保持 max");
+    }
+
+    @Test
     void reasoningUsesBoundedProviderHeadroomFromTheFirstRequestAndRecovery() {
         AiProvider provider = provider(AiProviderType.OPENAI, "glm-5.2", 0.9, 65_536);
         var capabilities = registry.resolve(provider);
@@ -187,6 +226,82 @@ class ModelRequestPolicyTest {
         assertThat(recovery.effectiveMaxTokens()).isEqualTo(65_536);
         assertThat(recovery.maxTokenDecision()).contains("Chat high reasoning");
         assertThat(recovery.maxTokenDecision()).contains("保持 high");
+    }
+
+    @Test
+    void explicitMaxReasoningIsPreservedAcrossInitialAndRecoveryRequests() {
+        ModelRequestPolicy maxPolicy = new ModelRequestPolicy("max");
+        AiProvider provider = provider(AiProviderType.DEEPSEEK, "provider-neutral-model", 0.1, 65_536);
+        provider.configureProtocol(
+            ModelProtocol.OPENAI_CHAT_COMPLETIONS,
+            null,
+            null,
+            null,
+            null,
+            Map.of(),
+            600,
+            false,
+            true,
+            false,
+            true,
+            true
+        );
+        var capabilities = registry.resolve(provider);
+        var initial = maxPolicy.initial(
+            provider,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "x".repeat(48_000)
+        );
+        var recovery = maxPolicy.recovery(
+            initial,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "EMPTY_AFTER_REASONING_RETRY",
+            0
+        );
+
+        assertThat(maxPolicy.reasoningEffort(capabilities)).isEqualTo("max");
+        assertThat(initial.maxTokenDecision()).contains("reasoning_effort", "max");
+        assertThat(recovery.maxTokenDecision()).contains("保持 max");
+    }
+
+    @Test
+    void messagesMaxReasoningIsPreservedAcrossInitialAndRecoveryRequests() {
+        ModelRequestPolicy maxPolicy = new ModelRequestPolicy("max");
+        AiProvider provider = provider(AiProviderType.ANTHROPIC, "qwen3.7-plus", 0.1, 65_536);
+        provider.configureProtocol(
+            ModelProtocol.ANTHROPIC_MESSAGES,
+            null,
+            null,
+            null,
+            null,
+            Map.of(),
+            600,
+            false,
+            false,
+            false,
+            true,
+            true
+        );
+        var capabilities = registry.resolve(provider);
+        var initial = maxPolicy.initial(
+            provider,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "x".repeat(48_000)
+        );
+        var recovery = maxPolicy.recovery(
+            initial,
+            capabilities,
+            ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT,
+            "EMPTY_AFTER_REASONING_RETRY",
+            0
+        );
+
+        assertThat(maxPolicy.reasoningEffort(capabilities)).isEqualTo("max");
+        assertThat(initial.maxTokenDecision()).contains("Messages thinking budget", "max");
+        assertThat(recovery.maxTokenDecision()).contains("Messages thinking budget", "保持 max");
     }
 
     @Test

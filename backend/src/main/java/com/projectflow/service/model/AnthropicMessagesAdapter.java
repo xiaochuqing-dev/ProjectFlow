@@ -45,7 +45,11 @@ public class AnthropicMessagesAdapter implements ModelProtocolAdapter {
             .system(request.systemPrompt())
             .addUserMessage(request.userPrompt())
             .maxTokens(request.maxOutputTokens());
-        if (request.temperature() != null) params.temperature(request.temperature());
+        if (request.reasoningEffort() != null) {
+            params.enabledThinking(reasoningBudget(request.reasoningEffort(), request.maxOutputTokens()));
+        } else if (request.temperature() != null) {
+            params.temperature(request.temperature());
+        }
         AnthropicClient client = clientBuilder(request).build();
         try {
             Message response = client.messages().create(params.build());
@@ -102,5 +106,18 @@ public class AnthropicMessagesAdapter implements ModelProtocolAdapter {
             case "refusal" -> NormalizedFinishReason.REFUSAL;
             default -> NormalizedFinishReason.UNKNOWN;
         };
+    }
+
+    static long reasoningBudget(String effort, int maxOutputTokens) {
+        long visibleOutputReserve = 1_024L;
+        if (maxOutputTokens <= visibleOutputReserve) {
+            throw new IllegalArgumentException("Anthropic Messages thinking requires max output tokens above 1024");
+        }
+        long requested = switch (effort == null ? "" : effort.toLowerCase(java.util.Locale.ROOT)) {
+            case "max" -> 31_999L;
+            case "high" -> 16_000L;
+            default -> throw new IllegalArgumentException("Anthropic Messages supports high or max thinking effort");
+        };
+        return Math.min(requested, maxOutputTokens - visibleOutputReserve);
     }
 }

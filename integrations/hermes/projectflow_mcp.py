@@ -15,7 +15,7 @@ from typing import Any
 
 
 SERVER_NAME = "projectflow-project-memory"
-SERVER_VERSION = "3.8.0"
+SERVER_VERSION = "3.8.5"
 PROTOCOL_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"}
 DEFAULT_PROTOCOL_VERSION = "2025-11-25"
 
@@ -136,13 +136,19 @@ TOOLS = [
         _schema({"projectId": PROJECT_ID, "page": PAGE, "size": SIZE}, ["projectId"]),
     ),
     _tool(
+        "list_project_history_corrections",
+        "Read the durable user presentation declarations for Project History, including automatic and applied values, differences, conflicts, target presence, and the current presentation revision. Read-only; declarations never mutate facts or raw events.",
+        _schema({"projectId": PROJECT_ID, "page": PAGE, "size": SIZE}, ["projectId"]),
+    ),
+    _tool(
         "list_project_change_stories",
-        "List paged evidence-bound change stories with before, change, after, later outcome, conflicts, unknowns, authority, and raw-event references. Supports subject, time, and attention filters.",
+        "List paged evidence-bound change stories with before, change, after, later outcome, conflicts, unknowns, authority, and raw-event references. Hidden presentation items remain omitted unless includeHidden is explicitly true.",
         _schema(
             {
                 "projectId": PROJECT_ID,
                 "subject": {"type": "string", "maxLength": 200},
                 "attentionOnly": {"type": "boolean", "default": False},
+                "includeHidden": {"type": "boolean", "default": False},
                 "from": TIME,
                 "until": TIME,
                 "page": PAGE,
@@ -418,10 +424,15 @@ def call_tool(client: ProjectFlowClient, name: str, arguments: dict[str, Any]) -
         return client.get(base + "/history/chapters", {
             "page": _argument(arguments, "page", 0), "size": _argument(arguments, "size", 10),
         })
+    if name == "list_project_history_corrections":
+        return client.get(base + "/history/corrections", {
+            "page": _argument(arguments, "page", 0), "size": _argument(arguments, "size", 50),
+        })
     if name == "list_project_change_stories":
         return client.get(base + "/history/stories", {
             "subject": _argument(arguments, "subject"),
             "attentionOnly": str(bool(_argument(arguments, "attentionOnly", False))).lower(),
+            "includeHidden": str(bool(_argument(arguments, "includeHidden", False))).lower(),
             "from": _argument(arguments, "from"), "to": _argument(arguments, "until"),
             "page": _argument(arguments, "page", 0), "size": _argument(arguments, "size", 10),
         })

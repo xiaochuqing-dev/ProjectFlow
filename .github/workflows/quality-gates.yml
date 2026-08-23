@@ -1,4 +1,4 @@
-name: ProjectFlow V3.8.0 Quality Gates
+name: ProjectFlow V3.8.5 Quality Gates
 
 on:
   push:
@@ -6,10 +6,30 @@ on:
   workflow_dispatch:
     inputs:
       run_real_model:
-        description: "使用 Secret 执行一次受预算限制的 GLM 真实验收"
+        description: "使用 OpenCode Go Secret 执行 GPT 5.6 Luna、DeepSeek V4 Flash 和 Qwen3.7 Plus 真实验收"
         required: false
         default: false
         type: boolean
+      real_model_scope:
+        description: "真实模型范围；affected 复验 Chapter 代表性、非代码、repair 与 ProjectFlow Dogfood"
+        required: false
+        default: full
+        type: choice
+        options:
+          - correction
+          - affected
+          - full
+      real_model_provider:
+        description: "真实模型 Provider；默认验收全部三种模型，也可定向复验"
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - both
+          - luna
+          - deepseek
+          - qwen
 
 permissions:
   contents: read
@@ -37,6 +57,44 @@ jobs:
           test -f target/surefire-reports/TEST-com.projectflow.service.ProjectHistoryPromptBuilderTest.xml
           test -f target/surefire-reports/TEST-com.projectflow.ProjectHistoryDogfoodAcceptanceTest.xml
           test -f target/surefire-reports/TEST-com.projectflow.ProjectHistoryProductAcceptanceTest.xml
+          for report in \
+            CrossConsumerHistoryConsistencyTest \
+            RealDogfoodRoleGraphConsistencyTest \
+            ModelPortabilityContractTest \
+            ModelOutputMinimalSchemaTest \
+            UnsupportedClaimFailureTaxonomyTest \
+            ProviderNeutralPromptSnapshotTest \
+            ProviderNeutralSemanticValidationTest \
+            StoryHumanLanguageContractTest \
+            CommitHumanSummaryContractTest \
+            ChapterHumanLanguageContractTest \
+            NonCodeLanguageRegressionTest \
+            GenericCommitGroupingTest \
+            PrimarySupportingBidirectionalInvariantTest \
+            CorrectedProjectionConsistencyTest \
+            CorrectedReadRevisionParityTest \
+            HumanReviewSampleManifestTest \
+            ProjectHistoryHumanNarrativeContractTest \
+            ProjectHistoryNarrativeEntailmentTest \
+            ProjectHistoryNarrativeParaphraseValidationTest \
+            ProjectHistoryHumanSubjectLabelTest \
+            ProjectHistoryChapterSemanticSynthesisTest \
+            ProjectHistoryChapterRepresentationPlannerTest \
+            ProjectHistoryChapterNoRawSubjectLeakTest \
+            ProjectHistoryBeforeChangeAfterNonRepetitionTest \
+            ProjectHistoryUnknownHumanWordingTest \
+            ProjectHistoryPlannedVsImplementedTest \
+            ProjectHistoryDeclaredVsVerifiedTest \
+            ProjectHistoryDogfoodNarrativeEntailmentTest \
+            ProjectHistoryNonCodeHumanLanguageTest \
+            ProjectHistoryCrossProviderNarrativeParityTest \
+            ProjectHistoryClaimEvidenceAttributionContractTest \
+            ProjectHistoryHumanReviewRound2ManifestTest; do
+            test -f "target/surefire-reports/TEST-com.projectflow.service.${report}.xml"
+          done
+          test -f target/surefire-reports/TEST-com.projectflow.service.ProjectHistoryHumanReviewRound3ManifestTest.xml
+          test -f target/surefire-reports/TEST-com.projectflow.ProjectHistoryV385GroundTruthExecutionTest.xml
+          test -f target/surefire-reports/TEST-com.projectflow.eval.ProjectHistoryV385TitleQualityTest.xml
       - name: 保存 JUnit 报告
         if: always()
         uses: actions/upload-artifact@v4
@@ -150,48 +208,250 @@ jobs:
       - name: 校验 V3.8.0 安全验收产物
         run: python scripts/verify_v380_acceptance_evidence.py
 
-  optional-real-provider:
+  optional-real-provider-qualification:
+    name: optional-real-provider-qualification (${{ matrix.id }})
     if: github.event_name == 'workflow_dispatch' && inputs.run_real_model
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: luna
+            display_name: GPT 5.6 Luna Responses
+            secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
+            provider: GPT 5.6 Luna OpenCode Go
+            base_url: https://opencode.ai/zen/go/v1
+            model: gpt-5.6-luna
+            type: OPENAI
+            protocol: OPENAI_RESPONSES
+            supports_json_mode: "true"
+            supports_reasoning: "true"
+            supports_reasoning_control: "true"
+            reasoning_effort: max
+          - id: deepseek
+            display_name: DeepSeek V4 Flash Chat
+            secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
+            provider: DeepSeek OpenCode Go
+            base_url: https://opencode.ai/zen/go/v1
+            model: deepseek-v4-flash
+            type: DEEPSEEK
+            protocol: OPENAI_CHAT_COMPLETIONS
+            supports_json_mode: "true"
+            supports_reasoning: "true"
+            supports_reasoning_control: "true"
+            reasoning_effort: max
+          - id: qwen
+            display_name: Qwen3.7 Plus Messages
+            secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
+            provider: Qwen3.7 Plus OpenCode Go
+            base_url: https://opencode.ai/zen/go
+            model: qwen3.7-plus
+            type: ANTHROPIC
+            protocol: ANTHROPIC_MESSAGES
+            supports_json_mode: "false"
+            supports_reasoning: "true"
+            supports_reasoning_control: "true"
+            reasoning_effort: max
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
           cache: maven
-      - name: 真实 GLM Provider、18-case、项目理解与项目历程验收
+      - name: 确认 ${{ matrix.display_name }} 安全凭据已配置
+        if: inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
+        shell: bash
+        env:
+          PROVIDER_KEY: ${{ secrets[matrix.secret_name] }}
+        run: |
+          if [ -z "$PROVIDER_KEY" ]; then
+            echo "BLOCKED: ${{ matrix.display_name }} 真实验收 Secret 缺失"
+            exit 1
+          fi
+      - name: 真实 ${{ matrix.display_name }} 连接、Ground Truth 与资格验收
+        if: inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
         working-directory: backend
         env:
           PROJECTFLOW_RUN_REAL_MODEL: "true"
-          PROJECTFLOW_REAL_MODEL_API_KEY: ${{ secrets.PROJECTFLOW_REAL_MODEL_API_KEY }}
-          PROJECTFLOW_REAL_MODEL_PROVIDER: "GLM"
-          PROJECTFLOW_REAL_MODEL_BASE_URL: "https://ark.cn-beijing.volces.com/api/coding/v3"
-          PROJECTFLOW_REAL_MODEL_NAME: "glm-5.2"
-          PROJECTFLOW_REAL_MODEL_TYPE: "OPENAI"
-          PROJECTFLOW_REAL_MODEL_PROTOCOL: "OPENAI_RESPONSES"
+          PROJECTFLOW_REAL_MODEL_API_KEY: ${{ secrets[matrix.secret_name] }}
+          PROJECTFLOW_REAL_MODEL_PROVIDER: ${{ matrix.provider }}
+          PROJECTFLOW_REAL_MODEL_BASE_URL: ${{ matrix.base_url }}
+          PROJECTFLOW_REAL_MODEL_NAME: ${{ matrix.model }}
+          PROJECTFLOW_REAL_MODEL_TYPE: ${{ matrix.type }}
+          PROJECTFLOW_REAL_MODEL_PROTOCOL: ${{ matrix.protocol }}
           PROJECTFLOW_REAL_MODEL_TIMEOUT_SECONDS: "600"
           # QUALITY_FIRST: reasoning and visible JSON share this loose Provider
           # ceiling from the first request. The ceiling is not a Token target;
           # elapsed time and usage remain diagnostics and never lower effort.
           PROJECTFLOW_REAL_MODEL_MAX_TOKENS: "65536"
-          PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE: "true"
-          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING: "true"
-          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL: "true"
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE: ${{ matrix.supports_json_mode }}
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING: ${{ matrix.supports_reasoning }}
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL: ${{ matrix.supports_reasoning_control }}
+          PROJECTFLOW_MODEL_REASONING_EFFORT: ${{ matrix.reasoning_effort }}
+          EVAL_PREFIX: ${{ matrix.id }}
         run: |
-          if [ -z "$PROJECTFLOW_REAL_MODEL_API_KEY" ]; then
-            echo "SKIPPED: 未提供安全测试 Key"
+          if [ "${{ inputs.real_model_scope }}" = "correction" ]; then
+            echo "correction scope: reuse recorded full qualification baselines; no qualification model call"
             exit 0
           fi
-          mvn -B -Dtest=ProjectFlowRealProviderProbeIT test
-          mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name=glm-v380 test
-          mvn -B -Dtest=ProjectFlowRealModelEvalIT test
-          mvn -B -Dtest=ProjectUnderstandingRealModelIT test
-      - name: 保存内部真实模型评测工件
-        if: always()
+          failures=0
+          run_gate() {
+            label="$1"
+            shift
+            echo "::group::$label"
+            if "$@"; then
+              echo "$label: PASS"
+            else
+              echo "$label: FAIL"
+              failures=$((failures + 1))
+            fi
+            echo "::endgroup::"
+          }
+          run_gate provider-probe mvn -B -Dtest=ProjectFlowRealProviderProbeIT test
+          if [ "${{ inputs.real_model_scope }}" = "full" ]; then
+            run_gate history-v380 mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-v380" test
+            run_gate understanding-v375 mvn -B -Dtest=ProjectFlowRealModelEvalIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-v375" test
+            run_gate understanding-e2e mvn -B -Dtest=ProjectUnderstandingRealModelIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-understanding" test
+          else
+            echo "affected scope: V3.8.0, V3.7.5 and Understanding reuse the recorded full baseline"
+          fi
+          run_gate history-v385-qualification mvn -B -Dtest=ProjectHistoryV385RealOutputEvaluatorTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385" test
+          if [ "$failures" -ne 0 ]; then
+            echo "$EVAL_PREFIX qualification gates failed: $failures"
+            exit 1
+          fi
+      - name: 保存内部真实模型资格评测工件
+        if: ${{ always() && (inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id) }}
         uses: actions/upload-artifact@v4
         with:
-          name: projectflow-real-model-eval
+          name: projectflow-real-model-qualification-${{ matrix.id }}
+          path: backend/target/projectflow-eval
+          if-no-files-found: ignore
+
+  optional-real-provider-scenarios:
+    name: optional-real-provider-scenarios (${{ matrix.id }})
+    needs: optional-real-provider-qualification
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.run_real_model }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: luna
+            display_name: GPT 5.6 Luna Responses
+            secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
+            provider: GPT 5.6 Luna OpenCode Go
+            base_url: https://opencode.ai/zen/go/v1
+            model: gpt-5.6-luna
+            type: OPENAI
+            protocol: OPENAI_RESPONSES
+            supports_json_mode: "true"
+            supports_reasoning: "true"
+            supports_reasoning_control: "true"
+            reasoning_effort: max
+            dogfood_test: LunaDogfoodRegressionTest
+          - id: deepseek
+            display_name: DeepSeek V4 Flash Chat
+            secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
+            provider: DeepSeek OpenCode Go
+            base_url: https://opencode.ai/zen/go/v1
+            model: deepseek-v4-flash
+            type: DEEPSEEK
+            protocol: OPENAI_CHAT_COMPLETIONS
+            supports_json_mode: "true"
+            supports_reasoning: "true"
+            supports_reasoning_control: "true"
+            reasoning_effort: max
+            dogfood_test: DeepSeekDogfoodRegressionTest
+          - id: qwen
+            display_name: Qwen3.7 Plus Messages
+            secret_name: PROJECTFLOW_DEEPSEEK_API_KEY
+            provider: Qwen3.7 Plus OpenCode Go
+            base_url: https://opencode.ai/zen/go
+            model: qwen3.7-plus
+            type: ANTHROPIC
+            protocol: ANTHROPIC_MESSAGES
+            supports_json_mode: "false"
+            supports_reasoning: "true"
+            supports_reasoning_control: "true"
+            reasoning_effort: max
+            dogfood_test: QwenDogfoodRegressionTest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: 确认 ${{ matrix.display_name }} 安全凭据已配置
+        if: inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
+        shell: bash
+        env:
+          PROVIDER_KEY: ${{ secrets[matrix.secret_name] }}
+        run: |
+          if [ -z "$PROVIDER_KEY" ]; then
+            echo "BLOCKED: ${{ matrix.display_name }} 真实验收 Secret 缺失"
+            exit 1
+          fi
+      - name: 真实 ${{ matrix.display_name }} 场景、Dogfood 与非代码验收
+        if: inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
+        working-directory: backend
+        env:
+          PROJECTFLOW_RUN_REAL_MODEL: "true"
+          PROJECTFLOW_REAL_MODEL_API_KEY: ${{ secrets[matrix.secret_name] }}
+          PROJECTFLOW_REAL_MODEL_PROVIDER: ${{ matrix.provider }}
+          PROJECTFLOW_REAL_MODEL_BASE_URL: ${{ matrix.base_url }}
+          PROJECTFLOW_REAL_MODEL_NAME: ${{ matrix.model }}
+          PROJECTFLOW_REAL_MODEL_TYPE: ${{ matrix.type }}
+          PROJECTFLOW_REAL_MODEL_PROTOCOL: ${{ matrix.protocol }}
+          PROJECTFLOW_REAL_MODEL_TIMEOUT_SECONDS: "600"
+          # Keep the exact same QUALITY_FIRST model contract as qualification.
+          PROJECTFLOW_REAL_MODEL_MAX_TOKENS: "65536"
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE: ${{ matrix.supports_json_mode }}
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING: ${{ matrix.supports_reasoning }}
+          PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL: ${{ matrix.supports_reasoning_control }}
+          PROJECTFLOW_MODEL_REASONING_EFFORT: ${{ matrix.reasoning_effort }}
+          EVAL_PREFIX: ${{ matrix.id }}
+          DOGFOOD_TEST: ${{ matrix.dogfood_test }}
+        run: |
+          failures=0
+          run_gate() {
+            label="$1"
+            shift
+            echo "::group::$label"
+            if "$@"; then
+              echo "$label: PASS"
+            else
+              echo "$label: FAIL"
+              failures=$((failures + 1))
+            fi
+            echo "::endgroup::"
+          }
+          if [ "${{ inputs.real_model_scope }}" = "correction" ]; then
+            run_gate history-v385-correction mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.scenario-scope=correction -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios-affected" test
+            echo "correction scope: Dogfood and non-code scenarios reuse the recorded full baseline"
+          elif [ "${{ inputs.real_model_scope }}" = "affected" ]; then
+            run_gate history-v385-chapter-affected mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.scenario-scope=chapter -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-chapter-affected" test
+            echo "affected scope: Chapter suite includes ProjectFlow Dogfood; unchanged V3.7.5/Understanding baselines are reused"
+          else
+            run_gate history-v385-scenarios mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios" test
+            run_gate history-v385-dogfood mvn -B -Dtest="$DOGFOOD_TEST" -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios" test
+          fi
+          if [ "$failures" -ne 0 ]; then
+            echo "$EVAL_PREFIX scenario gates failed: $failures"
+            exit 1
+          fi
+      - name: 保存内部真实模型场景评测工件
+        if: ${{ always() && (inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: projectflow-real-model-scenarios-${{ matrix.id }}
           path: backend/target/projectflow-eval
           if-no-files-found: ignore

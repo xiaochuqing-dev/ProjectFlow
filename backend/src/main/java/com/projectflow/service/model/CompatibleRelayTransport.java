@@ -102,9 +102,21 @@ public class CompatibleRelayTransport {
                 body.put("system", request.systemPrompt());
                 body.put("messages", List.of(Map.of("role", "user", "content", request.userPrompt())));
                 body.put("max_tokens", request.maxOutputTokens());
+                if (request.reasoningEffort() != null) {
+                    body.put("thinking", Map.of(
+                        "type", "enabled",
+                        "budget_tokens", AnthropicMessagesAdapter.reasoningBudget(
+                            request.reasoningEffort(), request.maxOutputTokens()
+                        )
+                    ));
+                }
             }
         }
-        if (request.temperature() != null) body.put("temperature", request.temperature());
+        if (request.temperature() != null
+            && !(request.provider().getProtocol() == ModelProtocol.ANTHROPIC_MESSAGES
+                && request.reasoningEffort() != null)) {
+            body.put("temperature", request.temperature());
+        }
         return body;
     }
 

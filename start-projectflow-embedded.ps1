@@ -5,6 +5,25 @@ param (
 
 $ErrorActionPreference = "Stop"
 
+function Get-ProjectFlowFileSha256 {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            return ([System.BitConverter]::ToString($sha256.ComputeHash($stream))).Replace("-", "")
+        } finally {
+            $sha256.Dispose()
+        }
+    } finally {
+        $stream.Dispose()
+    }
+}
+
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $backendDir = Join-Path $root "backend"
 $frontendDir = Join-Path $root "frontend"
@@ -14,7 +33,7 @@ $frontendPackage = Get-Content -LiteralPath (Join-Path $frontendDir "package.jso
 $productVersion = [string]$frontendPackage.version
 $packageLockPath = Join-Path $frontendDir "package-lock.json"
 $dependencyMarkerPath = Join-Path $frontendDir "node_modules\.projectflow-package-lock.sha256"
-$packageLockHash = (Get-FileHash -LiteralPath $packageLockPath -Algorithm SHA256).Hash
+$packageLockHash = Get-ProjectFlowFileSha256 -Path $packageLockPath
 $installedPackageLockHash = if (Test-Path -LiteralPath $dependencyMarkerPath) {
     (Get-Content -LiteralPath $dependencyMarkerPath -Raw).Trim()
 } else {

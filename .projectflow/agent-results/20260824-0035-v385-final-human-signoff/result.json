@@ -1,0 +1,28 @@
+{
+  "taskGoal": "重新审计 V3.8.5 最终冻结包，记录项目所有者真实签字与产品语言债务，并在不改写历史工件的前提下授权正式 GitHub 收口。",
+  "actualChanges": [
+    "重新核对 PR #15、本地与远端 Head、master base、冻结 manifest/worksheet、CI、分支、worktree 和 Repository Secret 名称，确认交接记录与当前事实一致。",
+    "新增正式中文产品语言与渐进披露合同，把短 ID、完整 Evidence 下钻、内部 diagnostics 分层和 V4.0 GUI 债务固定为权威产品边界。",
+    "将项目所有者明确批准和量化评分豁免保存为独立 final human sign-off evidence；保留所有数值评分为 null，未改写 Round 1/2/3 或 Final Chapter 冻结文件。",
+    "新增自动合同，校验签字证据、项目所有者 override、空评分、P0 披露、冻结包 canonical-LF 哈希和敏感内容边界。"
+  ],
+  "keyFiles": [
+    "docs/acceptance-evidence/v3.8.5/final-human-signoff.json",
+    "docs/projectflow-v3.8.5-final-human-signoff.md",
+    "docs/product-language-and-progressive-disclosure-contract.md",
+    "docs/projectflow-v3.8.5-final-signoff-current-state-audit.md",
+    "backend/src/test/java/com/projectflow/service/ProjectHistoryFinalHumanSignoffEvidenceTest.java"
+  ],
+  "verification": {
+    "build": "not_run",
+    "tests": "Final Human Sign-off、Final Chapter 与 Round 3 三项聚焦合同共 3 项通过，0 failure、0 error、0 skip；V3.8.0 验收证据校验通过，冻结文件零差异。",
+    "manualCheck": "确认项目所有者明确批准继续与合并，同时明确豁免本轮量化评分；签字证据不保存原始对话、凭据、身份或机器绝对路径。PR Head 78231a9 在签字前的 push/PR CI 均成功，签字提交仍需新 Head CI。"
+  },
+  "unfinished": [
+    "PR #15 尚待新 Head CI、Ready、merge、master CI、acceptance backfill 与最终清理。",
+    "量化人工评分未提供；最终结论必须始终标明 PASS_BY_EXPLICIT_OWNER_OVERRIDE 和 single-reviewer limitation。"
+  ],
+  "sedimentCandidates": [
+    "冻结人工评审工件不应被后续批准改写；真实签字应作为引用冻结哈希的独立追加证据。"
+  ]
+}

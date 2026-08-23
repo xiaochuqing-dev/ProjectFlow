@@ -70,7 +70,7 @@ class ProjectHistoryGitHubEvidenceTest {
         provider(userId);
         when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
             String prompt = invocation.getArgument(1, String.class);
-            capturedPrompt.set(prompt);
+            capturedPrompt.compareAndSet(null, prompt);
             String response = historyResponse(prompt);
             return new ModelGatewayService.StructuredModelResponse(response, outputAdapter.parse(response));
         });
@@ -84,7 +84,8 @@ class ProjectHistoryGitHubEvidenceTest {
         var exportStories = readService.stories(userId, project.getId(), "export", false, null, null, 0, 20).items();
         var story = exportStories.stream().filter(item -> item.reasonEvidenceRefs().contains("github-pr:7"))
             .findFirst()
-            .orElseThrow(() -> new AssertionError("No export story retained github-pr:7: " + exportStories));
+            .orElseThrow(() -> new AssertionError("No export story retained github-pr:7; diagnostics="
+                + readService.overview(userId, project.getId()).diagnostics() + "; stories=" + exportStories));
         assertThat(story.reason()).contains("旧客户端", "CSV");
         assertThat(story.reasonEvidenceRefs()).containsExactly("github-pr:7");
         assertThat(story.authority()).isEqualTo("INFERRED_NON_AUTHORITATIVE");
@@ -163,18 +164,21 @@ class ProjectHistoryGitHubEvidenceTest {
             for (JsonNode evidence : story.path("reasonEligibleEvidenceRefs")) {
                 reasonEligible |= evidence.asText().equals("github-pr:7");
             }
+            String subject = story.path("subjectDisplayConcept").asText("项目材料");
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("storyId", story.path("storyId").asText());
             item.put("humanTitle", reasonEligible
-                ? "增加导出兼容路径并保留旧客户端结果"
-                : "记录项目约束并保留可追溯状态");
+                ? "实现成果导出，形成可使用的功能"
+                : "整理" + subject + "，形成可追溯记录");
             item.put("oneSentenceSummary", reasonEligible
-                ? "导出路径增加兼容结果，原因由 Pull Request 声明支持。"
-                : "来源事件已按时间归纳，无法确认的原因继续保持未知。");
+                ? "相关代码已经形成成果导出的实现，具体范围可在工程详情中核对。"
+                : "与" + subject + "有关的来源事件已按时间归纳，无法确认的原因继续保持未知。");
+            item.put("beforeWording", story.path("deterministicBefore").asText());
+            item.put("changeWording", story.path("deterministicChange").asText());
+            item.put("afterWording", story.path("deterministicAfter").asText());
             item.put("reason", reasonEligible ? "旧客户端仍需要 CSV 兼容路径。" : "");
             item.put("reasonEvidenceRefs", reasonEligible ? List.of("github-pr:7") : List.of());
-            item.put("conflicts", List.of());
-            item.put("unknowns", reasonEligible ? List.of() : List.of("原因未知"));
+            item.put("unknownWording", reasonEligible ? "" : "目前没有足够信息确认为什么做这次调整。");
             storyOutput.add(item);
         }
         List<Map<String, Object>> chapterOutput = new ArrayList<>();
@@ -183,7 +187,6 @@ class ProjectHistoryGitHubEvidenceTest {
             item.put("chapterId", chapter.path("chapterId").asText());
             item.put("title", "整理导出兼容变化并形成可读区间");
             item.put("summary", "该时间区间汇总导出兼容与协作声明，未把声明升级为实现事实。");
-            item.put("storyRefs", objectMapper.convertValue(chapter.path("storyRefs"), List.class));
             chapterOutput.add(item);
         }
         return objectMapper.writeValueAsString(Map.of("stories", storyOutput, "chapters", chapterOutput));

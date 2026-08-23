@@ -1,0 +1,831 @@
+{
+  "version": "projectflow-v385-final-chapter-review-v1",
+  "status": "HUMAN_REVIEW_REQUIRED",
+  "v385FinalAcceptance": "NOT_PASS",
+  "chapterRepresentativenessAutomatedGate": "PASS",
+  "chapterRepresentativenessHumanGate": "NOT_RUN",
+  "storyHumanGate": "PENDING_ROUND3_AND_CHANGED_SUBSET_REVIEW",
+  "sourceRunId": "32609107531",
+  "sourceRunUrl": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/32609107531",
+  "sourceCodeHead": "e1b67f28428e73f39fc23aa6f85961155a20ffd8",
+  "providerProfiles": {
+    "luna": {
+      "name": "GPT 5.6 Luna OpenCode Go",
+      "model": "gpt-5.6-luna",
+      "protocol": "OPENAI_RESPONSES",
+      "reasoningEffort": "max"
+    },
+    "deepseek": {
+      "name": "DeepSeek OpenCode Go",
+      "model": "deepseek-v4-flash",
+      "protocol": "OPENAI_CHAT_COMPLETIONS",
+      "reasoningEffort": "max"
+    },
+    "qwen": {
+      "name": "Qwen3.7 Plus OpenCode Go",
+      "model": "qwen3.7-plus",
+      "protocol": "ANTHROPIC_MESSAGES",
+      "reasoningEffort": "max"
+    }
+  },
+  "sourceArtifactCanonicalLfSha256": {
+    "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-ground-truth-real-result.json": "4e6031a1da307891c09ef19c20a8ee1304bd0e792a1a14541de38bbc255f9b30",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-real-scenarios.json": "7ec1a4c84f538d4ba0df755817b0ef6cf281a541200f022d9644a2ddefe4f159",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-ground-truth-real-result.json": "71f6843a5b1ee82bc0c2b674b9e64bc856421b8d1fd83af1a8cde7f1fa9b3094",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-real-scenarios.json": "58095cf37e387245d775642d590b6abf8590b32052e9ddfad42239b562e25ba9",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/qwen/history-ground-truth-real-result.json": "64cc9f8463f1fcb618db64c6d3e3c34361721eea06855d1d2f43a0cab6c94709",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/qwen/history-real-scenarios.json": "4e049f4f7a0032a0f856ad4f986ec37fda3d5a4e7483e8524d32280faacf1edb"
+  },
+  "round3": {
+    "status": "PENDING_HUMAN_REVIEW_ROUND3",
+    "reviewerCount": 0,
+    "storyCount": 30,
+    "chapterCount": 8,
+    "manifestCanonicalLfSha256": "f316b71a6bec24f7ba40c2da81ef210b101b3ca238c688793fa32d48be877c1b",
+    "worksheetCanonicalLfSha256": "4d57d7d1fa5bb975465db9be413f70cf943ca7c9c70d8174ba0d4dcdd7d85ca6",
+    "immutable": true
+  },
+  "storyRegression": {
+    "round3FrozenStoryCount": 30,
+    "exactContentUnchangedCount": 0,
+    "changedPresentationCount": 30,
+    "truthSemanticUnchangedCount": 30,
+    "truthSemanticChangedCount": 0,
+    "changedSampleIds": [
+      "deepseek-story-01",
+      "deepseek-story-02",
+      "deepseek-story-03",
+      "deepseek-story-04",
+      "deepseek-story-05",
+      "deepseek-story-06",
+      "deepseek-story-07",
+      "deepseek-story-08",
+      "deepseek-story-09",
+      "deepseek-story-10",
+      "deepseek-story-11",
+      "deepseek-story-12",
+      "deepseek-story-13",
+      "deepseek-story-14",
+      "deepseek-story-15",
+      "glm-story-01",
+      "glm-story-02",
+      "glm-story-03",
+      "glm-story-04",
+      "glm-story-05",
+      "glm-story-06",
+      "glm-story-07",
+      "glm-story-08",
+      "glm-story-09",
+      "glm-story-10",
+      "glm-story-11",
+      "glm-story-12",
+      "glm-story-13",
+      "glm-story-14",
+      "glm-story-15"
+    ],
+    "changedSubsetHumanReviewRequired": true
+  },
+  "changedStories": [
+    {
+      "sampleId": "deepseek-story-01",
+      "provider": "DeepSeek V4 Flash",
+      "source": "cal-small-five-commit-project",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-ground-truth-real-result.json",
+      "entityId": "story-c6dc58d433d0058dfd21",
+      "round3ContentHash": "sha256:b2b60608e50027941b8c699fbe6d797f0294c74d0561ac5fa9972ed8a57330de",
+      "finalContentHash": "sha256:e33047b06670339240867c9cc883e27b5ddcb96dbd641ad3f1a8129e69081ab6",
+      "round3TruthSemanticHash": "sha256:53039eb24003c597949d06a9e108a1cfba26310cb853b55c345af8c51e34f161",
+      "finalTruthSemanticHash": "sha256:53039eb24003c597949d06a9e108a1cfba26310cb853b55c345af8c51e34f161",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "short-history",
+        "direct-implementation"
+      ]
+    },
+    {
+      "sampleId": "deepseek-story-02",
+      "provider": "DeepSeek V4 Flash",
+      "source": "cal-create-modify-delete-restore",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-ground-truth-real-result.json",
+      "entityId": "story-dc02ce8462b357cae277",
+      "round3ContentHash": "sha256:e541ba13230b4a571193a437b7286cdb9c5ee3490c5108528fbf232e73b6a178",
+      "finalContentHash": "sha256:c97bb2266118896b89fbeee2a6d99c187e9fbcc572dd783eef2c979a3fdca1a4",
+      "round3TruthSemanticHash": "sha256:abd1879e9e6f67758536c53b5be34af98efccad5d43e3dd4329107e1f0b0385f",
+      "finalTruthSemanticHash": "sha256:abd1879e9e6f67758536c53b5be34af98efccad5d43e3dd4329107e1f0b0385f",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "lifecycle-restore"
+      ]
+    },
+    {
+      "sampleId": "deepseek-story-03",
+      "provider": "DeepSeek V4 Flash",
+      "source": "cal-multi-commit-one-change",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-ground-truth-real-result.json",
+      "entityId": "story-5a966d15304affb4956c",
+      "round3ContentHash": "sha256:5fe4025ce0b3b62a88a6d481129f64501571d7ba0cb5aa867bf42ca5e561d3b1",
+      "finalContentHash": "sha256:a97222759557af82bc6806bc5b225d963f6e546e9d350e5e48930dfbfed1d7f2",
+      "round3TruthSemanticHash": "sha256:b1f5cc6e2b09e3c6909a9f7f709e20f8c45512d54f156b475aea632e171b58e3",
+      "finalTruthSemanticHash": "sha256:b1f5cc6e2b09e3c6909a9f7f709e20f8c45512d54f156b475aea632e171b58e3",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "multi-commit-one-result",
+        "direct-implementation"
+      ]
+    },
+    {
+      "sampleId": "deepseek-story-04",
+      "provider": "DeepSeek V4 Flash",
+      "source": "cal-primary-supporting",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-ground-truth-real-result.json",
+      "entityId": "story-45b0fba3c8503b49b2f3",
+      "round3ContentHash": "sha256:bd0b606c6c183eb16b8133753c8a7eaa3cbfa9c61de9a9278e36333714d54091",
+      "finalContentHash": "sha256:4108ee617294d8a82e3bada998d8e9d70ead5acf3f3d9634c762871711adb2bb",
+      "round3TruthSemanticHash": "sha256:8dd865209e1c9f8e5ac0b8796a299e4679bcaf02eacff40b819a5cdabe064d02",
+      "finalTruthSemanticHash": "sha256:8dd865209e1c9f8e5ac0b8796a299e4679bcaf02eacff40b819a5cdabe064d02",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "supporting",
+        "direct-implementation"
+      ]
+    },
+    {
+      "sampleId": "deepseek-story-05",
+      "provider": "DeepSeek V4 Flash",
+      "source": "cal-non-code-project",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-ground-truth-real-result.json",
+      "entityId": "story-5bb82bc0568d3f0fe0ac",
+      "round3ContentHash": "sha256:453a9849eb7753cc4362c86b24ae63357884f672896a59bb09825f2f427f949b",
+      "finalContentHash": "sha256:ce3b1c30370b7d3e7c3e27ce03ce202cc0d9dc830318ed385871fc1a7f309653",
+      "round3TruthSemanticHash": "sha256:1579d536159677f7346082bb4a2b05ace72117280bffe77004bc5ec802ee9df9",
+      "finalTruthSemanticHash": "sha256:1579d536159677f7346082bb4a2b05ace72117280bffe77004bc5ec802ee9df9",
+      "truthSemanticUnchanged": true,
+      "titleChanged": false,
+      "summaryChanged": false,
+      "coverageTags": [
+        "non-code"
+      ]
+    },
+    {
+      "sampleId": "deepseek-story-06",
+      "provider": "DeepSeek V4 Flash",
+      "source": "cal-reason-unknown",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-ground-truth-real-result.json",
+      "entityId": "story-5f88f0eb88b63824f5d7",
+      "round3ContentHash": "sha256:bdcee9d56321b0c524d6dcc3f64d58cf331f5d9d2189f8835f36f42b0e815313",
+      "finalContentHash": "sha256:aa2175aa137cc335f4d86655964ad9f67663a94e65e129472fd244c25c7549e4",
+      "round3TruthSemanticHash": "sha256:b0f04d6a757d8de187c4828f7fb1d215cc4216af047e09766ddf0a4a730873e1",
+      "finalTruthSemanticHash": "sha256:b0f04d6a757d8de187c4828f7fb1d215cc4216af047e09766ddf0a4a730873e1",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "unknown-reason"
+      ]
+    },
+    {
+      "sampleId": "deepseek-story-07",
+      "provider": "DeepSeek V4 Flash",
+      "source": "cal-conflict-preservation",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-ground-truth-real-result.json",
+      "entityId": "story-aebe29fa39631868c948",
+      "round3ContentHash": "sha256:9151d40d4bf94d982ecb0d06cef7403e7664e0480755ac7255c59299e7fd0829",
+      "finalContentHash": "sha256:2d4de063e015e227e72c62f90269019df64ddb91542cf4e648ec2bade7142308",
+      "round3TruthSemanticHash": "sha256:c7c3ea55dc88f403e77d0807095cf6f91aa59af345db9f025d49e0bd77945f9d",
+      "finalTruthSemanticHash": "sha256:c7c3ea55dc88f403e77d0807095cf6f91aa59af345db9f025d49e0bd77945f9d",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "conflict"
+      ]
+    },
+    {
+      "sampleId": "deepseek-story-08",
+      "provider": "DeepSeek V4 Flash",
+      "source": "holdout-chaotic-history",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-ground-truth-real-result.json",
+      "entityId": "story-a0a2c26f4678d181c4c4",
+      "round3ContentHash": "sha256:b0a8321c3b0d2a82432b7b87213ec1dda5656dbf93624331519b954c8f7aa484",
+      "finalContentHash": "sha256:64f08466788883f4fbde5007356a596a11e66827d1ed7600084d0550165cd9fd",
+      "round3TruthSemanticHash": "sha256:7a5bde7a7bbea6f15643cd87151dfb5a0f0c950b4dfa4ab0a56bd5d53fdb424e",
+      "finalTruthSemanticHash": "sha256:7a5bde7a7bbea6f15643cd87151dfb5a0f0c950b4dfa4ab0a56bd5d53fdb424e",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "long-history"
+      ]
+    },
+    {
+      "sampleId": "deepseek-story-09",
+      "provider": "DeepSeek V4 Flash",
+      "source": "holdout-rename-move-split-merge",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-ground-truth-real-result.json",
+      "entityId": "story-ff4ec1e31afb7e871ec9",
+      "round3ContentHash": "sha256:2330072db5cf6eb0e49ecbbe2fc6fbfd78bff9e19407f292df851c5841b17741",
+      "finalContentHash": "sha256:d16d4cb0f1ae86616a1b7decb4f7d330923300eb93261a1b125341020274dbdd",
+      "round3TruthSemanticHash": "sha256:0367b63a7655a8994fe3601e2b844b7c8389d3be04818ce04d183796e60a40e0",
+      "finalTruthSemanticHash": "sha256:0367b63a7655a8994fe3601e2b844b7c8389d3be04818ce04d183796e60a40e0",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "rename-move",
+        "split-merge"
+      ]
+    },
+    {
+      "sampleId": "deepseek-story-10",
+      "provider": "DeepSeek V4 Flash",
+      "source": "holdout-unrelated-commit",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-ground-truth-real-result.json",
+      "entityId": "story-6b07aba7a1b1b5a60798",
+      "round3ContentHash": "sha256:eb7842af792f895f8b0ad4b665fa0b71b6a27c4a2fb9ef7cf3ca70838978a90a",
+      "finalContentHash": "sha256:504c27e0b1435b010e055fdc5394156e50413f60e5775037e51bec83d9f70f56",
+      "round3TruthSemanticHash": "sha256:e1845be798e70792e1d523c780b8cca2a97630a6b58cb9d3441f897558a3d423",
+      "finalTruthSemanticHash": "sha256:e1845be798e70792e1d523c780b8cca2a97630a6b58cb9d3441f897558a3d423",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "one-commit-multiple-results"
+      ]
+    },
+    {
+      "sampleId": "deepseek-story-11",
+      "provider": "DeepSeek V4 Flash",
+      "source": "holdout-generic-message",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-ground-truth-real-result.json",
+      "entityId": "story-96989ee442a0b2c2a67f",
+      "round3ContentHash": "sha256:10a9837afd386fa13cd85edbe43fdea18cd18c38bfd9d0648a6015cc45799ced",
+      "finalContentHash": "sha256:5fe2dd1bb7437796450e63df14587690a3a10de8cd666e80bc7de2cc6bd07186",
+      "round3TruthSemanticHash": "sha256:f4aae775fdd2f57510f2424a79bad30d78cbe2a40334a994235bb84a43a793da",
+      "finalTruthSemanticHash": "sha256:f4aae775fdd2f57510f2424a79bad30d78cbe2a40334a994235bb84a43a793da",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "generic-commit",
+        "direct-implementation"
+      ]
+    },
+    {
+      "sampleId": "deepseek-story-12",
+      "provider": "DeepSeek V4 Flash",
+      "source": "correction-local-invalidation",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-real-scenarios.json",
+      "entityId": "story-864aa243f20fe29fac9d",
+      "round3ContentHash": "sha256:3b98dec1c070cc18c20949c03309435631843cd07d5991c108d9c7f88c889920",
+      "finalContentHash": "sha256:b5b7b14a1d6ae7db2a53e4fdaee5c0822c43c70bedfccb6ee571d8d9debbec94",
+      "round3TruthSemanticHash": "sha256:4fab4998014fa27a573d477124d4b01abc99ff11e0da77740ba65bf8ae3a4cf8",
+      "finalTruthSemanticHash": "sha256:4fab4998014fa27a573d477124d4b01abc99ff11e0da77740ba65bf8ae3a4cf8",
+      "truthSemanticUnchanged": true,
+      "titleChanged": false,
+      "summaryChanged": true,
+      "coverageTags": [
+        "correction"
+      ]
+    },
+    {
+      "sampleId": "deepseek-story-13",
+      "provider": "DeepSeek V4 Flash",
+      "source": "projectflow-current-history-dogfood:primary",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-real-scenarios.json",
+      "entityId": "story-07672b907b8da28dcc08",
+      "round3ContentHash": "sha256:52263bb29242f1d04b8f9e440c077363b2ea17b9c089bdc5393a7071f07a8744",
+      "finalContentHash": "sha256:dd2418f3b052c97b586813c3dc4ed9bfffb29c4f11acf329cd5fc42b0ab506c0",
+      "round3TruthSemanticHash": "sha256:b5cbfc1855149a48b251c80538e653982ffc5ba7953e2e9bf2f9f042cbc1c1cc",
+      "finalTruthSemanticHash": "sha256:b5cbfc1855149a48b251c80538e653982ffc5ba7953e2e9bf2f9f042cbc1c1cc",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "projectflow",
+        "long-history",
+        "config-deployment-adversarial"
+      ]
+    },
+    {
+      "sampleId": "deepseek-story-14",
+      "provider": "DeepSeek V4 Flash",
+      "source": "projectflow-current-history-dogfood:truthfulness-p0",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-real-scenarios.json",
+      "entityId": "story-50793a1a36bab00785a1",
+      "round3ContentHash": "sha256:d7f7cb51505ca9a7dd47023aca87bd5b3f59c7d60e669ef4104ab95c685c6652",
+      "finalContentHash": "sha256:cd4ffbe6d063c54f5004277399d4c6ed1a9df2f44c4089dafd8e1ee0905b0eaa",
+      "round3TruthSemanticHash": "sha256:775ef4db5c5c63e8cc61867e95ab8c14e089b2380babb7404f2a38bb92f9ffa2",
+      "finalTruthSemanticHash": "sha256:775ef4db5c5c63e8cc61867e95ab8c14e089b2380babb7404f2a38bb92f9ffa2",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "projectflow",
+        "long-history",
+        "truthfulness-p0",
+        "planned-implemented-adversarial",
+        "readme-api-plan-unrelated-code-regression"
+      ]
+    },
+    {
+      "sampleId": "deepseek-story-15",
+      "provider": "DeepSeek V4 Flash",
+      "source": "projectflow-current-history-dogfood:explicit-supporting",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-real-scenarios.json",
+      "entityId": "story-a66a36c01ff5d11fbc01",
+      "round3ContentHash": "sha256:91c1cd5982ed4936724d126bb2b48864a93ecafbf565789121f30e5901d7f5f7",
+      "finalContentHash": "sha256:56e11f9d6da5e6d4791530a4ce5ed946b46c9080ed760376aaad8b5b09b779dd",
+      "round3TruthSemanticHash": "sha256:ab7284089bb1c40b0856689b52b55320543fdc002d78553e68fc13bf865a91a3",
+      "finalTruthSemanticHash": "sha256:ab7284089bb1c40b0856689b52b55320543fdc002d78553e68fc13bf865a91a3",
+      "truthSemanticUnchanged": true,
+      "titleChanged": false,
+      "summaryChanged": false,
+      "coverageTags": [
+        "projectflow",
+        "supporting"
+      ]
+    },
+    {
+      "sampleId": "glm-story-01",
+      "provider": "GPT 5.6 Luna",
+      "source": "cal-small-five-commit-project",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-ground-truth-real-result.json",
+      "entityId": "story-3f8f98e7d8c919b00ab5",
+      "round3ContentHash": "sha256:ff6f2490fe8098ebf2bd653376116a17f027cf4b680a36e602ee09d60636b68d",
+      "finalContentHash": "sha256:8ea74b5442dd9d76b5491a351c9d8251cf1ad9d94ae297f7b9c0d3c55e190900",
+      "round3TruthSemanticHash": "sha256:53039eb24003c597949d06a9e108a1cfba26310cb853b55c345af8c51e34f161",
+      "finalTruthSemanticHash": "sha256:53039eb24003c597949d06a9e108a1cfba26310cb853b55c345af8c51e34f161",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "short-history",
+        "direct-implementation"
+      ]
+    },
+    {
+      "sampleId": "glm-story-02",
+      "provider": "GPT 5.6 Luna",
+      "source": "cal-create-modify-delete-restore",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-ground-truth-real-result.json",
+      "entityId": "story-434d20bba7a3abfcc1c6",
+      "round3ContentHash": "sha256:de25b60edd7fd9efa17d8715303985ee9ab88b9bd20c0e55854dc96ac6b1b3c7",
+      "finalContentHash": "sha256:81358a82d8adc5bbf4bbc40d4b1965774422dfc9d0c6d31226b2763204d86b8f",
+      "round3TruthSemanticHash": "sha256:abd1879e9e6f67758536c53b5be34af98efccad5d43e3dd4329107e1f0b0385f",
+      "finalTruthSemanticHash": "sha256:abd1879e9e6f67758536c53b5be34af98efccad5d43e3dd4329107e1f0b0385f",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "lifecycle-restore"
+      ]
+    },
+    {
+      "sampleId": "glm-story-03",
+      "provider": "GPT 5.6 Luna",
+      "source": "cal-multi-commit-one-change",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-ground-truth-real-result.json",
+      "entityId": "story-fc6a5654696a9b685f1e",
+      "round3ContentHash": "sha256:84fff68099d7d1e722ed3fa4e3deed9700ff1d7a3658365d9185066f86e2e041",
+      "finalContentHash": "sha256:1d4ceb4472ac1b24d5678985d61eb2c157a90b9ff3e0e653b855b23f0c0875ef",
+      "round3TruthSemanticHash": "sha256:b1f5cc6e2b09e3c6909a9f7f709e20f8c45512d54f156b475aea632e171b58e3",
+      "finalTruthSemanticHash": "sha256:b1f5cc6e2b09e3c6909a9f7f709e20f8c45512d54f156b475aea632e171b58e3",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "multi-commit-one-result",
+        "direct-implementation"
+      ]
+    },
+    {
+      "sampleId": "glm-story-04",
+      "provider": "GPT 5.6 Luna",
+      "source": "cal-primary-supporting",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-ground-truth-real-result.json",
+      "entityId": "story-ec28746344a9f14daa86",
+      "round3ContentHash": "sha256:475924032826e7fe39b149f39e7eb3fea24f3943fc6584ed773086ef51e4bbba",
+      "finalContentHash": "sha256:418616c42408f18fe4e65c2b7713dbc6ed71ae60bc98061a1c43fc3b87789234",
+      "round3TruthSemanticHash": "sha256:8dd865209e1c9f8e5ac0b8796a299e4679bcaf02eacff40b819a5cdabe064d02",
+      "finalTruthSemanticHash": "sha256:8dd865209e1c9f8e5ac0b8796a299e4679bcaf02eacff40b819a5cdabe064d02",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "supporting",
+        "direct-implementation"
+      ]
+    },
+    {
+      "sampleId": "glm-story-05",
+      "provider": "GPT 5.6 Luna",
+      "source": "cal-non-code-project",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-ground-truth-real-result.json",
+      "entityId": "story-c2620ae1464cb74ce97f",
+      "round3ContentHash": "sha256:e822a71d470cf60c467dffcc8efb0411768feb7e152a63f1b204eaa4d1964e65",
+      "finalContentHash": "sha256:1c5e0ab6a0657b75e4eadbca9c423710e5de32c9abed28d601fb8ef43120f7cc",
+      "round3TruthSemanticHash": "sha256:1579d536159677f7346082bb4a2b05ace72117280bffe77004bc5ec802ee9df9",
+      "finalTruthSemanticHash": "sha256:1579d536159677f7346082bb4a2b05ace72117280bffe77004bc5ec802ee9df9",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "non-code"
+      ]
+    },
+    {
+      "sampleId": "glm-story-06",
+      "provider": "GPT 5.6 Luna",
+      "source": "cal-reason-unknown",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-ground-truth-real-result.json",
+      "entityId": "story-bcae9e22f3a480129089",
+      "round3ContentHash": "sha256:9a1c04b44a70769dfd889be74ea520a999a88dceb07a1b4f988831046c3eb3bd",
+      "finalContentHash": "sha256:e7cb461e58ca1095fccb407ed4a83270dbc97237847379f5b2ca6f54c1ce6ea3",
+      "round3TruthSemanticHash": "sha256:b0f04d6a757d8de187c4828f7fb1d215cc4216af047e09766ddf0a4a730873e1",
+      "finalTruthSemanticHash": "sha256:b0f04d6a757d8de187c4828f7fb1d215cc4216af047e09766ddf0a4a730873e1",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "unknown-reason"
+      ]
+    },
+    {
+      "sampleId": "glm-story-07",
+      "provider": "GPT 5.6 Luna",
+      "source": "cal-conflict-preservation",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-ground-truth-real-result.json",
+      "entityId": "story-351097e84cd8ac0b0666",
+      "round3ContentHash": "sha256:49518892311ef670d8089aaf58856178a692552fcd480868d7c245a8c1d46933",
+      "finalContentHash": "sha256:fcebb77e7f8e5c44df5bbc03d98bfb3971dab99afe90f77f00076a65a1f8a23f",
+      "round3TruthSemanticHash": "sha256:c7c3ea55dc88f403e77d0807095cf6f91aa59af345db9f025d49e0bd77945f9d",
+      "finalTruthSemanticHash": "sha256:c7c3ea55dc88f403e77d0807095cf6f91aa59af345db9f025d49e0bd77945f9d",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "conflict"
+      ]
+    },
+    {
+      "sampleId": "glm-story-08",
+      "provider": "GPT 5.6 Luna",
+      "source": "holdout-chaotic-history",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-ground-truth-real-result.json",
+      "entityId": "story-3e438e95b9f136a2a3f8",
+      "round3ContentHash": "sha256:cde2ff909442a1e737b221a455187d91e57d8c74b0aa766418bf08dc33090dff",
+      "finalContentHash": "sha256:3e2f9ec3b750bbd0f194a069f3b2fa0f93b115cc1ce953a7bdefa697e7bbf818",
+      "round3TruthSemanticHash": "sha256:7a5bde7a7bbea6f15643cd87151dfb5a0f0c950b4dfa4ab0a56bd5d53fdb424e",
+      "finalTruthSemanticHash": "sha256:7a5bde7a7bbea6f15643cd87151dfb5a0f0c950b4dfa4ab0a56bd5d53fdb424e",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "long-history"
+      ]
+    },
+    {
+      "sampleId": "glm-story-09",
+      "provider": "GPT 5.6 Luna",
+      "source": "holdout-rename-move-split-merge",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-ground-truth-real-result.json",
+      "entityId": "story-c93ec61bf8fcfd72f6d1",
+      "round3ContentHash": "sha256:2a143621be2fb1623ccdd64373aa96aa0a3036aef36ae47d206247dca6087662",
+      "finalContentHash": "sha256:7ffe07a19846a83957d727e7872f7c7e7ddeabb6888a939b2176e4753290fcc4",
+      "round3TruthSemanticHash": "sha256:0367b63a7655a8994fe3601e2b844b7c8389d3be04818ce04d183796e60a40e0",
+      "finalTruthSemanticHash": "sha256:0367b63a7655a8994fe3601e2b844b7c8389d3be04818ce04d183796e60a40e0",
+      "truthSemanticUnchanged": true,
+      "titleChanged": false,
+      "summaryChanged": false,
+      "coverageTags": [
+        "rename-move",
+        "split-merge"
+      ]
+    },
+    {
+      "sampleId": "glm-story-10",
+      "provider": "GPT 5.6 Luna",
+      "source": "holdout-unrelated-commit",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-ground-truth-real-result.json",
+      "entityId": "story-aed318e8e0c0993f84cc",
+      "round3ContentHash": "sha256:d53e899c1efdd1ef31460e675c563b5a6c0d288854f24acd640d1f1f8d56e974",
+      "finalContentHash": "sha256:60f9f6ea357a3f74868280f7a0a9286c002bcf96fe7c8723b0a167b392f047f0",
+      "round3TruthSemanticHash": "sha256:90d4be204fa510e720aeaf2e671187cf2946bb7ced5401afa6735f6088897920",
+      "finalTruthSemanticHash": "sha256:90d4be204fa510e720aeaf2e671187cf2946bb7ced5401afa6735f6088897920",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "one-commit-multiple-results",
+        "direct-implementation"
+      ]
+    },
+    {
+      "sampleId": "glm-story-11",
+      "provider": "GPT 5.6 Luna",
+      "source": "holdout-generic-message",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-ground-truth-real-result.json",
+      "entityId": "story-0b0ec9f404f8b98bd7c1",
+      "round3ContentHash": "sha256:ed61f687e50ea886448a995722dd87f88d5022525a89c66bcdd6645d18ccfc2e",
+      "finalContentHash": "sha256:9404bfa27d80d42cc3803c61ac0a034a7f2b0a6abd991ae2179bc5879ff2e7f2",
+      "round3TruthSemanticHash": "sha256:f4aae775fdd2f57510f2424a79bad30d78cbe2a40334a994235bb84a43a793da",
+      "finalTruthSemanticHash": "sha256:f4aae775fdd2f57510f2424a79bad30d78cbe2a40334a994235bb84a43a793da",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "generic-commit",
+        "direct-implementation"
+      ]
+    },
+    {
+      "sampleId": "glm-story-12",
+      "provider": "GPT 5.6 Luna",
+      "source": "correction-local-invalidation",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-real-scenarios.json",
+      "entityId": "story-d3d5b771bcbf5301eb98",
+      "round3ContentHash": "sha256:6fd6bd178aad8dae58869089b0f3392d89de07f7ad0c0f7758ad8282cbc3b0e5",
+      "finalContentHash": "sha256:3e62ad7494e997535d6d26f231d377286d7f4727218b5236c247950d940b1fd3",
+      "round3TruthSemanticHash": "sha256:4fab4998014fa27a573d477124d4b01abc99ff11e0da77740ba65bf8ae3a4cf8",
+      "finalTruthSemanticHash": "sha256:4fab4998014fa27a573d477124d4b01abc99ff11e0da77740ba65bf8ae3a4cf8",
+      "truthSemanticUnchanged": true,
+      "titleChanged": false,
+      "summaryChanged": true,
+      "coverageTags": [
+        "correction"
+      ]
+    },
+    {
+      "sampleId": "glm-story-13",
+      "provider": "GPT 5.6 Luna",
+      "source": "projectflow-current-history-dogfood:primary",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-real-scenarios.json",
+      "entityId": "story-dc330dd5ad41e3e18613",
+      "round3ContentHash": "sha256:89ffd678cd54d72dd86b50e9f903219fbfed3e563a47d361653a16b6899758ff",
+      "finalContentHash": "sha256:5c1f3dfa2ea1cea5248e4e48e308aad3a7f560d44e64ebbbd81b47104492787d",
+      "round3TruthSemanticHash": "sha256:a79b9ccf5ad1d941d1b462197fb97bcbba44f703c3ba67949a681bad4c8d0234",
+      "finalTruthSemanticHash": "sha256:a79b9ccf5ad1d941d1b462197fb97bcbba44f703c3ba67949a681bad4c8d0234",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "projectflow",
+        "long-history"
+      ]
+    },
+    {
+      "sampleId": "glm-story-14",
+      "provider": "GPT 5.6 Luna",
+      "source": "projectflow-current-history-dogfood:truthfulness-p0",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-real-scenarios.json",
+      "entityId": "story-411140d6f96d95940e93",
+      "round3ContentHash": "sha256:e9b1969b7212e7549815dd25190467285520e923774961cd7b24733b1d277359",
+      "finalContentHash": "sha256:6267c50e3fa56af362aeabb4abd3a4041a3c8055479dfb82ef1d5e7b7e93d9ef",
+      "round3TruthSemanticHash": "sha256:775ef4db5c5c63e8cc61867e95ab8c14e089b2380babb7404f2a38bb92f9ffa2",
+      "finalTruthSemanticHash": "sha256:775ef4db5c5c63e8cc61867e95ab8c14e089b2380babb7404f2a38bb92f9ffa2",
+      "truthSemanticUnchanged": true,
+      "titleChanged": true,
+      "summaryChanged": true,
+      "coverageTags": [
+        "projectflow",
+        "long-history",
+        "truthfulness-p0",
+        "planned-implemented-adversarial",
+        "readme-api-plan-unrelated-code-regression"
+      ]
+    },
+    {
+      "sampleId": "glm-story-15",
+      "provider": "GPT 5.6 Luna",
+      "source": "projectflow-current-history-dogfood:explicit-supporting",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-real-scenarios.json",
+      "entityId": "story-8f3c53143e2308187a22",
+      "round3ContentHash": "sha256:445533ce1830a7982cfa6743bd87cc0bbb6c7544d326a388c2a731c3358938dd",
+      "finalContentHash": "sha256:1462c2773a5b81c41a7b107fafe81e5cbb1bba01a44087769cd4848593a9a592",
+      "round3TruthSemanticHash": "sha256:ab7284089bb1c40b0856689b52b55320543fdc002d78553e68fc13bf865a91a3",
+      "finalTruthSemanticHash": "sha256:ab7284089bb1c40b0856689b52b55320543fdc002d78553e68fc13bf865a91a3",
+      "truthSemanticUnchanged": true,
+      "titleChanged": false,
+      "summaryChanged": false,
+      "coverageTags": [
+        "projectflow",
+        "supporting"
+      ]
+    }
+  ],
+  "chapters": [
+    {
+      "sampleId": "luna-final-chapter-01",
+      "provider": "GPT 5.6 Luna",
+      "model": "gpt-5.6-luna",
+      "protocol": "OPENAI_RESPONSES",
+      "reasoningEffort": "max",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-real-scenarios.json",
+      "source": "projectflow-current-history-dogfood:chapter-representativeness",
+      "entityId": "chapter-c8341a77674588123d20",
+      "contentHash": "sha256:f2609c4871b5abed7eb37e257813661cdc66ca44c724d3688bfc114bc9b73910",
+      "presentationRevision": "presentation:530ae583412ba8429217293c2fa65bb9",
+      "coverageTags": [
+        "projectflow",
+        "large-coherent-long-history"
+      ]
+    },
+    {
+      "sampleId": "luna-final-chapter-02",
+      "provider": "GPT 5.6 Luna",
+      "model": "gpt-5.6-luna",
+      "protocol": "OPENAI_RESPONSES",
+      "reasoningEffort": "max",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-real-scenarios.json",
+      "source": "chapter-large-coherent:chapter-representativeness",
+      "entityId": "chapter-b4a7ccbf464edd806aff",
+      "contentHash": "sha256:7accc8f128f747d9ec274fc43a0b582a211723762335d52e7fcc5cfe1fa91263",
+      "presentationRevision": "presentation:05f449979668aa846786bf2624a97486",
+      "coverageTags": [
+        "large-coherent"
+      ]
+    },
+    {
+      "sampleId": "luna-final-chapter-03",
+      "provider": "GPT 5.6 Luna",
+      "model": "gpt-5.6-luna",
+      "protocol": "OPENAI_RESPONSES",
+      "reasoningEffort": "max",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-real-scenarios.json",
+      "source": "chapter-large-heterogeneous:chapter-representativeness",
+      "entityId": "chapter-7720ad035089870b83ee",
+      "contentHash": "sha256:be847120b06bc8e8fcb1887d33969a6ebf2bc2679e5061a5cc99f32c62859f0a",
+      "presentationRevision": "presentation:9766c60cc648e026a5f4172fbc229688",
+      "coverageTags": [
+        "large-heterogeneous",
+        "representation-boundary"
+      ]
+    },
+    {
+      "sampleId": "luna-final-chapter-04",
+      "provider": "GPT 5.6 Luna",
+      "model": "gpt-5.6-luna",
+      "protocol": "OPENAI_RESPONSES",
+      "reasoningEffort": "max",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-real-scenarios.json",
+      "source": "chapter-review-fixtures:minor-first",
+      "entityId": "chapter-63209adb3de2e810c000",
+      "contentHash": "sha256:a1885b729edc7de9dd44c6a8fe12ad3cd2a3b0c41f819c26986510eae07feee3",
+      "presentationRevision": "presentation:e834e89e3533ad943f58146c80db888d",
+      "coverageTags": [
+        "minor-first"
+      ]
+    },
+    {
+      "sampleId": "deepseek-final-chapter-01",
+      "provider": "DeepSeek V4 Flash",
+      "model": "deepseek-v4-flash",
+      "protocol": "OPENAI_CHAT_COMPLETIONS",
+      "reasoningEffort": "max",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-real-scenarios.json",
+      "source": "projectflow-current-history-dogfood:chapter-representativeness",
+      "entityId": "chapter-b542f9d3866b3655c21c",
+      "contentHash": "sha256:c986d71f3df1ce632be669873764168edc706030f8d570169cac502b065310ac",
+      "presentationRevision": "presentation:d38f2f96b2d7ec4c500950889dd4bf10",
+      "coverageTags": [
+        "projectflow",
+        "large-coherent-long-history"
+      ]
+    },
+    {
+      "sampleId": "deepseek-final-chapter-02",
+      "provider": "DeepSeek V4 Flash",
+      "model": "deepseek-v4-flash",
+      "protocol": "OPENAI_CHAT_COMPLETIONS",
+      "reasoningEffort": "max",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-real-scenarios.json",
+      "source": "chapter-review-fixtures:supporting-heavy",
+      "entityId": "chapter-784850301ac8d255457e",
+      "contentHash": "sha256:b13dffaa3cc56068986056389e8cd4381885588f483c82800f3c76533bcf0bbd",
+      "presentationRevision": "presentation:ad6b4b91eb4e375ffc2403014989c7fe",
+      "coverageTags": [
+        "supporting-heavy"
+      ]
+    },
+    {
+      "sampleId": "deepseek-final-chapter-03",
+      "provider": "DeepSeek V4 Flash",
+      "model": "deepseek-v4-flash",
+      "protocol": "OPENAI_CHAT_COMPLETIONS",
+      "reasoningEffort": "max",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-real-scenarios.json",
+      "source": "non-code-research-report:chapter-representativeness",
+      "entityId": "chapter-4b8b35f5c2f1844e4b74",
+      "contentHash": "sha256:55068d48f9bf56e2d9f62f248d0c0f997093e670278f427717e85dc74bd973f8",
+      "presentationRevision": "presentation:8384c41df9c112c933a04683b562c0a7",
+      "coverageTags": [
+        "non-code",
+        "report-document"
+      ]
+    },
+    {
+      "sampleId": "deepseek-final-chapter-04",
+      "provider": "DeepSeek V4 Flash",
+      "model": "deepseek-v4-flash",
+      "protocol": "OPENAI_CHAT_COMPLETIONS",
+      "reasoningEffort": "max",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-real-scenarios.json",
+      "source": "non-code-data-analysis:chapter-representativeness",
+      "entityId": "chapter-22ea20bd67fb71b3cde2",
+      "contentHash": "sha256:9f955857fb3b978883a18f718916e1cb785601303a09416801a08bb3ca245cac",
+      "presentationRevision": "presentation:ce94ce127b72db0f9fb297aff262f87d",
+      "coverageTags": [
+        "non-code",
+        "data-analysis"
+      ]
+    },
+    {
+      "sampleId": "qwen-final-chapter-01",
+      "provider": "Qwen3.7 Plus",
+      "model": "qwen3.7-plus",
+      "protocol": "ANTHROPIC_MESSAGES",
+      "reasoningEffort": "max",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/qwen/history-real-scenarios.json",
+      "source": "non-code-presentation:chapter-representativeness",
+      "entityId": "chapter-aa81ab0bb8ed23dfe005",
+      "contentHash": "sha256:484d4224a2edd1d4e989a2936fc4b17ec424be28a22c2a6c0436f49d5d44ac2e",
+      "presentationRevision": "presentation:0fbae8350bc503118c53615e57fd9fcb",
+      "coverageTags": [
+        "non-code",
+        "presentation"
+      ]
+    },
+    {
+      "sampleId": "qwen-final-chapter-02",
+      "provider": "Qwen3.7 Plus",
+      "model": "qwen3.7-plus",
+      "protocol": "ANTHROPIC_MESSAGES",
+      "reasoningEffort": "max",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/qwen/history-real-scenarios.json",
+      "source": "chapter-repair-safety:deterministic-fallback",
+      "entityId": "chapter-250e2df3ea363398924c",
+      "contentHash": "sha256:f5853f3f2ff3343d92e1267adf0ff37f0db1550735d21c0057ebf41a0808d179",
+      "presentationRevision": "presentation:ea0864a7e11c6bd2cb0de45b5d1ba9c4",
+      "coverageTags": [
+        "deterministic-fallback",
+        "repair"
+      ]
+    },
+    {
+      "sampleId": "qwen-final-chapter-03",
+      "provider": "Qwen3.7 Plus",
+      "model": "qwen3.7-plus",
+      "protocol": "ANTHROPIC_MESSAGES",
+      "reasoningEffort": "max",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/qwen/history-real-scenarios.json",
+      "source": "chapter-review-fixtures:short-coherent",
+      "entityId": "chapter-71dfd5be00149ec52fd4",
+      "contentHash": "sha256:04cf227b4d8cd6318cec4559352b7c74778da6e80878ec6db023c891944325f7",
+      "presentationRevision": "presentation:3592605def1fafaa018d430233dcbca8",
+      "coverageTags": [
+        "short-coherent"
+      ]
+    },
+    {
+      "sampleId": "qwen-final-chapter-04",
+      "provider": "Qwen3.7 Plus",
+      "model": "qwen3.7-plus",
+      "protocol": "ANTHROPIC_MESSAGES",
+      "reasoningEffort": "max",
+      "artifact": "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/qwen/history-real-scenarios.json",
+      "source": "chapter-review-fixtures:user-declared",
+      "entityId": "chapter-user-8b6161f0b3dbd557dc08",
+      "contentHash": "sha256:8ff52ecee5d239af1728c3a60a1e8439995cf063ef682e6340f8585bc712b9ef",
+      "presentationRevision": "presentation:a95a001af478195376e3fa87123629aa",
+      "coverageTags": [
+        "correction",
+        "user-declared"
+      ]
+    }
+  ],
+  "reviewerCount": 0,
+  "reviewMode": "PENDING_SINGLE_HUMAN_REVIEWER",
+  "thresholds": {
+    "storyReadabilityAverage": 4.0,
+    "chapterReadabilityAverage": 4.0,
+    "chapterRepresentativenessAverage": 4.0,
+    "everyCoreDimensionAverage": 3.5,
+    "truthfulnessP0Count": 0
+  },
+  "security": {
+    "modelSelfScoring": false,
+    "rawPromptStored": false,
+    "rawResponseStored": false,
+    "reasoningStored": false,
+    "credentialsStored": false,
+    "absolutePathStored": false
+  }
+}

@@ -3,6 +3,7 @@ package com.projectflow.service;
 import java.util.List;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -18,8 +19,8 @@ public enum ModelTaskType {
     ),
     PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST(
         "Provider ProjectFlow 最小任务测试", 512, 1_024, 0.0, false,
-        List.of(), List.of("summary", "architecture"), List.of(),
-        "{\"summary\":\"\",\"architecture\":\"\"}"
+        List.of(), List.of("summary"), List.of(),
+        "{\"summary\":\"\"}"
     ),
     DEVELOPMENT_SEGMENT_MERGE(
         "分析新变化 / 开发推进段归并", 6_000, 20_000, 0.2, true,
@@ -81,7 +82,12 @@ public enum ModelTaskType {
     PROJECT_HISTORY_SYNTHESIS(
         "项目历程变化故事与篇章归纳", 6_000, 20_000, 0.1, false,
         List.of(), List.of("stories", "chapters"), List.of(),
-        "{\"stories\":[{\"storyId\":\"\",\"humanTitle\":\"\",\"oneSentenceSummary\":\"\",\"reason\":\"\",\"reasonEvidenceRefs\":[],\"conflicts\":[],\"unknowns\":[]}],\"chapters\":[{\"chapterId\":\"\",\"title\":\"\",\"summary\":\"\",\"storyRefs\":[]}] }"
+        "{\"stories\":[{\"storyId\":\"\",\"humanTitle\":\"\",\"oneSentenceSummary\":\"\",\"beforeWording\":\"\",\"changeWording\":\"\",\"afterWording\":\"\",\"reason\":\"\",\"reasonEvidenceRefs\":[],\"unknownWording\":\"\"}],\"chapters\":[{\"chapterId\":\"\",\"title\":\"\",\"summary\":\"\"}]}"
+    ),
+    PROJECT_HISTORY_CHAPTER_SYNTHESIS(
+        "项目历程大篇章二阶段归纳", 1_200, 4_000, 0.1, false,
+        List.of(), List.of("chapters"), List.of(),
+        "{\"chapters\":[{\"chapterId\":\"\",\"representedClusterIds\":[],\"title\":\"\",\"summary\":\"\"}]}"
     ),
     LEGACY_STRUCTURED(
         "兼容结构化调用", 2_048, 20_000, 0.2, false,
@@ -141,6 +147,17 @@ public enum ModelTaskType {
         }
         JsonNode normalized = normalizeObjectRoot(root);
         if (!normalized.isObject()) return 0;
+        if (this == PROJECT_HISTORY_SYNTHESIS) {
+            JsonNode stories = normalized.path("stories");
+            JsonNode chapters = normalized.path("chapters");
+            if (!stories.isArray() || !chapters.isArray()) return 0;
+            return 100 + Math.min(stories.size(), 100) * 4 + Math.min(chapters.size(), 20);
+        }
+        if (this == PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+            JsonNode chapters = normalized.path("chapters");
+            if (!chapters.isArray()) return 0;
+            return 100 + Math.min(chapters.size(), 20) * 4;
+        }
         int matches = 0;
         for (String field : requiredObjectFields) {
             JsonNode value = normalized.get(field);
@@ -221,17 +238,135 @@ public enum ModelTaskType {
 
     public JsonNode normalizeRoot(JsonNode root) {
         if (this == LEGACY_STRUCTURED) return root;
+        if (this == PROJECT_HISTORY_SYNTHESIS) return normalizeHistorySynthesisRoot(root);
+        if (this == PROJECT_HISTORY_CHAPTER_SYNTHESIS) return normalizeHistoryChapterRoot(root);
         return collectionOutput ? root : normalizeObjectRoot(root);
+    }
+
+    /**
+     * Provider-neutral shape repair only. Missing empty containers and a direct
+     * single-object encoding carry no new project semantics; the history parser
+     * still validates every required ID, field and claim before acceptance.
+     */
+    private JsonNode normalizeHistorySynthesisRoot(JsonNode root) {
+        JsonNode current = normalizeObjectRoot(root);
+        if (current != null && current.isArray()
+            && current.size() > 0
+            && current.path(0).path("storyId").isTextual()) {
+            ObjectNode wrapped = JsonNodeFactory.instance.objectNode();
+            wrapped.set("stories", current.deepCopy());
+            wrapped.putArray("chapters");
+            return wrapped;
+        }
+        if (current == null || !current.isObject()) return current;
+        if (current.path("storyId").isTextual()) {
+            ObjectNode wrapped = JsonNodeFactory.instance.objectNode();
+            wrapped.putArray("stories").add(current.deepCopy());
+            wrapped.putArray("chapters");
+            return wrapped;
+        }
+        JsonNode storyContainer = historyField(
+            current, "stories", "storyNarratives", "story_narratives", "historyStories", "history_stories"
+        );
+        JsonNode chapterContainer = historyField(
+            current, "chapters", "chapterNarratives", "chapter_narratives", "historyChapters", "history_chapters"
+        );
+        if (storyContainer == null && chapterContainer == null) return current;
+        ObjectNode normalized = current.deepCopy();
+        JsonNode stories = normalizeHistoryCollection(storyContainer, "storyId");
+        JsonNode chapters = normalizeHistoryCollection(chapterContainer, "chapterId");
+        if (stories == null || !stories.isArray()) normalized.putArray("stories");
+        else normalized.set("stories", stories);
+        if (chapters == null || !chapters.isArray()) normalized.putArray("chapters");
+        else normalized.set("chapters", chapters);
+        return normalized;
+    }
+
+    private JsonNode normalizeHistoryChapterRoot(JsonNode root) {
+        JsonNode current = normalizeObjectRoot(root);
+        if (current != null && current.isArray()
+            && current.size() > 0
+            && current.path(0).path("chapterId").isTextual()) {
+            ObjectNode wrapped = JsonNodeFactory.instance.objectNode();
+            wrapped.set("chapters", current.deepCopy());
+            return wrapped;
+        }
+        if (current != null && current.isObject() && current.path("chapterId").isTextual()) {
+            ObjectNode wrapped = JsonNodeFactory.instance.objectNode();
+            wrapped.putArray("chapters").add(current.deepCopy());
+            return wrapped;
+        }
+        if (current != null && current.isObject()) {
+            JsonNode chapterContainer = historyField(
+                current, "chapters", "chapterNarratives", "chapter_narratives", "historyChapters", "history_chapters"
+            );
+            JsonNode chapters = normalizeHistoryCollection(chapterContainer, "chapterId");
+            if (chapters == null || !chapters.isArray()) return current;
+            ObjectNode normalized = current.deepCopy();
+            normalized.set("chapters", chapters);
+            return normalized;
+        }
+        return current;
+    }
+
+    /**
+     * Compatible models sometimes encode an array as an object keyed by the
+     * already-required stable ID. Converting that transport shape back to an
+     * array adds no project semantics: item fields and every ID are still
+     * checked by the history contract before persistence.
+     */
+    private static JsonNode normalizeHistoryCollection(JsonNode source, String idField) {
+        if (source == null || source.isNull() || source.isMissingNode()) return null;
+        if (source.isArray()) return source;
+        if (!source.isObject()) return source;
+        if (source.path(idField).isTextual()) {
+            return JsonNodeFactory.instance.arrayNode().add(source.deepCopy());
+        }
+        for (JsonNode value : source) if (!value.isObject()) return source;
+        ArrayNode normalized = JsonNodeFactory.instance.arrayNode();
+        source.fields().forEachRemaining(entry -> {
+            ObjectNode item = ((ObjectNode) entry.getValue()).deepCopy();
+            if (!item.path(idField).isTextual() && !entry.getKey().isBlank()) {
+                item.put(idField, entry.getKey());
+            }
+            normalized.add(item);
+        });
+        return normalized;
+    }
+
+    private static JsonNode historyField(JsonNode root, String... names) {
+        if (root == null || !root.isObject()) return null;
+        for (String name : names) {
+            JsonNode value = root.get(name);
+            if (value != null && !value.isNull() && !value.isMissingNode()) return value;
+        }
+        return null;
     }
 
     private JsonNode normalizeObjectRoot(JsonNode root) {
         JsonNode current = root;
         for (int depth = 0; depth < 3 && current != null && current.isObject(); depth++) {
-            boolean matched = requiredObjectFields.stream().anyMatch(current::has);
+            boolean matched = requiredObjectFields.stream().anyMatch(current::has)
+                || historyAliasContainerPresent(current);
             if (matched || current.size() != 1) return normalizeDiagnosticDefaults(current);
             current = current.elements().next();
         }
         return normalizeDiagnosticDefaults(current == null ? root : current);
+    }
+
+    private boolean historyAliasContainerPresent(JsonNode root) {
+        if (this == PROJECT_HISTORY_SYNTHESIS) {
+            return historyField(
+                root, "storyNarratives", "story_narratives", "historyStories", "history_stories",
+                "chapterNarratives", "chapter_narratives", "historyChapters", "history_chapters"
+            ) != null;
+        }
+        if (this == PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+            return historyField(
+                root, "chapterNarratives", "chapter_narratives", "historyChapters", "history_chapters"
+            ) != null;
+        }
+        return false;
     }
 
     /**

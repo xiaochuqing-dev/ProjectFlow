@@ -1,0 +1,69 @@
+{
+  "taskGoal": "按 V3.8.5 RC3 提示词完成叙事真实性修复、双 Provider 复验、Round 3 准备与验收收尾，并如实保留人工门禁和外部阻塞。",
+  "baseline": "Round 1 与 Round 2 均为 NEEDS_REVISION_NOT_APPROVED；Round 2 的 ProjectFlow skeleton/login 样本证明 Story-wide Evidence 聚合会借用无关代码强度并产生虚假 IMPLEMENTED。",
+  "currentPR": "PR #15 OPEN、Draft、未合并。",
+  "actualChanges": [
+    "将可见 Claim 收紧为 Technical Atom 级 subject/action/state 归因，直接 Evidence 才能提升状态；同提交、同 Story 和 Supporting Evidence 只作间接上下文。",
+    "为宽泛 project-area 主体设置 OBSERVED 上限，同时保留精确主体在直接代码 Evidence 下达到 IMPLEMENTED 的能力。",
+    "为 Chapter 建立独立 v6 repair 合同和具体阶段成果校验，避免复用 Story schema；独立成果不再被宽泛阶段叙事拼接。",
+    "为 Story v12 增加 action/object/result 门禁；Provider 措辞缺少明确结果时保留已验证确定性标题与摘要，并公开混合来源状态和累计回退数。",
+    "补齐 Round 2 跨平台 canonical-LF 哈希、Round 3 30 Story/8 Chapter 冻结设计、来源工件哈希、空白人工字段和精确 P0/配置/直接实现覆盖合同。",
+    "为真实场景测试增加只输出 HTTP、传输或格式分类及请求数的安全诊断，不输出 Prompt、响应正文、reasoning、凭证或路径。",
+    "保留所有真实 Provider 失败与取消；没有用旧 GLM 11/11、失败工件或确定性结果冒充本轮 GLM 完整通过。"
+  ],
+  "rootCause": [
+    "Story 级扁平 Evidence 集合没有证明每个主体和动作的直接关系，导致登录计划借用同提交其他代码的实现强度。",
+    "宽泛工程区域可被区域内任意实现文件提升为 IMPLEMENTED，超出了可验证主体粒度。",
+    "Chapter repair 错用了 Story 输出 schema；部分 Provider 标题只写动作和对象，没有明确结果。",
+    "最终外部阻塞不是本地 schema 或 prompt 解析：连续三次最小 GLM correction 诊断均得到 HTTP 429。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryClaimEvidenceAttributionService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryNarrativeEntailmentValidator.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryPromptBuilder.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryReconstructionService.java",
+    "backend/src/test/java/com/projectflow/eval/ProjectHistoryV385RealScenarioEvaluatorTest.java",
+    "backend/src/test/java/com/projectflow/service/ProjectHistoryHumanReviewRound3ManifestTest.java",
+    "scripts/freeze_v385_human_review_sample.py",
+    "docs/acceptance-evidence/v3.8.5/evidence-index.md",
+    "docs/projectflow-v3.8.5-human-readability-real-provider-results.md",
+    "docs/projectflow-v3.8.5-human-readability-round3-review.md"
+  ],
+  "tests": {
+    "affected": "119 项，0 失败，0 错误，4 个条件跳过；19 个冻结 Ground Truth case 全部通过。",
+    "backendH2": "602 项，0 失败，0 错误，11 个条件跳过；仅排除本机 Docker PostgreSQL 与尚不存在的 Round 3 清单合同，Maven 干净退出。",
+    "startup": "根启动器完成 Next 16.2.11 生产构建、Spring Boot/H2 启动和双端就绪；Build ID 20JnrO0wTzUPAG3ebVDwu，退出后无 3000/8080 监听。",
+    "githubStatic": "阻塞证据 head e0fd50e 的 push run 31594703405 与 PR run 31594709131：browser、frontend、Hermes、Obsidian、sensitive-content 通过；backend/H2 与 PostgreSQL 都是 597 项中仅 Round 3 manifest 合同 1 项失败。"
+  },
+  "realProviderRuns": [
+    "31571883309：DeepSeek qualification 失败后其余相关 job 被取消。",
+    "31574016609：DeepSeek qualification 通过；GLM Chapter repair 合同失败；两家 scenarios 均为 10/11，并复现同一 Dogfood 区域级 P0。",
+    "31580355605：DeepSeek qualification 通过；GLM 因两个 Title AOR case 失败；GLM scenarios 11/11，DeepSeek scenarios 10/11。",
+    "31586433372：双 Provider qualification 19/19；DeepSeek scenarios 11/11；GLM scenarios attempt 1 为 1/11，job retry 为 0/11。",
+    "31592405476：GLM correction-only attempt 1、2、3 均为两个窗口各 HTTP 429、每个窗口两次有界请求、0 个成功模型调用。"
+  ],
+  "humanReviewStatus": "PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS；Round 3 人工字段未生成、未填写、未评分。",
+  "round2Decision": "NEEDS_REVISION_NOT_APPROVED；原文件与 raw/canonical-LF 哈希保持冻结。",
+  "round3Status": "BLOCKED_BEFORE_FREEZE：冻结脚本与合同已完成，但缺少合格 GLM 11/11，同头 30 Story/8 Chapter 包未生成。",
+  "currentHead": "e0fd50ed98e75c38fe1d762c89b501344b496c04，加本次仅记录 CI 的报告后继；生产行为未变化。",
+  "requiredCI": "push run 31594703405 与 PR run 31594709131 的非后端门禁通过；backend/H2 与 PostgreSQL 仅 Round 3 manifest 合同失败。最终全绿 CI 尚不存在，不得写成通过。",
+  "knownRisks": [
+    "GLM Actions Secret 当前连续返回 HTTP 429；安全诊断不能区分短期限流与额度耗尽。",
+    "Round 3 必须在 GLM 恢复并通过完整场景后重新冻结，不能复用 RC2 GLM 场景。",
+    "npm audit 的既有 high 风险仍需独立升级和全量回归，本轮未执行破坏性自动修复。"
+  ],
+  "unfinished": [
+    "更新或恢复可用的 GLM GitHub Actions Secret，先通过 correction 探针，再完成 GLM 11/11。",
+    "复制、扫描并哈希六份同头真实 Provider 工件，生成 Round 3 manifest/worksheet 并通过清单合同。",
+    "运行最终 backend/H2、PostgreSQL、frontend、browser、Hermes、Obsidian 与 sensitive-content CI。",
+    "由真实人工完成 30 Story/8 Chapter 评分；零 P0 且阈值通过后再由用户明确决定是否批准。",
+    "未 Ready、未合并、未 backfill、未创建 Tag/Release、未清理分支或 worktree。"
+  ],
+  "mergeAuthorization": "NOT_AUTHORIZED",
+  "sedimentCandidates": [],
+  "verification": {
+    "build": "passed",
+    "tests": "deterministic_passed_provider_blocked",
+    "manualCheck": "not_run_pending_round3"
+  }
+}

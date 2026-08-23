@@ -34,6 +34,8 @@ import com.projectflow.entity.ProjectStatus;
 import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.service.ModelGatewayService;
+import com.projectflow.service.ProjectHistoryChapterRepresentationPlanner;
+import com.projectflow.service.ProjectHistoryLanguageService;
 import com.projectflow.service.ProjectHistoryReadService;
 import com.projectflow.service.ProjectHistoryReconstructionService;
 
@@ -119,6 +121,155 @@ class ProjectHistoryDogfoodAcceptanceTest {
             userId, project.getId(), baselineCommits, overview, chapters, stories, threads,
             storyPage.totalElements(), threadPage.totalElements(), v37Commits.totalElements(),
             v37RawEvents.totalElements(), v37Stories.totalElements()
+        );
+    }
+
+    @Test
+    void reconstructsCurrentProjectFlowWithoutProviderAndMeasuresChapterRepresentativeness() throws Exception {
+        Path sourceRepository = sourceRepository();
+        int commitCount = Integer.parseInt(git(sourceRepository, "rev-list", "--count", "HEAD").trim());
+        assertThat(commitCount).isGreaterThan(197);
+        UUID userId = UUID.randomUUID();
+        ProjectSpace project = project(userId, sourceRepository);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        var overview = readService.overview(userId, project.getId());
+        List<ChangeStory> stories = allStories(userId, project.getId());
+        List<HistoryChapter> chapters = allChapters(userId, project.getId());
+        List<EvolutionThread> threads = allThreads(userId, project.getId());
+        var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        writeCurrentDogfoodArtifact(commitCount, overview, stories, chapters, threads, cached.cacheHit());
+
+        assertThat(overview.status()).isEqualTo("READY");
+        assertThat(overview.sourceEventCount()).isPositive();
+        assertThat(stories).isNotEmpty();
+        assertThat(chapters).isNotEmpty();
+        assertThat(threads).isNotEmpty();
+        assertThat(overview.diagnostics())
+            .containsEntry("eventConservation", true)
+            .containsEntry("invalidEvidenceRefCount", 0)
+            .containsEntry("crossProjectRefCount", 0)
+            .containsEntry("unsupportedStrongFactCount", 0)
+            .containsEntry("chaptersWithMinorClusterTitleRisk", 0)
+            .containsEntry("technicalLeakCount", 0)
+            .containsEntry("unsupportedClaimCount", 0)
+            .containsEntry("chapterOverlapCount", 0)
+            .containsEntry("orphanSupportingCount", 0)
+            .containsEntry("userDeclaredChapterMutationCount", 0);
+        assertThat(((Number) overview.diagnostics().get("representativePrimaryCoverage")).doubleValue())
+            .isGreaterThanOrEqualTo(0.60);
+        Map<String, ChangeStory> storiesById = stories.stream().collect(
+            LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll
+        );
+        var firstChapterPlan = new ProjectHistoryChapterRepresentationPlanner(
+            new ProjectHistoryLanguageService()
+        ).plan(chapters.get(0).storyRefs().stream().map(storiesById::get)
+            .filter(java.util.Objects::nonNull).toList());
+        assertThat(chapters.get(0).title()).contains("前后端项目骨架")
+            .doesNotStartWith("补充环境配置示例")
+            .doesNotStartWith("建立项目使用说明");
+        assertThat(firstChapterPlan.selectedClusters().get(0).humanLabel()).contains("前后端项目骨架");
+        assertThat(cached.cacheHit()).isTrue();
+        verifyNoInteractions(modelGateway);
+    }
+
+    private List<ChangeStory> allStories(UUID userId, UUID projectId) {
+        List<ChangeStory> result = new ArrayList<>();
+        int page = 0;
+        while (true) {
+            var slice = readService.stories(userId, projectId, null, false, true, null, null, page, 100);
+            result.addAll(slice.items());
+            if (++page >= slice.totalPages()) return List.copyOf(result);
+        }
+    }
+
+    private List<HistoryChapter> allChapters(UUID userId, UUID projectId) {
+        List<HistoryChapter> result = new ArrayList<>();
+        int page = 0;
+        while (true) {
+            var slice = readService.chapters(userId, projectId, page, 100);
+            result.addAll(slice.items());
+            if (++page >= slice.totalPages()) return List.copyOf(result);
+        }
+    }
+
+    private List<EvolutionThread> allThreads(UUID userId, UUID projectId) {
+        List<EvolutionThread> result = new ArrayList<>();
+        int page = 0;
+        while (true) {
+            var slice = readService.threads(userId, projectId, null, page, 100);
+            result.addAll(slice.items());
+            if (++page >= slice.totalPages()) return List.copyOf(result);
+        }
+    }
+
+    private void writeCurrentDogfoodArtifact(
+        int commitCount,
+        com.projectflow.dto.ProjectHistoryDtos.HistoryOverviewResponse overview,
+        List<ChangeStory> stories,
+        List<HistoryChapter> chapters,
+        List<EvolutionThread> threads,
+        boolean cacheHit
+    ) throws Exception {
+        String configured = System.getProperty("projectflow.history.final-dogfood-output", "").trim();
+        if (configured.isBlank()) return;
+        Path output = Path.of(configured).toAbsolutePath().normalize();
+        Files.createDirectories(output);
+        Map<String, Object> artifact = new LinkedHashMap<>();
+        artifact.put("version", "projectflow-v3.8.5-final-chapter-deterministic-dogfood-v1");
+        artifact.put("source", "current ProjectFlow Git history");
+        artifact.put("commitCount", commitCount);
+        artifact.put("sourceEventCount", overview.sourceEventCount());
+        artifact.put("storyCount", stories.size());
+        artifact.put("visiblePrimaryCount", stories.stream()
+            .filter(ChangeStory::primary).filter(story -> !story.hiddenByDefault()).count());
+        artifact.put("supportingCount", stories.stream().filter(ChangeStory::supporting).count());
+        artifact.put("chapterCount", chapters.size());
+        artifact.put("threadCount", threads.size());
+        artifact.put("diagnostics", overview.diagnostics());
+        artifact.put("cacheHit", cacheHit);
+        artifact.put("providerModelCalls", 0);
+        Map<String, ChangeStory> storiesById = stories.stream().collect(
+            LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll
+        );
+        ProjectHistoryChapterRepresentationPlanner planner = new ProjectHistoryChapterRepresentationPlanner(
+            new ProjectHistoryLanguageService()
+        );
+        List<Map<String, Object>> chapterDetails = new ArrayList<>();
+        for (HistoryChapter chapter : chapters.stream().limit(12).toList()) {
+            var plan = planner.plan(chapter.storyRefs().stream().map(storiesById::get)
+                .filter(java.util.Objects::nonNull).toList());
+            Map<String, Object> detail = new LinkedHashMap<>();
+            detail.put("chapter", chapter);
+            detail.put("primaryStoryCount", plan.primaryStoryCount());
+            detail.put("supportingStoryCount", plan.supportingStoryCount());
+            detail.put("representativePrimaryCoverage", plan.representativePrimaryCoverage());
+            detail.put("dominantClusterIds", plan.dominantClusterIds());
+            detail.put("selectedClusterIds", plan.requiredRepresentativeClusterIds());
+            detail.put("clusters", plan.clusters().stream().map(cluster -> Map.of(
+                "id", cluster.id(),
+                "role", cluster.role(),
+                "label", cluster.humanLabel(),
+                "family", cluster.family(),
+                "primaryStoryCount", cluster.primaryStoryCount(),
+                "supportingStoryCount", cluster.supportingStoryCount(),
+                "claimCeiling", cluster.claimCeiling(),
+                "outcomes", cluster.representativeOutcomes(),
+                "areas", cluster.areas(),
+                "topics", cluster.topics()
+            )).toList());
+            chapterDetails.add(detail);
+        }
+        artifact.put("chapters", chapterDetails);
+        artifact.put("security", Map.of(
+            "apiKeyStored", false,
+            "promptStored", false,
+            "rawResponseStored", false,
+            "reasoningStored", false,
+            "absolutePathStored", false
+        ));
+        objectMapper.writerWithDefaultPrettyPrinter().writeValue(
+            output.resolve("projectflow-final-chapter-deterministic-dogfood.json").toFile(), artifact
         );
     }
 

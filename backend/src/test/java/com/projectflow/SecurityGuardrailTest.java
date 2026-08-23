@@ -47,6 +47,12 @@ class SecurityGuardrailTest {
         assertThat(guard.validateBaseUrl("http://localhost:18080/v1")).isEqualTo("http://localhost:18080/v1");
         assertThat(guard.endpointUri("https://api.openai.com/v1", ModelProtocol.OPENAI_RESPONSES, null).toString())
             .isEqualTo("https://api.openai.com/v1/responses");
+        assertThat(guard.endpointUri(
+            "https://opencode.ai/zen/go", ModelProtocol.ANTHROPIC_MESSAGES, null
+        ).toString()).isEqualTo("https://opencode.ai/zen/go/v1/messages");
+        assertThat(guard.sdkBaseUrl(
+            "https://opencode.ai/zen/go", ModelProtocol.ANTHROPIC_MESSAGES, null
+        )).isEqualTo("https://opencode.ai/zen/go");
         assertThat(guard.sdkBaseUrl(
             "https://relay.example/v1", ModelProtocol.OPENAI_CHAT_COMPLETIONS,
             "https://relay.example/custom/chat/completions"

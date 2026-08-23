@@ -78,7 +78,10 @@ public class OpenAiResponsesAdapter implements ModelProtocolAdapter {
                 usage.reasoningTokens() * 4
             );
         } catch (OpenAIServiceException exception) {
-            throw new ModelProtocolHttpException(exception.statusCode(), exception);
+            throw new ModelProtocolHttpException(
+                exception.statusCode(), exception.type().orElse(""), exception.code().orElse(""),
+                exception.param().orElse(""), exception
+            );
         } catch (RuntimeException exception) {
             throw new IOException("OpenAI Responses SDK request failed", exception);
         } finally {

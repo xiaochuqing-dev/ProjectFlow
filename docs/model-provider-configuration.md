@@ -1,5 +1,21 @@
 # Model Provider Configuration
 
+## V3.8.5 Final Chapter acceptance profiles
+
+The current Final Chapter matrix uses exactly these three profiles, all with `max` reasoning and the existing Provider-neutral Model Gateway:
+
+| Profile | Model | Protocol | Service root |
+| --- | --- | --- | --- |
+| GPT 5.6 Luna | `gpt-5.6-luna` | `OPENAI_RESPONSES` | OpenCode Go `/v1` root |
+| DeepSeek V4 Flash | `deepseek-v4-flash` | `OPENAI_CHAT_COMPLETIONS` | OpenCode Go `/v1` root |
+| Qwen3.7 Plus | `qwen3.7-plus` | `ANTHROPIC_MESSAGES` | OpenCode Go service root without an added `/v1`; the Messages adapter appends `/v1/messages` |
+
+No alternative Qwen model may replace `qwen3.7-plus` in this acceptance profile. The shared CI credential remains an external Repository Secret; model names, URLs and capability declarations are configuration, while no key value, Authorization header, Prompt, raw response or reasoning is committed or uploaded.
+
+Provider transport normalization decodes only JSON-shaped `result` / `output` / `data` / `response` wrappers and then selects an object that already contains the exact registered task fields; ordinary text and missing fields remain rejected. History additionally accepts the exact array contract, direct single items, encoded JSON containers and a conservative object keyed by the already-required `storyId` or `chapterId`. Known `storyNarratives` / `historyStories` and `chapterNarratives` / `historyChapters` aliases are normalized only when their values remain complete objects. None of these conversions fill narrative fields or approve IDs: the unchanged task Schema, History parser, Evidence allow-list, role graph and Claim validators still reject omissions, unknown IDs and unsupported wording.
+
+HTTP failures expose only status plus optional strict lowercase type/code/parameter identifiers. Values containing whitespace, line breaks, credential-shaped prefixes, unexpected characters or more than 64 characters are discarded; response bodies, SDK messages and request content remain outside diagnostics.
+
 ## Concepts
 
 Preset identifies the Provider family; protocol identifies the wire contract. OpenAI defaults to Responses, Anthropic defaults to Messages, and DeepSeek/OpenAI-compatible/custom legacy presets default conservatively to Chat Completions. Protocol is persisted and participates in duplicate identity.
@@ -57,7 +73,7 @@ Transport retry diagnostics aggregate wall-clock latency from the first attempt 
 
 Reasoning-capable models may count hidden thinking and visible JSON against one output budget. Under `QUALITY_FIRST`, a reasoning-capable task may use the configured Provider ceiling from the first request. The ceiling is a loose user-controlled safety bound, not a consumption target; elapsed time, Token usage, request count and cost remain diagnostics and never trigger automatic quality reduction.
 
-Reasoning control is an explicit capability override, not a model-name guess. When OpenAI Responses or Chat Completions support is probed and marked supported, ProjectFlow sends standard high reasoning effort for connection, semantic and recovery requests. It never switches to low effort to save time or Token. Unsupported/automatic profiles omit the field rather than inventing a private parameter. Optional real-eval injection uses `PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING=true` and `PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL=true` only after a successful Provider probe; explicit JSON Mode uses `PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE=true` only when supported.
+Reasoning control is an explicit capability override, not a model-name guess. When OpenAI Responses or Chat Completions support is probed and marked supported, ProjectFlow sends the explicitly configured reasoning effort for connection, semantic and recovery requests. It never switches to low effort to save time or Token. Unsupported/automatic profiles omit the field rather than inventing a private parameter. Optional real-eval injection uses `PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING=true` and `PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING_CONTROL=true` only after a successful Provider probe; explicit JSON Mode uses `PROJECTFLOW_REAL_MODEL_SUPPORTS_JSON_MODE=true` only when supported.
 
 For CI or one-process local acceptance, inject `PROJECTFLOW_REAL_MODEL_API_KEY` through the environment. Never put a real value in `.env`, Maven arguments, docs, reports or Git. GLM OpenAI Responses acceptance uses the Ark coding v3 base URL and model `glm-5.2`; the value of the key remains external.
 
@@ -66,3 +82,7 @@ For CI or one-process local acceptance, inject `PROJECTFLOW_REAL_MODEL_API_KEY` 
 V3.7.5 validates one provider-neutral Strong Fact contract through two official/compatible protocol adapters. The main profile is GLM `glm-5.2` through Ark Coding OpenAI Responses. The compatibility profile is DeepSeek `deepseek-v4-flash` through the official OpenAI Chat Completions endpoint with explicit JSON Mode. Both profiles declare reasoning support/control, use high effort and a 65,536 output ceiling. Model names and protocol details may differ; Evidence allow-lists, fact statuses, promotion guards, schema normalization, bounded repair and cancellation rules do not.
 
 The second model is used for contract compatibility, core regression, Holdout and product-chain acceptance. ProjectFlow does not call both models for every user request and does not treat agreement as evidence. Provider probes establish only connectivity and structured protocol compatibility; dated evaluation reports establish bounded product acceptance.
+
+## V3.8.5 RC3 real-model profile
+
+The current RC3 workflow keeps GLM `glm-5.2` on Ark Coding OpenAI Responses and DeepSeek `deepseek-v4-flash` on the OpenCode Go OpenAI Chat Completions-compatible endpoint. Both acceptance profiles explicitly declare JSON Mode/reasoning control and use max reasoning. These are acceptance configuration values, not business-code model-name branches. Keys are supplied only through the protected `PROJECTFLOW_REAL_MODEL_API_KEY` and `PROJECTFLOW_DEEPSEEK_API_KEY` Repository Secrets.

@@ -1,0 +1,37 @@
+{
+  "taskGoal": "重新确认 GLM 可用额度，在可用时完成 V3.8.5 RC3 双 Provider 真实验收、Round 3 冻结、自动化收尾并推送 PR #15 分支。",
+  "actualChanges": [
+    "先用 correction 范围确认 GLM 从连续 HTTP 429 中恢复，再在同一代码头运行 GLM Responses/max 与 DeepSeek Flash Chat/max；两家资格验收均为 19/19，完整场景均为 11/11。",
+    "下载并安全扫描六份同头规范化真实模型工件，以 canonical-LF SHA-256 绑定来源；两家 ProjectFlow Dogfood 的旧登录真实性 P0 均保持 OBSERVED。",
+    "冻结 Round 3 为 30 个 Story 和 8 个 Chapter，双 Provider 各 15/4；reviewerCount 为 0，所有人工评分、判断、姓名、备注和 PASS/FAIL 字段保持空白。",
+    "修正 Round 3 合同中空评审人检测会跨行吞入下一行文本的问题，使空字段校验只检查当前行；未修改人工样本内容。",
+    "更新 RC3 状态、最终验收、证据索引和项目上下文，并把证据提交推送到 PR #15 的远端分支。"
+  ],
+  "keyFiles": [
+    "backend/src/test/java/com/projectflow/service/ProjectHistoryHumanReviewRound3ManifestTest.java",
+    "docs/acceptance-evidence/v3.8.5/human-review-round3-manifest.json",
+    "docs/acceptance-evidence/v3.8.5/human-review-round3-worksheet.md",
+    "docs/acceptance-evidence/v3.8.5/evidence-index.md",
+    "docs/acceptance-evidence/v3.8.5/real-model/glm/history-ground-truth-real-result.json",
+    "docs/acceptance-evidence/v3.8.5/real-model/glm/history-real-scenarios.json",
+    "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-ground-truth-real-result.json",
+    "docs/acceptance-evidence/v3.8.5/real-model/deepseek/history-real-scenarios.json",
+    "docs/projectflow-v3.8.5-final-acceptance.md",
+    "docs/projectflow-v3.8.5-human-readability-round3-review.md",
+    "docs/projectflow-v3.8.5-rc3-current-state-audit.md",
+    "PROJECT_CONTEXT.md"
+  ],
+  "verification": {
+    "build": "Start-ProjectFlow.bat -NoBrowser 通过：Next.js 16.2.11 与 Spring Boot/H2 双端就绪，Build ID yFBn3UKDWR9I_MD9j1vq0，退出后 3000/8080 无监听。",
+    "tests": "Round 3 清单合同 1/1 通过；mvn -B test 为 597 项、0 失败、0 错误、5 条件跳过；V3.8.0 证据校验与密钥扫描通过。证据 head 49622f16aebf77e892c70a5b091f17c2b8ebaa6c 的 push run 31740051324 与 PR run 31740054761 均成功，七项 required job 全绿。",
+    "manualCheck": "确认 PR #15 仍为 OPEN、Draft、未合并；Round 3 人工字段为空，未代替用户评分。"
+  },
+  "unfinished": [
+    "Round 3 仍需真人完成 worksheet 并按阈值作出明确批准或拒绝；当前状态只能是 PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS。",
+    "在用户明确批准前，不得 Ready、merge、acceptance backfill、Tag、Release 或清理分支和工作树。"
+  ],
+  "sedimentCandidates": [
+    "真实 Provider 恢复后采用最小探针、同头完整复验、规范化工件安全扫描、canonical-LF 哈希和空白人工门禁的验收闭环。",
+    "多行文本中的空字段检测应把可跳过空白限制在当前行，避免正则的空白类跨行造成假阳性。"
+  ]
+}

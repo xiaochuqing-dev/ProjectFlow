@@ -60,8 +60,87 @@ public final class ProjectHistoryDtos {
         int rawEventCount,
         String authority,
         String coverage,
-        List<String> limitations
+        List<String> limitations,
+        String presentationAuthority,
+        String presentationRevision,
+        boolean userDeclared,
+        List<String> userCorrectionRefs,
+        boolean hiddenByDefault,
+        boolean pinned
     ) {
+        public HistoryChapter(
+            String id,
+            String title,
+            String summary,
+            Instant from,
+            Instant to,
+            List<String> boundarySignals,
+            List<String> storyRefs,
+            int storyCount,
+            int rawEventCount,
+            String authority,
+            String coverage,
+            List<String> limitations
+        ) {
+            this(id, title, summary, from, to, boundarySignals, storyRefs, storyCount, rawEventCount,
+                authority, coverage, limitations, "AUTOMATIC", "", false, List.of(), false, false);
+        }
+
+        public HistoryChapter {
+            boundarySignals = immutable(boundarySignals);
+            storyRefs = immutable(storyRefs);
+            limitations = immutable(limitations);
+            userCorrectionRefs = immutable(userCorrectionRefs);
+            presentationAuthority = text(presentationAuthority, "AUTOMATIC");
+            presentationRevision = text(presentationRevision, "");
+        }
+
+        public boolean declared() { return userDeclared; }
+
+        private static String text(String value, String fallback) {
+            return value == null || value.isBlank() ? fallback : value.trim();
+        }
+
+        private static List<String> immutable(List<String> values) {
+            return values == null ? List.of() : List.copyOf(values);
+        }
+    }
+
+    public record ClaimAttribution(
+        String subject,
+        String action,
+        String state,
+        String outcome,
+        List<String> directEvidenceRefs,
+        List<String> indirectEvidenceRefs,
+        List<String> sourceAuthorities,
+        String supportClass,
+        String downgradeReason
+    ) {
+        public ClaimAttribution {
+            subject = text(subject, "项目材料");
+            action = text(action, "UNKNOWN");
+            state = text(state, "UNKNOWN").toUpperCase(java.util.Locale.ROOT);
+            outcome = text(outcome, "缺少足够的直接证据");
+            directEvidenceRefs = immutable(directEvidenceRefs);
+            indirectEvidenceRefs = immutable(indirectEvidenceRefs);
+            sourceAuthorities = immutable(sourceAuthorities);
+            supportClass = text(supportClass, "INSUFFICIENT").toUpperCase(java.util.Locale.ROOT);
+            downgradeReason = downgradeReason == null ? "" : downgradeReason.trim();
+        }
+
+        public static ClaimAttribution empty() {
+            return new ClaimAttribution("项目材料", "UNKNOWN", "UNKNOWN", "缺少足够的直接证据",
+                List.of(), List.of(), List.of(), "INSUFFICIENT", "缺少可归因的直接 Evidence。");
+        }
+
+        private static String text(String value, String fallback) {
+            return value == null || value.isBlank() ? fallback : value.trim();
+        }
+
+        private static List<String> immutable(List<String> values) {
+            return values == null ? List.of() : List.copyOf(values);
+        }
     }
 
     public record ChangeStory(
@@ -87,8 +166,153 @@ public final class ProjectHistoryDtos {
         String coverage,
         List<String> limitations,
         List<UUID> eventRefs,
-        List<String> evidenceRefs
+        List<String> evidenceRefs,
+        String role,
+        String primaryStoryId,
+        List<String> supportingChangeRefs,
+        List<String> technicalAtomRefs,
+        List<String> commitSummaries,
+        List<String> technicalDetails,
+        String presentationAuthority,
+        String presentationRevision,
+        String automaticTitle,
+        String automaticSummary,
+        List<String> userCorrectionRefs,
+        boolean hiddenByDefault,
+        boolean pinned,
+        String mergedIntoStoryId,
+        String displayStatus,
+        List<String> correctionConflicts,
+        ClaimAttribution claimAttribution
     ) {
+        public ChangeStory(
+            String id,
+            String primarySubjectKey,
+            String humanTitle,
+            String oneSentenceSummary,
+            String beforeState,
+            String change,
+            String afterState,
+            List<String> affectedAreas,
+            String reason,
+            List<String> reasonEvidenceRefs,
+            String laterOutcome,
+            List<String> conflicts,
+            List<String> unknowns,
+            Instant occurredFrom,
+            Instant occurredTo,
+            int evidenceCount,
+            int rawEventCount,
+            String authority,
+            String summaryStatus,
+            String coverage,
+            List<String> limitations,
+            List<UUID> eventRefs,
+            List<String> evidenceRefs
+        ) {
+            this(id, primarySubjectKey, humanTitle, oneSentenceSummary, beforeState, change, afterState, affectedAreas,
+                reason, reasonEvidenceRefs, laterOutcome, conflicts, unknowns, occurredFrom, occurredTo, evidenceCount,
+                rawEventCount, authority, summaryStatus, coverage, limitations, eventRefs, evidenceRefs, "PRIMARY", "",
+                List.of(), List.of(), List.of(), List.of(), "AUTOMATIC", "", humanTitle, oneSentenceSummary, List.of(),
+                false, false, "", "ACTIVE", List.of(), ClaimAttribution.empty());
+        }
+
+        public ChangeStory(
+            String id,
+            String primarySubjectKey,
+            String humanTitle,
+            String oneSentenceSummary,
+            String beforeState,
+            String change,
+            String afterState,
+            List<String> affectedAreas,
+            String reason,
+            List<String> reasonEvidenceRefs,
+            String laterOutcome,
+            List<String> conflicts,
+            List<String> unknowns,
+            Instant occurredFrom,
+            Instant occurredTo,
+            int evidenceCount,
+            int rawEventCount,
+            String authority,
+            String summaryStatus,
+            String coverage,
+            List<String> limitations,
+            List<UUID> eventRefs,
+            List<String> evidenceRefs,
+            String role,
+            String primaryStoryId,
+            List<String> supportingChangeRefs,
+            List<String> technicalAtomRefs,
+            List<String> commitSummaries,
+            List<String> technicalDetails,
+            String presentationAuthority,
+            String presentationRevision,
+            String automaticTitle,
+            String automaticSummary,
+            List<String> userCorrectionRefs,
+            boolean hiddenByDefault,
+            boolean pinned,
+            String mergedIntoStoryId,
+            String displayStatus,
+            List<String> correctionConflicts
+        ) {
+            this(id, primarySubjectKey, humanTitle, oneSentenceSummary, beforeState, change, afterState, affectedAreas,
+                reason, reasonEvidenceRefs, laterOutcome, conflicts, unknowns, occurredFrom, occurredTo, evidenceCount,
+                rawEventCount, authority, summaryStatus, coverage, limitations, eventRefs, evidenceRefs, role,
+                primaryStoryId, supportingChangeRefs, technicalAtomRefs, commitSummaries, technicalDetails,
+                presentationAuthority, presentationRevision, automaticTitle, automaticSummary, userCorrectionRefs,
+                hiddenByDefault, pinned, mergedIntoStoryId, displayStatus, correctionConflicts, ClaimAttribution.empty());
+        }
+
+        public ChangeStory {
+            affectedAreas = immutable(affectedAreas);
+            reasonEvidenceRefs = immutable(reasonEvidenceRefs);
+            conflicts = immutable(conflicts);
+            unknowns = immutable(unknowns);
+            limitations = immutable(limitations);
+            eventRefs = eventRefs == null ? List.of() : List.copyOf(eventRefs);
+            evidenceRefs = immutable(evidenceRefs);
+            supportingChangeRefs = immutable(supportingChangeRefs);
+            technicalAtomRefs = immutable(technicalAtomRefs);
+            commitSummaries = immutable(commitSummaries);
+            technicalDetails = immutable(technicalDetails);
+            userCorrectionRefs = immutable(userCorrectionRefs);
+            correctionConflicts = immutable(correctionConflicts);
+            claimAttribution = claimAttribution == null ? ClaimAttribution.empty() : claimAttribution;
+            role = role == null || role.isBlank() ? "PRIMARY" : role.trim().toUpperCase(java.util.Locale.ROOT);
+            primaryStoryId = primaryStoryId == null ? "" : primaryStoryId.trim();
+            presentationAuthority = text(presentationAuthority, "AUTOMATIC");
+            presentationRevision = text(presentationRevision, "");
+            automaticTitle = text(automaticTitle, humanTitle);
+            automaticSummary = text(automaticSummary, oneSentenceSummary);
+            mergedIntoStoryId = mergedIntoStoryId == null ? "" : mergedIntoStoryId.trim();
+            displayStatus = text(displayStatus, "ACTIVE");
+        }
+
+        public boolean primary() { return "PRIMARY".equals(role); }
+        public boolean supporting() { return "SUPPORTING".equals(role); }
+        public boolean userDeclared() { return "USER_DECLARED_PRESENTATION".equals(presentationAuthority); }
+
+        public ChangeStory withClaimAttribution(ClaimAttribution value) {
+            return new ChangeStory(
+                id, primarySubjectKey, humanTitle, oneSentenceSummary, beforeState, change, afterState, affectedAreas,
+                reason, reasonEvidenceRefs, laterOutcome, conflicts, unknowns, occurredFrom, occurredTo, evidenceCount,
+                rawEventCount, authority, summaryStatus, coverage, limitations, eventRefs, evidenceRefs, role,
+                primaryStoryId, supportingChangeRefs, technicalAtomRefs, commitSummaries, technicalDetails,
+                presentationAuthority, presentationRevision, automaticTitle, automaticSummary, userCorrectionRefs,
+                hiddenByDefault, pinned, mergedIntoStoryId, displayStatus, correctionConflicts, value
+            );
+        }
+
+        private static String text(String value, String fallback) {
+            return value == null || value.isBlank() ? fallback : value.trim();
+        }
+
+        private static <T> List<T> immutable(List<T> values) {
+            return values == null ? List.of() : List.copyOf(values);
+        }
     }
 
     public record EvolutionThread(
@@ -103,12 +327,45 @@ public final class ProjectHistoryDtos {
         List<String> conflicts,
         List<String> unknowns,
         int evidenceCount,
-        UUID capabilityId
+        UUID capabilityId,
+        String presentationAuthority,
+        String presentationRevision,
+        List<String> userCorrectionRefs
     ) {
+        public EvolutionThread(
+            String id,
+            String subjectKey,
+            String subjectLabel,
+            String subjectType,
+            List<String> storyRefs,
+            List<String> transitions,
+            String currentOutcome,
+            List<String> gaps,
+            List<String> conflicts,
+            List<String> unknowns,
+            int evidenceCount,
+            UUID capabilityId
+        ) {
+            this(id, subjectKey, subjectLabel, subjectType, storyRefs, transitions, currentOutcome, gaps, conflicts,
+                unknowns, evidenceCount, capabilityId, "AUTOMATIC", "", List.of());
+        }
+
+        public EvolutionThread {
+            storyRefs = storyRefs == null ? List.of() : List.copyOf(storyRefs);
+            transitions = transitions == null ? List.of() : List.copyOf(transitions);
+            gaps = gaps == null ? List.of() : List.copyOf(gaps);
+            conflicts = conflicts == null ? List.of() : List.copyOf(conflicts);
+            unknowns = unknowns == null ? List.of() : List.copyOf(unknowns);
+            userCorrectionRefs = userCorrectionRefs == null ? List.of() : List.copyOf(userCorrectionRefs);
+            presentationAuthority = presentationAuthority == null || presentationAuthority.isBlank()
+                ? "AUTOMATIC" : presentationAuthority.trim();
+            presentationRevision = presentationRevision == null ? "" : presentationRevision.trim();
+        }
     }
 
     public record HistoryOverviewResponse(
         UUID projectId,
+        String presentationRevision,
         String status,
         String projectRevision,
         int sourceEventCount,
@@ -130,6 +387,7 @@ public final class ProjectHistoryDtos {
 
     public record HistoryChapterPageResponse(
         UUID projectId,
+        String presentationRevision,
         List<HistoryChapter> items,
         int page,
         int size,
@@ -140,6 +398,7 @@ public final class ProjectHistoryDtos {
 
     public record HistoryChapterDetailResponse(
         UUID projectId,
+        String presentationRevision,
         HistoryChapter chapter,
         List<ChangeStory> stories
     ) {
@@ -147,6 +406,7 @@ public final class ProjectHistoryDtos {
 
     public record HistoryStoryPageResponse(
         UUID projectId,
+        String presentationRevision,
         List<ChangeStory> items,
         int page,
         int size,
@@ -157,6 +417,7 @@ public final class ProjectHistoryDtos {
 
     public record HistoryStoryDetailResponse(
         UUID projectId,
+        String presentationRevision,
         ChangeStory story,
         List<HistoryEventResponse> events,
         List<EvolutionThread> threads
@@ -165,6 +426,7 @@ public final class ProjectHistoryDtos {
 
     public record EvolutionThreadPageResponse(
         UUID projectId,
+        String presentationRevision,
         List<EvolutionThread> items,
         int page,
         int size,
@@ -175,6 +437,7 @@ public final class ProjectHistoryDtos {
 
     public record EvolutionThreadDetailResponse(
         UUID projectId,
+        String presentationRevision,
         EvolutionThread thread,
         List<ChangeStory> stories
     ) {
@@ -194,6 +457,7 @@ public final class ProjectHistoryDtos {
         String scope,
         String category,
         String transition,
+        String userSummary,
         String safeSourceLabel,
         List<String> affectedPaths,
         List<String> subjectKeys,
@@ -248,5 +512,133 @@ public final class ProjectHistoryDtos {
         List<String> epistemicStatuses,
         List<String> rewriteStates
     ) {
+    }
+
+    /** A presentation-only correction. It never writes ProjectFact, Event, or Evidence. */
+    public record HistoryCorrectionRequest(
+        String type,
+        String targetType,
+        String targetId,
+        List<String> targetIds,
+        String title,
+        String summary,
+        String role,
+        String chapterId,
+        String expectedPresentationRevision,
+        String sourceFingerprint,
+        String declaredTitle,
+        String declaredSummary,
+        String declaredRole,
+        String declaredChapterId,
+        String secondaryTitle,
+        String secondarySummary
+    ) {
+        public HistoryCorrectionRequest(
+            String type,
+            String targetType,
+            String targetId,
+            List<String> targetIds,
+            String title,
+            String summary,
+            String role,
+            String chapterId,
+            String expectedPresentationRevision,
+            String sourceFingerprint
+        ) {
+            this(type, targetType, targetId, targetIds, title, summary, role, chapterId,
+                expectedPresentationRevision, sourceFingerprint, "", "", "", "", "", "");
+        }
+
+        public List<String> safeTargetIds() {
+            return targetIds == null ? List.of() : targetIds.stream()
+                .filter(value -> value != null && !value.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
+        }
+
+        public String effectiveTitle() { return firstNonBlank(declaredTitle, title); }
+        public String effectiveSummary() { return firstNonBlank(declaredSummary, summary); }
+        public String effectiveRole() { return firstNonBlank(declaredRole, role); }
+        public String effectiveChapterId() { return firstNonBlank(declaredChapterId, chapterId); }
+        public String effectiveSecondaryTitle() { return secondaryTitle == null ? "" : secondaryTitle.trim(); }
+        public String effectiveSecondarySummary() { return secondarySummary == null ? "" : secondarySummary.trim(); }
+
+        private static String firstNonBlank(String preferred, String fallback) {
+            return preferred != null && !preferred.isBlank() ? preferred.trim() : fallback == null ? "" : fallback.trim();
+        }
+    }
+
+    public record HistoryCorrectionResponse(
+        UUID id,
+        UUID projectId,
+        String type,
+        String targetType,
+        String targetId,
+        List<String> targetIds,
+        String status,
+        String beforePresentationRevision,
+        String sourceFingerprint,
+        String conflictReason,
+        Instant createdAt,
+        Instant updatedAt,
+        String presentationRevision,
+        String declaredTitle,
+        String declaredSummary,
+        String declaredRole,
+        String declaredChapterId,
+        String automaticValue,
+        String appliedValue,
+        String difference,
+        boolean targetPresent,
+        String declaredSecondaryTitle,
+        String declaredSecondarySummary,
+        String targetMembershipFingerprint,
+        String automaticPresentationFingerprint,
+        boolean sourceStale,
+        boolean membershipStale,
+        boolean automaticPresentationChanged
+    ) {
+        public HistoryCorrectionResponse(
+            UUID id,
+            UUID projectId,
+            String type,
+            String targetType,
+            String targetId,
+            List<String> targetIds,
+            String status,
+            String beforePresentationRevision,
+            String sourceFingerprint,
+            String conflictReason,
+            Instant createdAt,
+            Instant updatedAt,
+            String presentationRevision
+        ) {
+            this(id, projectId, type, targetType, targetId, targetIds, status, beforePresentationRevision,
+                sourceFingerprint, conflictReason, createdAt, updatedAt, presentationRevision, "", "", "", "", "", "", "", false, "", "", "", "", false, false, false);
+        }
+    }
+
+    public record HistoryCorrectionListResponse(
+        UUID projectId,
+        List<HistoryCorrectionResponse> items,
+        String presentationRevision,
+        boolean truncated,
+        int page,
+        int size,
+        long total,
+        long activeCount,
+        int activeLimit,
+        boolean activeLimitExceeded
+    ) {
+        public HistoryCorrectionListResponse(
+            UUID projectId,
+            List<HistoryCorrectionResponse> items,
+            String presentationRevision,
+            boolean truncated
+        ) {
+            this(projectId, items, presentationRevision, truncated, 0, items == null ? 0 : items.size(),
+                items == null ? 0 : items.size(), 0, 2_000, false);
+        }
     }
 }

@@ -1,6 +1,10 @@
 # ProjectFlow
 
-ProjectFlow V3.8.0 is a local-first project-history reconstruction and long-term project-memory layer. Its universal product axis is 项目历程, not Capability Map: it turns Git, files, documents, Project Facts, Agent results and optional collaboration metadata into a readable path from source events to dynamic chapters, change stories, evolution threads and Evidence drill-down.
+ProjectFlow V3.8.5 is a local-first project-history reconstruction and long-term project-memory layer. Its universal product axis is 项目历程, not Capability Map: it turns Git, files, documents, Project Facts, Agent results and optional collaboration metadata into a readable path from source events to human-readable chapters, primary change stories, supporting work, evolution threads and Evidence drill-down.
+
+V3.8.5 Final Chapter Closure adds deterministic Representative Clusters, coverage, Claim ceilings and bounded repair on top of the RC3 claim-level Evidence boundary. The same-head final matrix uses GPT 5.6 Luna Responses/max, DeepSeek V4 Flash Chat/max and Qwen3.7 Plus Messages/max; all three passed qualification 19/19 and Chapter scenarios 9/9. Round 1 and Round 2 remain `NEEDS_REVISION_NOT_APPROVED`, and the frozen Round 3 files remain immutable. On 2026-08-24 the project owner explicitly approved the final package and merge while waiving this round's quantitative scores. The result is `PASS_BY_EXPLICIT_OWNER_OVERRIDE`; no 1-5 score is invented, and the single-reviewer and scope limitations remain disclosed in the separate final sign-off evidence.
+
+User-facing language follows the formal Chinese and progressive-disclosure contract in `docs/product-language-and-progressive-disclosure-contract.md`: the first layer shows the story and current result, while full SHA, Evidence IDs and internal diagnostics remain available through engineering detail. The final GUI implementation remains deferred to V4.0.
 
 ProjectFact remains the only persistent strong-fact source. `OBSERVED`/`VERIFIED` stay separate from `DECLARED`, `INFERRED`, `CONFLICTED`, `UNKNOWN` and `PROCESS_EVIDENCE`; a story or chapter is a replaceable read model and cannot promote a claim. Missing reasons remain UNKNOWN, raw events are retained, and GET reads never scan Git or call a model.
 
@@ -14,7 +18,16 @@ V3.7.4 strengthened content-first discovery, large-file ranges and shared Agent 
 
 Authorized Agents can list all loaded projects, query bounded cross-project history, read evidence/knowledge/context packages, and continue from the same durable memory after an Agent or model switch. Reads remain project-isolated and audited. Agents may submit only validated candidates; they cannot directly write strong facts. Hermes exposes the same boundary through read-only MCP tools and project context resources.
 
-V3.8.0 reuses the existing provider-neutral Model Gateway and persistent Job system. Deterministic reconstruction always remains available; one bounded model call may improve wording for an eligible history window but cannot change membership, chronology, transitions or Evidence. This phase includes only a minimal read-only developer preview, not the final GUI, and creates no Git Tag or GitHub Release.
+V3.8.5 reuses the existing provider-neutral Model Gateway and persistent Job system. Deterministic reconstruction always remains available; bounded semantic windows may improve wording and Primary/Supporting presentation, but validated engineering data still owns membership, chronology, transitions and Evidence. User corrections are durable presentation declarations and never mutate ProjectFact or raw events. This phase includes only a minimal history preview, not the final GUI, and creates no Git Tag or GitHub Release.
+
+## V3.8.5 Human-readable Project History Quality Closure
+
+- A Technical Atom layer separates raw source events from the default reading unit. Primary changes are shown as complete outcomes; tests, documents, configuration and other supporting work remain available through engineering detail.
+- Stories and chapters use Chinese-first action/object/result wording with Before, Change, After, later outcome, unknowns, conflicts and bounded Evidence drill-down. Generic technical templates are rejected by deterministic validation.
+- Large histories are processed through stable bounded windows with source/strategy/Prompt/correction-aware cache keys, durable checkpoints, retryable failures and explicit partial/degraded scope. No model call is made per Commit or file.
+- A presentation-only correction API supports rename, summary edit, merge/split, Primary/Supporting changes, hide/pin, declared chapters and restore-automatic. The corrected view is shared by Gateway, Agent Context, Hermes, the frontend preview and Obsidian.
+- Obsidian CORE stays dense: overview, history index, readable chapters, pinned/corrected stories and selected high-value threads. Full Story/Thread projection remains explicit opt-in.
+- V3.8.5 adds no runtime dependency, Tag or Release and does not change the ProjectFact authority boundary.
 
 ## V3.8.0 Evidence-backed Project History Reconstruction
 

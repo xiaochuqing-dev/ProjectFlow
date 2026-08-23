@@ -195,32 +195,13 @@ public class AiProviderService {
                 List.of("缺少认证信息。"), "UNAVAILABLE", "FAILED");
         }
 
-        ModelGatewayService.StructuredModelResponse response;
         try {
-            response = modelGatewayService.callStructured(
+            ModelGatewayService.StructuredModelResponse response = modelGatewayService.callStructured(
                 provider,
-                "只返回这个 JSON：{\"ok\":true}",
-                ModelTaskType.PROVIDER_CONNECTION_TEST
-            );
-        } catch (Exception exception) {
-            return testResult(
-                provider, false, false, "传输或协议测试失败。" + modelGatewayService.failureMessage(exception),
-                "INCOMPATIBLE", requestCount(exception), List.of("失败阶段已归一化，未保存原始响应。"), "UNAVAILABLE", "FAILED"
-            );
-        }
-        if (!response.parsed().root().path("ok").asBoolean(false)) {
-            return testResult(provider, false, true, "连接可达，但未得到约定的 ok=true。", "INCOMPATIBLE",
-                response.diagnostics().requestCount(), List.of("基础 JSON/Schema 契约不匹配。"), usage(response.diagnostics()), "PASSED");
-        }
-
-        try {
-            ModelGatewayService.StructuredModelResponse compatibility = modelGatewayService.callStructured(
-                provider,
-                "基于事实‘ProjectFlow 使用 ProjectFact 保存已发生开发结果’，只返回 {\"summary\":\"\",\"architecture\":\"\"}，两项都填简短中文。",
+                "基于事实‘ProjectFlow 使用 ProjectFact 保存已发生开发结果’，只返回 {\"summary\":\"\"}，填入一句简短中文。",
                 ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST
             );
-            boolean projectFlowOk = compatibility.parsed().root().has("summary")
-                && compatibility.parsed().root().has("architecture");
+            boolean projectFlowOk = !response.parsed().root().path("summary").asText("").isBlank();
             ModelGatewayService.ModelCallDiagnostics diagnostics = response.diagnostics();
             return testResult(
                 provider, projectFlowOk, true,
@@ -228,14 +209,17 @@ public class AiProviderService {
                     ? "连接、协议解析和 ProjectFlow 最小结构化任务均通过。能力档案：" + diagnostics.capabilityProfile() + "。"
                     : "连接成功，但 ProjectFlow 最小结构化任务不兼容。",
                 projectFlowOk ? "FULL" : "INCOMPATIBLE",
-                response.diagnostics().requestCount() + compatibility.diagnostics().requestCount(),
+                diagnostics.requestCount(),
                 capabilitiesWarnings(provider), usage(diagnostics), "PASSED"
             );
         } catch (Exception exception) {
+            boolean connectionPassed = requestReachedProvider(exception);
             return testResult(
-                provider, false, true, "连接与基础结构通过，但 ProjectFlow 最小任务失败。" + modelGatewayService.failureMessage(exception),
-                "INCOMPATIBLE", response.diagnostics().requestCount() + requestCount(exception),
-                List.of("失败阶段已归一化，未保存原始响应。"), usage(response.diagnostics()), "PASSED"
+                provider, false, connectionPassed,
+                (connectionPassed ? "连接可达，但协议响应或 ProjectFlow 最小任务不兼容。" : "传输或协议测试失败。")
+                    + modelGatewayService.failureMessage(exception),
+                "INCOMPATIBLE", requestCount(exception),
+                List.of("失败阶段已归一化，未保存原始响应。"), "UNAVAILABLE", connectionPassed ? "FAILED" : "UNAVAILABLE"
             );
         }
     }
@@ -430,6 +414,22 @@ public class AiProviderService {
         if (exception instanceof ModelGatewayService.ModelHttpException http) return http.requestCount();
         if (exception instanceof ModelGatewayService.ModelTransportException transport) return transport.requestCount();
         return 1;
+    }
+
+    private boolean requestReachedProvider(Exception exception) {
+        Throwable current = exception;
+        while (current != null) {
+            if (current instanceof ModelGatewayService.ModelResponseFormatException format
+                && format.diagnostics() != null) {
+                return format.diagnostics().requestSucceeded();
+            }
+            if (current instanceof ModelGatewayService.ModelHttpException
+                || current instanceof ModelGatewayService.ModelTransportException) {
+                return false;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private List<String> capabilitiesWarnings(AiProvider provider) {

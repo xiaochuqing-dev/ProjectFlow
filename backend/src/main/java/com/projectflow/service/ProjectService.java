@@ -25,7 +25,9 @@ import com.projectflow.repository.ProjectEvolutionRecordRepository;
 import com.projectflow.repository.ProjectEvolutionBridgeRepository;
 import com.projectflow.repository.ProjectFactSourceRepository;
 import com.projectflow.repository.ProjectHistoryEventRepository;
+import com.projectflow.repository.ProjectHistoryCorrectionRepository;
 import com.projectflow.repository.ProjectHistorySnapshotRepository;
+import com.projectflow.repository.ProjectHistoryWindowCheckpointRepository;
 import com.projectflow.repository.ProjectMaterialRepository;
 import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectMemoryReadAuditRepository;
@@ -63,7 +65,9 @@ public class ProjectService {
     private final ProjectUnderstandingSnapshotRepository understandingSnapshotRepository;
     private final ProjectAgentCandidateRepository agentCandidateRepository;
     private final ProjectHistoryEventRepository historyEventRepository;
+    private final ProjectHistoryCorrectionRepository historyCorrectionRepository;
     private final ProjectHistorySnapshotRepository historySnapshotRepository;
+    private final ProjectHistoryWindowCheckpointRepository historyWindowCheckpointRepository;
 
     public ProjectService(
         ProjectRepository projectRepository,
@@ -90,7 +94,9 @@ public class ProjectService {
         ProjectUnderstandingSnapshotRepository understandingSnapshotRepository,
         ProjectAgentCandidateRepository agentCandidateRepository,
         ProjectHistoryEventRepository historyEventRepository,
-        ProjectHistorySnapshotRepository historySnapshotRepository
+        ProjectHistoryCorrectionRepository historyCorrectionRepository,
+        ProjectHistorySnapshotRepository historySnapshotRepository,
+        ProjectHistoryWindowCheckpointRepository historyWindowCheckpointRepository
     ) {
         this.projectRepository = projectRepository;
         this.materialRepository = materialRepository;
@@ -116,7 +122,9 @@ public class ProjectService {
         this.understandingSnapshotRepository = understandingSnapshotRepository;
         this.agentCandidateRepository = agentCandidateRepository;
         this.historyEventRepository = historyEventRepository;
+        this.historyCorrectionRepository = historyCorrectionRepository;
         this.historySnapshotRepository = historySnapshotRepository;
+        this.historyWindowCheckpointRepository = historyWindowCheckpointRepository;
     }
 
     @Transactional
@@ -158,8 +166,10 @@ public class ProjectService {
         modelUsageRecordRepository.deleteByProjectId(id);
         memoryReadAuditRepository.deleteByProjectId(id);
         agentCandidateRepository.deleteByProjectId(id);
+        historyCorrectionRepository.deleteByProjectId(id);
         historyEventRepository.deleteByProjectId(id);
         historySnapshotRepository.deleteByProjectId(id);
+        historyWindowCheckpointRepository.deleteByProjectId(id);
         understandingSnapshotRepository.deleteByProjectId(id);
         structureIndexRepository.deleteByProjectId(id);
         evolutionBridgeRepository.deleteByProjectId(id);

@@ -3012,6 +3012,12 @@ export type ProjectHistoryChapter = {
   authority: string;
   coverage: string;
   limitations: string[];
+  presentationAuthority?: string;
+  presentationRevision?: string;
+  userDeclared?: boolean;
+  userCorrectionRefs?: string[];
+  hiddenByDefault?: boolean;
+  pinned?: boolean;
 };
 
 export type ProjectHistoryChapterSummary = {
@@ -3049,6 +3055,35 @@ export type ProjectHistoryStory = {
   limitations: string[];
   eventRefs: string[];
   evidenceRefs: string[];
+  role?: "PRIMARY" | "SUPPORTING" | string;
+  primaryStoryId?: string;
+  supportingChangeRefs?: string[];
+  technicalAtomRefs?: string[];
+  commitSummaries?: string[];
+  technicalDetails?: string[];
+  presentationAuthority?: string;
+  presentationRevision?: string;
+  automaticTitle?: string;
+  automaticSummary?: string;
+  userCorrectionRefs?: string[];
+  hiddenByDefault?: boolean;
+  pinned?: boolean;
+  mergedIntoStoryId?: string;
+  displayStatus?: string;
+  correctionConflicts?: string[];
+  claimAttribution?: ProjectHistoryClaimAttribution;
+};
+
+export type ProjectHistoryClaimAttribution = {
+  subject: string;
+  action: string;
+  state: string;
+  outcome: string;
+  directEvidenceRefs: string[];
+  indirectEvidenceRefs: string[];
+  sourceAuthorities: string[];
+  supportClass: string;
+  downgradeReason: string;
 };
 
 export type ProjectHistoryThread = {
@@ -3064,6 +3099,9 @@ export type ProjectHistoryThread = {
   unknowns: string[];
   evidenceCount: number;
   capabilityId: string | null;
+  presentationAuthority?: string;
+  presentationRevision?: string;
+  userCorrectionRefs?: string[];
 };
 
 export type ProjectHistoryEvent = {
@@ -3072,6 +3110,7 @@ export type ProjectHistoryEvent = {
   sourceType: string;
   category: string;
   transition: string;
+  userSummary: string;
   safeSourceLabel: string;
   affectedPaths: string[];
   evidenceRefs: string[];
@@ -3082,8 +3121,26 @@ export type ProjectHistoryEvent = {
   rewriteState: string;
 };
 
+export type ProjectHistoryEvidence = {
+  projectId: string;
+  eventId: string;
+  items: Array<{
+    type: string;
+    reference: string;
+    label: string;
+    currentness: string;
+    revision: string;
+    validation: string;
+    coverage: string;
+    limitations: string[];
+    deepLink: string;
+  }>;
+  truncated: boolean;
+};
+
 export type ProjectHistoryOverview = {
   projectId: string;
+  presentationRevision: string;
   status: string;
   sourceEventCount: number;
   earliestEventAt: string | null;
@@ -3107,16 +3164,64 @@ export type ProjectHistoryOverview = {
   };
   errorCode: string;
   errorSummary: string;
+  projectRevision?: string;
+  diagnostics?: Record<string, unknown>;
+};
+
+export type ProjectHistoryCorrection = {
+  id: string;
+  projectId: string;
+  type: string;
+  targetType: string;
+  targetId: string;
+  targetIds: string[];
+  status: string;
+  beforePresentationRevision: string;
+  sourceFingerprint: string;
+  conflictReason: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  presentationRevision: string;
+  declaredTitle: string;
+  declaredSummary: string;
+  declaredRole: string;
+  declaredChapterId: string;
+  automaticValue: string;
+  appliedValue: string;
+  difference: string;
+  targetPresent: boolean;
+  declaredSecondaryTitle: string;
+  declaredSecondarySummary: string;
+  targetMembershipFingerprint: string;
+  automaticPresentationFingerprint: string;
+  sourceStale: boolean;
+  membershipStale: boolean;
+  automaticPresentationChanged: boolean;
+};
+
+export type ProjectHistoryCorrectionList = {
+  projectId: string;
+  items: ProjectHistoryCorrection[];
+  presentationRevision: string;
+  truncated: boolean;
+  page: number;
+  size: number;
+  total: number;
+  activeCount: number;
+  activeLimit: number;
+  activeLimitExceeded: boolean;
 };
 
 export type ProjectHistoryChapterDetail = {
   projectId: string;
+  presentationRevision: string;
   chapter: ProjectHistoryChapter;
   stories: ProjectHistoryStory[];
 };
 
 export type ProjectHistoryStoryDetail = {
   projectId: string;
+  presentationRevision: string;
   story: ProjectHistoryStory;
   events: ProjectHistoryEvent[];
   threads: ProjectHistoryThread[];
@@ -3124,6 +3229,7 @@ export type ProjectHistoryStoryDetail = {
 
 export type ProjectHistoryThreadDetail = {
   projectId: string;
+  presentationRevision: string;
   thread: ProjectHistoryThread;
   stories: ProjectHistoryStory[];
 };
@@ -3171,4 +3277,71 @@ export function getProjectHistoryThread(
     token,
     `/projects/${projectId}/history/threads/${encodeURIComponent(threadId)}`,
   );
+}
+
+export function getProjectHistoryEvidence(
+  token: string,
+  projectId: string,
+  eventId: string,
+): Promise<ProjectHistoryEvidence> {
+  return projectHistoryGet<ProjectHistoryEvidence>(
+    token,
+    `/projects/${projectId}/history/events/${encodeURIComponent(eventId)}/evidence`,
+  );
+}
+
+export function getProjectHistoryCorrections(
+  token: string,
+  projectId: string,
+  page = 0,
+  size = 50,
+): Promise<ProjectHistoryCorrectionList> {
+  return projectHistoryGet<ProjectHistoryCorrectionList>(
+    token,
+    `/projects/${projectId}/history/corrections?page=${Math.max(0, page)}&size=${Math.max(1, size)}`,
+  );
+}
+
+export function createProjectHistoryCorrection(
+  token: string,
+  projectId: string,
+  request: {
+    type: string;
+    targetType?: string;
+    targetId?: string;
+    targetIds?: string[];
+    title?: string;
+    summary?: string;
+    role?: string;
+    chapterId?: string;
+    expectedPresentationRevision?: string;
+    sourceFingerprint?: string;
+    declaredTitle?: string;
+    declaredSummary?: string;
+    declaredRole?: string;
+    declaredChapterId?: string;
+    secondaryTitle?: string;
+    secondarySummary?: string;
+  },
+): Promise<ProjectHistoryCorrection> {
+  return requestJson<ProjectHistoryCorrection>(`/projects/${projectId}/history/corrections`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+}
+
+export function revertProjectHistoryCorrection(
+  token: string,
+  projectId: string,
+  correctionId: string,
+  expectedPresentationRevision?: string,
+): Promise<ProjectHistoryCorrection> {
+  const query = expectedPresentationRevision
+    ? `?expectedPresentationRevision=${encodeURIComponent(expectedPresentationRevision)}`
+    : "";
+  return requestJson<ProjectHistoryCorrection>(`/projects/${projectId}/history/corrections/${correctionId}/revert${query}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }

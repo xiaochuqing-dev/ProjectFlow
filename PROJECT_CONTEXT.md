@@ -1,12 +1,18 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-08-03
+Last updated: 2026-08-24
+
+V3.8.5 Final Chapter Closure 当前状态：Representative Cluster、dominant/co-dominant/minor、代表覆盖、Claim ceiling、有界 repair 与保守 split 工程链已完成。源码头 `e1b67f28428e73f39fc23aa6f85961155a20ffd8` 的同头 run `32609107531` 中，GPT 5.6 Luna Responses/max、DeepSeek V4 Flash Chat/max、Qwen3.7 Plus Messages/max 均通过 qualification 19/19 和 Chapter scenarios 9/9；没有替代 Qwen 模型。Final Chapter 已冻结为三 Provider 各 4 个、共 12 个 Chapter；Round 3 的 30 Story/8 Chapter 与 canonical-LF 哈希不变，展示变更 30/30 的 Truth/Evidence semantic hash 不变。2026-08-24 项目所有者明确批准最终 package 与 merge，并明确豁免本轮量化人工评分；独立签字结论为 `PASS_BY_EXPLICIT_OWNER_OVERRIDE`，V3.9 ENTRY 已获批准。冻结工件继续保持人工字段空白和 reviewerCount=0，独立签字 reviewerCount=1，不得伪造数值分数；仍禁止 Tag 和 Release。
+
+2026-08-24 PHASE A0 复核确认当时本地、远端与 PR Head 均为 `7d181af2b1bea20d8dab35778da2abf64d446dfa`，base master 为 `5cb5e49661206feb8f59885bea672c314c9374e8`，push/PR CI 全绿，冻结 manifest/worksheet 合同 2/2 通过。交接材料记录用户对最终展示的总体判断约为 8.5/10，并把剩余主要问题归为 GUI、ID/Hash 默认过长、内部 diagnostics 过载和中英文产品标签混排；这项总体意见没有换算成逐样本 1-5 分。正式中文与渐进披露合同已沉淀到 `docs/product-language-and-progressive-disclosure-contract.md`，最终 GUI 延后到 V4.0。后续项目所有者用显式 override 完成签字，限制见 `docs/projectflow-v3.8.5-final-human-signoff.md`。
+
+历史 RC3 仍保留：Round 1 与 Round 2 均为 NEEDS_REVISION_NOT_APPROVED。Round 2 的 ProjectFlow skeleton/login P0 证明 Story-wide Evidence 聚合会让一个主体借用同 Commit 无关代码的实现强度；RC3 已改为 Technical Atom 级 subject/action/state 归因，区分 direct Evidence 与不可提升状态的 indirect context，并对不够精确的 `project-area-*` 主体设置 OBSERVED 上限。2026-08-14 的 GLM / DeepSeek 双 Provider run 与 Round 3 继续作为不可改写历史证据，不代表 Final Chapter 已获真人批准。
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 
 ## Product Position
 
-ProjectFlow V3.8.0 is a local-first project-history reconstruction, strong-fact and shared project-memory system for anyone who uses a computer to conduct a project. It turns real project materials into a readable history while preserving ProjectFact as the only strong-fact source. Replaceable understanding and history snapshots remain separate from durable Project Facts, compatibility Timeline, optional Capability Map, Agent candidates, Project Memory Gateway, Hermes reads and Obsidian projection.
+ProjectFlow V3.8.5 is a local-first project-history reconstruction, strong-fact and shared project-memory system for anyone who uses a computer to conduct a project. It turns real project materials into a human-readable history while preserving ProjectFact as the only strong-fact source. Replaceable understanding and history snapshots remain separate from durable Project Facts, compatibility Timeline, optional Capability Map, Agent candidates, Project Memory Gateway, Hermes reads and Obsidian projection.
 
 ProjectFlow V3.4.5 established the backend intelligence and model-protocol foundation. ProjectFlow V3.5.0 added the bounded intake foundation retained by V3.6.0 and V3.7.0.
 
@@ -17,6 +23,14 @@ Current direction:
 - Rules collect evidence, models interpret it, rules validate the result, and ProjectFlow automatically records normal evidence-backed facts.
 - Human attention is exceptional: evidence conflicts, missing evidence, incomplete boundaries, or unsafe duplicates become `NEEDS_ATTENTION` without blocking later scans.
 - GitHub CLI is optional metadata/link enrichment and must never block local Git analysis.
+
+V3.8.5 focus:
+
+- Project History now separates Raw Events, Technical Atoms, Primary Stories, Supporting Changes, Evolution Threads and readable Chapters. The default layer describes action, understandable object and confirmed result; engineering paths, symbols and Evidence remain available on demand.
+- Deterministic grouping and validation own event membership, chronology, transitions, authority and Evidence. Bounded semantic windows may improve wording and presentation role, but cannot change facts, events or Evidence.
+- Window cache keys include source fingerprint, strategy/Prompt versions, window identity and presentation correction revision. Durable checkpoints retain validated results and expose failed, cancelled, skipped and unprocessed scope.
+- `USER_DECLARED_PRESENTATION` corrections are persistent, auditable, reversible overlays. Gateway, Agent Context, Hermes, frontend and Obsidian all read the same corrected view without promoting declarations to ProjectFact.
+- Obsidian CORE projects a bounded reading set; all Story/Thread and audit projection remains explicit opt-in. This stage adds no dependency, Tag, Release, daemon, watcher or final GUI.
 
 V3.8.0 focus:
 
@@ -181,7 +195,7 @@ V3.3.6 compatibility focus:
 - Local fact and Agent-result drafts remain visible but never automatically enter the formal suggestion flow.
 - Confirmed sediments persist source batches and affected files, enter pending capability analysis, and are the direct input to capability analysis.
 - Capability analysis records input sediment IDs and updates their analysis state only after successful card persistence.
-- Empty truncated model output triggers one bounded recovery. Reasoning-capable profiles keep high effort and the configured Provider ceiling; reasoning text is not retained, and external waits do not hold method-level database transactions.
+- Empty truncated model output triggers one bounded recovery. Reasoning-capable profiles keep their configured effort and Provider ceiling; the current RC3 acceptance profiles use GLM max and DeepSeek Flash max. Reasoning text is not retained, and external waits do not hold method-level database transactions.
 
 V3.3.5 focus (still applies):
 

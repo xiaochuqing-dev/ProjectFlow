@@ -3,6 +3,8 @@ package com.projectflow.service;
 import static com.projectflow.dto.ProjectHistoryDtos.*;
 
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -41,26 +43,33 @@ import com.projectflow.support.AppException;
 @Service
 public class ProjectHistoryReadService {
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int OVERVIEW_CHAPTER_LIMIT = 8;
     private final ProjectRepository projectRepository;
     private final ProjectHistorySnapshotRepository snapshotRepository;
     private final ProjectHistoryEventRepository eventRepository;
+    private final ProjectHistoryCorrectionService correctionService;
     private final ProjectEvidenceTraceService evidenceTraceService;
     private final SensitiveContentRedactor redactor;
+    private final ProjectHistoryLanguageService languageService;
     private final ObjectMapper objectMapper;
 
     public ProjectHistoryReadService(
         ProjectRepository projectRepository,
         ProjectHistorySnapshotRepository snapshotRepository,
         ProjectHistoryEventRepository eventRepository,
+        ProjectHistoryCorrectionService correctionService,
         ProjectEvidenceTraceService evidenceTraceService,
         SensitiveContentRedactor redactor,
+        ProjectHistoryLanguageService languageService,
         ObjectMapper objectMapper
     ) {
         this.projectRepository = projectRepository;
         this.snapshotRepository = snapshotRepository;
         this.eventRepository = eventRepository;
+        this.correctionService = correctionService;
         this.evidenceTraceService = evidenceTraceService;
         this.redactor = redactor;
+        this.languageService = languageService;
         this.objectMapper = objectMapper;
     }
 
@@ -70,7 +79,7 @@ public class ProjectHistoryReadService {
         ProjectHistorySnapshot snapshot = snapshotRepository.findByProjectId(projectId).orElse(null);
         if (snapshot == null) {
             return new HistoryOverviewResponse(
-                projectId, "NOT_INITIALIZED", "", 0, null, null,
+                projectId, "", "NOT_INITIALIZED", "", 0, null, null,
                 ProjectHistoryReconstructionService.STRATEGY_VERSION,
                 ProjectHistoryReconstructionService.PROMPT_VERSION,
                 new HistoryOverviewContent(
@@ -79,32 +88,42 @@ public class ProjectHistoryReadService {
                 ), emptyCoverage(), Map.of(), null, null, null, null, "", ""
             );
         }
+        ProjectHistoryCorrectionService.CorrectedHistory corrected = correctionService.resolve(projectId, snapshot);
+        HistoryOverviewContent automaticOverview = value(snapshot.getOverviewJson(), HistoryOverviewContent.class,
+            new HistoryOverviewContent("", "", List.of(), List.of(), List.of(), List.of()));
+        HistoryOverviewContent displayOverview = correctedOverview(automaticOverview, corrected);
+        Map<String, Object> displayDiagnostics = new LinkedHashMap<>(map(snapshot.getDiagnosticsJson()));
+        displayDiagnostics.put("presentationRevision", corrected.presentationRevision());
+        displayDiagnostics.put("activeCorrectionCount", corrected.corrections().size());
         return new HistoryOverviewResponse(
-            projectId, snapshot.getStatus().name(), snapshot.getProjectRevision(), snapshot.getSourceEventCount(),
+            projectId, corrected.presentationRevision(), snapshot.getStatus().name(), snapshot.getProjectRevision(), snapshot.getSourceEventCount(),
             snapshot.getEarliestEventAt(), snapshot.getLatestEventAt(), snapshot.getStrategyVersion(), snapshot.getPromptVersion(),
-            value(snapshot.getOverviewJson(), HistoryOverviewContent.class, new HistoryOverviewContent("", "", List.of(), List.of(), List.of(), List.of())),
+            displayOverview,
             value(snapshot.getCoverageJson(), HistoryCoverage.class, emptyCoverage()),
-            map(snapshot.getDiagnosticsJson()), snapshot.getAnalysisJobId(), snapshot.getGeneratedAt(),
+            displayDiagnostics, snapshot.getAnalysisJobId(), snapshot.getGeneratedAt(),
                 snapshot.getLatestSuccessfulAt(), snapshot.getUpdatedAt(), outbound(snapshot.getErrorCode()), outbound(snapshot.getErrorSummary())
         );
     }
 
     @Transactional(readOnly = true)
     public HistoryChapterPageResponse chapters(UUID userId, UUID projectId, int page, int size) {
-        List<HistoryChapter> values = snapshotList(userId, projectId, "chapters", new TypeReference<List<HistoryChapter>>() {});
+        ProjectHistoryCorrectionService.CorrectedHistory corrected = corrected(userId, projectId);
+        List<HistoryChapter> values = corrected.chapters();
         Slice<HistoryChapter> slice = slice(values, page, size);
-        return new HistoryChapterPageResponse(projectId, slice.items(), slice.page(), slice.size(), slice.total(), slice.totalPages());
+        return new HistoryChapterPageResponse(projectId, corrected.presentationRevision(), slice.items(), slice.page(), slice.size(), slice.total(), slice.totalPages());
     }
 
     @Transactional(readOnly = true)
     public HistoryChapterDetailResponse chapter(UUID userId, UUID projectId, String chapterId) {
-        List<HistoryChapter> chapters = snapshotList(userId, projectId, "chapters", new TypeReference<List<HistoryChapter>>() {});
+        ProjectHistoryCorrectionService.CorrectedHistory corrected = corrected(userId, projectId);
+        List<HistoryChapter> chapters = corrected.chapters();
         HistoryChapter chapter = chapters.stream().filter(item -> item.id().equals(chapterId)).findFirst()
             .orElseThrow(() -> new AppException("PROJECT_HISTORY_CHAPTER_NOT_FOUND", "项目历程篇章不存在", HttpStatus.NOT_FOUND));
-        Map<String, ChangeStory> stories = snapshotList(userId, projectId, "stories", new TypeReference<List<ChangeStory>>() {})
+        Map<String, ChangeStory> stories = corrected.stories()
             .stream().collect(LinkedHashMap::new, (map, item) -> map.put(item.id(), item), Map::putAll);
         return new HistoryChapterDetailResponse(
-            projectId, chapter, chapter.storyRefs().stream().map(stories::get).filter(java.util.Objects::nonNull).toList()
+            projectId, corrected.presentationRevision(), chapter, chapter.storyRefs().stream().map(stories::get).filter(java.util.Objects::nonNull)
+                .filter(story -> !story.hiddenByDefault()).toList()
         );
     }
 
@@ -112,23 +131,38 @@ public class ProjectHistoryReadService {
     public HistoryStoryPageResponse stories(
         UUID userId, UUID projectId, String subject, boolean attentionOnly, Instant from, Instant to, int page, int size
     ) {
+        return stories(userId, projectId, subject, attentionOnly, false, from, to, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public HistoryStoryPageResponse stories(
+        UUID userId, UUID projectId, String subject, boolean attentionOnly, boolean includeHidden,
+        Instant from, Instant to, int page, int size
+    ) {
         owned(userId, projectId);
         validateTimeRange(from, to);
-        List<ChangeStory> values = snapshotList(userId, projectId, "stories", new TypeReference<List<ChangeStory>>() {})
-            .stream().filter(story -> subject == null || subject.isBlank()
+        ProjectHistoryCorrectionService.CorrectedHistory corrected = corrected(userId, projectId);
+        List<ChangeStory> values = corrected.stories()
+            .stream().filter(story -> includeHidden || !story.hiddenByDefault())
+            .filter(story -> subject == null || subject.isBlank()
                 || story.primarySubjectKey().contains(normalize(subject))
                 || story.affectedAreas().stream().anyMatch(area -> area.toLowerCase(Locale.ROOT).contains(subject.toLowerCase(Locale.ROOT))))
-            .filter(story -> !attentionOnly || !story.conflicts().isEmpty() || !story.unknowns().isEmpty())
+            .filter(story -> !attentionOnly || !story.conflicts().isEmpty() || !story.unknowns().isEmpty()
+                || !story.correctionConflicts().isEmpty())
             .filter(story -> from == null || !story.occurredTo().isBefore(from))
             .filter(story -> to == null || !story.occurredFrom().isAfter(to))
+            .sorted(Comparator.comparing(ChangeStory::pinned).reversed()
+                .thenComparing(ChangeStory::occurredFrom, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(ChangeStory::id))
             .toList();
         Slice<ChangeStory> slice = slice(values, page, size);
-        return new HistoryStoryPageResponse(projectId, slice.items(), slice.page(), slice.size(), slice.total(), slice.totalPages());
+        return new HistoryStoryPageResponse(projectId, corrected.presentationRevision(), slice.items(), slice.page(), slice.size(), slice.total(), slice.totalPages());
     }
 
     @Transactional(readOnly = true)
     public HistoryStoryDetailResponse story(UUID userId, UUID projectId, String storyId) {
-        List<ChangeStory> stories = snapshotList(userId, projectId, "stories", new TypeReference<List<ChangeStory>>() {});
+        ProjectHistoryCorrectionService.CorrectedHistory corrected = corrected(userId, projectId);
+        List<ChangeStory> stories = corrected.stories();
         ChangeStory story = stories.stream().filter(item -> item.id().equals(storyId)).findFirst()
             .orElseThrow(() -> new AppException("PROJECT_HISTORY_STORY_NOT_FOUND", "项目变化故事不存在", HttpStatus.NOT_FOUND));
         Map<UUID, ProjectHistoryEvent> events = eventRepository.findAllById(story.eventRefs()).stream()
@@ -136,31 +170,34 @@ public class ProjectHistoryReadService {
             .collect(LinkedHashMap::new, (map, event) -> map.put(event.getId(), event), Map::putAll);
         List<HistoryEventResponse> orderedEvents = story.eventRefs().stream().map(events::get).filter(java.util.Objects::nonNull)
             .map(this::toEvent).toList();
-        List<EvolutionThread> threads = snapshotList(userId, projectId, "threads", new TypeReference<List<EvolutionThread>>() {})
+        List<EvolutionThread> threads = corrected.threads()
             .stream().filter(thread -> thread.storyRefs().contains(storyId)).toList();
-        return new HistoryStoryDetailResponse(projectId, story, orderedEvents, threads);
+        return new HistoryStoryDetailResponse(projectId, corrected.presentationRevision(), story, orderedEvents, threads);
     }
 
     @Transactional(readOnly = true)
     public EvolutionThreadPageResponse threads(UUID userId, UUID projectId, String subject, int page, int size) {
-        List<EvolutionThread> values = snapshotList(userId, projectId, "threads", new TypeReference<List<EvolutionThread>>() {})
+        ProjectHistoryCorrectionService.CorrectedHistory corrected = corrected(userId, projectId);
+        List<EvolutionThread> values = corrected.threads()
             .stream().filter(thread -> subject == null || subject.isBlank()
                 || thread.subjectKey().contains(normalize(subject))
                 || thread.subjectLabel().toLowerCase(Locale.ROOT).contains(subject.toLowerCase(Locale.ROOT)))
             .toList();
         Slice<EvolutionThread> slice = slice(values, page, size);
-        return new EvolutionThreadPageResponse(projectId, slice.items(), slice.page(), slice.size(), slice.total(), slice.totalPages());
+        return new EvolutionThreadPageResponse(projectId, corrected.presentationRevision(), slice.items(), slice.page(), slice.size(), slice.total(), slice.totalPages());
     }
 
     @Transactional(readOnly = true)
     public EvolutionThreadDetailResponse thread(UUID userId, UUID projectId, String threadId) {
-        List<EvolutionThread> threads = snapshotList(userId, projectId, "threads", new TypeReference<List<EvolutionThread>>() {});
+        ProjectHistoryCorrectionService.CorrectedHistory corrected = corrected(userId, projectId);
+        List<EvolutionThread> threads = corrected.threads();
         EvolutionThread thread = threads.stream().filter(item -> item.id().equals(threadId)).findFirst()
             .orElseThrow(() -> new AppException("PROJECT_HISTORY_THREAD_NOT_FOUND", "项目演变链不存在", HttpStatus.NOT_FOUND));
-        Map<String, ChangeStory> stories = snapshotList(userId, projectId, "stories", new TypeReference<List<ChangeStory>>() {})
+        Map<String, ChangeStory> stories = corrected.stories()
             .stream().collect(LinkedHashMap::new, (map, item) -> map.put(item.id(), item), Map::putAll);
         return new EvolutionThreadDetailResponse(
-            projectId, thread, thread.storyRefs().stream().map(stories::get).filter(java.util.Objects::nonNull).toList()
+            projectId, corrected.presentationRevision(), thread,
+            thread.storyRefs().stream().map(stories::get).filter(java.util.Objects::nonNull).toList()
         );
     }
 
@@ -266,6 +303,131 @@ public class ProjectHistoryReadService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public HistoryCorrectionListResponse corrections(UUID userId, UUID projectId) {
+        return correctionService.list(userId, projectId);
+    }
+
+    @Transactional(readOnly = true)
+    public HistoryCorrectionListResponse corrections(UUID userId, UUID projectId, int page, int size) {
+        return correctionService.list(userId, projectId, page, size);
+    }
+
+    private ProjectHistoryCorrectionService.CorrectedHistory corrected(UUID userId, UUID projectId) {
+        owned(userId, projectId);
+        ProjectHistorySnapshot snapshot = snapshotRepository.findByProjectId(projectId).orElse(null);
+        return correctionService.resolve(projectId, snapshot);
+    }
+
+    private HistoryOverviewContent correctedOverview(
+        HistoryOverviewContent automatic,
+        ProjectHistoryCorrectionService.CorrectedHistory corrected
+    ) {
+        List<HistoryChapterSummary> summaries = representativeChapters(corrected).stream()
+            .map(chapter -> new HistoryChapterSummary(
+                 chapter.id(), chapter.title(), chapter.summary(), chapter.from(), chapter.to(), chapter.storyCount(),
+                 chapter.rawEventCount(), chapter.authority()
+            )).toList();
+        List<String> recent = corrected.stories().stream()
+            .filter(story -> !story.hiddenByDefault() && !"MERGED".equals(story.displayStatus()))
+            .sorted(Comparator.comparing(ChangeStory::pinned).reversed()
+                .thenComparing(ChangeStory::occurredTo, Comparator.nullsLast(Comparator.reverseOrder())))
+            .limit(5).map(story -> story.humanTitle() + "（" + date(story.occurredTo()) + "）").toList();
+        return new HistoryOverviewContent(
+            automatic.earliestConfirmedState(), automatic.currentState(), summaries, recent,
+            automatic.conflicts(), automatic.unknowns()
+        );
+    }
+
+    private List<HistoryChapter> representativeChapters(
+        ProjectHistoryCorrectionService.CorrectedHistory corrected
+    ) {
+        List<HistoryChapter> visible = corrected.chapters().stream()
+            .filter(chapter -> !chapter.hiddenByDefault())
+            .sorted(Comparator.comparing(HistoryChapter::from, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(HistoryChapter::to, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(HistoryChapter::id))
+            .toList();
+        if (visible.size() <= OVERVIEW_CHAPTER_LIMIT) return visible;
+
+        Map<String, ChangeStory> stories = corrected.stories().stream()
+            .collect(LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll);
+        LinkedHashMap<String, HistoryChapter> selected = new LinkedHashMap<>();
+        addRepresentative(selected, visible.get(0));
+        addRepresentative(selected, visible.get(visible.size() - 1));
+        addLatestMatching(selected, visible, chapter -> chapter.pinned() || chapter.storyRefs().stream()
+            .map(stories::get).filter(java.util.Objects::nonNull).anyMatch(ChangeStory::pinned));
+        addLatestMatching(selected, visible, chapter -> chapter.userDeclared()
+            || ProjectHistoryCorrectionService.USER_DECLARED_PRESENTATION.equals(chapter.presentationAuthority()));
+        addLatestMatching(selected, visible, chapter -> chapter.storyRefs().stream().map(stories::get)
+            .filter(java.util.Objects::nonNull).anyMatch(story -> !story.conflicts().isEmpty()
+                || !story.correctionConflicts().isEmpty()));
+        addLatestMatching(selected, visible, chapter -> chapter.storyRefs().stream().map(stories::get)
+            .filter(java.util.Objects::nonNull).anyMatch(ProjectHistoryReadService::hasImportantUnknown));
+
+        int spanSlots = OVERVIEW_CHAPTER_LIMIT - selected.size();
+        for (int slot = 1; slot <= spanSlots; slot++) {
+            int target = (int) Math.round((double) slot * (visible.size() - 1) / (spanSlots + 1));
+            addNearestUnselected(selected, visible, target);
+        }
+        for (HistoryChapter chapter : visible) {
+            if (selected.size() >= OVERVIEW_CHAPTER_LIMIT) break;
+            addRepresentative(selected, chapter);
+        }
+        return selected.values().stream()
+            .sorted(Comparator.comparing(HistoryChapter::from, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(HistoryChapter::to, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(HistoryChapter::id))
+            .limit(OVERVIEW_CHAPTER_LIMIT).toList();
+    }
+
+    private static void addLatestMatching(
+        Map<String, HistoryChapter> selected,
+        List<HistoryChapter> chapters,
+        java.util.function.Predicate<HistoryChapter> predicate
+    ) {
+        if (selected.size() >= OVERVIEW_CHAPTER_LIMIT) return;
+        for (int index = chapters.size() - 1; index >= 0; index--) {
+            HistoryChapter chapter = chapters.get(index);
+            if (predicate.test(chapter)) {
+                addRepresentative(selected, chapter);
+                return;
+            }
+        }
+    }
+
+    private static void addNearestUnselected(
+        Map<String, HistoryChapter> selected,
+        List<HistoryChapter> chapters,
+        int target
+    ) {
+        for (int distance = 0; distance < chapters.size(); distance++) {
+            int before = target - distance;
+            if (before >= 0 && !selected.containsKey(chapters.get(before).id())) {
+                addRepresentative(selected, chapters.get(before));
+                return;
+            }
+            int after = target + distance;
+            if (after < chapters.size() && !selected.containsKey(chapters.get(after).id())) {
+                addRepresentative(selected, chapters.get(after));
+                return;
+            }
+        }
+    }
+
+    private static void addRepresentative(Map<String, HistoryChapter> selected, HistoryChapter chapter) {
+        if (chapter != null && selected.size() < OVERVIEW_CHAPTER_LIMIT) selected.putIfAbsent(chapter.id(), chapter);
+    }
+
+    private static boolean hasImportantUnknown(ChangeStory story) {
+        return story.unknowns().stream().anyMatch(value -> {
+            String text = value == null ? "" : value.trim();
+            return !text.isBlank()
+                && !text.contains("未发现可独立验证的变更原因")
+                && !text.matches(".*原因保持\\s*UNKNOWN[。.]?.*");
+        });
+    }
+
     private void owned(UUID userId, UUID projectId) {
         projectRepository.findByIdAndUserId(projectId, userId)
             .orElseThrow(() -> new AppException("PROJECT_NOT_FOUND", "项目不存在", HttpStatus.NOT_FOUND));
@@ -293,12 +455,25 @@ public class ProjectHistoryReadService {
             event.getId(), event.getProjectId(), event.getStableEventKey(), event.getSourceType().name(),
             outbound(event.getSourceIdentity()), outbound(event.getSourceRevision()), outbound(event.getProjectRevision()), event.getOccurredAt(),
             event.getEffectiveAt(), outbound(event.getActorLabel()), event.getScope().name(), event.getCategory().name(),
-            event.getTransition().name(), outbound(event.getSafeSourceLabel()), strings(event.getAffectedPathsJson()),
+            event.getTransition().name(), eventUserSummary(event), outbound(event.getSafeSourceLabel()), strings(event.getAffectedPathsJson()),
             strings(event.getSubjectKeysJson()), strings(event.getEvidenceRefsJson()), strings(event.getRelationRefsJson()),
             event.getAuthority().name(), event.getEpistemicStatus().name(), map(event.getCoverageJson()),
             strings(event.getLimitationsJson()), ProjectHistorySourceCollector.safeDeepLink(event.getRawSourceDeepLink()),
             event.getRewriteState().name(), event.getUpdatedAt()
         );
+    }
+
+    private String eventUserSummary(ProjectHistoryEvent event) {
+        if (event.getSourceType() == SourceType.GIT
+            && Set.of(Category.COMMIT, Category.MERGE).contains(event.getCategory())) {
+            return languageService.commitSummary(
+                outbound(event.getSafeSourceLabel()), event.getTransition(), strings(event.getAffectedPathsJson())
+            );
+        }
+        return languageService.fallback(
+            event.getTransition(), outbound(event.getSafeSourceLabel()), strings(event.getAffectedPathsJson()),
+            List.of(outbound(event.getSafeSourceLabel())), List.of(event.getTransition().name())
+        ).title();
     }
 
     private List<String> strings(String json) {
@@ -360,6 +535,10 @@ public class ProjectHistoryReadService {
 
     private static String normalize(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]+", "-");
+    }
+
+    private static String date(Instant value) {
+        return value == null ? "时间未知" : LocalDate.ofInstant(value, ZoneOffset.UTC).toString();
     }
 
     private String safeCoverage(String json) {

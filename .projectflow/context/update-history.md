@@ -1,5 +1,39 @@
 # Update history
 
+## ProjectFlow V3.8.5 项目所有者最终签字 - 2026-08-24
+
+项目所有者明确批准 V3.8.5 最终 package 与 PR #15 合并，并要求不再等待本轮量化人工评分。新增独立、追加式 final human sign-off evidence，保留 Story/Chapter 三项平均分与核心维度最低分为 null，结论只写 `PASS_BY_EXPLICIT_OWNER_OVERRIDE`；没有改写 Round 1/2/3 或 Final Chapter 冻结工件。签字记录 reviewerCount=1、single-reviewer limitation、最终批准未重确认 item count，以及 human P0=0 仅代表没有新报告而非新的逐样本复评。V3.9 ENTRY 获批；Ready、merge、backfill 和清理仍需真实 CI，继续 NO TAG / NO RELEASE。
+
+## ProjectFlow V3.8.5 Final Sign-off A0 与产品语言合同 - 2026-08-24
+
+重新核对 GitHub 与本地后，PR #15 仍为 OPEN/Draft/MERGEABLE，Head `7d181af2` 与 base master `5cb5e496` 未变化；当前 Head 的 push/PR required CI 全绿。Final Chapter 与 Round 3 冻结合同测试 2/2 通过，30 Story、12 Final Chapter、三模型同头结果和 canonical-LF 哈希均未改变。交接材料记录的 8.5/10 总体判断只作为 human judgement 保存，不拆分为逐样本评分；Hash/ID 过长、内部 diagnostics 过载和用户层中英文混排正式登记为 V4.0 GUI 债务。新增正式中文产品语言与渐进披露合同。由于审核范围、三个 1-5 平均分、P0 结论和明确 merge 批准仍缺失，V3.8.5 继续为 HUMAN_REVIEW_REQUIRED / NOT PASS，V3.9 ENTRY 继续 BLOCKED。
+
+## ProjectFlow V3.8.5 Final Chapter Closure - 2026-08-23
+
+新增确定性 Representative Cluster、dominant/co-dominant/minor、代表覆盖、Claim ceiling、有界 repair 与保守 split。最终同头 run `32609107531` 在源码头 `e1b67f2` 上完成 GPT 5.6 Luna Responses/max、DeepSeek V4 Flash Chat/max、Qwen3.7 Plus Messages/max 三协议验收，均为 qualification 19/19 与 Chapter scenarios 9/9。Final Chapter 冻结为三 Provider 各 4、共 12 个；Round 3 的 30 Story/8 Chapter 继续不可变，30/30 展示变化保持 Truth/Evidence semantic hash 不变。自动工程 Gate 完成但真人字段为空，PR #15 继续 Draft，不执行 merge、backfill、Tag、Release 或清理。
+
+## ProjectFlow V3.8.5 RC3 Evidence 级叙事真实性封板 - 2026-08-12
+
+Round 2 因 GLM `glm-story-14` 把 skeleton/登录规划与同提交无关代码拼成“登录已实现”而正式冻结为 NEEDS_REVISION_NOT_APPROVED，原 artifacts 和哈希未改写。RC3 新增 Technical Atom 级 Claim attribution，按 subject/action 区分 direct Evidence 与不可提升状态的 indirect context，逐 Claim 计算 PLANNED/DECLARED/CONFIGURED/IMPLEMENTED/OBSERVED/VERIFIED/REMOVED/RESTORED/UNKNOWN/CONFLICTED 上限，并让 correction 与 fallback 通过同一真实性门禁。Chapter 现在必须复述具体 Primary 成果；同一泛化提交中的独立 Primary outcome 仅在 Supporting ownership 完整时由工程层确定性拆分。真实运行又发现 Chapter 修复请求误用了 Story 的 OUTPUT_TEMPLATE_JSON 合同、宽泛 `project-area-*` 区域主体会借区域内任意代码达到 IMPLEMENTED，以及 GLM 会偶发给出有动作/对象但没有明确结果的标题。现已分别改为基于原始 CHAPTER_SYNTHESIS_JSON 的 v6 专用 repair、区域级 OBSERVED ceiling，以及 Story v12 的动作/对象/结果门禁与可诊断确定性标题回退。GitHub 还暴露 Round 2 raw hash 受 LF/CRLF checkout 影响；验证现改为 immutable canonical-LF hash 加两个已记录 raw hash 的白名单，未改写冻结文件。冻结 Ground Truth 和阈值未修改；真实运行的首次 DeepSeek 资格失败、10/11 Dogfood 失败、GLM 安全 fallback 与标题波动及后续复验均作为独立 Evidence 保留。Round 3 真人批准、合并、backfill 和清理仍未授权，PR #15 保持 Draft。
+
+## ProjectFlow V3.8.5 RC2 大众可读历程最终封板 - 2026-08-10
+
+Round 1 正式记录为 NEEDS_REVISION_NOT_APPROVED，并保持原 30 Story/8 Chapter 文件不变。新增 Provider-neutral 的大众主体归一化与叙述蕴含校验：九种 claim state、受约束主体、原因 Evidence、不同义的 Title/Summary/Before/Change/After、自然未知表述和阶段级 Chapter 都由统一规则校验；模型输入不再包含原始路径、技术详情或 commit 摘要。当前本地后端 584 项、前端 58 项契约、构建、Hermes 与 Obsidian 通过；新的双 Provider workflow、Round 2 冻结和用户批准仍待完成，PR #15 保持 Draft。
+
+## ProjectFlow V3.8.5 RC2 模型与消费者一致性收口 - 2026-08-08
+
+- 模型 schema 缩为 Story/Chapter 措辞，Primary/Supporting、Chapter membership、生命周期和 Evidence 由工程层唯一维护。
+- Frontend、Gateway、Agent、Hermes、Obsidian 统一 corrected view 与 presentationRevision；补齐 hidden/pinned、split/merge 和 revision 漂移保护。
+- 本地 H2 546、PostgreSQL 16、前端 58、Playwright 9、Hermes 10、Obsidian 25 均通过；真实双 Provider 与人工 30/8 仍为 BLOCKED。
+
+## ProjectFlow V3.8.5 真实资格收口 - 2026-08-07
+
+补充记录真实 Provider 结果：GLM `glm-5.2` Responses 合同通过但 19-case qualification FAIL（20 请求、103,268 token、16 个降级窗口、24 个失败/未处理窗口）；DeepSeek Chat 合同通过但 19-case qualification FAIL（20 请求、79,702 token、14 个降级窗口、24 个失败/未处理窗口）。DeepSeek 11 个真实场景通过 10 个，ProjectFlow Dogfood 因 Primary/Supporting 引用不一致失败；五类非代码场景通过。GLM 真实场景、旧版项目理解/历程入口和人工可读性抽样未运行。PR #15 保持 Draft，未合并、未创建 Tag/Release、未清理分支或 worktree。
+
+## ProjectFlow V3.8.5 大众可读项目历程质量封顶与用户修正闭环 - 2026-08-06
+
+在 V3.8.0 的来源事件和可替换历史快照之上，新增 Raw Event → Technical Atom → Primary/Supporting Change → Story → Thread → Chapter 的多层语义压缩。首层中文优先呈现 Before/Change/After、成果摘要和工程详情下钻；模型只在有界窗口内改善措辞与展示角色，确定性规则保留成员、时间、Evidence 和安全边界。新增窗口 cache/checkpoint、失败/取消/跳过/未处理范围诊断，以及 `USER_DECLARED_PRESENTATION` 的重命名、摘要、分组、隐藏、置顶、合并/拆分、章节声明、恢复自动结果和乐观冲突处理。Gateway、Agent Context、Hermes、Frontend 和 Obsidian 共用修正后的只读展示视图；默认 Obsidian CORE 保持有限密度。确定性、H2、Playwright、Hermes、Obsidian 与 GitHub PostgreSQL 16 门禁已通过；双真实 Provider、非代码项目和人工可读性验收仍待隔离环境补跑，详细状态见 V3.8.5 Acceptance Report。
+
 ## ProjectFlow V3.8.0 基于证据的项目历程重建 - 2026-08-03
 
 项目历程取代 Capability Map 成为任意项目类型的通用主轴。新增来源事件库存和可替换历程快照，把 Git、文件、文档、ProjectFact、Agent Result 与可选 GitHub 元数据组织为总览、动态篇章、变化故事、演变链、原始事件和 Evidence 六层只读合同。显式刷新复用持久化 Job；工程层固定成员、时间、transition 和 Evidence，模型最多一次只改善措辞。同秒 Git 事件按 parent 拓扑和 Commit 内类别稳定排序，不再由 project-scoped 哈希或 SHA 字典序影响 Story 边界。Gateway、Hermes、Obsidian 和最小开发者预览复用同一读模型；旧 Timeline、Capability 与 Vault 内容保持兼容。本阶段无新依赖、无 Tag、无 Release，最终 CI、PR 与合并结果以 V3.8.0 Acceptance Report 为准。

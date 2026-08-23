@@ -24,13 +24,9 @@ import com.projectflow.service.ModelGatewayService;
 import com.projectflow.service.ModelOutputAdapter;
 import com.projectflow.service.ModelTaskType;
 import com.projectflow.service.ProjectHistoryPromptBuilder;
+import com.projectflow.service.ProjectHistoryModelOutputContract;
 
 class ProjectHistoryRealModelIT {
-    private static final Set<String> ROOT_FIELDS = Set.of("stories", "chapters");
-    private static final Set<String> STORY_FIELDS = Set.of(
-        "storyId", "humanTitle", "oneSentenceSummary", "reason", "reasonEvidenceRefs", "conflicts", "unknowns"
-    );
-    private static final Set<String> CHAPTER_FIELDS = Set.of("chapterId", "title", "summary", "storyRefs");
     private static final List<String> WEAK_OR_PROHIBITED = List.of(
         "优化了系统", "改进了功能", "进行了重构", "提升了体验", "修改了相关文件",
         "成熟度", "关键里程碑", "项目成功", "成功完成", "下一步", "路线图", "未来计划"
@@ -68,8 +64,8 @@ class ProjectHistoryRealModelIT {
         assertThat(qualification.duplicateEntityCount()).isZero();
         assertThat(qualification.crossProjectReferenceCount()).isZero();
         assertThat(qualification.invalidEvidenceRefCount()).isZero();
-        assertThat(qualification.chapterMembershipMismatchCount()).isZero();
         assertThat(qualification.reasonWithoutEvidenceCount()).isZero();
+        assertThat(qualification.missingReasonUnknownCount()).isZero();
         assertThat(qualification.emptyReadableSummaryCount()).isZero();
         assertThat(qualification.unsupportedClaimCount()).isZero();
     }
@@ -125,17 +121,14 @@ class ProjectHistoryRealModelIT {
         ProjectHistoryPromptBuilder.PromptInput input,
         ProjectHistoryPromptBuilder.PromptBuildResult prompt
     ) {
-        int rootSchemaViolations = root != null && root.isObject() && fields(root).equals(ROOT_FIELDS) ? 0 : 1;
+        int rootSchemaViolations = root != null && root.isObject()
+            && fields(root).equals(ProjectHistoryModelOutputContract.ROOT_FIELDS) ? 0 : 1;
         Map<String, Set<String>> eligibleEvidence = new LinkedHashMap<>();
         input.stories().forEach(story -> eligibleEvidence.put(story.storyId(), Set.copyOf(story.reasonEligibleEvidenceRefs())));
-        Map<String, List<String>> expectedChapterStories = new LinkedHashMap<>();
-        input.chapters().forEach(chapter -> expectedChapterStories.put(chapter.chapterId(), chapter.storyRefs()));
-
         List<String> returnedStoryIds = new ArrayList<>();
         List<String> returnedChapterIds = new ArrayList<>();
         int entitySchemaViolations = 0;
         int invalidEvidenceRefs = 0;
-        int chapterMembershipMismatches = 0;
         int reasonWithoutEvidence = 0;
         int missingReasonUnknown = 0;
         int emptyReadableSummaries = 0;
@@ -146,7 +139,9 @@ class ProjectHistoryRealModelIT {
             rootSchemaViolations++;
         } else {
             for (JsonNode story : stories) {
-                if (!story.isObject() || !fields(story).equals(STORY_FIELDS)) entitySchemaViolations++;
+                if (!story.isObject() || !fields(story).equals(ProjectHistoryModelOutputContract.STORY_FIELDS)) {
+                    entitySchemaViolations++;
+                }
                 String storyId = text(story, "storyId");
                 returnedStoryIds.add(storyId);
                 Set<String> eligible = eligibleEvidence.getOrDefault(storyId, Set.of());
@@ -154,8 +149,15 @@ class ProjectHistoryRealModelIT {
                 invalidEvidenceRefs += refs.stream().filter(ref -> !eligible.contains(ref)).count();
                 String reason = text(story, "reason");
                 if (!reason.isBlank() && refs.isEmpty()) reasonWithoutEvidence++;
-                boolean reasonUnknownDisclosed = strings(story.path("unknowns")).stream()
-                    .anyMatch(value -> value.contains("原因") && (value.contains("未知") || value.contains("没有") || value.contains("缺少")));
+                List<String> unknownWording = new ArrayList<>();
+                String currentUnknown = text(story, "unknownWording");
+                if (!currentUnknown.isBlank()) unknownWording.add(currentUnknown);
+                unknownWording.addAll(strings(story.path("unknowns")));
+                boolean reasonUnknownDisclosed = unknownWording.stream().anyMatch(value ->
+                    (value.contains("原因") || value.contains("为什么"))
+                        && (value.contains("未知") || value.contains("没有") || value.contains("缺少")
+                            || value.contains("不足") || value.contains("无法确认"))
+                );
                 if (eligible.isEmpty() && reason.isBlank() && !reasonUnknownDisclosed) {
                     missingReasonUnknown++;
                 }
@@ -171,12 +173,11 @@ class ProjectHistoryRealModelIT {
             rootSchemaViolations++;
         } else {
             for (JsonNode chapter : chapters) {
-                if (!chapter.isObject() || !fields(chapter).equals(CHAPTER_FIELDS)) entitySchemaViolations++;
+                if (!chapter.isObject() || !fields(chapter).equals(ProjectHistoryModelOutputContract.CHAPTER_FIELDS)) {
+                    entitySchemaViolations++;
+                }
                 String chapterId = text(chapter, "chapterId");
                 returnedChapterIds.add(chapterId);
-                if (!strings(chapter.path("storyRefs")).equals(expectedChapterStories.get(chapterId))) {
-                    chapterMembershipMismatches++;
-                }
                 String title = text(chapter, "title");
                 String summary = text(chapter, "summary");
                 if (title.length() < 4 || summary.length() < 6) emptyReadableSummaries++;
@@ -192,10 +193,9 @@ class ProjectHistoryRealModelIT {
             + difference(prompt.includedChapterIds(), uniqueChapterIds).size();
         int unknownEntities = difference(uniqueStoryIds, prompt.includedStoryIds()).size()
             + difference(uniqueChapterIds, prompt.includedChapterIds()).size();
-
         return new Qualification(
             rootSchemaViolations, entitySchemaViolations, missingEntities, duplicateEntities, unknownEntities,
-            invalidEvidenceRefs, chapterMembershipMismatches, reasonWithoutEvidence, missingReasonUnknown,
+            invalidEvidenceRefs, reasonWithoutEvidence, missingReasonUnknown,
             emptyReadableSummaries, unsupportedClaims, returnedStoryIds.size(), returnedChapterIds.size()
         );
     }
@@ -216,11 +216,12 @@ class ProjectHistoryRealModelIT {
         Files.createDirectories(output);
 
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("version", "projectflow-v3.8.0-history-real-model-v2");
+        artifact.put("version", "projectflow-v3.8.5-history-real-model-v4");
         artifact.put("generatedAt", Instant.now().toString());
         artifact.put("promptVersion", ProjectHistoryPromptBuilder.PROMPT_VERSION);
         artifact.put("provider", Map.of(
-            "name", config.name(), "model", config.model(), "protocol", config.protocol().name()
+            "name", config.name(), "model", config.model(), "protocol", config.protocol().name(),
+            "reasoningEffort", config.reasoningEffort()
         ));
         artifact.put("input", Map.of(
             "storyCount", prompt.includedStoryIds().size(),
@@ -285,7 +286,6 @@ class ProjectHistoryRealModelIT {
         int duplicateEntityCount,
         int crossProjectReferenceCount,
         int invalidEvidenceRefCount,
-        int chapterMembershipMismatchCount,
         int reasonWithoutEvidenceCount,
         int missingReasonUnknownCount,
         int emptyReadableSummaryCount,
@@ -294,4 +294,5 @@ class ProjectHistoryRealModelIT {
         int returnedChapterCount
     ) {
     }
+
 }

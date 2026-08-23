@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Semaphore;
+import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -89,7 +90,7 @@ public class ModelGatewayService {
         int requestTimeoutSeconds
     ) {
         this(
-            objectMapper, aiProviderUrlGuard, outputAdapter, new ModelCapabilityRegistry(), new ModelRequestPolicy(),
+            objectMapper, aiProviderUrlGuard, outputAdapter, new ModelCapabilityRegistry(), ModelRequestPolicy.runtimeConfigured(),
             new ModelProtocolAdapterRegistry(List.of(
                 new OpenAiResponsesAdapter(aiProviderUrlGuard),
                 new OpenAiChatCompletionsAdapter(aiProviderUrlGuard),
@@ -133,7 +134,7 @@ public class ModelGatewayService {
         try {
             firstResponse = sendStructuredRequest(provider, prompt, task, capabilities, initialParameters);
         } catch (ModelSchemaMismatchException mismatch) {
-            return repairSchema(provider, task, capabilities, initialParameters, mismatch);
+            return repairSchema(provider, prompt, task, capabilities, initialParameters, mismatch);
         } catch (ModelOutputTruncatedException exhausted) {
             return retryExhaustedOutput(provider, prompt, task, capabilities, initialParameters, exhausted, null);
         }
@@ -143,6 +144,7 @@ public class ModelGatewayService {
 
     private StructuredModelResponse repairSchema(
         AiProvider provider,
+        String originalPrompt,
         ModelTaskType task,
         ModelCapabilities capabilities,
         RequestParameters initialParameters,
@@ -151,14 +153,17 @@ public class ModelGatewayService {
         RequestParameters retryParameters = requestPolicy.recovery(
             initialParameters, capabilities, task, "SCHEMA_REPAIR_RETRY", firstFailure.rawContent().length()
         );
-        String repairPrompt = """
-            上一次模型结果是可读取的 JSON，但不符合目标业务 Schema。不要重新分析事实，只把已有结果转换为下面结构。
-            只返回转换后的 JSON；缺失字段使用空字符串或空数组，不要补造证据。已有非空数组必须逐项保留，
-            不得为了满足结构把它们替换为空；尤其保留 Evidence ID、project shape、applicable view、claim、
-            capabilityDecisions/toolRequests、unknown、conflict、warning 和 selfCheck 的原有语义。
-            目标 Schema：%s
-            待转换结果：%s
-            """.formatted(task.minimalSchema(), bounded(firstFailure.rawContent(), 30_000));
+        String repairPrompt = ProjectHistoryPromptBuilder.schemaRepair(originalPrompt, task, objectMapper);
+        if (repairPrompt.isBlank()) {
+            repairPrompt = """
+                上一次模型结果是可读取的 JSON，但不符合目标业务 Schema。不要重新分析事实，只把已有结果转换为下面结构。
+                只返回转换后的 JSON；缺失字段使用空字符串或空数组，不要补造证据。已有非空数组必须逐项保留，
+                不得为了满足结构把它们替换为空；尤其保留 Evidence ID、project shape、applicable view、claim、
+                capabilityDecisions/toolRequests、unknown、conflict、warning 和 selfCheck 的原有语义。
+                目标 Schema：%s
+                待转换结果：%s
+                """.formatted(task.minimalSchema(), bounded(firstFailure.rawContent(), 30_000));
+        }
         try {
             StructuredModelResponse repaired = sendStructuredRequest(provider, repairPrompt, task, capabilities, retryParameters);
             return repaired.withRecovery(firstFailure.diagnostics(), "SCHEMA_REPAIR_RETRY", true);
@@ -194,8 +199,9 @@ public class ModelGatewayService {
         );
         String retryPrompt = prompt + (reasoningExhausted ? """
 
-            【可见输出恢复】上次 reasoning 疑似占满共享预算且没有形成完整可见结果。请直接生成最终 JSON，
-            不要输出推理过程；保留所有有证据支持的重要条目。
+            【可见输出恢复】上次响应只形成 reasoning，没有形成可见 content。请重新处理同一份有界输入，
+            保持配置的推理强度并为可见结果预留输出空间；结束 reasoning 后必须在 content 中返回完整目标 JSON。
+            不要把 reasoning 原文复制到 content；保留所有有证据支持的重要条目。
             """ : """
 
             【截断恢复】上次最终 JSON 未完整输出。本次预算已按首次结果提高，请直接返回完整目标 JSON，
@@ -275,16 +281,20 @@ public class ModelGatewayService {
         );
         CanonicalModelRequest request = new CanonicalModelRequest(
             provider,
-            "只返回合法 JSON，不要 Markdown 代码块。所有自然语言字段必须使用简体中文；技术名、文件路径和代码标识符保留原文。",
+            structuredSystemPrompt(parameters, capabilities),
             prompt,
             parameters.effectiveMaxTokens(),
             parameters.temperatureSent() ? parameters.effectiveTemperature() : null,
             capabilities.supportsJsonMode() || capabilities.supportsStructuredOutput(),
-            reasoningEffort(provider, task, capabilities, parameters),
+            requestPolicy.reasoningEffort(capabilities),
             configuredConnectionTimeout,
             timeout
         );
-        int allowedAttempts = "NONE".equals(parameters.retryType()) ? MAX_TRANSPORT_ATTEMPTS : 1;
+        // A semantic recovery still owns the same single bounded transport
+        // retry as an initial request. This retries only the identical request
+        // after a transport failure or explicitly transient HTTP status; it
+        // does not create another semantic recovery or alter model effort.
+        int allowedAttempts = MAX_TRANSPORT_ATTEMPTS;
         long requestSequenceStartedAt = System.nanoTime();
         for (int attempt = 1; attempt <= allowedAttempts; attempt++) {
             try {
@@ -307,7 +317,9 @@ public class ModelGatewayService {
                         pauseBeforeRetry(attempt);
                         continue;
                     }
-                    throw new ModelHttpException(http.statusCode(), attempt);
+                    throw new ModelHttpException(
+                        http.statusCode(), attempt, http.errorType(), http.errorCode(), http.errorParam()
+                    );
                 }
                 if (attempt >= allowedAttempts) {
                     throw new ModelTransportException(exception, attempt);
@@ -318,20 +330,14 @@ public class ModelGatewayService {
         throw new IOException("model request failed");
     }
 
-    private static String reasoningEffort(
-        AiProvider provider,
-        ModelTaskType task,
-        ModelCapabilities capabilities,
-        RequestParameters parameters
-    ) {
-        if (!capabilities.supportsReasoningControl()) {
-            return null;
-        }
-        return switch (provider.getProtocol()) {
-            case OPENAI_RESPONSES -> "high";
-            case OPENAI_CHAT_COMPLETIONS -> "high";
-            case ANTHROPIC_MESSAGES -> null;
-        };
+    private String structuredSystemPrompt(RequestParameters parameters, ModelCapabilities capabilities) {
+        String base = "只返回合法 JSON，不要 Markdown 代码块。所有自然语言字段必须使用简体中文；技术名、文件路径和代码标识符保留原文。";
+        if (requestPolicy.reasoningEffort(capabilities) == null) return base;
+        String reasoningContract = " 保持配置的充分推理强度，在 reasoning 阶段完成判断并正常结束 reasoning，"
+            + "随后必须把完整 JSON 写入可见 content；不得在 content 为空时结束，也不得把 reasoning 原文复制到 content。";
+        return "EMPTY_AFTER_REASONING_RETRY".equals(parameters.retryType())
+            ? base + " 当前是唯一可见输出恢复请求。" + reasoningContract
+            : base + reasoningContract;
     }
 
     private StructuredModelResponse parseCanonicalResponse(
@@ -366,7 +372,8 @@ public class ModelGatewayService {
             provider.getMaxTokens(), parameters.taskRequestedMaxTokens(), parameters.effectiveMaxTokens(),
             parameters.configuredTemperature(), parameters.recommendedTemperature(),
             parameters.effectiveTemperature() == null ? 0 : parameters.effectiveTemperature(), parameters.temperatureSent(),
-            parameters.temperatureDecision(), parameters.maxTokenDecision(), timeoutSeconds, latencyMs, true,
+            parameters.temperatureDecision(), parameters.maxTokenDecision(),
+            reasoningEffortDiagnostic(capabilities), timeoutSeconds, latencyMs, true,
             !content.isBlank(), truncated, !"NONE".equals(parameters.retryType()), false, transportRetryCount,
             false, false, 0, usageSource, response.reasoningPresent(), response.reasoningLength(), reasoningExhausted,
             1 + transportRetryCount, diagnosticRetryType, false, "RESPONSE_PARSE", "", provider.getProtocol().name(),
@@ -456,7 +463,8 @@ public class ModelGatewayService {
             finishReason, promptTokens, completionTokens, totalTokens, provider.getMaxTokens(),
             parameters.taskRequestedMaxTokens(), parameters.effectiveMaxTokens(), parameters.configuredTemperature(),
             parameters.recommendedTemperature(), parameters.effectiveTemperature() == null ? 0 : parameters.effectiveTemperature(),
-            parameters.temperatureSent(), parameters.temperatureDecision(), parameters.maxTokenDecision(), timeoutSeconds, latencyMs,
+            parameters.temperatureSent(), parameters.temperatureDecision(), parameters.maxTokenDecision(),
+            reasoningEffortDiagnostic(capabilities), timeoutSeconds, latencyMs,
             true, !content.isBlank(), truncated, !"NONE".equals(parameters.retryType()), false,
             transportRetryCount, false, false, 0, usageSource, reasoningLength > 0, reasoningLength,
             reasoningExhausted, 1 + transportRetryCount, diagnosticRetryType, false, "RESPONSE_PARSE", "",
@@ -538,6 +546,11 @@ public class ModelGatewayService {
         return length;
     }
 
+    private String reasoningEffortDiagnostic(ModelCapabilities capabilities) {
+        String effort = requestPolicy.reasoningEffort(capabilities);
+        return effort == null ? "" : effort;
+    }
+
     private int estimateTokens(String content) {
         return content == null || content.isBlank() ? 0 : Math.max(1, (int) Math.ceil(content.length() / 4.0));
     }
@@ -580,6 +593,7 @@ public class ModelGatewayService {
         boolean temperatureSent,
         String temperatureDecision,
         String maxTokenDecision,
+        String reasoningEffort,
         long timeoutSeconds,
         long latencyMs,
         boolean requestSucceeded,
@@ -607,7 +621,7 @@ public class ModelGatewayService {
         static ModelCallDiagnostics unknown(ModelOutputAdapter.ParsedOutput parsed) {
             return new ModelCallDiagnostics(
                 "", "", "", "", "UNKNOWN", 0, 0, "", 0, 0, 0, 0, 0, 0,
-                0, 0, 0, false, "", "", 0, 0, true, true, parsed.partial(), false, false,
+                0, 0, 0, false, "", "", "", 0, 0, true, true, parsed.partial(), false, false,
                 0, parsed.repaired(), parsed.partial(), parsed.recoveredItems(), "UNAVAILABLE", false, 0, false,
                 0, "NONE", true, "", "", "UNKNOWN", "UNKNOWN", ""
             );
@@ -630,9 +644,14 @@ public class ModelGatewayService {
         }
 
         ModelCallDiagnostics withRecovery(String type, boolean succeeded) {
+            return withRecovery(type, succeeded, 1);
+        }
+
+        ModelCallDiagnostics withRecovery(String type, boolean succeeded, int additionalRequestCount) {
             boolean outputRecovery = !"SCHEMA_REPAIR_RETRY".equals(type);
             return copy(
-                promptTokens, completionTokens, totalTokens, latencyMs, requestCount + 1, type,
+                promptTokens, completionTokens, totalTokens, latencyMs,
+                requestCount + Math.max(1, additionalRequestCount), type,
                 truncated, outputRecovery, outputRecovery && succeeded, jsonRepaired, partialResult, recoveredItems,
                 schemaMatched, succeeded ? "" : failureStage, succeeded ? "" : failureCode
             );
@@ -669,7 +688,7 @@ public class ModelGatewayService {
                 entryPoint, taskType, providerName, modelName, capabilityProfile, inputSize, promptSize, finishReason,
                 newPromptTokens, newCompletionTokens, newTotalTokens, providerMaxTokens, taskPolicyMaxTokens,
                 effectiveMaxTokens, providerTemperature, recommendedTemperature, effectiveTemperature, temperatureSent,
-                temperatureDecision, maxTokenDecision, timeoutSeconds, newLatency, requestSucceeded, contentPresent,
+                temperatureDecision, maxTokenDecision, reasoningEffort, timeoutSeconds, newLatency, requestSucceeded, contentPresent,
                 newTruncated, retryAttempted, retrySucceeded, transportRetryCount, repaired, partial, recovered,
                 usageSource, reasoningPresent, reasoningLength, reasoningBudgetExhausted, newRequestCount, newRetryType,
                 matched, stage, code, protocol, normalizedFinishReason, requestId
@@ -678,16 +697,57 @@ public class ModelGatewayService {
     }
 
     public static final class ModelHttpException extends IOException {
+        private static final Pattern SAFE_HTTP_TOKEN = Pattern.compile("[a-z][a-z0-9_.:-]{0,63}");
+        private static final Pattern CREDENTIAL_SHAPED_HTTP_TOKEN = Pattern.compile(
+            "(?:^|[_.:-])(?:sk|pk|rk|ark|bearer|token|secret|authorization|password|credential)(?:$|[_.:-])"
+        );
         private final int statusCode;
         private final int requestCount;
+        private final String errorType;
+        private final String errorCode;
+        private final String errorParam;
         public ModelHttpException(int statusCode) { this(statusCode, 1); }
         public ModelHttpException(int statusCode, int requestCount) {
-            super("model HTTP " + statusCode);
+            this(statusCode, requestCount, "", "", "");
+        }
+        public ModelHttpException(
+            int statusCode,
+            int requestCount,
+            String errorType,
+            String errorCode,
+            String errorParam
+        ) {
+            super(httpFailureMessage(statusCode, errorType, errorCode, errorParam));
             this.statusCode = statusCode;
             this.requestCount = Math.max(1, requestCount);
+            this.errorType = safeHttpToken(errorType);
+            this.errorCode = safeHttpToken(errorCode);
+            this.errorParam = safeHttpToken(errorParam);
         }
         public int statusCode() { return statusCode; }
         public int requestCount() { return requestCount; }
+        public String errorType() { return errorType; }
+        public String errorCode() { return errorCode; }
+        public String errorParam() { return errorParam; }
+
+        private static String httpFailureMessage(int statusCode, String type, String code, String param) {
+            StringBuilder result = new StringBuilder("model HTTP ").append(statusCode);
+            String safeType = safeHttpToken(type);
+            String safeCode = safeHttpToken(code);
+            String safeParam = safeHttpToken(param);
+            if (!safeType.isBlank()) result.append(" type=").append(safeType);
+            if (!safeCode.isBlank()) result.append(" code=").append(safeCode);
+            if (!safeParam.isBlank()) result.append(" param=").append(safeParam);
+            return result.toString();
+        }
+
+        private static String safeHttpToken(String value) {
+            if (value == null || value.isBlank()) return "";
+            String safe = value.trim();
+            if (!SAFE_HTTP_TOKEN.matcher(safe).matches()
+                || CREDENTIAL_SHAPED_HTTP_TOKEN.matcher(safe).find()) return "";
+            return safe;
+        }
     }
 
     public static final class ModelTransportException extends IOException {

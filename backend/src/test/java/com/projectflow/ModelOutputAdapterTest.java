@@ -2,10 +2,14 @@ package com.projectflow;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.service.ModelOutputAdapter;
+import com.projectflow.service.ModelTaskType;
 
 class ModelOutputAdapterTest {
     private final ModelOutputAdapter adapter = new ModelOutputAdapter(new ObjectMapper());
@@ -18,6 +22,155 @@ class ModelOutputAdapterTest {
         assertThat(adapter.items(object.root(), "capabilities")).hasSize(1);
         assertThat(adapter.items(array.root(), "capabilities")).hasSize(1);
         assertThat(object.repaired()).isFalse();
+    }
+
+    @Test
+    void normalizesHistorySingleObjectsAndOmittedEmptyContainersWithoutInventingContent() throws Exception {
+        var story = adapter.parse(
+            "{\"storyId\":\"story-one\",\"humanTitle\":\"形成入口\"}",
+            ModelTaskType.PROJECT_HISTORY_SYNTHESIS
+        );
+        var chapter = adapter.parse(
+            "{\"chapterId\":\"chapter-one\",\"representedClusterIds\":[\"cluster-one\"],"
+                + "\"title\":\"形成入口\",\"summary\":\"入口已经形成。\"}",
+            ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS
+        );
+        var storiesOnly = adapter.parse(
+            "{\"stories\":[{\"storyId\":\"story-two\"}]}",
+            ModelTaskType.PROJECT_HISTORY_SYNTHESIS
+        );
+
+        assertThat(story.root().path("stories")).singleElement()
+            .satisfies(value -> assertThat(value.path("storyId").asText()).isEqualTo("story-one"));
+        assertThat(story.root().path("chapters")).isEmpty();
+        assertThat(chapter.root().path("chapters")).singleElement()
+            .satisfies(value -> assertThat(value.path("chapterId").asText()).isEqualTo("chapter-one"));
+        assertThat(storiesOnly.root().path("stories")).hasSize(1);
+        assertThat(storiesOnly.root().path("chapters")).isEmpty();
+        assertThat(ModelTaskType.PROJECT_HISTORY_SYNTHESIS.schemaMatches(story.root(), adapter)).isTrue();
+        assertThat(ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS.schemaMatches(chapter.root(), adapter)).isTrue();
+    }
+
+    @Test
+    void decodesStringifiedHistoryContainersAndWrapsSingleContainerObjectsWithoutChangingFields() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        String storyObject = "{\"storyId\":\"story-one\",\"humanTitle\":\"形成入口\"}";
+        String chapterObject = "{\"chapterId\":\"chapter-one\",\"representedClusterIds\":[\"cluster-one\"],"
+            + "\"title\":\"形成入口\",\"summary\":\"入口已经形成。\"}";
+        String encodedWrapper = mapper.writeValueAsString(
+            Map.of("result", mapper.writeValueAsString(Map.of("chapters", List.of(mapper.readTree(chapterObject)))))
+        );
+
+        var stringifiedStory = adapter.parse(
+            mapper.writeValueAsString(Map.of("stories", storyObject, "chapters", "[]")),
+            ModelTaskType.PROJECT_HISTORY_SYNTHESIS
+        );
+        var stringifiedChapterWrapper = adapter.parse(
+            encodedWrapper,
+            ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS
+        );
+        var singleContainers = adapter.parse(
+            "{\"stories\":" + storyObject + ",\"chapters\":[]}",
+            ModelTaskType.PROJECT_HISTORY_SYNTHESIS
+        );
+        var singleChapterContainer = adapter.parse(
+            "{\"chapters\":" + chapterObject + "}",
+            ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS
+        );
+
+        assertThat(stringifiedStory.root().path("stories")).singleElement()
+            .satisfies(value -> assertThat(value.path("storyId").asText()).isEqualTo("story-one"));
+        assertThat(stringifiedChapterWrapper.root().path("chapters")).singleElement()
+            .satisfies(value -> assertThat(value.path("chapterId").asText()).isEqualTo("chapter-one"));
+        assertThat(singleContainers.root().path("stories")).singleElement();
+        assertThat(singleChapterContainer.root().path("chapters")).singleElement();
+        assertThat(stringifiedStory.repaired()).isTrue();
+        assertThat(stringifiedChapterWrapper.repaired()).isTrue();
+    }
+
+    @Test
+    void normalizesIdKeyedHistoryMapsAndKnownNarrativeAliasesWithoutChangingItemContent() throws Exception {
+        var history = adapter.parse(
+            "{\"storyNarratives\":{\"story-one\":{\"humanTitle\":\"形成入口\"}},"
+                + "\"chapter_narratives\":{\"chapter-one\":{\"title\":\"入口阶段\",\"summary\":\"入口已经形成。\"}}}",
+            ModelTaskType.PROJECT_HISTORY_SYNTHESIS
+        );
+        var chapter = adapter.parse(
+            "{\"historyChapters\":{\"chapter-two\":{\"representedClusterIds\":[\"cluster-one\"],"
+                + "\"title\":\"交付阶段\",\"summary\":\"交付结果已经形成。\"}}}",
+            ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS
+        );
+
+        assertThat(history.root().path("stories")).singleElement().satisfies(value -> {
+            assertThat(value.path("storyId").asText()).isEqualTo("story-one");
+            assertThat(value.path("humanTitle").asText()).isEqualTo("形成入口");
+        });
+        assertThat(history.root().path("chapters")).singleElement().satisfies(value -> {
+            assertThat(value.path("chapterId").asText()).isEqualTo("chapter-one");
+            assertThat(value.path("title").asText()).isEqualTo("入口阶段");
+        });
+        assertThat(chapter.root().path("chapters")).singleElement().satisfies(value -> {
+            assertThat(value.path("chapterId").asText()).isEqualTo("chapter-two");
+            assertThat(value.path("representedClusterIds").path(0).asText()).isEqualTo("cluster-one");
+        });
+        assertThat(ModelTaskType.PROJECT_HISTORY_SYNTHESIS.schemaMatches(history.root(), adapter)).isTrue();
+        assertThat(ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS.schemaMatches(chapter.root(), adapter)).isTrue();
+        assertThat(history.repaired()).isTrue();
+        assertThat(chapter.repaired()).isTrue();
+    }
+
+    @Test
+    void decodesStringifiedJsonForExactObjectTaskWithoutInventingMissingFields() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        String exact = mapper.writeValueAsString(Map.of("summary", "ProjectFact 保存已发生的开发结果。"));
+        String wrapped = mapper.writeValueAsString(Map.of(
+            "status", "ok",
+            "result", exact
+        ));
+
+        var direct = adapter.parse(mapper.writeValueAsString(exact),
+            ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST);
+        var nested = adapter.parse(wrapped, ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST);
+        var unrelated = adapter.parse("{\"result\":\"普通文本\"}",
+            ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST);
+
+        assertThat(direct.root().path("summary").asText()).isEqualTo("ProjectFact 保存已发生的开发结果。");
+        assertThat(nested.root().path("summary").asText()).isEqualTo("ProjectFact 保存已发生的开发结果。");
+        assertThat(ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST.schemaMatches(direct.root(), adapter)).isTrue();
+        assertThat(ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST.schemaMatches(nested.root(), adapter)).isTrue();
+        assertThat(ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST.schemaMatches(unrelated.root(), adapter)).isFalse();
+    }
+
+    @Test
+    void unwrapsNamedExactHistoryTemplateWithMetadataWithoutKeepingWrapperFields() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        String exact = "{\"chapters\":[{\"chapterId\":\"chapter-one\","
+            + "\"representedClusterIds\":[\"cluster-one\"],\"title\":\"形成入口\","
+            + "\"summary\":\"入口已经形成。\"}]}";
+        String response = mapper.writeValueAsString(Map.of(
+            "status", "ok",
+            "REQUIRED_OUTPUT_TEMPLATE_JSON", exact
+        ));
+
+        var parsed = adapter.parse(response, ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS);
+
+        assertThat(parsed.root().fieldNames()).toIterable().containsExactly("chapters");
+        assertThat(parsed.root().path("chapters")).singleElement()
+            .satisfies(value -> assertThat(value.path("chapterId").asText()).isEqualTo("chapter-one"));
+        assertThat(ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS.schemaMatches(parsed.root(), adapter)).isTrue();
+    }
+
+    @Test
+    void prefersCompleteHistoryContainerOverEarlierSingleStoryCandidate() throws Exception {
+        String response = "示例：{\"storyId\":\"story-one\",\"humanTitle\":\"示例\"}\n正式："
+            + "{\"stories\":[{\"storyId\":\"story-one\"},{\"storyId\":\"story-two\"}],"
+            + "\"chapters\":[]}";
+
+        var parsed = adapter.parse(response, ModelTaskType.PROJECT_HISTORY_SYNTHESIS);
+
+        assertThat(parsed.root().path("stories")).hasSize(2);
+        assertThat(parsed.root().path("stories").findValuesAsText("storyId"))
+            .containsExactly("story-one", "story-two");
     }
 
     @Test

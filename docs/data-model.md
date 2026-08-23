@@ -1,5 +1,15 @@
 # Data Model
 
+The final human-readability closure adds no entity, table or migration. Claim state and narrative envelopes are derived at refresh time from existing events and Evidence. Validated wording remains inside the replaceable ProjectHistorySnapshot/checkpoint presentation payload and cannot become ProjectFact.
+
+## V3.8.5 presentation and checkpoint additions
+
+RC2 does not add a durable fact entity or migrate ProjectFact. `presentationRevision` is a corrected-view consistency token exposed by DTOs, not a new truth source. `HistoryEventResponse.userSummary` is derived display text; `safeSourceLabel`, source revision, paths and Evidence remain available for audit and are never overwritten.
+
+`project_history_window_checkpoints` is a bounded, project-owned cache/checkpoint table. It stores window identity, source fingerprint, cache key, status, counts, safe diagnostics and validated presentation JSON only; it never stores Prompt, raw response, reasoning, credentials or complete source material.
+
+`project_history_corrections` stores durable `USER_DECLARED_PRESENTATION` overlays with target IDs, actor, source/presentation revisions, declared values, status, conflict/revert relation and timestamps. Corrections are applied at read time and cannot promote a claim or mutate ProjectFact, ProjectHistoryEvent or Evidence. Snapshot JSON remains replaceable and old snapshots remain readable through compatibility defaults.
+
 ## V3.8.0 Project History
 
 ### project_history_events

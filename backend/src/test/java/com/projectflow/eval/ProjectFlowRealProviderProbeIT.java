@@ -58,17 +58,21 @@ class ProjectFlowRealProviderProbeIT {
 
         var response = gateway.callStructured(
             provider,
-            "这是最小兼容性检查。只返回 {\"ok\":true}。",
-            ModelTaskType.PROVIDER_CONNECTION_TEST
+            "请用一句简短中文概括以下事实：ProjectFlow 使用 ProjectFact 保存已发生的开发结果。"
+                + "输出一个 JSON 对象，其中只包含名为 summary 的字符串字段。",
+            ModelTaskType.PROVIDER_PROJECTFLOW_COMPATIBILITY_TEST
         );
         var diagnostics = response.diagnostics();
 
-        assertThat(response.parsed().root().path("ok").asBoolean()).isTrue();
+        assertThat(response.parsed().root().path("summary").asText()).isNotBlank();
         assertThat(diagnostics.requestSucceeded()).isTrue();
         assertThat(diagnostics.schemaMatched()).isTrue();
         assertThat(diagnostics.requestCount()).isBetween(1, 2);
         assertThat(diagnostics.protocol()).isEqualTo(config.protocol().name());
         assertThat(diagnostics.modelName()).isEqualTo(config.model());
+        assertThat(diagnostics.reasoningEffort()).isEqualTo(
+            config.supportsReasoningControl() ? config.reasoningEffort() : ""
+        );
         assertThat(diagnostics.requestId()).doesNotContain(config.apiKey());
     }
 }

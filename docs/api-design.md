@@ -1,6 +1,24 @@
 # API Design
 
+## V3.8.5 final narrative fields
+
+The internal model contract adds `beforeWording`, `changeWording`, `afterWording` and `unknownWording`; these are presentation fields only. Public History DTOs keep the existing Before/Change/After locations and engineering-owned identity, role, time, membership and Evidence fields. No new write API or Provider-specific API was added.
+
 Base path: `/api`
+
+V3.8.5 RC2 adds direct `presentationRevision` parity to History overview, Chapter, Story and Thread responses. Native and Gateway Story list endpoints accept bounded `includeHidden`; default false preserves the public reading layer, while explicit consumers such as Obsidian can retrieve referenced hidden Stories. A client must restart a multi-page read when revisions differ.
+
+## V3.8.5 presentation corrections
+
+History reads remain persisted-data-only and project-owned. The refresh endpoint is still the only source-discovery/model entry. The following presentation-only endpoints persist auditable `USER_DECLARED_PRESENTATION` declarations; they never change ProjectFact, raw events, Commit metadata or Evidence:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/projects/{projectId}/history/corrections` | Read active/reverted/conflicted declarations, automatic/applied values and presentation revision. |
+| POST | `/projects/{projectId}/history/corrections` | Create rename, summary, merge/split, Primary/Supporting, hide/pin or declared Chapter correction with optimistic source/presentation checks. |
+| POST | `/projects/{projectId}/history/corrections/{correctionId}/revert` | Revert one declaration and restore the automatic presentation. |
+
+The same correction list is available through Project Memory Gateway. Gateway, Agent Context, Hermes, frontend and Obsidian use the same stable IDs, source revision and presentation revision.
 
 ## V3.8.0 Project History
 

@@ -1,0 +1,81 @@
+{
+  "version": "projectflow-v3.8.5-rc2-provider-failure-taxonomy-v1",
+  "taxonomy": {
+    "A": "模型真实越界",
+    "B": "Prompt 含义不清",
+    "C": "Validator 过严",
+    "D": "Schema 不必要地复杂",
+    "E": "Evidence eligibility 缺陷",
+    "F": "角色图工程缺陷",
+    "G": "窗口或缓存缺陷",
+    "H": "语言质量差但不构成事实违规",
+    "I": "输出截断",
+    "J": "其他或现有证据不足以细分"
+  },
+  "historicalUnsupportedClaims": [
+    { "provider": "GLM", "caseId": "cal-small-five-commit-project", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "GLM", "caseId": "cal-create-modify-delete-restore", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "GLM", "caseId": "cal-multi-commit-one-change", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "GLM", "caseId": "cal-primary-supporting", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "GLM", "caseId": "cal-non-code-project", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "GLM", "caseId": "cal-technical-leakage", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "GLM", "caseId": "holdout-rename-move-split-merge", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "GLM", "caseId": "holdout-unrelated-commit", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "GLM", "caseId": "holdout-document-project", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "GLM", "caseId": "holdout-thousand-events", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "GLM", "caseId": "holdout-generic-message", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "GLM", "caseId": "holdout-agent-evidence", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "DeepSeek", "caseId": "cal-small-five-commit-project", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "DeepSeek", "caseId": "cal-create-modify-delete-restore", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "DeepSeek", "caseId": "cal-non-code-project", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "DeepSeek", "caseId": "cal-conflict-preservation", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "DeepSeek", "caseId": "cal-technical-leakage", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "DeepSeek", "caseId": "holdout-chaotic-history", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "DeepSeek", "caseId": "holdout-rename-move-split-merge", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "DeepSeek", "caseId": "holdout-unrelated-commit", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "DeepSeek", "caseId": "holdout-document-project", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "DeepSeek", "caseId": "holdout-thousand-events", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "DeepSeek", "caseId": "holdout-generic-message", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" },
+    { "provider": "DeepSeek", "caseId": "holdout-agent-evidence", "count": 1, "taxonomyCode": "J", "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT" }
+  ],
+  "rc2ObservedFailures": [
+    {
+      "runId": "31294942095",
+      "provider": "GLM",
+      "scope": "qualification-and-real-scenarios",
+      "finding": "19-case qualification 留下 2 个失败或未处理窗口；11 场景为 8/11。",
+      "taxonomyCode": "J",
+      "causeStatus": "PARTIALLY_CLASSIFIED_FROM_NORMALIZED_ARTIFACT"
+    },
+    {
+      "runId": "31303975027",
+      "provider": "DeepSeek Flash",
+      "scope": "understanding-small-script",
+      "finding": "两次 finish COMPLETE 均存在 reasoning 但可见 content 为空，归一化为 REASONING_EXHAUSTED_OUTPUT；当前统一 Prompt 与一次恢复已在后续 run 验证。",
+      "taxonomyCode": "I",
+      "causeStatus": "CONFIRMED_NORMALIZED_OUTPUT_FAILURE"
+    },
+    {
+      "runId": "31318477841",
+      "runAttempt": 1,
+      "provider": "DeepSeek Flash",
+      "scope": "seventeen-window-restart-cache-and-chapter",
+      "finding": "首轮 16 个目标窗口中 15 succeeded、1 failed，并保留 1 pending；correction 因 continuation fixture 不可用连带失败。相同 head 的失败 job attempt 2 为 11/11。",
+      "taxonomyCode": "J",
+      "causeStatus": "UNKNOWN_FROM_SANITIZED_ARTIFACT"
+    }
+  ],
+  "confirmedCrossCuttingContributors": [
+    {
+      "taxonomyCode": "D",
+      "scope": "pre-RC2 story model contract",
+      "finding": "旧合同要求模型同时生成展示文字、角色与关系结构；RC2 已将角色、归属和关系收回工程层。"
+    },
+    {
+      "taxonomyCode": "F",
+      "scope": "pre-RC2 ProjectFlow dogfood",
+      "finding": "旧 Dogfood 允许窗口级模型改写全局 Primary/Supporting 图，导致跨窗口引用不一致；RC2 改为工程层唯一构图。"
+    }
+  ],
+  "evidenceLimit": "历史安全工件只保留 case ID、计数和聚合诊断，不保留 raw response 或细分 validator 命中字段；不得把 D 或 F 倒推成每个历史实例的精确原因。"
+}

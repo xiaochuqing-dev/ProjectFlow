@@ -57,7 +57,9 @@ const server = http.createServer(async (request, response) => {
   const prompt = Array.isArray(payload.messages)
     ? payload.messages.map((message) => String(message.content || "")).join("\n")
     : "";
-  const task = prompt.includes("项目理解器")
+  const task = prompt.includes("CHAPTER_SYNTHESIS_JSON=") ? "project-history-chapter"
+    : prompt.includes("STORIES_JSON=") ? "project-history"
+    : prompt.includes("项目理解器")
       || prompt.includes("Semantic Scout")
       || prompt.includes("\"semanticScout\"")
       || prompt.includes("\"engineeringState\"") ? "understanding"
@@ -75,7 +77,11 @@ const server = http.createServer(async (request, response) => {
     return json(response, 503, { error: { message: "controlled E2E failure" } });
   }
 
-  const content = task === "understanding"
+  const content = task === "project-history"
+    ? projectHistoryContent(prompt)
+    : task === "project-history-chapter"
+      ? projectHistoryChapterContent(prompt)
+      : task === "understanding"
     ? JSON.stringify({
         semanticScout: {
           projectShapeHypotheses: [{
@@ -193,6 +199,64 @@ function jsonArrayAfter(prompt, marker) {
   } catch {
     return [];
   }
+}
+
+function jsonObjectAfter(prompt, marker) {
+  const start = prompt.indexOf(marker);
+  if (start < 0) return {};
+  const line = prompt.slice(start + marker.length).split(/\r?\n/, 1)[0];
+  try {
+    const value = JSON.parse(line);
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch {
+    return {};
+  }
+}
+
+function projectHistoryContent(prompt) {
+  const stories = jsonArrayAfter(prompt, "STORIES_JSON=");
+  const chapters = jsonArrayAfter(prompt, "CHAPTERS_JSON=");
+  return JSON.stringify({
+    stories: stories.map((story) => ({
+      storyId: story.storyId,
+      humanTitle: historyStoryTitle(story),
+      oneSentenceSummary: historyStorySummary(story),
+      reason: "",
+      reasonEvidenceRefs: [],
+      unknowns: ["变化原因未知，仍需结合来源核对。"],
+    })),
+    chapters: chapters.map((chapter) => ({
+      chapterId: chapter.chapterId,
+      title: "项目结果逐步形成并经过后续调整",
+      summary: "这一阶段按发生顺序说明主要结果，以及为这些结果提供验证和说明的支撑工作。",
+    })),
+  });
+}
+
+function historyStoryTitle(story) {
+  const subject = String(story.subject || "项目内容").trim();
+  if (story.role === "SUPPORTING") return `补充${subject}，为主要结果提供支撑`;
+  const transitions = Array.isArray(story.transitions) ? story.transitions : [];
+  if (transitions.includes("RESTORED")) return `恢复${subject}，重新提供原有结果`;
+  if (transitions.includes("REMOVED")) return `移除${subject}，停止提供原有结果`;
+  if (transitions.includes("RENAMED") || transitions.includes("MOVED")) return `调整${subject}的位置和名称，保留原有结果`;
+  if (transitions.includes("ADDED") || transitions.includes("CREATED")) return `新增${subject}，形成可使用的结果`;
+  return `调整${subject}，形成当前可确认的结果`;
+}
+
+function historyStorySummary(story) {
+  const deterministic = String(story.deterministicChange || "").trim();
+  if (deterministic.length >= 6) return deterministic;
+  return `${String(story.subject || "项目内容").trim()}已根据可追溯来源形成当前结果。`;
+}
+
+function projectHistoryChapterContent(prompt) {
+  const chapter = jsonObjectAfter(prompt, "CHAPTER_SYNTHESIS_JSON=");
+  return JSON.stringify({ chapters: [{
+    chapterId: chapter.chapterId || "",
+    title: "整理项目内容并形成可阅读阶段结果",
+    summary: `这一阶段形成 ${chapter.primaryStoryCount || 0} 项主要结果，并保留 ${chapter.supportingStoryCount || 0} 项支撑工作。`,
+  }] });
 }
 
 function capabilityMapContent(prompt) {
