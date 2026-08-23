@@ -1,5 +1,7 @@
 # ProjectFlow V3.8.5 RC3 当前状态审计
 
+2026-08-23 superseding note: Final Chapter Closure is now the current engineering layer. It preserves this RC3 audit, replaces the stopped GLM slot with GPT 5.6 Luna, adds Qwen3.7 Plus beside DeepSeek V4 Flash, and freezes a separate unscored Chapter package. The controlling status remains `HUMAN_REVIEW_REQUIRED / NOT PASS`; see `projectflow-v3.8.5-final-closure-report.md`.
+
 审计日期：2026-08-14。当前结论：PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS。
 
 ## 基线

@@ -1,5 +1,7 @@
 # V3.8.5 RC3 Product Acceptance
 
+2026-08-23 superseding note: deterministic Chapter representation and the same-head GPT 5.6 Luna, DeepSeek V4 Flash and Qwen3.7 Plus acceptance matrix are the current automated closure boundary. Human Chapter representativeness is still NOT_RUN, so the product decision remains `HUMAN_REVIEW_REQUIRED / NOT PASS`; see `projectflow-v3.8.5-final-closure-report.md`.
+
 Current decision: PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS.
 
 Automated implementation completed:

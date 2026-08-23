@@ -1,5 +1,7 @@
 # ProjectFlow V3.8.5 Human Readability Round 3 Review
 
+2026-08-23 superseding note: Round 3 stays byte/semantic immutable and unscored. Final Chapter Closure adds a separate 12-Chapter, three-Provider blank worksheet plus a Round 3 Story presentation-regression check; it does not rewrite this review or inherit approval. See `projectflow-v3.8.5-final-chapter-representativeness-review.md`.
+
 Status: PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS.
 
 Round 1 and Round 2 remain NEEDS_REVISION_NOT_APPROVED. Their frozen artifacts and hashes are unchanged. Round 3 is a new package and cannot inherit an approval from either earlier round.

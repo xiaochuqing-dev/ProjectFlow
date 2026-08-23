@@ -55,4 +55,4 @@ Round 3 已冻结为 30 Story / 8 Chapter，双 Provider 各 15/4，人工字段
 
 ## 当前阻塞与权限
 
-工程 Provider 阻塞已关闭，最终证据头静态 CI 仍以 Final Closure 报告记录为准。人工门禁仍未开始：用户完成真实评分并明确批准前，不得 Ready、merge、backfill、Tag、Release 或清理分支/worktree。
+工程 Provider 阻塞已关闭。最终证据头 `d5ddb3f20193a2330ed69fc156240a4ead5293c4` 的 push run `32612757299` 与 PR run `32612759225` 均成功，backend/H2、PostgreSQL、frontend、browser、Hermes、Obsidian、sensitive-content 全绿。人工门禁仍未开始：用户完成真实评分并明确批准前，不得 Ready、merge、backfill、Tag、Release 或清理分支/worktree。

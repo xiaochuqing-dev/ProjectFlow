@@ -1,0 +1,36 @@
+{
+  "taskGoal": "接续中断的 ProjectFlow V3.8.5 Final Chapter 工作，完成 GPT 5.6 Luna、DeepSeek V4 Flash、Qwen3.7 Plus 三模型 Max 真实验收、Chapter 代表性封板、证据冻结、验证与正常推送。",
+  "actualChanges": [
+    "完成确定性 Representative Cluster、dominant/co-dominant/minor、代表覆盖、Claim ceiling、保守 split 和模型 Chapter grounding 链；Supporting 只跟随 Primary owner，模型不能改变 Story 成员、Evidence 或 claim strength。",
+    "加固 Responses、Chat Completions、Messages 三协议兼容与安全诊断；HTTP 失败只保留状态和严格白名单标识，响应正文、SDK message、请求内容和凭据不进入诊断或证据。",
+    "在同一源码头运行 GPT 5.6 Luna、DeepSeek V4 Flash、Qwen3.7 Plus，三家 qualification 均为 19/19、Chapter scenarios 均为 9/9；失败、取消和修复后定向尝试均在最终报告中保留。",
+    "冻结六份同头脱敏 Provider 工件、当前 ProjectFlow 零模型 Dogfood、12 个 Final Chapter 与 30 个 Round 3 Story 展示变更子集；Truth/Evidence semantic hash 30/30 不变，Round 3 原文件与 canonical-LF 哈希未改。",
+    "修正冻结脚本对隔离评测中 run-local Story/Fact 身份的比较方式：只归一化身份，继续精确校验角色、Evidence、Claim attribution、19/19、9/9、一一映射、安全内容和空白人工字段。",
+    "更新项目协议、上下文、Provider/CI/测试文档、证据索引和最终封板报告，并把可执行证据头推送到 PR #15 的远端分支。"
+  ],
+  "keyFiles": [
+    "scripts/freeze_v385_final_chapter_review.py",
+    "backend/src/test/java/com/projectflow/service/ProjectHistoryFinalChapterReviewManifestTest.java",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-review-manifest.json",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-review-worksheet.md",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-deterministic/projectflow-final-chapter-deterministic-dogfood.json",
+    "docs/acceptance-evidence/v3.8.5/evidence-index.md",
+    "docs/projectflow-v3.8.5-final-closure-report.md",
+    "docs/projectflow-v3.8.5-final-chapter-representativeness-review.md",
+    ".projectflow/AGENT_PROTOCOL.md",
+    "PROJECT_CONTEXT.md"
+  ],
+  "verification": {
+    "build": "Start-ProjectFlow.bat -NoBrowser 通过：Next.js 16.2.11 与 Spring Boot/H2 双端就绪，Build ID n8TKaHfKQejeExyRej5uv，退出后 3000/8080 无监听。",
+    "tests": "本地受影响模型/协议/历史套件 100 项通过、1 条件跳过；确定性 Dogfood 2 项通过；Final Chapter 清单合同 1/1 通过。同头真实 run 32609107531 三模型 19/19 与 9/9 全部成功，backend/H2 634 项 0 失败、PostgreSQL 工件 11 项 0 失败。证据头 d5ddb3f20193a2330ed69fc156240a4ead5293c4 的 push run 32612757299 与 PR run 32612759225 均成功。",
+    "manualCheck": "确认 PR #15 仍为 OPEN、Draft、未合并；Final Chapter reviewerCount=0，评分、是/否、评审人、备注和 PASS/FAIL 全部为空；Round 3 两个 canonical-LF 哈希保持不变。"
+  },
+  "unfinished": [
+    "Final Chapter 与 Round 3 展示变更仍需真人完成冻结 worksheet，并由用户按阈值明确批准或拒绝；当前只能是 HUMAN_REVIEW_REQUIRED / NOT PASS。",
+    "用户明确批准前，不得 Ready、merge、acceptance backfill、Tag、Release 或清理分支和工作树。"
+  ],
+  "sedimentCandidates": [
+    "三协议真实 Provider 验收可采用失败记录不覆盖、定向修复、同头全量复验、规范化工件安全扫描、canonical-LF 哈希和空白人工门禁的闭环。",
+    "隔离评测中的随机实体身份只能在回归匹配层归一化；角色、Evidence、Claim attribution、实体一一映射和最终事实语义必须继续精确校验。"
+  ]
+}
