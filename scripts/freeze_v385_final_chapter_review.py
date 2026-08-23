@@ -33,6 +33,10 @@ FILLED_RESULT = re.compile(r"(?m)^结论（PASS/FAIL）：\s*(?:PASS|FAIL)\s*$")
 FILLED_BOOLEAN = re.compile(r"(?m)^.*（是/否）：\s*(?:是|否)\s*$")
 FILLED_REVIEWER = re.compile(r"(?m)^评审人：[ \t]*\S+.*$")
 FILLED_NOTE = re.compile(r"(?m)^备注：[ \t]*\S+.*$")
+RUN_LOCAL_FACT_REF = re.compile(
+    r"^fact:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -106,6 +110,45 @@ def provider_profile(value: dict[str, Any], slug: str, path: Path) -> dict[str, 
     }
 
 
+def validate_final_artifact(value: dict[str, Any], path: Path) -> None:
+    qualified(value, path)
+    qualification = value["qualification"]
+    if path.name == "history-ground-truth-real-result.json":
+        evaluation = value.get("evaluation") if isinstance(value.get("evaluation"), dict) else {}
+        overall = evaluation.get("overall") if isinstance(evaluation.get("overall"), dict) else {}
+        unsafe_counts = (
+            "modelDegradedCaseCount",
+            "failedOrPendingWindowCount",
+            "rejectedModelOutputCount",
+            "validationRepairFailureCount",
+            "unresolvedAfterRetryCaseCount",
+        )
+        if (
+            overall.get("caseCount") != 19
+            or overall.get("caseWithFailureCount") != 0
+            or overall.get("passes") is not True
+            or evaluation.get("missingCases") not in (None, [])
+            or any(int(qualification.get(key) or 0) != 0 for key in unsafe_counts)
+        ):
+            raise ValueError(f"Final qualification is not a clean 19/19 result: {relative(path)}")
+        return
+    if value.get("scenarioScope") != "chapter":
+        raise ValueError(f"Final Chapter artifact is not affected Chapter scope: {relative(path)}")
+    scenarios = value.get("scenarios")
+    names = {
+        item.get("name") for item in (scenarios or [])
+        if isinstance(item, dict) and item.get("status") == "PASS" and isinstance(item.get("name"), str)
+    }
+    if (
+        not isinstance(scenarios, list)
+        or len(scenarios) != 9
+        or len(names) != 9
+        or qualification.get("scenarioCount") != 9
+        or qualification.get("passedScenarioCount") != 9
+    ):
+        raise ValueError(f"Final Chapter scenarios are not a clean 9/9 result: {relative(path)}")
+
+
 def scenario(value: dict[str, Any], name: str) -> dict[str, Any]:
     for item in value.get("scenarios", []):
         if isinstance(item, dict) and item.get("name") == name and item.get("status") == "PASS":
@@ -161,29 +204,105 @@ def validate_chapter(entity: dict[str, Any], source: str) -> None:
 
 def truth_semantic(value: dict[str, Any]) -> str:
     attribution = value.get("claimAttribution") if isinstance(value.get("claimAttribution"), dict) else {}
+    # Story IDs include the isolated evaluation project's run-local identity.
+    # Fact UUIDs are also regenerated with that isolated project. Compare the
+    # stable Evidence plus run-local Fact cardinality while keeping role and
+    # claim attribution semantic and exact.
     payload = {
         "role": value.get("role"),
-        "primaryStoryId": value.get("primaryStoryId"),
-        "supportingChangeRefs": sorted(value.get("supportingChangeRefs") or []),
-        "evidenceRefs": sorted(value.get("evidenceRefs") or []),
-        "reasonEvidenceRefs": sorted(value.get("reasonEvidenceRefs") or []),
+        "hasPrimaryStory": bool(value.get("primaryStoryId")),
+        "evidence": evidence_semantic(value.get("evidenceRefs")),
+        "reasonEvidence": evidence_semantic(value.get("reasonEvidenceRefs")),
         "claimSubject": attribution.get("subject"),
         "claimAction": attribution.get("action"),
         "claimState": attribution.get("state"),
-        "directEvidenceRefs": sorted(attribution.get("directEvidenceRefs") or []),
-        "indirectEvidenceRefs": sorted(attribution.get("indirectEvidenceRefs") or []),
+        "directEvidence": evidence_semantic(attribution.get("directEvidenceRefs")),
+        "indirectEvidence": evidence_semantic(attribution.get("indirectEvidenceRefs")),
         "supportClass": attribution.get("supportClass"),
     }
     content = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return "sha256:" + hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
-def current_story_candidates(evidence_root: Path) -> tuple[
+def evidence_semantic(refs: Any) -> dict[str, Any]:
+    values = {str(value) for value in (refs or []) if value is not None}
+    return {
+        "stableRefs": sorted(value for value in values if not RUN_LOCAL_FACT_REF.fullmatch(value)),
+        "runLocalFactCount": sum(1 for value in values if RUN_LOCAL_FACT_REF.fullmatch(value)),
+    }
+
+
+def story_options(qualification: dict[str, Any], scenarios: dict[str, Any], source: str) -> list[dict[str, Any]]:
+    for item in qualification.get("humanReviewCandidates") or []:
+        if isinstance(item, dict) and item.get("caseId") == source:
+            return [value for value in (item.get("stories") or []) if isinstance(value, dict)]
+    name, separator, sample_type = source.partition(":")
+    selected = next((
+        item for item in (scenarios.get("scenarios") or [])
+        if isinstance(item, dict) and item.get("name") == name and item.get("status") == "PASS"
+    ), None)
+    if selected is None:
+        raise ValueError(f"current Story source is missing: {source}")
+    samples = selected.get("samples") or []
+    if not separator:
+        return [value for value in samples if isinstance(value, dict)]
+    for group in samples:
+        if isinstance(group, dict) and group.get("sampleType") == sample_type:
+            return [value for value in (group.get("items") or []) if isinstance(value, dict)]
+    raise ValueError(f"current Story sample group is missing: {source}")
+
+
+def story_identity(value: dict[str, Any]) -> tuple[Any, ...]:
+    attribution = value.get("claimAttribution") if isinstance(value.get("claimAttribution"), dict) else {}
+    evidence = evidence_semantic(value.get("evidenceRefs"))
+    reason = evidence_semantic(value.get("reasonEvidenceRefs"))
+    return (
+        value.get("role"),
+        attribution.get("subject"),
+        attribution.get("action"),
+        attribution.get("state"),
+        tuple(evidence["stableRefs"]),
+        evidence["runLocalFactCount"],
+        tuple(reason["stableRefs"]),
+        reason["runLocalFactCount"],
+    )
+
+
+def corresponding_story(options: list[dict[str, Any]], frozen: dict[str, Any], source: str) -> dict[str, Any]:
+    exact = [value for value in options if story_identity(value) == story_identity(frozen)]
+    if len(exact) == 1:
+        return exact[0]
+    frozen_attribution = frozen.get("claimAttribution") if isinstance(frozen.get("claimAttribution"), dict) else {}
+    frozen_refs = set(evidence_semantic(frozen.get("evidenceRefs"))["stableRefs"])
+    compatible = []
+    for value in options:
+        attribution = value.get("claimAttribution") if isinstance(value.get("claimAttribution"), dict) else {}
+        refs = set(evidence_semantic(value.get("evidenceRefs"))["stableRefs"])
+        if (value.get("role"), attribution.get("subject"), attribution.get("action"), attribution.get("state")) != (
+            frozen.get("role"), frozen_attribution.get("subject"), frozen_attribution.get("action"),
+            frozen_attribution.get("state"),
+        ):
+            continue
+        if frozen_refs and frozen_refs.issubset(refs):
+            compatible.append(value)
+    if len(compatible) == 1:
+        return compatible[0]
+    raise ValueError(
+        f"current Story cannot be matched uniquely to the frozen semantic input: {source} "
+        f"(exact={len(exact)}, compatible={len(compatible)})"
+    )
+
+
+def current_story_candidates(
+    evidence_root: Path,
+    frozen_entities: dict[str, dict[str, Any]],
+) -> tuple[
     list[dict[str, Any]], dict[str, dict[str, Any]], dict[str, dict[str, Any]]
 ]:
     entries: list[dict[str, Any]] = []
     entities: dict[str, dict[str, Any]] = {}
     profiles: dict[str, dict[str, Any]] = {}
+    used_entity_ids: set[str] = set()
     # Luna replaces the retired GLM slot for the frozen Round 3 Story inputs.
     # The alias preserves the immutable Round 3 sample IDs while recording the
     # actual current Provider on every changed-subset entry.
@@ -191,15 +310,31 @@ def current_story_candidates(evidence_root: Path) -> tuple[
         ("luna", "glm", "GPT 5.6 Luna"),
         ("deepseek", "deepseek", "DeepSeek V4 Flash"),
     ):
-        stories, _, selected = provider_samples(evidence_root, slug, name, 3)
-        for entry in stories:
+        stories, _, _ = provider_samples(evidence_root, slug, name, 3)
+        qualification_path = evidence_root / slug / "history-ground-truth-real-result.json"
+        scenario_path = evidence_root / slug / "history-real-scenarios.json"
+        qualification = load_json(qualification_path)
+        scenarios = load_json(scenario_path)
+        for original_entry in stories:
+            entry = dict(original_entry)
             source_sample_id = entry["sampleId"]
             sample_id = source_sample_id.replace(f"{slug}-story-", f"{frozen_slug}-story-", 1)
+            frozen = frozen_entities.get(sample_id)
+            if frozen is None:
+                raise ValueError(f"frozen Story context is missing: {sample_id}")
+            options = story_options(qualification, scenarios, entry["source"])
+            entity = corresponding_story(options, frozen, entry["source"])
+            entity_id = entity.get("id")
+            if not isinstance(entity_id, str) or not entity_id or entity_id in used_entity_ids:
+                raise ValueError(f"current Story mapping is missing or duplicated: {sample_id}")
+            used_entity_ids.add(entity_id)
             entry["sampleId"] = sample_id
+            entry["entityId"] = entity_id
+            entry["contentHash"] = canonical_hash(entity)
+            entry["presentationRevision"] = entity.get("presentationRevision")
             entries.append(entry)
-            entities[sample_id] = selected[source_sample_id]
-        scenario_path = evidence_root / slug / "history-real-scenarios.json"
-        profiles[slug] = provider_profile(load_json(scenario_path), slug, scenario_path)
+            entities[sample_id] = entity
+        profiles[slug] = provider_profile(scenarios, slug, scenario_path)
     qwen_path = evidence_root / "qwen" / "history-real-scenarios.json"
     profiles["qwen"] = provider_profile(load_json(qwen_path), "qwen", qwen_path)
     if len(entries) != 30:
@@ -327,6 +462,9 @@ def artifact_hashes(evidence_root: Path) -> dict[str, str]:
             path = evidence_root / slug / name
             if not path.is_file():
                 raise ValueError(f"missing Final Closure normalized artifact: {relative(path)}")
+            content = path.read_text(encoding="utf-8")
+            if SENSITIVE_PATTERN.search(content) or ABSOLUTE_PATH_PATTERN.search(content):
+                raise ValueError(f"refusing to freeze a source artifact containing sensitive data: {relative(path)}")
             result[relative(path)] = canonical_lf_sha256(path)
     return result
 
@@ -429,12 +567,10 @@ def write_outputs(args: argparse.Namespace) -> tuple[int, int]:
         for name in ("history-ground-truth-real-result.json", "history-real-scenarios.json"):
             path = evidence_root / slug / name
             value = load_json(path)
-            qualified(value, path)
-            if name == "history-real-scenarios.json" and value.get("scenarioScope") != "chapter":
-                raise ValueError(f"Final Chapter artifact is not affected Chapter scope: {relative(path)}")
+            validate_final_artifact(value, path)
 
-    current_entries, current_entities, profiles = current_story_candidates(evidence_root)
     _, frozen_entities, frozen_manifest = frozen_story_candidates()
+    current_entries, current_entities, profiles = current_story_candidates(evidence_root, frozen_entities)
     regression, changed_stories, changed_entities = story_regression(
         current_entries, current_entities, frozen_entities, frozen_manifest
     )

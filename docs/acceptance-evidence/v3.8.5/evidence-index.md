@@ -1,6 +1,22 @@
-# V3.8.5 RC3 验收证据索引
+# V3.8.5 验收证据索引
 
-当前状态：PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS。PR #15 保持 Draft、未合并。
+当前状态：HUMAN_REVIEW_REQUIRED / NOT PASS。PR #15 保持 Draft、未合并。
+
+## Final Chapter Closure
+
+- 最终同头 run `32609107531`，源码头 `e1b67f28428e73f39fc23aa6f85961155a20ffd8`。GPT 5.6 Luna Responses/max、DeepSeek V4 Flash Chat/max、Qwen3.7 Plus Messages/max 均为 qualification 19/19、Chapter scenarios 9/9；没有替代 Qwen 模型。
+- Luna qualification/scenarios 为 42/56 次请求、123,198/338,147 Token；DeepSeek 为 42/55 次请求、188,051/412,738 Token；Qwen 为 42/60 次请求、177,380/421,525 Token。三家最终未解决、重试与安全计数均为 0；场景 repair 分别为 4、3、4。
+- 当前 ProjectFlow 确定性 Dogfood 为 275 Commit、3,525 Source Event、371 Story、9 Chapter、271 Thread，0 模型调用；整体/最大 Chapter Representative Primary Coverage 为 0.7783/0.6507，安全、overlap、orphan 与 unsupported claim 计数均为 0。
+- Final Chapter manifest 冻结 12 个 Chapter，三家各 4 个；Round 3 Story 展示变更子集为 30，Truth/Evidence semantic hash 30/30 不变。人工字段全部空白，reviewerCount=0。
+
+最终六工件 canonical-LF SHA-256：
+
+- Luna Ground Truth：`4e6031a1da307891c09ef19c20a8ee1304bd0e792a1a14541de38bbc255f9b30`
+- Luna scenarios：`7ec1a4c84f538d4ba0df755817b0ef6cf281a541200f022d9644a2ddefe4f159`
+- DeepSeek Ground Truth：`71f6843a5b1ee82bc0c2b674b9e64bc856421b8d1fd83af1a8cde7f1fa9b3094`
+- DeepSeek scenarios：`58095cf37e387245d775642d590b6abf8590b32052e9ddfad42239b562e25ba9`
+- Qwen Ground Truth：`64cc9f8463f1fcb618db64c6d3e3c34361721eea06855d1d2f43a0cab6c94709`
+- Qwen scenarios：`4e049f4f7a0032a0f856ad4f986ec37fda3d5a4e7483e8524d32280faacf1edb`
 
 ## 冻结基线
 
@@ -39,4 +55,4 @@ Round 3 已冻结为 30 Story / 8 Chapter，双 Provider 各 15/4，人工字段
 
 ## 当前阻塞与权限
 
-外部 GLM 阻塞与最终静态 CI 均已关闭。人工门禁仍未开始：用户完成真实评分并明确批准前，不得 Ready、merge、backfill、Tag、Release 或清理分支/worktree。
+工程 Provider 阻塞已关闭，最终证据头静态 CI 仍以 Final Closure 报告记录为准。人工门禁仍未开始：用户完成真实评分并明确批准前，不得 Ready、merge、backfill、Tag、Release 或清理分支/worktree。

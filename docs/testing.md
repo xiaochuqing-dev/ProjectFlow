@@ -1,5 +1,13 @@
 # Testing
 
+## V3.8.5 Final Chapter representativeness closure
+
+Final closure adds deterministic Representative Cluster, dominant/minor selection, conservative split, claim-ceiling, correction-preservation and Chapter repair contracts. `ProjectHistoryDogfoodAcceptanceTest` can export the zero-model current-repository artifact for before/after coverage and conservation checks. `ModelOutputAdapterTest` proves that direct, encoded and ID-keyed history transport shapes, plus JSON-shaped generic Provider wrappers, normalize without changing model item content or inventing a missing registered field; downstream Schema, ID/Evidence/Claim validation remains authoritative. `ProjectHistoryV385RealOutputEvaluatorTest` records one bounded explicit failed-window recovery refresh when needed, including initial unresolved/repair-failure counters and whether the final persisted retry recovered. The Chapter evaluator counts failed calls and stops after one unchanged failed-checkpoint retry; qualification still requires a fully validated final snapshot. `ProjectHistoryFinalChapterReviewManifestTest` becomes blocking only after the same-head three-Provider artifacts and blank 12-Chapter human worksheet are frozen.
+
+The real matrix is GPT 5.6 Luna Responses/max, DeepSeek V4 Flash Chat/max and Qwen3.7 Plus Messages/max; no alternative Qwen model is allowed. The final human gate is deliberately not automated: Round 1/2 remain rejected evidence, Round 3 stays immutable, Final Chapter scores remain blank and V3.8.5 remains NOT PASS until a genuine reviewer completes the frozen worksheet and the user explicitly approves.
+
+The root Windows launcher fingerprints `package-lock.json` through the .NET SHA-256 API instead of relying on the optional `Get-FileHash` cmdlet. `Start-ProjectFlow.bat -CheckOnly`, the frontend contract test and a full build/start/stop run cover bundled PowerShell compatibility without changing machine configuration.
+
 ## V3.8.5 RC3 truthfulness closure
 
 RC3 keeps the frozen V3.8.5 Ground Truth and thresholds unchanged. The affected ProjectHistory and Provider-neutral suite reports 119 tests, 0 failures, 0 errors and 4 conditional skips; all 19 deterministic Calibration/Holdout cases pass with Chapter precision 1.0, title action/object/result 1.0 and every safety count at zero. After Story v12, the current full local backend/H2 run executed 602 tests with 0 failures, 0 errors and 11 conditional skips while explicitly excluding only `ProjectFlowPostgresIT` (local Docker unavailable) and the not-yet-frozen `ProjectHistoryHumanReviewRound3ManifestTest`. The separate Round 3 manifest test remains intentionally excluded until qualified same-head Provider artifacts are normalized and the new 30 Story/8 Chapter sample is frozen.

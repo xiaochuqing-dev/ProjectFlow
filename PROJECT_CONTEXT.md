@@ -1,8 +1,10 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-08-14
+Last updated: 2026-08-23
 
-V3.8.5 RC3 当前状态：Round 1 与 Round 2 均为 NEEDS_REVISION_NOT_APPROVED。Round 2 的 ProjectFlow skeleton/login P0 证明 Story-wide Evidence 聚合会让一个主体借用同 Commit 无关代码的实现强度；RC3 已改为 Technical Atom 级 subject/action/state 归因，区分 direct Evidence 与不可提升状态的 indirect context，并对不够精确的 `project-area-*` 主体设置 OBSERVED 上限。Chapter repair 与 Story v12 的动作/对象/结果保底已完成。2026-08-14 同头 run `31733839404` 中，GLM `glm-5.2` Responses/max 与 DeepSeek Flash Chat/max 均通过 qualification 19/19 和 scenarios 11/11，Dogfood P0 均保持 OBSERVED；Round 3 已冻结为 30 Story/8 Chapter，人工字段为空。最终 Evidence-head CI 以验收报告为准。用户明确批准 Round 3 前，PR #15 必须保持 Draft，状态只能是 PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS，不得合并、backfill 或清理分支。
+V3.8.5 Final Chapter Closure 当前状态：Representative Cluster、dominant/co-dominant/minor、代表覆盖、Claim ceiling、有界 repair 与保守 split 工程链已完成。源码头 `e1b67f28428e73f39fc23aa6f85961155a20ffd8` 的同头 run `32609107531` 中，GPT 5.6 Luna Responses/max、DeepSeek V4 Flash Chat/max、Qwen3.7 Plus Messages/max 均通过 qualification 19/19 和 Chapter scenarios 9/9；没有替代 Qwen 模型。Final Chapter 已冻结为三 Provider 各 4 个、共 12 个 Chapter；Round 3 的 30 Story/8 Chapter 与 canonical-LF 哈希不变，展示变更 30/30 的 Truth/Evidence semantic hash 不变。人工字段为空、reviewerCount=0，因此 PR #15 必须保持 Draft，状态只能是 HUMAN_REVIEW_REQUIRED / NOT PASS，不得 Ready、merge、backfill、Tag、Release 或清理分支/工作树。
+
+历史 RC3 仍保留：Round 1 与 Round 2 均为 NEEDS_REVISION_NOT_APPROVED。Round 2 的 ProjectFlow skeleton/login P0 证明 Story-wide Evidence 聚合会让一个主体借用同 Commit 无关代码的实现强度；RC3 已改为 Technical Atom 级 subject/action/state 归因，区分 direct Evidence 与不可提升状态的 indirect context，并对不够精确的 `project-area-*` 主体设置 OBSERVED 上限。2026-08-14 的 GLM / DeepSeek 双 Provider run 与 Round 3 继续作为不可改写历史证据，不代表 Final Chapter 已获真人批准。
 
 Use this file as the first read for substantial ProjectFlow work. It is a compact routing layer, not a replacement for source code. After reading it, open only the docs and modules relevant to the current task.
 

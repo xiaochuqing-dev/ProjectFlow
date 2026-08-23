@@ -1,10 +1,18 @@
 # CI quality gates
 
+## V3.8.5 Final Chapter Closure execution
+
+Final Chapter Closure uses one same-head, explicitly dispatched three-Provider matrix: GPT 5.6 Luna `gpt-5.6-luna` over `OPENAI_RESPONSES`, DeepSeek V4 Flash `deepseek-v4-flash` over `OPENAI_CHAT_COMPLETIONS`, and Qwen3.7 Plus `qwen3.7-plus` over `ANTHROPIC_MESSAGES`. All three profiles use `max` reasoning. No alternative Qwen model may be substituted.
+
+Use `run_real_model=true`, `real_model_scope=affected` and `real_model_provider=all`. Qualification runs the frozen 19-case Calibration/Holdout set. The dependent Chapter scope runs large coherent/heterogeneous Chapters, repair, correction, non-code presentation/report/data, review fixtures and current ProjectFlow Dogfood. A qualification case may perform at most one explicit persisted refresh after unresolved window/checkpoint work; successful windows remain cached, the retry count and initial/final degradation are retained, and final qualification still requires zero unresolved, rejected or unsafe output. Chapter completion also stops after one unchanged failed-checkpoint retry instead of repeatedly billing the same non-progressing state. Failed Provider calls are included in request, Token and latency totals. This is a product retry exercise, not a third request inside one logical model call.
+
+Only sanitized normalized JSON is uploaded. The Final Chapter freeze requires all six qualification/scenario artifacts from the same code head, exact Provider/model/protocol/effort profiles, every scenario PASS, all security persistence flags false and Chapter `scenarioScope=chapter`. Automated green status stops at `HUMAN_REVIEW_REQUIRED / NOT PASS`; it never fills the worksheet or authorizes Ready, merge, backfill, Tag, Release or cleanup.
+
 ## V3.8.5 RC3 execution
 
 The final RC3 evidence head is merge-ineligible until backend/H2, PostgreSQL 16 Testcontainers, frontend production build/contracts, Playwright, Hermes, Obsidian and sensitive-content all pass with the Round 3 manifest and worksheet present. A real-model workflow run before those files exist may legitimately fail backend/PostgreSQL artifact assertions and is not the final static CI authority.
 
-`workflow_dispatch` with `run_real_model=true`, `real_model_scope=affected` and `real_model_provider=both` executes the same affected qualification and real scenarios for GLM `glm-5.2` Responses/max and DeepSeek Flash Chat/max. Both Provider artifacts must come from the same code head. Qualification and scenario failures, fallbacks, repairs, token usage and latency are retained as evidence; a later pass never deletes an earlier failure.
+The historical RC3 dispatch used `real_model_provider=both` for GLM `glm-5.2` Responses/max and DeepSeek Flash Chat/max. It is retained only to explain old evidence and is not the Final Chapter command. Current final closure uses the exact three-profile `real_model_provider=all` matrix above; qualification and scenario failures, fallbacks, repairs, token usage and latency remain evidence, and a later pass never deletes an earlier failure.
 
 RC3 adds explicit report checks for claim Evidence attribution, deterministic Ground Truth execution, title quality and the Round 3 manifest. The Round 3 check stays red until the qualified Provider outputs are normalized and exactly 30 Story/8 Chapter with blank human fields are frozen. Human approval is never a CI job and automated green checks cannot change `PENDING_HUMAN_REVIEW_ROUND3` into PASS.
 

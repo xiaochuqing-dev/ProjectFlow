@@ -1,5 +1,21 @@
 # Model Provider Configuration
 
+## V3.8.5 Final Chapter acceptance profiles
+
+The current Final Chapter matrix uses exactly these three profiles, all with `max` reasoning and the existing Provider-neutral Model Gateway:
+
+| Profile | Model | Protocol | Service root |
+| --- | --- | --- | --- |
+| GPT 5.6 Luna | `gpt-5.6-luna` | `OPENAI_RESPONSES` | OpenCode Go `/v1` root |
+| DeepSeek V4 Flash | `deepseek-v4-flash` | `OPENAI_CHAT_COMPLETIONS` | OpenCode Go `/v1` root |
+| Qwen3.7 Plus | `qwen3.7-plus` | `ANTHROPIC_MESSAGES` | OpenCode Go service root without an added `/v1`; the Messages adapter appends `/v1/messages` |
+
+No alternative Qwen model may replace `qwen3.7-plus` in this acceptance profile. The shared CI credential remains an external Repository Secret; model names, URLs and capability declarations are configuration, while no key value, Authorization header, Prompt, raw response or reasoning is committed or uploaded.
+
+Provider transport normalization decodes only JSON-shaped `result` / `output` / `data` / `response` wrappers and then selects an object that already contains the exact registered task fields; ordinary text and missing fields remain rejected. History additionally accepts the exact array contract, direct single items, encoded JSON containers and a conservative object keyed by the already-required `storyId` or `chapterId`. Known `storyNarratives` / `historyStories` and `chapterNarratives` / `historyChapters` aliases are normalized only when their values remain complete objects. None of these conversions fill narrative fields or approve IDs: the unchanged task Schema, History parser, Evidence allow-list, role graph and Claim validators still reject omissions, unknown IDs and unsupported wording.
+
+HTTP failures expose only status plus optional strict lowercase type/code/parameter identifiers. Values containing whitespace, line breaks, credential-shaped prefixes, unexpected characters or more than 64 characters are discarded; response bodies, SDK messages and request content remain outside diagnostics.
+
 ## Concepts
 
 Preset identifies the Provider family; protocol identifies the wire contract. OpenAI defaults to Responses, Anthropic defaults to Messages, and DeepSeek/OpenAI-compatible/custom legacy presets default conservatively to Chat Completions. Protocol is persisted and participates in duplicate identity.
