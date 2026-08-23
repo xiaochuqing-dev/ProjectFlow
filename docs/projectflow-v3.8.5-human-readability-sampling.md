@@ -1,5 +1,7 @@
 # ProjectFlow V3.8.5 Human Readability Sampling
 
+2026-08-24 closure note: this file preserves the pre-freeze sampling plan and its failed candidate state. Round 3 was subsequently frozen from run `31733839404`, Final Chapter closure used Luna/DeepSeek/Qwen run `32609107531`, and the project owner later authorized `PASS_BY_EXPLICIT_OWNER_OVERRIDE`. PR #15 is merged and post-merge master CI passed; no historical sample or worksheet was rewritten.
+
 Status: PENDING_ROUND3_FREEZE / PENDING_HUMAN_REVIEW_ROUND3.
 
 Round 1 and Round 2 remain immutable NEEDS_REVISION_NOT_APPROVED packages. Round 3 will be generated only from qualified GLM and DeepSeek normalized artifacts produced by the same final code head.
