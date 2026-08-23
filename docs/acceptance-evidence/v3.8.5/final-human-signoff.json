@@ -1,0 +1,60 @@
+{
+  "version": "projectflow-v385-final-human-signoff-v1",
+  "recordedAt": "2026-08-24T00:35:33+08:00",
+  "status": "APPROVED_BY_PROJECT_OWNER",
+  "v385FinalAcceptance": "PASS_BY_EXPLICIT_OWNER_OVERRIDE",
+  "v39Entry": "APPROVED",
+  "reviewerCount": 1,
+  "reviewMode": "SINGLE_PROJECT_OWNER",
+  "reviewerIdentityStored": false,
+  "reviewBasis": "FINAL_WORKSHEET_DISPLAY_AND_EXPLICIT_OWNER_APPROVAL",
+  "scope": {
+    "packageStoryCount": 30,
+    "packageFinalChapterCount": 12,
+    "exactItemCountsReconfirmedInFinalApproval": false,
+    "scopeStatement": "OWNER_APPROVED_FINAL_PACKAGE_WITHOUT_RECONFIRMING_ITEM_COUNTS"
+  },
+  "scores": {
+    "overallOutOf10": 8.5,
+    "storyReadabilityAverage": null,
+    "chapterReadabilityAverage": null,
+    "chapterRepresentativenessAverage": null,
+    "coreDimensionMinimum": null,
+    "quantitativeScoreStatus": "NOT_PROVIDED_WAIVED_BY_PROJECT_OWNER"
+  },
+  "truthfulness": {
+    "humanP0Count": 0,
+    "basis": "NO_NEW_P0_REPORTED_IN_PRIOR_FINAL_DISPLAY_REVIEW_OR_EXPLICIT_OWNER_APPROVAL",
+    "independentPerSampleRescorePerformed": false
+  },
+  "decision": {
+    "explicitMergeApproval": true,
+    "continueWithoutFurtherQuestions": true,
+    "originalQuantitativeThresholdsEvidenced": false,
+    "projectOwnerOverride": true,
+    "decisionCode": "PASS_BY_EXPLICIT_OWNER_OVERRIDE",
+    "noTag": true,
+    "noRelease": true
+  },
+  "frozenPackage": {
+    "finalChapterSourceRunId": "32609107531",
+    "finalChapterSourceCodeHead": "e1b67f28428e73f39fc23aa6f85961155a20ffd8",
+    "finalChapterManifestCanonicalLfSha256": "70da30e5248c1d48e3bccacbb928ff70ccb0bf2a20c7604a707fce3a26071e4a",
+    "finalChapterWorksheetCanonicalLfSha256": "63245fa4d80fce597e56dedb3860162ab133260dc951ee715b9077e375fdaa18",
+    "round3ManifestCanonicalLfSha256": "f316b71a6bec24f7ba40c2da81ef210b101b3ca238c688793fa32d48be877c1b",
+    "round3WorksheetCanonicalLfSha256": "4d57d7d1fa5bb975465db9be413f70cf943ca7c9c70d8174ba0d4dcdd7d85ca6",
+    "frozenArtifactsModified": false
+  },
+  "limitations": [
+    "The approval comes from one project owner and is not multi-reviewer consensus.",
+    "The three frozen 1-5 averages and core-dimension minimum were not supplied and are not claimed to have passed numerically.",
+    "The final approval did not separately reconfirm the 30 Story and 12 Final Chapter item counts.",
+    "The human P0 count records that no new P0 was reported; no independent per-sample rescore was performed."
+  ],
+  "security": {
+    "rawConversationStored": false,
+    "credentialsStored": false,
+    "authorizationStored": false,
+    "absolutePathStored": false
+  }
+}

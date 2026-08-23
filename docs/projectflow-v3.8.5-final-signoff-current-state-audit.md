@@ -2,6 +2,8 @@
 
 日期：2026-08-24。
 
+后续状态：本报告冻结的是签字前 A0 事实。项目所有者随后明确批准最终 package 与 merge，并豁免本轮量化评分；当前控制结论转为 `PASS_BY_EXPLICIT_OWNER_OVERRIDE`，见 `projectflow-v3.8.5-final-human-signoff.md`。以下 blocked 结论保留为当时的审计快照。
+
 状态：`HUMAN_REVIEW_REQUIRED / NOT PASS`。本报告只记录 PHASE A0 复核结果，不代替真人签字，也不授权 Ready、merge、acceptance backfill、分支清理、Tag 或 Release。
 
 ## GitHub 与本地基线

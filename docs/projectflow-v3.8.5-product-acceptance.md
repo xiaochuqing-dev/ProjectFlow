@@ -1,8 +1,10 @@
 # V3.8.5 RC3 Product Acceptance
 
-2026-08-23 superseding note: deterministic Chapter representation and the same-head GPT 5.6 Luna, DeepSeek V4 Flash and Qwen3.7 Plus acceptance matrix are the current automated closure boundary. Human Chapter representativeness is still NOT_RUN, so the product decision remains `HUMAN_REVIEW_REQUIRED / NOT PASS`; see `projectflow-v3.8.5-final-closure-report.md`.
+2026-08-24 final decision: the project owner explicitly approved the final package and merge, and waived the quantitative human scores for this closure. Product acceptance is `PASS_BY_EXPLICIT_OWNER_OVERRIDE`; no numeric score or original threshold pass is inferred. The single-reviewer, scope and P0-basis limitations are recorded in `projectflow-v3.8.5-final-human-signoff.md`. V3.9 ENTRY is approved after merge/backfill verification.
 
-Current decision: PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS.
+2026-08-23 historical note: deterministic Chapter representation and the same-head GPT 5.6 Luna, DeepSeek V4 Flash and Qwen3.7 Plus acceptance matrix were the automated closure boundary. Human Chapter representativeness was still NOT_RUN at that point; see `projectflow-v3.8.5-final-closure-report.md`.
+
+Current decision: `PASS_BY_EXPLICIT_OWNER_OVERRIDE`. The pre-signoff blocked analysis below is retained as historical evidence.
 
 Automated implementation completed:
 

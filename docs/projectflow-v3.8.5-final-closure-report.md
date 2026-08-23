@@ -2,7 +2,9 @@
 
 日期：2026-08-23。
 
-最终状态：`HUMAN_REVIEW_REQUIRED`。`V3.8.5 FINAL ACCEPTANCE = BLOCKED / NOT PASS`。
+最终状态：`APPROVED_BY_PROJECT_OWNER`。`V3.8.5 FINAL ACCEPTANCE = PASS_BY_EXPLICIT_OWNER_OVERRIDE`。
+
+2026-08-24 项目所有者明确批准最终 package 与 PR #15 merge，并明确豁免本轮量化人工评分。数值阈值没有得到证明，也没有被自动填充；独立追加证据、single-reviewer、scope 与 P0 依据限制见 `projectflow-v3.8.5-final-human-signoff.md`。Round 1/2/3 与 Final Chapter 冻结工件继续原样。
 
 ## 封板边界
 
@@ -70,7 +72,7 @@ DeepSeek 在兼容加固期间保留了多次失败证据：runs `32418200565`�
 
 最终工件冻结 12 个 Chapter，三 Provider 各 4 个，覆盖 ProjectFlow 大型长期历史、large-coherent、large-heterogeneous、representation boundary、minor-first、supporting-heavy、short-coherent、user-declared、deterministic fallback、presentation、research report 与 data analysis。Round 3 Story 只比较展示变化，Truth/Evidence semantic hash 必须 30/30 不变。
 
-人工评审状态仍为 `NOT_RUN`：`reviewerCount=0`，姓名、是/否、1-5 分、PASS/FAIL 与备注全部为空。自动 Gate 不能代替真人判断 Chapter 是否真正代表整个阶段，也不能授权发布。
+冻结 worksheet 人工状态仍为 `NOT_RUN`：`reviewerCount=0`，姓名、是/否、1-5 分、PASS/FAIL 与备注全部为空。独立 final sign-off 记录 `reviewerCount=1` 与项目所有者明确批准，不改写冻结 worksheet。
 
 2026-08-24 PHASE A0 复核确认 PR Head、base master、最终 Provider run、冻结哈希与 required CI 均未变化，冻结合同测试 2/2 通过。交接材料记录用户基于最终 worksheet 展示给出约 8.5/10 的总体判断，认为整体信息、个人理解、标题与摘要已基本可接受，未报告新的 Truthfulness P0。该判断没有覆盖冻结 Gate 所需的精确 1-5 平均分、完整审核范围与 merge 批准，因此不能自动转写为 PASS。
 
@@ -78,6 +80,6 @@ DeepSeek 在兼容加固期间保留了多次失败证据：runs `32418200565`�
 
 ## 最终决策与风险
 
-工程自动门禁完成后仍停在 `HUMAN_REVIEW_REQUIRED / NOT PASS`。唯一允许的下一步是真人填写冻结 worksheet，并由用户根据平均可读性、代表性、核心维度和 P0=0 阈值明确批准或拒绝。
+工程自动门禁完成后曾停在 `HUMAN_REVIEW_REQUIRED / NOT PASS`。2026-08-24 项目所有者明确改变本次收口要求：不再等待量化评分并批准继续，因此当前按 `PASS_BY_EXPLICIT_OWNER_OVERRIDE` 执行 Ready、merge、master CI、acceptance backfill 与 V3.9 进入。不得把该 override 改写为原数值 Gate 已通过。
 
 保留风险：Provider 输出仍有随机性，DeepSeek 已实际触发并通过有界重试；最终人工评审计划只有一名评审人，必须披露 single-reviewer limitation；API Key 的本地数据库存储仍是桌面产品化前需迁移到 OS SecretStore 的既有风险。V3.9 可考虑把代表性反馈转为新的人工评测集，但不在 V3.8.5 反向改写冻结事实或验收结论。

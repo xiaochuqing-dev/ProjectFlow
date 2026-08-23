@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.8.5 项目所有者最终签字 - 2026-08-24
+
+项目所有者明确批准 V3.8.5 最终 package 与 PR #15 合并，并要求不再等待本轮量化人工评分。新增独立、追加式 final human sign-off evidence，保留 Story/Chapter 三项平均分与核心维度最低分为 null，结论只写 `PASS_BY_EXPLICIT_OWNER_OVERRIDE`；没有改写 Round 1/2/3 或 Final Chapter 冻结工件。签字记录 reviewerCount=1、single-reviewer limitation、最终批准未重确认 item count，以及 human P0=0 仅代表没有新报告而非新的逐样本复评。V3.9 ENTRY 获批；Ready、merge、backfill 和清理仍需真实 CI，继续 NO TAG / NO RELEASE。
+
 ## ProjectFlow V3.8.5 Final Sign-off A0 与产品语言合同 - 2026-08-24
 
 重新核对 GitHub 与本地后，PR #15 仍为 OPEN/Draft/MERGEABLE，Head `7d181af2` 与 base master `5cb5e496` 未变化；当前 Head 的 push/PR required CI 全绿。Final Chapter 与 Round 3 冻结合同测试 2/2 通过，30 Story、12 Final Chapter、三模型同头结果和 canonical-LF 哈希均未改变。交接材料记录的 8.5/10 总体判断只作为 human judgement 保存，不拆分为逐样本评分；Hash/ID 过长、内部 diagnostics 过载和用户层中英文混排正式登记为 V4.0 GUI 债务。新增正式中文产品语言与渐进披露合同。由于审核范围、三个 1-5 平均分、P0 结论和明确 merge 批准仍缺失，V3.8.5 继续为 HUMAN_REVIEW_REQUIRED / NOT PASS，V3.9 ENTRY 继续 BLOCKED。

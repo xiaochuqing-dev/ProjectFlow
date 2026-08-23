@@ -1,8 +1,10 @@
 # ProjectFlow V3.8.5 RC3 Acceptance Report
 
-2026-08-23 superseding note: Final Chapter Closure replaces GLM with GPT 5.6 Luna, retains DeepSeek V4 Flash and adds Qwen3.7 Plus, all at Max reasoning. The current engineering evidence and blank Final Chapter human gate are in `projectflow-v3.8.5-final-closure-report.md`; V3.8.5 remains `HUMAN_REVIEW_REQUIRED / NOT PASS`. The RC3 report below remains immutable historical context.
+2026-08-24 final sign-off superseding note: the project owner explicitly approved the final package and PR #15 merge and waived this round's quantitative human scores. The current decision is `PASS_BY_EXPLICIT_OWNER_OVERRIDE`; numeric thresholds remain unevidenced rather than fabricated. The append-only sign-off, single-reviewer limitation, unreconfirmed item-count scope and P0 reporting basis are in `projectflow-v3.8.5-final-human-signoff.md`. The RC3 report below remains immutable historical context.
 
-Report status: PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS. Updated 2026-08-12.
+2026-08-23 historical note: Final Chapter Closure replaced GLM with GPT 5.6 Luna, retained DeepSeek V4 Flash and added Qwen3.7 Plus, all at Max reasoning. The engineering evidence and then-blank Final Chapter human gate are in `projectflow-v3.8.5-final-closure-report.md`; at that point V3.8.5 remained `HUMAN_REVIEW_REQUIRED / NOT PASS`.
+
+Current report status: `PASS_BY_EXPLICIT_OWNER_OVERRIDE`, pending the authorized merge/backfill sequence. The report status below was the 2026-08-12 historical state.
 
 Remote master remains `5cb5e49661206feb8f59885bea672c314c9374e8`. PR #15 is OPEN, Draft and unmerged. Production behavior is fixed at `539dfc9802069dec40207179f65b873bf862872c`; current PR validation head `b9e9c2d` adds only the cross-platform frozen-file hash contract.
 

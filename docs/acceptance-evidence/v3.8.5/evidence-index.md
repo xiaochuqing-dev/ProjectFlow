@@ -1,6 +1,8 @@
 # V3.8.5 验收证据索引
 
-当前状态：HUMAN_REVIEW_REQUIRED / NOT PASS。PR #15 保持 Draft、未合并。
+当前状态：`PASS_BY_EXPLICIT_OWNER_OVERRIDE`，PR #15 已获项目所有者 merge 授权，正在执行 Ready/merge/backfill。NO TAG / NO RELEASE。
+
+2026-08-24 Final Human Sign-off：项目所有者明确批准最终 package 与 merge，并豁免本轮量化人工评分。独立证据为 `final-human-signoff.json`；reviewerCount=1，数值评分为 null，原阈值未宣称通过，single-reviewer、未重确认 item count 和 P0 仅按无新报告记录的限制均已披露。Round 1/2/3 与 Final Chapter 冻结工件保持原样。
 
 2026-08-24 PHASE A0 复核：PR Head/base、最终 Provider run 与冻结包未变化；Final Chapter/Round 3 manifest 合同测试 2/2 通过。交接材料记录的 8.5/10 总体意见已作为有限范围 human judgement 保存，但未被换算为精确 Gate 分数。当前状态审计见 `docs/projectflow-v3.8.5-final-signoff-current-state-audit.md`，产品语言与 V4.0 GUI 债务合同见 `docs/product-language-and-progressive-disclosure-contract.md`。
 

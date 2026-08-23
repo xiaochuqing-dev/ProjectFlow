@@ -1,8 +1,10 @@
 # V3.8.5 RC3 Real Provider Results
 
-2026-08-23 superseding note: the active Final Chapter profiles are GPT 5.6 Luna `gpt-5.6-luna` / Responses/max, DeepSeek V4 Flash `deepseek-v4-flash` / Chat/max, and Qwen3.7 Plus `qwen3.7-plus` / Messages/max. Current qualification, Chapter scenario, retry and security evidence is consolidated in `projectflow-v3.8.5-final-closure-report.md`. Automated Provider success does not change the blank human gate or NOT PASS decision.
+2026-08-24 final sign-off note: all Final Chapter Provider evidence remains unchanged, and the project owner explicitly approved the final package while waiving quantitative scores. Human acceptance is `PASS_BY_EXPLICIT_OWNER_OVERRIDE`; this does not convert the blank frozen worksheets into scored artifacts or erase any failed Provider attempt.
 
-Current status: RE-RUN REQUIRED / PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS.
+2026-08-23 Provider superseding note: the active Final Chapter profiles are GPT 5.6 Luna `gpt-5.6-luna` / Responses/max, DeepSeek V4 Flash `deepseek-v4-flash` / Chat/max, and Qwen3.7 Plus `qwen3.7-plus` / Messages/max. Current qualification, Chapter scenario, retry and security evidence is consolidated in `projectflow-v3.8.5-final-closure-report.md`. Automated Provider success did not by itself change the then-blank human gate.
+
+Current status: FINAL THREE-PROVIDER MATRIX PASS; HUMAN ACCEPTANCE `PASS_BY_EXPLICIT_OWNER_OVERRIDE`. Historical RC3 rerun status follows.
 
 The RC3 acceptance profiles are GLM `glm-5.2`, Ark Coding v3, `OPENAI_RESPONSES`, max; and DeepSeek `deepseek-v4-flash`, OpenCode Go `/v1`, `OPENAI_CHAT_COMPLETIONS`, max. Credentials are injected only through GitHub Actions Secrets. No Key, Authorization value, Prompt, raw response, reasoning or machine absolute path is stored in normalized artifacts.
 
