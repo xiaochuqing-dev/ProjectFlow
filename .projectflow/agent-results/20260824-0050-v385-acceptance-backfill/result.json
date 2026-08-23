@@ -18,7 +18,7 @@
     "manualCheck": "PR #15 已合并；final human scores 继续为 null，reviewerCount=1，single-reviewer、scope 与 P0 依据限制均保留；冻结包未修改。"
   },
   "unfinished": [
-    "本分支仍需创建 acceptance-backfill PR，通过 required CI 后合并并完成最终 master 验证与两条 V3.8.5 分支清理。"
+    "Acceptance-backfill PR #16 已创建，仍需通过 required CI 后合并并完成最终 master 验证与两条 V3.8.5 分支清理。"
   ],
   "sedimentCandidates": [
     "人工冻结工件与后续 GitHub 关闭元数据应分离，关闭证据通过冻结哈希引用原工件，避免回填改写历史。"

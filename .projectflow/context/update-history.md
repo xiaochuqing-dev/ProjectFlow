@@ -2,7 +2,7 @@
 
 ## ProjectFlow V3.8.5 GitHub 正式合入与验收回填 - 2026-08-24
 
-PR #15 已按仓库惯例以 merge commit `29c154eb618ca43edf58c631c14cc1d296e14f3f` 合入 master。最终 PR Head 的 push/PR runs `32652420679`、`32652422016` 和合并后 master run `32652683003` 均全绿，覆盖 Backend/H2、PostgreSQL、Frontend、Browser、Hermes、Obsidian 与 sensitive-content。根 `Start-ProjectFlow.bat -NoBrowser` 从干净 merge revision 重建并通过双端健康检查，退出后无端口残留。新增独立 acceptance backfill 元数据，继续只把人工结论写成 `PASS_BY_EXPLICIT_OWNER_OVERRIDE`，保留 null 分数、single-reviewer、scope 与 P0 依据限制，不改写冻结工件；Tag 与 Release 仍禁止。
+PR #15 已按仓库惯例以 merge commit `29c154eb618ca43edf58c631c14cc1d296e14f3f` 合入 master。最终 PR Head 的 push/PR runs `32652420679`、`32652422016` 和合并后 master run `32652683003` 均全绿，覆盖 Backend/H2、PostgreSQL、Frontend、Browser、Hermes、Obsidian 与 sensitive-content。根 `Start-ProjectFlow.bat -NoBrowser` 从干净 merge revision 重建并通过双端健康检查，退出后无端口残留。Acceptance-backfill PR #16 承载独立最终元数据，继续只把人工结论写成 `PASS_BY_EXPLICIT_OWNER_OVERRIDE`，保留 null 分数、single-reviewer、scope 与 P0 依据限制，不改写冻结工件；Tag 与 Release 仍禁止。
 
 ## ProjectFlow V3.8.5 项目所有者最终签字 - 2026-08-24
 

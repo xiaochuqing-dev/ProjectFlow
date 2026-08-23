@@ -6,7 +6,7 @@
 
 2026-08-24 项目所有者明确批准最终 package 与 PR #15 merge，并明确豁免本轮量化人工评分。数值阈值没有得到证明，也没有被自动填充；独立追加证据、single-reviewer、scope 与 P0 依据限制见 `projectflow-v3.8.5-final-human-signoff.md`。Round 1/2/3 与 Final Chapter 冻结工件继续原样。
 
-GitHub 正式关闭：PR #15 已以 merge commit `29c154eb618ca43edf58c631c14cc1d296e14f3f` 合入 master。合并后 required CI run `32652683003` 的 Backend/H2、PostgreSQL、Frontend、Browser、Hermes、Obsidian 与 sensitive-content 全绿；根启动器从同一干净 revision 完成构建、启动、健康检查和无残留退出。回填证据为 `acceptance-evidence/v3.8.5/final-acceptance-backfill.json`。
+GitHub 正式关闭：PR #15 已以 merge commit `29c154eb618ca43edf58c631c14cc1d296e14f3f` 合入 master。合并后 required CI run `32652683003` 的 Backend/H2、PostgreSQL、Frontend、Browser、Hermes、Obsidian 与 sensitive-content 全绿；根启动器从同一干净 revision 完成构建、启动、健康检查和无残留退出。回填证据为 `acceptance-evidence/v3.8.5/final-acceptance-backfill.json`，随 acceptance-backfill PR #16 合并生效。
 
 ## 封板边界
 

@@ -1,10 +1,11 @@
 {
   "version": "projectflow-v385-final-acceptance-backfill-v1",
   "generatedAt": "2026-08-24T00:50:47+08:00",
-  "state": "FEATURE_MERGED_MASTER_VALIDATED_BACKFILL_PR_PENDING",
+  "state": "FINAL_ACCEPTED_ON_BACKFILL_PR_16_MERGE",
   "repository": "xiaochuqing-dev/ProjectFlow",
   "featurePr": 15,
-  "acceptanceBackfillPr": null,
+  "acceptanceBackfillPr": 16,
+  "acceptanceBackfillOpenedAt": "2026-08-23T16:56:05Z",
   "featureHeadSha": "60200af43045b4861c2a794130ed5183c8fe07bb",
   "featureMergeSha": "29c154eb618ca43edf58c631c14cc1d296e14f3f",
   "featureMergedAt": "2026-08-23T16:45:45Z",
@@ -109,7 +110,7 @@
     "humanReadableProjectHistoryQuality": "PASS_BY_EXPLICIT_OWNER_OVERRIDE",
     "chapterRepresentativeness": "PASS_BY_EXPLICIT_OWNER_OVERRIDE",
     "multiProviderHistoryContract": "PASS",
-    "v39Entry": "APPROVED_AFTER_BACKFILL_MERGE_AND_FINAL_MASTER_VERIFICATION",
+    "v39Entry": "APPROVED_ON_BACKFILL_PR_16_MERGE_AND_FINAL_MASTER_VERIFICATION",
     "noTag": true,
     "noRelease": true
   }

@@ -4,7 +4,7 @@
 
 2026-08-23 historical note: deterministic Chapter representation and the same-head GPT 5.6 Luna, DeepSeek V4 Flash and Qwen3.7 Plus acceptance matrix were the automated closure boundary. Human Chapter representativeness was still NOT_RUN at that point; see `projectflow-v3.8.5-final-closure-report.md`.
 
-Current decision: `PASS_BY_EXPLICIT_OWNER_OVERRIDE`. PR #15 merged as `29c154eb618ca43edf58c631c14cc1d296e14f3f`; master required CI run `32652683003` and the clean-master root launcher passed. The backfill evidence records the exact GitHub, human, Provider, hash and risk metadata. The pre-signoff blocked analysis below is retained as historical evidence.
+Current decision: `PASS_BY_EXPLICIT_OWNER_OVERRIDE`. PR #15 merged as `29c154eb618ca43edf58c631c14cc1d296e14f3f`; master required CI run `32652683003` and the clean-master root launcher passed. Acceptance-backfill PR #16 records the exact GitHub, human, Provider, hash and risk metadata and makes this final metadata effective on merge. The pre-signoff blocked analysis below is retained as historical evidence.
 
 Automated implementation completed:
 

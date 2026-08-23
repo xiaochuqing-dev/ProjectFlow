@@ -1,6 +1,6 @@
 # V3.8.5 验收证据索引
 
-当前状态：`PASS_BY_EXPLICIT_OWNER_OVERRIDE`。PR #15 已以 `29c154eb618ca43edf58c631c14cc1d296e14f3f` 合入 master，合并后 required CI run `32652683003` 全绿，正在执行 acceptance backfill。NO TAG / NO RELEASE。
+当前状态：`PASS_BY_EXPLICIT_OWNER_OVERRIDE`。PR #15 已以 `29c154eb618ca43edf58c631c14cc1d296e14f3f` 合入 master，合并后 required CI run `32652683003` 全绿。Acceptance-backfill PR #16 承载最终元数据并在合并时生效。NO TAG / NO RELEASE。
 
 2026-08-24 Final Human Sign-off：项目所有者明确批准最终 package 与 merge，并豁免本轮量化人工评分。独立证据为 `final-human-signoff.json`；reviewerCount=1，数值评分为 null，原阈值未宣称通过，single-reviewer、未重确认 item count 和 P0 仅按无新报告记录的限制均已披露。Round 1/2/3 与 Final Chapter 冻结工件保持原样。
 

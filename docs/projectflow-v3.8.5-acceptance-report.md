@@ -4,7 +4,7 @@
 
 2026-08-23 historical note: Final Chapter Closure replaced GLM with GPT 5.6 Luna, retained DeepSeek V4 Flash and added Qwen3.7 Plus, all at Max reasoning. The engineering evidence and then-blank Final Chapter human gate are in `projectflow-v3.8.5-final-closure-report.md`; at that point V3.8.5 remained `HUMAN_REVIEW_REQUIRED / NOT PASS`.
 
-Current report status: `PASS_BY_EXPLICIT_OWNER_OVERRIDE`. PR #15 merged as `29c154eb618ca43edf58c631c14cc1d296e14f3f`; master required CI run `32652683003` passed Backend/H2, PostgreSQL, Frontend, Browser, Hermes, Obsidian and sensitive-content, and the root launcher passed from the clean merge revision. Exact backfill metadata is in `acceptance-evidence/v3.8.5/final-acceptance-backfill.json`. The report status below was the 2026-08-12 historical state.
+Current report status: `PASS_BY_EXPLICIT_OWNER_OVERRIDE`. PR #15 merged as `29c154eb618ca43edf58c631c14cc1d296e14f3f`; master required CI run `32652683003` passed Backend/H2, PostgreSQL, Frontend, Browser, Hermes, Obsidian and sensitive-content, and the root launcher passed from the clean merge revision. Acceptance-backfill PR #16 carries `acceptance-evidence/v3.8.5/final-acceptance-backfill.json`; the metadata becomes final on its merge. The report status below was the 2026-08-12 historical state.
 
 Historical RC3 snapshot: remote master was `5cb5e49661206feb8f59885bea672c314c9374e8`, PR #15 was OPEN/Draft, production behavior was fixed at `539dfc9802069dec40207179f65b873bf862872c`, and validation head `b9e9c2d` added only the cross-platform frozen-file hash contract. The current master and merge facts are recorded above.
 
