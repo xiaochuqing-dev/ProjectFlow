@@ -35,6 +35,7 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.projectflow.entity.ProjectAgentCandidate;
 import com.projectflow.entity.ProjectFact;
 import com.projectflow.entity.ProjectFactEpistemicStatus;
 import com.projectflow.entity.ProjectFactRecordStatus;
@@ -46,6 +47,7 @@ import com.projectflow.entity.ProjectHistoryEvent.Transition;
 import com.projectflow.entity.ProjectMemory;
 import com.projectflow.entity.ProjectSpace;
 import com.projectflow.repository.ProjectFactRepository;
+import com.projectflow.repository.ProjectAgentCandidateRepository;
 import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
 import com.projectflow.support.AppException;
@@ -102,6 +104,7 @@ public class ProjectHistorySourceCollector {
     private final ProjectRepository projectRepository;
     private final ProjectMemoryRepository memoryRepository;
     private final ProjectFactRepository factRepository;
+    private final ProjectAgentCandidateRepository candidateRepository;
     private final LocalProjectPathGuard pathGuard;
     private final LocalCommandExecutor commandExecutor;
     private final SensitiveContentRedactor redactor;
@@ -111,6 +114,7 @@ public class ProjectHistorySourceCollector {
         ProjectRepository projectRepository,
         ProjectMemoryRepository memoryRepository,
         ProjectFactRepository factRepository,
+        ProjectAgentCandidateRepository candidateRepository,
         LocalProjectPathGuard pathGuard,
         LocalCommandExecutor commandExecutor,
         SensitiveContentRedactor redactor,
@@ -119,6 +123,7 @@ public class ProjectHistorySourceCollector {
         this.projectRepository = projectRepository;
         this.memoryRepository = memoryRepository;
         this.factRepository = factRepository;
+        this.candidateRepository = candidateRepository;
         this.pathGuard = pathGuard;
         this.commandExecutor = commandExecutor;
         this.redactor = redactor;
@@ -186,6 +191,7 @@ public class ProjectHistorySourceCollector {
             collectFilesystemCurrent(project, root, projectRevision, events, limitations, collectionState);
         }
         if (root != null) collectAgentResults(projectId, root, projectRevision, events, limitations, collectionState);
+        collectAgentCandidates(projectId, projectRevision, events, limitations, collectionState);
         collectProjectFacts(projectId, projectRevision, events, limitations, collectionState);
 
         List<CollectedEvent> ordered = events.values().stream()
@@ -930,6 +936,69 @@ public class ProjectHistorySourceCollector {
             collectionState.complete = false;
             limitations.add("项目事实数量达到来源事件上限；未读取部分已作为覆盖缺口记录。 ");
         }
+    }
+
+    private void collectAgentCandidates(
+        UUID projectId,
+        String projectRevision,
+        Map<String, CollectedEvent> events,
+        List<String> limitations,
+        CollectionState collectionState
+    ) {
+        Page<ProjectAgentCandidate> page = candidateRepository.findByProjectIdOrderByCreatedAtDesc(
+            projectId, PageRequest.of(0, MAX_AGENT_RESULTS + 1)
+        );
+        if (page.getTotalElements() > MAX_AGENT_RESULTS) {
+            collectionState.complete = false;
+            limitations.add("Agent Result candidate 超过单次安全上限 " + MAX_AGENT_RESULTS
+                + "；未读取部分保留为覆盖缺口。 ");
+        }
+        for (ProjectAgentCandidate candidate : page.getContent().stream().limit(MAX_AGENT_RESULTS).toList()) {
+            ModelCancellationContext.throwIfCancelled();
+            List<String> evidence = candidate.getEvidenceRefs().stream()
+                .map(redactor::redact).map(value -> safeLabel(value, 500))
+                .filter(value -> !value.isBlank()).distinct().limit(MAX_LIST_ITEMS).toList();
+            List<String> paths = evidence.stream().map(ProjectHistorySourceCollector::candidateFilePath)
+                .filter(value -> !value.isBlank()).distinct().limit(60).toList();
+            List<String> subjects = paths.isEmpty()
+                ? List.of("agent-result-" + candidate.getId().toString().substring(0, 12))
+                : paths.stream().map(ProjectHistorySourceCollector::historySubjectKey).distinct().limit(20).toList();
+            List<String> relations = new ArrayList<>(evidence);
+            relations.add("agent-result:" + candidate.getId());
+            List<String> eventLimitations = new ArrayList<>(candidate.getLimitations().stream()
+                .map(redactor::redact).map(value -> safeLabel(value, 500))
+                .filter(value -> !value.isBlank()).limit(20).toList());
+            eventLimitations.add("Agent candidate 属于过程证据，未经独立验证不能升级为强事实。 ");
+            String sourceRevision = sha256(String.join("|", List.of(
+                candidate.getCandidateType(), candidate.getAssertion(), candidate.getEpistemicStatus().name(),
+                String.join("\u0000", evidence), candidate.getCurrentness(), candidate.getSourceRevision(),
+                candidate.getValidationStatus()
+            )));
+            add(events, event(
+                projectId, SourceType.AGENT_RESULT, "candidate:" + candidate.getId(), sourceRevision, projectRevision,
+                candidate.getCreatedAt(), "Agent", Scope.HISTORICAL, Category.AGENT_RESULT, Transition.MODIFIED,
+                redactor.redact(candidate.getAssertion()), paths, subjects, evidence, relations,
+                Authority.PROCESS_EVIDENCE, candidate.getEpistemicStatus(),
+                Map.of(
+                    "source", "agent-candidate",
+                    "candidateType", candidate.getCandidateType(),
+                    "validationStatus", candidate.getValidationStatus(),
+                    "currentness", candidate.getCurrentness(),
+                    "claimOnly", true
+                ), eventLimitations, ""
+            ));
+        }
+    }
+
+    private static String candidateFilePath(String evidenceRef) {
+        if (evidenceRef == null) return "";
+        String value;
+        if (evidenceRef.startsWith("file:")) value = evidenceRef.substring("file:".length());
+        else if (evidenceRef.startsWith("file-metadata:")) value = evidenceRef.substring("file-metadata:".length());
+        else return "";
+        int hash = value.indexOf("#sha256=");
+        if (hash >= 0) value = value.substring(0, hash);
+        return safeRelativePath(value);
     }
 
     private void collectFilesystemCurrent(

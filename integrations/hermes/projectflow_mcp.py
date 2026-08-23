@@ -15,7 +15,7 @@ from typing import Any
 
 
 SERVER_NAME = "projectflow-project-memory"
-SERVER_VERSION = "3.8.5"
+SERVER_VERSION = "3.9.0"
 PROTOCOL_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"}
 DEFAULT_PROTOCOL_VERSION = "2025-11-25"
 
@@ -128,6 +128,11 @@ TOOLS = [
     _tool(
         "get_project_history_overview",
         "Read the persisted Project History overview: earliest confirmed state, current state, recent changes, dynamic chapter summaries, conflicts, unknowns, coverage, and currentness. GET never scans Git or calls a model.",
+        _schema({"projectId": PROJECT_ID}, ["projectId"]),
+    ),
+    _tool(
+        "get_project_current_state",
+        "Read the revisioned Current Project State derived from the persisted corrected Project History, including currentness, stale or degraded disclosure, related Story, Thread and Chapter references, conflicts, unknowns, and limitations. It never scans sources, calls a model, or creates a ProjectFact.",
         _schema({"projectId": PROJECT_ID}, ["projectId"]),
     ),
     _tool(
@@ -420,6 +425,8 @@ def call_tool(client: ProjectFlowClient, name: str, arguments: dict[str, Any]) -
         return client.get(base + "/snapshot")
     if name == "get_project_history_overview":
         return client.get(base + "/history/overview")
+    if name == "get_project_current_state":
+        return client.get(base + "/history/current-state")
     if name == "list_project_history_chapters":
         return client.get(base + "/history/chapters", {
             "page": _argument(arguments, "page", 0), "size": _argument(arguments, "size", 10),

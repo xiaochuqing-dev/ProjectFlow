@@ -1,5 +1,15 @@
 # Architecture
 
+## V3.9 Project Continuity Closure
+
+V3.9 extends the existing explicit History refresh chain: source collection → Event upsert → `ProjectContinuityDelta` → affected Story/Thread → affected Chapter tail → corrected history → Current Project State → Agent Context/Gateway/Hermes/Obsidian. It adds no second History, Fact, incremental engine, projector, model client, watcher or daemon.
+
+`ProjectContinuityDelta` is a bounded, project-owned refresh diagnostic derived from existing upsert mutations and presentation revision. `ProjectContinuityDirtyMarker` records ProjectFlow-owned Agent candidate, Correction and Fact-ingestion writes on `ProjectHistorySnapshot`; it never scans or invokes a model. Refresh acknowledges only the dirty revision observed before collection, so a concurrent later write remains STALE. Database Agent candidates enter source collection as bounded PROCESS_EVIDENCE.
+
+Story and Thread IDs remain engineering-owned. Unaffected Chapters are reused only when all their Story members remain in the retained pre-overlap set; the first affected Chapter and later tail are recomputed by the existing planner. Corrections can replay across safe additive membership only when every bounded old member remains; uncertain rewrite targets become conflict.
+
+Current Project State is a model-free read projection of persisted corrected history. Its revision flows into Context Package v2 and the Obsidian Overview/History indexes. GET consumers never scan or reinterpret semantics.
+
 ## V3.8.5 human-readable history closure
 
 The final RC2 presentation boundary adds a human-subject normalizer before prompt construction and a Provider-neutral entailment validator after model output. The prompt receives only a bounded display concept, exact claim state, allowed/forbidden claims, deterministic narrative semantics and eligible reason references. Raw paths, technical details and commit summaries do not enter this wording pass.

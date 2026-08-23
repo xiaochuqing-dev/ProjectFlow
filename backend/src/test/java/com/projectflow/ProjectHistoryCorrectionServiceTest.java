@@ -399,6 +399,42 @@ class ProjectHistoryCorrectionServiceTest {
     }
 
     @Test
+    void additiveStoryContinuationKeepsCorrectionOnlyWhenEveryOriginalMemberRemains() throws Exception {
+        correctionService.create(ownerId, project.getId(), request(
+            "RENAME_STORY", "story-a", List.of(), "持续沿用的用户标题", "", "", "", ""
+        ));
+        UUID appendedEvent = UUID.randomUUID();
+        List<ChangeStory> updatedStories = List.of(
+            story("story-a", "自动标题已经扩展", List.of(eventA, eventB, appendedEvent), FIRST),
+            story("story-b", "补充登录测试", List.of(UUID.randomUUID()), FIRST.plusSeconds(60)),
+            story("story-c", "整理登录说明", List.of(UUID.randomUUID()), FIRST.plusSeconds(120))
+        );
+        HistoryChapter updatedChapter = new HistoryChapter(
+            "chapter-a", "登录能力形成", "登录相关工作形成一个阶段。", FIRST, FIRST.plusSeconds(120),
+            List.of("EARLIEST_DISCOVERED_EVENT"), List.of("story-a", "story-b", "story-c"), 3, 5,
+            "ENGINEERING_GROUPING", "FULL_WITHIN_DISCOVERED_SOURCES", List.of()
+        );
+        EvolutionThread updatedThread = new EvolutionThread(
+            "thread-a", "login", "登录流程", "PROJECT_SUBJECT", List.of("story-a", "story-b", "story-c"),
+            List.of("CREATED", "MODIFIED"), "登录流程已经形成。", List.of(), List.of(), List.of(), 5, null
+        );
+        rewriteSnapshot("additive-source-fingerprint", updatedStories, List.of(updatedChapter), List.of(updatedThread));
+
+        ProjectHistorySnapshot refreshed = snapshotRepository.findByProjectId(project.getId()).orElseThrow();
+        ChangeStory corrected = correctionService.resolve(project.getId(), refreshed).stories().stream()
+            .filter(value -> value.id().equals("story-a")).findFirst().orElseThrow();
+        assertThat(corrected.humanTitle()).isEqualTo("持续沿用的用户标题");
+        assertThat(corrected.eventRefs()).containsExactly(eventA, eventB, appendedEvent);
+        var listed = correctionService.list(ownerId, project.getId()).items().stream()
+            .filter(value -> value.targetId().equals("story-a")).findFirst().orElseThrow();
+        assertThat(listed.membershipStale()).isFalse();
+        assertThat(listed.additiveContinuationReplayed()).isTrue();
+        assertThat(listed.difference()).contains("安全追加");
+        assertThat(correctionRepository.findByProjectIdOrderByCreatedAtAsc(project.getId()).get(0)
+            .getTargetMembershipRefsJson()).contains(eventA.toString(), eventB.toString());
+    }
+
+    @Test
     void changedStoryMembershipDoesNotSilentlyApplyOldCorrection() throws Exception {
         correctionService.create(ownerId, project.getId(), request(
             "RENAME_STORY", "story-a", List.of(), "旧对象标题", "", "", "", ""
@@ -429,6 +465,37 @@ class ProjectHistoryCorrectionServiceTest {
         String listedRevision = correctionService.list(ownerId, project.getId()).presentationRevision();
         String resolvedRevision = correctionService.resolve(project.getId(), snapshot).presentationRevision();
         assertThat(listedRevision).isEqualTo(resolvedRevision);
+    }
+
+    @Test
+    void currentStateAndAgentContextRevisionsAreStableOnNoopAndChangeWithCorrection() throws Exception {
+        var firstState = memoryGatewayService.historyCurrentState(ownerId, project.getId());
+        var firstPackage = agentHistoryService.contextPackage(ownerId, project.getId(), 32_000);
+        var secondPackage = agentHistoryService.contextPackage(ownerId, project.getId(), 32_000);
+        assertThat(firstPackage.packageRevision()).isEqualTo(secondPackage.packageRevision());
+        assertThat(firstPackage.currentProjectState().stateRevision()).isEqualTo(firstState.stateRevision());
+        assertThat(firstPackage.currentProjectState().modelCalled()).isFalse();
+
+        correctionService.create(ownerId, project.getId(), request(
+            "RENAME_STORY", "story-a", List.of(), "修正后持续可读的登录结果", "", "", "", ""
+        ));
+        var changedState = memoryGatewayService.historyCurrentState(ownerId, project.getId());
+        var changedPackage = agentHistoryService.contextPackage(ownerId, project.getId(), 32_000);
+        assertThat(changedState.stateRevision()).isNotEqualTo(firstState.stateRevision());
+        assertThat(changedState.presentationRevision()).isEqualTo(correctionService.list(ownerId, project.getId()).presentationRevision());
+        assertThat(changedPackage.packageRevision()).isNotEqualTo(firstPackage.packageRevision());
+        assertThat(changedPackage.currentProjectState().stateRevision()).isEqualTo(changedState.stateRevision());
+
+        mockMvc.perform(get("/api/projects/" + project.getId() + "/history/current-state")
+                .header("Authorization", "Bearer local-test"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.stateRevision").value(changedState.stateRevision()))
+            .andExpect(jsonPath("$.data.modelCalled").value(false));
+        mockMvc.perform(get("/api/projects/" + project.getId() + "/project-memory/history/current-state")
+                .header("Authorization", "Bearer local-test")
+                .header("X-ProjectFlow-Caller", "continuity-test"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.stateRevision").value(changedState.stateRevision()));
     }
 
     @Test

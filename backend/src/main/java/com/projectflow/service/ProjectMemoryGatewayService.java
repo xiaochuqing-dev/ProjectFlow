@@ -33,6 +33,7 @@ import com.projectflow.dto.ProjectHistoryDtos.HistoryEvidenceResponse;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryEventPageResponse;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryOverviewContent;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryOverviewResponse;
+import com.projectflow.dto.ProjectHistoryDtos.ProjectCurrentStateResponse;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryStoryPageResponse;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryCorrectionListResponse;
 import com.projectflow.dto.ProjectTimelineDtos.TimelineLifecycleResponse;
@@ -311,6 +312,11 @@ public class ProjectMemoryGatewayService {
     @Transactional(readOnly = true)
     public HistoryOverviewResponse historyOverview(UUID userId, UUID projectId) {
         return historyReadService.overview(userId, projectId);
+    }
+
+    @Transactional(readOnly = true)
+    public ProjectCurrentStateResponse historyCurrentState(UUID userId, UUID projectId) {
+        return historyReadService.currentState(userId, projectId);
     }
 
     @Transactional(readOnly = true)

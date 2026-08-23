@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.9 Project Continuity Closure 核心实现 - 2026-08-24
+
+从 final master `ab29b1ff0f842c029b5cf121bd584bd40fcf74b2` 创建 `codex/v3.9-project-continuity-closure` 与 Draft PR #17。先冻结 15 Calibration + 15 Holdout、产品合同、复用审计与 Ground Truth 泄漏门禁，再在既有 History 链上实现有界 Continuity Delta、Story/Thread 连续性诊断、未受影响 Chapter 精确复用、Correction 安全 additive replay、Current Project State、Context Package revision 联动和 Obsidian Current-State-only 两文件更新。数据库 Agent Result candidate 现在作为 PROCESS_EVIDENCE 进入下一次显式刷新；Agent candidate、Correction 和 Fact ingestion 使用并发安全 dirty revision，刷新只确认开始时观察到的版本。新增 Native/Gateway/Frontend/Hermes Current State 读取，Hermes 版本升至 3.9.0、共 21 个只读工具。当前只记录已完成实现与确定性验证；Provider、Dogfood、真人 review、最终 CI/merge/backfill 仍按真实结果更新，继续 NO TAG / NO RELEASE。
+
 ## ProjectFlow V3.8.5 GitHub 正式合入与验收回填 - 2026-08-24
 
 PR #15 已按仓库惯例以 merge commit `29c154eb618ca43edf58c631c14cc1d296e14f3f` 合入 master。最终 PR Head 的 push/PR runs `32652420679`、`32652422016` 和合并后 master run `32652683003` 均全绿，覆盖 Backend/H2、PostgreSQL、Frontend、Browser、Hermes、Obsidian 与 sensitive-content。根 `Start-ProjectFlow.bat -NoBrowser` 从干净 merge revision 重建并通过双端健康检查，退出后无端口残留。Acceptance-backfill PR #16 承载独立最终元数据，继续只把人工结论写成 `PASS_BY_EXPLICIT_OWNER_OVERRIDE`，保留 null 分数、single-reviewer、scope 与 P0 依据限制，不改写冻结工件；Tag 与 Release 仍禁止。

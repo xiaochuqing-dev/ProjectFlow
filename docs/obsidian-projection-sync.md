@@ -1,5 +1,11 @@
 # Obsidian Projection and Sync
 
+## V3.9 incremental current-state projection
+
+The Gateway dataset includes persisted Current Project State. Project Overview and History Index use its confirmed state/currentness and include `stateRevision` in source identity. A current-state-only change updates only those two managed notes; Story notes remain byte-stable and the next identical sync is 0 write.
+
+Existing per-file hashes, manifest, atomic replacement, managed-block/user-content preservation and conflict behavior are reused. No watcher, daemon, automatic Git action or new Obsidian dependency is added. The projection manifest remains a checkpoint, never a History or Fact source.
+
 ## V3.8.5 history projection density
 
 The final RC2 contract changes no projection storage format. Obsidian receives the same validated Story/Chapter wording as native and Gateway consumers; it does not regenerate prose or promote a claim state.

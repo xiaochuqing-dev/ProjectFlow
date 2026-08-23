@@ -1,6 +1,10 @@
 # ProjectFlow
 
-ProjectFlow V3.8.5 is a local-first project-history reconstruction and long-term project-memory layer. Its universal product axis is 项目历程, not Capability Map: it turns Git, files, documents, Project Facts, Agent results and optional collaboration metadata into a readable path from source events to human-readable chapters, primary change stories, supporting work, evolution threads and Evidence drill-down.
+ProjectFlow V3.9 is a local-first project continuity and long-term project-memory layer. Its universal product axis is 项目历程: it turns Git, files, documents, Project Facts, Agent results and optional collaboration metadata into stable incremental Events, Stories, Evolution Threads, Chapters, Current Project State, Agent Context and Evidence drill-down.
+
+V3.9 — Project Continuity Closure extends the V3.8.5 final baseline without a second History, Fact or incremental engine. Existing source-event upsert, 31-day overlap, durable window checkpoint, Correction overlay, Context Package v2, Gateway and Obsidian projector are reused. Small changes produce a bounded Continuity Delta, retain unaffected Story/Thread/Chapter identity, safely preserve corrections, update a model-free Current Project State and propagate its revision to Agent and projection consumers. External changes are discovered by explicit refresh; ProjectFlow-owned Agent candidate, Correction and Fact writes can mark continuity dirty without a watcher or model call.
+
+The V3.9 branch is still under formal acceptance. Deterministic, Provider, multi-step Dogfood, PostgreSQL/browser/launcher, human review, PR/master CI and backfill outcomes are reported separately; no unfinished gate is described as PASS. V3.9 creates no Tag or Release.
 
 V3.8.5 Final Chapter Closure adds deterministic Representative Clusters, coverage, Claim ceilings and bounded repair on top of the RC3 claim-level Evidence boundary. The same-head final matrix uses GPT 5.6 Luna Responses/max, DeepSeek V4 Flash Chat/max and Qwen3.7 Plus Messages/max; all three passed qualification 19/19 and Chapter scenarios 9/9. Round 1 and Round 2 remain `NEEDS_REVISION_NOT_APPROVED`, and the frozen Round 3 files remain immutable. On 2026-08-24 the project owner explicitly approved the final package and merge while waiving this round's quantitative scores. The result is `PASS_BY_EXPLICIT_OWNER_OVERRIDE`; no 1-5 score is invented, and the single-reviewer and scope limitations remain disclosed in the separate final sign-off evidence.
 
@@ -21,6 +25,16 @@ V3.7.4 strengthened content-first discovery, large-file ranges and shared Agent 
 Authorized Agents can list all loaded projects, query bounded cross-project history, read evidence/knowledge/context packages, and continue from the same durable memory after an Agent or model switch. Reads remain project-isolated and audited. Agents may submit only validated candidates; they cannot directly write strong facts. Hermes exposes the same boundary through read-only MCP tools and project context resources.
 
 V3.8.5 reuses the existing provider-neutral Model Gateway and persistent Job system. Deterministic reconstruction always remains available; bounded semantic windows may improve wording and Primary/Supporting presentation, but validated engineering data still owns membership, chronology, transitions and Evidence. User corrections are durable presentation declarations and never mutate ProjectFact or raw events. This phase includes only a minimal history preview, not the final GUI, and creates no Git Tag or GitHub Release.
+
+## V3.9 Project Continuity Closure
+
+- `ProjectContinuityDelta` exposes bounded added/updated/stale/invalidated Event changes, affected time, safe paths, hashed document/Agent identities, source/presentation revisions and no-op state.
+- Stable deterministic lineage continues or separates Story/Thread safely; semantic uncertainty stays new/UNKNOWN/attention instead of a false strong attachment.
+- Unaffected historical Chapters are reused exactly and only the affected tail uses the existing representation planner/checkpoints.
+- Correction membership refs prove safe additive continuation; rewrite replacement or incomplete legacy proof remains conflict.
+- Current Project State is a persisted corrected-history read model exposed natively, through Gateway, Frontend and the 21-tool Hermes adapter. It never becomes ProjectFact.
+- Context Package v2 includes Current State revision. Obsidian updates only affected managed notes and remains 0 write on no-op.
+- Database Agent Result candidates enter the next explicit History refresh as bounded process evidence; internal writes use a concurrent-safe dirty revision and never start a daemon.
 
 ## V3.8.5 Human-readable Project History Quality Closure
 

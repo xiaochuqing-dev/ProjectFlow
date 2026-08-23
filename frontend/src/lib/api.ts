@@ -3168,6 +3168,32 @@ export type ProjectHistoryOverview = {
   diagnostics?: Record<string, unknown>;
 };
 
+export type ProjectCurrentState = {
+  projectId: string;
+  stateRevision: string;
+  historyStatus: string;
+  currentness: string;
+  sourceRevision: string;
+  sourceFingerprint: string;
+  presentationRevision: string;
+  continuityDirty: boolean;
+  pendingContinuityRevision: string;
+  pendingContinuityReason: string;
+  continuityDirtyAt: string | null;
+  confirmedState: string;
+  recentConfirmedChanges: string[];
+  activeThreadRefs: string[];
+  relatedStoryRefs: string[];
+  relatedChapterRefs: string[];
+  conflicts: string[];
+  unknowns: string[];
+  limitations: string[];
+  stale: boolean;
+  degraded: boolean;
+  modelCalled: false;
+  latestSuccessfulAt: string | null;
+};
+
 export type ProjectHistoryCorrection = {
   id: string;
   projectId: string;
@@ -3197,6 +3223,7 @@ export type ProjectHistoryCorrection = {
   sourceStale: boolean;
   membershipStale: boolean;
   automaticPresentationChanged: boolean;
+  additiveContinuationReplayed: boolean;
 };
 
 export type ProjectHistoryCorrectionList = {
@@ -3244,6 +3271,10 @@ function projectHistoryGet<T>(token: string, path: string): Promise<T> {
 
 export function getProjectHistoryOverview(token: string, projectId: string): Promise<ProjectHistoryOverview> {
   return projectHistoryGet<ProjectHistoryOverview>(token, `/projects/${projectId}/history/overview`);
+}
+
+export function getProjectCurrentState(token: string, projectId: string): Promise<ProjectCurrentState> {
+  return projectHistoryGet<ProjectCurrentState>(token, `/projects/${projectId}/history/current-state`);
 }
 
 export function getProjectHistoryChapter(

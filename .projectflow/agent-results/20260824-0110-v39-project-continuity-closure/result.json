@@ -3,14 +3,20 @@
   "baselineMaster": "ab29b1ff0f842c029b5cf121bd584bd40fcf74b2",
   "branch": "codex/v3.9-project-continuity-closure",
   "PR": {
-    "number": null,
-    "url": "",
-    "status": "NOT_CREATED"
+    "number": 17,
+    "url": "https://github.com/xiaochuqing-dev/ProjectFlow/pull/17",
+    "status": "DRAFT"
   },
   "actualChanges": [
     "完成 V3.9 源码复用与当前状态审计，确认沿用既有增量事件、窗口 Checkpoint、修正覆盖层、Agent Context v2 和 Obsidian 投影。",
     "在实现前冻结 15 个 Calibration 与 15 个 Holdout 连续性场景以及硬性质量门。",
-    "冻结 V3.9 产品合同、显式刷新边界、Current Project State 语义和不引入第二引擎的约束。"
+    "冻结 V3.9 产品合同、显式刷新边界、Current Project State 语义和不引入第二引擎的约束。",
+    "在既有 Event upsert 上实现有界 Continuity Delta，并公开 source/presentation revision、rewrite、affected range、安全路径与哈希化文档和 Agent Result 引用。",
+    "保持 Story 与 Thread 工程身份，复用未受影响历史 Chapter 并只重算受影响尾部。",
+    "为 Correction 保存有界原始 membership refs，安全 additive continuation 可重放，rewrite 替换继续冲突。",
+    "新增持久化 corrected-history Current Project State，并将其 revision 接入 Agent Context、Gateway、Frontend、Hermes 与 Obsidian。",
+    "Agent candidate、Correction 与 Fact ingestion 会写并发安全 dirty revision；数据库 Agent candidate 在下一次显式刷新作为 PROCESS_EVIDENCE 采集。",
+    "Obsidian 的 Current-State-only delta 只更新 Project Overview 与 History Index，再次同步为 0 write。"
   ],
   "reusedExistingMechanisms": [
     "ProjectHistoryReconstructionService source fingerprint、affectedFrom 与 31 天 overlap",
@@ -23,31 +29,59 @@
     "Continuity Delta",
     "未受影响 Story、Thread、Chapter 身份稳定",
     "Current Project State 派生只读模型",
-    "Context 与 Obsidian no-op revision 稳定"
+    "Context 与 Obsidian no-op revision 稳定",
+    "内部写入 dirty revision 与显式刷新确认",
+    "Correction additive continuation 安全证明"
   ],
   "keyFiles": [
     "docs/projectflow-v3.9-reuse-and-current-state-audit.md",
     "docs/projectflow-v3.9-reuse-and-research-decisions.md",
     "docs/projectflow-v3.9-product-contract.md",
     "docs/projectflow-v3.9-ground-truth-and-quality-gates.md",
-    "docs/acceptance-evidence/v3.9/continuity-ground-truth.json"
+    "docs/projectflow-v3.9-incremental-continuity-contract.md",
+    "docs/projectflow-v3.9-current-project-state-contract.md",
+    "docs/projectflow-v3.9-agent-context-continuity.md",
+    "docs/projectflow-v3.9-obsidian-incremental-projection.md",
+    "docs/acceptance-evidence/v3.9/continuity-ground-truth.json",
+    "backend/src/main/java/com/projectflow/service/ProjectContinuityDelta.java",
+    "backend/src/main/java/com/projectflow/service/ProjectContinuityDirtyMarker.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryReconstructionService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryReadService.java",
+    "integrations/obsidian/projectflow_obsidian.py"
   ],
-  "deterministicTests": {"status":"PENDING","runs":[]},
+  "deterministicTests": {
+    "status": "CORE_PASS",
+    "runs": [
+      "Backend compile 与 test-compile PASS",
+      "V3.9 Ground Truth、Delta、dirty marker、Correction 与 Agent Work Result focused tests PASS",
+      "ProjectHistoryReconstructionTest 37 tests PASS",
+      "Frontend TypeScript、58 contract tests 与 production build PASS",
+      "Hermes 10 tests PASS，21 tools",
+      "Obsidian 26 tests PASS，5000-fact no-op writes=0"
+    ]
+  },
   "providerRuns": [],
   "dogfoodSequence": {"status":"PENDING","steps":[]},
-  "currentStateVerification": "PENDING",
-  "agentContextVerification": "PENDING",
-  "correctionVerification": "PENDING",
-  "obsidianVerification": "PENDING",
+  "currentStateVerification": "FOCUSED_PASS：Native/Gateway GET、revision、dirty/stale/degraded 与 modelCalled=false 已验证。",
+  "agentContextVerification": "FOCUSED_PASS：Current State revision 进入 package identity，no-op 稳定且相关 Correction 改变 revision。",
+  "correctionVerification": "FOCUSED_PASS：安全 additive membership replay 与 rewrite replacement conflict 均通过。",
+  "obsidianVerification": "PASS：26 tests；Current-State-only 更新 2 个必要 notes，用户内容保留，后续 no-op 0 write。",
   "humanReviewStatus": "NOT_STARTED",
-  "verification": {"build":"not_run","tests":"not_run","manualCheck":"audit and ground truth reviewed against frozen prompt requirements"},
+  "verification": {
+    "build": "backend compile PASS；frontend production build PASS",
+    "tests": "core deterministic、frontend contracts、Hermes、Obsidian PASS；full H2/PostgreSQL/Playwright/launcher 尚待最终门禁",
+    "manualCheck": "reuse audit、30-case freeze、API/authority/trigger contracts 与无第二引擎边界已复核"
+  },
   "knownRisks": [
-    "当前 Chapter 全局重排可能影响未受影响历史身份，尚待实现尾部复用。",
-    "当前 correction membership fingerprint 无法证明 additive continuation，尚待加入有界成员引用。",
-    "当前 Agent Context revision 尚未纳入 corrected history/current-state revision。"
+    "V3.9 新增 nullable schema 仍依赖 ddl-auto=update，必须通过旧 H2 升级与 PostgreSQL 16 最终门禁。",
+    "外部文件没有 watcher，只能由下一次显式 refresh 发现。",
+    "Agent candidate 单次采集上限为 200，超过时 coverage 明确降级。",
+    "三 Provider、连续 Dogfood 与真人 Continuity review 未完成前不能宣布 Final PASS。"
   ],
   "unfinished": [
-    "V3.9 生产实现、确定性测试、三 Provider、dogfood、真人验收、CI、合并与 backfill 尚未完成。"
+    "完整 Backend/H2、PostgreSQL 16、Playwright、root launcher 与 sensitive-content 同头门禁。",
+    "三 Provider Calibration/Holdout/产品场景与失败保留。",
+    "ProjectFlow T0-T7 连续 Dogfood、真人 Continuity review、PR Ready/merge/master CI/backfill/cleanup。"
   ],
   "sedimentCandidates": []
 }

@@ -84,6 +84,15 @@ public class ProjectHistorySnapshot {
     @Column(name = "latest_successful_at")
     private Instant latestSuccessfulAt;
 
+    @Column(name = "continuity_dirty_revision", length = 96)
+    private String continuityDirtyRevision;
+
+    @Column(name = "continuity_dirty_reason", length = 80)
+    private String continuityDirtyReason;
+
+    @Column(name = "continuity_dirty_at")
+    private Instant continuityDirtyAt;
+
     @Column(name = "error_code", length = 80)
     private String errorCode;
 
@@ -197,7 +206,45 @@ public class ProjectHistorySnapshot {
         this.status = latestSuccessfulAt == null ? Status.FAILED : Status.DEGRADED;
     }
 
+    /**
+     * Marks a known internal write for the next explicit continuity refresh.
+     * The marker is diagnostic state on the existing read model, not another
+     * source ledger and never starts scanning or model work by itself.
+     */
+    public void markContinuityDirty(String revision, String reason, Instant occurredAt) {
+        String safeRevision = bounded(revision, 96);
+        if (safeRevision.isBlank()) return;
+        this.continuityDirtyRevision = safeRevision;
+        this.continuityDirtyReason = bounded(reason, 80);
+        this.continuityDirtyAt = occurredAt == null ? Instant.now() : occurredAt;
+        preserveDirtyStatus();
+    }
+
+    /** Clears only the marker observed before source discovery. */
+    public boolean acknowledgeContinuityDirty(String observedRevision) {
+        String current = text(continuityDirtyRevision);
+        if (current.isBlank()) return true;
+        if (!current.equals(text(observedRevision))) {
+            preserveDirtyStatus();
+            return false;
+        }
+        this.continuityDirtyRevision = "";
+        this.continuityDirtyReason = "";
+        this.continuityDirtyAt = null;
+        return true;
+    }
+
+    private void preserveDirtyStatus() {
+        if (latestSuccessfulAt != null && status != Status.DEGRADED && status != Status.FAILED) {
+            status = Status.STALE;
+        }
+    }
+
     private static String text(String value) { return value == null ? "" : value.trim(); }
+    private static String bounded(String value, int maximum) {
+        String safe = text(value);
+        return safe.length() <= maximum ? safe : safe.substring(0, maximum);
+    }
     private static String objectJson(String value) { String safe = text(value); return safe.isBlank() ? "{}" : safe; }
     private static String arrayJson(String value) { String safe = text(value); return safe.isBlank() ? "[]" : safe; }
 
@@ -220,6 +267,9 @@ public class ProjectHistorySnapshot {
     public UUID getAnalysisJobId() { return analysisJobId; }
     public Instant getGeneratedAt() { return generatedAt; }
     public Instant getLatestSuccessfulAt() { return latestSuccessfulAt; }
+    public String getContinuityDirtyRevision() { return text(continuityDirtyRevision); }
+    public String getContinuityDirtyReason() { return text(continuityDirtyReason); }
+    public Instant getContinuityDirtyAt() { return continuityDirtyAt; }
     public String getErrorCode() { return errorCode; }
     public String getErrorSummary() { return errorSummary; }
     public Instant getCreatedAt() { return createdAt; }

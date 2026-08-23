@@ -385,6 +385,47 @@ public final class ProjectHistoryDtos {
     ) {
     }
 
+    /** Persisted corrected-history read model; it is not a ProjectFact. */
+    public record ProjectCurrentStateResponse(
+        UUID projectId,
+        String stateRevision,
+        String historyStatus,
+        String currentness,
+        String sourceRevision,
+        String sourceFingerprint,
+        String presentationRevision,
+        boolean continuityDirty,
+        String pendingContinuityRevision,
+        String pendingContinuityReason,
+        Instant continuityDirtyAt,
+        String confirmedState,
+        List<String> recentConfirmedChanges,
+        List<String> activeThreadRefs,
+        List<String> relatedStoryRefs,
+        List<String> relatedChapterRefs,
+        List<String> conflicts,
+        List<String> unknowns,
+        List<String> limitations,
+        boolean stale,
+        boolean degraded,
+        boolean modelCalled,
+        Instant latestSuccessfulAt
+    ) {
+        public ProjectCurrentStateResponse {
+            recentConfirmedChanges = immutable(recentConfirmedChanges);
+            activeThreadRefs = immutable(activeThreadRefs);
+            relatedStoryRefs = immutable(relatedStoryRefs);
+            relatedChapterRefs = immutable(relatedChapterRefs);
+            conflicts = immutable(conflicts);
+            unknowns = immutable(unknowns);
+            limitations = immutable(limitations);
+        }
+
+        private static <T> List<T> immutable(List<T> values) {
+            return values == null ? List.of() : List.copyOf(values);
+        }
+    }
+
     public record HistoryChapterPageResponse(
         UUID projectId,
         String presentationRevision,
@@ -597,7 +638,8 @@ public final class ProjectHistoryDtos {
         String automaticPresentationFingerprint,
         boolean sourceStale,
         boolean membershipStale,
-        boolean automaticPresentationChanged
+        boolean automaticPresentationChanged,
+        boolean additiveContinuationReplayed
     ) {
         public HistoryCorrectionResponse(
             UUID id,
@@ -615,7 +657,7 @@ public final class ProjectHistoryDtos {
             String presentationRevision
         ) {
             this(id, projectId, type, targetType, targetId, targetIds, status, beforePresentationRevision,
-                sourceFingerprint, conflictReason, createdAt, updatedAt, presentationRevision, "", "", "", "", "", "", "", false, "", "", "", "", false, false, false);
+                sourceFingerprint, conflictReason, createdAt, updatedAt, presentationRevision, "", "", "", "", "", "", "", false, "", "", "", "", false, false, false, false);
         }
     }
 

@@ -49,6 +49,7 @@ public class ProjectFactIngestionService {
     private final TimelinePeriodResolver timelinePeriodResolver;
     private final ApplicationEventPublisher eventPublisher;
     private final StrongFactPromotionGuard promotionGuard;
+    private final ProjectContinuityDirtyMarker continuityDirtyMarker;
 
     public ProjectFactIngestionService(
         ChangeBatchRepository batchRepository,
@@ -60,7 +61,8 @@ public class ProjectFactIngestionService {
         ProjectFactCursorRepository cursorRepository,
         TimelinePeriodResolver timelinePeriodResolver,
         ApplicationEventPublisher eventPublisher,
-        StrongFactPromotionGuard promotionGuard
+        StrongFactPromotionGuard promotionGuard,
+        ProjectContinuityDirtyMarker continuityDirtyMarker
     ) {
         this.batchRepository = batchRepository;
         this.segmentRepository = segmentRepository;
@@ -72,6 +74,7 @@ public class ProjectFactIngestionService {
         this.timelinePeriodResolver = timelinePeriodResolver;
         this.eventPublisher = eventPublisher;
         this.promotionGuard = promotionGuard;
+        this.continuityDirtyMarker = continuityDirtyMarker;
     }
 
     /**
@@ -138,6 +141,7 @@ public class ProjectFactIngestionService {
                 projectId, facts.stream().map(ProjectFact::getId).toList()
             ));
         }
+        continuityDirtyMarker.mark(projectId, "PROJECT_FACT_INGESTION", "change-batch:" + batchId);
         return new IngestionResult(batch.getId(), facts.size(), attention, occurredFrom, occurredTo);
     }
 

@@ -53,9 +53,11 @@ class AgentWorkResultWriteTest {
         when(candidates.save(any(ProjectAgentCandidate.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         SensitiveContentRedactor redactor = new SensitiveContentRedactor();
+        ProjectContinuityDirtyMarker dirtyMarker = mock(ProjectContinuityDirtyMarker.class);
         ProjectAgentCandidateService service = new ProjectAgentCandidateService(
             projects, mock(ProjectFactRepository.class), candidates, memories, understanding, redactor,
-            new LocalProjectPathGuard(), new LargeFileContentService(redactor), mock(LocalCommandExecutor.class)
+            new LocalProjectPathGuard(), new LargeFileContentService(redactor), mock(LocalCommandExecutor.class),
+            dirtyMarker
         );
         SubmitAgentWorkResultRequest request = new SubmitAgentWorkResultRequest(
             List.of("src/MailService.java"),
@@ -79,6 +81,9 @@ class AgentWorkResultWriteTest {
         assertThat(result.candidates()).allSatisfy(item -> assertThat(item.epistemicStatus())
             .isNotIn("OBSERVED", "VERIFIED"));
         assertThat(result.candidates().get(0).assertion()).doesNotContain(projectRoot.toString());
+        verify(dirtyMarker).mark(
+            projectId, "AGENT_RESULT_CANDIDATE", "agent-result:" + result.workResultCandidateId()
+        );
     }
 
     @Test
@@ -92,7 +97,8 @@ class AgentWorkResultWriteTest {
         ProjectAgentCandidateService service = new ProjectAgentCandidateService(
             projects, mock(ProjectFactRepository.class), candidates, mock(ProjectMemoryRepository.class),
             mock(ProjectUnderstandingService.class), redactor, new LocalProjectPathGuard(),
-            new LargeFileContentService(redactor), mock(LocalCommandExecutor.class)
+            new LargeFileContentService(redactor), mock(LocalCommandExecutor.class),
+            mock(ProjectContinuityDirtyMarker.class)
         );
         SubmitAgentWorkResultRequest request = new SubmitAgentWorkResultRequest(
             List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),

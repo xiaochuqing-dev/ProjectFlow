@@ -54,8 +54,9 @@ test("history presentation enums have natural first-layer labels", () => {
   assert.equal(projectHistoryRewriteStateLabel("STALE"), "来源已变化");
 });
 
-test("frontend API exposes read-only overview, chapter, story and thread readers", () => {
+test("frontend API exposes read-only current state, overview, chapter, story and thread readers", () => {
   for (const name of [
+    "getProjectCurrentState",
     "getProjectHistoryOverview",
     "getProjectHistoryChapter",
     "getProjectHistoryStory",

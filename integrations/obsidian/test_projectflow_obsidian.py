@@ -213,6 +213,15 @@ def dataset() -> dict:
         "latestSuccessfulAt": "2026-08-20T10:00:00Z", "updatedAt": "2026-08-20T10:00:00Z",
         "errorCode": "", "errorSummary": "",
     }
+    current_state = {
+        "projectId": PROJECT_ID, "stateRevision": "current-state:fixture-v1", "historyStatus": "READY",
+        "currentness": "CURRENT", "sourceRevision": "git:history", "sourceFingerprint": "fixture-fingerprint",
+        "presentationRevision": "presentation:corrected", "confirmedState": "最近可确认统一读取入口已经恢复。",
+        "recentConfirmedChanges": ["恢复统一读取入口并重新连接项目记忆（2026-07-20）"],
+        "activeThreadRefs": [THREAD_A], "relatedStoryRefs": [STORY_C], "relatedChapterRefs": [CHAPTER_B],
+        "conflicts": [], "unknowns": ["恢复原因保持 UNKNOWN。"], "limitations": [],
+        "stale": False, "degraded": False, "modelCalled": False,
+    }
     return {
         "snapshot": {
             "project": {"projectId": PROJECT_ID, "name": "ProjectFlow", "summary": "自动维护项目从创建至今的长期记忆。", "status": "BUILDING", "techStack": ["Java", "Python"]},
@@ -224,6 +233,7 @@ def dataset() -> dict:
             "health": {"historyStatus": "COMPLETED", "projectHistoryStatus": "READY", "timelineStatus": "READY", "capabilityMapStatus": "READY", "capabilityMapStale": False, "latestRealChangeAt": "2026-07-17T09:00:00Z", "warnings": []},
         },
         "historyOverview": history_overview,
+        "currentState": current_state,
         "historyChapters": chapters,
         "historyStories": stories,
         "historyThreads": threads,
@@ -307,6 +317,36 @@ class ObsidianProjectionTest(unittest.TestCase):
         self.assertEqual(manifest_before, (self.managed() / MANIFEST_NAME).read_bytes())
         self.assertEqual(hashes, {path.relative_to(self.managed()).as_posix(): path.read_bytes() for path in self.managed().rglob("*.md")})
         self.assertGreater(first["bytesWritten"], 0)
+
+    def test_current_state_delta_updates_only_required_indexes_and_then_reaches_noop(self) -> None:
+        data = copy.deepcopy(dataset())
+        self.source = FakeSource(data)
+        self.projection().sync(PROJECT_ID)
+        story_bytes = {
+            path.relative_to(self.managed()).as_posix(): path.read_bytes()
+            for path in (self.managed() / "项目历程/变化故事").glob("*.md")
+        }
+        overview_path = self.managed() / "项目概览.md"
+        overview_path.write_text(
+            overview_path.read_text(encoding="utf-8") + "\n用户保留区内容。\n", encoding="utf-8"
+        )
+
+        data["currentState"]["stateRevision"] = "current-state:fixture-v2"
+        data["currentState"]["confirmedState"] = "当前只更新了可确认项目状态。"
+        self.source = FakeSource(data)
+        changed = self.projection().sync(PROJECT_ID)
+        self.assertEqual(2, changed["plan"]["UPDATED"])
+        self.assertEqual(2, changed["noteWrites"])
+        self.assertIn("当前只更新了可确认项目状态", overview_path.read_text(encoding="utf-8"))
+        self.assertIn("用户保留区内容", overview_path.read_text(encoding="utf-8"))
+        self.assertEqual(story_bytes, {
+            path.relative_to(self.managed()).as_posix(): path.read_bytes()
+            for path in (self.managed() / "项目历程/变化故事").glob("*.md")
+        })
+
+        noop = self.projection().sync(PROJECT_ID)
+        self.assertEqual(0, noop["totalWrites"])
+        self.assertEqual(0, noop["noteWrites"])
 
     def test_history_notes_remain_readable_without_plugins_and_advanced_uri_degrades_to_official(self) -> None:
         first = self.projection().sync(PROJECT_ID)
@@ -762,6 +802,8 @@ class ObsidianProjectionTest(unittest.TestCase):
                     response = Handler.data["snapshot"]
                 elif parsed.path == base + "/history/overview":
                     response = Handler.data["historyOverview"]
+                elif parsed.path == base + "/history/current-state":
+                    response = Handler.data["currentState"]
                 elif parsed.path == base + "/history/chapters":
                     items = Handler.data["historyChapters"]
                     response = {"items": items, "page": 0, "size": 100, "totalElements": len(items), "totalPages": 1}

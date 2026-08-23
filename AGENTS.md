@@ -1,7 +1,7 @@
 <!-- PROJECTFLOW V3.9 CONTEXT START -->
 ProjectFlow V3.9 正在 `codex/v3.9-project-continuity-closure` 开发。V3.9 必须在 V3.8.5 同一来源事件、History Snapshot、Window Planner/Checkpoint、Correction、Agent Context v2、Gateway/Hermes/Obsidian 链上完成持续闭环；禁止建立第二套 History、Fact、增量、向量或投影引擎。实现前冻结的 30 个 Calibration/Holdout 与硬门位于 `docs/acceptance-evidence/v3.9/continuity-ground-truth.json`，case ID、预期和阈值不得进入 production Prompt。
 
-Continuity refresh 仍是显式持久化 Job。no-change 必须 0 模型请求并保持 Story、Thread、Chapter、Current State、Context Package 与 Obsidian 语义身份稳定；小 delta 只允许重算 affected scope。rewrite/delete/restore 保留 Event 并公开 STALE/INVALIDATED。修正只能在工程层证明旧成员仍安全属于同一稳定目标时续接，否则必须冲突，绝不静默丢失或错绑。Current Project State 只是 corrected persisted history 的派生读模型，不是 ProjectFact。GET、Gateway、Hermes 与 Obsidian 禁止扫描或调用模型。V3.9 不做 daemon/watcher、最终 GUI、V4 工作、Tag 或 Release。
+Continuity refresh 仍是显式持久化 Job。no-change 必须 0 模型请求并保持 Story、Thread、Chapter、Current State、Context Package 与 Obsidian 语义身份稳定；小 delta 只允许重算 affected scope。Agent candidate、Correction、Fact ingestion 等内部写入只标记并发安全 dirty revision，不在写入请求内扫描或调用模型；数据库 Agent candidate 在下一次 refresh 作为 PROCESS_EVIDENCE 采集。rewrite/delete/restore 保留 Event 并公开 STALE/INVALIDATED。修正只能在工程层证明旧成员仍安全属于同一稳定目标时续接，否则必须冲突，绝不静默丢失或错绑。Current Project State 只是 corrected persisted history 的派生读模型，不是 ProjectFact。GET、Gateway、Hermes 与 Obsidian 禁止扫描或调用模型。V3.9 不做 daemon/watcher、最终 GUI、V4 工作、Tag 或 Release。
 
 <!-- PROJECTFLOW V3.8.5 CONTEXT START -->
 ProjectFlow 当前版本为 V3.8.5。后续 Agent 必须按“真实项目材料 -> 规范化来源事件 -> Technical Atom -> Primary/Supporting Change -> 可读变化故事 -> 动态时间篇章 -> 演变链 -> 原始事件与 Evidence 下钻 -> 当前结果 -> 人与 Agent 继续工作”理解产品。项目历程是通用主轴，Capability 只是部分项目的可选视图。

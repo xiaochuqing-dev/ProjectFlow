@@ -1,5 +1,15 @@
 # Data Model
 
+## V3.9 continuity additions
+
+`ProjectContinuityDelta` is an in-memory record derived per refresh and copied into bounded snapshot diagnostics; it is not a table or source of truth. It carries added/updated/stale/invalidated Event IDs, affected time, previous/current source and presentation revisions, safe paths, hashed document/Agent identities, no-op and truncation.
+
+`project_history_snapshots` adds nullable `continuity_dirty_revision`, `continuity_dirty_reason` and `continuity_dirty_at`. These fields signal a ProjectFlow-owned write awaiting explicit refresh. Completion clears only the revision captured before source discovery; a newer concurrent marker remains STALE.
+
+`project_history_corrections` adds nullable text `target_membership_refs_json`, defaulted in Java to an empty list for old rows. New corrections store at most 1,000 canonical member tokens plus a truncation sentinel. A correction may replay across additive evolution only when the stored list is complete and every old token remains; absence, replacement or truncation stays conflicted.
+
+Current Project State remains a DTO/read projection over `project_history_snapshots`, corrections and coverage. No new Fact or current-state table is introduced. All new columns remain nullable-compatible under the existing `ddl-auto=update`; V3.10 owns formal versioned migrations.
+
 The final human-readability closure adds no entity, table or migration. Claim state and narrative envelopes are derived at refresh time from existing events and Evidence. Validated wording remains inside the replaceable ProjectHistorySnapshot/checkpoint presentation payload and cannot become ProjectFact.
 
 ## V3.8.5 presentation and checkpoint additions

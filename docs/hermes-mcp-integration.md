@@ -1,5 +1,11 @@
 # Hermes MCP Integration
 
+## V3.9 current-state continuity
+
+Hermes now exposes 21 bounded read-only tools. `get_project_current_state` calls the Gateway current-state route and returns the persisted corrected state, revisions, related Story/Thread/Chapter refs, dirty/stale/degraded signals, conflicts, unknowns and limitations. It cannot refresh, scan, call a model or write ProjectFlow state.
+
+The stdio server version is 3.9.0. Existing tools and the context resource remain compatible; Context Package revision now follows the same Current State revision.
+
 ## V3.8.5 corrected history
 
 The final RC2 contract changes no Hermes tool or transport. Hermes reads the persisted validated wording and retains raw subjects, paths, Evidence IDs and internal states below the public first layer.
@@ -12,7 +18,7 @@ ProjectFlow provides a repository-local, dependency-free Python stdio MCP adapte
 
 ## Tools
 
-The server exposes nineteen bounded, idempotent, read-only tools. Six V3.8.0 tools cover `get_project_history_overview`, `list_project_history_chapters`, `list_project_change_stories`, `list_project_evolution_threads`, `list_project_history_events` and `get_project_history_evidence`. The previous thirteen project, snapshot, search, recent, Timeline, Capability, Fact, brief, portfolio, context, Evidence and knowledge tools remain compatible.
+The current server exposes 21 bounded, idempotent, read-only tools. Six V3.8.0 tools cover `get_project_history_overview`, `list_project_history_chapters`, `list_project_change_stories`, `list_project_evolution_threads`, `list_project_history_events` and `get_project_history_evidence`; V3.8.5 adds correction reads and V3.9 adds Current Project State. Earlier project, snapshot, search, recent, Timeline, Capability, Fact, brief, portfolio, context, Evidence and knowledge tools remain compatible.
 
 History tools preserve filters, pagination, occurrence time, authority, epistemic status and rewrite state. Hermes starts with what happened, then drills into raw events and Evidence; it cannot refresh history, write a Fact, alter a Story or control Git/Obsidian.
 

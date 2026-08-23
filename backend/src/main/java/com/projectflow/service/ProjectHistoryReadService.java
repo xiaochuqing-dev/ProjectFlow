@@ -95,6 +95,9 @@ public class ProjectHistoryReadService {
         Map<String, Object> displayDiagnostics = new LinkedHashMap<>(map(snapshot.getDiagnosticsJson()));
         displayDiagnostics.put("presentationRevision", corrected.presentationRevision());
         displayDiagnostics.put("activeCorrectionCount", corrected.corrections().size());
+        displayDiagnostics.put("continuityDirty", !snapshot.getContinuityDirtyRevision().isBlank());
+        displayDiagnostics.put("pendingContinuityRevision", snapshot.getContinuityDirtyRevision());
+        displayDiagnostics.put("pendingContinuityReason", snapshot.getContinuityDirtyReason());
         return new HistoryOverviewResponse(
             projectId, corrected.presentationRevision(), snapshot.getStatus().name(), snapshot.getProjectRevision(), snapshot.getSourceEventCount(),
             snapshot.getEarliestEventAt(), snapshot.getLatestEventAt(), snapshot.getStrategyVersion(), snapshot.getPromptVersion(),
@@ -103,6 +106,130 @@ public class ProjectHistoryReadService {
             displayDiagnostics, snapshot.getAnalysisJobId(), snapshot.getGeneratedAt(),
                 snapshot.getLatestSuccessfulAt(), snapshot.getUpdatedAt(), outbound(snapshot.getErrorCode()), outbound(snapshot.getErrorSummary())
         );
+    }
+
+    @Transactional(readOnly = true)
+    public ProjectCurrentStateResponse currentState(UUID userId, UUID projectId) {
+        owned(userId, projectId);
+        ProjectHistorySnapshot snapshot = snapshotRepository.findByProjectId(projectId).orElse(null);
+        if (snapshot == null) {
+            String revision = "current-state:" + ProjectHistorySourceCollector.sha256(
+                "project-current-state-v1|" + projectId + "|NOT_INITIALIZED"
+            );
+            return new ProjectCurrentStateResponse(
+                projectId, revision, "NOT_INITIALIZED", "NOT_INITIALIZED", "", "", "",
+                false, "", "", null,
+                "当前没有持久化项目历程状态。", List.of(), List.of(), List.of(), List.of(), List.of(),
+                List.of("尚未刷新项目历程。"), List.of("请显式刷新；当前读取不会扫描来源或调用模型。"),
+                false, false, false, null
+            );
+        }
+        ProjectHistoryCorrectionService.CorrectedHistory corrected = correctionService.resolve(projectId, snapshot);
+        HistoryOverviewContent automatic = value(snapshot.getOverviewJson(), HistoryOverviewContent.class,
+            new HistoryOverviewContent("", "", List.of(), List.of(), List.of(), List.of()));
+        HistoryCoverage coverage = value(snapshot.getCoverageJson(), HistoryCoverage.class, emptyCoverage());
+        List<ChangeStory> recent = corrected.stories().stream()
+            .filter(story -> !story.hiddenByDefault() && !"MERGED".equals(story.displayStatus()))
+            .sorted(Comparator.comparing(ChangeStory::pinned).reversed()
+                .thenComparing(ChangeStory::occurredTo, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(ChangeStory::id))
+            .limit(12).toList();
+        String confirmed = recent.stream().map(ChangeStory::afterState)
+            .filter(value -> value != null && !value.isBlank()).findFirst().orElse(automatic.currentState());
+        if (confirmed == null || confirmed.isBlank()) confirmed = "当前没有可确认的持久化状态。";
+        List<String> storyRefs = recent.stream().map(ChangeStory::id).toList();
+        Set<String> recentIds = new LinkedHashSet<>(storyRefs);
+        List<String> threadRefs = corrected.threads().stream()
+            .filter(thread -> thread.storyRefs().stream().anyMatch(recentIds::contains))
+            .map(EvolutionThread::id).distinct().limit(20).toList();
+        List<String> chapterRefs = corrected.chapters().stream()
+            .filter(chapter -> chapter.storyRefs().stream().anyMatch(recentIds::contains))
+            .map(HistoryChapter::id).distinct().limit(20).toList();
+        List<String> conflicts = boundedDistinct(java.util.stream.Stream.concat(
+            automatic.conflicts().stream(), corrected.stories().stream()
+                .flatMap(story -> java.util.stream.Stream.concat(story.conflicts().stream(), story.correctionConflicts().stream()))
+        ).toList(), 50);
+        List<String> unknowns = boundedDistinct(java.util.stream.Stream.concat(
+            automatic.unknowns().stream(), corrected.stories().stream().flatMap(story -> story.unknowns().stream())
+        ).toList(), 50);
+        List<String> limitations = new ArrayList<>(coverage.limitations());
+        recent.stream().flatMap(story -> story.limitations().stream()).forEach(limitations::add);
+        if (snapshot.getErrorSummary() != null && !snapshot.getErrorSummary().isBlank()) {
+            limitations.add(outbound(snapshot.getErrorSummary()));
+        }
+        boolean continuityDirty = !snapshot.getContinuityDirtyRevision().isBlank();
+        if (continuityDirty) {
+            limitations.add("存在 ProjectFlow 已知内部写入，等待下一次显式 continuity refresh。 ");
+        }
+        limitations = new ArrayList<>(boundedDistinct(limitations, 50));
+        String status = snapshot.getStatus().name();
+        boolean stale = continuityDirty || Set.of("STALE", "RUNNING").contains(status)
+            || (coverage.currentness() != null && coverage.currentness().toUpperCase(Locale.ROOT).contains("STALE"));
+        boolean degraded = Set.of("DEGRADED", "FAILED").contains(status) || !coverage.complete();
+        String currentness = "RUNNING".equals(status) ? "REFRESH_RUNNING"
+            : continuityDirty && degraded ? "DEGRADED_STALE"
+            : continuityDirty || "STALE".equals(status) ? "STALE"
+            : degraded ? "DEGRADED"
+            : coverage.currentness();
+        List<String> recentChanges = recent.stream()
+            .map(story -> outbound(story.humanTitle()) + "（" + date(story.occurredTo()) + "）")
+            .limit(8).toList();
+        String stateRevision = currentStateRevision(
+            projectId, snapshot, corrected.presentationRevision(), currentness, confirmed, recentChanges,
+            threadRefs, storyRefs, chapterRefs, conflicts, unknowns, limitations
+        );
+        return new ProjectCurrentStateResponse(
+            projectId, stateRevision, status, currentness, outbound(snapshot.getProjectRevision()),
+            outbound(snapshot.getSourceEventFingerprint()), corrected.presentationRevision(), continuityDirty,
+            snapshot.getContinuityDirtyRevision(), snapshot.getContinuityDirtyReason(), snapshot.getContinuityDirtyAt(),
+            outbound(confirmed),
+            recentChanges, threadRefs, storyRefs, chapterRefs, conflicts, unknowns, limitations,
+            stale, degraded, false, snapshot.getLatestSuccessfulAt()
+        );
+    }
+
+    private String currentStateRevision(
+        UUID projectId,
+        ProjectHistorySnapshot snapshot,
+        String presentationRevision,
+        String currentness,
+        String confirmedState,
+        List<String> recentChanges,
+        List<String> threadRefs,
+        List<String> storyRefs,
+        List<String> chapterRefs,
+        List<String> conflicts,
+        List<String> unknowns,
+        List<String> limitations
+    ) {
+        Map<String, Object> canonical = new LinkedHashMap<>();
+        canonical.put("version", "project-current-state-v1");
+        canonical.put("projectId", projectId);
+        canonical.put("historyStatus", snapshot.getStatus().name());
+        canonical.put("currentness", currentness);
+        canonical.put("projectRevision", snapshot.getProjectRevision());
+        canonical.put("sourceFingerprint", snapshot.getSourceEventFingerprint());
+        canonical.put("presentationRevision", presentationRevision);
+        canonical.put("continuityDirtyRevision", snapshot.getContinuityDirtyRevision());
+        canonical.put("continuityDirtyReason", snapshot.getContinuityDirtyReason());
+        canonical.put("confirmedState", confirmedState);
+        canonical.put("recentChanges", recentChanges);
+        canonical.put("threadRefs", threadRefs);
+        canonical.put("storyRefs", storyRefs);
+        canonical.put("chapterRefs", chapterRefs);
+        canonical.put("conflicts", conflicts);
+        canonical.put("unknowns", unknowns);
+        canonical.put("limitations", limitations);
+        try {
+            return "current-state:" + ProjectHistorySourceCollector.sha256(objectMapper.writeValueAsString(canonical));
+        } catch (JsonProcessingException exception) {
+            return "current-state:" + ProjectHistorySourceCollector.sha256(canonical.toString());
+        }
+    }
+
+    private List<String> boundedDistinct(List<String> values, int limit) {
+        return (values == null ? List.<String>of() : values).stream()
+            .map(this::outbound).filter(value -> !value.isBlank()).distinct().limit(limit).toList();
     }
 
     @Transactional(readOnly = true)

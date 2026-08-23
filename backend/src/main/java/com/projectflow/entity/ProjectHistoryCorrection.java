@@ -79,6 +79,9 @@ public class ProjectHistoryCorrection {
     @Column(name = "target_membership_fingerprint", length = 64)
     private String targetMembershipFingerprint;
 
+    @Column(name = "target_membership_refs_json", columnDefinition = "text")
+    private String targetMembershipRefsJson;
+
     @Column(name = "automatic_presentation_fingerprint", length = 64)
     private String automaticPresentationFingerprint;
 
@@ -119,7 +122,7 @@ public class ProjectHistoryCorrection {
         String sourceFingerprint
     ) {
         this(projectId, actorUserId, correctionType, targetType, targetId, targetIdsJson, declaredTitle, declaredSummary,
-            declaredRole, declaredChapterId, beforePresentationRevision, sourceFingerprint, "", "", "", "");
+            declaredRole, declaredChapterId, beforePresentationRevision, sourceFingerprint, "", "[]", "", "", "");
     }
 
     public ProjectHistoryCorrection(
@@ -140,6 +143,31 @@ public class ProjectHistoryCorrection {
         String secondaryDeclaredTitle,
         String secondaryDeclaredSummary
     ) {
+        this(projectId, actorUserId, correctionType, targetType, targetId, targetIdsJson, declaredTitle, declaredSummary,
+            declaredRole, declaredChapterId, beforePresentationRevision, sourceFingerprint,
+            targetMembershipFingerprint, "[]", automaticPresentationFingerprint,
+            secondaryDeclaredTitle, secondaryDeclaredSummary);
+    }
+
+    public ProjectHistoryCorrection(
+        UUID projectId,
+        UUID actorUserId,
+        String correctionType,
+        String targetType,
+        String targetId,
+        String targetIdsJson,
+        String declaredTitle,
+        String declaredSummary,
+        String declaredRole,
+        String declaredChapterId,
+        String beforePresentationRevision,
+        String sourceFingerprint,
+        String targetMembershipFingerprint,
+        String targetMembershipRefsJson,
+        String automaticPresentationFingerprint,
+        String secondaryDeclaredTitle,
+        String secondaryDeclaredSummary
+    ) {
         this.id = UUID.randomUUID();
         this.projectId = projectId;
         this.actorUserId = actorUserId;
@@ -156,6 +184,7 @@ public class ProjectHistoryCorrection {
         this.beforePresentationRevision = bounded(beforePresentationRevision, 180, "");
         this.sourceFingerprint = bounded(sourceFingerprint, 64, "");
         this.targetMembershipFingerprint = bounded(targetMembershipFingerprint, 64, "");
+        this.targetMembershipRefsJson = boundedJson(targetMembershipRefsJson);
         this.automaticPresentationFingerprint = bounded(automaticPresentationFingerprint, 64, "");
         this.conflictReason = "";
         this.status = Status.ACTIVE;
@@ -170,6 +199,7 @@ public class ProjectHistoryCorrection {
         if (beforePresentationRevision == null) beforePresentationRevision = "";
         if (sourceFingerprint == null) sourceFingerprint = "";
         if (targetMembershipFingerprint == null) targetMembershipFingerprint = "";
+        if (targetMembershipRefsJson == null || targetMembershipRefsJson.isBlank()) targetMembershipRefsJson = "[]";
         if (automaticPresentationFingerprint == null) automaticPresentationFingerprint = "";
         if (secondaryDeclaredTitle == null) secondaryDeclaredTitle = "";
         if (secondaryDeclaredSummary == null) secondaryDeclaredSummary = "";
@@ -207,6 +237,7 @@ public class ProjectHistoryCorrection {
     public String getBeforePresentationRevision() { return beforePresentationRevision == null ? "" : beforePresentationRevision; }
     public String getSourceFingerprint() { return sourceFingerprint == null ? "" : sourceFingerprint; }
     public String getTargetMembershipFingerprint() { return targetMembershipFingerprint == null ? "" : targetMembershipFingerprint; }
+    public String getTargetMembershipRefsJson() { return targetMembershipRefsJson == null ? "[]" : targetMembershipRefsJson; }
     public String getAutomaticPresentationFingerprint() { return automaticPresentationFingerprint == null ? "" : automaticPresentationFingerprint; }
     public String getConflictReason() { return conflictReason == null ? "" : conflictReason; }
     public Status getStatus() { return status == null ? Status.CONFLICT : status; }

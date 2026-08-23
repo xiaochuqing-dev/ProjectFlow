@@ -52,6 +52,8 @@ public class ProjectHistoryCorrectionService {
     private static final int MAX_TARGET_ID_LENGTH = 180;
     private static final int MAX_TITLE_LENGTH = 8_000;
     private static final int MAX_SUMMARY_LENGTH = 12_000;
+    private static final int MAX_MEMBERSHIP_REFS = 1_000;
+    private static final String MEMBERSHIP_REFS_TRUNCATED = "membership:truncated";
     private static final Set<String> TYPES = Set.of(
         "RENAME_STORY", "EDIT_SUMMARY", "MERGE_STORIES", "SPLIT_STORY", "SET_PRIMARY",
         "SET_SUPPORTING", "REATTACH_SUPPORTING", "HIDE_STORY", "PIN_STORY",
@@ -64,6 +66,7 @@ public class ProjectHistoryCorrectionService {
     private final ProjectHistoryEventRepository eventRepository;
     private final ProjectHistoryPresentationInvariantValidator presentationInvariantValidator;
     private final ProjectHistoryNarrativeEntailmentValidator narrativeValidator;
+    private final ProjectContinuityDirtyMarker continuityDirtyMarker;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate conflictTransactionTemplate;
 
@@ -74,6 +77,7 @@ public class ProjectHistoryCorrectionService {
         ProjectHistoryEventRepository eventRepository,
         ProjectHistoryPresentationInvariantValidator presentationInvariantValidator,
         ProjectHistoryNarrativeEntailmentValidator narrativeValidator,
+        ProjectContinuityDirtyMarker continuityDirtyMarker,
         ObjectMapper objectMapper,
         PlatformTransactionManager transactionManager
     ) {
@@ -83,6 +87,7 @@ public class ProjectHistoryCorrectionService {
         this.eventRepository = eventRepository;
         this.presentationInvariantValidator = presentationInvariantValidator;
         this.narrativeValidator = narrativeValidator;
+        this.continuityDirtyMarker = continuityDirtyMarker;
         this.objectMapper = objectMapper;
         this.conflictTransactionTemplate = new TransactionTemplate(transactionManager);
         this.conflictTransactionTemplate.setPropagationBehavior(
@@ -244,18 +249,22 @@ public class ProjectHistoryCorrectionService {
         String targetMembership = targetMembershipFingerprint(
             type, normalizedTargetId, normalizedTargetIds, storyMap, chapterMap
         );
+        List<String> targetMembershipRefs = targetMembershipRefs(
+            type, normalizedTargetId, normalizedTargetIds, storyMap, chapterMap
+        );
         String automaticPresentation = automaticPresentationFingerprint(
             type, normalizedTargetId, normalizedTargetIds, storyMap, chapterMap
         );
         if (!expected.isBlank() && !expected.equals(currentRevision)) {
             persistConflict(newCorrection(projectId, userId, type, request, normalizedTargetId, normalizedTargetIds,
-                expected, source.isBlank() ? currentSource : source, targetMembership, automaticPresentation),
+                expected, source.isBlank() ? currentSource : source, targetMembership, targetMembershipRefs,
+                automaticPresentation),
                 "展示版本已变化，请重新读取后再提交修正");
             throw new AppException("PROJECT_HISTORY_CORRECTION_CONFLICT", "项目历程展示版本已变化，请刷新后重试", HttpStatus.CONFLICT);
         }
         if (!source.isBlank() && !source.equals(currentSource)) {
             persistConflict(newCorrection(projectId, userId, type, request, normalizedTargetId, normalizedTargetIds,
-                currentRevision, source, targetMembership, automaticPresentation),
+                currentRevision, source, targetMembership, targetMembershipRefs, automaticPresentation),
                 "来源快照已变化，修正需要重新确认");
             throw new AppException("PROJECT_HISTORY_CORRECTION_STALE", "项目历程来源已变化，请刷新后重试", HttpStatus.CONFLICT);
         }
@@ -276,9 +285,11 @@ public class ProjectHistoryCorrectionService {
             correctionRepository.saveAll(existing);
         }
         ProjectHistoryCorrection correction = newCorrection(projectId, userId, type, request, normalizedTargetId,
-            normalizedTargetIds, currentRevision, currentSource, targetMembership, automaticPresentation);
+            normalizedTargetIds, currentRevision, currentSource, targetMembership, targetMembershipRefs,
+            automaticPresentation);
         correctionRepository.saveAndFlush(correction);
         List<ProjectHistoryCorrection> after = activeCorrections(projectId);
+        continuityDirtyMarker.mark(projectId, "HISTORY_CORRECTION", "correction:" + correction.getId());
         return response(correction, snapshot, presentationRevision(snapshot, after), null);
     }
 
@@ -296,6 +307,7 @@ public class ProjectHistoryCorrectionService {
         correction.markReverted(null);
         correctionRepository.saveAndFlush(correction);
         List<ProjectHistoryCorrection> after = activeCorrections(projectId);
+        continuityDirtyMarker.mark(projectId, "HISTORY_CORRECTION", "correction:" + correction.getId());
         return response(correction, snapshot, presentationRevision(snapshot, after), null);
     }
 
@@ -341,13 +353,14 @@ public class ProjectHistoryCorrectionService {
         String beforeRevision,
         String sourceFingerprint,
         String targetMembershipFingerprint,
+        List<String> targetMembershipRefs,
         String automaticPresentationFingerprint
     ) {
         return new ProjectHistoryCorrection(
             projectId, userId, type, safeType(request.targetType()), targetId, json(targetIds),
             request.effectiveTitle(), request.effectiveSummary(), request.effectiveRole(),
             effectiveChapterId(type, request, targetId), beforeRevision, sourceFingerprint,
-            targetMembershipFingerprint, automaticPresentationFingerprint,
+            targetMembershipFingerprint, json(targetMembershipRefs), automaticPresentationFingerprint,
             request.effectiveSecondaryTitle(), request.effectiveSecondarySummary()
         );
     }
@@ -1191,18 +1204,25 @@ public class ProjectHistoryCorrectionService {
         Map<String, ChangeStory> stories,
         Map<String, HistoryChapter> chapters
     ) {
-        if (snapshot == null) return new CorrectionState(false, false, false, false, "项目历程快照不存在");
+        if (snapshot == null) return new CorrectionState(false, false, false, false, false, "项目历程快照不存在");
         String type = safe(correction.getCorrectionType()).toUpperCase(Locale.ROOT);
-        if ("RESTORE_AUTOMATIC".equals(type)) return new CorrectionState(true, false, false, false, "");
+        if ("RESTORE_AUTOMATIC".equals(type)) return new CorrectionState(true, false, false, false, false, "");
         List<String> rawIds = rawTargetIds(correction);
         String currentMembership = targetMembershipFingerprint(type, correction.getTargetId(), rawIds, stories, chapters);
+        List<String> currentMembershipRefs = targetMembershipRefs(
+            type, correction.getTargetId(), rawIds, stories, chapters
+        );
+        List<String> originalMembershipRefs = storedMembershipRefs(correction);
         String currentAutomatic = automaticPresentationFingerprint(type, correction.getTargetId(), rawIds, stories, chapters);
         boolean sourceStale = !safe(correction.getSourceFingerprint()).isBlank()
             && !safe(correction.getSourceFingerprint()).equals(safe(snapshot.getSourceEventFingerprint()));
         boolean hasMembershipFingerprint = !safe(correction.getTargetMembershipFingerprint()).isBlank();
-        boolean membershipStale = hasMembershipFingerprint
+        boolean membershipChanged = hasMembershipFingerprint
             ? !safe(correction.getTargetMembershipFingerprint()).equals(currentMembership)
             : sourceStale;
+        boolean additiveContinuation = membershipChanged
+            && safeAdditiveReplay(type, originalMembershipRefs, currentMembershipRefs);
+        boolean membershipStale = membershipChanged && !additiveContinuation;
         boolean automaticChanged = !safe(correction.getAutomaticPresentationFingerprint()).isBlank()
             && !safe(correction.getAutomaticPresentationFingerprint()).equals(currentAutomatic);
         boolean present = targetsValid(correction, targetIds(correction), stories, chapters);
@@ -1211,7 +1231,100 @@ public class ProjectHistoryCorrectionService {
                 ? "修正目标包含的原始事件已经变化，旧修正未自动覆盖新成员"
                 : "旧修正缺少目标成员指纹，来源变化后无法证明可以安全重放"
             : present ? "" : "修正目标已不存在或已被历史重建替换";
-        return new CorrectionState(present, sourceStale, membershipStale, automaticChanged, reason);
+        return new CorrectionState(present, sourceStale, membershipStale, automaticChanged, additiveContinuation, reason);
+    }
+
+    private List<String> storedMembershipRefs(ProjectHistoryCorrection correction) {
+        try {
+            return objectMapper.readValue(correction.getTargetMembershipRefsJson(), new TypeReference<List<String>>() {})
+                .stream().filter(value -> value != null && !value.isBlank()).map(String::trim).distinct().toList();
+        } catch (JsonProcessingException exception) {
+            return List.of();
+        }
+    }
+
+    private static boolean safeAdditiveReplay(
+        String type,
+        List<String> originalMembershipRefs,
+        List<String> currentMembershipRefs
+    ) {
+        if ("RESTORE_AUTOMATIC".equals(type) || originalMembershipRefs == null || originalMembershipRefs.isEmpty()
+            || originalMembershipRefs.contains(MEMBERSHIP_REFS_TRUNCATED)) return false;
+        Set<String> current = new LinkedHashSet<>(currentMembershipRefs == null ? List.of() : currentMembershipRefs);
+        return current.containsAll(originalMembershipRefs);
+    }
+
+    private List<String> targetMembershipRefs(
+        String type,
+        String targetId,
+        List<String> rawTargetIds,
+        Map<String, ChangeStory> stories,
+        Map<String, HistoryChapter> chapters
+    ) {
+        LinkedHashSet<String> values = new LinkedHashSet<>();
+        String normalizedType = safe(type).toUpperCase(Locale.ROOT);
+        values.add("type:" + normalizedType);
+        switch (normalizedType) {
+            case "DECLARE_CHAPTER" -> {
+                values.add("declared-chapter:" + safe(targetId));
+                rawTargetIds.stream().sorted().forEach(id -> addStoryMembershipRefs(values, id, stories));
+            }
+            case "RENAME_CHAPTER" -> addChapterMembershipRefs(values, targetId, stories, chapters);
+            case "MERGE_STORIES" -> {
+                LinkedHashSet<String> ids = new LinkedHashSet<>(rawTargetIds);
+                if (ids.isEmpty() && !safe(targetId).isBlank()) ids.add(safe(targetId));
+                ids.stream().sorted().forEach(id -> addStoryMembershipRefs(values, id, stories));
+            }
+            case "SPLIT_STORY" -> {
+                addStoryMembershipRefs(values, targetId, stories);
+                rawTargetIds.stream().sorted().forEach(id -> values.add("split-event:" + id));
+            }
+            case "SET_SUPPORTING", "REATTACH_SUPPORTING" -> {
+                addStoryMembershipRefs(values, targetId, stories);
+                rawTargetIds.stream().limit(1).forEach(id -> addStoryMembershipRefs(values, id, stories));
+            }
+            default -> addStoryMembershipRefs(values, targetId, stories);
+        }
+        List<String> ordered = values.stream().sorted().toList();
+        if (ordered.size() <= MAX_MEMBERSHIP_REFS) return ordered;
+        List<String> bounded = new ArrayList<>(ordered.subList(0, MAX_MEMBERSHIP_REFS));
+        bounded.add(MEMBERSHIP_REFS_TRUNCATED);
+        return List.copyOf(bounded);
+    }
+
+    private static void addStoryMembershipRefs(
+        Set<String> values,
+        String id,
+        Map<String, ChangeStory> stories
+    ) {
+        String safeId = safe(id);
+        values.add("story:" + safeId);
+        ChangeStory story = stories.get(safeId);
+        if (story == null) {
+            values.add("story-missing:" + safeId);
+            return;
+        }
+        story.eventRefs().stream().map(UUID::toString).sorted()
+            .forEach(eventId -> values.add("story-event:" + safeId + ":" + eventId));
+    }
+
+    private static void addChapterMembershipRefs(
+        Set<String> values,
+        String id,
+        Map<String, ChangeStory> stories,
+        Map<String, HistoryChapter> chapters
+    ) {
+        String safeId = safe(id);
+        values.add("chapter:" + safeId);
+        HistoryChapter chapter = chapters.get(safeId);
+        if (chapter == null) {
+            values.add("chapter-missing:" + safeId);
+            return;
+        }
+        chapter.storyRefs().stream().sorted().forEach(storyId -> {
+            values.add("chapter-story:" + safeId + ":" + storyId);
+            addStoryMembershipRefs(values, storyId, stories);
+        });
     }
 
     private String targetMembershipFingerprint(
@@ -1336,6 +1449,7 @@ public class ProjectHistoryCorrectionService {
         String effectiveReason = safe(reason).isBlank() ? state.reason() : reason;
         String difference;
         if (!safe(effectiveReason).isBlank()) difference = effectiveReason;
+        else if (state.additiveContinuationReplayed()) difference = "目标仅安全追加了新成员，继续保留用户明确修正";
         else if (state.automaticPresentationChanged()) difference = "自动展示已变化，仍保留用户明确修正";
         else difference = automatic.equals(applied) ? "无展示差异" : "用户声明覆盖自动展示";
         String status = safe(effectiveReason).isBlank() ? value.getStatus().name() : "CONFLICT";
@@ -1345,7 +1459,7 @@ public class ProjectHistoryCorrectionService {
             value.getDeclaredTitle(), value.getDeclaredSummary(), value.getDeclaredRole(), value.getDeclaredChapterId(),
             automatic, applied, difference, state.targetPresent(), value.getSecondaryDeclaredTitle(), value.getSecondaryDeclaredSummary(),
             value.getTargetMembershipFingerprint(), value.getAutomaticPresentationFingerprint(), state.sourceStale(),
-            state.membershipStale(), state.automaticPresentationChanged());
+            state.membershipStale(), state.automaticPresentationChanged(), state.additiveContinuationReplayed());
     }
 
     private HistoryCorrectionResponse response(ProjectHistoryCorrection value, ProjectHistorySnapshot snapshot,
@@ -1360,6 +1474,7 @@ public class ProjectHistoryCorrectionService {
         String effectiveReason = safe(reason).isBlank() ? state.reason() : reason;
         String difference;
         if (!safe(effectiveReason).isBlank()) difference = effectiveReason;
+        else if (state.additiveContinuationReplayed()) difference = "目标仅安全追加了新成员，继续保留用户明确修正";
         else if (state.automaticPresentationChanged()) difference = "自动展示已变化，仍保留用户明确修正";
         else difference = automatic.equals(applied) ? "无展示差异" : "用户声明覆盖自动展示";
         String status = safe(effectiveReason).isBlank() ? value.getStatus().name() : "CONFLICT";
@@ -1369,7 +1484,7 @@ public class ProjectHistoryCorrectionService {
             value.getDeclaredTitle(), value.getDeclaredSummary(), value.getDeclaredRole(), value.getDeclaredChapterId(),
             automatic, applied, difference, state.targetPresent(), value.getSecondaryDeclaredTitle(), value.getSecondaryDeclaredSummary(),
             value.getTargetMembershipFingerprint(), value.getAutomaticPresentationFingerprint(), state.sourceStale(),
-            state.membershipStale(), state.automaticPresentationChanged());
+            state.membershipStale(), state.automaticPresentationChanged(), state.additiveContinuationReplayed());
     }
 
     private String presentationRevision(ProjectHistorySnapshot snapshot, List<ProjectHistoryCorrection> corrections) {
@@ -1403,6 +1518,7 @@ public class ProjectHistoryCorrectionService {
         appendToken(value, correction.getBeforePresentationRevision());
         appendToken(value, correction.getSourceFingerprint());
         appendToken(value, correction.getTargetMembershipFingerprint());
+        appendToken(value, correction.getTargetMembershipRefsJson());
         appendToken(value, correction.getAutomaticPresentationFingerprint());
         appendToken(value, correction.getReplacedById() == null ? "" : correction.getReplacedById().toString());
         appendToken(value, correction.getUpdatedAt() == null ? "" : correction.getUpdatedAt().toString());
@@ -1520,6 +1636,7 @@ public class ProjectHistoryCorrectionService {
         boolean sourceStale,
         boolean membershipStale,
         boolean automaticPresentationChanged,
+        boolean additiveContinuationReplayed,
         String reason
     ) {
         private boolean conflict() {

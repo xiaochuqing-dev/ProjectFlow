@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import com.projectflow.dto.ProjectHistoryDtos.ProjectCurrentStateResponse;
+
 public final class ProjectAgentHistoryDtos {
     private ProjectAgentHistoryDtos() {
     }
@@ -122,6 +124,7 @@ public final class ProjectAgentHistoryDtos {
         List<AgentSourceRangeResponse> relatedRanges,
         AgentTrustGuidanceResponse trustGuidance,
         String historicalCoverage,
+        ProjectCurrentStateResponse currentProjectState,
         AgentCoverageDisclosureResponse coverageDisclosure,
         List<String> unreadScope,
         List<String> limitations,

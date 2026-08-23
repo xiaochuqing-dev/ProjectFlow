@@ -1,5 +1,16 @@
 # API Design
 
+## V3.9 Current Project State
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/projects/{projectId}/history/current-state` | Read the persisted corrected current state, revisions, related Story/Thread/Chapter refs, conflict/unknown/limitations and stale/degraded/dirty status. |
+| GET | `/projects/{projectId}/project-memory/history/current-state` | Read the identical view through Project Memory Gateway with safe audit metadata. |
+
+The response is project-owned, bounded, model-free, scan-free and write-free. It returns `modelCalled=false`. Internal dirty revision/reason is an opaque bounded diagnostic and contains no source body or secret. Frontend uses `getProjectCurrentState`; Hermes uses `get_project_current_state`.
+
+History correction responses add `additiveContinuationReplayed`. It is true only when stored bounded old membership is a complete subset of the evolved target. Legacy corrections without member refs and rewrite replacements remain conservative conflicts.
+
 ## V3.8.5 final narrative fields
 
 The internal model contract adds `beforeWording`, `changeWording`, `afterWording` and `unknownWording`; these are presentation fields only. Public History DTOs keep the existing Before/Change/After locations and engineering-owned identity, role, time, membership and Evidence fields. No new write API or Provider-specific API was added.

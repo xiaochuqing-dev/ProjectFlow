@@ -1,5 +1,13 @@
 # Testing
 
+## V3.9 continuity gates
+
+The frozen V3.9 dataset contains exactly 15 Calibration and 15 Holdout cases under `docs/acceptance-evidence/v3.9/continuity-ground-truth.json`; production Prompt builders are tested to exclude its IDs and answers. Deterministic coverage exercises Delta bounds/no-op, Story/Thread identity, Chapter-tail reuse, additive Correction replay versus rewrite conflict, Current State and Context revisions, internal dirty acknowledgement, database Agent Result collection, non-Git material, rewrite/failure/checkpoint behavior and cross-project safety.
+
+Blocking invariants include zero no-op model requests, raw Event loss, invalid Evidence, cross-project refs, unsupported Strong Fact promotion, silent Correction loss/wrong rebind, false strong continuity attachment, unknown candidate ID, unrelated window rerun, successful checkpoint replay, secret/path leak and Obsidian user-content/no-op mutation. Unaffected Story/Thread/Chapter identity must be 100% stable.
+
+Obsidian tests require Current-State-only projection to update exactly Project Overview and History Index, preserve user content and produce 0 writes on the next no-op. Hermes exposes 21 read-only tools including `get_project_current_state`. Provider, multi-step Dogfood, PostgreSQL, browser, launcher and genuine human-review results are recorded separately and must not be inferred from deterministic green tests.
+
 ## V3.8.5 Final Chapter representativeness closure
 
 Final closure adds deterministic Representative Cluster, dominant/minor selection, conservative split, claim-ceiling, correction-preservation and Chapter repair contracts. `ProjectHistoryDogfoodAcceptanceTest` can export the zero-model current-repository artifact for before/after coverage and conservation checks. `ModelOutputAdapterTest` proves that direct, encoded and ID-keyed history transport shapes, plus JSON-shaped generic Provider wrappers, normalize without changing model item content or inventing a missing registered field; downstream Schema, ID/Evidence/Claim validation remains authoritative. `ProjectHistoryV385RealOutputEvaluatorTest` records one bounded explicit failed-window recovery refresh when needed, including initial unresolved/repair-failure counters and whether the final persisted retry recovered. The Chapter evaluator counts failed calls and stops after one unchanged failed-checkpoint retry; qualification still requires a fully validated final snapshot. `ProjectHistoryFinalChapterReviewManifestTest` becomes blocking only after the same-head three-Provider artifacts and blank 12-Chapter human worksheet are frozen.

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -37,6 +38,7 @@ import com.projectflow.entity.ProjectFact;
 import com.projectflow.entity.ProjectFactEpistemicStatus;
 import com.projectflow.entity.ProjectFactOrigin;
 import com.projectflow.entity.ProjectFactRecordStatus;
+import com.projectflow.entity.ProjectAgentCandidate;
 import com.projectflow.entity.ProjectHistoryEvent.RewriteState;
 import com.projectflow.entity.ProjectHistorySnapshot;
 import com.projectflow.entity.ProjectMemory;
@@ -44,6 +46,7 @@ import com.projectflow.entity.ProjectSpace;
 import com.projectflow.entity.ProjectStatus;
 import com.projectflow.repository.AiProviderRepository;
 import com.projectflow.repository.ProjectFactRepository;
+import com.projectflow.repository.ProjectAgentCandidateRepository;
 import com.projectflow.repository.ProjectHistoryEventRepository;
 import com.projectflow.repository.ProjectHistorySnapshotRepository;
 import com.projectflow.repository.ProjectHistoryWindowCheckpointRepository;
@@ -53,6 +56,7 @@ import com.projectflow.service.ModelGatewayService;
 import com.projectflow.service.ModelOutputAdapter;
 import com.projectflow.service.ModelTaskType;
 import com.projectflow.service.ProjectHistoryCorrectionService;
+import com.projectflow.service.ProjectContinuityDirtyMarker;
 import com.projectflow.service.ProjectHistoryPromptBuilder;
 import com.projectflow.service.ProjectHistoryReadService;
 import com.projectflow.service.ProjectHistoryReconstructionService;
@@ -70,15 +74,59 @@ class ProjectHistoryReconstructionTest {
     @Autowired ProjectHistorySnapshotRepository snapshotRepository;
     @Autowired ProjectHistoryWindowCheckpointRepository checkpointRepository;
     @Autowired ProjectFactRepository factRepository;
+    @Autowired ProjectAgentCandidateRepository candidateRepository;
     @Autowired AiProviderRepository providerRepository;
     @Autowired ProjectHistoryReconstructionService reconstructionService;
     @Autowired ProjectHistoryCorrectionService correctionService;
     @Autowired ProjectHistoryReadService readService;
+    @Autowired ProjectContinuityDirtyMarker continuityDirtyMarker;
     @Autowired ModelOutputAdapter outputAdapter;
     @Autowired ObjectMapper objectMapper;
     @MockitoBean ModelGatewayService modelGateway;
 
     @TempDir Path temporaryRoot;
+
+    @Test
+    void collectsDatabaseAgentResultCandidateAndAcknowledgesInternalDirtyRevision() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path projectRoot = temporaryRoot.resolve("agent-candidate-continuity");
+        Files.createDirectories(projectRoot);
+        Files.writeString(projectRoot.resolve("report.md"), "initial report\n", StandardCharsets.UTF_8);
+        ProjectSpace project = project(userId, "Agent Candidate Continuity", projectRoot);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        ProjectAgentCandidate candidate = new ProjectAgentCandidate(
+            project.getId(), "WORK_RESULT", "Agent completed the report revision",
+            ProjectFactEpistemicStatus.PROCESS_EVIDENCE,
+            List.of("file:report.md#sha256=fixture"), "CURRENT", "agent-revision-1",
+            List.of(), "continuity-test-agent"
+        );
+        candidate.markValidationStatus("SOURCE_IDENTITY_REVALIDATED");
+        candidateRepository.saveAndFlush(candidate);
+        continuityDirtyMarker.mark(
+            project.getId(), "AGENT_RESULT_CANDIDATE", "agent-result:" + candidate.getId()
+        );
+
+        var pendingState = readService.currentState(userId, project.getId());
+        assertThat(pendingState.continuityDirty()).isTrue();
+        assertThat(pendingState.currentness()).contains("STALE");
+
+        var refreshed = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(refreshed.cacheHit()).isFalse();
+        assertThat(readService.events(
+            userId, project.getId(), "AGENT_RESULT", "AGENT_RESULT", null, null,
+            "PROCESS_EVIDENCE", "CURRENT", null, false, null, null, 0, 20
+        ).items()).anySatisfy(event -> {
+            assertThat(event.safeSourceLabel()).contains("report revision");
+            assertThat(event.affectedPaths()).contains("report.md");
+        });
+        Map<String, Object> diagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat((List<?>) diagnostics.get("continuityAgentResultRefs")).isNotEmpty();
+        assertThat(readService.currentState(userId, project.getId()).continuityDirty()).isFalse();
+
+        assertThat(reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false).cacheHit())
+            .isTrue();
+    }
 
     @Test
     void rebuildsSourceEventsStoriesAndCreatedModifiedRemovedRestoredThread() throws Exception {
@@ -206,6 +254,11 @@ class ProjectHistoryReconstructionTest {
         assertThat(sensitive.get(0).safeSourceLabel()).doesNotContain("should-never-be-read", projectRoot.toString());
         assertThat(readService.stories(userId, project.getId(), "sensitive-material", false, null, null, 0, 20).items())
             .isEmpty();
+        var currentState = readService.currentState(userId, project.getId());
+        assertThat(currentState.degraded()).isTrue();
+        assertThat(currentState.currentness()).isEqualTo("DEGRADED");
+        assertThat(currentState.modelCalled()).isFalse();
+        assertThat(currentState.confirmedState()).isNotBlank();
     }
 
     @Test
@@ -586,6 +639,11 @@ class ProjectHistoryReconstructionTest {
         commitAt(repository, "add email fallback", Instant.parse("2024-03-01T00:00:00Z"));
         ProjectSpace project = project(userId, "Incremental History", repository);
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        List<String> originalChapterIds = readService.chapters(userId, project.getId(), 0, 100).items().stream()
+            .map(item -> item.id()).toList();
+        List<String> originalThreadIds = readService.threads(userId, project.getId(), null, 0, 100).items().stream()
+            .map(item -> item.id()).toList();
+        String originalStateRevision = readService.currentState(userId, project.getId()).stateRevision();
 
         Files.writeString(auth, "class AuthService { boolean email; boolean oauth; }\n");
         commitAt(repository, "add oauth path", Instant.parse("2025-01-01T00:00:00Z"));
@@ -595,6 +653,27 @@ class ProjectHistoryReconstructionTest {
         assertThat(diagnostics.get("reconstructionMode")).isEqualTo("INCREMENTAL_OVERLAP_WINDOW");
         assertThat(((Number) diagnostics.get("reusedStoryCount")).intValue()).isGreaterThanOrEqualTo(2);
         assertThat(((Number) diagnostics.get("recomputedStoryCount")).intValue()).isGreaterThanOrEqualTo(1);
+        assertThat(((List<?>) diagnostics.get("reusedChapterIds")).stream().map(Object::toString).toList())
+            .containsAll(originalChapterIds);
+        assertThat(((List<?>) diagnostics.get("newChapterIds")).stream().map(Object::toString).toList()).isNotEmpty();
+        assertThat(((List<?>) diagnostics.get("continuedThreadIds")).stream().map(Object::toString).toList())
+            .containsAll(originalThreadIds);
+        assertThat(((Number) diagnostics.get("continuityDeltaSize")).intValue()).isPositive();
+        assertThat(((List<?>) diagnostics.get("continuityChangedPaths")).stream().map(Object::toString).toList())
+            .contains("src/AuthService.java");
+        assertThat(readService.chapters(userId, project.getId(), 0, 100).items().stream().map(item -> item.id()))
+            .containsSubsequence(originalChapterIds.toArray(String[]::new));
+        String changedStateRevision = readService.currentState(userId, project.getId()).stateRevision();
+        assertThat(changedStateRevision).isNotEqualTo(originalStateRevision);
+
+        var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(cached.cacheHit()).isTrue();
+        var cachedDiagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(cachedDiagnostics).containsEntry("continuityNoOp", true);
+        assertThat(((List<?>) cachedDiagnostics.get("reusedChapterIds")).stream().map(Object::toString).toList())
+            .containsAll(readService.chapters(userId, project.getId(), 0, 100).items().stream().map(item -> item.id()).toList());
+        assertThat(readService.currentState(userId, project.getId()).stateRevision()).isEqualTo(changedStateRevision);
+        verifyNoInteractions(modelGateway);
     }
 
     @Test
