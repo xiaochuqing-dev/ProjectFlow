@@ -1,5 +1,7 @@
 # ProjectFlow V3.8.5 Human Readability Round 3 Review
 
+2026-08-24 closure note: this is an immutable, unscored historical Round 3 package. A separate project-owner decision later authorized `PASS_BY_EXPLICIT_OWNER_OVERRIDE`; it did not populate this worksheet. PR #15 is merged and post-merge master CI passed. Current closure evidence is in `projectflow-v3.8.5-final-human-signoff.md` and `acceptance-evidence/v3.8.5/final-acceptance-backfill.json`.
+
 2026-08-23 superseding note: Round 3 stays byte/semantic immutable and unscored. Final Chapter Closure adds a separate 12-Chapter, three-Provider blank worksheet plus a Round 3 Story presentation-regression check; it does not rewrite this review or inherit approval. See `projectflow-v3.8.5-final-chapter-representativeness-review.md`.
 
 Status: PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS.

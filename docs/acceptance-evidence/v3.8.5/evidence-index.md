@@ -1,8 +1,10 @@
 # V3.8.5 验收证据索引
 
-当前状态：`PASS_BY_EXPLICIT_OWNER_OVERRIDE`，PR #15 已获项目所有者 merge 授权，正在执行 Ready/merge/backfill。NO TAG / NO RELEASE。
+当前状态：`PASS_BY_EXPLICIT_OWNER_OVERRIDE`。PR #15 已以 `29c154eb618ca43edf58c631c14cc1d296e14f3f` 合入 master，合并后 required CI run `32652683003` 全绿，正在执行 acceptance backfill。NO TAG / NO RELEASE。
 
 2026-08-24 Final Human Sign-off：项目所有者明确批准最终 package 与 merge，并豁免本轮量化人工评分。独立证据为 `final-human-signoff.json`；reviewerCount=1，数值评分为 null，原阈值未宣称通过，single-reviewer、未重确认 item count 和 P0 仅按无新报告记录的限制均已披露。Round 1/2/3 与 Final Chapter 冻结工件保持原样。
+
+2026-08-24 Acceptance Backfill：`final-acceptance-backfill.json` 记录 PR #15 Head/merge SHA、合并时间、Head push/PR CI、master CI、本地启动器、真实人工 override、最终三模型 run、十一份 canonical-LF 哈希和当前风险。
 
 2026-08-24 PHASE A0 复核：PR Head/base、最终 Provider run 与冻结包未变化；Final Chapter/Round 3 manifest 合同测试 2/2 通过。交接材料记录的 8.5/10 总体意见已作为有限范围 human judgement 保存，但未被换算为精确 Gate 分数。当前状态审计见 `docs/projectflow-v3.8.5-final-signoff-current-state-audit.md`，产品语言与 V4.0 GUI 债务合同见 `docs/product-language-and-progressive-disclosure-contract.md`。
 
@@ -53,10 +55,10 @@ Round 3 已冻结为 30 Story / 8 Chapter，双 Provider 各 15/4，人工字段
 ## 确定性验证
 
 - 本地 backend/H2：597 项，0 失败，0 错误，5 个条件跳过；Maven 以 0 退出，耗时 5 分 24 秒。
-- 根 `Start-ProjectFlow.bat -NoBrowser`：Next 16.2.11、Spring Boot/H2、双端就绪通过；Build ID `yFBn3UKDWR9I_MD9j1vq0`，readyAt `2026-08-14T04:15:07.3018054+08:00`，退出后 3000/8080 无监听。
+- 根 `Start-ProjectFlow.bat -NoBrowser`：从干净 master `29c154eb618ca43edf58c631c14cc1d296e14f3f` 重建 Next 16.2.11 并启动 Spring Boot/H2，双端就绪通过；Build ID `8MRIhvsa6p0s1fOpqYUPl`，readyAt `2026-08-24T00:47:26.5337922+08:00`，退出后 3000/8080 无监听。
 - 阻塞证据 head `e0fd50ed98e75c38fe1d762c89b501344b496c04` 的 push run `31594703405` 与 PR run `31594709131`：browser、frontend、Hermes、Obsidian、sensitive-content 通过；backend/H2 与 PostgreSQL 都是 597 项中仅 `ProjectHistoryHumanReviewRound3ManifestTest` 1 项失败。
 - Evidence head `49622f16aebf77e892c70a5b091f17c2b8ebaa6c` 的 push run `31740051324` 与 PR run `31740054761` 均成功；backend/H2、PostgreSQL、browser、frontend、Hermes、Obsidian、sensitive-content 全绿。真实 Provider job 按非手动触发设计跳过。
 
-## 当前阻塞与权限
+## 当前关闭状态与限制
 
-工程 Provider 阻塞已关闭。最终证据头 `d5ddb3f20193a2330ed69fc156240a4ead5293c4` 的 push run `32612757299` 与 PR run `32612759225` 均成功，backend/H2、PostgreSQL、frontend、browser、Hermes、Obsidian、sensitive-content 全绿。人工门禁仍未开始：用户完成真实评分并明确批准前，不得 Ready、merge、backfill、Tag、Release 或清理分支/worktree。
+工程 Provider 阻塞已关闭，项目所有者已用明确 override 批准继续且 PR #15 已合并。final PR Head `60200af43045b4861c2a794130ed5183c8fe07bb` 的 push run `32652420679`、PR run `32652422016` 以及 merge master run `32652683003` 均成功。量化人工阈值仍未证明，single-reviewer、scope 与 P0 依据限制继续有效；acceptance-backfill 合并和最终 master 验证完成前不清理本阶段分支。Tag 与 Release 始终禁止。

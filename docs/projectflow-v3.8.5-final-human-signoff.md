@@ -11,3 +11,5 @@
 Round 1 与 Round 2 继续是 `NEEDS_REVISION_NOT_APPROVED`。Round 3 manifest/worksheet 和 Final Chapter manifest/worksheet 继续保持冻结、人工字段空白、`reviewerCount=0`；新的签字证据位于 `docs/acceptance-evidence/v3.8.5/final-human-signoff.json`，不会篡改历史工件。
 
 这是一名单独项目所有者的批准，不是多人一致结论。量化阈值未被证明，只因项目所有者明确改变本次收口要求而允许 PR #15 Ready、merge、acceptance backfill、最终 master 验证与 V3.9 进入。仍然禁止 Tag 和 Release。
+
+GitHub 关闭进度：PR #15 已于 2026-08-24 合入 master，merge SHA 为 `29c154eb618ca43edf58c631c14cc1d296e14f3f`。合并后 master required CI run `32652683003` 全绿；根 `Start-ProjectFlow.bat -NoBrowser` 也从该干净提交完成构建、启动、健康检查和无残留退出。真实关闭元数据见 `docs/acceptance-evidence/v3.8.5/final-acceptance-backfill.json`。

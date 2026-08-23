@@ -1,0 +1,116 @@
+{
+  "version": "projectflow-v385-final-acceptance-backfill-v1",
+  "generatedAt": "2026-08-24T00:50:47+08:00",
+  "state": "FEATURE_MERGED_MASTER_VALIDATED_BACKFILL_PR_PENDING",
+  "repository": "xiaochuqing-dev/ProjectFlow",
+  "featurePr": 15,
+  "acceptanceBackfillPr": null,
+  "featureHeadSha": "60200af43045b4861c2a794130ed5183c8fe07bb",
+  "featureMergeSha": "29c154eb618ca43edf58c631c14cc1d296e14f3f",
+  "featureMergedAt": "2026-08-23T16:45:45Z",
+  "validatedMasterSha": "29c154eb618ca43edf58c631c14cc1d296e14f3f",
+  "githubChecks": {
+    "featureHeadPushRun": 32652420679,
+    "featureHeadPullRequestRun": 32652422016,
+    "masterRequiredCiRun": 32652683003,
+    "masterRequiredCiAttempt": 1,
+    "conclusion": "SUCCESS",
+    "requiredJobs": {
+      "backend-unit-and-h2": "SUCCESS",
+      "postgres-integration": "SUCCESS",
+      "frontend-quality": "SUCCESS",
+      "browser-e2e": "SUCCESS",
+      "hermes-mcp": "SUCCESS",
+      "obsidian-projection": "SUCCESS",
+      "sensitive-content": "SUCCESS"
+    },
+    "optionalRealProviderJobs": "SKIPPED_BY_NORMAL_PUSH_CONTRACT"
+  },
+  "localLauncher": {
+    "command": "Start-ProjectFlow.bat -NoBrowser",
+    "sourceRevision": "29c154eb618ca43edf58c631c14cc1d296e14f3f",
+    "version": "3.8.5",
+    "frontendBuildId": "8MRIhvsa6p0s1fOpqYUPl",
+    "readyAt": "2026-08-24T00:47:26.5337922+08:00",
+    "frontendAndBackendReady": true,
+    "ports3000And8080ClearAfterExit": true
+  },
+  "humanGate": {
+    "evidence": "docs/acceptance-evidence/v3.8.5/final-human-signoff.json",
+    "decision": "PASS_BY_EXPLICIT_OWNER_OVERRIDE",
+    "reviewerCount": 1,
+    "reviewMode": "SINGLE_PROJECT_OWNER",
+    "overallOutOf10": 8.5,
+    "storyReadabilityAverage": null,
+    "chapterReadabilityAverage": null,
+    "chapterRepresentativenessAverage": null,
+    "coreDimensionMinimum": null,
+    "quantitativeScoreStatus": "NOT_PROVIDED_WAIVED_BY_PROJECT_OWNER",
+    "humanP0Count": 0,
+    "humanP0Basis": "NO_NEW_P0_REPORTED_NO_INDEPENDENT_PER_SAMPLE_RESCORE",
+    "originalQuantitativeThresholdsEvidenced": false,
+    "singleReviewerLimitation": true,
+    "exactItemCountsReconfirmedInFinalApproval": false
+  },
+  "finalProviderGate": {
+    "sourceRunId": 32609107531,
+    "sourceCodeHead": "e1b67f28428e73f39fc23aa6f85961155a20ffd8",
+    "profiles": [
+      {
+        "id": "luna",
+        "model": "gpt-5.6-luna",
+        "protocol": "OPENAI_RESPONSES",
+        "reasoningEffort": "max",
+        "qualification": "19/19",
+        "chapterScenarios": "9/9"
+      },
+      {
+        "id": "deepseek",
+        "model": "deepseek-v4-flash",
+        "protocol": "OPENAI_CHAT_COMPLETIONS",
+        "reasoningEffort": "max",
+        "qualification": "19/19",
+        "chapterScenarios": "9/9"
+      },
+      {
+        "id": "qwen",
+        "model": "qwen3.7-plus",
+        "protocol": "ANTHROPIC_MESSAGES",
+        "reasoningEffort": "max",
+        "qualification": "19/19",
+        "chapterScenarios": "9/9"
+      }
+    ]
+  },
+  "artifactCanonicalLfSha256": {
+    "docs/acceptance-evidence/v3.8.5/final-human-signoff.json": "b48fbb599ac803b8ec1bec58c0306ad42f7eb9180a2bcd11d25c265a29eff317",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-review-manifest.json": "70da30e5248c1d48e3bccacbb928ff70ccb0bf2a20c7604a707fce3a26071e4a",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-review-worksheet.md": "63245fa4d80fce597e56dedb3860162ab133260dc951ee715b9077e375fdaa18",
+    "docs/acceptance-evidence/v3.8.5/human-review-round3-manifest.json": "f316b71a6bec24f7ba40c2da81ef210b101b3ca238c688793fa32d48be877c1b",
+    "docs/acceptance-evidence/v3.8.5/human-review-round3-worksheet.md": "4d57d7d1fa5bb975465db9be413f70cf943ca7c9c70d8174ba0d4dcdd7d85ca6",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-ground-truth-real-result.json": "4e6031a1da307891c09ef19c20a8ee1304bd0e792a1a14541de38bbc255f9b30",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/luna/history-real-scenarios.json": "7ec1a4c84f538d4ba0df755817b0ef6cf281a541200f022d9644a2ddefe4f159",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-ground-truth-real-result.json": "71f6843a5b1ee82bc0c2b674b9e64bc856421b8d1fd83af1a8cde7f1fa9b3094",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/deepseek/history-real-scenarios.json": "58095cf37e387245d775642d590b6abf8590b32052e9ddfad42239b562e25ba9",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/qwen/history-ground-truth-real-result.json": "64cc9f8463f1fcb618db64c6d3e3c34361721eea06855d1d2f43a0cab6c94709",
+    "docs/acceptance-evidence/v3.8.5/final-chapter-real-model/qwen/history-real-scenarios.json": "4e049f4f7a0032a0f856ad4f986ec37fda3d5a4e7483e8524d32280faacf1edb"
+  },
+  "currentKnownRisks": [
+    "The owner decision is a single-reviewer override; the original numeric human thresholds remain unevidenced.",
+    "Human P0 count zero means no new P0 was reported; no independent per-sample rescore was performed.",
+    "Real Provider output remains stochastic even though the frozen same-head three-provider gate passed.",
+    "The frontend dependency audit reports four high and zero critical advisories pending a compatible upgrade.",
+    "Project history schema evolution still relies on Hibernate ddl-auto=update rather than versioned migrations.",
+    "Full GUI progressive disclosure and product-language cleanup remain deferred to V4.0.",
+    "GitHub Actions reports Node 20 action-runtime and setup-java v4 deprecation warnings; the run still passed."
+  ],
+  "decision": {
+    "v385FinalAcceptance": "PASS_BY_EXPLICIT_OWNER_OVERRIDE",
+    "humanReadableProjectHistoryQuality": "PASS_BY_EXPLICIT_OWNER_OVERRIDE",
+    "chapterRepresentativeness": "PASS_BY_EXPLICIT_OWNER_OVERRIDE",
+    "multiProviderHistoryContract": "PASS",
+    "v39Entry": "APPROVED_AFTER_BACKFILL_MERGE_AND_FINAL_MASTER_VERIFICATION",
+    "noTag": true,
+    "noRelease": true
+  }
+}

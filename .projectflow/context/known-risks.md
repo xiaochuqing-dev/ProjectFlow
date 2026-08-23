@@ -1,6 +1,7 @@
 # Known risks
 
 - V3.8.5 已由项目所有者明确批准并豁免本轮量化人工评分，结论只能写 `PASS_BY_EXPLICIT_OWNER_OVERRIDE`。Story/Chapter 三项平均分和核心维度最低分仍未提供，原定量阈值没有得到证明；最终只有一名评审人，批准消息没有重确认 30 Story/12 Chapter item count，P0=0 只表示没有新报告。这些限制必须在最终报告和 backfill 中持续披露。
+- PR #15 merge 后 master run `32652683003` 全绿，但 GitHub Actions 已提示 Node 20 action runtime 和 `setup-java@v4` 弃用；本次没有在仅元数据 backfill 中夹带 workflow 升级，后续应单独升级并跑完整 CI。
 - V3.8.5 Human Readability Round 1 与 Round 2 均为 NEEDS_REVISION_NOT_APPROVED，原 30 Story/8 Chapter 文件和哈希保持冻结。Final Chapter 自动门禁不能提供真人评分；任一 P0 truthfulness failure 都直接阻止 PASS。
 
 - V3.8.5 RC3 的旧失败链必须保留：run `31574016609` 暴露 Chapter repair 误用 Story schema 与宽泛主体错误提升，run `31580355605` 暴露标题缺少明确结果，run `31592405476` 记录 GLM HTTP 429。外部容量后来恢复；Final Chapter 同头 run `32609107531` 已由 Luna、DeepSeek、Qwen 完成 19/19 与 9/9，旧 429 不再是当前阻断。Provider 输出仍有随机性，后续相关合同变化必须按影响范围重验。

@@ -6,11 +6,13 @@
 
 2026-08-24 项目所有者明确批准最终 package 与 PR #15 merge，并明确豁免本轮量化人工评分。数值阈值没有得到证明，也没有被自动填充；独立追加证据、single-reviewer、scope 与 P0 依据限制见 `projectflow-v3.8.5-final-human-signoff.md`。Round 1/2/3 与 Final Chapter 冻结工件继续原样。
 
+GitHub 正式关闭：PR #15 已以 merge commit `29c154eb618ca43edf58c631c14cc1d296e14f3f` 合入 master。合并后 required CI run `32652683003` 的 Backend/H2、PostgreSQL、Frontend、Browser、Hermes、Obsidian 与 sensitive-content 全绿；根启动器从同一干净 revision 完成构建、启动、健康检查和无残留退出。回填证据为 `acceptance-evidence/v3.8.5/final-acceptance-backfill.json`。
+
 ## 封板边界
 
 本轮只关闭 Chapter Representativeness、三协议真实 Provider 兼容和最终可审计证据。ProjectFact 继续是唯一强事实来源；Raw Event、Technical Atom、Story 身份、Primary/Supporting、Claim State、Evidence、Timeline、Capability、Evolution 与用户修正均未被 Chapter 归纳改写。Round 1、Round 2 继续是 `NEEDS_REVISION_NOT_APPROVED`；Round 3 的 30 Story / 8 Chapter、空白人工字段和 canonical-LF 哈希保持不变。
 
-起始时 PR #15 为 OPEN、Draft、未合并；主工作树包含用户修改，本轮只在隔离工作树和 `codex/v3.8.5-history-quality` 远端分支实施。最终仍不执行 Ready、merge、acceptance backfill、Tag、Release、分支或工作树清理。
+起始时 PR #15 为 OPEN、Draft、未合并；该句只保留任务起点。项目所有者随后授权，PR 已 Ready 并合入 master，正在执行仅含关闭元数据的 acceptance backfill。Tag 与 Release 始终不执行；分支只在回填合并和最终 master 验证后清理。
 
 ## 根因与实现结果
 

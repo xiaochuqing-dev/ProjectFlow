@@ -1,5 +1,7 @@
 # V3.8.5 RC3 Human Readability Closure Audit
 
+2026-08-24 superseding note: this document preserves the pre-Final-Chapter RC3 block. The later Luna/DeepSeek/Qwen gate passed, the project owner approved closure through `PASS_BY_EXPLICIT_OWNER_OVERRIDE`, PR #15 merged as `29c154eb618ca43edf58c631c14cc1d296e14f3f`, and post-merge master CI passed. Frozen Round 3 remains unmodified; current evidence is in `projectflow-v3.8.5-final-human-signoff.md` and `acceptance-evidence/v3.8.5/final-acceptance-backfill.json`.
+
 Current decision: PENDING_HUMAN_REVIEW_ROUND3 / NOT PASS.
 
 The automated engineering closure is designed to answer three questions: whether a visible Claim is supported by the same subject/action Evidence, whether weak/configured/implemented states are prevented from false promotion, and whether each Chapter names a concrete supported phase result. ProjectFact remains the only persistent strong-fact source.

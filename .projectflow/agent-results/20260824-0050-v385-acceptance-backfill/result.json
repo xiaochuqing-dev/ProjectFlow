@@ -1,0 +1,26 @@
+{
+  "taskGoal": "把 V3.8.5 功能合并、master 质量门禁和本地启动结果回填为可审计的最终关闭证据。",
+  "actualChanges": [
+    "PR #15 已按仓库惯例以 merge commit 合入 master，并记录真实 merge SHA、合并时间、最终 PR Head 与功能分支 CI。",
+    "master 的 Backend/H2、PostgreSQL、Frontend、Browser、Hermes、Obsidian 和敏感内容门禁全部通过；普通 push 中可选真实 Provider job 按合同跳过。",
+    "根启动器从干净 master 重建 Next.js 并启动 Spring Boot/H2，前后端健康检查通过，退出后 3000/8080 无监听。",
+    "新增最终 acceptance backfill 证据，引用真实人工 override、三模型 run、冻结工件哈希和当前风险，不修改任何冻结 worksheet 或 manifest。"
+  ],
+  "keyFiles": [
+    "docs/acceptance-evidence/v3.8.5/final-acceptance-backfill.json",
+    "docs/acceptance-evidence/v3.8.5/final-human-signoff.json",
+    "docs/projectflow-v3.8.5-final-acceptance.md",
+    "docs/projectflow-v3.8.5-final-closure-report.md"
+  ],
+  "verification": {
+    "build": "Start-ProjectFlow.bat -NoBrowser 在 master 29c154eb618ca43edf58c631c14cc1d296e14f3f 上通过，Build ID 8MRIhvsa6p0s1fOpqYUPl。",
+    "tests": "master required CI run 32652683003 全绿，覆盖 Backend/H2、PostgreSQL、Frontend、Browser、Hermes、Obsidian 与敏感内容。",
+    "manualCheck": "PR #15 已合并；final human scores 继续为 null，reviewerCount=1，single-reviewer、scope 与 P0 依据限制均保留；冻结包未修改。"
+  },
+  "unfinished": [
+    "本分支仍需创建 acceptance-backfill PR，通过 required CI 后合并并完成最终 master 验证与两条 V3.8.5 分支清理。"
+  ],
+  "sedimentCandidates": [
+    "人工冻结工件与后续 GitHub 关闭元数据应分离，关闭证据通过冻结哈希引用原工件，避免回填改写历史。"
+  ]
+}
