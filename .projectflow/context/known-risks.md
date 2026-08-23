@@ -1,8 +1,9 @@
 # Known risks
 
-- V3.8.5 Human Readability Round 1 与 Round 2 均为 NEEDS_REVISION_NOT_APPROVED，原 30 Story/8 Chapter 文件和哈希保持冻结。RC3 自动门禁不能提供真人评分；新的 Round 3 仍必须由用户逐项审核，任一 P0 truthfulness failure 都直接阻止 PASS。
+- 当前 V3.8.5 唯一正式阻断是精确真人签字。交接材料记录的 8.5/10 只是整体展示判断，不能换算为逐样本评分；仍需确认审核范围、Story/Chapter 可读性平均分、Chapter 代表性平均分、P0 数量和 merge 批准。最终只有一名评审人，必须披露 single-reviewer limitation。
+- V3.8.5 Human Readability Round 1 与 Round 2 均为 NEEDS_REVISION_NOT_APPROVED，原 30 Story/8 Chapter 文件和哈希保持冻结。Final Chapter 自动门禁不能提供真人评分；任一 P0 truthfulness failure 都直接阻止 PASS。
 
-- V3.8.5 RC3 已把 subject/action/state 与 direct/indirect Evidence 归因收回工程层，并禁止同 Commit 或 Supporting Evidence 提升其他 Claim。run `31574016609` 暴露 Chapter repair 误用 Story schema 以及宽泛 `project-area-*` 主体被区域内任意代码提升为 IMPLEMENTED；run `31580355605` 又暴露 GLM 偶发标题缺少明确结果。现已分别用 Chapter prompt v6、OBSERVED ceiling 与 Story v12 的可诊断确定性标题回退修复。run `31586433372` 的双 Provider qualification 与 DeepSeek 11/11 scenarios 已通过，但 GLM scenarios 为 1/11 后重跑 0/11；correction-only run `31592405476` 连续三次把两窗口失败安全分类为 HTTP 429。该外部可用性恢复前不能冻结 Round 3。所有旧失败、fallback、Round 2 登录 P0 与 CI 历史必须保留；PR #15 仍为 BLOCKED/Draft。
+- V3.8.5 RC3 的旧失败链必须保留：run `31574016609` 暴露 Chapter repair 误用 Story schema 与宽泛主体错误提升，run `31580355605` 暴露标题缺少明确结果，run `31592405476` 记录 GLM HTTP 429。外部容量后来恢复；Final Chapter 同头 run `32609107531` 已由 Luna、DeepSeek、Qwen 完成 19/19 与 9/9，旧 429 不再是当前阻断。Provider 输出仍有随机性，后续相关合同变化必须按影响范围重验。
 - V3.8.5 用户修正是可审计、可逆的展示覆盖，不改变 ProjectFact、原始事件或 Evidence；跨窗口的模型措辞仍受窗口上限、Provider 兼容性和未处理范围诊断约束。
 - 2026-08-08 的只读 `npm audit` 报告 4 个 high、0 critical，涉及直接依赖 Next/PostCSS 与传递依赖 nanoid/sharp；本轮未运行 `audit fix`，避免在 RC2 夹带未评估的依赖升级，正式发布前仍需单独处置并回归。
 - 2026-08-03 的 `npm audit` 对当前前端依赖图报告 3 个 high，涉及 PostCSS 的 source map 文件读取/路径问题与 Sharp/libvips 继承漏洞，并聚合影响 Next。注册表当前自动修复建议是破坏性的 Next 9.3.3 downgrade，不能用 `npm audit fix --force` 代替兼容性判断；应等待或选择官方兼容修复版本，升级后重跑 lint、contracts、production build、Playwright 和根启动器。
@@ -10,7 +11,7 @@
 - Git `--all` 会覆盖本地可达分支，不等同于远端全部协作历史；浅克隆、force-push、已删除远端分支和未授权 GitHub 元数据会形成明确覆盖缺口。
 - 当前增量策略使用受影响时间窗口与 31 天 overlap，能重建常见新增和 rewrite 范围，但超长跨年语义链仍依赖稳定 subject/Evidence；不会用模型相似度强行连接。
 - Source event 和 snapshot schema 仍由 Hibernate `ddl-auto=update` 管理，没有 Flyway/Liquibase。必须继续用旧 H2 升级与 PostgreSQL 16 CI 验证，禁止删库规避。
-- 最小 `/history` 页面只验证信息层次和深链接，不是最终 GUI；筛选、虚拟滚动、跨篇章可视化和完整可访问性设计仍是 V3.9 进入条件。
+- 最小 `/history` 页面只验证信息层次和深链接，不是最终 GUI。完整 Hash/Evidence 下钻、短 ID、正式中文标签、信息密度、筛选、跨篇章可视化和完整可访问性属于 V4.0 GUI/Productization 债务；V3.9 只遵守产品语言合同并实现必要低风险文案，不抢跑最终视觉重构。
 - Obsidian Advanced URI、Local REST/MCP、Dataview/Bases 均为可选增强。零插件官方 URI 只能稳定打开 Vault/文件，标题或块级定位需要插件能力并必须安全降级。
 - DeepSeek 与 GLM 专项结果只适用于当日模型、协议、Prompt v2 和冻结输入，不是任意项目准确率承诺。GLM 38-run 的 Conflict Detection 为 0.6667、Deep-read Sufficiency 为 0.8333，仍需把冲突和未读范围作为显式限制保留，不能因总门禁通过而隐藏。
 - V3.8.5 真实 qualification 工件保留 12 个 UNSUPPORTED_CLAIM 拒绝和 24 个失败/未处理窗口（两 Provider 均如此）；聚合安全指标为零违规不等于质量资格通过。

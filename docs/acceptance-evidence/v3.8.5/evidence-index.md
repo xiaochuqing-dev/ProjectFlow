@@ -2,6 +2,8 @@
 
 当前状态：HUMAN_REVIEW_REQUIRED / NOT PASS。PR #15 保持 Draft、未合并。
 
+2026-08-24 PHASE A0 复核：PR Head/base、最终 Provider run 与冻结包未变化；Final Chapter/Round 3 manifest 合同测试 2/2 通过。交接材料记录的 8.5/10 总体意见已作为有限范围 human judgement 保存，但未被换算为精确 Gate 分数。当前状态审计见 `docs/projectflow-v3.8.5-final-signoff-current-state-audit.md`，产品语言与 V4.0 GUI 债务合同见 `docs/product-language-and-progressive-disclosure-contract.md`。
+
 ## Final Chapter Closure
 
 - 最终同头 run `32609107531`，源码头 `e1b67f28428e73f39fc23aa6f85961155a20ffd8`。GPT 5.6 Luna Responses/max、DeepSeek V4 Flash Chat/max、Qwen3.7 Plus Messages/max 均为 qualification 19/19、Chapter scenarios 9/9；没有替代 Qwen 模型。

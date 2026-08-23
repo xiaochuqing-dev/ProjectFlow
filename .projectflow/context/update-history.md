@@ -1,5 +1,13 @@
 # Update history
 
+## ProjectFlow V3.8.5 Final Sign-off A0 与产品语言合同 - 2026-08-24
+
+重新核对 GitHub 与本地后，PR #15 仍为 OPEN/Draft/MERGEABLE，Head `7d181af2` 与 base master `5cb5e496` 未变化；当前 Head 的 push/PR required CI 全绿。Final Chapter 与 Round 3 冻结合同测试 2/2 通过，30 Story、12 Final Chapter、三模型同头结果和 canonical-LF 哈希均未改变。交接材料记录的 8.5/10 总体判断只作为 human judgement 保存，不拆分为逐样本评分；Hash/ID 过长、内部 diagnostics 过载和用户层中英文混排正式登记为 V4.0 GUI 债务。新增正式中文产品语言与渐进披露合同。由于审核范围、三个 1-5 平均分、P0 结论和明确 merge 批准仍缺失，V3.8.5 继续为 HUMAN_REVIEW_REQUIRED / NOT PASS，V3.9 ENTRY 继续 BLOCKED。
+
+## ProjectFlow V3.8.5 Final Chapter Closure - 2026-08-23
+
+新增确定性 Representative Cluster、dominant/co-dominant/minor、代表覆盖、Claim ceiling、有界 repair 与保守 split。最终同头 run `32609107531` 在源码头 `e1b67f2` 上完成 GPT 5.6 Luna Responses/max、DeepSeek V4 Flash Chat/max、Qwen3.7 Plus Messages/max 三协议验收，均为 qualification 19/19 与 Chapter scenarios 9/9。Final Chapter 冻结为三 Provider 各 4、共 12 个；Round 3 的 30 Story/8 Chapter 继续不可变，30/30 展示变化保持 Truth/Evidence semantic hash 不变。自动工程 Gate 完成但真人字段为空，PR #15 继续 Draft，不执行 merge、backfill、Tag、Release 或清理。
+
 ## ProjectFlow V3.8.5 RC3 Evidence 级叙事真实性封板 - 2026-08-12
 
 Round 2 因 GLM `glm-story-14` 把 skeleton/登录规划与同提交无关代码拼成“登录已实现”而正式冻结为 NEEDS_REVISION_NOT_APPROVED，原 artifacts 和哈希未改写。RC3 新增 Technical Atom 级 Claim attribution，按 subject/action 区分 direct Evidence 与不可提升状态的 indirect context，逐 Claim 计算 PLANNED/DECLARED/CONFIGURED/IMPLEMENTED/OBSERVED/VERIFIED/REMOVED/RESTORED/UNKNOWN/CONFLICTED 上限，并让 correction 与 fallback 通过同一真实性门禁。Chapter 现在必须复述具体 Primary 成果；同一泛化提交中的独立 Primary outcome 仅在 Supporting ownership 完整时由工程层确定性拆分。真实运行又发现 Chapter 修复请求误用了 Story 的 OUTPUT_TEMPLATE_JSON 合同、宽泛 `project-area-*` 区域主体会借区域内任意代码达到 IMPLEMENTED，以及 GLM 会偶发给出有动作/对象但没有明确结果的标题。现已分别改为基于原始 CHAPTER_SYNTHESIS_JSON 的 v6 专用 repair、区域级 OBSERVED ceiling，以及 Story v12 的动作/对象/结果门禁与可诊断确定性标题回退。GitHub 还暴露 Round 2 raw hash 受 LF/CRLF checkout 影响；验证现改为 immutable canonical-LF hash 加两个已记录 raw hash 的白名单，未改写冻结文件。冻结 Ground Truth 和阈值未修改；真实运行的首次 DeepSeek 资格失败、10/11 Dogfood 失败、GLM 安全 fallback 与标题波动及后续复验均作为独立 Evidence 保留。Round 3 真人批准、合并、backfill 和清理仍未授权，PR #15 保持 Draft。

@@ -8,6 +8,8 @@
 
 人工状态：`reviewerCount=0`。评审人、是/否判断、可读性评分、Chapter representativeness 评分、PASS/FAIL 和备注全部为空，未由 Codex、模型或自动脚本代填。
 
+交接材料记录的前置人工意见为总体约 8.5/10：信息层基本完整、能够理解，标题与摘要质量总体可接受，且未报告新的 Truthfulness P0。该意见同时指出 Hash/ID 默认过长、内部 diagnostics 过载和中英文标签混排等 GUI/Product Language 问题。它只作为 human judgement 与 V4.0 deferred debt 保存，不拆分为各 Story/Chapter 的 1-5 分，也不改变本页 `NOT_RUN` 状态。
+
 阈值仍为：Story 平均可读性至少 4.0，Chapter 平均可读性至少 4.0，Chapter representativeness 平均至少 4.0，各核心维度平均至少 3.5，truthfulness P0 为 0。只有真实评审完成冻结 worksheet 且用户明确批准，才可以讨论 Ready/merge；当前不得 backfill、Tag、Release 或清理分支/工作树。
 
 证据入口：

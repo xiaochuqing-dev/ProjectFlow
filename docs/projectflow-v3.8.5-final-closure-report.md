@@ -72,6 +72,10 @@ DeepSeek 在兼容加固期间保留了多次失败证据：runs `32418200565`�
 
 人工评审状态仍为 `NOT_RUN`：`reviewerCount=0`，姓名、是/否、1-5 分、PASS/FAIL 与备注全部为空。自动 Gate 不能代替真人判断 Chapter 是否真正代表整个阶段，也不能授权发布。
 
+2026-08-24 PHASE A0 复核确认 PR Head、base master、最终 Provider run、冻结哈希与 required CI 均未变化，冻结合同测试 2/2 通过。交接材料记录用户基于最终 worksheet 展示给出约 8.5/10 的总体判断，认为整体信息、个人理解、标题与摘要已基本可接受，未报告新的 Truthfulness P0。该判断没有覆盖冻结 Gate 所需的精确 1-5 平均分、完整审核范围与 merge 批准，因此不能自动转写为 PASS。
+
+同一反馈把主要剩余问题定位为 GUI/Presentation：完整 Hash、Commit 与 Evidence ID 默认过长；Representative Cluster、weight、Primary/Supporting 与内部 state 不应在用户第一层堆叠；Before/Change/After 等混排标签应采用正式中文产品语言。工程层继续保留 Git、Commit、PR、CI、API、Token、SHA、JSON、HTTP 等专业术语。权威合同见 `product-language-and-progressive-disclosure-contract.md`，最终 GUI 实现延后到 V4.0，不反向阻断 V3.8.5 的语义验收。
+
 ## 最终决策与风险
 
 工程自动门禁完成后仍停在 `HUMAN_REVIEW_REQUIRED / NOT PASS`。唯一允许的下一步是真人填写冻结 worksheet，并由用户根据平均可读性、代表性、核心维度和 P0=0 阈值明确批准或拒绝。
