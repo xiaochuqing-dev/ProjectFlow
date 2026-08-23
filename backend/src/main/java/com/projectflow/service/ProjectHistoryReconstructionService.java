@@ -216,7 +216,12 @@ public class ProjectHistoryReconstructionService {
 
             beginSnapshot(projectId, jobId, before == null || !currentFingerprint.equals(before.getSourceEventFingerprint()));
             safeProgress.update("HISTORY_ENGINEERING_RECONSTRUCTION", "正在确定性组织变化故事、时间篇章和演变链");
-            DeterministicResult deterministic = reconstruct(completedCollection, completedPersistence, before, force);
+            Instant reconstructionAffectedFrom = reconstructionAffectedFrom(
+                completedPersistence.affectedFrom(), before, currentFingerprint, projectId
+            );
+            DeterministicResult deterministic = reconstruct(
+                completedCollection, completedPersistence, before, force, reconstructionAffectedFrom
+            );
             ModelResult modelResult = enhanceWithModel(
                 userId, projectId, deterministic, completedPersistence.currentEvents(),
                 modelDiagnostics, safeProgress
@@ -255,6 +260,14 @@ public class ProjectHistoryReconstructionService {
                 modelResult.unprocessedStoryCount()
             );
             diagnostics.putAll(completedDelta.diagnostics());
+            diagnostics.put(
+                "continuityReconstructionAffectedFrom",
+                reconstructionAffectedFrom == null ? "" : reconstructionAffectedFrom.toString()
+            );
+            diagnostics.put(
+                "continuityRetryScopeReused",
+                completedPersistence.affectedFrom() == null && reconstructionAffectedFrom != null
+            );
             putContinuityStructureDiagnostics(deterministic.continuity(), diagnostics);
             diagnostics.put("modelDeterministicTitleFallbackCount", (int) finalResult.stories().stream()
                 .filter(story -> "MODEL_VALIDATED_WITH_DETERMINISTIC_TITLE".equals(story.summaryStatus()))
@@ -467,7 +480,8 @@ public class ProjectHistoryReconstructionService {
         CollectionOutcome collected,
         PersistedEvents persisted,
         ProjectHistorySnapshot previousSnapshot,
-        boolean force
+        boolean force,
+        Instant affectedFrom
     ) {
         List<EventView> events = persisted.currentEvents().stream().map(this::view).toList();
         List<EventView> semanticEvents = events.stream().filter(ProjectHistoryReconstructionService::semanticEligible).toList();
@@ -483,8 +497,8 @@ public class ProjectHistoryReconstructionService {
         String reconstructionMode = "FULL_REBUILD";
         if (!force && previousSnapshot != null && previousSnapshot.getLatestSuccessfulAt() != null
             && STRATEGY_VERSION.equals(previousSnapshot.getStrategyVersion())
-            && persisted.affectedFrom() != null) {
-            Instant cutoff = persisted.affectedFrom().minus(INCREMENTAL_OVERLAP);
+            && affectedFrom != null) {
+            Instant cutoff = affectedFrom.minus(INCREMENTAL_OVERLAP);
             Set<UUID> currentEventIds = eventsById.keySet();
             retainedStories = previousStories(previousSnapshot).stream()
                 .filter(story -> story.occurredTo().isBefore(cutoff))
@@ -510,12 +524,13 @@ public class ProjectHistoryReconstructionService {
         envelopes.addAll(recomputed);
         envelopes = new ArrayList<>(classifyPrimaryAndSupporting(envelopes, eventsById));
         envelopes = new ArrayList<>(compressRepetitivePrimaryStories(envelopes, eventsById));
+        envelopes = new ArrayList<>(canonicalizeRoleGraph(envelopes));
         envelopes.sort(Comparator.comparing((StoryEnvelope envelope) -> envelope.story().occurredFrom())
             .thenComparing(envelope -> envelope.story().id()));
         List<EvolutionThread> threads = threads(envelopes);
         List<ChangeStory> stories = applyLaterOutcomes(envelopes, threads);
         ChapterContinuityResult chapterContinuity = incrementalChapters(
-            stories, events, previousSnapshot, retainedStories, persisted.affectedFrom(), force
+            stories, events, previousSnapshot, retainedStories, affectedFrom, force
         );
         List<HistoryChapter> chapters = chapterContinuity.chapters();
         Set<String> recomputedStoryIds = recomputed.stream().map(item -> item.story().id())
@@ -763,6 +778,48 @@ public class ProjectHistoryReconstructionService {
         return result;
     }
 
+    /**
+     * Rebuild the bidirectional presentation relation from each Supporting
+     * story's single owner. Incremental overlap can retain an older Primary
+     * while recomputing and reattaching one of its Supporting stories; forward
+     * refs from the retained snapshot must not survive that reassignment.
+     * Invalid/orphan reverse links are conservatively restored to Primary.
+     */
+    private List<StoryEnvelope> canonicalizeRoleGraph(List<StoryEnvelope> input) {
+        Map<String, StoryEnvelope> byId = input.stream().collect(
+            LinkedHashMap::new, (map, value) -> map.put(value.story().id(), value), Map::putAll
+        );
+        Map<String, String> validOwners = new LinkedHashMap<>();
+        for (StoryEnvelope envelope : input) {
+            ChangeStory story = envelope.story();
+            if (!story.supporting() || story.primaryStoryId().isBlank()) continue;
+            StoryEnvelope owner = byId.get(story.primaryStoryId());
+            if (owner != null && owner.story().primary() && !owner.story().id().equals(story.id())) {
+                validOwners.put(story.id(), owner.story().id());
+            }
+        }
+        Map<String, List<String>> supportingByPrimary = new LinkedHashMap<>();
+        validOwners.forEach((support, primary) ->
+            supportingByPrimary.computeIfAbsent(primary, ignored -> new ArrayList<>()).add(support)
+        );
+        return input.stream().map(envelope -> {
+            ChangeStory story = envelope.story();
+            String owner = validOwners.get(story.id());
+            boolean supporting = owner != null;
+            List<String> supportingRefs = supporting
+                ? List.of()
+                : List.copyOf(supportingByPrimary.getOrDefault(story.id(), List.of()));
+            ChangeStory normalized = withPresentation(
+                story, story.humanTitle(), story.oneSentenceSummary(), story.beforeState(), story.change(),
+                story.afterState(), supporting ? "SUPPORTING" : "PRIMARY", supporting ? owner : "",
+                supportingRefs, story.presentationAuthority(), story.presentationRevision(),
+                story.userCorrectionRefs(), supporting || story.hiddenByDefault(), story.pinned(),
+                story.mergedIntoStoryId(), story.displayStatus(), story.correctionConflicts()
+            );
+            return new StoryEnvelope(normalized, envelope.transitions());
+        }).toList();
+    }
+
     private String presentationFamily(ChangeStory story) {
         String object = languageService.readableObject(
             story.primarySubjectKey(), story.technicalDetails(), story.affectedAreas()
@@ -865,6 +922,31 @@ public class ProjectHistoryReconstructionService {
             // An unreadable diagnostic must not turn an incomplete snapshot into
             // a false global cache hit.
             return true;
+        }
+    }
+
+    private Instant reconstructionAffectedFrom(
+        Instant currentAffectedFrom,
+        ProjectHistorySnapshot previousSnapshot,
+        String currentFingerprint,
+        UUID projectId
+    ) {
+        if (currentAffectedFrom != null) return currentAffectedFrom;
+        if (previousSnapshot == null || currentFingerprint == null
+            || !currentFingerprint.equals(previousSnapshot.getSourceEventFingerprint())
+            || (!hasRetryableWindowCheckpoint(projectId) && !hasPendingWindowDiagnostics(previousSnapshot))) {
+            return null;
+        }
+        try {
+            JsonNode diagnostics = objectMapper.readTree(previousSnapshot.getDiagnosticsJson());
+            String value = diagnostics == null ? "" : diagnostics
+                .path("continuityReconstructionAffectedFrom").asText("").trim();
+            if (value.isBlank() && diagnostics != null) {
+                value = diagnostics.path("continuityAffectedFrom").asText("").trim();
+            }
+            return value.isBlank() ? null : Instant.parse(value);
+        } catch (Exception ignored) {
+            return null;
         }
     }
 

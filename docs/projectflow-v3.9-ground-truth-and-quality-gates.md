@@ -4,6 +4,8 @@
 
 机器可读清单：`docs/acceptance-evidence/v3.9/continuity-ground-truth.json`
 
+可执行绑定：`docs/acceptance-evidence/v3.9/continuity-ground-truth-execution-map.json`
+
 本清单在实现前冻结。Calibration 与 Holdout 使用不同 case ID；预期答案、阈值与 case identity 不得进入 production Prompt。后续只能通过 append-only amendment 增加说明，不能为了让实现通过而改写原预期。
 
 ## Calibration
@@ -47,3 +49,4 @@
 4. ProjectFlow T0–T7 多轮 dogfood 逐轮记录 delta、复用/变化范围、模型窗口、revision、修正和投影 mutation。
 5. 最终 10–15 个连续性场景由真人检查；模型自评不能替代该门。
 
+冻结清单保持不可变；执行绑定把 30 个 case ID 逐条连接到 Maven 或 Python 测试，并由 `ProjectHistoryV39GroundTruthExecutionMapTest` 校验 ID、split、源码和测试方法均真实存在。标准后端与 Obsidian 门会实际运行这些测试；映射文件及 case ID 不进入 production Prompt。

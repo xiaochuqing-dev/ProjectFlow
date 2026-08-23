@@ -94,13 +94,18 @@ jobs:
           done
           test -f target/surefire-reports/TEST-com.projectflow.service.ProjectHistoryHumanReviewRound3ManifestTest.xml
           test -f target/surefire-reports/TEST-com.projectflow.ProjectHistoryV385GroundTruthExecutionTest.xml
+          test -f target/surefire-reports/TEST-com.projectflow.ProjectHistoryV39ContinuityGroundTruthTest.xml
+          test -f target/surefire-reports/TEST-com.projectflow.ProjectHistoryV39GroundTruthExecutionMapTest.xml
+          test -f target/surefire-reports/TEST-com.projectflow.ProjectHistoryV39HumanReviewWorksheetTest.xml
           test -f target/surefire-reports/TEST-com.projectflow.eval.ProjectHistoryV385TitleQualityTest.xml
       - name: 保存 JUnit 报告
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: backend-junit
-          path: backend/target/surefire-reports
+          path: |
+            backend/target/surefire-reports
+            backend/target/projectflow-eval/v39-dogfood-sequence.json
 
   postgres-integration:
     runs-on: ubuntu-latest
@@ -439,10 +444,12 @@ jobs:
             echo "correction scope: Dogfood and non-code scenarios reuse the recorded full baseline"
           elif [ "${{ inputs.real_model_scope }}" = "affected" ]; then
             run_gate history-v385-chapter-affected mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.scenario-scope=chapter -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-chapter-affected" test
-            echo "affected scope: Chapter suite includes ProjectFlow Dogfood; unchanged V3.7.5/Understanding baselines are reused"
+            run_gate history-v39-continuity mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.scenario-scope=continuity -Dprojectflow.eval.output-name="$EVAL_PREFIX-v39-continuity" test
+            echo "affected scope: Chapter suite includes ProjectFlow Dogfood; V3.9 adds small-delta/no-op/resume/no-Git continuity; unchanged V3.7.5/Understanding baselines are reused"
           else
             run_gate history-v385-scenarios mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios" test
             run_gate history-v385-dogfood mvn -B -Dtest="$DOGFOOD_TEST" -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios" test
+            run_gate history-v39-continuity mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.scenario-scope=continuity -Dprojectflow.eval.output-name="$EVAL_PREFIX-v39-continuity" test
           fi
           if [ "$failures" -ne 0 ]; then
             echo "$EVAL_PREFIX scenario gates failed: $failures"

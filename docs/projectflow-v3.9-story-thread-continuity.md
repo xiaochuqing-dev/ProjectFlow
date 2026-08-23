@@ -18,7 +18,8 @@ Story 与 Thread 身份继续由工程层拥有。Story 使用稳定 subject lin
 
 用户对 Primary/Supporting、merge、split、reattach 等 presentation correction 继续作用于 corrected Thread view，但不改写 Raw Event、ProjectFact 或工程 Evidence。
 
+增量重建会把保留的旧 Story 与受影响窗口的新 Story 合并。合并、分类和压缩完成后，系统只以每个 Supporting Story 的有效 `primaryStoryId` 重建双向角色图：Primary 的 `supportingChangeRefs` 必须由这些反向归属重新计算，旧快照中已经失效的前向引用不得带入新快照。目标不存在、自指或目标不再是 Primary 时，相关 Story 保守恢复为 Primary，不建立未经证明的支撑关系。
+
 ## Diagnostics 与 Gate
 
 Diagnostics 输出 continued、unchanged、new、relinked、invalidated 的 Story/Thread ID 与计数，以及 ambiguous 与 rejected candidate 计数。冻结 Gate 要求未受影响 Story/Thread 身份稳定率 100%、unknown candidate ID 为 0、cross-project reference 为 0、false strong continuity attachment 为 0。
-

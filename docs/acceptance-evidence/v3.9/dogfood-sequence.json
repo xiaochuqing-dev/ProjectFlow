@@ -1,0 +1,669 @@
+{
+  "schemaVersion" : "projectflow-v3.9-continuity-dogfood-v1",
+  "source" : "ProjectFlow Git history plus deterministic local continuation commits",
+  "fixedCommits" : {
+    "v39Freeze" : "3ba06c26a977e70a6fa276ae5108a98b7e8638ad",
+    "v385Final" : "ab29b1ff0f842c029b5cf121bd584bd40fcf74b2",
+    "v39Core" : "cc1970370865094caf02a7bb0e621c1a8055af2b"
+  },
+  "steps" : [ {
+    "step" : "T0",
+    "scenario" : "V3.8.5 final snapshot and no-change probe",
+    "continuityNoOp" : true,
+    "presentationChanged" : false,
+    "rewriteMode" : "UNCHANGED",
+    "deltaSize" : 0,
+    "delta" : {
+      "agentResultRefs" : 0,
+      "added" : 0,
+      "truncated" : false,
+      "changedPaths" : 0,
+      "updated" : 0,
+      "invalidated" : 0,
+      "stale" : 0,
+      "documentIdentities" : 0
+    },
+    "structure" : {
+      "stories" : 367,
+      "recomputedStories" : 367,
+      "reusedStories" : 0,
+      "unchangedStories" : 367,
+      "newStories" : 0,
+      "continuedStories" : 0,
+      "threads" : 266,
+      "unchangedThreads" : 266,
+      "newThreads" : 0,
+      "continuedThreads" : 0
+    },
+    "chapters" : {
+      "recomputed" : 0,
+      "reused" : 9,
+      "affected" : 0,
+      "total" : 9,
+      "created" : 0
+    },
+    "model" : {
+      "pendingWindows" : 0,
+      "windows" : 0,
+      "failedWindows" : 0,
+      "status" : "CACHE_HIT",
+      "requests" : 0,
+      "windowCacheHits" : 0,
+      "succeededWindows" : 0
+    },
+    "currentState" : {
+      "modelCalled" : false,
+      "currentness" : "CURRENT",
+      "degraded" : false,
+      "stale" : false,
+      "continuityDirty" : false,
+      "revisionChanged" : false
+    },
+    "agentContext" : {
+      "stateRevisionMatches" : true,
+      "revisionChanged" : false,
+      "modelCalled" : false
+    },
+    "correction" : { },
+    "obsidianProjection" : {
+      "mutationClass" : "NO_OP_ZERO_WRITES",
+      "sourceDeltaSize" : 0,
+      "actualProjectorGate" : "test_noop_has_zero_writes_and_stable_hashes + test_current_state_delta_updates_only_required_indexes_and_then_reaches_noop"
+    },
+    "rawEvents" : {
+      "conserved" : true,
+      "ledgerTotal" : 3569,
+      "current" : 3569
+    },
+    "extra" : {
+      "noChangeProbe" : true,
+      "noChangeCacheHit" : true
+    }
+  }, {
+    "step" : "T1",
+    "scenario" : "V3.9 freeze documents and Agent Result",
+    "continuityNoOp" : false,
+    "presentationChanged" : true,
+    "rewriteMode" : "APPEND_ONLY",
+    "deltaSize" : 11,
+    "delta" : {
+      "agentResultRefs" : 1,
+      "added" : 11,
+      "truncated" : false,
+      "changedPaths" : 9,
+      "updated" : 0,
+      "invalidated" : 0,
+      "stale" : 0,
+      "documentIdentities" : 0
+    },
+    "structure" : {
+      "stories" : 367,
+      "recomputedStories" : 150,
+      "reusedStories" : 217,
+      "unchangedStories" : 365,
+      "newStories" : 0,
+      "continuedStories" : 2,
+      "threads" : 266,
+      "unchangedThreads" : 266,
+      "newThreads" : 0,
+      "continuedThreads" : 0
+    },
+    "chapters" : {
+      "recomputed" : 2,
+      "reused" : 2,
+      "affected" : 7,
+      "total" : 11,
+      "created" : 7
+    },
+    "model" : {
+      "pendingWindows" : 0,
+      "windows" : 0,
+      "failedWindows" : 0,
+      "status" : "NOT_CONFIGURED_DETERMINISTIC",
+      "requests" : 0,
+      "windowCacheHits" : 0,
+      "succeededWindows" : 0
+    },
+    "currentState" : {
+      "modelCalled" : false,
+      "currentness" : "CURRENT",
+      "degraded" : false,
+      "stale" : false,
+      "continuityDirty" : false,
+      "revisionChanged" : true
+    },
+    "agentContext" : {
+      "stateRevisionMatches" : true,
+      "revisionChanged" : true,
+      "modelCalled" : false
+    },
+    "correction" : { },
+    "obsidianProjection" : {
+      "mutationClass" : "AFFECTED_MANAGED_BLOCKS_ONLY",
+      "sourceDeltaSize" : 11,
+      "actualProjectorGate" : "test_noop_has_zero_writes_and_stable_hashes + test_current_state_delta_updates_only_required_indexes_and_then_reaches_noop"
+    },
+    "rawEvents" : {
+      "conserved" : true,
+      "ledgerTotal" : 3580,
+      "current" : 3580
+    },
+    "extra" : { }
+  }, {
+    "step" : "T2",
+    "scenario" : "same continuity theme receives the V3.9 core implementation",
+    "continuityNoOp" : false,
+    "presentationChanged" : true,
+    "rewriteMode" : "SOURCE_REFRESH",
+    "deltaSize" : 59,
+    "delta" : {
+      "agentResultRefs" : 2,
+      "added" : 58,
+      "truncated" : false,
+      "changedPaths" : 61,
+      "updated" : 0,
+      "invalidated" : 0,
+      "stale" : 1,
+      "documentIdentities" : 0
+    },
+    "structure" : {
+      "stories" : 375,
+      "recomputedStories" : 158,
+      "reusedStories" : 217,
+      "unchangedStories" : 366,
+      "newStories" : 8,
+      "continuedStories" : 0,
+      "threads" : 267,
+      "unchangedThreads" : 259,
+      "newThreads" : 1,
+      "continuedThreads" : 7
+    },
+    "chapters" : {
+      "recomputed" : 1,
+      "reused" : 3,
+      "affected" : 8,
+      "total" : 12,
+      "created" : 8
+    },
+    "model" : {
+      "pendingWindows" : 0,
+      "windows" : 0,
+      "failedWindows" : 0,
+      "status" : "NOT_CONFIGURED_DETERMINISTIC",
+      "requests" : 0,
+      "windowCacheHits" : 0,
+      "succeededWindows" : 0
+    },
+    "currentState" : {
+      "modelCalled" : false,
+      "currentness" : "CURRENT",
+      "degraded" : false,
+      "stale" : false,
+      "continuityDirty" : false,
+      "revisionChanged" : true
+    },
+    "agentContext" : {
+      "stateRevisionMatches" : true,
+      "revisionChanged" : true,
+      "modelCalled" : false
+    },
+    "correction" : { },
+    "obsidianProjection" : {
+      "mutationClass" : "AFFECTED_MANAGED_BLOCKS_ONLY",
+      "sourceDeltaSize" : 59,
+      "actualProjectorGate" : "test_noop_has_zero_writes_and_stable_hashes + test_current_state_delta_updates_only_required_indexes_and_then_reaches_noop"
+    },
+    "rawEvents" : {
+      "conserved" : true,
+      "ledgerTotal" : 3638,
+      "current" : 3637
+    },
+    "extra" : { }
+  }, {
+    "step" : "T3",
+    "scenario" : "independent export audit topic",
+    "continuityNoOp" : false,
+    "presentationChanged" : true,
+    "rewriteMode" : "APPEND_ONLY",
+    "deltaSize" : 2,
+    "delta" : {
+      "agentResultRefs" : 0,
+      "added" : 2,
+      "truncated" : false,
+      "changedPaths" : 1,
+      "updated" : 0,
+      "invalidated" : 0,
+      "stale" : 0,
+      "documentIdentities" : 0
+    },
+    "structure" : {
+      "stories" : 376,
+      "recomputedStories" : 157,
+      "reusedStories" : 219,
+      "unchangedStories" : 375,
+      "newStories" : 1,
+      "continuedStories" : 0,
+      "threads" : 268,
+      "unchangedThreads" : 267,
+      "newThreads" : 1,
+      "continuedThreads" : 0
+    },
+    "chapters" : {
+      "recomputed" : 7,
+      "reused" : 3,
+      "affected" : 9,
+      "total" : 12,
+      "created" : 2
+    },
+    "model" : {
+      "pendingWindows" : 0,
+      "windows" : 0,
+      "failedWindows" : 0,
+      "status" : "NOT_CONFIGURED_DETERMINISTIC",
+      "requests" : 0,
+      "windowCacheHits" : 0,
+      "succeededWindows" : 0
+    },
+    "currentState" : {
+      "modelCalled" : false,
+      "currentness" : "CURRENT",
+      "degraded" : false,
+      "stale" : false,
+      "continuityDirty" : false,
+      "revisionChanged" : true
+    },
+    "agentContext" : {
+      "stateRevisionMatches" : true,
+      "revisionChanged" : true,
+      "modelCalled" : false
+    },
+    "correction" : { },
+    "obsidianProjection" : {
+      "mutationClass" : "AFFECTED_MANAGED_BLOCKS_ONLY",
+      "sourceDeltaSize" : 2,
+      "actualProjectorGate" : "test_noop_has_zero_writes_and_stable_hashes + test_current_state_delta_updates_only_required_indexes_and_then_reaches_noop"
+    },
+    "rawEvents" : {
+      "conserved" : true,
+      "ledgerTotal" : 3640,
+      "current" : 3639
+    },
+    "extra" : {
+      "independentStoryFound" : true
+    }
+  }, {
+    "step" : "T4",
+    "scenario" : "user correction is applied without changing factual history",
+    "continuityNoOp" : false,
+    "presentationChanged" : true,
+    "rewriteMode" : "UNCHANGED",
+    "deltaSize" : 0,
+    "delta" : {
+      "agentResultRefs" : 0,
+      "added" : 0,
+      "truncated" : false,
+      "changedPaths" : 0,
+      "updated" : 0,
+      "invalidated" : 0,
+      "stale" : 0,
+      "documentIdentities" : 0
+    },
+    "structure" : {
+      "stories" : 376,
+      "recomputedStories" : 376,
+      "reusedStories" : 0,
+      "unchangedStories" : 376,
+      "newStories" : 0,
+      "continuedStories" : 0,
+      "threads" : 268,
+      "unchangedThreads" : 268,
+      "newThreads" : 0,
+      "continuedThreads" : 0
+    },
+    "chapters" : {
+      "recomputed" : 0,
+      "reused" : 12,
+      "affected" : 0,
+      "total" : 12,
+      "created" : 0
+    },
+    "model" : {
+      "pendingWindows" : 0,
+      "windows" : 0,
+      "failedWindows" : 0,
+      "status" : "NOT_CONFIGURED_DETERMINISTIC",
+      "requests" : 0,
+      "windowCacheHits" : 0,
+      "succeededWindows" : 0
+    },
+    "currentState" : {
+      "modelCalled" : false,
+      "currentness" : "CURRENT",
+      "degraded" : false,
+      "stale" : false,
+      "continuityDirty" : false,
+      "revisionChanged" : true
+    },
+    "agentContext" : {
+      "stateRevisionMatches" : true,
+      "revisionChanged" : true,
+      "modelCalled" : false
+    },
+    "correction" : {
+      "targetPresent" : true,
+      "status" : "ACTIVE",
+      "continuityDirtyAcknowledged" : true
+    },
+    "obsidianProjection" : {
+      "mutationClass" : "CORRECTED_PRESENTATION_SCOPE",
+      "sourceDeltaSize" : 0,
+      "actualProjectorGate" : "test_noop_has_zero_writes_and_stable_hashes + test_current_state_delta_updates_only_required_indexes_and_then_reaches_noop"
+    },
+    "rawEvents" : {
+      "conserved" : true,
+      "ledgerTotal" : 3640,
+      "current" : 3639
+    },
+    "extra" : {
+      "presentationOnlyDelta" : true
+    }
+  }, {
+    "step" : "T5",
+    "scenario" : "related change safely continues the corrected Story",
+    "continuityNoOp" : false,
+    "presentationChanged" : true,
+    "rewriteMode" : "APPEND_ONLY",
+    "deltaSize" : 2,
+    "delta" : {
+      "agentResultRefs" : 0,
+      "added" : 2,
+      "truncated" : false,
+      "changedPaths" : 1,
+      "updated" : 0,
+      "invalidated" : 0,
+      "stale" : 0,
+      "documentIdentities" : 0
+    },
+    "structure" : {
+      "stories" : 376,
+      "recomputedStories" : 157,
+      "reusedStories" : 219,
+      "unchangedStories" : 375,
+      "newStories" : 0,
+      "continuedStories" : 1,
+      "threads" : 268,
+      "unchangedThreads" : 268,
+      "newThreads" : 0,
+      "continuedThreads" : 0
+    },
+    "chapters" : {
+      "recomputed" : 9,
+      "reused" : 3,
+      "affected" : 9,
+      "total" : 12,
+      "created" : 0
+    },
+    "model" : {
+      "pendingWindows" : 0,
+      "windows" : 0,
+      "failedWindows" : 0,
+      "status" : "NOT_CONFIGURED_DETERMINISTIC",
+      "requests" : 0,
+      "windowCacheHits" : 0,
+      "succeededWindows" : 0
+    },
+    "currentState" : {
+      "modelCalled" : false,
+      "currentness" : "CURRENT",
+      "degraded" : false,
+      "stale" : false,
+      "continuityDirty" : false,
+      "revisionChanged" : true
+    },
+    "agentContext" : {
+      "stateRevisionMatches" : true,
+      "revisionChanged" : true,
+      "modelCalled" : false
+    },
+    "correction" : {
+      "status" : "ACTIVE",
+      "membershipStale" : false,
+      "additiveContinuationReplayed" : true
+    },
+    "obsidianProjection" : {
+      "mutationClass" : "AFFECTED_MANAGED_BLOCKS_ONLY",
+      "sourceDeltaSize" : 2,
+      "actualProjectorGate" : "test_noop_has_zero_writes_and_stable_hashes + test_current_state_delta_updates_only_required_indexes_and_then_reaches_noop"
+    },
+    "rawEvents" : {
+      "conserved" : true,
+      "ledgerTotal" : 3642,
+      "current" : 3641
+    },
+    "extra" : {
+      "membershipExpanded" : true,
+      "sameStoryIdentity" : true
+    }
+  }, {
+    "step" : "T6",
+    "scenario" : "rename followed by rewritten lifecycle",
+    "continuityNoOp" : false,
+    "presentationChanged" : true,
+    "rewriteMode" : "PARTIAL_REWRITE",
+    "deltaSize" : 4,
+    "delta" : {
+      "agentResultRefs" : 0,
+      "added" : 2,
+      "truncated" : false,
+      "changedPaths" : 3,
+      "updated" : 0,
+      "invalidated" : 2,
+      "stale" : 0,
+      "documentIdentities" : 0
+    },
+    "structure" : {
+      "stories" : 376,
+      "recomputedStories" : 157,
+      "reusedStories" : 219,
+      "unchangedStories" : 375,
+      "newStories" : 0,
+      "continuedStories" : 0,
+      "threads" : 268,
+      "unchangedThreads" : 268,
+      "newThreads" : 0,
+      "continuedThreads" : 0
+    },
+    "chapters" : {
+      "recomputed" : 9,
+      "reused" : 3,
+      "affected" : 9,
+      "total" : 12,
+      "created" : 0
+    },
+    "model" : {
+      "pendingWindows" : 0,
+      "windows" : 0,
+      "failedWindows" : 0,
+      "status" : "NOT_CONFIGURED_DETERMINISTIC",
+      "requests" : 0,
+      "windowCacheHits" : 0,
+      "succeededWindows" : 0
+    },
+    "currentState" : {
+      "modelCalled" : false,
+      "currentness" : "CURRENT",
+      "degraded" : false,
+      "stale" : false,
+      "continuityDirty" : false,
+      "revisionChanged" : true
+    },
+    "agentContext" : {
+      "stateRevisionMatches" : true,
+      "revisionChanged" : true,
+      "modelCalled" : false
+    },
+    "correction" : {
+      "status" : "ACTIVE",
+      "silentWrongTargetRebind" : false
+    },
+    "obsidianProjection" : {
+      "mutationClass" : "AFFECTED_MANAGED_BLOCKS_ONLY",
+      "sourceDeltaSize" : 4,
+      "actualProjectorGate" : "test_noop_has_zero_writes_and_stable_hashes + test_current_state_delta_updates_only_required_indexes_and_then_reaches_noop"
+    },
+    "rawEvents" : {
+      "conserved" : true,
+      "ledgerTotal" : 3646,
+      "current" : 3643
+    },
+    "extra" : {
+      "rawEventLedgerNonDecreasing" : true,
+      "rewriteMutationCount" : 2,
+      "renameRefresh" : {
+        "continuityNoOp" : false,
+        "deltaSize" : 2,
+        "added" : 2,
+        "updated" : 0,
+        "stale" : 0,
+        "invalidated" : 0,
+        "windows" : 0,
+        "succeeded" : 0,
+        "failed" : 0,
+        "pending" : 0,
+        "cacheHits" : 0,
+        "status" : "NOT_CONFIGURED_DETERMINISTIC"
+      }
+    }
+  }, {
+    "step" : "T7",
+    "scenario" : "provider HTTP 503 failure and durable checkpoint resume",
+    "continuityNoOp" : true,
+    "presentationChanged" : false,
+    "rewriteMode" : "UNCHANGED",
+    "deltaSize" : 0,
+    "delta" : {
+      "agentResultRefs" : 0,
+      "added" : 0,
+      "truncated" : false,
+      "changedPaths" : 0,
+      "updated" : 0,
+      "invalidated" : 0,
+      "stale" : 0,
+      "documentIdentities" : 0
+    },
+    "structure" : {
+      "stories" : 412,
+      "recomputedStories" : 193,
+      "reusedStories" : 219,
+      "unchangedStories" : 412,
+      "newStories" : 0,
+      "continuedStories" : 0,
+      "threads" : 304,
+      "unchangedThreads" : 304,
+      "newThreads" : 0,
+      "continuedThreads" : 0
+    },
+    "chapters" : {
+      "recomputed" : 0,
+      "reused" : 12,
+      "affected" : 0,
+      "total" : 12,
+      "created" : 0
+    },
+    "model" : {
+      "pendingWindows" : 0,
+      "windows" : 3,
+      "failedWindows" : 0,
+      "status" : "CACHE_HIT",
+      "requests" : 0,
+      "windowCacheHits" : 2,
+      "succeededWindows" : 3
+    },
+    "currentState" : {
+      "modelCalled" : false,
+      "currentness" : "CURRENT",
+      "degraded" : false,
+      "stale" : false,
+      "continuityDirty" : false,
+      "revisionChanged" : true
+    },
+    "agentContext" : {
+      "stateRevisionMatches" : true,
+      "revisionChanged" : true,
+      "modelCalled" : false
+    },
+    "correction" : { },
+    "obsidianProjection" : {
+      "mutationClass" : "NO_OP_ZERO_WRITES",
+      "sourceDeltaSize" : 0,
+      "actualProjectorGate" : "test_noop_has_zero_writes_and_stable_hashes + test_current_state_delta_updates_only_required_indexes_and_then_reaches_noop"
+    },
+    "rawEvents" : {
+      "conserved" : true,
+      "ledgerTotal" : 3718,
+      "current" : 3715
+    },
+    "extra" : {
+      "stabilizationRefreshes" : 1,
+      "resume" : {
+        "continuityNoOp" : true,
+        "deltaSize" : 0,
+        "added" : 0,
+        "updated" : 0,
+        "stale" : 0,
+        "invalidated" : 0,
+        "windows" : 3,
+        "succeeded" : 3,
+        "failed" : 0,
+        "pending" : 0,
+        "cacheHits" : 2,
+        "status" : "MODEL_VALIDATED_INCREMENTAL"
+      },
+      "successfulCheckpointReplays" : 0,
+      "finalContextRevisionStable" : true,
+      "resumeRefreshes" : 1,
+      "failure" : {
+        "continuityNoOp" : false,
+        "deltaSize" : 72,
+        "added" : 72,
+        "updated" : 0,
+        "stale" : 0,
+        "invalidated" : 0,
+        "windows" : 3,
+        "succeeded" : 2,
+        "failed" : 1,
+        "pending" : 0,
+        "cacheHits" : 0,
+        "status" : "MODEL_PARTIAL_FALLBACK_DETERMINISTIC"
+      },
+      "finalNoChangeModelRequests" : 0,
+      "finalNoChangeCacheHit" : true,
+      "finalStateRevisionStable" : true
+    }
+  } ],
+  "result" : {
+    "pass" : true,
+    "stepCount" : 8,
+    "rawEventLedgerMonotonic" : true,
+    "invalidEvidence" : 0,
+    "crossProjectReferences" : 0,
+    "unsupportedStrongFacts" : 0,
+    "silentCorrectionLoss" : 0,
+    "silentWrongTargetRebind" : 0,
+    "successfulCheckpointReplays" : 0,
+    "storyModelRequestsIncludingInjectedFailure" : 4,
+    "chapterModelRequestsAtMost" : 1
+  },
+  "providerEvidence" : {
+    "realProviderGate" : "PENDING_SEPARATE_GITHUB_WORKFLOW",
+    "failure" : "HTTP_503",
+    "kind" : "deterministic fault injection"
+  },
+  "security" : {
+    "promptStored" : false,
+    "apiKeyStored" : false,
+    "absolutePathStored" : false,
+    "rawResponseStored" : false,
+    "reasoningStored" : false
+  }
+}

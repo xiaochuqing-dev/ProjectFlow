@@ -62,6 +62,7 @@ import com.projectflow.repository.ProjectRepository;
 import com.projectflow.service.ModelGatewayService;
 import com.projectflow.service.ModelOutputAdapter;
 import com.projectflow.service.ModelTaskType;
+import com.projectflow.service.ProjectAgentHistoryService;
 import com.projectflow.service.ProjectHistoryCorrectionService;
 import com.projectflow.service.ProjectHistoryPromptBuilder;
 import com.projectflow.service.ProjectHistoryReadService;
@@ -102,6 +103,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
     @Autowired ProjectHistoryWindowCheckpointRepository checkpointRepository;
     @Autowired AiProviderRepository providerRepository;
     @Autowired ProjectHistoryCorrectionService correctionService;
+    @Autowired ProjectAgentHistoryService agentHistoryService;
     @Autowired ProjectHistoryReadService readService;
     @Autowired ProjectHistoryReconstructionService reconstructionService;
     @Autowired ModelOutputAdapter outputAdapter;
@@ -158,6 +160,10 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
                 );
             }
             if (faultTriggered.get() || ordinal != 2) return actual;
+            if (faultMode.get() == FaultMode.HTTP_503_AFTER_REAL_CALL) {
+                faultTriggered.set(true);
+                throw new ModelGatewayService.ModelHttpException(503);
+            }
             if (faultMode.get() == FaultMode.SCHEMA_AFTER_REAL_CALL) {
                 faultTriggered.set(true);
                 String invalid = "{\"stories\":[],\"chapters\":[]}";
@@ -183,7 +189,15 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         providerRepository.saveAndFlush(provider(userId, config));
         List<SafeScenarioRun> runs = new ArrayList<>();
         String scenarioScope = scenarioScope();
-        if ("correction".equals(scenarioScope)) {
+        if ("continuity".equals(scenarioScope)) {
+            runs.add(runScenario("v39-small-delta-checkpoint-context-and-noop", FaultMode.NONE,
+                () -> v39SmallDeltaContinuity(userId)));
+            runs.add(runScenario("v39-http-503-failure-and-resume", FaultMode.HTTP_503_AFTER_REAL_CALL,
+                () -> http503FailureRecovery(userId)));
+            runs.add(runScenario("v39-no-git-document-continuity", FaultMode.NONE,
+                () -> nonCode(userId, "v39-no-git-version", "deliverables/version.txt",
+                    "整理交付版本并记录当前内容", "当前交付材料可读取，但没有可还原的 Git 历史。")));
+        } else if ("correction".equals(scenarioScope)) {
             runs.add(runScenario("correction-local-invalidation", FaultMode.NONE,
                 () -> correctionFocused(userId)));
         } else if ("chapter".equals(scenarioScope)) {
@@ -590,6 +604,83 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
             stories, 5, reviewRevision(userId, project.getId())));
     }
 
+    private ScenarioEvidence v39SmallDeltaContinuity(UUID userId) throws Exception {
+        Path root = temporaryRoot.resolve("v39-small-delta-continuity");
+        Files.createDirectories(root);
+        ProjectSpace project = project(userId, "V3.9 small delta continuity", root);
+        int storyLimit = ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
+        historicalFacts(project, 0, 2 * storyLimit, 1, 1, 0);
+
+        Map<String, Object> initialDiagnostics = completeRefresh(userId, project.getId(), 12);
+        List<ChangeStory> initialStories = allStories(userId, project.getId());
+        Set<String> initialStoryIds = initialStories.stream().map(ChangeStory::id)
+            .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        Set<String> initialThreadIds = allThreads(userId, project.getId()).stream().map(EvolutionThread::id)
+            .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        List<UUID> initialCheckpointIds = checkpointRepository
+            .findByProjectIdOrderByUpdatedAtAsc(project.getId()).stream()
+            .filter(value -> value.getWindowIdentity().startsWith("window-"))
+            .map(value -> value.getId()).toList();
+        require(initialCheckpointIds.size() == 2, "V3.9 small-delta 初始窗口数不是 2");
+        CallAccumulator call = calls.get(activeScenario.get());
+        require(call != null && call.storyLogicalCalls == 2, "V3.9 small-delta 初始模型窗口调用数不是 2");
+
+        var initialState = readService.currentState(userId, project.getId());
+        var initialContext = agentHistoryService.contextPackage(userId, project.getId(), 32_000);
+        historicalFacts(project, 2 * storyLimit, 1, 1, 1, 0);
+        Map<String, Object> appendedDiagnostics = completeRefresh(userId, project.getId(), 12);
+        require(call.storyLogicalCalls == 3, "V3.9 small delta 重跑了无关成功窗口");
+        require(number(appendedDiagnostics, "continuityDeltaSize") > 0, "V3.9 small delta 未被记录");
+        require(number(appendedDiagnostics, "modelWindowCacheHitCount") >= 2,
+            "V3.9 small delta 未复用前两个窗口");
+
+        List<UUID> appendedCheckpointIds = checkpointRepository
+            .findByProjectIdOrderByUpdatedAtAsc(project.getId()).stream()
+            .filter(value -> value.getWindowIdentity().startsWith("window-"))
+            .map(value -> value.getId()).toList();
+        require(appendedCheckpointIds.containsAll(initialCheckpointIds), "V3.9 small delta 替换了成功 checkpoint");
+        List<ChangeStory> appendedStories = allStories(userId, project.getId());
+        require(appendedStories.stream().map(ChangeStory::id).collect(java.util.stream.Collectors.toSet())
+            .containsAll(initialStoryIds), "V3.9 small delta 改变了未受影响 Story identity");
+        require(allThreads(userId, project.getId()).stream().map(EvolutionThread::id)
+            .collect(java.util.stream.Collectors.toSet()).containsAll(initialThreadIds),
+            "V3.9 small delta 改变了未受影响 Thread identity");
+
+        var appendedState = readService.currentState(userId, project.getId());
+        var appendedContext = agentHistoryService.contextPackage(userId, project.getId(), 32_000);
+        require(!appendedState.stateRevision().equals(initialState.stateRevision()),
+            "V3.9 relevant delta 未更新 Current State revision");
+        require(!appendedContext.packageRevision().equals(initialContext.packageRevision()),
+            "V3.9 relevant delta 未更新 Context Package revision");
+        require(appendedContext.currentProjectState() != null
+            && appendedContext.currentProjectState().stateRevision().equals(appendedState.stateRevision()),
+            "V3.9 Current State 与 Context Package revision 不一致");
+
+        int callsBeforeNoop = call.storyLogicalCalls + call.chapterLogicalCalls;
+        var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        require(cached.cacheHit(), "V3.9 small delta 完成后 no-change 未进入 cache hit");
+        require(call.storyLogicalCalls + call.chapterLogicalCalls == callsBeforeNoop,
+            "V3.9 no-change 仍调用模型");
+        require(readService.currentState(userId, project.getId()).stateRevision().equals(appendedState.stateRevision()),
+            "V3.9 no-change 改变 Current State revision");
+        require(agentHistoryService.contextPackage(userId, project.getId(), 32_000).packageRevision()
+            .equals(appendedContext.packageRevision()), "V3.9 no-change 改变 Context Package revision");
+
+        Map<String, Object> metrics = safeDiagnostics(appendedDiagnostics);
+        metrics.put("initialWindowCount", number(initialDiagnostics, "totalWindowCount"));
+        metrics.put("appendedWindowCount", number(appendedDiagnostics, "totalWindowCount"));
+        metrics.put("successfulCheckpointReplayCount", 0);
+        metrics.put("unrelatedWindowRerunCount", 0);
+        metrics.put("unchangedStoryIdentityPercent", 100);
+        metrics.put("unchangedThreadIdentityPercent", 100);
+        metrics.put("contextStateRevisionMatched", true);
+        metrics.put("finalNoChangeModelRequests", 0);
+        metrics.put("finalCacheHit", true);
+        return new ScenarioEvidence(metrics, ProjectHistoryV385ReviewSamples.stories(
+            appendedStories, 5, reviewRevision(userId, project.getId())
+        ));
+    }
+
     private ScenarioEvidence correctionInvalidatesOnlyOneWindow(UUID userId) throws Exception {
         require(continuationState != null, "continuation fixture 不可用");
         ProjectHistorySnapshot snapshot = snapshotRepository.findByProjectId(continuationState.projectId()).orElseThrow();
@@ -678,6 +769,41 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         return new ScenarioEvidence(safeDiagnostics(recovered),
             ProjectHistoryV385ReviewSamples.stories(
                 allStories(userId, project.getId()), 4, reviewRevision(userId, project.getId())));
+    }
+
+    private ScenarioEvidence http503FailureRecovery(UUID userId) throws Exception {
+        ProjectSpace project = threeWindowProject(userId, "v39-http-503-failure");
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        Map<String, Object> failed = readService.overview(userId, project.getId()).diagnostics();
+        require(number(failed, "succeededWindowCount") == 2,
+            "HTTP 503 后独立窗口未继续；safeDiagnostics=" + safeDiagnostics(failed));
+        require(number(failed, "failedWindowCount") == 1, "HTTP 503 未记录失败 checkpoint");
+        require(number(failed, "pendingWindowCount") == 0, "HTTP 503 后出现未处理窗口");
+        List<UUID> firstSucceeded = checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()).stream()
+            .filter(value -> value.getWindowIdentity().startsWith("window-"))
+            .filter(value -> "SUCCEEDED".equals(value.getStatus())).map(value -> value.getId()).toList();
+        require(firstSucceeded.size() == 2, "HTTP 503 后的成功 checkpoint 数量不正确");
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        Map<String, Object> recovered = readService.overview(userId, project.getId()).diagnostics();
+        require(number(recovered, "succeededWindowCount") == 3, "HTTP 503 重试后未全部完成");
+        require(number(recovered, "failedWindowCount") == 0, "HTTP 503 checkpoint 未恢复");
+        require(number(recovered, "pendingWindowCount") == 0, "HTTP 503 恢复后仍有 pending window");
+        require(calls.get(activeScenario.get()).storyLogicalCalls == 4,
+            "HTTP 503 恢复重复调用了成功窗口或遗漏失败范围");
+        Map<UUID, String> finalStatuses = checkpointRepository
+            .findByProjectIdOrderByUpdatedAtAsc(project.getId()).stream()
+            .collect(LinkedHashMap::new, (map, value) -> map.put(value.getId(), value.getStatus()), Map::putAll);
+        require(firstSucceeded.stream().allMatch(id -> "SUCCEEDED".equals(finalStatuses.get(id))),
+            "HTTP 503 恢复覆盖了此前成功 checkpoint");
+
+        Map<String, Object> metrics = safeDiagnostics(recovered);
+        metrics.put("faultInjection", "HTTP_503_AFTER_REAL_PROVIDER_CALL");
+        metrics.put("successfulCheckpointReplayCount", 0);
+        metrics.put("recoveredFailedScope", true);
+        return new ScenarioEvidence(metrics, ProjectHistoryV385ReviewSamples.stories(
+            allStories(userId, project.getId()), 4, reviewRevision(userId, project.getId())
+        ));
     }
 
     private ScenarioEvidence cancellationRecovery(UUID userId) throws Exception {
@@ -1214,7 +1340,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
 
     private String scenarioScope() {
         String value = System.getProperty("projectflow.eval.scenario-scope", "full").trim().toLowerCase(Locale.ROOT);
-        require(Set.of("full", "correction", "chapter").contains(value), "不支持的真实场景范围");
+        require(Set.of("full", "correction", "chapter", "continuity").contains(value),
+            "不支持的真实场景范围");
         return value;
     }
 
@@ -1233,6 +1360,8 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
         artifact.put("version", "projectflow-v3.8.5-real-scenario-qualification-v4");
         artifact.put("generatedAt", Instant.now().toString());
         artifact.put("scenarioScope", scenarioScope);
+        artifact.put("acceptanceTarget", "continuity".equals(scenarioScope)
+            ? "V3.9_PROJECT_CONTINUITY" : "V3.8.5_HISTORY_QUALITY_REGRESSION");
         artifact.put("provider", Map.of(
             "name", config.name(), "model", config.model(), "protocol", config.protocol().name(),
             "reasoningEffort", config.reasoningEffort()
@@ -1350,6 +1479,7 @@ class ProjectHistoryV385RealScenarioEvaluatorTest {
 
     private enum FaultMode {
         NONE,
+        HTTP_503_AFTER_REAL_CALL,
         SCHEMA_AFTER_REAL_CALL,
         CANCEL_AFTER_REAL_CALL,
         CHAPTER_SCHEMA_AFTER_REAL_CALL

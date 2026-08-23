@@ -41,7 +41,8 @@ ProjectFlow 已知的内部写入使用 `ProjectContinuityDirtyMarker` 在既有
 
 现有 31 天 overlap、CURRENT/STALE/INVALIDATED、affectedFrom 和 durable window checkpoint 保持不变。rewrite 不删除旧 Raw Event；未受影响的旧 Story/Thread/Chapter 保持稳定。失败保留上一次成功快照和未消费 dirty marker，成功 checkpoint 不重放，failed/pending window 只按既有恢复合同重试。
 
+同一 source fingerprint 的失败重试必须复用上一次未完成快照记录的 reconstruction affectedFrom，不能因为本轮 upsert 没有新 mutation 就退回 full rebuild。系统仅在仍存在 retryable checkpoint 或未完成窗口诊断时恢复该范围；全部窗口完成后 no-change 仍直接进入 cache hit。该行为通过 `continuityReconstructionAffectedFrom` 与 `continuityRetryScopeReused` 审计。
+
 ## 审计字段
 
-快照 diagnostics 至少包含 `continuityDeltaRevision`、`continuityNoOp`、`continuityRewriteMode`、前后 revision/fingerprint、`continuityAffectedFrom`、四类 Event ID、changed path、document identity、Agent Result ref、delta size、truncated 和已消费 dirty revision。
-
+快照 diagnostics 至少包含 `continuityDeltaRevision`、`continuityNoOp`、`continuityRewriteMode`、前后 revision/fingerprint、`continuityAffectedFrom`、`continuityReconstructionAffectedFrom`、`continuityRetryScopeReused`、四类 Event ID、changed path、document identity、Agent Result ref、delta size、truncated 和已消费 dirty revision。

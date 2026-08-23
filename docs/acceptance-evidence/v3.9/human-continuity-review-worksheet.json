@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "projectflow-v3.9-human-continuity-review-v1",
+  "status": "NOT_REVIEWED",
+  "reviewer": null,
+  "reviewedAt": null,
+  "decision": null,
+  "p0TruthfulnessCount": null,
+  "instructions": "A human reviewer records the observed product result. Automation and model self-review cannot fill these fields.",
+  "scenarios": [
+    {"id":"V39-HUMAN-01","scenario":"no-change refresh","observedResult":null,"correctAttachment":null,"oldHistoryStable":null,"truthfulUnknownConflict":null,"comments":null},
+    {"id":"V39-HUMAN-02","scenario":"one new change continues an existing Story","observedResult":null,"correctAttachment":null,"oldHistoryStable":null,"truthfulUnknownConflict":null,"comments":null},
+    {"id":"V39-HUMAN-03","scenario":"a new Story continues an existing Thread","observedResult":null,"correctAttachment":null,"oldHistoryStable":null,"truthfulUnknownConflict":null,"comments":null},
+    {"id":"V39-HUMAN-04","scenario":"an unrelated change remains independent","observedResult":null,"correctAttachment":null,"oldHistoryStable":null,"truthfulUnknownConflict":null,"comments":null},
+    {"id":"V39-HUMAN-05","scenario":"coherent Chapter continuation and heterogeneous boundary","observedResult":null,"correctAttachment":null,"oldHistoryStable":null,"truthfulUnknownConflict":null,"comments":null},
+    {"id":"V39-HUMAN-06","scenario":"a correction survives safe additive continuation","observedResult":null,"correctAttachment":null,"oldHistoryStable":null,"truthfulUnknownConflict":null,"comments":null},
+    {"id":"V39-HUMAN-07","scenario":"rewrite invalidates an unsafe correction target","observedResult":null,"correctAttachment":null,"oldHistoryStable":null,"truthfulUnknownConflict":null,"comments":null},
+    {"id":"V39-HUMAN-08","scenario":"Current Project State and Agent Context advance together","observedResult":null,"correctAttachment":null,"oldHistoryStable":null,"truthfulUnknownConflict":null,"comments":null},
+    {"id":"V39-HUMAN-09","scenario":"Agent Result is later refined by Git Evidence without self-promotion","observedResult":null,"correctAttachment":null,"oldHistoryStable":null,"truthfulUnknownConflict":null,"comments":null},
+    {"id":"V39-HUMAN-10","scenario":"no-Git and non-code project continuity","observedResult":null,"correctAttachment":null,"oldHistoryStable":null,"truthfulUnknownConflict":null,"comments":null},
+    {"id":"V39-HUMAN-11","scenario":"Provider failure, fallback and resume","observedResult":null,"correctAttachment":null,"oldHistoryStable":null,"truthfulUnknownConflict":null,"comments":null},
+    {"id":"V39-HUMAN-12","scenario":"Obsidian no-op and affected managed-block update","observedResult":null,"correctAttachment":null,"oldHistoryStable":null,"truthfulUnknownConflict":null,"comments":null}
+  ],
+  "limitations": [
+    "The project owner instructed the implementation to proceed without waiting for human scoring.",
+    "This worksheet remains blank and V3.9 human acceptance remains pending until an actual reviewer completes it."
+  ]
+}
