@@ -1,0 +1,53 @@
+{
+  "taskGoal": "在 V3.8.5 正式闭环后的最新 master 上实现 ProjectFlow V3.9 项目持续认知与增量维护闭环。",
+  "baselineMaster": "ab29b1ff0f842c029b5cf121bd584bd40fcf74b2",
+  "branch": "codex/v3.9-project-continuity-closure",
+  "PR": {
+    "number": null,
+    "url": "",
+    "status": "NOT_CREATED"
+  },
+  "actualChanges": [
+    "完成 V3.9 源码复用与当前状态审计，确认沿用既有增量事件、窗口 Checkpoint、修正覆盖层、Agent Context v2 和 Obsidian 投影。",
+    "在实现前冻结 15 个 Calibration 与 15 个 Holdout 连续性场景以及硬性质量门。",
+    "冻结 V3.9 产品合同、显式刷新边界、Current Project State 语义和不引入第二引擎的约束。"
+  ],
+  "reusedExistingMechanisms": [
+    "ProjectHistoryReconstructionService source fingerprint、affectedFrom 与 31 天 overlap",
+    "ProjectHistoryWindowPlanner 与 durable window checkpoints",
+    "ProjectHistoryCorrectionService USER_DECLARED_PRESENTATION overlay",
+    "Agent Context Package v2",
+    "Gateway、Hermes 与 Obsidian corrected-history 读取面"
+  ],
+  "newContinuityContracts": [
+    "Continuity Delta",
+    "未受影响 Story、Thread、Chapter 身份稳定",
+    "Current Project State 派生只读模型",
+    "Context 与 Obsidian no-op revision 稳定"
+  ],
+  "keyFiles": [
+    "docs/projectflow-v3.9-reuse-and-current-state-audit.md",
+    "docs/projectflow-v3.9-reuse-and-research-decisions.md",
+    "docs/projectflow-v3.9-product-contract.md",
+    "docs/projectflow-v3.9-ground-truth-and-quality-gates.md",
+    "docs/acceptance-evidence/v3.9/continuity-ground-truth.json"
+  ],
+  "deterministicTests": {"status":"PENDING","runs":[]},
+  "providerRuns": [],
+  "dogfoodSequence": {"status":"PENDING","steps":[]},
+  "currentStateVerification": "PENDING",
+  "agentContextVerification": "PENDING",
+  "correctionVerification": "PENDING",
+  "obsidianVerification": "PENDING",
+  "humanReviewStatus": "NOT_STARTED",
+  "verification": {"build":"not_run","tests":"not_run","manualCheck":"audit and ground truth reviewed against frozen prompt requirements"},
+  "knownRisks": [
+    "当前 Chapter 全局重排可能影响未受影响历史身份，尚待实现尾部复用。",
+    "当前 correction membership fingerprint 无法证明 additive continuation，尚待加入有界成员引用。",
+    "当前 Agent Context revision 尚未纳入 corrected history/current-state revision。"
+  ],
+  "unfinished": [
+    "V3.9 生产实现、确定性测试、三 Provider、dogfood、真人验收、CI、合并与 backfill 尚未完成。"
+  ],
+  "sedimentCandidates": []
+}
