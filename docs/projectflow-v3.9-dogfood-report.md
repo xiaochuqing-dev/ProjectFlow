@@ -1,6 +1,6 @@
 # ProjectFlow V3.9 连续 Dogfood 报告
 
-当前状态：DETERMINISTIC PASS；真实三 Provider 结果单独验收；真人 Gate 尚未执行。
+当前状态：DETERMINISTIC PASS；真实三 Provider 受影响重验 PASS；真人 Gate 尚未执行。
 
 执行证据：`docs/acceptance-evidence/v3.9/dogfood-sequence.json`
 
@@ -25,8 +25,10 @@ T0 使用 V3.8.5 final master `ab29b1ff0f842c029b5cf121bd584bd40fcf74b2`，T1 �
 
 8 个步骤均满足 event conservation，Raw Event ledger 从 3569 单调增长到 3718。记录中的 Invalid Evidence、跨项目引用、Unsupported Strong Fact、Correction 静默丢失和错误目标重绑均为 0。工件不保存 API Key、Prompt、raw response、reasoning 或机器绝对路径。
 
-本序列使用真实 ProjectFlow Git 历史和生产重建链，但 Provider failure 为内存内确定性故障注入；它不能代替三 Provider 的真实网络验收。Obsidian mutation class 由同一 continuity diagnostics 推导，并由独立 Python projector 测试验证真实零写入和受影响块更新。
+本序列使用真实 ProjectFlow Git 历史和生产重建链，T7 的 Provider failure 是内存内确定性故障注入。独立真实网络 run `32666372066` 已让 Luna Responses、DeepSeek Chat 与 Qwen Messages 全部通过三个 continuity 场景，包括真实 Provider 调用后的内存 HTTP 503 与持久化恢复。Obsidian mutation class 由同一 continuity diagnostics 推导，并由独立 Python projector 测试验证真实零写入和受影响块更新。
 
 ## 发现并关闭的问题
 
 首次执行暴露两项连续性缺陷：保留旧 Primary 时会遗留过期 `supportingChangeRefs`，以及同源失败重试会丢失首次 affectedFrom 并改变窗口 identity。实现现会在合并后规范化双向角色图，并在存在未完成 checkpoint 时恢复上次 reconstruction affectedFrom。修复后的完整 T0–T7 序列通过。
+
+第一次真实三 Provider run `32659635453` 又由 Qwen 暴露一项共享 Chapter 代表性缺陷：一个符合普通叙事锚定的旧 Chapter 不再覆盖当前 dominant/selected representative cluster，回填时又把已选中的带日期公开成果泛化。修复在保留旧 Chapter 前执行完整 representation plan 验证，并优先保留已选中的公开成果措辞。两个新回归、原 ProjectFlow Dogfood 路径及修复后真实矩阵全部通过；旧 8/9 失败仍在独立工件中保留。
