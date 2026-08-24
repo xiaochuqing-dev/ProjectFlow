@@ -329,6 +329,22 @@ class ModelRequestPolicyTest {
         assertThat(recovery.maxTokenDecision()).contains("递增 50%");
     }
 
+    @Test
+    void independentSemanticReviewUsesItsDedicatedBoundedTaskContract() {
+        AiProvider provider = provider(AiProviderType.OPENAI, "glm-5.2", 0.1, 16_384);
+        var parameters = policy.initial(
+            provider,
+            registry.resolve(provider),
+            ModelTaskType.PROJECT_HISTORY_INDEPENDENT_SEMANTIC_REVIEW,
+            "x".repeat(20_000)
+        );
+
+        assertThat(ModelTaskType.PROJECT_HISTORY_INDEPENDENT_SEMANTIC_REVIEW.minimalSchema())
+            .contains("reviews", "scenarioId", "truthfulnessConcern");
+        assertThat(parameters.taskRequestedMaxTokens()).isEqualTo(16_384);
+        assertThat(parameters.effectiveMaxTokens()).isEqualTo(16_384);
+    }
+
     private AiProvider provider(String model, double temperature, int maxTokens) {
         return provider(AiProviderType.DEEPSEEK, model, temperature, maxTokens);
     }

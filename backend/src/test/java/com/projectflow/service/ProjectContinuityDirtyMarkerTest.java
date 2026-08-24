@@ -39,6 +39,28 @@ class ProjectContinuityDirtyMarkerTest {
         assertThat(snapshot.getContinuityDirtyRevision()).isBlank();
     }
 
+    @Test
+    void repeatedSameTargetWritesAdvanceTheDirtyGeneration() {
+        UUID projectId = UUID.randomUUID();
+        ProjectHistorySnapshot snapshot = readySnapshot(projectId);
+        ProjectHistorySnapshotRepository repository = mock(ProjectHistorySnapshotRepository.class);
+        when(repository.findLockedByProjectId(projectId)).thenReturn(Optional.of(snapshot));
+        ProjectContinuityDirtyMarker marker = new ProjectContinuityDirtyMarker(repository);
+
+        String created = marker.mark(projectId, "HISTORY_CORRECTION", "correction:same");
+        String reverted = marker.mark(projectId, "HISTORY_CORRECTION", "correction:same");
+        String reapplied = marker.mark(projectId, "HISTORY_CORRECTION", "correction:same");
+
+        assertThat(snapshot.getContinuityDirtyGeneration()).isEqualTo(3L);
+        assertThat(created).isNotEqualTo(reverted);
+        assertThat(reverted).isNotEqualTo(reapplied);
+        assertThat(snapshot.acknowledgeContinuityDirty(created)).isFalse();
+        assertThat(snapshot.getContinuityDirtyRevision()).isEqualTo(reapplied);
+        assertThat(snapshot.acknowledgeContinuityDirty(reverted)).isFalse();
+        assertThat(snapshot.getContinuityDirtyRevision()).isEqualTo(reapplied);
+        assertThat(snapshot.acknowledgeContinuityDirty(reapplied)).isTrue();
+    }
+
     private static ProjectHistorySnapshot readySnapshot(UUID projectId) {
         ProjectHistorySnapshot snapshot = new ProjectHistorySnapshot(projectId);
         snapshot.complete(

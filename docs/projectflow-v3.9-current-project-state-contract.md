@@ -17,7 +17,11 @@ Current Project State 是最新持久化 corrected history 的 DERIVED / PRESENT
 
 响应包含 state/source/presentation revision、history status、currentness、confirmed state、最近确认变化、相关 Story/Thread/Chapter refs、conflict、unknown、limitations、latest successful refresh 和 stale/degraded 状态。ProjectFlow 已知内部写入尚未刷新时，还包含有界 dirty revision、reason 和时间。
 
-confirmed state 只从 corrected Story 的已证据约束状态和旧 Overview 派生；引用保持项目所有权隔离并有数量上限。第一层不展示 full SHA、内部 checkpoint key 或私有机器路径。
+confirmed state 优先从未隐藏、未合并的 corrected Primary Story 派生：先取最新有效 Chapter 中的 Primary 候选，再与最新有效 Primary 候选合并，最终统一按真实发生时间倒序并限制为 4 条。`pinned`、用户声明 Chapter 和最新 Supporting 变化都不能把较早结果移动到较新 Primary 之前；Supporting 只保留为近期上下文。
+
+没有可见 Primary 时不会从隐藏 Story 泄露状态：存在被展示修正隐藏的 Primary 会明确说明该限制；只有确实没有活动 Story 时才使用旧 Overview 兼容后备。引用保持项目所有权隔离并有数量上限。第一层不展示 full SHA、内部 checkpoint key 或私有机器路径。
+
+Gateway Snapshot/Brief、Agent Context、Hermes、Frontend Overview 与 Obsidian 概览复用同一 corrected current-state 语义；近期发生统一按时间排序，置顶只影响其他展示位置。
 
 ## Revision
 

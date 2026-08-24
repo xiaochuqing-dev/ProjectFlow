@@ -10,6 +10,15 @@
 - `technical-acceptance-evidence.json`：技术门、CI、真实 Provider、安全、失败保留和人工边界的机器可读汇总。
 - `human-continuity-review-worksheet.json`：12 个真人场景，当前所有人工字段为空，SHA-256 `75f9f18836d87c77db0d8a89fd3541348d2b48f28673e68ffa57e96ff000f9df`。
 
+## 最终收口新增的 append-only 输入
+
+- `final-owner-acceptance-policy.json`：记录 Owner 免除逐项手填并授权自动化 + 独立盲评的边界；明确禁止伪造 `HUMAN_REVIEW_PASS`，原 worksheet 不修改。
+- `independent-semantic-review-package.json`：原 12 个 HUMAN 场景的无答案标题、有界盲评输入；不包含冻结答案、实现状态、测试结果或其他模型判断。
+- `independent-semantic-review-schema.md`：独立复核的字段、单 Provider 一次逻辑调用预算、工件完整性和敏感信息边界。
+- `../../projectflow-v3.9-final-closure-report.md`：最终收口报告；合并前只记录本地实测与远端待完成门禁，最终 merge/backfill 事实将在完成后追加。
+
+这三项只定义最终收口路径，不预先声明真实 Provider、PR、merge 或 master 门禁通过。实际三 Provider 独立复核工件与最终 CI/merge 事实必须在对应 run 完成后 append-only 回填。
+
 ## GitHub 与真实 Provider
 
 - 同头普通 CI：push run `32666198144` 与 PR run `32666201528` 均为 SUCCESS。

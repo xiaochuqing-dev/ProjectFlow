@@ -445,11 +445,17 @@ jobs:
           elif [ "${{ inputs.real_model_scope }}" = "affected" ]; then
             run_gate history-v385-chapter-affected mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.scenario-scope=chapter -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-chapter-affected" test
             run_gate history-v39-continuity mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.scenario-scope=continuity -Dprojectflow.eval.output-name="$EVAL_PREFIX-v39-continuity" test
+            run_gate history-v39-independent-review-package mvn -B -Dtest=IndependentSemanticReviewPackageTest test
+            run_gate history-v39-independent-semantic-review mvn -B -Dtest=ProjectHistoryIndependentSemanticReviewEvaluatorTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v39-independent-semantic-review" test
+            run_gate history-v39-independent-review-artifact mvn -B -Dtest=IndependentSemanticReviewArtifactTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v39-independent-semantic-review" test
             echo "affected scope: Chapter suite includes ProjectFlow Dogfood; V3.9 adds small-delta/no-op/resume/no-Git continuity; unchanged V3.7.5/Understanding baselines are reused"
           else
             run_gate history-v385-scenarios mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios" test
             run_gate history-v385-dogfood mvn -B -Dtest="$DOGFOOD_TEST" -Dprojectflow.eval.output-name="$EVAL_PREFIX-v385-scenarios" test
             run_gate history-v39-continuity mvn -B -Dtest=ProjectHistoryV385RealScenarioEvaluatorTest -Dprojectflow.eval.scenario-scope=continuity -Dprojectflow.eval.output-name="$EVAL_PREFIX-v39-continuity" test
+            run_gate history-v39-independent-review-package mvn -B -Dtest=IndependentSemanticReviewPackageTest test
+            run_gate history-v39-independent-semantic-review mvn -B -Dtest=ProjectHistoryIndependentSemanticReviewEvaluatorTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v39-independent-semantic-review" test
+            run_gate history-v39-independent-review-artifact mvn -B -Dtest=IndependentSemanticReviewArtifactTest -Dprojectflow.eval.output-name="$EVAL_PREFIX-v39-independent-semantic-review" test
           fi
           if [ "$failures" -ne 0 ]; then
             echo "$EVAL_PREFIX scenario gates failed: $failures"
@@ -461,4 +467,4 @@ jobs:
         with:
           name: projectflow-real-model-scenarios-${{ matrix.id }}
           path: backend/target/projectflow-eval
-          if-no-files-found: ignore
+          if-no-files-found: error

@@ -74,6 +74,13 @@ test("preview renders progressive overview, story states, evidence and evolution
   }
 });
 
+test("overview consumes the dedicated current-state read model", () => {
+  assert.match(pageSource, /getProjectCurrentState\(token, projectId\)/);
+  assert.match(pageSource, /currentState\.confirmedState/);
+  assert.match(pageSource, /currentState\.stateRevision/);
+  assert.match(pageSource, /currentState\.continuityDirty/);
+});
+
 test("default history layer hides internal enums behind engineering details", () => {
   assert.doesNotMatch(pageSource, /展示角色 \{story\.role/);
   assert.doesNotMatch(pageSource, /当前展示权威/);

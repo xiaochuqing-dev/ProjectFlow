@@ -24,9 +24,12 @@ public class ProjectContinuityDirtyMarker {
         if (snapshot == null) return "";
         String safeReason = bounded(reason, 80);
         String safeAffectedRevision = bounded(affectedRevision, 180);
-        String revision = "continuity-dirty:" + ProjectHistorySourceCollector.sha256(
-            "project-continuity-dirty-v1|" + projectId + "|" + safeReason + "|" + safeAffectedRevision
+        long generation = snapshot.advanceContinuityDirtyGeneration();
+        String contextHash = ProjectHistorySourceCollector.sha256(
+            "project-continuity-dirty-v2|" + projectId + "|generation:" + generation
+                + "|" + safeReason + "|" + safeAffectedRevision
         );
+        String revision = "continuity-dirty:g" + generation + ":" + contextHash.substring(0, 32);
         snapshot.markContinuityDirty(revision, safeReason, Instant.now());
         snapshotRepository.save(snapshot);
         return revision;

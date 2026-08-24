@@ -1,0 +1,29 @@
+{
+  "taskGoal": "为 V3.9 原 continuity worksheet 的 12 个 HUMAN 场景建立独立、盲化、可重复的语义复核验收链，并接入 affected/full 真实 Provider workflow。",
+  "actualChanges": [
+    "新增 12 个 HUMAN 场景的 bounded blind review package；输入只含旧历史、delta、候选续接、Evidence 摘要、Story/Thread/Chapter 引用、conflict 和 unknown，不含场景答案标题、frozen expected、实现状态、测试结果或其他模型判断。",
+    "新增确定性 package contract test，校验 exact 12 个 ID、字段边界、输入大小、答案标签、敏感信息/绝对路径隔离，并确认 human worksheet 仍为 NOT_REVIEWED 且字段为空；Evaluator 在任何 Provider 调用前复用同一校验。",
+    "新增真实 Provider 独立语义复核 evaluator；12 个场景按一个有界批次通过既有 ModelGatewayService 与专用 PROJECT_HISTORY_INDEPENDENT_SEMANTIC_REVIEW 任务调用，每个 Provider 最多一次逻辑调用、四次物理请求并受输出/总 Token 上限约束。工件只保留六个 bounded judgement 字段、共享安全 diagnostics 和明确 COMPLETE/FAILED 状态，模型分歧不会升级 Strong Fact。",
+    "affected/full real-provider workflow 均新增 package、独立语义复核和完整工件三道门禁，复用现有 Secret 环境变量；缺失、不完整、超预算或不安全工件会阻断，而不是被静默忽略。"
+  ],
+  "keyFiles": [
+    "docs/acceptance-evidence/v3.9/independent-semantic-review-package.json",
+    "docs/acceptance-evidence/v3.9/independent-semantic-review-schema.md",
+    "backend/src/test/java/com/projectflow/eval/IndependentSemanticReviewPackageTest.java",
+    "backend/src/test/java/com/projectflow/eval/IndependentSemanticReviewEvaluatorContractTest.java",
+    "backend/src/test/java/com/projectflow/eval/ProjectHistoryIndependentSemanticReviewEvaluatorTest.java",
+    "backend/src/test/java/com/projectflow/eval/IndependentSemanticReviewArtifactTest.java",
+    "backend/src/main/java/com/projectflow/service/ModelTaskType.java",
+    ".github/workflows/quality-gates.yml"
+  ],
+  "verification": {
+    "build": "PASS：新增专用 ModelTaskType、Evaluator、package/evaluator/artifact contract tests 已完成 Java 17 主源码与测试源码编译。",
+    "tests": "PASS：相关定向矩阵 27 项，0 failure、0 error、2 个真实 Provider 环境性 skip；ModelGateway 三协议矩阵和专用预算策略均通过。",
+    "manualCheck": "PASS：确认 blind package 不含场景答案标签、CALIBRATION/HOLDOUT expected 字段或 absolute path；Evaluator 首调前校验 exact package；工件只含白名单 judgement、共享 safe diagnostics、明确完成状态和 no Strong Fact promotion 边界；workflow 仅在 affected/full 分支执行。"
+  },
+  "unfinished": [
+    "三 Provider 各一次有界批量真实语义复核尚未在本地执行；需要 workflow_dispatch 且由仓库 Secret 提供真实配置后运行。",
+    "模型分歧与 uncertainty 仍需由既有 deterministic gate 和 Sol/human review 边界解释，不能由 evaluator 自动关闭真人 worksheet。"
+  ],
+  "sedimentCandidates": []
+}

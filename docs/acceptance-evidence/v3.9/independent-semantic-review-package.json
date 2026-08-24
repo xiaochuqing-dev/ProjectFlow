@@ -1,0 +1,128 @@
+{
+  "schemaVersion": "projectflow-v3.9-independent-semantic-review-input-v1",
+  "packageKind": "BLIND_SEMANTIC_REVIEW",
+  "scenarioCount": 12,
+  "reviewBoundary": "Each item contains only bounded history, a bounded delta, a candidate continuation and source summaries. The reviewer decides wording quality; deterministic identity and evidence gates remain authoritative.",
+  "scenarios": [
+    {
+      "id": "V39-HUMAN-01",
+      "oldBoundedHistory": {"summary": "The latest history window contains one settled story and one thread with stable identifiers.", "storyIds": ["story-01"], "threadIds": ["thread-01"], "chapterIds": ["chapter-01"]},
+      "newDelta": {"summary": "The refresh contains no new source event and no changed source fingerprint.", "eventIds": [], "sourceKinds": []},
+      "candidateContinuation": {"summary": "The candidate keeps the same story, thread and chapter references and reports an unchanged window.", "storyId": "story-01", "threadId": "thread-01", "chapterId": "chapter-01", "continuationKind": "UNCHANGED"},
+      "evidenceSummaries": [{"id": "source:history-window-01", "kind": "HISTORY", "summary": "Bounded prior window and stable semantic identifiers."}, {"id": "source:delta-01", "kind": "DELTA", "summary": "Empty delta with matching source fingerprint."}],
+      "storyThreadChapterRefs": {"story": ["story-01"], "thread": ["thread-01"], "chapter": ["chapter-01"]},
+      "conflicts": [],
+      "unknowns": ["Whether an external source changed outside this bounded window."]
+    },
+    {
+      "id": "V39-HUMAN-02",
+      "oldBoundedHistory": {"summary": "A story records one outcome in an established thread and chapter.", "storyIds": ["story-02"], "threadIds": ["thread-02"], "chapterIds": ["chapter-02"], "lastEventId": "event-020"},
+      "newDelta": {"summary": "One new engineering event extends the same outcome and cites a new bounded evidence item.", "eventIds": ["event-021"], "sourceKinds": ["GIT"], "evidenceIds": ["source:git-021"]},
+      "candidateContinuation": {"summary": "The candidate appends the new event to the existing story while retaining its thread and chapter references.", "storyId": "story-02", "threadId": "thread-02", "chapterId": "chapter-02", "continuationKind": "APPEND"},
+      "evidenceSummaries": [{"id": "source:history-window-02", "kind": "HISTORY", "summary": "Prior story wording and its last event."}, {"id": "source:git-021", "kind": "GIT", "summary": "One bounded event describing a compatible follow-up outcome."}],
+      "storyThreadChapterRefs": {"story": ["story-02"], "thread": ["thread-02"], "chapter": ["chapter-02"]},
+      "conflicts": [],
+      "unknowns": ["The full repository outside the supplied window."]
+    },
+    {
+      "id": "V39-HUMAN-03",
+      "oldBoundedHistory": {"summary": "The thread groups an earlier story about the same durable product direction.", "storyIds": ["story-03a"], "threadIds": ["thread-03"], "chapterIds": ["chapter-03"], "lastEventId": "event-030"},
+      "newDelta": {"summary": "A later outcome is related at thread level but has a distinct subject and event lineage.", "eventIds": ["event-031"], "sourceKinds": ["AGENT_RESULT", "GIT"], "evidenceIds": ["source:agent-031", "source:git-031"]},
+      "candidateContinuation": {"summary": "The candidate creates a new story under the existing thread and leaves the earlier story intact.", "storyId": "story-03b", "threadId": "thread-03", "chapterId": "chapter-03", "continuationKind": "NEW_STORY_IN_THREAD"},
+      "evidenceSummaries": [{"id": "source:history-window-03", "kind": "HISTORY", "summary": "Earlier story and thread relationship."}, {"id": "source:agent-031", "kind": "AGENT_RESULT", "summary": "Process evidence describing the later direction."}, {"id": "source:git-031", "kind": "GIT", "summary": "Engineering evidence for a separate later outcome."}],
+      "storyThreadChapterRefs": {"story": ["story-03a", "story-03b"], "thread": ["thread-03"], "chapter": ["chapter-03"]},
+      "conflicts": [],
+      "unknowns": ["Whether the two outcomes share a future implementation boundary."]
+    },
+    {
+      "id": "V39-HUMAN-04",
+      "oldBoundedHistory": {"summary": "The prior window contains a story about one product subject.", "storyIds": ["story-04a"], "threadIds": ["thread-04a"], "chapterIds": ["chapter-04"]},
+      "newDelta": {"summary": "The new event concerns a different subject and has no shared evidence with the prior story.", "eventIds": ["event-041"], "sourceKinds": ["GIT"], "evidenceIds": ["source:git-041"]},
+      "candidateContinuation": {"summary": "The candidate presents a separate story and thread, with no attachment to the prior subject.", "storyId": "story-04b", "threadId": "thread-04b", "chapterId": "chapter-04", "continuationKind": "INDEPENDENT"},
+      "evidenceSummaries": [{"id": "source:history-window-04", "kind": "HISTORY", "summary": "Prior subject and its bounded evidence."}, {"id": "source:git-041", "kind": "GIT", "summary": "New event with a distinct subject and evidence lineage."}],
+      "storyThreadChapterRefs": {"story": ["story-04a", "story-04b"], "thread": ["thread-04a", "thread-04b"], "chapter": ["chapter-04"]},
+      "conflicts": ["The chapter is shared even though the stories are unrelated at thread level."],
+      "unknowns": ["Whether a later chapter boundary will be needed."]
+    },
+    {
+      "id": "V39-HUMAN-05",
+      "oldBoundedHistory": {"summary": "The latest chapter contains a coherent sequence of two related stories.", "storyIds": ["story-05a", "story-05b"], "threadIds": ["thread-05"], "chapterIds": ["chapter-05"]},
+      "newDelta": {"summary": "Two new events arrive together: one follows the chapter subject and one introduces a different outcome.", "eventIds": ["event-051", "event-052"], "sourceKinds": ["GIT"], "evidenceIds": ["source:git-051", "source:git-052"]},
+      "candidateContinuation": {"summary": "The candidate extends the coherent tail and places the heterogeneous outcome at a separate chapter boundary.", "storyId": "story-05c", "threadId": "thread-05", "chapterId": "chapter-05-tail", "continuationKind": "SPLIT_TAIL"},
+      "evidenceSummaries": [{"id": "source:history-window-05", "kind": "HISTORY", "summary": "Prior chapter sequence and related subject."}, {"id": "source:git-051", "kind": "GIT", "summary": "Coherent follow-up event."}, {"id": "source:git-052", "kind": "GIT", "summary": "Heterogeneous event with a different outcome."}],
+      "storyThreadChapterRefs": {"story": ["story-05a", "story-05b", "story-05c"], "thread": ["thread-05"], "chapter": ["chapter-05", "chapter-05-tail"]},
+      "conflicts": ["The two new events share a refresh boundary but not an outcome subject."],
+      "unknowns": ["The final chapter title is still a bounded semantic label."]
+    },
+    {
+      "id": "V39-HUMAN-06",
+      "oldBoundedHistory": {"summary": "A user presentation correction labels an existing story while retaining its source lineage.", "storyIds": ["story-06"], "threadIds": ["thread-06"], "chapterIds": ["chapter-06"], "correctionRef": "correction-06"},
+      "newDelta": {"summary": "A new event adds evidence to the same story without changing the corrected subject.", "eventIds": ["event-061"], "sourceKinds": ["GIT"], "evidenceIds": ["source:git-061"]},
+      "candidateContinuation": {"summary": "The candidate retains the user label, appends the new event and keeps the original correction reference.", "storyId": "story-06", "threadId": "thread-06", "chapterId": "chapter-06", "continuationKind": "CORRECTED_APPEND", "correctionRef": "correction-06"},
+      "evidenceSummaries": [{"id": "source:history-window-06", "kind": "HISTORY", "summary": "Corrected story wording and original event lineage."}, {"id": "source:git-061", "kind": "GIT", "summary": "Additive event compatible with the corrected subject."}],
+      "storyThreadChapterRefs": {"story": ["story-06"], "thread": ["thread-06"], "chapter": ["chapter-06"]},
+      "conflicts": [],
+      "unknowns": ["Whether a later event will make the presentation label obsolete."]
+    },
+    {
+      "id": "V39-HUMAN-07",
+      "oldBoundedHistory": {"summary": "A presentation correction points to a story whose source lineage was present in the prior window.", "storyIds": ["story-07"], "threadIds": ["thread-07"], "chapterIds": ["chapter-07"], "correctionRef": "correction-07"},
+      "newDelta": {"summary": "The source lineage was rewritten; the old target is absent from the new bounded source set.", "eventIds": ["event-071"], "sourceKinds": ["GIT"], "evidenceIds": ["source:git-rewrite-071"]},
+      "candidateContinuation": {"summary": "The candidate leaves the old correction unresolved and surfaces a conflict instead of attaching it to another story.", "storyId": "story-07-new", "threadId": "thread-07-new", "chapterId": "chapter-07-new", "continuationKind": "CORRECTION_CONFLICT", "correctionRef": "correction-07"},
+      "evidenceSummaries": [{"id": "source:history-window-07", "kind": "HISTORY", "summary": "Prior correction target and its source lineage."}, {"id": "source:git-rewrite-071", "kind": "GIT", "summary": "Bounded rewrite evidence showing the old lineage is unavailable."}],
+      "storyThreadChapterRefs": {"story": ["story-07", "story-07-new"], "thread": ["thread-07", "thread-07-new"], "chapter": ["chapter-07", "chapter-07-new"]},
+      "conflicts": ["The correction target cannot be safely matched to the rewritten lineage."],
+      "unknowns": ["Which later story, if any, a reviewer may choose to relabel."]
+    },
+    {
+      "id": "V39-HUMAN-08",
+      "oldBoundedHistory": {"summary": "The prior state summary and agent context both refer to the same last observed project revision.", "storyIds": ["story-08"], "threadIds": ["thread-08"], "chapterIds": ["chapter-08"], "stateRevision": "state-080"},
+      "newDelta": {"summary": "A bounded source change advances the project revision and supplies a matching agent context update.", "eventIds": ["event-081"], "sourceKinds": ["GIT", "AGENT_RESULT"], "evidenceIds": ["source:git-081", "source:agent-081"], "stateRevision": "state-081"},
+      "candidateContinuation": {"summary": "The candidate presents the new state and context at one revision while retaining the preceding history references.", "storyId": "story-08", "threadId": "thread-08", "chapterId": "chapter-08", "continuationKind": "STATE_AND_CONTEXT_ADVANCE", "stateRevision": "state-081"},
+      "evidenceSummaries": [{"id": "source:history-window-08", "kind": "HISTORY", "summary": "Prior state revision and history references."}, {"id": "source:git-081", "kind": "GIT", "summary": "Engineering delta for the new revision."}, {"id": "source:agent-081", "kind": "AGENT_RESULT", "summary": "Agent context tied to the same bounded revision."}],
+      "storyThreadChapterRefs": {"story": ["story-08"], "thread": ["thread-08"], "chapter": ["chapter-08"]},
+      "conflicts": [],
+      "unknowns": ["Changes after state-081 that are outside this package."]
+    },
+    {
+      "id": "V39-HUMAN-09",
+      "oldBoundedHistory": {"summary": "The prior story contains process evidence from an agent result and labels its engineering status as limited.", "storyIds": ["story-09"], "threadIds": ["thread-09"], "chapterIds": ["chapter-09"], "evidenceIds": ["source:agent-090"]},
+      "newDelta": {"summary": "Later Git evidence clarifies which part of the agent description is supported by an engineering change.", "eventIds": ["event-091"], "sourceKinds": ["GIT"], "evidenceIds": ["source:git-091"]},
+      "candidateContinuation": {"summary": "The candidate preserves the process source, adds the engineering source and keeps unsupported interpretation qualified.", "storyId": "story-09", "threadId": "thread-09", "chapterId": "chapter-09", "continuationKind": "EVIDENCE_REFINEMENT", "evidenceIds": ["source:agent-090", "source:git-091"]},
+      "evidenceSummaries": [{"id": "source:history-window-09", "kind": "HISTORY", "summary": "Prior story with process-source provenance."}, {"id": "source:agent-090", "kind": "AGENT_RESULT", "summary": "A bounded description of work intent and observed context."}, {"id": "source:git-091", "kind": "GIT", "summary": "Later engineering evidence that narrows the supported outcome."}],
+      "storyThreadChapterRefs": {"story": ["story-09"], "thread": ["thread-09"], "chapter": ["chapter-09"]},
+      "conflicts": ["Process wording is broader than the later engineering evidence."],
+      "unknowns": ["Whether the remaining process description was completed outside the supplied Git evidence."]
+    },
+    {
+      "id": "V39-HUMAN-10",
+      "oldBoundedHistory": {"summary": "The project history is built from bounded document evidence and has no Git source.", "storyIds": ["story-10"], "threadIds": ["thread-10"], "chapterIds": ["chapter-10"], "sourceKinds": ["DOCUMENT"]},
+      "newDelta": {"summary": "A document fingerprint and bounded content sample changed while the project remained non-code.", "eventIds": ["event-101"], "sourceKinds": ["DOCUMENT"], "evidenceIds": ["source:document-101"]},
+      "candidateContinuation": {"summary": "The candidate continues the document story, states that Git history is unavailable and avoids code-specific claims.", "storyId": "story-10", "threadId": "thread-10", "chapterId": "chapter-10", "continuationKind": "DOCUMENT_CONTINUATION"},
+      "evidenceSummaries": [{"id": "source:history-window-10", "kind": "DOCUMENT", "summary": "Prior document identity, bounded sample and no-Git limitation."}, {"id": "source:document-101", "kind": "DOCUMENT", "summary": "New document fingerprint and content signals."}],
+      "storyThreadChapterRefs": {"story": ["story-10"], "thread": ["thread-10"], "chapter": ["chapter-10"]},
+      "conflicts": [],
+      "unknowns": ["Binary or unreadable portions outside the sampled document content."]
+    },
+    {
+      "id": "V39-HUMAN-11",
+      "oldBoundedHistory": {"summary": "The prior window contains a completed story and a persisted checkpoint for the next bounded window.", "storyIds": ["story-11"], "threadIds": ["thread-11"], "chapterIds": ["chapter-11"], "checkpointId": "checkpoint-11"},
+      "newDelta": {"summary": "A new event is available; the first semantic request is unavailable and the checkpoint can be resumed later.", "eventIds": ["event-111"], "sourceKinds": ["GIT"], "evidenceIds": ["source:git-111"], "availability": "DEGRADED"},
+      "candidateContinuation": {"summary": "The candidate preserves completed history, marks the affected interpretation as limited and leaves a resumable checkpoint.", "storyId": "story-11", "threadId": "thread-11", "chapterId": "chapter-11", "continuationKind": "DEGRADED_RESUMABLE", "checkpointId": "checkpoint-11-next"},
+      "evidenceSummaries": [{"id": "source:history-window-11", "kind": "HISTORY", "summary": "Completed prior window and checkpoint identity."}, {"id": "source:git-111", "kind": "GIT", "summary": "New event with bounded source evidence and limited interpretation availability."}],
+      "storyThreadChapterRefs": {"story": ["story-11"], "thread": ["thread-11"], "chapter": ["chapter-11"]},
+      "conflicts": ["The candidate cannot provide a full semantic continuation while the provider is unavailable."],
+      "unknowns": ["The wording that a later resumed request may produce."]
+    },
+    {
+      "id": "V39-HUMAN-12",
+      "oldBoundedHistory": {"summary": "The prior project projection contains a managed overview and a managed capability note with stable entity metadata.", "storyIds": ["story-12"], "threadIds": ["thread-12"], "chapterIds": ["chapter-12"], "projectionRefs": ["projection-overview", "projection-capability-12"]},
+      "newDelta": {"summary": "One source entity is unchanged and one affected entity has a new bounded history reference.", "eventIds": ["event-121"], "sourceKinds": ["GIT", "PROJECTION"], "evidenceIds": ["source:projection-121"]},
+      "candidateContinuation": {"summary": "The candidate keeps the unchanged projection entity and updates only the affected managed entity while retaining its stable identity.", "storyId": "story-12", "threadId": "thread-12", "chapterId": "chapter-12", "continuationKind": "AFFECTED_PROJECTION_UPDATE", "projectionRefs": ["projection-overview", "projection-capability-12"]},
+      "evidenceSummaries": [{"id": "source:history-window-12", "kind": "PROJECTION", "summary": "Prior managed entity identities and bounded content ownership."}, {"id": "source:projection-121", "kind": "PROJECTION", "summary": "Affected entity metadata and the new history reference."}],
+      "storyThreadChapterRefs": {"story": ["story-12"], "thread": ["thread-12"], "chapter": ["chapter-12"]},
+      "conflicts": ["Projection content is a view of the supplied history and is not an additional fact source."],
+      "unknowns": ["User-authored content outside the managed blocks."]
+    }
+  ]
+}

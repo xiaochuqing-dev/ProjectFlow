@@ -1,0 +1,44 @@
+{
+  "taskGoal": "关闭 V3.9 Dirty Revision 与 Current Project State 的最终 P0，建立 Owner 授权的自动化加独立语义复核验收链，并完成合并前技术门禁。",
+  "baselineMaster": "ab29b1ff0f842c029b5cf121bd584bd40fcf74b2",
+  "baselineV39Head": "9a01e497b0b0d7ebcaf0b73e64aa6daa161a4450",
+  "branch": "codex/v3.9-project-continuity-closure",
+  "pullRequest": 17,
+  "actualChanges": [
+    "Dirty marker 改为 snapshot 行锁内持久化单调 generation；旧刷新只能确认开始时观察到的 revision。",
+    "Current Project State 改为只由可见 Primary Story 的真实发生时间和稳定 ID 决定，并对齐 Overview、Gateway、Agent Context、Frontend 与 Obsidian。",
+    "新增 12 场景盲化独立语义复核包、专用 ModelTaskType、一次逻辑调用预算、完整工件与 workflow 门禁。",
+    "记录 Owner 自动化验收 policy，原 human worksheet 保持 NOT_REVIEWED 且未修改。"
+  ],
+  "verification": {
+    "backendFullH2": "PASS: 668 tests, 0 failures, 0 errors, 9 environment skips",
+    "independentSemanticContract": "PASS: 21 tests, 0 failures, 0 errors, 2 real-provider environment skips",
+    "frontend": "PASS: lint, production build, 59 contracts, Playwright 9/9",
+    "integrations": "PASS: Hermes 10/10, Obsidian 27/27",
+    "rootLauncher": "PASS: final working tree reached backend/frontend readiness; build id 2m8G5myAsHL_VbZ1U2WwU; listeners released",
+    "sensitiveContent": "PASS: no long sk marker or added Authorization/API Key/Bearer value"
+  },
+  "acceptance": {
+    "localGate": "PASS",
+    "ownerPolicy": "RECORDED_GATES_PENDING",
+    "humanWorksheet": "NOT_REVIEWED",
+    "canonicalHumanWorksheetSha256": "75f9f18836d87c77db0d8a89fd3541348d2b48f28673e68ffa57e96ff000f9df",
+    "finalStatus": "REMOTE_GATES_PENDING"
+  },
+  "knownRisks": [
+    "本机 Docker Engine 未运行，新增 PostgreSQL 16 并发用例必须由远端普通 CI 执行。",
+    "本地没有安全真实 Provider 配置，三 Provider affected continuity 与独立语义复核必须由受保护 workflow 执行。",
+    "Frontend 依赖审计的 4 个 high 漏洞留给 V3.10 dependency security 正式处理。",
+    "历史 run 32659635453 的 Qwen Chapter 8/9 失败继续保留。"
+  ],
+  "unfinished": [
+    "推送当前分支并取得普通 PR CI 与 PostgreSQL 16 结果。",
+    "执行三 Provider affected continuity、provider probe 与独立语义复核并审阅工件。",
+    "Draft 转 Ready、最终 CI、merge、master CI、根启动器复验、acceptance backfill、最终 master 验证与 cleanup。"
+  ],
+  "delegationSummary": [
+    "Luna Max 对 Current State 与 Dirty Revision/独立语义复核做只读审计和多轮 P1 复核。",
+    "主 Agent 负责 P0 实现、高风险差异审阅、严格 artifact 合同修正与最终门禁。"
+  ],
+  "sedimentCandidates": []
+}

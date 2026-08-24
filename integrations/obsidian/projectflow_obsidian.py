@@ -1151,11 +1151,16 @@ class ObsidianProjection:
             "### 最近发生",
             "",
         ]
-        recent_ids = [str(story.get("id")) for story in sorted(
-            history_stories,
-            key=lambda value: (bool(value.get("pinned")), str(value.get("occurredTo") or "")),
+        recent_stories = sorted(history_stories, key=lambda value: str(value.get("id") or ""))
+        recent_stories = sorted(
+            recent_stories, key=lambda value: str(value.get("occurredFrom") or ""), reverse=True
+        )
+        recent_stories = sorted(
+            recent_stories,
+            key=lambda value: (bool(value.get("occurredTo")), str(value.get("occurredTo") or "")),
             reverse=True,
-        )[:5]]
+        )
+        recent_ids = [str(story.get("id")) for story in recent_stories[:5]]
         for story_id in recent_ids:
             story = story_by_id[story_id]
             lines.append(

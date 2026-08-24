@@ -202,8 +202,14 @@ public class ProjectHistoryReconstructionService {
                 putContinuityStructureDiagnostics(noOpContinuityDiagnostics(before), diagnostics);
                 diagnostics.put("presentationRevision", correctionRevision);
                 diagnostics.put("continuityConsumedDirtyRevision", observedDirtyRevision);
+                safeProgress.update("PERSIST_HISTORY_SNAPSHOT", "正在保存已校验的项目历程快照");
                 transactionTemplate.executeWithoutResult(status -> {
                     ProjectHistorySnapshot snapshot = snapshotRepository.findLockedByProjectId(projectId).orElseThrow();
+                    String pendingDirtyRevision = snapshot.getContinuityDirtyRevision();
+                    boolean dirtyAcknowledged = pendingDirtyRevision.isBlank()
+                        || pendingDirtyRevision.equals(observedDirtyRevision);
+                    diagnostics.put("continuityDirtyAcknowledged", dirtyAcknowledged);
+                    diagnostics.put("continuityPendingDirtyRevision", dirtyAcknowledged ? "" : pendingDirtyRevision);
                     snapshot.recordCacheHit(jobId, json(diagnostics));
                     snapshot.acknowledgeContinuityDirty(observedDirtyRevision);
                     snapshotRepository.save(snapshot);
@@ -308,6 +314,11 @@ public class ProjectHistoryReconstructionService {
             transactionTemplate.executeWithoutResult(status -> {
                 ProjectHistorySnapshot snapshot = snapshotRepository.findLockedByProjectId(projectId)
                     .orElseGet(() -> new ProjectHistorySnapshot(projectId));
+                String pendingDirtyRevision = snapshot.getContinuityDirtyRevision();
+                boolean dirtyAcknowledged = pendingDirtyRevision.isBlank()
+                    || pendingDirtyRevision.equals(observedDirtyRevision);
+                diagnostics.put("continuityDirtyAcknowledged", dirtyAcknowledged);
+                diagnostics.put("continuityPendingDirtyRevision", dirtyAcknowledged ? "" : pendingDirtyRevision);
                 snapshot.complete(
                     completedCollection.projectRevision(), currentFingerprint, completedPersistence.currentEvents().size(),
                     earliest(completedPersistence.currentEvents()), latest(completedPersistence.currentEvents()),

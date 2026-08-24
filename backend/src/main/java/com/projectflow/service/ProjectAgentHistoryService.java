@@ -306,7 +306,7 @@ public class ProjectAgentHistoryService {
         if (historyReadService != null) {
             try {
                 currentState = historyReadService.currentState(userId, projectId);
-                history = correctedHistoryNarrative(userId, projectId, history, limitations);
+                history = correctedHistoryNarrative(userId, projectId, currentState, history, limitations);
             } catch (RuntimeException exception) {
                 limitations.add("项目历程展示层暂时无法读取，保留原有持久化历史覆盖诊断");
             }
@@ -536,7 +536,13 @@ public class ProjectAgentHistoryService {
      * view.  Engineering references remain compact and explicitly marked as
      * drill-down material so a user declaration cannot be mistaken for a fact.
      */
-    private String correctedHistoryNarrative(UUID userId, UUID projectId, String fallback, List<String> limitations) {
+    private String correctedHistoryNarrative(
+        UUID userId,
+        UUID projectId,
+        ProjectCurrentStateResponse currentState,
+        String fallback,
+        List<String> limitations
+    ) {
         HistoryOverviewResponse overview = historyReadService.overview(userId, projectId);
         List<HistoryChapter> chapters = historyReadService.chapters(userId, projectId, 0, 12).items();
         List<ChangeStory> stories = historyReadService.stories(userId, projectId, null, false, null, null, 0, 16).items();
@@ -545,7 +551,7 @@ public class ProjectAgentHistoryService {
         text.append("来源修订：").append(overview.projectRevision()).append("；展示修订：")
             .append(overview.presentationRevision()).append("\n");
         text.append("最早状态：").append(bounded(overview.overview().earliestConfirmedState(), 500)).append("\n");
-        text.append("当前状态：").append(bounded(overview.overview().currentState(), 500)).append("\n");
+        text.append("当前状态：").append(bounded(currentState.confirmedState(), 500)).append("\n");
         if (!chapters.isEmpty()) {
             text.append("篇章：\n");
             for (HistoryChapter chapter : chapters) {

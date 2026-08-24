@@ -217,7 +217,11 @@ class ProjectMemoryGatewayTest {
         assertThat(snapshot.representativeCapabilities()).singleElement()
             .satisfies(item -> assertThat(item.stale()).isTrue());
         String brief = gateway.brief(owner.userId(), project.getId(), 6_000).contextText();
-        assertThat(brief).contains("项目历程：READY", "当前状态：最近可确认事实游标");
+        assertThat(brief).contains(
+            "项目历程：READY",
+            "当前状态：当前可确认的结果为：新增事实游标并形成稳定增量边界",
+            "事实游标已经成为增量读取边界"
+        );
         assertThat(brief.indexOf("项目历程：")).isLessThan(brief.indexOf("主要能力："));
 
         var july = gateway.timeline(owner.userId(), project.getId(), "MONTH", "2026-07", null, null, 0, 20, "compact");

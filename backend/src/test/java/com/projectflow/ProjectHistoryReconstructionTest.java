@@ -132,6 +132,108 @@ class ProjectHistoryReconstructionTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void oldRefreshCannotAcknowledgeSameTargetWriteMarkedDuringRefresh() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path projectRoot = temporaryRoot.resolve("dirty-generation-race");
+        Files.createDirectories(projectRoot);
+        Files.writeString(projectRoot.resolve("status.md"), "initial status\n", StandardCharsets.UTF_8);
+        ProjectSpace project = project(userId, "Dirty Generation Race", projectRoot);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+
+        String observed = continuityDirtyMarker.mark(
+            project.getId(), "HISTORY_CORRECTION", "correction:same"
+        );
+        AtomicReference<String> markedDuringRefresh = new AtomicReference<>();
+
+        reconstructionService.refresh(
+            userId, project.getId(), UUID.randomUUID(), true,
+            (stage, message) -> {
+                if ("HISTORY_ENGINEERING_RECONSTRUCTION".equals(stage)
+                    && markedDuringRefresh.get() == null) {
+                    markedDuringRefresh.set(continuityDirtyMarker.mark(
+                        project.getId(), "HISTORY_CORRECTION", "correction:same"
+                    ));
+                }
+            }
+        );
+
+        String latest = markedDuringRefresh.get();
+        assertThat(latest).isNotBlank().isNotEqualTo(observed);
+        var state = readService.currentState(userId, project.getId());
+        assertThat(state.continuityDirty()).isTrue();
+        assertThat(state.pendingContinuityRevision()).isEqualTo(latest);
+        assertThat(state.currentness()).contains("STALE");
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("continuityConsumedDirtyRevision", observed)
+            .containsEntry("continuityDirtyAcknowledged", false)
+            .containsEntry("continuityPendingDirtyRevision", latest);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void cacheHitCannotAcknowledgeSameTargetWriteMarkedAfterDiscovery() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path projectRoot = temporaryRoot.resolve("dirty-generation-cache-hit-race");
+        Files.createDirectories(projectRoot);
+        Files.writeString(projectRoot.resolve("status.md"), "stable status\n", StandardCharsets.UTF_8);
+        ProjectSpace project = project(userId, "Dirty Cache Hit Race", projectRoot);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+
+        String observed = continuityDirtyMarker.mark(
+            project.getId(), "HISTORY_CORRECTION", "correction:same"
+        );
+        AtomicReference<String> markedBeforeAcknowledge = new AtomicReference<>();
+
+        var outcome = reconstructionService.refresh(
+            userId, project.getId(), UUID.randomUUID(), false,
+            (stage, message) -> {
+                if ("PERSIST_HISTORY_SNAPSHOT".equals(stage)
+                    && markedBeforeAcknowledge.get() == null) {
+                    markedBeforeAcknowledge.set(continuityDirtyMarker.mark(
+                        project.getId(), "HISTORY_CORRECTION", "correction:same"
+                    ));
+                }
+            }
+        );
+
+        String latest = markedBeforeAcknowledge.get();
+        assertThat(outcome.cacheHit()).isTrue();
+        assertThat(latest).isNotBlank().isNotEqualTo(observed);
+        var state = readService.currentState(userId, project.getId());
+        assertThat(state.continuityDirty()).isTrue();
+        assertThat(state.pendingContinuityRevision()).isEqualTo(latest);
+        assertThat(state.currentness()).contains("STALE");
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("continuityConsumedDirtyRevision", observed)
+            .containsEntry("continuityDirtyAcknowledged", false)
+            .containsEntry("continuityPendingDirtyRevision", latest);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void cacheHitAcknowledgesOnlyTheObservedDirtyGeneration() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path projectRoot = temporaryRoot.resolve("dirty-generation-cache-hit-ack");
+        Files.createDirectories(projectRoot);
+        Files.writeString(projectRoot.resolve("status.md"), "stable status\n", StandardCharsets.UTF_8);
+        ProjectSpace project = project(userId, "Dirty Cache Hit Ack", projectRoot);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+
+        String observed = continuityDirtyMarker.mark(
+            project.getId(), "HISTORY_CORRECTION", "correction:same"
+        );
+        var outcome = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        assertThat(outcome.cacheHit()).isTrue();
+        assertThat(readService.currentState(userId, project.getId()).continuityDirty()).isFalse();
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("continuityConsumedDirtyRevision", observed)
+            .containsEntry("continuityDirtyAcknowledged", true)
+            .containsEntry("continuityPendingDirtyRevision", "");
+    }
+
+    @Test
     void rebuildsSourceEventsStoriesAndCreatedModifiedRemovedRestoredThread() throws Exception {
         UUID userId = UUID.randomUUID();
         Path repository = temporaryRoot.resolve("chain");

@@ -318,6 +318,24 @@ class ObsidianProjectionTest(unittest.TestCase):
         self.assertEqual(hashes, {path.relative_to(self.managed()).as_posix(): path.read_bytes() for path in self.managed().rglob("*.md")})
         self.assertGreater(first["bytesWritten"], 0)
 
+    def test_old_pinned_story_does_not_override_newer_current_context(self) -> None:
+        data = copy.deepcopy(dataset())
+        older = data["historyStories"][0]
+        middle = data["historyStories"][1]
+        newest = data["historyStories"][2]
+        older["pinned"] = True
+        older["occurredTo"] = None
+        older["occurredFrom"] = "2027-01-01T00:00:00Z"
+        middle["occurredTo"] = newest["occurredTo"]
+        middle["occurredFrom"] = newest["occurredFrom"]
+        self.source = FakeSource(data)
+
+        self.projection().sync(PROJECT_ID)
+
+        overview = (self.managed() / "项目概览.md").read_text(encoding="utf-8")
+        self.assertLess(overview.index(middle["humanTitle"]), overview.index(newest["humanTitle"]))
+        self.assertLess(overview.index(newest["humanTitle"]), overview.index(older["humanTitle"]))
+
     def test_current_state_delta_updates_only_required_indexes_and_then_reaches_noop(self) -> None:
         data = copy.deepcopy(dataset())
         self.source = FakeSource(data)

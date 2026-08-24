@@ -93,6 +93,9 @@ public class ProjectHistorySnapshot {
     @Column(name = "continuity_dirty_at")
     private Instant continuityDirtyAt;
 
+    @Column(name = "continuity_dirty_generation")
+    private Long continuityDirtyGeneration;
+
     @Column(name = "error_code", length = 80)
     private String errorCode;
 
@@ -126,6 +129,7 @@ public class ProjectHistorySnapshot {
         this.threadsJson = "[]";
         this.coverageJson = "{}";
         this.diagnosticsJson = "{}";
+        this.continuityDirtyGeneration = 0L;
     }
 
     @PrePersist
@@ -220,6 +224,16 @@ public class ProjectHistorySnapshot {
         preserveDirtyStatus();
     }
 
+    /** Advances the project-local dirty generation while the snapshot row is locked. */
+    public long advanceContinuityDirtyGeneration() {
+        long current = continuityDirtyGeneration == null ? 0L : continuityDirtyGeneration;
+        if (current == Long.MAX_VALUE) {
+            throw new IllegalStateException("continuity dirty generation exhausted");
+        }
+        continuityDirtyGeneration = current + 1L;
+        return continuityDirtyGeneration;
+    }
+
     /** Clears only the marker observed before source discovery. */
     public boolean acknowledgeContinuityDirty(String observedRevision) {
         String current = text(continuityDirtyRevision);
@@ -270,6 +284,9 @@ public class ProjectHistorySnapshot {
     public String getContinuityDirtyRevision() { return text(continuityDirtyRevision); }
     public String getContinuityDirtyReason() { return text(continuityDirtyReason); }
     public Instant getContinuityDirtyAt() { return continuityDirtyAt; }
+    public long getContinuityDirtyGeneration() {
+        return continuityDirtyGeneration == null ? 0L : continuityDirtyGeneration;
+    }
     public String getErrorCode() { return errorCode; }
     public String getErrorSummary() { return errorSummary; }
     public Instant getCreatedAt() { return createdAt; }

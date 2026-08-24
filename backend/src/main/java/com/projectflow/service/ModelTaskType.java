@@ -89,6 +89,11 @@ public enum ModelTaskType {
         List.of(), List.of("chapters"), List.of(),
         "{\"chapters\":[{\"chapterId\":\"\",\"representedClusterIds\":[],\"title\":\"\",\"summary\":\"\"}]}"
     ),
+    PROJECT_HISTORY_INDEPENDENT_SEMANTIC_REVIEW(
+        "V3.9 项目历程独立语义复核", 6_000, 16_384, 0.1, false,
+        List.of(), List.of("reviews"), List.of(),
+        "{\"reviews\":[{\"scenarioId\":\"V39-HUMAN-01\",\"attachmentSemanticallySupported\":\"uncertain\",\"shouldRemainIndependent\":\"uncertain\",\"oldHistoryUnexpectedlyChanged\":\"no\",\"truthfulnessConcern\":\"no\",\"rationale\":\"\",\"confidence\":\"low\"}]}"
+    ),
     LEGACY_STRUCTURED(
         "兼容结构化调用", 2_048, 20_000, 0.2, false,
         List.of("items", "results"), List.of(), List.of(), "{}"

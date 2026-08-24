@@ -44,6 +44,8 @@ import com.projectflow.support.AppException;
 public class ProjectHistoryReadService {
     private static final int MAX_PAGE_SIZE = 100;
     private static final int OVERVIEW_CHAPTER_LIMIT = 8;
+    private static final int CURRENT_STATE_STORY_LIMIT = 12;
+    private static final int CURRENT_STATE_PRIMARY_LIMIT = 4;
     private final ProjectRepository projectRepository;
     private final ProjectHistorySnapshotRepository snapshotRepository;
     private final ProjectHistoryEventRepository eventRepository;
@@ -128,15 +130,16 @@ public class ProjectHistoryReadService {
         HistoryOverviewContent automatic = value(snapshot.getOverviewJson(), HistoryOverviewContent.class,
             new HistoryOverviewContent("", "", List.of(), List.of(), List.of(), List.of()));
         HistoryCoverage coverage = value(snapshot.getCoverageJson(), HistoryCoverage.class, emptyCoverage());
-        List<ChangeStory> recent = corrected.stories().stream()
-            .filter(story -> !story.hiddenByDefault() && !"MERGED".equals(story.displayStatus()))
-            .sorted(Comparator.comparing(ChangeStory::pinned).reversed()
-                .thenComparing(ChangeStory::occurredTo, Comparator.nullsLast(Comparator.reverseOrder()))
-                .thenComparing(ChangeStory::id))
-            .limit(12).toList();
-        String confirmed = recent.stream().map(ChangeStory::afterState)
-            .filter(value -> value != null && !value.isBlank()).findFirst().orElse(automatic.currentState());
-        if (confirmed == null || confirmed.isBlank()) confirmed = "当前没有可确认的持久化状态。";
+        List<ChangeStory> activeStories = corrected.stories().stream()
+            .filter(story -> !"MERGED".equals(story.displayStatus()))
+            .toList();
+        List<ChangeStory> visibleStories = activeStories.stream()
+            .filter(story -> !story.hiddenByDefault())
+            .sorted(currentStoryOrder())
+            .toList();
+        List<ChangeStory> recent = visibleStories.stream().limit(CURRENT_STATE_STORY_LIMIT).toList();
+        List<ChangeStory> currentPrimaryStories = currentPrimaryStories(corrected, visibleStories);
+        String confirmed = confirmedState(automatic, activeStories, visibleStories, currentPrimaryStories);
         List<String> storyRefs = recent.stream().map(ChangeStory::id).toList();
         Set<String> recentIds = new LinkedHashSet<>(storyRefs);
         List<String> threadRefs = corrected.threads().stream()
@@ -186,6 +189,82 @@ public class ProjectHistoryReadService {
             recentChanges, threadRefs, storyRefs, chapterRefs, conflicts, unknowns, limitations,
             stale, degraded, false, snapshot.getLatestSuccessfulAt()
         );
+    }
+
+    private List<ChangeStory> currentPrimaryStories(
+        ProjectHistoryCorrectionService.CorrectedHistory corrected,
+        List<ChangeStory> visibleStories
+    ) {
+        Map<String, ChangeStory> storiesById = visibleStories.stream().collect(
+            LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll
+        );
+        HistoryChapter latestChapter = corrected.chapters().stream()
+            .filter(chapter -> !chapter.hiddenByDefault())
+            .filter(chapter -> chapter.storyRefs().stream()
+                .map(storiesById::get).anyMatch(story -> story != null && story.primary()))
+            .sorted(currentChapterOrder())
+            .findFirst().orElse(null);
+        LinkedHashSet<String> selectedIds = new LinkedHashSet<>();
+        if (latestChapter != null) {
+            latestChapter.storyRefs().stream()
+                .map(storiesById::get)
+                .filter(story -> story != null && story.primary())
+                .sorted(currentStoryOrder())
+                .map(ChangeStory::id)
+                .forEach(selectedIds::add);
+        }
+        visibleStories.stream().filter(ChangeStory::primary).map(ChangeStory::id).forEach(selectedIds::add);
+        return selectedIds.stream().map(storiesById::get)
+            .filter(java.util.Objects::nonNull)
+            .sorted(currentStoryOrder())
+            .limit(CURRENT_STATE_PRIMARY_LIMIT)
+            .toList();
+    }
+
+    private String confirmedState(
+        HistoryOverviewContent automatic,
+        List<ChangeStory> activeStories,
+        List<ChangeStory> visibleStories,
+        List<ChangeStory> currentPrimaryStories
+    ) {
+        List<String> outcomes = currentPrimaryStories.stream()
+            .filter(story -> story.afterState() != null && !story.afterState().isBlank())
+            .map(story -> {
+                String title = outbound(story.humanTitle());
+                String state = outbound(story.afterState());
+                return title.isBlank() ? state : title + "：" + state;
+            })
+            .filter(value -> !value.isBlank()).distinct().limit(CURRENT_STATE_PRIMARY_LIMIT).toList();
+        if (!outcomes.isEmpty()) {
+            return outcomes.size() == 1
+                ? "当前可确认的结果为：" + outcomes.get(0) + "。"
+                : "当前可确认的结果包括：" + String.join("；", outcomes) + "。";
+        }
+        boolean hasActivePrimary = activeStories.stream().anyMatch(ChangeStory::primary);
+        boolean hasVisiblePrimary = visibleStories.stream().anyMatch(ChangeStory::primary);
+        if (hasActivePrimary && !hasVisiblePrimary) {
+            return "当前 Primary 结果已被展示修正隐藏；读取端不会用隐藏内容替代当前可确认状态。";
+        }
+        if (hasVisiblePrimary) {
+            return "当前存在 Primary 变化，但没有可确认的结果状态；Supporting 变化不会替代 Primary 结果。";
+        }
+        if (!activeStories.isEmpty() && !hasActivePrimary) {
+            return "当前没有可确认的 Primary 结果；Supporting 变化仅作为相关上下文保留。";
+        }
+        String fallback = automatic.currentState();
+        return fallback == null || fallback.isBlank() ? "当前没有可确认的持久化状态。" : fallback;
+    }
+
+    private static Comparator<ChangeStory> currentStoryOrder() {
+        return Comparator.comparing(ChangeStory::occurredTo, Comparator.nullsLast(Comparator.reverseOrder()))
+            .thenComparing(ChangeStory::occurredFrom, Comparator.nullsLast(Comparator.reverseOrder()))
+            .thenComparing(ChangeStory::id, Comparator.nullsLast(Comparator.naturalOrder()));
+    }
+
+    private static Comparator<HistoryChapter> currentChapterOrder() {
+        return Comparator.comparing(HistoryChapter::to, Comparator.nullsLast(Comparator.reverseOrder()))
+            .thenComparing(HistoryChapter::from, Comparator.nullsLast(Comparator.reverseOrder()))
+            .thenComparing(HistoryChapter::id, Comparator.nullsLast(Comparator.naturalOrder()));
     }
 
     private String currentStateRevision(
@@ -455,13 +534,21 @@ public class ProjectHistoryReadService {
                  chapter.id(), chapter.title(), chapter.summary(), chapter.from(), chapter.to(), chapter.storyCount(),
                  chapter.rawEventCount(), chapter.authority()
             )).toList();
-        List<String> recent = corrected.stories().stream()
-            .filter(story -> !story.hiddenByDefault() && !"MERGED".equals(story.displayStatus()))
-            .sorted(Comparator.comparing(ChangeStory::pinned).reversed()
-                .thenComparing(ChangeStory::occurredTo, Comparator.nullsLast(Comparator.reverseOrder())))
-            .limit(5).map(story -> story.humanTitle() + "（" + date(story.occurredTo()) + "）").toList();
+        List<ChangeStory> activeStories = corrected.stories().stream()
+            .filter(story -> !"MERGED".equals(story.displayStatus()))
+            .toList();
+        List<ChangeStory> visibleStories = activeStories.stream()
+            .filter(story -> !story.hiddenByDefault())
+            .sorted(currentStoryOrder())
+            .toList();
+        List<String> recent = visibleStories.stream().limit(5)
+            .map(story -> outbound(story.humanTitle()) + "（" + date(story.occurredTo()) + "）")
+            .toList();
+        String confirmed = confirmedState(
+            automatic, activeStories, visibleStories, currentPrimaryStories(corrected, visibleStories)
+        );
         return new HistoryOverviewContent(
-            automatic.earliestConfirmedState(), automatic.currentState(), summaries, recent,
+            automatic.earliestConfirmedState(), confirmed, summaries, recent,
             automatic.conflicts(), automatic.unknowns()
         );
     }

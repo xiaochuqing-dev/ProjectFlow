@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "projectflow-v3.9-owner-approved-automated-acceptance-policy-v1",
+  "evidenceType": "OWNER_ACCEPTANCE_POLICY",
+  "recordedDate": "2026-08-25",
+  "scope": "V3.9_PROJECT_CONTINUITY_FINAL_CLOSURE",
+  "ownerDirective": {
+    "executionAuthorized": true,
+    "perScenarioManualReview": "WAIVED_BY_OWNER",
+    "continueThroughRecordedBlockers": true
+  },
+  "humanWorksheet": {
+    "path": "docs/acceptance-evidence/v3.9/human-continuity-review-worksheet.json",
+    "status": "NOT_REVIEWED",
+    "canonicalSha256RecordedByPriorAcceptance": "75f9f18836d87c77db0d8a89fd3541348d2b48f28673e68ffa57e96ff000f9df",
+    "mustRemainUnmodified": true
+  },
+  "prohibitedClaims": [
+    "HUMAN_REVIEW_PASS",
+    "HUMAN_SCENARIO_SCORE",
+    "HUMAN_REVIEWER_JUDGEMENT"
+  ],
+  "authorizedClosureMode": "PASS_BY_OWNER_APPROVED_AUTOMATED_AND_INDEPENDENT_SEMANTIC_REVIEW",
+  "requiredGates": [
+    "DETERMINISTIC_STRUCTURAL_GATE_PASS",
+    "FROZEN_GROUND_TRUTH_PASS",
+    "DOGFOOD_T0_T7_PASS",
+    "INDEPENDENT_BLIND_SEMANTIC_REVIEW_PASS",
+    "THREE_PROVIDER_AFFECTED_CONTINUITY_PASS",
+    "SOL_HIGH_RISK_FINAL_REVIEW_PASS",
+    "NORMAL_PR_CI_PASS",
+    "NO_SECRET_LEAK"
+  ],
+  "truthBoundary": {
+    "modelConsensusIsStrongFact": false,
+    "uncertaintyRequiresIndependentStoryOrUnknown": true,
+    "falseContinuitySuspicionRequiresSolReview": true
+  },
+  "policyState": "RECORDED_GATES_PENDING"
+}

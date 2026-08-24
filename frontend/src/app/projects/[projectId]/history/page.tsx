@@ -12,6 +12,7 @@ import {
   createProjectHistoryCorrection,
   getProjectHistoryEvidence,
   getProjectHistoryOverview,
+  getProjectCurrentState,
   getProjectHistoryStory,
   getProjectHistoryThread,
   type Project,
@@ -19,6 +20,7 @@ import {
   type ProjectHistoryEvidence,
   type ProjectHistoryEvent,
   type ProjectHistoryOverview,
+  type ProjectCurrentState,
   type ProjectHistoryStory,
   type ProjectHistoryStoryDetail,
   type ProjectHistoryThreadDetail,
@@ -37,7 +39,7 @@ import {
 } from "@/lib/project-history";
 
 type LoadedHistory =
-  | { type: "overview"; value: ProjectHistoryOverview }
+  | { type: "overview"; value: ProjectHistoryOverview; currentState: ProjectCurrentState }
   | { type: "chapter"; value: ProjectHistoryChapterDetail }
   | { type: "story"; value: ProjectHistoryStoryDetail }
   | { type: "thread"; value: ProjectHistoryThreadDetail };
@@ -99,7 +101,9 @@ export default function ProjectHistoryPreviewPage() {
         ) : null}
 
         {!error && !history ? <p className="rounded-card border border-line bg-white p-5 text-sm text-muted">正在读取持久化历程……</p> : null}
-        {history?.type === "overview" ? <OverviewView projectId={params.projectId} value={history.value} /> : null}
+        {history?.type === "overview" ? (
+          <OverviewView projectId={params.projectId} value={history.value} currentState={history.currentState} />
+        ) : null}
         {history?.type === "chapter" ? <ChapterView projectId={params.projectId} value={history.value} /> : null}
         {history?.type === "story" ? (
           <StoryView
@@ -131,7 +135,13 @@ async function loadHistory(
   type: ProjectHistoryEntityType,
   entityId: string,
 ): Promise<LoadedHistory> {
-  if (type === "overview") return { type, value: await getProjectHistoryOverview(token, projectId) };
+  if (type === "overview") {
+    const [value, currentState] = await Promise.all([
+      getProjectHistoryOverview(token, projectId),
+      getProjectCurrentState(token, projectId),
+    ]);
+    return { type, value, currentState };
+  }
   if (!entityId) throw new Error("深链接缺少历程实体 ID。");
   if (type === "chapter") return { type, value: await getProjectHistoryChapter(token, projectId, entityId) };
   if (type === "story") return { type, value: await getProjectHistoryStory(token, projectId, entityId) };
@@ -142,8 +152,22 @@ function loadedPresentationRevision(history: LoadedHistory): string {
   return history.value.presentationRevision || "";
 }
 
-function OverviewView({ projectId, value }: { projectId: string; value: ProjectHistoryOverview }) {
-  const warnings = [...value.coverage.gaps, ...value.coverage.limitations, ...value.overview.conflicts, ...value.overview.unknowns];
+function OverviewView({
+  projectId,
+  value,
+  currentState,
+}: {
+  projectId: string;
+  value: ProjectHistoryOverview;
+  currentState: ProjectCurrentState;
+}) {
+  const warnings = [
+    ...value.coverage.gaps,
+    ...value.coverage.limitations,
+    ...currentState.conflicts,
+    ...currentState.unknowns,
+    ...currentState.limitations,
+  ];
   return (
     <>
       <section className="rounded-card border border-line bg-white p-6 shadow-card">
@@ -158,12 +182,22 @@ function OverviewView({ projectId, value }: { projectId: string; value: ProjectH
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <StateCard label="最早可确认状态" value={value.overview.earliestConfirmedState} />
-          <StateCard label="当前状态" value={value.overview.currentState} />
+          <StateCard label="当前状态" value={currentState.confirmedState} />
         </div>
         <p className="mt-4 text-xs text-muted">覆盖时间：{formatMoment(value.earliestEventAt)} → {formatMoment(value.latestEventAt)}</p>
+        {currentState.continuityDirty || currentState.stale || currentState.degraded ? (
+          <p className="mt-3 rounded-field bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            {currentState.continuityDirty
+              ? "存在尚待显式刷新的内部变化，当前展示保留上次可确认结果。"
+              : currentState.degraded
+                ? "当前状态存在明确覆盖缺口，已保留可追溯结果。"
+                : "当前状态可能已过期，请在需要时显式刷新项目历程。"}
+          </p>
+        ) : null}
         <details className="mt-4 border-t border-line pt-4 text-xs text-muted">
           <summary className="cursor-pointer font-medium text-body">查看工程详情与审计信息</summary>
-          <p className="mt-3">状态：{value.status} · 当前性：{value.coverage.currentness} · 来源事件：{value.sourceEventCount}</p>
+          <p className="mt-3">状态：{value.status} · 当前性：{currentState.currentness} · 来源事件：{value.sourceEventCount}</p>
+          <p className="mt-2 break-all">Current State revision：{currentState.stateRevision}</p>
         </details>
       </section>
 

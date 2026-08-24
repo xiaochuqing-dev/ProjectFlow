@@ -4,7 +4,7 @@
 
 `ProjectContinuityDelta` is an in-memory record derived per refresh and copied into bounded snapshot diagnostics; it is not a table or source of truth. It carries added/updated/stale/invalidated Event IDs, affected time, previous/current source and presentation revisions, safe paths, hashed document/Agent identities, no-op and truncation.
 
-`project_history_snapshots` adds nullable `continuity_dirty_revision`, `continuity_dirty_reason` and `continuity_dirty_at`. These fields signal a ProjectFlow-owned write awaiting explicit refresh. Completion clears only the revision captured before source discovery; a newer concurrent marker remains STALE.
+`project_history_snapshots` adds nullable `continuity_dirty_revision`, `continuity_dirty_reason`, `continuity_dirty_at` and `continuity_dirty_generation`. The generation is a project-local monotonic counter advanced under the existing snapshot row lock for every write covered by the V3.9 marker contract: Agent Result candidate, History Correction/revert and ProjectFact ingestion. Old rows safely begin at zero on their first mark. Completion clears only the revision captured before source discovery and never resets the generation, so a newer concurrent marker remains STALE without timestamp or random-token assumptions.
 
 `project_history_corrections` adds nullable text `target_membership_refs_json`, defaulted in Java to an empty list for old rows. New corrections store at most 1,000 canonical member tokens plus a truncation sentinel. A correction may replay across additive evolution only when the stored list is complete and every old token remains; absence, replacement or truncation stays conflicted.
 

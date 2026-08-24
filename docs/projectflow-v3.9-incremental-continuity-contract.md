@@ -35,7 +35,7 @@ Correction 变化即使没有 source mutation，也属于 presentation delta，�
 
 ProjectFlow 已知的内部写入使用 `ProjectContinuityDirtyMarker` 在既有 `ProjectHistorySnapshot` 上记录待消费 revision。目前覆盖 Agent Result candidate、History correction/revert 和 ProjectFact ingestion。标记本身不扫描、不调用模型。
 
-刷新开始时捕获 dirty revision，完成时只确认同一个 revision。刷新运行期间出现的新 revision 不会被旧刷新清除，快照继续显示 STALE。数据库 Agent Result candidate 同时作为有界 `AGENT_RESULT` 过程证据进入下一次 collection；它不能自行提升为 Strong Fact。
+每次纳入 V3.9 marker 合同的内部写入（Agent Result candidate、History Correction/revert、ProjectFact ingestion）都在现有 snapshot 行级悲观锁内递增持久化的 project-local dirty generation，并由 generation 与有界写入身份形成新 token。它不依赖时间戳、随机碰撞规避或 target 是否变化。刷新开始时捕获 dirty revision，完成时只确认同一个 revision。刷新运行期间出现的新 generation 不会被旧刷新清除，快照继续显示 STALE；diagnostics 同时公开 observed revision、是否真正 acknowledged 与仍待处理的 revision。数据库 Agent Result candidate 同时作为有界 `AGENT_RESULT` 过程证据进入下一次 collection；它不能自行提升为 Strong Fact。
 
 ## Rewrite、失败与恢复
 
@@ -45,4 +45,4 @@ ProjectFlow 已知的内部写入使用 `ProjectContinuityDirtyMarker` 在既有
 
 ## 审计字段
 
-快照 diagnostics 至少包含 `continuityDeltaRevision`、`continuityNoOp`、`continuityRewriteMode`、前后 revision/fingerprint、`continuityAffectedFrom`、`continuityReconstructionAffectedFrom`、`continuityRetryScopeReused`、四类 Event ID、changed path、document identity、Agent Result ref、delta size、truncated 和已消费 dirty revision。
+快照 diagnostics 至少包含 `continuityDeltaRevision`、`continuityNoOp`、`continuityRewriteMode`、前后 revision/fingerprint、`continuityAffectedFrom`、`continuityReconstructionAffectedFrom`、`continuityRetryScopeReused`、四类 Event ID、changed path、document identity、Agent Result ref、delta size、truncated、刷新开始观察到的 `continuityConsumedDirtyRevision`、实际是否确认的 `continuityDirtyAcknowledged`，以及未确认时仍待处理的 `continuityPendingDirtyRevision`。
