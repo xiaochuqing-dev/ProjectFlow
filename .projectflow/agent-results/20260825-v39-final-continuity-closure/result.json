@@ -8,14 +8,16 @@
     "Dirty marker 改为 snapshot 行锁内持久化单调 generation；旧刷新只能确认开始时观察到的 revision。",
     "Current Project State 改为只由可见 Primary Story 的真实发生时间和稳定 ID 决定，并对齐 Overview、Gateway、Agent Context、Frontend 与 Obsidian。",
     "新增 12 场景盲化独立语义复核包、专用 ModelTaskType、一次逻辑调用预算、完整工件与 workflow 门禁。",
+    "根据首次真实 Luna reasoning-exhausted 失败移除 evaluator 的 16,384 人工压低，保持 max reasoning 并恢复 workflow 已配置的 65,536 有界单请求上限。",
     "记录 Owner 自动化验收 policy，原 human worksheet 保持 NOT_REVIEWED 且未修改。"
   ],
   "verification": {
     "backendFullH2": "PASS: 668 tests, 0 failures, 0 errors, 9 environment skips",
     "independentSemanticContract": "PASS: 21 tests, 0 failures, 0 errors, 2 real-provider environment skips",
+    "independentSemanticBudgetFix": "PASS: 27 targeted tests, 0 failures, 0 errors, 2 real-provider environment skips",
     "frontend": "PASS: lint, production build, 59 contracts, Playwright 9/9",
     "integrations": "PASS: Hermes 10/10, Obsidian 27/27",
-    "rootLauncher": "PASS: final working tree reached backend/frontend readiness; build id 2m8G5myAsHL_VbZ1U2WwU; listeners released",
+    "rootLauncher": "PASS: budget-fix working tree reached backend/frontend readiness; build id _ndcuJ4OXVuTsVdQK395i; listeners released",
     "sensitiveContent": "PASS: no long sk marker or added Authorization/API Key/Bearer value"
   },
   "acceptance": {
@@ -29,7 +31,8 @@
     "本机 Docker Engine 未运行，新增 PostgreSQL 16 并发用例必须由远端普通 CI 执行。",
     "本地没有安全真实 Provider 配置，三 Provider affected continuity 与独立语义复核必须由受保护 workflow 执行。",
     "Frontend 依赖审计的 4 个 high 漏洞留给 V3.10 dependency security 正式处理。",
-    "历史 run 32659635453 的 Qwen Chapter 8/9 失败继续保留。"
+    "历史 run 32659635453 的 Qwen Chapter 8/9 失败继续保留。",
+    "受保护 run 32778908166 的 Luna 独立盲评首次失败为 REASONING_EXHAUSTED_OUTPUT，失败工件 SHA-256 722701739361e0428ecf9ad80b0121ad2274e746d67605e8f0c7ff0f0c58f3d7；已做有界预算修复，真实复验待新 Head。"
   ],
   "unfinished": [
     "推送当前分支并取得普通 PR CI 与 PostgreSQL 16 结果。",

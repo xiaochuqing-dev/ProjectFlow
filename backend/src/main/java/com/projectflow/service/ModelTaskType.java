@@ -90,7 +90,7 @@ public enum ModelTaskType {
         "{\"chapters\":[{\"chapterId\":\"\",\"representedClusterIds\":[],\"title\":\"\",\"summary\":\"\"}]}"
     ),
     PROJECT_HISTORY_INDEPENDENT_SEMANTIC_REVIEW(
-        "V3.9 项目历程独立语义复核", 6_000, 16_384, 0.1, false,
+        "V3.9 项目历程独立语义复核", 6_000, 65_536, 0.1, false,
         List.of(), List.of("reviews"), List.of(),
         "{\"reviews\":[{\"scenarioId\":\"V39-HUMAN-01\",\"attachmentSemanticallySupported\":\"uncertain\",\"shouldRemainIndependent\":\"uncertain\",\"oldHistoryUnexpectedlyChanged\":\"no\",\"truthfulnessConcern\":\"no\",\"rationale\":\"\",\"confidence\":\"low\"}]}"
     ),

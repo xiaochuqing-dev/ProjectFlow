@@ -127,9 +127,9 @@ class IndependentSemanticReviewArtifactTest {
         assertThat(budget.path("logicalModelCalls").asInt()).isEqualTo(1);
         assertThat(budget.path("logicalModelCallLimit").asInt()).isEqualTo(1);
         assertThat(budget.path("physicalRequestLimit").asInt()).isEqualTo(4);
-        assertThat(budget.path("providerOutputTokenLimitPerRequest").asInt()).isEqualTo(16_384);
-        assertThat(budget.path("completionTokenLimit").asInt()).isEqualTo(32_768);
-        assertThat(budget.path("totalTokenLimit").asInt()).isEqualTo(65_536);
+        assertThat(budget.path("providerOutputTokenLimitPerRequest").asInt()).isEqualTo(65_536);
+        assertThat(budget.path("completionTokenLimit").asInt()).isEqualTo(131_072);
+        assertThat(budget.path("totalTokenLimit").asInt()).isEqualTo(160_000);
         assertThat(diagnostics.path("requestCount").asInt())
             .isBetween(1, budget.path("physicalRequestLimit").asInt());
         assertThat(diagnostics.path("effectiveMaxTokens").asInt())

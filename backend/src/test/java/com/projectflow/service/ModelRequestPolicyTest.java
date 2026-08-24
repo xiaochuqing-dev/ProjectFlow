@@ -331,7 +331,7 @@ class ModelRequestPolicyTest {
 
     @Test
     void independentSemanticReviewUsesItsDedicatedBoundedTaskContract() {
-        AiProvider provider = provider(AiProviderType.OPENAI, "glm-5.2", 0.1, 16_384);
+        AiProvider provider = provider(AiProviderType.OPENAI, "glm-5.2", 0.1, 65_536);
         var parameters = policy.initial(
             provider,
             registry.resolve(provider),
@@ -341,8 +341,8 @@ class ModelRequestPolicyTest {
 
         assertThat(ModelTaskType.PROJECT_HISTORY_INDEPENDENT_SEMANTIC_REVIEW.minimalSchema())
             .contains("reviews", "scenarioId", "truthfulnessConcern");
-        assertThat(parameters.taskRequestedMaxTokens()).isEqualTo(16_384);
-        assertThat(parameters.effectiveMaxTokens()).isEqualTo(16_384);
+        assertThat(parameters.taskRequestedMaxTokens()).isEqualTo(65_536);
+        assertThat(parameters.effectiveMaxTokens()).isEqualTo(65_536);
     }
 
     private AiProvider provider(String model, double temperature, int maxTokens) {

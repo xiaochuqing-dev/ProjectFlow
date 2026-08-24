@@ -32,12 +32,16 @@ Current Project State 现在只由可见 Primary Story 按 `occurredTo`、`occur
 - Frontend lint、生产 build、59 个 contracts 与 Playwright 9/9 通过。
 - Hermes 10/10、Obsidian 27/27 通过。
 - 敏感内容扫描未发现长 `sk-` 标记或新增 Authorization/API Key/Bearer 值；`git diff --check` 通过。
-- 根 `Start-ProjectFlow.bat -NoBrowser` 从最终未提交工作树完成 Frontend build、Backend/Frontend readiness，生成 build ID `2m8G5myAsHL_VbZ1U2WwU`；脚本退出后 3000/8080 监听数为 0。
+- 根 `Start-ProjectFlow.bat -NoBrowser` 从预算修复后的最终未提交工作树完成 Frontend build、Backend/Frontend readiness，生成 build ID `_ndcuJ4OXVuTsVdQK395i`；脚本退出后 3000/8080 监听数为 0。
 
 本机 Docker Engine 未运行，因此新增 PostgreSQL 16 并发门禁尚无本地执行事实，必须由普通远端 CI 验证。真实 Provider 本地门禁按无安全配置正常跳过，不能描述为真实模型通过。
 
 ## 保留的失败与边界
 
 历史真实 Provider run `32659635453` 的 Qwen Chapter 8/9 失败继续保留；后续成功不会覆盖该事实。Frontend 本地依赖审计仍报告 4 个 high 漏洞，该项属于 V3.10 dependency/supply-chain security 范围，不在 V3.9 临时升级依赖。
+
+首次最终收口受保护 run `32778908166` 在 Head `83d6f2b4a72d91c883aac843c980212d8f34d285` 上保留了新的 Luna 失败：Chapter affected 与 continuity 工件已生成，但独立盲评在两个 16,384-token 请求后仍只有 reasoning、没有可见 JSON，工件状态为 `FAILED`、0/12，failure code 为 `REASONING_EXHAUSTED_OUTPUT`，失败工件 SHA-256 为 `722701739361e0428ecf9ad80b0121ad2274e746d67605e8f0c7ff0f0c58f3d7`。该失败没有被删除或改写。
+
+根因是 evaluator 自行把 workflow 已配置的 65,536 quality-first 上限压低为 16,384，而不是 Provider Key、输入包或 production continuity 失败。修复保持 `max` reasoning，不降低质量档次；单请求恢复为 Provider 已配置的 65,536 有界上限，最多一次语义恢复，对应 aggregate completion/total 上限为 131,072/160,000。修复后的定向合同 27 tests 通过，2 个真实 Provider 环境性 skip；真实复验仍待新 Head 完成。
 
 V3.9 不创建 Tag 或 GitHub Release，不提前实现 V4 GUI。只有远端三 Provider、PR CI、merge/master、backfill 与 cleanup 全部完成并形成 append-only 证据后，才能把最终状态更新为 `PASS_BY_OWNER_APPROVED_AUTOMATED_AND_INDEPENDENT_SEMANTIC_REVIEW`。

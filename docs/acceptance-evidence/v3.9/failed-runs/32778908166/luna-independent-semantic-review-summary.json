@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "projectflow-v3.9-independent-semantic-review-failure-summary-v1",
+  "runId": 32778908166,
+  "jobId": 97603433620,
+  "headSha": "83d6f2b4a72d91c883aac843c980212d8f34d285",
+  "providerId": "luna",
+  "protocol": "OPENAI_RESPONSES",
+  "result": "FAILED",
+  "failureCode": "REASONING_EXHAUSTED_OUTPUT",
+  "scenarioCount": 12,
+  "successfulScenarioCount": 0,
+  "failedScenarioCount": 12,
+  "diagnostics": {
+    "logicalModelCalls": 1,
+    "physicalRequestCount": 2,
+    "inputTokens": 7926,
+    "completionTokens": 32768,
+    "totalTokens": 40694,
+    "latencyMs": 282389,
+    "effectiveMaxTokensPerRequest": 16384,
+    "requestSucceeded": true,
+    "schemaMatched": false,
+    "truncated": true,
+    "retryType": "EMPTY_AFTER_REASONING_RETRY",
+    "finishReason": "OUTPUT_LIMIT"
+  },
+  "artifactSha256": "722701739361e0428ecf9ad80b0121ad2274e746d67605e8f0c7ff0f0c58f3d7",
+  "observedRootCause": "The acceptance evaluator overrode the workflow's existing 65536 quality-first provider ceiling with 16384; max reasoning consumed both bounded responses before visible JSON was emitted.",
+  "disposition": "KEEP_FAILURE_AND_REVALIDATE_AFTER_BOUNDED_BUDGET_FIX",
+  "security": {
+    "apiKeyPersisted": false,
+    "authorizationPersisted": false,
+    "promptPersisted": false,
+    "rawResponsePersisted": false,
+    "reasoningPersisted": false,
+    "absolutePathPersisted": false
+  }
+}

@@ -42,11 +42,11 @@ class ProjectHistoryIndependentSemanticReviewEvaluatorTest {
         "docs/acceptance-evidence/v3.9/independent-semantic-review-package.json";
     private static final ModelTaskType REVIEW_TASK =
         ModelTaskType.PROJECT_HISTORY_INDEPENDENT_SEMANTIC_REVIEW;
-    private static final int MAX_PROVIDER_OUTPUT_TOKENS = 16_384;
+    private static final int MAX_PROVIDER_OUTPUT_TOKENS = 65_536;
     private static final int MAX_LOGICAL_MODEL_CALLS = 1;
     private static final int MAX_PHYSICAL_REQUESTS = 4;
-    private static final int MAX_COMPLETION_TOKENS = 32_768;
-    private static final int MAX_TOTAL_TOKENS = 65_536;
+    private static final int MAX_COMPLETION_TOKENS = 131_072;
+    private static final int MAX_TOTAL_TOKENS = 160_000;
     private static final Set<String> YES_NO = Set.of("yes", "no");
     private static final Set<String> YES_NO_UNCERTAIN = Set.of("yes", "no", "uncertain");
     private static final Set<String> CONFIDENCE = Set.of("high", "medium", "low");

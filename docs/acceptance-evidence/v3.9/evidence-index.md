@@ -27,5 +27,6 @@
 - `real-model/{luna,deepseek,qwen}/history-ground-truth-real-result.json`：三种协议的资格工件。
 - `real-model/{luna,deepseek,qwen}/history-chapter-regression.json`：三种协议的 V3.8.5 Chapter 受影响回归。
 - `real-model/{luna,deepseek,qwen}/history-continuity-scenarios.json`：三种协议的 V3.9 连续性产品场景。
+- `failed-runs/32778908166/luna-independent-semantic-review-summary.json`：最终收口首次 Luna 独立盲评的 reasoning-exhausted 失败摘要与安全诊断；后续成功不得覆盖。
 
 九个真实工件的完整性哈希、请求数、Token、耗时、fallback 和 repair 计数见 `technical-acceptance-evidence.json`。工件不保存 Key、Authorization、Prompt、raw response、reasoning 或机器绝对路径。自动结果不会改写空白的真人 worksheet，也不授权 Ready、merge、V3.10 ENTRY、Tag 或 Release。
