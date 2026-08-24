@@ -1,6 +1,6 @@
 {
   "version": "projectflow-v3.9-technical-acceptance-evidence-v1",
-  "generatedAt": "2026-08-24T10:40:39+08:00",
+  "generatedAt": "2026-08-24T10:48:00+08:00",
   "status": "TECHNICAL_ACCEPTANCE_PASS",
   "humanReviewStatus": "HUMAN_REVIEW_REQUIRED",
   "finalAcceptance": false,
@@ -73,12 +73,12 @@
     "rootLauncher": {
       "status": "PASS",
       "version": "3.9.0",
-      "sourceRevision": "eb38c78fe70d3cf9280e716f7fc906d8729b15b1",
-      "frontendBuildId": "s2OnA44xMraaVrZQ4FzDv",
-      "readyAt": "2026-08-24T05:16:02.2922787+08:00",
+      "sourceRevision": "be9a24504bfcbb015fa86b76ba62e5204ed93f44",
+      "sourceRevisionKind": "evidence-publication successor of the production/eval source head",
+      "frontendBuildId": "CK7Uj_1rpBUJ0HdzhwmOF",
+      "readyAt": "2026-08-24T10:47:25.8227689+08:00",
       "portsClearAfterExit": true,
-      "localChangesAtBuild": true,
-      "localChangesScope": "acceptance reports and evidence only"
+      "localChangesAtBuild": false
     }
   },
   "githubRuns": {
