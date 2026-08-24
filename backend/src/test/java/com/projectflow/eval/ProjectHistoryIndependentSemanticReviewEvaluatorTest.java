@@ -108,7 +108,7 @@ class ProjectHistoryIndependentSemanticReviewEvaluatorTest {
         assertThat(failureCode).isBlank();
     }
 
-    private String blindPrompt(JsonNode scenarios) throws Exception {
+    String blindPrompt(JsonNode scenarios) throws Exception {
         String serializedScenarios = objectMapper.writeValueAsString(scenarios);
         if (serializedScenarios.length() > 60_000) {
             throw new IllegalArgumentException("BLIND_INPUT_TOO_LARGE");
@@ -116,8 +116,8 @@ class ProjectHistoryIndependentSemanticReviewEvaluatorTest {
         return """
             你是 ProjectFlow V3.9 的独立语义复核器。只依据下面十二条有界输入判断每个候选续接是否忠实；不要补充输入之外的事实，不要把不确定性写成确定事实，也不要用其他条目的候选结论替代本条证据。
             只返回一个 JSON 对象，不要 Markdown，不要解释 JSON。根字段只能是 reviews；reviews 必须按输入顺序逐条返回且不遗漏。每条字段必须是：
-            scenarioId、attachmentSemanticallySupported、shouldRemainIndependent（值只能是 yes、no、uncertain）、oldHistoryUnexpectedlyChanged、truthfulnessConcern（值只能是 yes、no），
-            rationale（不超过 500 个字符的单行理由）和 confidence（值只能是 high、medium、low）。
+            scenarioId、attachmentSemanticallySupported、shouldRemainIndependent（值只能是 JSON 字符串 "yes"、"no"、"uncertain"）、oldHistoryUnexpectedlyChanged、truthfulnessConcern（值只能是 JSON 字符串 "yes"、"no"），
+            rationale（不超过 500 个字符的单行理由）和 confidence（值只能是 JSON 字符串 "high"、"medium"、"low"）。所有枚举值必须带双引号，不要返回 true/false 或数字。
             attachmentSemanticallySupported 表示候选的语义归属是否被给出的 Evidence 支持；shouldRemainIndependent 表示候选是否应保持独立；
             oldHistoryUnexpectedlyChanged 表示候选是否显示旧历史被意外改变；truthfulnessConcern 表示是否存在需要关注的真实性风险。
             任一分歧或不确定情况都保留为 uncertain，并在 rationale 中说明边界。
@@ -150,7 +150,7 @@ class ProjectHistoryIndependentSemanticReviewEvaluatorTest {
                 enumValue(review, "shouldRemainIndependent", YES_NO_UNCERTAIN),
                 enumValue(review, "oldHistoryUnexpectedlyChanged", YES_NO),
                 enumValue(review, "truthfulnessConcern", YES_NO),
-                safeRationale(review.path("rationale").asText("")),
+                rationaleValue(review),
                 enumValue(review, "confidence", CONFIDENCE)
             ));
             if (result.get(scenarioId).rationale().isBlank()) {
@@ -164,11 +164,27 @@ class ProjectHistoryIndependentSemanticReviewEvaluatorTest {
     }
 
     private String enumValue(JsonNode root, String field, Set<String> allowed) {
-        String value = root.path(field).asText("").trim().toLowerCase(Locale.ROOT);
+        JsonNode node = root.path(field);
+        String value;
+        if (node.isBoolean() && allowed.containsAll(YES_NO)) {
+            value = node.booleanValue() ? "yes" : "no";
+        } else if (node.isTextual()) {
+            value = node.textValue().trim().toLowerCase(Locale.ROOT);
+        } else {
+            throw new IllegalArgumentException("REVIEW_FIELD_INVALID_" + field);
+        }
         if (!allowed.contains(value)) {
             throw new IllegalArgumentException("REVIEW_FIELD_INVALID_" + field);
         }
         return value;
+    }
+
+    private String rationaleValue(JsonNode review) {
+        JsonNode node = review.path("rationale");
+        if (!node.isTextual()) {
+            throw new IllegalArgumentException("REVIEW_RATIONALE_INVALID");
+        }
+        return safeRationale(node.textValue());
     }
 
     private String safeRationale(String value) {
