@@ -67,7 +67,7 @@ jobs:
         run: |
           $dpapiTest = Get-ChildItem backend/src/test -Recurse -Filter 'WindowsDpapiProviderCredentialStoreTest.java' -File
           if (-not $dpapiTest) { throw 'NET-03 blocked: the Java Windows DPAPI adapter test is missing.' }
-          mvn -B -f backend/pom.xml -Dtest=WindowsDpapiProviderCredentialStoreTest,ProviderCredentialStoreTest,AiProviderCredentialSecurityTest,ProjectFlowFlywayMigrationStrategyTest,ProjectFlowV39DataContinuityMigrationTest,EmbeddedH2BackupServiceTest,ProjectFlowH2UpgradeIntegrationTest test
+          mvn -B -f backend/pom.xml "-Dtest=WindowsDpapiProviderCredentialStoreTest,ProviderCredentialStoreTest,AiProviderCredentialSecurityTest,ProjectFlowFlywayMigrationStrategyTest,ProjectFlowV39DataContinuityMigrationTest,EmbeddedH2BackupServiceTest,ProjectFlowH2UpgradeIntegrationTest" test
 
       - name: Clean unpack and runtime smoke
         shell: pwsh
