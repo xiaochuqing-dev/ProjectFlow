@@ -1,0 +1,306 @@
+{
+  "schemaVersion": "projectflow-v3.10-release-readiness-ground-truth-v1",
+  "status": "FROZEN_PENDING_EXECUTION",
+  "frozenAt": "2026-08-25T00:00:00Z",
+  "baselineMaster": "dd5ee41b6afcbd7703fa0883dc115c11f4821447",
+  "branchStart": "c65d6d1807bb",
+  "rules": {
+    "productionPromptUse": "FORBIDDEN",
+    "modelCalibrationRequired": false,
+    "unknownSchemaPolicy": "BLOCK",
+    "dataLossThreshold": 0,
+    "plaintextProviderKeyThreshold": 0,
+    "criticalProductionVulnerabilityThreshold": 0,
+    "unreviewedHighProductionVulnerabilityThreshold": 0
+  },
+  "cases": [
+    {
+      "id": "MIG-01",
+      "category": "MIGRATION",
+      "name": "empty H2",
+      "fixture": "empty isolated H2 database",
+      "expected": "Flyway executes V1..latest, Hibernate validate passes, second start performs no mutation",
+      "authority": "focused H2 integration test and Flyway history"
+    },
+    {
+      "id": "MIG-02",
+      "category": "MIGRATION",
+      "name": "empty PostgreSQL",
+      "fixture": "empty PostgreSQL 16 Testcontainers schema",
+      "expected": "Flyway executes V1..latest and application core persistence smoke passes",
+      "authority": "PostgreSQL 16 integration test and Flyway history"
+    },
+    {
+      "id": "MIG-03",
+      "category": "MIGRATION",
+      "name": "V3.9 H2 upgrade",
+      "fixture": "representative synthetic V3.9 H2 schema and data without Flyway history",
+      "expected": "exact signature is accepted, valid backup is created, controlled baseline V1 and migration complete with zero protected-record loss",
+      "authority": "legacy H2 upgrade integration test, count/hash comparison and backup manifest"
+    },
+    {
+      "id": "MIG-04",
+      "category": "MIGRATION",
+      "name": "V3.9 PostgreSQL upgrade",
+      "fixture": "representative synthetic V3.9 PostgreSQL 16 schema and data without Flyway history",
+      "expected": "exact signature and explicit backup acknowledgement allow controlled baseline and migration with zero protected-record loss",
+      "authority": "PostgreSQL 16 legacy integration test and count/hash comparison"
+    },
+    {
+      "id": "MIG-05",
+      "category": "MIGRATION",
+      "name": "unsupported schema",
+      "fixture": "partial or modified non-empty schema without Flyway history",
+      "expected": "startup blocks with UNSUPPORTED_LEGACY_SCHEMA and makes no schema/data mutation",
+      "authority": "negative integration test and before/after metadata hash"
+    },
+    {
+      "id": "MIG-06",
+      "category": "MIGRATION",
+      "name": "failed or interrupted migration",
+      "fixture": "synthetic failing migration or invalid Flyway history",
+      "expected": "startup blocks with SCHEMA_MIGRATION_BLOCKED, original data and valid pre-upgrade backup remain recoverable",
+      "authority": "failure injection integration test"
+    },
+    {
+      "id": "MIG-07",
+      "category": "MIGRATION",
+      "name": "rerun idempotency",
+      "fixture": "successfully migrated current database",
+      "expected": "restart and explicit revalidation add no duplicate facts/events/corrections/provider rows and apply no migration twice",
+      "authority": "two-restart integration test and stable counts/hashes"
+    },
+    {
+      "id": "SEC-01",
+      "category": "SECRET",
+      "name": "new secure save",
+      "fixture": "new Provider with API key and available credential store",
+      "expected": "secret is write/read verified, DB stores only secretRef metadata and api_key remains null",
+      "authority": "credential service transaction test and direct DB assertion"
+    },
+    {
+      "id": "SEC-02",
+      "category": "SECRET",
+      "name": "legacy plaintext migration",
+      "fixture": "V3.9 Provider row with plaintext api_key and no secretRef",
+      "expected": "store write and read-back precede one DB commit that sets secretRef and clears plaintext",
+      "authority": "two-phase migration integration test"
+    },
+    {
+      "id": "SEC-03",
+      "category": "SECRET",
+      "name": "store write or verify failure",
+      "fixture": "credential store failure before DB update",
+      "expected": "legacy/new DB credential metadata is unchanged and plaintext legacy value is not cleared",
+      "authority": "deterministic failing-store test"
+    },
+    {
+      "id": "SEC-04",
+      "category": "SECRET",
+      "name": "DB failure after secret write",
+      "fixture": "database transaction failure after successful store write",
+      "expected": "DB retains previous state; new orphan is removed or recorded for idempotent cleanup without secret content",
+      "authority": "transaction failure test"
+    },
+    {
+      "id": "SEC-05",
+      "category": "SECRET",
+      "name": "delete cleanup",
+      "fixture": "Provider with existing secretRef",
+      "expected": "successful delete removes both metadata and store entry; store failure preserves metadata and reports safe diagnostic",
+      "authority": "service contract test"
+    },
+    {
+      "id": "SEC-06",
+      "category": "SECRET",
+      "name": "masked read",
+      "fixture": "configured Provider API list/detail requests",
+      "expected": "responses expose only configured/masked status and never secret or full secretRef",
+      "authority": "controller/API contract test"
+    },
+    {
+      "id": "SEC-07",
+      "category": "SECRET",
+      "name": "no secret log or artifact",
+      "fixture": "sentinel secret exercised through save, failure, migration, package and logs",
+      "expected": "sentinel is absent from API responses, logs, reports and release archive",
+      "authority": "sensitive-content and artifact scans"
+    },
+    {
+      "id": "SEC-08",
+      "category": "SECRET",
+      "name": "real provider through secure store",
+      "fixture": "Luna Responses, DeepSeek Chat and Qwen Messages profiles on one source head",
+      "expected": "each protocol completes bounded real smoke with credential resolved only by Model Gateway request path",
+      "authority": "protected GitHub workflow sanitized summaries"
+    },
+    {
+      "id": "RUN-01",
+      "category": "RUNTIME",
+      "name": "clean release start",
+      "fixture": "fresh unpacked Windows portable RC and empty external data root",
+      "expected": "manifest/preflight, backend migration, health and frontend start succeed",
+      "authority": "windows-latest release smoke"
+    },
+    {
+      "id": "RUN-02",
+      "category": "RUNTIME",
+      "name": "no developer tools",
+      "fixture": "release PATH without Maven, npm, Git or system Java/Node",
+      "expected": "bundled Java/Node runtime starts package without source build",
+      "authority": "windows-latest environment and process command evidence"
+    },
+    {
+      "id": "RUN-03",
+      "category": "RUNTIME",
+      "name": "read-only install",
+      "fixture": "release install directory treated as immutable",
+      "expected": "start/stop writes only external data root and install tree hash remains stable",
+      "authority": "before/after release directory manifest"
+    },
+    {
+      "id": "RUN-04",
+      "category": "RUNTIME",
+      "name": "persistent external data",
+      "fixture": "created project/fact in release data root",
+      "expected": "data survives stop, package replacement and second start",
+      "authority": "Windows API smoke and DB count/hash"
+    },
+    {
+      "id": "RUN-05",
+      "category": "RUNTIME",
+      "name": "restart stability",
+      "fixture": "at least two starts plus bounded 10-cycle start/stop loop when CI cost permits",
+      "expected": "health is stable, no repeated migration and backend/frontend ports are released after each stop",
+      "authority": "Windows process/port smoke log"
+    },
+    {
+      "id": "RUN-06",
+      "category": "RUNTIME",
+      "name": "port conflict",
+      "fixture": "foreign listeners on backend or frontend port",
+      "expected": "launcher reports PORT_CONFLICT and does not kill foreign process",
+      "authority": "Windows negative smoke"
+    },
+    {
+      "id": "RUN-07",
+      "category": "RUNTIME",
+      "name": "stale database/process lock",
+      "fixture": "stale ProjectFlow PID/lock and stale H2 lock without live owner",
+      "expected": "only identity-verified stale state is recovered; live/unknown owner blocks without data damage",
+      "authority": "Windows failure/recovery smoke"
+    },
+    {
+      "id": "REC-01",
+      "category": "RECOVERY",
+      "name": "pre-upgrade backup",
+      "fixture": "H2 current database with pending migration",
+      "expected": "transaction-consistent backup, complete manifest and SHA-256 exist before migration starts",
+      "authority": "backup integration test and timestamped manifest"
+    },
+    {
+      "id": "REC-02",
+      "category": "RECOVERY",
+      "name": "backup restore",
+      "fixture": "valid H2 upgrade backup and modified current database",
+      "expected": "restore first protects current DB, verifies archive, restores in isolation and reproduces protected counts/hashes",
+      "authority": "Windows/H2 round-trip restore smoke"
+    },
+    {
+      "id": "REC-03",
+      "category": "RECOVERY",
+      "name": "interrupted migration recovery",
+      "fixture": "migration failure after valid pre-upgrade backup",
+      "expected": "application remains blocked, backup remains valid and explicit restore returns the fixture to its pre-upgrade state",
+      "authority": "failure injection plus restore test"
+    },
+    {
+      "id": "REC-04",
+      "category": "RECOVERY",
+      "name": "incompatible binary rollback",
+      "fixture": "older binary opened against newer unsupported schema",
+      "expected": "INCOMPATIBLE_SCHEMA_VERSION blocks startup and no Hibernate update/down mutation occurs",
+      "authority": "compatibility preflight test"
+    },
+    {
+      "id": "NET-01",
+      "category": "SECURITY",
+      "name": "loopback default",
+      "fixture": "local-release with auth disabled and no bind override",
+      "expected": "backend and frontend listen only on loopback",
+      "authority": "release profile test and Windows listener inspection"
+    },
+    {
+      "id": "NET-02",
+      "category": "SECURITY",
+      "name": "external/auth placeholder rejection",
+      "fixture": "external bind or auth enabled with placeholder/missing JWT/reset credential",
+      "expected": "startup fails closed with safe error code",
+      "authority": "configuration preflight tests"
+    },
+    {
+      "id": "NET-03",
+      "category": "SECURITY",
+      "name": "sensitive-content boundary",
+      "fixture": "sentinel Authorization, key, JWT, password and reset code",
+      "expected": "health/API/log/package/report scans contain none of the sentinels",
+      "authority": "source/log/artifact sensitive scans"
+    },
+    {
+      "id": "NET-04",
+      "category": "SECURITY",
+      "name": "dependency gate",
+      "fixture": "locked frontend/backend/runtime artifact dependency graph",
+      "expected": "Critical production vulnerabilities are zero; High are zero or each has explicit Sol-reviewed reachability and mitigation evidence",
+      "authority": "npm/backend CVE/SBOM and artifact scan reports"
+    },
+    {
+      "id": "CORE-01",
+      "category": "CORE_REGRESSION",
+      "name": "V3.8.5 History",
+      "fixture": "frozen relevant History regression suite",
+      "expected": "event conservation, Story/Thread/Chapter and current presentation contracts remain passing",
+      "authority": "backend focused/full tests"
+    },
+    {
+      "id": "CORE-02",
+      "category": "CORE_REGRESSION",
+      "name": "V3.9 Continuity",
+      "fixture": "frozen relevant Continuity regression suite",
+      "expected": "no-change zero-model, delta continuity and dirty revision behavior remain passing",
+      "authority": "backend continuity tests and bounded protected smoke"
+    },
+    {
+      "id": "CORE-03",
+      "category": "CORE_REGRESSION",
+      "name": "Correction",
+      "fixture": "correction before and after release restart",
+      "expected": "correction identity and safe overlay remain stable with zero loss",
+      "authority": "integration test"
+    },
+    {
+      "id": "CORE-04",
+      "category": "CORE_REGRESSION",
+      "name": "Context Package",
+      "fixture": "same corrected project revision before and after restart",
+      "expected": "bounded Context Package revision/content remains consistent and secret-free",
+      "authority": "context contract test"
+    },
+    {
+      "id": "CORE-05",
+      "category": "CORE_REGRESSION",
+      "name": "Hermes",
+      "fixture": "local stdio consumer against migrated/restarted backend",
+      "expected": "read-only Gateway semantics and ownership remain passing",
+      "authority": "Hermes integration suite"
+    },
+    {
+      "id": "CORE-06",
+      "category": "CORE_REGRESSION",
+      "name": "Obsidian",
+      "fixture": "managed projection before and after restart",
+      "expected": "corrected view identities, managed blocks and zero-write unchanged behavior remain passing",
+      "authority": "Obsidian integration suite"
+    }
+  ]
+}
