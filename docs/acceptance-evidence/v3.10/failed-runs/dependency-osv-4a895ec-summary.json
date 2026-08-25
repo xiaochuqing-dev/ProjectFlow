@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "projectflow-v3.10-dependency-scan-failure-v1",
+  "status": "FAILED_RETAINED",
+  "sourceHead": "4a895ec2aef101997f71204f0e2932fa39152733",
+  "workflowRunId": 32799677757,
+  "jobId": 97657951370,
+  "scanner": "OSV-Scanner v2.5.1",
+  "scanScope": [
+    "backend/pom.xml",
+    "frontend/package-lock.json"
+  ],
+  "result": {
+    "affectedPackages": 19,
+    "knownVulnerabilities": 57,
+    "critical": 3,
+    "high": 24,
+    "medium": 24,
+    "low": 6,
+    "unknown": 0,
+    "fixableReportedByScanner": 57,
+    "ecosystemWithFindings": "Maven"
+  },
+  "principalAffectedFamilies": [
+    "Spring Boot/Framework/Data",
+    "Tomcat",
+    "Jackson",
+    "Netty",
+    "PostgreSQL JDBC",
+    "Logback/Log4j API",
+    "Micrometer",
+    "SCIP transitive Protobuf/Guava",
+    "Testcontainers transitive Commons Compress"
+  ],
+  "decision": "BLOCKED_UNTIL_FIXED_OR_SOL_REVIEWED",
+  "notes": [
+    "The frontend production npm audit on the same dependency update was 0 High and 0 Critical.",
+    "The complete SARIF remains attached to the GitHub workflow run; this repository summary intentionally excludes runner paths and verbose advisory payloads.",
+    "No vulnerability is ignored automatically."
+  ]
+}
