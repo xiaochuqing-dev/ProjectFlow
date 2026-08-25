@@ -1,0 +1,13 @@
+projectflow:
+  runtime:
+    mode: external
+    data-contract-version: projectflow-runtime-data-v1
+  auth:
+    required: true
+  credentials:
+    store: ${PROJECTFLOW_CREDENTIAL_STORE:auto}
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate

@@ -19,9 +19,16 @@ import com.projectflow.entity.ModelProtocol;
 class SecurityGuardrailTest {
     @Test
     void jwtServiceRejectsExplicitWeakSecret() {
-        assertThatThrownBy(() -> new JwtService("short-secret", 60))
+        assertThatThrownBy(() -> new JwtService("short-secret", 60, true))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("JWT_SECRET");
+    }
+
+    @Test
+    void jwtServiceRejectsPlaceholderWhenAuthenticationIsEnabled() {
+        assertThatThrownBy(() -> new JwtService("replace-with-at-least-32-random-bytes", 60, true))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("explicitly configured");
     }
 
     @Test

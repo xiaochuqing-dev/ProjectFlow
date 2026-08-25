@@ -1,0 +1,23 @@
+server:
+  address: 127.0.0.1
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+projectflow:
+  runtime:
+    mode: local-release
+    data-contract-version: projectflow-runtime-data-v1
+  credentials:
+    store: ${PROJECTFLOW_CREDENTIAL_STORE:auto}
+
+logging:
+  file:
+    name: ${PROJECTFLOW_LOG_DIR:${PROJECTFLOW_DATA_DIR}/logs}/projectflow.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7
+      total-size-cap: 70MB

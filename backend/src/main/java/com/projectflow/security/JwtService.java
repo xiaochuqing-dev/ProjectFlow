@@ -27,9 +27,10 @@ public class JwtService {
 
     public JwtService(
         @Value("${projectflow.jwt.secret:${JWT_SECRET:replace-with-at-least-32-random-bytes}}") String secret,
-        @Value("${projectflow.jwt.access-token-minutes:${JWT_ACCESS_TOKEN_MINUTES:60}}") long accessTokenMinutes
+        @Value("${projectflow.jwt.access-token-minutes:${JWT_ACCESS_TOKEN_MINUTES:60}}") long accessTokenMinutes,
+        @Value("${projectflow.auth.required:false}") boolean authenticationRequired
     ) {
-        this.key = Keys.hmacShaKeyFor(resolveSecretBytes(secret));
+        this.key = Keys.hmacShaKeyFor(resolveSecretBytes(secret, authenticationRequired));
         this.accessTokenMinutes = accessTokenMinutes;
     }
 
@@ -54,9 +55,12 @@ public class JwtService {
         return UUID.fromString(subject);
     }
 
-    private byte[] resolveSecretBytes(String secret) {
+    private byte[] resolveSecretBytes(String secret, boolean authenticationRequired) {
         String trimmed = secret == null ? "" : secret.trim();
         if (DEFAULT_PLACEHOLDER_SECRET.equals(trimmed)) {
+            if (authenticationRequired) {
+                throw new IllegalStateException("JWT_SECRET must be explicitly configured when authentication is enabled.");
+            }
             LOGGER.warn("JWT_SECRET is using the default placeholder. ProjectFlow generated an in-memory development key; all sessions expire after restart and this is not safe for production.");
             byte[] generated = new byte[64];
             new SecureRandom().nextBytes(generated);
