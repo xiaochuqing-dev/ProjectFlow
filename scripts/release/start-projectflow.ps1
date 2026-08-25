@@ -88,12 +88,12 @@ if (Test-Path -LiteralPath $statePath -PathType Leaf) {
     } catch {
         Throw-ReleaseError 'PORT_CONFLICT' 'The existing ProjectFlow instance state cannot be verified.'
     }
-    if ((Get-PortListeners -Port $BackendPort).Count -gt 0 -or (Get-PortListeners -Port $FrontendPort).Count -gt 0) {
+    if (@(Get-PortListeners -Port $BackendPort).Count -gt 0 -or @(Get-PortListeners -Port $FrontendPort).Count -gt 0) {
         Throw-ReleaseError 'PORT_CONFLICT' 'A runtime port is occupied by an unknown process.'
     }
     Remove-Item -LiteralPath $statePath -Force -ErrorAction SilentlyContinue
 }
-if ((Get-PortListeners -Port $BackendPort).Count -gt 0 -or (Get-PortListeners -Port $FrontendPort).Count -gt 0) {
+if (@(Get-PortListeners -Port $BackendPort).Count -gt 0 -or @(Get-PortListeners -Port $FrontendPort).Count -gt 0) {
     Throw-ReleaseError 'PORT_CONFLICT' 'A runtime port is occupied by an unknown process.'
 }
 Clear-VerifiedStaleH2Lock -LockPath (Join-Path $layout.database 'projectflow.lock.db')
