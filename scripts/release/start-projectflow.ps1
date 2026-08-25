@@ -103,7 +103,14 @@ if ($CheckOnly) {
     exit 0
 }
 
-if (Test-Path -LiteralPath (Join-Path $layout.database 'projectflow.mv.db') -PathType Leaf) {
+$databasePath = Join-Path $layout.database 'projectflow.mv.db'
+$schemaStatePath = Join-Path $layout.backups 'projectflow-schema-state.json'
+if ((Test-Path -LiteralPath $databasePath -PathType Leaf) -and (Test-Path -LiteralPath $schemaStatePath -PathType Leaf)) {
+    # A trusted marker lets the launcher protect an already-managed database
+    # before opening it. Markerless V3.9 databases are protected by the
+    # release Flyway strategy after exact schema inspection; calling the
+    # PowerShell backup first would reject the legacy upgrade before Flyway
+    # gets a chance to create its migration-owned backup.
     & $backupScript -DataRoot $DataRoot -ReleaseRoot $ReleaseRoot -Reason 'pre-start-upgrade' -RequireDatabase | Out-Null
 }
 
