@@ -5,7 +5,7 @@ param (
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "ProjectFlow V3.3.8 - Docker/team mode"
+Write-Host "ProjectFlow V3.10 - Docker/developer mode"
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $backendDir = Join-Path $root "backend"
