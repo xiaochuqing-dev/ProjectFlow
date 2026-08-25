@@ -1,6 +1,14 @@
 package com.projectflow.migration;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.channels.FileChannel;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
 
 import javax.sql.DataSource;
 
@@ -20,6 +28,8 @@ import org.springframework.stereotype.Component;
 @Component
 @ConditionalOnProperty(name = "spring.flyway.enabled", havingValue = "true")
 public class ProjectFlowFlywayMigrationStrategy implements FlywayMigrationStrategy {
+    private static final String SCHEMA_STATE_FILE = "projectflow-schema-state.json";
+    private static final String SCHEMA_STATE_VERSION = "projectflow-schema-state-v1";
     private final DatabaseSchemaSignature signature;
     private final EmbeddedH2BackupService h2BackupService;
     private final PostgresBackupAcknowledgement postgresBackupAcknowledgement;
@@ -64,16 +74,21 @@ public class ProjectFlowFlywayMigrationStrategy implements FlywayMigrationStrate
                     : null;
                 runMigrate(flyway);
                 completeH2Retention(backup);
+                recordSchemaState(dataSource, flyway);
                 return;
             }
             switch (inspection.classification()) {
-                case EMPTY -> runMigrate(flyway);
+                case EMPTY -> {
+                    runMigrate(flyway);
+                    recordSchemaState(dataSource, flyway);
+                }
                 case KNOWN_V39 -> {
                     EmbeddedH2BackupService.BackupArtifact backup =
                         requirePreMigrationProtection(dataSource, inspection, flyway);
                     baselineKnownV39(flyway);
                     runMigrate(flyway);
                     completeH2Retention(backup);
+                    recordSchemaState(dataSource, flyway);
                 }
                 case KNOWN_CURRENT -> throw new SchemaMigrationException(
                     "UNSUPPORTED_LEGACY_SCHEMA",
@@ -194,6 +209,58 @@ public class ProjectFlowFlywayMigrationStrategy implements FlywayMigrationStrate
 
     private void completeH2Retention(EmbeddedH2BackupService.BackupArtifact backup) {
         if (backup != null) h2BackupService.pruneCompletedBackups(backupDirectory);
+    }
+
+    private void recordSchemaState(DataSource dataSource, Flyway flyway) {
+        try {
+            DatabaseSchemaSignature.Inspection inspection = signature.inspect(dataSource);
+            if (!inspection.matchesRestorableSchema()) {
+                throw new SchemaMigrationException(
+                    "SCHEMA_MIGRATION_BLOCKED",
+                    "The migrated database did not match a known restorable schema."
+                );
+            }
+            String content = "{\n"
+                + "  \"schemaVersion\":\"" + SCHEMA_STATE_VERSION + "\",\n"
+                + "  \"databaseType\":\"" + escape(inspection.dialect()) + "\",\n"
+                + "  \"schemaClassification\":\"" + inspection.classification().name() + "\",\n"
+                + "  \"schemaFingerprint\":\"" + escape(inspection.actualFingerprint()) + "\",\n"
+                + "  \"flywayCurrentVersion\":\"" + escape(currentVersion(flyway)) + "\",\n"
+                + "  \"updatedAt\":\"" + Instant.now() + "\"\n"
+                + "}\n";
+            Files.createDirectories(backupDirectory);
+            Path target = backupDirectory.resolve(SCHEMA_STATE_FILE);
+            Path temporary = backupDirectory.resolve(SCHEMA_STATE_FILE + ".tmp");
+            byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+            try (FileChannel channel = FileChannel.open(
+                temporary,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING,
+                StandardOpenOption.WRITE
+            )) {
+                channel.write(ByteBuffer.wrap(bytes));
+                channel.force(true);
+            }
+            try {
+                Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException exception) {
+                throw new IllegalStateException("Atomic schema state move is required", exception);
+            }
+        } catch (SchemaMigrationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new SchemaMigrationException(
+                "SCHEMA_MIGRATION_BLOCKED",
+                "Trusted schema state could not be recorded.",
+                exception
+            );
+        }
+    }
+
+    private String escape(String value) {
+        if (value == null) return "";
+        return value.replace("\\", "\\\\").replace("\"", "\\\"")
+            .replace("\r", " ").replace("\n", " ");
     }
 
     private String currentVersion(Flyway flyway) {

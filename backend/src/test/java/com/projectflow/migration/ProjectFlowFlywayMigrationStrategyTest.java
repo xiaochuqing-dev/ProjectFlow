@@ -30,6 +30,12 @@ class ProjectFlowFlywayMigrationStrategyTest {
             assertThat(columnExists(connection, "ai_providers", "secret_ref")).isTrue();
             assertThat(historyCount(connection)).isEqualTo(2);
         }
+        String schemaState = Files.readString(Path.of("target", "migration-test-backups", "projectflow-schema-state.json"));
+        assertThat(schemaState)
+            .contains("\"schemaVersion\":\"projectflow-schema-state-v1\"")
+            .contains("\"schemaClassification\":\"KNOWN_CURRENT\"")
+            .contains("\"flywayCurrentVersion\":\"2\"")
+            .doesNotContain("C:\\");
     }
 
     @Test

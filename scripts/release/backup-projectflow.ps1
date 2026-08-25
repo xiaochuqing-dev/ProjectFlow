@@ -38,6 +38,32 @@ $payloadPath = Join-Path $layout.backups $payloadName
 $manifestName = "$backupId.manifest.json"
 $manifestPath = Join-Path $layout.backups $manifestName
 $databaseUrl = 'jdbc:h2:file:' + $layout.database.Replace('\', '/') + '/projectflow;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE'
+$schemaStatePath = Join-Path $layout.backups 'projectflow-schema-state.json'
+$schemaClassification = 'unknown'
+$flywayCurrentVersion = 'unknown'
+$schemaStateValid = $false
+if (Test-Path -LiteralPath $schemaStatePath -PathType Leaf) {
+    if (Test-ReparsePath -Path $schemaStatePath) {
+        Throw-ReleaseError 'BACKUP_FAILED' 'The trusted schema state marker uses a junction or symlink.'
+    }
+    try {
+        $schemaState = Get-Content -LiteralPath $schemaStatePath -Raw | ConvertFrom-Json
+        $schemaClassification = [string]$schemaState.schemaClassification
+        $flywayCurrentVersion = [string]$schemaState.flywayCurrentVersion
+        $schemaStateValid = (
+            ([string]$schemaState.schemaVersion -eq 'projectflow-schema-state-v1') -and
+            ([string]$schemaState.databaseType -eq 'h2') -and
+            ($schemaClassification -in @('KNOWN_V39', 'KNOWN_CURRENT')) -and
+            ($flywayCurrentVersion -in @('1', '2')) -and
+            ([string]$schemaState.schemaFingerprint -match '^[0-9a-fA-F]{64}$')
+        )
+    } catch {
+        $schemaStateValid = $false
+    }
+}
+if (-not $schemaStateValid) {
+    Throw-ReleaseError 'BACKUP_FAILED' 'The backend has not exported a verified schema identity for this database.'
+}
 
 try {
     $backupSql = "BACKUP TO '$($tempPayload.Replace('\\', '/'))'"
@@ -55,9 +81,9 @@ try {
         databaseType = 'h2'
         createdAt = [DateTime]::UtcNow.ToString('o')
         reason = $safeReason
-        schemaClassification = 'unknown'
-        flywayCurrentVersion = 'unknown'
-        flywayTargetVersion = 'unknown'
+        schemaClassification = $schemaClassification
+        flywayCurrentVersion = $flywayCurrentVersion
+        flywayTargetVersion = $flywayCurrentVersion
         payloadFile = $payloadName
         payloadBytes = [int64]$payloadInfo.Length
         sha256 = Get-FileSha256Hex -Path $payloadPath
