@@ -1,0 +1,43 @@
+# ProjectFlow V3.10 Windows portable runtime
+
+This boundary packages the existing Spring Boot executable jar and Next standalone output. It does not add a desktop shell, installer, updater, service, watcher or daemon.
+
+## Build
+
+From the repository root, run:
+
+```powershell
+./scripts/release/build-windows-portable.ps1 -OutputRoot ./artifacts/projectflow-portable -Clean
+```
+
+The build may use Maven, npm, Git, jlink and the build machine JDK/Node. The output contains `backend/projectflow.jar`, `frontend/server.js` with `.next/static` and `public`, a jlink Java 17 image, `runtime/node/node.exe`, the locked H2 runtime jar, release scripts, `manifest.json` and `checksums.sha256.json`. The zip and its sidecar SHA-256 are emitted beside the package directory.
+
+The runtime manifest records a full source SHA, build time, resolved Spring Boot/Next/Java/Node/Flyway versions, data-contract version and payload hashes. The packager fails closed if build provenance cannot be resolved; it never fabricates migration evidence.
+
+## Runtime
+
+```powershell
+./scripts/release/start-projectflow.ps1 -NoBrowser
+./scripts/release/stop-projectflow.ps1
+./scripts/release/restore-projectflow.ps1 -BackupManifest <validated-manifest>
+```
+
+Installed mode defaults to `%LOCALAPPDATA%\ProjectFlow`. `PROJECTFLOW_DATA_DIR` or `-DataRoot` has explicit priority. `-Portable` is opt-in and uses a separate sibling data root unless `-PortableRoot` is supplied. The launcher rejects the install root, source root, filesystem root and reparse-point escape. Runtime processes use the bundled Java and Node directly; no Maven, npm, Git, source tree, package install or build is invoked.
+
+The launcher verifies manifest/checksums before creating `data/database`, `data/storage`, `backups`, `logs`, `cache`, `config`, `temp` and `run`. It performs an atomic-write and free-space preflight, starts the backend with `embedded,release`, enables the release Flyway gate, and injects the external backup/config/log/temp/cache directories. It binds the local release to loopback, writes state only to the external data root, and records PID, process start time, command hash and bundled artifact marker. Stop terminates only a process whose recorded identity still matches; unknown listeners produce `PORT_CONFLICT` and are not killed.
+
+Before an existing embedded H2 database is opened, the launcher creates an H2 payload backup. `backup-projectflow.ps1` writes a complete payload plus manifest and SHA-256, but the PowerShell boundary cannot independently prove the database schema signature. Restore first creates an emergency backup, validates the selected payload/hash and H2-openability in isolation, moves the current database into a retained recovery directory, re-opens the installed files before success, and rolls back on failure. It never deletes the last current or backup copy. A restore with `schemaClassification=unknown` is intentionally blocked by the Windows release gate until the backend's trusted schema-signature metadata is carried into the runtime backup contract.
+
+`dpapi-smoke.ps1` is a Windows-only placeholder smoke for current-user DPAPI round-trip using a non-provider test value. It is not a ProviderCredentialStore implementation and does not prove backend credential migration.
+
+## Verification
+
+```powershell
+./scripts/release/test-release-scripts.ps1
+./scripts/release/manifest-projectflow.ps1 -Root <package> -Verify
+./scripts/release/dpapi-smoke.ps1 -DataRoot <isolated-data-root>
+```
+
+`.github/workflows/windows-release.yml` performs clean unpack, PATH-without-developer-tools startup, bundled-process identity checks, stop-and-restart, exact health/stop/port checks, full install-tree checksum stability, Java DPAPI and legacy H2 gates, H2 backup/restore with a fail-closed schema-identity assertion, synthetic V3.9 baseline startup with protected-row preservation, foreign-port refusal, PowerShell DPAPI smoke and sensitive marker scanning. It uses pinned current action commits and never supplies a real Provider key.
+
+The existing backend still owns its current embedded profile and schema behavior. The portable scripts therefore do not claim Flyway migration, OS credential migration, PostgreSQL backup, or legacy-schema acceptance; the release workflow remains blocked until the backend migration service exports trusted schema classification into the runtime backup/restore boundary and the credential-store contracts are implemented and tested.

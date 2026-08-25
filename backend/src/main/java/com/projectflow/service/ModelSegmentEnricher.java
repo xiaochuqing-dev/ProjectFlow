@@ -219,7 +219,7 @@ public class ModelSegmentEnricher {
         return providerRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId).stream()
             .filter(provider -> provider.getType() != AiProviderType.MOCK)
             .filter(AiProvider::isDefaultEnabled)
-            .filter(provider -> provider.getApiKey() != null && !provider.getApiKey().isBlank())
+            .filter(AiProvider::hasConfiguredCredential)
             .findFirst()
             .orElse(null);
     }

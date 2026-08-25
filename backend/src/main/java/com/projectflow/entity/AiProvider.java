@@ -38,6 +38,10 @@ public class AiProvider {
     @Column(name = "api_key", columnDefinition = "text")
     private String apiKey;
 
+    /** Opaque ProviderCredentialStore reference; never a credential value. */
+    @Column(name = "secret_ref", length = 200)
+    private String secretRef;
+
     @Column(name = "model_name", nullable = false, length = 160)
     private String modelName;
 
@@ -149,6 +153,14 @@ public class AiProvider {
         return apiKey;
     }
 
+    public String getSecretRef() {
+        return secretRef;
+    }
+
+    public boolean hasConfiguredCredential() {
+        return (secretRef != null && !secretRef.isBlank()) || (apiKey != null && !apiKey.isBlank());
+    }
+
     public String getModelName() {
         return modelName;
     }
@@ -213,12 +225,54 @@ public class AiProvider {
         this.name = name;
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
+        this.secretRef = null;
         this.modelName = modelName;
         this.type = type;
         this.temperature = temperature;
         this.maxTokens = maxTokens;
         this.defaultEnabled = defaultEnabled;
         this.purposeTags = purposeTags == null ? new ArrayList<>() : new ArrayList<>(purposeTags);
+    }
+
+    /**
+     * Release write path: only an opaque secret reference is persisted. The
+     * legacy apiKey column is cleared in the same entity update.
+     */
+    public void updateWithSecretRef(
+        String name,
+        String baseUrl,
+        String secretRef,
+        String modelName,
+        AiProviderType type,
+        Double temperature,
+        Integer maxTokens,
+        boolean defaultEnabled,
+        List<String> purposeTags
+    ) {
+        this.name = name;
+        this.baseUrl = baseUrl;
+        this.apiKey = null;
+        this.secretRef = blankToNull(secretRef);
+        this.modelName = modelName;
+        this.type = type;
+        this.temperature = temperature;
+        this.maxTokens = maxTokens;
+        this.defaultEnabled = defaultEnabled;
+        this.purposeTags = purposeTags == null ? new ArrayList<>() : new ArrayList<>(purposeTags);
+    }
+
+    public void setSecretRef(String secretRef) {
+        this.secretRef = blankToNull(secretRef);
+    }
+
+    public void clearLegacyApiKey() {
+        this.apiKey = null;
+    }
+
+    /** Restores the credential columns after a failed persistence attempt. */
+    public void restoreCredentialState(String secretRef, String legacyApiKey) {
+        this.secretRef = blankToNull(secretRef);
+        this.apiKey = legacyApiKey;
     }
 
     public void setDefaultEnabled(boolean enabled) {

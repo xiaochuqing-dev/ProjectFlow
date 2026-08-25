@@ -71,7 +71,7 @@ class ModelGatewayProtocolMatrixTest {
         outputLimited = true;
         for (ModelProtocol protocol : ModelProtocol.values()) {
             var response = registry.require(protocol).execute(new CanonicalModelRequest(
-                provider(protocol), "只返回 JSON", "{}", 256, null, false, Duration.ofSeconds(30)
+                provider(protocol), "test-key", "只返回 JSON", "{}", 256, null, false, Duration.ofSeconds(30)
             ));
             assertThat(response.finishReason()).isEqualTo(NormalizedFinishReason.OUTPUT_LIMIT);
             assertThat(response.usage().source()).isEqualTo("ACTUAL");
@@ -346,7 +346,7 @@ class ModelGatewayProtocolMatrixTest {
         AiProviderType type = protocol == ModelProtocol.OPENAI_RESPONSES ? AiProviderType.OPENAI
             : protocol == ModelProtocol.ANTHROPIC_MESSAGES ? AiProviderType.ANTHROPIC : AiProviderType.OPENAI_COMPATIBLE;
         String baseUrl = protocol == ModelProtocol.ANTHROPIC_MESSAGES ? serverBase : serverBase + "/v1";
-        provider.update("matrix", baseUrl, "test-key", "test-model", type, 0.1, 20_000, true, List.of("TEST"));
+        provider.update("matrix", baseUrl, "legacy-sentinel", "test-model", type, 0.1, 20_000, true, List.of("TEST"));
         provider.configureProtocol(protocol, null, AiProviderAuthMode.PROTOCOL_DEFAULT, null, null, Map.of(), 30,
             true, protocol == ModelProtocol.OPENAI_CHAT_COMPLETIONS, protocol == ModelProtocol.OPENAI_RESPONSES,
             false, false);
@@ -374,7 +374,7 @@ class ModelGatewayProtocolMatrixTest {
     }
 
     private CanonicalModelRequest request(AiProvider provider) {
-        return new CanonicalModelRequest(provider, "只返回 JSON", "{}", 256, null, false, Duration.ofSeconds(30));
+        return new CanonicalModelRequest(provider, "test-key", "只返回 JSON", "{}", 256, null, false, Duration.ofSeconds(30));
     }
 
     private boolean shouldLimit() {

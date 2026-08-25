@@ -1,0 +1,34 @@
+{
+  "taskGoal": "Implement the V3.10 Flyway migration, schema-signature, H2 backup/recovery, and PostgreSQL acknowledgement chain with focused verification.",
+  "actualChanges": [
+    "Added the V3.9 entity-derived V1 baseline and nullable V2 ai_providers.secret_ref migration; Flyway is the release schema owner while baselineOnMigrate remains false.",
+    "Added exact bounded schema inspection for tables, columns, type families, nullability, primary keys, unique constraints, indexes, and foreign keys, with frozen V3.9 and known-current classifications.",
+    "Added H2 BACKUP TO archives with checksummed complete manifests, atomic artifact moves, bounded retention, tamper validation, and isolated restore without an automatic database switch.",
+    "Added fail-closed Flyway preflight for empty, known V3.9, current-history, unknown legacy, unsupported dialect, invalid baseline configuration, and PostgreSQL backup acknowledgement paths.",
+    "Raised the backend dependency baseline to Spring Boot 3.5.15 and pinned the requested framework/runtime/security dependency floors; SCIP protobuf, Guava, and Testcontainers commons-compress are directly managed at safer versions."
+  ],
+  "keyFiles": [
+    "backend/pom.xml",
+    "backend/src/main/resources/db/migration/V1__v39_schema_baseline.sql",
+    "backend/src/main/resources/db/migration/V2__provider_secret_ref.sql",
+    "backend/src/main/java/com/projectflow/migration/DatabaseSchemaSignature.java",
+    "backend/src/main/java/com/projectflow/migration/EmbeddedH2BackupService.java",
+    "backend/src/main/java/com/projectflow/migration/ProjectFlowFlywayMigrationStrategy.java",
+    "backend/src/main/java/com/projectflow/migration/PostgresBackupAcknowledgement.java",
+    "backend/src/test/java/com/projectflow/migration/DatabaseSchemaSignatureTest.java",
+    "backend/src/test/java/com/projectflow/migration/EmbeddedH2BackupServiceTest.java",
+    "backend/src/test/java/com/projectflow/migration/ProjectFlowFlywayMigrationStrategyTest.java",
+    "backend/src/test/java/com/projectflow/migration/ProjectFlowFlywayPostgresIT.java"
+  ],
+  "verification": {
+    "build": "mvn -B -DskipTests package passed; main and test sources compiled.",
+    "tests": "Focused migration suite passed: 13 tests, 0 failures before the final H2 index-name canonicalization; the final DatabaseSchemaSignatureTest reran 4 tests with 0 failures. PostgreSQL Testcontainers fixture compiled and was skipped because PROJECTFLOW_RUN_POSTGRES_MIGRATION_TESTS was not enabled.",
+    "manualCheck": "Targeted dependency tree resolved Boot 3.5.15, Spring 6.2.19, Spring Data 3.5.12, Tomcat 10.1.55, Micrometer 1.15.12, Logback 1.5.34, Jackson 2.21.5, Netty 4.1.136.Final, PostgreSQL 42.7.12, Log4j 2.25.5, Guava 33.4.8-jre, Protobuf 3.25.8, and commons-compress 1.27.1."
+  },
+  "unfinished": [
+    "Release and external profiles must explicitly enable Flyway and set Hibernate ddl-auto=validate; those profiles are owned by the parent agent.",
+    "Real PostgreSQL migration remains pending an opt-in Docker/Testcontainers run.",
+    "A later full test-compile attempt is blocked by parallel ProviderCredentialMigrationCoordinator constructor changes outside this database scope; the focused migration suite had already passed with 13 tests."
+  ],
+  "sedimentCandidates": []
+}

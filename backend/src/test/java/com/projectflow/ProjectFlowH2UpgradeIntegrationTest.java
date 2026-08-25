@@ -183,7 +183,11 @@ class ProjectFlowH2UpgradeIntegrationTest {
             assertThat(providers.count()).isEqualTo(1);
             AiProvider migratedProvider = providers.findAll().get(0);
             assertThat(migratedProvider.getProtocol()).isEqualTo(ModelProtocol.OPENAI_CHAT_COMPLETIONS);
-            assertThat(migratedProvider.getApiKey()).isEqualTo("legacy-placeholder");
+            assertThat(migratedProvider.getApiKey()).isNull();
+            assertThat(migratedProvider.getSecretRef()).isNotBlank();
+            assertThat(upgraded.getBean(com.projectflow.service.ProviderCredentialStore.class)
+                .status(migratedProvider.getSecretRef()))
+                .isEqualTo(com.projectflow.service.ProviderCredentialStore.Status.CONFIGURED);
             assertThat(migratedProvider.isDefaultEnabled()).isTrue();
             assertThat(sediments.count()).isEqualTo(1);
             assertThat(cards.count()).isEqualTo(2);
@@ -231,6 +235,7 @@ class ProjectFlowH2UpgradeIntegrationTest {
                 "--spring.datasource.driver-class-name=org.h2.Driver",
                 "--spring.datasource.username=sa",
                 "--spring.datasource.password=",
+                "--spring.profiles.active=test",
                 "--spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
                 "--spring.jpa.hibernate.ddl-auto=" + ddlAuto,
                 "--spring.jpa.open-in-view=false",

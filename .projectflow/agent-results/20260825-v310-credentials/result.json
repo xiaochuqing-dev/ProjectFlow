@@ -1,0 +1,33 @@
+{
+  "taskGoal": "V3.10 B8 secure Provider credential storage and request-scoped Model Gateway credentials.",
+  "actualChanges": [
+    "Provider writes now use opaque secretRef values backed by a credential store; legacy rows use write/read-back verification before the same database persistence clears api_key, and failure paths preserve the prior database/store state where the transaction can roll back.",
+    "Added Windows current-user DPAPI, explicit test/CI in-memory, unavailable-platform stores, provider cleanup coordination, and a startup legacy migration coordinator with a zero-plaintext assertion and idempotent rerun behavior.",
+    "Model Gateway canonical requests and OpenAI Responses, OpenAI-compatible Chat Completions, and Anthropic adapters consume only request-scoped credentials; API responses expose only configured/status information, and credential-like custom headers are rejected.",
+    "Added focused credential-store, migration, gateway-boundary, protocol-parity, provider-security, transaction, and H2 upgrade coverage."
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ProviderCredentialStore.java",
+    "backend/src/main/java/com/projectflow/service/WindowsDpapiProviderCredentialStore.java",
+    "backend/src/main/java/com/projectflow/service/ProviderCredentialMigrationCoordinator.java",
+    "backend/src/main/java/com/projectflow/service/AiProviderService.java",
+    "backend/src/main/java/com/projectflow/service/ModelGatewayService.java",
+    "backend/src/main/java/com/projectflow/service/model/CanonicalModelRequest.java",
+    "backend/src/main/java/com/projectflow/service/model/OpenAiSdkSupport.java",
+    "backend/src/main/java/com/projectflow/service/model/AnthropicMessagesAdapter.java",
+    "backend/src/main/java/com/projectflow/service/model/CompatibleRelayTransport.java",
+    "backend/src/test/java/com/projectflow/service/ProviderCredentialStoreTest.java",
+    "backend/src/test/java/com/projectflow/service/ProviderCredentialMigrationCoordinatorTest.java",
+    "backend/src/test/java/com/projectflow/service/ModelGatewayCredentialBoundaryTest.java",
+    "backend/src/test/java/com/projectflow/ProjectFlowH2UpgradeIntegrationTest.java"
+  ],
+  "verification": {
+    "build": "mvn -q -DskipTests compile passed",
+    "tests": "Focused Maven credential, migration, gateway, protocol, provider-service, and H2 upgrade tests passed.",
+    "manualCheck": "git diff --check passed; production adapters have no direct getApiKey call; backend/.projectflow/config is absent after tests, so no credential artifact remains."
+  },
+  "unfinished": [
+    "Windows DPAPI native integration smoke remains environment-dependent and was not run in this non-Windows test environment."
+  ],
+  "sedimentCandidates": []
+}

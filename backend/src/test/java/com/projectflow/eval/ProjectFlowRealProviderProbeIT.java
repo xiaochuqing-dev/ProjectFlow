@@ -11,9 +11,16 @@ import org.junit.jupiter.api.Test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.service.AiProviderUrlGuard;
+import com.projectflow.service.InMemoryProviderCredentialStore;
+import com.projectflow.service.ModelCapabilityRegistry;
 import com.projectflow.service.ModelGatewayService;
 import com.projectflow.service.ModelOutputAdapter;
+import com.projectflow.service.ModelRequestPolicy;
 import com.projectflow.service.ModelTaskType;
+import com.projectflow.service.model.AnthropicMessagesAdapter;
+import com.projectflow.service.model.ModelProtocolAdapterRegistry;
+import com.projectflow.service.model.OpenAiChatCompletionsAdapter;
+import com.projectflow.service.model.OpenAiResponsesAdapter;
 
 class ProjectFlowRealProviderProbeIT {
 
@@ -23,17 +30,27 @@ class ProjectFlowRealProviderProbeIT {
         Assumptions.assumeTrue(config != null, "未提供真实 Provider 配置，健康检查跳过");
 
         ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
+        AiProviderUrlGuard urlGuard = new AiProviderUrlGuard();
+        InMemoryProviderCredentialStore credentialStore = new InMemoryProviderCredentialStore();
         ModelGatewayService gateway = new ModelGatewayService(
             mapper,
-            new AiProviderUrlGuard(),
+            urlGuard,
             new ModelOutputAdapter(mapper),
+            new ModelCapabilityRegistry(),
+            new ModelRequestPolicy(config.reasoningEffort()),
+            new ModelProtocolAdapterRegistry(List.of(
+                new OpenAiResponsesAdapter(urlGuard),
+                new OpenAiChatCompletionsAdapter(urlGuard),
+                new AnthropicMessagesAdapter(urlGuard)
+            )),
+            credentialStore,
             config.timeoutSeconds()
         );
         AiProvider provider = new AiProvider(UUID.randomUUID());
         provider.update(
             config.name(),
             config.baseUrl(),
-            config.apiKey(),
+            null,
             config.model(),
             config.type(),
             0.0,
@@ -55,6 +72,7 @@ class ProjectFlowRealProviderProbeIT {
             config.supportsReasoning(),
             config.supportsReasoningControl()
         );
+        provider.setSecretRef(credentialStore.writeAndVerify(provider.getId(), config.apiKey()));
 
         var response = gateway.callStructured(
             provider,

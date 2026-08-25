@@ -120,6 +120,8 @@ jobs:
           cache: maven
       - name: PostgreSQL Testcontainers 真实集成测试
         working-directory: backend
+        env:
+          PROJECTFLOW_RUN_POSTGRES_MIGRATION_TESTS: "true"
         run: mvn -B -Ppostgres-it verify
       - name: 保存 PostgreSQL 测试报告
         if: always()

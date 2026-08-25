@@ -38,6 +38,8 @@ public class ModelGatewayService {
     private final ModelCapabilityRegistry capabilityRegistry;
     private final ModelRequestPolicy requestPolicy;
     private final ModelProtocolAdapterRegistry protocolAdapters;
+    private final ProviderCredentialStore providerCredentialStore;
+    private final boolean allowLegacyCredentialFallback;
 
     @Autowired
     public ModelGatewayService(
@@ -47,6 +49,7 @@ public class ModelGatewayService {
         ModelCapabilityRegistry capabilityRegistry,
         ModelRequestPolicy requestPolicy,
         ModelProtocolAdapterRegistry protocolAdapters,
+        ProviderCredentialStore providerCredentialStore,
         @Value("${projectflow.model.connection-timeout-seconds:10}") int connectionTimeoutSeconds,
         @Value("${projectflow.model.request-timeout-seconds:240}") int requestTimeoutSeconds
     ) {
@@ -56,6 +59,8 @@ public class ModelGatewayService {
         this.capabilityRegistry = capabilityRegistry;
         this.requestPolicy = requestPolicy;
         this.protocolAdapters = protocolAdapters;
+        this.providerCredentialStore = providerCredentialStore;
+        this.allowLegacyCredentialFallback = false;
         this.configuredConnectionTimeout = Duration.ofSeconds(Math.max(1, Math.min(60, connectionTimeoutSeconds)));
         this.configuredRequestTimeout = Duration.ofSeconds(Math.max(30, requestTimeoutSeconds));
     }
@@ -77,8 +82,10 @@ public class ModelGatewayService {
             capabilityRegistry,
             requestPolicy,
             protocolAdapters,
+            new InMemoryProviderCredentialStore(),
             10,
-            requestTimeoutSeconds
+            requestTimeoutSeconds,
+            true
         );
     }
 
@@ -95,8 +102,49 @@ public class ModelGatewayService {
                 new OpenAiResponsesAdapter(aiProviderUrlGuard),
                 new OpenAiChatCompletionsAdapter(aiProviderUrlGuard),
                 new AnthropicMessagesAdapter(aiProviderUrlGuard)
-            )), 10, requestTimeoutSeconds
+            )), new InMemoryProviderCredentialStore(), 10, requestTimeoutSeconds, true
         );
+    }
+
+    /** Explicit store constructor for tests and non-Spring callers; never falls back to the entity plaintext column. */
+    public ModelGatewayService(
+        ObjectMapper objectMapper,
+        AiProviderUrlGuard aiProviderUrlGuard,
+        ModelOutputAdapter outputAdapter,
+        ModelCapabilityRegistry capabilityRegistry,
+        ModelRequestPolicy requestPolicy,
+        ModelProtocolAdapterRegistry protocolAdapters,
+        ProviderCredentialStore providerCredentialStore,
+        int requestTimeoutSeconds
+    ) {
+        this(
+            objectMapper, aiProviderUrlGuard, outputAdapter, capabilityRegistry, requestPolicy, protocolAdapters,
+            providerCredentialStore, 10, requestTimeoutSeconds, false
+        );
+    }
+
+    private ModelGatewayService(
+        ObjectMapper objectMapper,
+        AiProviderUrlGuard aiProviderUrlGuard,
+        ModelOutputAdapter outputAdapter,
+        ModelCapabilityRegistry capabilityRegistry,
+        ModelRequestPolicy requestPolicy,
+        ModelProtocolAdapterRegistry protocolAdapters,
+        ProviderCredentialStore providerCredentialStore,
+        int connectionTimeoutSeconds,
+        int requestTimeoutSeconds,
+        boolean allowLegacyCredentialFallback
+    ) {
+        this.objectMapper = objectMapper;
+        this.aiProviderUrlGuard = aiProviderUrlGuard;
+        this.outputAdapter = outputAdapter;
+        this.capabilityRegistry = capabilityRegistry;
+        this.requestPolicy = requestPolicy;
+        this.protocolAdapters = protocolAdapters;
+        this.providerCredentialStore = providerCredentialStore;
+        this.allowLegacyCredentialFallback = allowLegacyCredentialFallback;
+        this.configuredConnectionTimeout = Duration.ofSeconds(Math.max(1, Math.min(60, connectionTimeoutSeconds)));
+        this.configuredRequestTimeout = Duration.ofSeconds(Math.max(30, requestTimeoutSeconds));
     }
 
     public JsonNode callJson(AiProvider provider, String prompt, int outputTokenLimit) throws IOException, InterruptedException {
@@ -279,8 +327,10 @@ public class ModelGatewayService {
                 ? parameters.timeoutSeconds()
                 : configuredRequestTimeout.toSeconds())
         );
+        String credential = resolveCredential(provider);
         CanonicalModelRequest request = new CanonicalModelRequest(
             provider,
+            credential,
             structuredSystemPrompt(parameters, capabilities),
             prompt,
             parameters.effectiveMaxTokens(),
@@ -328,6 +378,33 @@ public class ModelGatewayService {
             }
         }
         throw new IOException("model request failed");
+    }
+
+    private String resolveCredential(AiProvider provider) throws IOException {
+        if (provider == null || provider.getAuthMode() == com.projectflow.entity.AiProviderAuthMode.NONE) return "";
+        String secretRef = provider.getSecretRef();
+        if (secretRef != null && !secretRef.isBlank()) {
+            try {
+                String credential = providerCredentialStore.read(secretRef);
+                if (credential == null || credential.isBlank()) {
+                    throw new ModelCredentialException("SECRET_STORE_UNAVAILABLE");
+                }
+                return credential;
+            } catch (ProviderCredentialStoreException failure) {
+                throw new ModelCredentialException(failure.code());
+            } catch (RuntimeException failure) {
+                // Third-party/custom stores must not leak implementation
+                // messages or accidentally become a plaintext fallback.
+                throw new ModelCredentialException("SECRET_STORE_UNAVAILABLE");
+            }
+        }
+        // Only explicit compatibility constructors used by focused tests may
+        // consume their synthetic legacy entity key. Spring production wiring
+        // always takes the secure store path and never falls back to plaintext.
+        if (allowLegacyCredentialFallback && provider.getApiKey() != null && !provider.getApiKey().isBlank()) {
+            return provider.getApiKey();
+        }
+        throw new ModelCredentialException("SECRET_STORE_UNAVAILABLE");
     }
 
     private String structuredSystemPrompt(RequestParameters parameters, ModelCapabilities capabilities) {
@@ -526,6 +603,19 @@ public class ModelGatewayService {
     public String failureMessage(Exception exception) {
         String code = ModelFailureClassifier.classifyException(exception);
         return ModelFailureClassifier.humanReason(code, "");
+    }
+
+    public static final class ModelCredentialException extends IOException {
+        private final String code;
+
+        public ModelCredentialException(String code) {
+            super(code == null || code.isBlank() ? "Provider credential unavailable" : code);
+            this.code = code == null || code.isBlank() ? "SECRET_STORE_UNAVAILABLE" : code;
+        }
+
+        public String code() {
+            return code;
+        }
     }
 
     private boolean isTransientModelStatus(int statusCode) {
