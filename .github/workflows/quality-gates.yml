@@ -1,4 +1,4 @@
-name: ProjectFlow V3.9 Quality Gates
+name: ProjectFlow V3.10 Quality Gates
 
 on:
   push:
@@ -38,10 +38,10 @@ jobs:
   backend-unit-and-h2:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
           distribution: temurin
           java-version: "17"
@@ -100,7 +100,7 @@ jobs:
           test -f target/surefire-reports/TEST-com.projectflow.eval.ProjectHistoryV385TitleQualityTest.xml
       - name: 保存 JUnit 报告
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: backend-junit
           path: |
@@ -110,10 +110,10 @@ jobs:
   postgres-integration:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
           distribution: temurin
           java-version: "17"
@@ -123,7 +123,7 @@ jobs:
         run: mvn -B -Ppostgres-it verify
       - name: 保存 PostgreSQL 测试报告
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: postgres-junit
           path: backend/target/failsafe-reports
@@ -131,14 +131,17 @@ jobs:
   frontend-quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - working-directory: frontend
         run: npm ci
+      - name: 前端生产依赖 High/Critical 门禁
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
       - name: TypeScript 与生产构建
         working-directory: frontend
         run: npm run lint && npm run build
@@ -149,8 +152,8 @@ jobs:
   hermes-mcp:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
       - name: ProjectFlow 只读 stdio MCP 契约与故障恢复
@@ -159,8 +162,8 @@ jobs:
   obsidian-projection:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
       - name: Obsidian 投影完整性、增量、冲突与恢复
@@ -169,13 +172,13 @@ jobs:
   browser-e2e:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
           distribution: temurin
           java-version: "17"
           cache: maven
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22"
           cache: npm
@@ -189,7 +192,7 @@ jobs:
         run: npm run test:e2e
       - name: 保存浏览器失败证据
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-report
           path: |
@@ -200,7 +203,7 @@ jobs:
   sensitive-content:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: 阻止明显密钥进入仓库
@@ -212,6 +215,19 @@ jobs:
           fi
       - name: 校验 V3.8.0 安全验收产物
         run: python scripts/verify_v380_acceptance_evidence.py
+
+  dependency-security:
+    name: OSV locked dependency gate
+    permissions:
+      actions: read
+      contents: read
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@6e4298ebc4db23e847df9b2e2de2939d6f066c67 # v2.5.1
+    with:
+      scan-args: |-
+        -r
+        ./
+      upload-sarif: false
+      fail-on-vuln: true
 
   optional-real-provider-qualification:
     name: optional-real-provider-qualification (${{ matrix.id }})
@@ -259,10 +275,10 @@ jobs:
             supports_reasoning_control: "true"
             reasoning_effort: max
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
           distribution: temurin
           java-version: "17"
@@ -331,7 +347,7 @@ jobs:
           fi
       - name: 保存内部真实模型资格评测工件
         if: ${{ always() && (inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id) }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: projectflow-real-model-qualification-${{ matrix.id }}
           path: backend/target/projectflow-eval
@@ -387,10 +403,10 @@ jobs:
             reasoning_effort: max
             dogfood_test: QwenDogfoodRegressionTest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
           distribution: temurin
           java-version: "17"
@@ -463,7 +479,7 @@ jobs:
           fi
       - name: 保存内部真实模型场景评测工件
         if: ${{ always() && (inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id) }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: projectflow-real-model-scenarios-${{ matrix.id }}
           path: backend/target/projectflow-eval
