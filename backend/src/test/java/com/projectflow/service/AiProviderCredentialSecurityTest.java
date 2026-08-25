@@ -260,7 +260,7 @@ class AiProviderCredentialSecurityTest {
                 .satisfies(error -> assertThat(((AppException) error).getCode()).isEqualTo("AI_PROVIDER_HEADER_BLOCKED"));
         }
         assertThatThrownBy(() -> service(repository, new RecordingStore()).update(
-            userId, provider.getId(), request("", Map.of("X-Provider-Option", "sk-sensitive-value-1234567890"))))
+            userId, provider.getId(), request("", Map.of("X-Provider-Option", "token=synthetic-header-value"))))
             .isInstanceOf(AppException.class)
             .satisfies(error -> assertThat(((AppException) error).getCode()).isEqualTo("AI_PROVIDER_HEADER_BLOCKED"));
         assertThatThrownBy(() -> AiProviderHeaderPolicy.requireSafe(Map.of("X-Provider-Option", "api_key=opaque-secret-value")))

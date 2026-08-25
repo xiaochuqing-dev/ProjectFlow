@@ -191,6 +191,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Playwright 核心流程
         working-directory: frontend
+        env:
+          PROJECTFLOW_CREDENTIAL_STORE: in-memory
         run: npm run test:e2e
       - name: 保存浏览器失败证据
         if: always()
