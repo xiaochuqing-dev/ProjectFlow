@@ -1,0 +1,27 @@
+{
+  "taskGoal": "完成 V3.10 release readiness 闭环，验证干净 Windows portable 包、V3.9 旧库升级、H2 备份恢复、凭据边界和远程质量门禁。",
+  "actualChanges": [
+    "修复 portable 启动器在没有 schema marker 的 V3.9 数据库上过早调用 PowerShell 备份的问题；markerless 旧库现在交给 release Flyway 做精确 schema 检查和迁移前保护，未知 schema 仍由后端 fail-closed。",
+    "修正 Windows 合成 V3.9 升级门禁对 PowerShell 数组结果的判断，确保 V2 Flyway 记录和受保护项目行被真实验证。",
+    "收窄 portable 敏感内容扫描到真实 token 形态，避免 README 占位符、字体命名和打包依赖路径被误报，同时保留对运行时文本和数据目录的扫描。",
+    "完成并推送 PostgreSQL 凭据安全、Flyway schema marker 和 H2 备份清单修复；备份清单现在报告 KNOWN_CURRENT 或 KNOWN_V39，不再把已识别数据库写成 unknown。"
+  ],
+  "keyFiles": [
+    "scripts/release/start-projectflow.ps1",
+    "scripts/release/backup-projectflow.ps1",
+    ".github/workflows/windows-release.yml",
+    "backend/src/main/java/com/projectflow/migration/ProjectFlowFlywayMigrationStrategy.java",
+    "backend/src/test/java/com/projectflow/migration/ProjectFlowFlywayMigrationStrategyTest.java",
+    "backend/src/test/java/com/projectflow/ProjectFlowPostgresIT.java",
+    "docs/projectflow-v3.10-windows-portable-runtime.md"
+  ],
+  "verification": {
+    "build": "本地干净 worktree 的 Next standalone、TypeScript、Spring Boot jar、H2 runtime、jlink Java runtime 和 portable archive 构建通过；最终提交 dd7c102 的 Windows portable 远程构建也通过。",
+    "tests": "远程 V3.10 Quality Gates 全部通过：backend/H2、PostgreSQL Testcontainers、Playwright、frontend、Hermes、Obsidian、敏感内容和 OSV；真实外部 Provider 场景按无密钥策略跳过。Windows portable 门禁通过 Java 凭据/迁移、干净解包启动、备份恢复、V3.9 旧库升级、端口冲突和敏感扫描。",
+    "manualCheck": "本地 portable 包通过 manifest 校验、DPAPI 往返、health、start/stop、H2 backup/restore、schemaClassification=KNOWN_CURRENT、flywayCurrentVersion=2、V3.9 保护项目保留和 foreign-port refusal；工作树保留用户已有的 frontend/next-env.d.ts、frontend/AGENTS.md、frontend/CLAUDE.md 未提交修改。"
+  },
+  "unfinished": [
+    "真实外部模型 Provider qualification 未启用；CI 因没有安全密钥按设计跳过，不影响本次 release/runtime 门禁。"
+  ],
+  "sedimentCandidates": []
+}
