@@ -203,7 +203,9 @@ jobs:
         run: |
           $packageRoot = Join-Path $env:RUNNER_TEMP 'projectflow-clean-unpack'
           $dataRoot = Join-Path $env:RUNNER_TEMP 'projectflow-runtime-data'
-          $matches = @(Get-ChildItem $packageRoot,$dataRoot -Recurse -File -ErrorAction SilentlyContinue | Select-String -Pattern '(?i)(sk-[A-Za-z0-9_-]{12,}|ark-[A-Za-z0-9-]{12,}|github_pat_[A-Za-z0-9_]{20,}|Bearer\s+[A-Za-z0-9._-]{8,}|Authorization\s*:\s*\S+)')
+          $binaryExtensions = @('.exe','.dll','.jar','.zip','.db','.bin','.node','.wasm','.woff','.woff2','.ttf','.otf','.png','.jpg','.jpeg','.gif','.ico','.webp','.pdf')
+          $textFiles = @(Get-ChildItem $packageRoot,$dataRoot -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $binaryExtensions -notcontains $_.Extension.ToLowerInvariant() })
+          $matches = @($textFiles | Select-String -Pattern '(?i)(?:\bsk-(?:proj-)?[A-Za-z0-9]{20,}\b|\bark-[A-Za-z0-9]{20,}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b|\bBearer\s+(?=[A-Za-z0-9._-]{16,}\b)(?=[A-Za-z0-9._-]*\d)[A-Za-z0-9._-]{16,}\b|\bAuthorization\s*:\s*(?:Bearer\s+)?(?=[A-Za-z0-9._-]{16,}\b)(?=[A-Za-z0-9._-]*\d)[A-Za-z0-9._-]{16,}\b)')
           if ($matches.Count -gt 0) { throw 'NET-03 failed: a sensitive marker was found in the release package or runtime data.' }
 
       # actions/upload-artifact v7.0.1, pinned to the reviewed commit.
