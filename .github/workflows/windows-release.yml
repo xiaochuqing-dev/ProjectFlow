@@ -173,7 +173,7 @@ jobs:
           $checkUrl = $url + ';IFEXISTS=TRUE'
           $history = & $java -cp $h2 org.h2.tools.Shell -url $checkUrl -user sa -password '' -sql 'SELECT VERSION FROM FLYWAY_SCHEMA_HISTORY ORDER BY INSTALLED_RANK' 2>$null
           $protected = & $java -cp $h2 org.h2.tools.Shell -url $checkUrl -user sa -password '' -sql "SELECT COUNT(*) FROM projects WHERE id='$legacyProject'" 2>$null
-          if ($LASTEXITCODE -ne 0 -or ($history -notmatch '2') -or ($protected -notmatch '(?m)^1\s*$')) { throw 'MIG-03 failed: Flyway did not record the controlled V2 upgrade or the protected project was not preserved.' }
+          if ($LASTEXITCODE -ne 0 -or -not ($history -match '(?m)^2\s*$') -or -not ($protected -match '(?m)^1\s*$')) { throw 'MIG-03 failed: Flyway did not record the controlled V2 upgrade or the protected project was not preserved.' }
 
       - name: Port conflict smoke
         shell: pwsh
