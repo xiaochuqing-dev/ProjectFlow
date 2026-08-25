@@ -1,0 +1,270 @@
+{
+  "version": "projectflow-v3.9-technical-acceptance-evidence-v1",
+  "generatedAt": "2026-08-24T10:48:00+08:00",
+  "status": "TECHNICAL_ACCEPTANCE_PASS",
+  "humanReviewStatus": "HUMAN_REVIEW_REQUIRED",
+  "finalAcceptance": false,
+  "baselineMaster": "ab29b1ff0f842c029b5cf121bd584bd40fcf74b2",
+  "branch": "codex/v3.9-project-continuity-closure",
+  "productionEvalSourceHead": "eb38c78fe70d3cf9280e716f7fc906d8729b15b1",
+  "implementationCommits": {
+    "contractAndGroundTruthFreeze": "3ba06c26a977e70a6fa276ae5108a98b7e8638ad",
+    "coreContinuityImplementation": "cc1970370865094caf02a7bb0e621c1a8055af2b",
+    "dogfoodAndDeterministicClosure": "b3094ade1405d263c770ce23b7db8af77897737d",
+    "chapterRepresentationFix": "eb38c78fe70d3cf9280e716f7fc906d8729b15b1"
+  },
+  "pullRequest": {
+    "number": 17,
+    "url": "https://github.com/xiaochuqing-dev/ProjectFlow/pull/17",
+    "status": "DRAFT"
+  },
+  "deterministicEvidence": {
+    "groundTruth": {
+      "calibrationCaseCount": 15,
+      "holdoutCaseCount": 15,
+      "executedCaseCount": 30,
+      "passedCaseCount": 30,
+      "artifactSha256": "be0f0967073bda24c7dae2a7f90a4b60c42b12ce1ec23b6c99953b04f00db9e7",
+      "executionMapSha256": "4d012f555fe0bc853a48d9aa10b49231660cbcad1cfe68d0de5777f1ea4b212a"
+    },
+    "dogfood": {
+      "stepCount": 8,
+      "passedStepCount": 8,
+      "finalNoChangeModelRequestCount": 0,
+      "eventConservation": true,
+      "artifactSha256": "600a0d483920ad0e79c8fac6ea05d7f11c9469cf7539e7e4d71908c7a05aad70"
+    },
+    "backendH2": {
+      "status": "PASS",
+      "testCount": 648,
+      "failureCount": 0,
+      "errorCount": 0,
+      "conditionalSkipCount": 7,
+      "elapsed": "05:52"
+    },
+    "postgresql16": {
+      "status": "PASS",
+      "localTestcontainersPassed": 5,
+      "localTestcontainersTotal": 5,
+      "image": "postgres:16.14",
+      "githubJob": "PASS"
+    },
+    "frontend": {
+      "lint": "PASS",
+      "contractTestsPassed": 58,
+      "contractTestsTotal": 58,
+      "productionBuild": "PASS"
+    },
+    "playwright": {
+      "passed": 9,
+      "total": 9
+    },
+    "hermes": {
+      "passed": 10,
+      "total": 10,
+      "readOnlyToolCount": 21
+    },
+    "obsidian": {
+      "passed": 26,
+      "total": 26,
+      "desktopApplicationRequired": false,
+      "noChangeWriteCount": 0
+    },
+    "rootLauncher": {
+      "status": "PASS",
+      "version": "3.9.0",
+      "sourceRevision": "be9a24504bfcbb015fa86b76ba62e5204ed93f44",
+      "sourceRevisionKind": "evidence-publication successor of the production/eval source head",
+      "frontendBuildId": "CK7Uj_1rpBUJ0HdzhwmOF",
+      "readyAt": "2026-08-24T10:47:25.8227689+08:00",
+      "portsClearAfterExit": true,
+      "localChangesAtBuild": false
+    }
+  },
+  "githubRuns": {
+    "ordinaryPush": {
+      "runId": 32666198144,
+      "url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/32666198144",
+      "head": "eb38c78fe70d3cf9280e716f7fc906d8729b15b1",
+      "conclusion": "SUCCESS"
+    },
+    "ordinaryPullRequest": {
+      "runId": 32666201528,
+      "url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/32666201528",
+      "head": "eb38c78fe70d3cf9280e716f7fc906d8729b15b1",
+      "conclusion": "SUCCESS"
+    },
+    "affectedRealProviderRerun": {
+      "runId": 32666372066,
+      "url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/32666372066",
+      "head": "eb38c78fe70d3cf9280e716f7fc906d8729b15b1",
+      "conclusion": "SUCCESS"
+    }
+  },
+  "realProviderSummary": {
+    "qualificationPassed": 57,
+    "qualificationTotal": 57,
+    "chapterScenarioPassed": 27,
+    "chapterScenarioTotal": 27,
+    "continuityScenarioPassed": 9,
+    "continuityScenarioTotal": 9,
+    "providers": [
+      {
+        "id": "luna",
+        "model": "gpt-5.6-luna",
+        "protocol": "OPENAI_RESPONSES",
+        "reasoningEffort": "max",
+        "qualification": {
+          "passed": 19,
+          "total": 19,
+          "physicalRequestCount": 42,
+          "tokenCount": 121336,
+          "modelLatencyMs": 310572,
+          "deterministicTitleFallbackCount": 0,
+          "validationRepairCount": 0,
+          "artifactSha256": "aa617e591a02fe950da55c8fb9550c4c1ff961cf5833643c1127aca97006a30d",
+          "artifactBytes": 157488
+        },
+        "chapterRegression": {
+          "passed": 9,
+          "total": 9,
+          "physicalRequestCount": 56,
+          "tokenCount": 344326,
+          "modelLatencyMs": 587351,
+          "deterministicTitleFallbackCount": 0,
+          "validationRepairCount": 4,
+          "artifactSha256": "c670d136d7a5c4bc99cacd8d25d8f3928c0d1fd01068f0f39580faaeafba035a",
+          "artifactBytes": 184073
+        },
+        "continuity": {
+          "passed": 3,
+          "total": 3,
+          "physicalRequestCount": 15,
+          "tokenCount": 89174,
+          "modelLatencyMs": 134210,
+          "deterministicTitleFallbackCount": 0,
+          "validationRepairCount": 0,
+          "finalNoChangeModelRequests": 0,
+          "artifactSha256": "5597c2aac09092f9520845222a7c67d8d972f5071fb0221ae40e018318bb90ef",
+          "artifactBytes": 32694
+        }
+      },
+      {
+        "id": "deepseek",
+        "model": "deepseek-v4-flash",
+        "protocol": "OPENAI_CHAT_COMPLETIONS",
+        "reasoningEffort": "max",
+        "qualification": {
+          "passed": 19,
+          "total": 19,
+          "physicalRequestCount": 42,
+          "tokenCount": 208020,
+          "modelLatencyMs": 559460,
+          "deterministicTitleFallbackCount": 0,
+          "validationRepairCount": 0,
+          "artifactSha256": "c0ae352df79aa9ba5807f77e442359e0da1dc3230d43bfb6cfd159d82de09c53",
+          "artifactBytes": 157476
+        },
+        "chapterRegression": {
+          "passed": 9,
+          "total": 9,
+          "physicalRequestCount": 55,
+          "tokenCount": 409930,
+          "modelLatencyMs": 674772,
+          "deterministicTitleFallbackCount": 0,
+          "validationRepairCount": 3,
+          "artifactSha256": "a86aaf3c014607a2da996d7555594aca63a6d369fa151c4bd736d698b1d5e015",
+          "artifactBytes": 186853
+        },
+        "continuity": {
+          "passed": 3,
+          "total": 3,
+          "physicalRequestCount": 15,
+          "tokenCount": 107474,
+          "modelLatencyMs": 163444,
+          "deterministicTitleFallbackCount": 0,
+          "validationRepairCount": 0,
+          "finalNoChangeModelRequests": 0,
+          "artifactSha256": "924e3c90adf971eb1a42c830e70de61ce0349354f1cbf441e719ec7d7ce7e82c",
+          "artifactBytes": 32704
+        }
+      },
+      {
+        "id": "qwen",
+        "model": "qwen3.7-plus",
+        "protocol": "ANTHROPIC_MESSAGES",
+        "reasoningEffort": "max",
+        "qualification": {
+          "passed": 19,
+          "total": 19,
+          "physicalRequestCount": 42,
+          "tokenCount": 172592,
+          "modelLatencyMs": 1397739,
+          "deterministicTitleFallbackCount": 11,
+          "validationRepairCount": 0,
+          "artifactSha256": "318562e4464775bab9eb64fa4fc90da13fcaf683954e14ced016cbfb74d72fa5",
+          "artifactBytes": 158379
+        },
+        "chapterRegression": {
+          "passed": 9,
+          "total": 9,
+          "physicalRequestCount": 57,
+          "tokenCount": 446754,
+          "modelLatencyMs": 3106499,
+          "deterministicTitleFallbackCount": 51,
+          "validationRepairCount": 4,
+          "currentHistoryUnsupportedClaimCount": 0,
+          "artifactSha256": "d5010781bd6d7bbb5b88d215ffa09e8d271719a040b7e1660d4055ac36e4058f",
+          "artifactBytes": 187818
+        },
+        "continuity": {
+          "passed": 3,
+          "total": 3,
+          "physicalRequestCount": 15,
+          "tokenCount": 111102,
+          "modelLatencyMs": 838300,
+          "deterministicTitleFallbackCount": 16,
+          "validationRepairCount": 0,
+          "finalNoChangeModelRequests": 0,
+          "artifactSha256": "d9720b2377c8106eef70c8b5326a3ea20a878be67fb2194e16fc6a7b7af557c7",
+          "artifactBytes": 33219
+        }
+      }
+    ]
+  },
+  "failedRunRetention": {
+    "runId": 32659635453,
+    "status": "FAILED_PRESERVED",
+    "provider": "qwen",
+    "failedScenario": "projectflow-current-history-dogfood",
+    "chapterPassed": 8,
+    "chapterTotal": 9,
+    "unsupportedClaimCount": 1,
+    "summaryArtifact": "failed-runs/32659635453/qwen-chapter-regression-summary.json"
+  },
+  "security": {
+    "repositorySensitiveContentGate": "PASS",
+    "providerArtifactCount": 9,
+    "providerArtifactsValidated": 9,
+    "apiKeyPersisted": false,
+    "authorizationPersisted": false,
+    "promptPersisted": false,
+    "rawResponsePersisted": false,
+    "reasoningPersisted": false,
+    "absoluteMachinePathPersisted": false
+  },
+  "humanReview": {
+    "status": "NOT_REVIEWED",
+    "scenarioCount": 12,
+    "reviewer": null,
+    "automatedSubstitutionAllowed": false,
+    "worksheetSha256": "75f9f18836d87c77db0d8a89fd3541348d2b48f28673e68ffa57e96ff000f9df"
+  },
+  "releaseBoundary": {
+    "readyForReview": false,
+    "mergeAuthorized": false,
+    "v310EntryAuthorized": false,
+    "tagCreated": false,
+    "releaseCreated": false
+  }
+}

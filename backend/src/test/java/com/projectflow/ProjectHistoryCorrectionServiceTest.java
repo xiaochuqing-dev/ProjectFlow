@@ -399,6 +399,42 @@ class ProjectHistoryCorrectionServiceTest {
     }
 
     @Test
+    void additiveStoryContinuationKeepsCorrectionOnlyWhenEveryOriginalMemberRemains() throws Exception {
+        correctionService.create(ownerId, project.getId(), request(
+            "RENAME_STORY", "story-a", List.of(), "持续沿用的用户标题", "", "", "", ""
+        ));
+        UUID appendedEvent = UUID.randomUUID();
+        List<ChangeStory> updatedStories = List.of(
+            story("story-a", "自动标题已经扩展", List.of(eventA, eventB, appendedEvent), FIRST),
+            story("story-b", "补充登录测试", List.of(UUID.randomUUID()), FIRST.plusSeconds(60)),
+            story("story-c", "整理登录说明", List.of(UUID.randomUUID()), FIRST.plusSeconds(120))
+        );
+        HistoryChapter updatedChapter = new HistoryChapter(
+            "chapter-a", "登录能力形成", "登录相关工作形成一个阶段。", FIRST, FIRST.plusSeconds(120),
+            List.of("EARLIEST_DISCOVERED_EVENT"), List.of("story-a", "story-b", "story-c"), 3, 5,
+            "ENGINEERING_GROUPING", "FULL_WITHIN_DISCOVERED_SOURCES", List.of()
+        );
+        EvolutionThread updatedThread = new EvolutionThread(
+            "thread-a", "login", "登录流程", "PROJECT_SUBJECT", List.of("story-a", "story-b", "story-c"),
+            List.of("CREATED", "MODIFIED"), "登录流程已经形成。", List.of(), List.of(), List.of(), 5, null
+        );
+        rewriteSnapshot("additive-source-fingerprint", updatedStories, List.of(updatedChapter), List.of(updatedThread));
+
+        ProjectHistorySnapshot refreshed = snapshotRepository.findByProjectId(project.getId()).orElseThrow();
+        ChangeStory corrected = correctionService.resolve(project.getId(), refreshed).stories().stream()
+            .filter(value -> value.id().equals("story-a")).findFirst().orElseThrow();
+        assertThat(corrected.humanTitle()).isEqualTo("持续沿用的用户标题");
+        assertThat(corrected.eventRefs()).containsExactly(eventA, eventB, appendedEvent);
+        var listed = correctionService.list(ownerId, project.getId()).items().stream()
+            .filter(value -> value.targetId().equals("story-a")).findFirst().orElseThrow();
+        assertThat(listed.membershipStale()).isFalse();
+        assertThat(listed.additiveContinuationReplayed()).isTrue();
+        assertThat(listed.difference()).contains("安全追加");
+        assertThat(correctionRepository.findByProjectIdOrderByCreatedAtAsc(project.getId()).get(0)
+            .getTargetMembershipRefsJson()).contains(eventA.toString(), eventB.toString());
+    }
+
+    @Test
     void changedStoryMembershipDoesNotSilentlyApplyOldCorrection() throws Exception {
         correctionService.create(ownerId, project.getId(), request(
             "RENAME_STORY", "story-a", List.of(), "旧对象标题", "", "", "", ""
@@ -429,6 +465,194 @@ class ProjectHistoryCorrectionServiceTest {
         String listedRevision = correctionService.list(ownerId, project.getId()).presentationRevision();
         String resolvedRevision = correctionService.resolve(project.getId(), snapshot).presentationRevision();
         assertThat(listedRevision).isEqualTo(resolvedRevision);
+    }
+
+    @Test
+    void currentStateAndAgentContextRevisionsAreStableOnNoopAndChangeWithCorrection() throws Exception {
+        var firstState = memoryGatewayService.historyCurrentState(ownerId, project.getId());
+        var firstPackage = agentHistoryService.contextPackage(ownerId, project.getId(), 32_000);
+        var secondPackage = agentHistoryService.contextPackage(ownerId, project.getId(), 32_000);
+        assertThat(firstPackage.packageRevision()).isEqualTo(secondPackage.packageRevision());
+        assertThat(firstPackage.currentProjectState().stateRevision()).isEqualTo(firstState.stateRevision());
+        assertThat(firstPackage.currentProjectState().modelCalled()).isFalse();
+
+        correctionService.create(ownerId, project.getId(), request(
+            "RENAME_STORY", "story-a", List.of(), "修正后持续可读的登录结果", "", "", "", ""
+        ));
+        var changedState = memoryGatewayService.historyCurrentState(ownerId, project.getId());
+        var changedPackage = agentHistoryService.contextPackage(ownerId, project.getId(), 32_000);
+        assertThat(changedState.stateRevision()).isNotEqualTo(firstState.stateRevision());
+        assertThat(changedState.presentationRevision()).isEqualTo(correctionService.list(ownerId, project.getId()).presentationRevision());
+        assertThat(changedState.confirmedState()).contains("修正后持续可读的登录结果");
+        assertThat(changedPackage.packageRevision()).isNotEqualTo(firstPackage.packageRevision());
+        assertThat(changedPackage.currentProjectState().stateRevision()).isEqualTo(changedState.stateRevision());
+
+        mockMvc.perform(get("/api/projects/" + project.getId() + "/history/current-state")
+                .header("Authorization", "Bearer local-test"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.stateRevision").value(changedState.stateRevision()))
+            .andExpect(jsonPath("$.data.modelCalled").value(false));
+        mockMvc.perform(get("/api/projects/" + project.getId() + "/project-memory/history/current-state")
+                .header("Authorization", "Bearer local-test")
+                .header("X-ProjectFlow-Caller", "continuity-test"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.stateRevision").value(changedState.stateRevision()));
+    }
+
+    @Test
+    void oldPinnedStoryCannotOverrideNewerPrimaryCurrentState() throws Exception {
+        ChangeStory oldStory = currentStateStory(
+            "story-old", "旧展示故事", "旧结果仍可追溯", FIRST, "PRIMARY", ""
+        );
+        ChangeStory newStory = currentStateStory(
+            "story-new", "最新主要成果", "最新主要成果已经形成", FIRST.plusSeconds(600), "PRIMARY", ""
+        );
+        replaceCurrentStateFixture(
+            List.of(oldStory, newStory),
+            List.of(chapter("chapter-old", FIRST, List.of(oldStory)),
+                chapter("chapter-new", FIRST.plusSeconds(600), List.of(newStory)))
+        );
+        correctionService.create(ownerId, project.getId(), request(
+            "PIN_STORY", oldStory.id(), List.of(), "", "", "", "", ""
+        ));
+
+        var state = memoryGatewayService.historyCurrentState(ownerId, project.getId());
+        var gatewaySnapshot = memoryGatewayService.snapshot(ownerId, project.getId());
+        var gatewayBrief = memoryGatewayService.brief(ownerId, project.getId(), 6_000);
+        var agentPackage = agentHistoryService.contextPackage(ownerId, project.getId(), 12_000);
+
+        assertThat(state.recentConfirmedChanges().get(0)).contains("最新主要成果");
+        assertThat(state.confirmedState()).contains("最新主要成果：最新主要成果已经形成");
+        assertThat(state.confirmedState().indexOf("最新主要成果"))
+            .isLessThan(state.confirmedState().indexOf("旧展示故事"));
+        assertThat(gatewaySnapshot.projectHistory().overview().currentState()).isEqualTo(state.confirmedState());
+        assertThat(gatewaySnapshot.projectHistory().overview().recentChanges().get(0)).contains("最新主要成果");
+        assertThat(gatewayBrief.contextText()).contains("当前状态：" + state.confirmedState());
+        assertThat(agentPackage.currentProjectState().confirmedState()).isEqualTo(state.confirmedState());
+        assertThat(agentPackage.historicalCoverage()).contains("当前状态：" + state.confirmedState());
+    }
+
+    @Test
+    void latestSupportingChangeRemainsContextAndDoesNotOwnConfirmedState() throws Exception {
+        ChangeStory primary = currentStateStory(
+            "story-primary", "主要成果", "主要成果已经形成", FIRST, "PRIMARY", "", "story-supporting"
+        );
+        ChangeStory supporting = currentStateStory(
+            "story-supporting", "最新辅助变化", "辅助变化已经记录", FIRST.plusSeconds(600),
+            "SUPPORTING", primary.id()
+        );
+        replaceCurrentStateFixture(
+            List.of(primary, supporting),
+            List.of(chapter("chapter-primary", FIRST, List.of(primary)),
+                chapter("chapter-supporting", FIRST.plusSeconds(600), List.of(supporting)))
+        );
+
+        var state = memoryGatewayService.historyCurrentState(ownerId, project.getId());
+
+        assertThat(state.recentConfirmedChanges().get(0)).contains("最新辅助变化");
+        assertThat(state.confirmedState()).contains("主要成果：主要成果已经形成");
+        assertThat(state.confirmedState()).doesNotContain("辅助变化已经记录");
+    }
+
+    @Test
+    void latestChapterAggregatesMultiplePrimaryOutcomesDeterministically() throws Exception {
+        ChangeStory first = currentStateStory(
+            "story-current-a", "当前成果甲", "成果甲已经形成", FIRST.plusSeconds(300), "PRIMARY", ""
+        );
+        ChangeStory second = currentStateStory(
+            "story-current-b", "当前成果乙", "成果乙已经形成", FIRST.plusSeconds(600), "PRIMARY", ""
+        );
+        replaceCurrentStateFixture(
+            List.of(first, second),
+            List.of(chapter("chapter-current", FIRST.plusSeconds(600), List.of(first, second)))
+        );
+
+        var firstRead = memoryGatewayService.historyCurrentState(ownerId, project.getId());
+        var secondRead = memoryGatewayService.historyCurrentState(ownerId, project.getId());
+
+        assertThat(firstRead.confirmedState()).contains("当前成果甲：成果甲已经形成", "当前成果乙：成果乙已经形成");
+        assertThat(firstRead.confirmedState().indexOf("当前成果乙"))
+            .isLessThan(firstRead.confirmedState().indexOf("当前成果甲"));
+        assertThat(secondRead.stateRevision()).isEqualTo(firstRead.stateRevision());
+    }
+
+    @Test
+    void latestChapterCannotMoveOlderPrimaryAheadOfNewerPrimary() throws Exception {
+        ChangeStory oldPrimary = currentStateStory(
+            "story-old-primary", "较早主要成果", "较早主要成果已经形成", FIRST, "PRIMARY", "", "story-latest-support"
+        );
+        ChangeStory newerPrimary = currentStateStory(
+            "story-newer-primary", "较新主要成果", "较新主要成果已经形成", FIRST.plusSeconds(300), "PRIMARY", ""
+        );
+        ChangeStory latestSupporting = currentStateStory(
+            "story-latest-support", "最新支撑变化", "最新支撑变化已经记录", FIRST.plusSeconds(600),
+            "SUPPORTING", oldPrimary.id()
+        );
+        replaceCurrentStateFixture(
+            List.of(oldPrimary, newerPrimary, latestSupporting),
+            List.of(
+                chapter("chapter-newer-primary", FIRST.plusSeconds(300), List.of(newerPrimary)),
+                chapter("chapter-latest-context", FIRST.plusSeconds(600), List.of(oldPrimary, latestSupporting))
+            )
+        );
+
+        var state = memoryGatewayService.historyCurrentState(ownerId, project.getId());
+
+        assertThat(state.confirmedState()).contains("较新主要成果", "较早主要成果");
+        assertThat(state.confirmedState().indexOf("较新主要成果"))
+            .isLessThan(state.confirmedState().indexOf("较早主要成果"));
+    }
+
+    @Test
+    void hiddenPrimaryCannotLeakThroughAutomaticOverviewFallback() throws Exception {
+        ChangeStory primary = currentStateStory(
+            "story-hidden-primary", "不应泄露的主要成果", "隐藏主要成果已经形成", FIRST,
+            "PRIMARY", "", "story-hidden-support"
+        );
+        ChangeStory supporting = currentStateStory(
+            "story-hidden-support", "隐藏支撑变化", "隐藏支撑变化已经记录", FIRST.plusSeconds(60),
+            "SUPPORTING", primary.id()
+        );
+        replaceCurrentStateFixture(
+            List.of(primary, supporting),
+            List.of(chapter("chapter-hidden", FIRST.plusSeconds(60), List.of(primary, supporting)))
+        );
+        correctionService.create(ownerId, project.getId(), request(
+            "HIDE_STORY", primary.id(), List.of(), "", "", "", "", ""
+        ));
+        correctionService.create(ownerId, project.getId(), request(
+            "HIDE_STORY", supporting.id(), List.of(), "", "", "", "", ""
+        ));
+
+        var state = memoryGatewayService.historyCurrentState(ownerId, project.getId());
+        var overview = memoryGatewayService.historyOverview(ownerId, project.getId());
+
+        assertThat(state.confirmedState()).contains("Primary 结果已被展示修正隐藏");
+        assertThat(state.confirmedState()).doesNotContain("自动当前状态", "隐藏主要成果已经形成");
+        assertThat(state.recentConfirmedChanges()).isEmpty();
+        assertThat(overview.overview().currentState()).isEqualTo(state.confirmedState());
+        assertThat(overview.overview().recentChanges()).isEmpty();
+    }
+
+    @Test
+    void primaryWithoutOutcomeCannotFallBackToSupportingAutomaticState() throws Exception {
+        ChangeStory primary = currentStateStory(
+            "story-primary-without-outcome", "主要变化尚无结果", "", FIRST,
+            "PRIMARY", "", "story-supporting-with-outcome"
+        );
+        ChangeStory supporting = currentStateStory(
+            "story-supporting-with-outcome", "支撑变化有结果", "支撑变化已经完成", FIRST.plusSeconds(60),
+            "SUPPORTING", primary.id()
+        );
+        replaceCurrentStateFixture(
+            List.of(primary, supporting),
+            List.of(chapter("chapter-primary-without-outcome", FIRST.plusSeconds(60), List.of(primary, supporting)))
+        );
+
+        var state = memoryGatewayService.historyCurrentState(ownerId, project.getId());
+
+        assertThat(state.confirmedState()).contains("存在 Primary 变化，但没有可确认的结果状态");
+        assertThat(state.confirmedState()).doesNotContain("自动当前状态", "支撑变化已经完成");
     }
 
     @Test
@@ -711,6 +935,52 @@ class ProjectHistoryCorrectionServiceTest {
         } catch (Exception ignored) {
             return List.of();
         }
+    }
+
+    private void replaceCurrentStateFixture(List<ChangeStory> stories, List<HistoryChapter> chapters) throws Exception {
+        Instant earliest = stories.stream().map(ChangeStory::occurredFrom).min(Instant::compareTo).orElse(FIRST);
+        Instant latest = stories.stream().map(ChangeStory::occurredTo).max(Instant::compareTo).orElse(earliest);
+        snapshot.complete(
+            "git:current-state-fixture", "current-state-source-fingerprint", stories.size(), earliest, latest,
+            "project-history-v385-semantic-compression-v1", "project-history-synthesis-v3",
+            objectMapper.writeValueAsString(new HistoryOverviewContent(
+                "此前状态", "自动当前状态仅作无 Primary 时的后备。", List.of(), List.of(), List.of(), List.of()
+            )),
+            objectMapper.writeValueAsString(chapters), objectMapper.writeValueAsString(stories), "[]",
+            objectMapper.writeValueAsString(new HistoryCoverage(
+                true, "CURRENT", stories.size(), stories.size(), 0, 0,
+                java.util.Map.of("GIT", stories.size()), List.of(), List.of()
+            )),
+            "{}", UUID.randomUUID(), false
+        );
+        snapshot = snapshotRepository.saveAndFlush(snapshot);
+    }
+
+    private static ChangeStory currentStateStory(
+        String id,
+        String title,
+        String afterState,
+        Instant occurredAt,
+        String role,
+        String primaryStoryId,
+        String... supportingChangeRefs
+    ) {
+        UUID eventId = UUID.randomUUID();
+        return new ChangeStory(
+            id, id, title, title + "摘要", "此前没有该结果。", "来源记录显示发生变化。", afterState,
+            List.of("项目状态"), "", List.of(), "", List.of(), List.of(), occurredAt, occurredAt,
+            1, 1, "ENGINEERING_GROUPING", "DETERMINISTIC", "FULL_WITHIN_DISCOVERED_SOURCES", List.of(),
+            List.of(eventId), List.of("event:" + eventId), role, primaryStoryId, List.of(supportingChangeRefs), List.of(), List.of(),
+            List.of(), "AUTOMATIC", "", title, title + "摘要", List.of(), false, false, "", "ACTIVE", List.of()
+        );
+    }
+
+    private static HistoryChapter chapter(String id, Instant occurredAt, List<ChangeStory> stories) {
+        return new HistoryChapter(
+            id, id, id + "摘要", occurredAt, occurredAt, List.of("CURRENT_STATE_FIXTURE"),
+            stories.stream().map(ChangeStory::id).toList(), stories.size(), stories.size(),
+            "ENGINEERING_GROUPING", "FULL_WITHIN_DISCOVERED_SOURCES", List.of()
+        );
     }
 
     private HistoryCorrectionRequest request(

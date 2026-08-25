@@ -1,7 +1,14 @@
 # Known risks
 
+- V3.9 技术验收已在生产/eval 源码头 `eb38c78fe70d3cf9280e716f7fc906d8729b15b1` 完成：30-case deterministic map、T0–T7 Dogfood、Backend/H2、PostgreSQL/Playwright、Hermes、Obsidian、root launcher、敏感内容与普通同头 CI 通过；run `32666372066` 的三 Provider qualification 19/19、Chapter 9/9 和 continuity 3/3 全部通过。但真人 Continuity review 仍为 `NOT_REVIEWED`；Ready/merge/master/backfill/cleanup 未完成前，不得宣布 V3.9 Final PASS 或 V3.10 ENTRY。
+- Current Project State 是 corrected History 的派生展示，不是 ProjectFact。它能诚实显示 READY/STALE/DEGRADED/UNKNOWN，但不能证明“完成、成熟、已部署、生产可用”；消费者不得把 state revision 当作事实 Evidence。
+- ProjectFlow 内部 Agent candidate、Correction、Fact ingestion 会写 continuity dirty revision，但不会自动刷新。外部 Git/文件变化没有 watcher，只能由下一次显式 source discovery 发现；不得宣称实时监控。
+- 数据库 Agent candidate 单次最多采集 200 条，超过上限会标记 coverage incomplete。Agent 声明仍是 PROCESS_EVIDENCE；即使后续与 Git Evidence 相关，也不能因自报或模型共识自动提升为 Strong Fact。
+- V3.9 新增的 Snapshot dirty 列与 Correction membership refs 继续依赖 Hibernate `ddl-auto=update`，保持 nullable 兼容。正式 Flyway/Liquibase 版本化迁移属于 V3.10；本轮必须以旧 H2 升级和 PostgreSQL 16 验证防止删库式规避。
+- Additive Correction replay 只在有界旧 membership 完整且全部仍存在时成立。旧行无 refs、refs 截断或 rewrite 替换必须保持 conflict；保守 attention 可能多于理想自动 rebind，但优先避免错绑。
+
 - V3.8.5 已由项目所有者明确批准并豁免本轮量化人工评分，结论只能写 `PASS_BY_EXPLICIT_OWNER_OVERRIDE`。Story/Chapter 三项平均分和核心维度最低分仍未提供，原定量阈值没有得到证明；最终只有一名评审人，批准消息没有重确认 30 Story/12 Chapter item count，P0=0 只表示没有新报告。这些限制必须在最终报告和 backfill 中持续披露。
-- PR #15 merge 后 master run `32652683003` 全绿，但 GitHub Actions 已提示 Node 20 action runtime 和 `setup-java@v4` 弃用；本次没有在仅元数据 backfill 中夹带 workflow 升级，后续应单独升级并跑完整 CI。
+- PR #15 merge 后 master run `32652683003` 与 V3.9 runs `32659635453`/`32666372066` 均提示 Node 20 action runtime 和 `setup-java@v4` 弃用；当前 runner 强制使用 Node 24 后任务仍通过。本轮不夹带无关 workflow 升级，后续应单独升级 actions/setup-java 并跑完整 CI。
 - V3.8.5 Human Readability Round 1 与 Round 2 均为 NEEDS_REVISION_NOT_APPROVED，原 30 Story/8 Chapter 文件和哈希保持冻结。Final Chapter 自动门禁不能提供真人评分；任一 P0 truthfulness failure 都直接阻止 PASS。
 
 - V3.8.5 RC3 的旧失败链必须保留：run `31574016609` 暴露 Chapter repair 误用 Story schema 与宽泛主体错误提升，run `31580355605` 暴露标题缺少明确结果，run `31592405476` 记录 GLM HTTP 429。外部容量后来恢复；Final Chapter 同头 run `32609107531` 已由 Luna、DeepSeek、Qwen 完成 19/19 与 9/9，旧 429 不再是当前阻断。Provider 输出仍有随机性，后续相关合同变化必须按影响范围重验。

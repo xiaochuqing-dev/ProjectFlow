@@ -1,5 +1,11 @@
 # Project Memory Gateway
 
+## V3.9 Current Project State
+
+`GET /api/projects/{projectId}/project-memory/history/current-state` delegates to the native persisted Current Project State read model and records the normal safe Gateway audit event. It returns the same state/source/presentation revisions, currentness, corrected confirmation, recent changes, related Story/Thread/Chapter refs, conflict/unknown/limitations, dirty marker and stale/degraded flags.
+
+Gateway does not derive a second current state, scan sources, invoke a model or promote a Story/Agent claim. Context Package v2 includes this state revision in its canonical identity, so relevant continuity changes propagate while no-op reads remain stable.
+
 ## V3.8.5 corrected history view
 
 Final RC2 wording validation occurs before the snapshot is stored. Gateway consumers therefore receive the same validated human title, summary and distinct Before/Change/After wording; they do not rerun subject normalization, infer claim strength or call a model.

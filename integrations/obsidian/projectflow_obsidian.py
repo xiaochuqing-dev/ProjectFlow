@@ -267,6 +267,7 @@ class GatewayClient:
         base = f"/api/projects/{project_id}/project-memory"
         snapshot = self.get(base + "/snapshot")
         history_overview = self.get(base + "/history/overview")
+        current_state = self.get(base + "/history/current-state")
         history_chapters, chapter_revision = self._pages_with_revision(base + "/history/chapters", None, {"size": 100})
         history_stories, story_revision = self._pages_with_revision(
             base + "/history/stories", None, {"size": 100, "includeHidden": "true"}
@@ -346,6 +347,7 @@ class GatewayClient:
         return {
             "snapshot": snapshot,
             "historyOverview": history_overview,
+            "currentState": current_state,
             "historyChapters": history_chapters,
             "historyStories": history_stories,
             "historyThreads": history_threads,
@@ -776,6 +778,15 @@ class ObsidianProjection:
         lifecycle_query = data.get("lifecycle") or {}
         lifecycle = lifecycle_query.get("lifecycle") or {}
         history_overview = data.get("historyOverview") or snapshot.get("projectHistory") or {}
+        current_state = data.get("currentState") or {
+            "stateRevision": "",
+            "historyStatus": history_overview.get("status"),
+            "currentness": (history_overview.get("coverage") or {}).get("currentness"),
+            "confirmedState": (history_overview.get("overview") or {}).get("currentState"),
+            "conflicts": (history_overview.get("overview") or {}).get("conflicts") or [],
+            "unknowns": (history_overview.get("overview") or {}).get("unknowns") or [],
+            "limitations": (history_overview.get("coverage") or {}).get("limitations") or [],
+        }
         history_chapters = sorted(data.get("historyChapters") or [], key=lambda value: (str(value.get("from") or ""), str(value.get("id") or "")))
         history_stories = sorted(data.get("historyStories") or [], key=lambda value: (str(value.get("occurredFrom") or ""), str(value.get("id") or "")))
         history_threads = sorted(data.get("historyThreads") or [], key=lambda value: (str(value.get("subjectLabel") or ""), str(value.get("id") or "")))
@@ -861,12 +872,13 @@ class ObsidianProjection:
             or (snapshot.get("health") or {}).get("latestRealChangeAt") or snapshot.get("latestFactAt") or ""
         )
         overview_body = self._overview_body(
-            project_id, snapshot, history_overview, history_chapters, visible_history_story_notes, history_thread_notes,
+            project_id, snapshot, history_overview, current_state, history_chapters, visible_history_story_notes, history_thread_notes,
             lifecycle, months, capabilities, evolutions, paths
         )
         notes.append(self._note(
             f"PROJECT_OVERVIEW:{project_id}", "PROJECT_OVERVIEW", project_id, paths["overview"],
-            f"{history_overview.get('projectRevision', '')}:{history_overview.get('sourceEventCount', 0)}:"
+            f"{history_overview.get('projectRevision', '')}:{current_state.get('stateRevision', '')}:"
+            f"{history_overview.get('sourceEventCount', 0)}:"
             f"{snapshot.get('factCount', 0)}:{snapshot.get('activeCapabilityCount', 0)}",
             note_time, overview_body, {
                 "projectflow_detail_url": self._projectflow_history_url(project_id, "OVERVIEW"),
@@ -875,10 +887,12 @@ class ObsidianProjection:
 
         notes.append(self._note(
             f"HISTORY_INDEX:{project_id}", "HISTORY_INDEX", project_id, paths["index:HISTORY_INDEX"],
-            f"{history_overview.get('projectRevision', '')}:{len(history_chapters)}:{len(history_stories)}:{len(history_threads)}",
+            f"{history_overview.get('projectRevision', '')}:{current_state.get('stateRevision', '')}:"
+            f"{len(history_chapters)}:{len(history_stories)}:{len(history_threads)}",
             note_time,
             self._history_index_body(
-                project_id, history_overview, history_chapters, visible_history_story_notes, history_thread_notes, paths
+                project_id, history_overview, current_state, history_chapters, visible_history_story_notes,
+                history_thread_notes, paths
             ),
             {"projectflow_detail_url": self._projectflow_history_url(project_id, "OVERVIEW")},
         ))
@@ -1094,6 +1108,7 @@ class ObsidianProjection:
         project_id: str,
         snapshot: dict[str, Any],
         history_overview: dict[str, Any],
+        current_state: dict[str, Any],
         history_chapters: list[dict[str, Any]],
         history_stories: list[dict[str, Any]],
         history_threads: list[dict[str, Any]],
@@ -1107,8 +1122,9 @@ class ObsidianProjection:
         history = history_overview.get("overview") or {}
         coverage = history_overview.get("coverage") or {}
         warnings = list((snapshot.get("health") or {}).get("warnings") or [])
-        warnings.extend(history.get("conflicts") or [])
-        warnings.extend(history.get("unknowns") or [])
+        warnings.extend(current_state.get("conflicts") or history.get("conflicts") or [])
+        warnings.extend(current_state.get("unknowns") or history.get("unknowns") or [])
+        warnings.extend(current_state.get("limitations") or [])
         corrections = history_overview.get("corrections") or []
         story_by_id = {str(story.get("id")): story for story in history_stories}
         lines = [
@@ -1118,12 +1134,13 @@ class ObsidianProjection:
             "",
             "## 项目历程",
             "",
-            compact_text(history.get("currentState"), 1200) or "尚未生成项目历程；普通 Markdown 与既有事实仍可阅读。",
+            compact_text(current_state.get("confirmedState") or history.get("currentState"), 1200)
+            or "尚未生成项目历程；普通 Markdown 与既有事实仍可阅读。",
             "",
             f"- 历程状态：{status_label(history_overview.get('status'))}",
             f"- 来源事件：{history_overview.get('sourceEventCount', 0)}",
             f"- 可确认范围：{history_overview.get('earliestEventAt') or '未知'} → {history_overview.get('latestEventAt') or '未知'}",
-            f"- 当前性：{status_label(coverage.get('currentness'))}",
+            f"- 当前性：{status_label(current_state.get('currentness') or coverage.get('currentness'))}",
             f"- 完整性：{'完整' if coverage.get('complete') else '存在明确缺口'}",
             f"- 展示修正：{len(corrections)} 条（只覆盖阅读层，不改变事实）",
             "",
@@ -1134,11 +1151,16 @@ class ObsidianProjection:
             "### 最近发生",
             "",
         ]
-        recent_ids = [str(story.get("id")) for story in sorted(
-            history_stories,
-            key=lambda value: (bool(value.get("pinned")), str(value.get("occurredTo") or "")),
+        recent_stories = sorted(history_stories, key=lambda value: str(value.get("id") or ""))
+        recent_stories = sorted(
+            recent_stories, key=lambda value: str(value.get("occurredFrom") or ""), reverse=True
+        )
+        recent_stories = sorted(
+            recent_stories,
+            key=lambda value: (bool(value.get("occurredTo")), str(value.get("occurredTo") or "")),
             reverse=True,
-        )[:5]]
+        )
+        recent_ids = [str(story.get("id")) for story in recent_stories[:5]]
         for story_id in recent_ids:
             story = story_by_id[story_id]
             lines.append(
@@ -1209,6 +1231,7 @@ class ObsidianProjection:
         self,
         project_id: str,
         history_overview: dict[str, Any],
+        current_state: dict[str, Any],
         chapters: list[dict[str, Any]],
         stories: list[dict[str, Any]],
         threads: list[dict[str, Any]],
@@ -1224,7 +1247,8 @@ class ObsidianProjection:
             f"- 变化故事：{len(stories)}",
             f"- 演变链：{len(threads)}",
             f"- 原始事件：{history_overview.get('sourceEventCount', 0)}",
-            f"- 当前性：{status_label(coverage.get('currentness'))}",
+            f"- 当前性：{status_label(current_state.get('currentness') or coverage.get('currentness'))}",
+            f"- 当前确认状态：{compact_text(current_state.get('confirmedState'), 300) or '未知'}",
             "",
             "## 时间篇章",
             "",

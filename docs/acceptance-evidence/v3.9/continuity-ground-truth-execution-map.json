@@ -1,0 +1,239 @@
+{
+  "schemaVersion": "projectflow-v3.9-continuity-ground-truth-execution-map-v1",
+  "groundTruth": "docs/acceptance-evidence/v3.9/continuity-ground-truth.json",
+  "policy": "Every frozen case is bound to an executable repository test. The map does not enter production prompts.",
+  "cases": [
+    {
+      "id": "V39-CAL-01",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/service/ProjectContinuityDeltaTest.java","method":"noOpRevisionIsStableAndContainsNoMutation","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryDogfoodAcceptanceTest.java","method":"replaysV39ContinuityFromV385ThroughCorrectionRewriteAndProviderResume","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-CAL-02",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryDogfoodAcceptanceTest.java","method":"replaysV39ContinuityFromV385ThroughCorrectionRewriteAndProviderResume","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"groupsMultipleCommitsForOneSubjectIntoOneBoundedChangeStory","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-CAL-03",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"reusesUnaffectedStoriesWhenOnlyASeparatedTailWindowChanges","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-CAL-04",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"splitsOneGenericCommitAcrossIndependentSubjectsAndKeepsOwnershipIsolation","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryDogfoodAcceptanceTest.java","method":"replaysV39ContinuityFromV385ThroughCorrectionRewriteAndProviderResume","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-CAL-05",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/service/ProjectHistoryChapterRepresentationPlannerTest.java","method":"a_largeCoherentPhaseKeepsRelatedOutcomeClustersInOneChapter","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryDogfoodAcceptanceTest.java","method":"replaysV39ContinuityFromV385ThroughCorrectionRewriteAndProviderResume","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-CAL-06",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"reusesUnaffectedStoriesWhenOnlyASeparatedTailWindowChanges","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-CAL-07",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/service/ProjectHistoryChapterRepresentationPlannerTest.java","method":"b_heterogeneousPhaseSplitsAtAChronologicalSemanticShift","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-CAL-08",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"reconstructsRenameMoveSplitMergeRevertReapplyMergeCommitsAndMixedMessages","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-CAL-09",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"rebuildsSourceEventsStoriesAndCreatedModifiedRemovedRestoredThread","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-CAL-10",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"invalidatesEventsRemovedByHistoryRewriteWithoutDeletingTheirEvidence","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryDogfoodAcceptanceTest.java","method":"replaysV39ContinuityFromV385ThroughCorrectionRewriteAndProviderResume","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-CAL-11",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"groupsMultipleCommitsForOneSubjectIntoOneBoundedChangeStory","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-CAL-12",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"splitsOneGenericCommitAcrossIndependentSubjectsAndKeepsOwnershipIsolation","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/service/ProjectHistoryClaimEvidenceAttributionContractTest.java","method":"threeIndependentFunctionsInOneCommitDoNotLendEvidenceToEachOther","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-CAL-13",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"genericCommitsLowerConfidenceAndFoldExplicitTestsAndConfigurationUnderThePrimaryResult","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"modelCannotRewriteEngineeringOwnedPrimarySupportingRoleGraph","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-CAL-14",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryCorrectionServiceTest.java","method":"additiveStoryContinuationKeepsCorrectionOnlyWhenEveryOriginalMemberRemains","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryDogfoodAcceptanceTest.java","method":"replaysV39ContinuityFromV385ThroughCorrectionRewriteAndProviderResume","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-CAL-15",
+      "split": "CALIBRATION",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryCorrectionServiceTest.java","method":"changedStoryMembershipDoesNotSilentlyApplyOldCorrection","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryDogfoodAcceptanceTest.java","method":"replaysV39ContinuityFromV385ThroughCorrectionRewriteAndProviderResume","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-HO-01",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/service/AgentWorkResultWriteTest.java","method":"workResultRereadsChangedFilesButKeepsAgentClaimsAsCandidates","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/service/ProjectHistoryClaimEvidenceAttributionContractTest.java","method":"agentResultCannotPromoteAClaimToStrongFact","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-HO-02",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"collectsDatabaseAgentResultCandidateAndAcknowledgesInternalDirtyRevision","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/service/ProjectHistoryClaimEvidenceAttributionContractTest.java","method":"agentResultCannotPromoteAClaimToStrongFact","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-HO-03",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"reconstructsCurrentStateOnlyForDocumentProjectWithoutGitAndKeepsSensitiveContentUnread","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-HO-04",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"keepsNonCodeArtifactsAsPrimaryResultsWithNeutralFirstLayerLanguage","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/service/ProjectHistoryNonCodeHumanLanguageTest.java","method":"reportDataSlidesDesignAndPagesRemainUserResults","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-HO-05",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/service/ProjectHistoryNarrativeEntailmentTest.java","method":"configurationEvidenceCannotClaimDeploymentOrProductionReadiness","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"keepsNonCodeArtifactsAsPrimaryResultsWithNeutralFirstLayerLanguage","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-HO-06",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"stopsLaterWindowsAfterSystemicProviderFailure","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryDogfoodAcceptanceTest.java","method":"replaysV39ContinuityFromV385ThroughCorrectionRewriteAndProviderResume","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-HO-07",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"continuesAfterOneWindowSchemaFailureAndRetriesOnlyThatWindow","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryDogfoodAcceptanceTest.java","method":"replaysV39ContinuityFromV385ThroughCorrectionRewriteAndProviderResume","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-HO-08",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/service/AgentContextPackageTest.java","method":"taskPackageRanksRelevantFactsRedactsTaskAndHasDeterministicRevision","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryCorrectionServiceTest.java","method":"currentStateAndAgentContextRevisionsAreStableOnNoopAndChangeWithCorrection","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-HO-09",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryCorrectionServiceTest.java","method":"currentStateAndAgentContextRevisionsAreStableOnNoopAndChangeWithCorrection","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryDogfoodAcceptanceTest.java","method":"replaysV39ContinuityFromV385ThroughCorrectionRewriteAndProviderResume","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-HO-10",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"integrations/obsidian/test_projectflow_obsidian.py","method":"test_noop_has_zero_writes_and_stable_hashes","gate":"python-unittest"}
+      ]
+    },
+    {
+      "id": "V39-HO-11",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"integrations/obsidian/test_projectflow_obsidian.py","method":"test_current_state_delta_updates_only_required_indexes_and_then_reaches_noop","gate":"python-unittest"},
+        {"source":"integrations/obsidian/test_projectflow_obsidian.py","method":"test_user_content_and_unknown_frontmatter_are_preserved","gate":"python-unittest"}
+      ]
+    },
+    {
+      "id": "V39-HO-12",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"splitsOneGenericCommitAcrossIndependentSubjectsAndKeepsOwnershipIsolation","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/AgentContextApiContractTest.java","method":"apiRejectsDirectStrongFactAndCrossProjectReadsBeforeMutation","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-HO-13",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"sourceAppendReusesUnaffectedWindowCheckpointsAndCreatesOnlyTheTail","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"keepsMoreThanOneThousandEventsAcrossThreeHundredCommitsAndCapsModelAtOneBoundedBatch","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-HO-14",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"reusesUnaffectedStoriesWhenOnlyASeparatedTailWindowChanges","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryDogfoodAcceptanceTest.java","method":"replaysV39ContinuityFromV385ThroughCorrectionRewriteAndProviderResume","gate":"maven-test"}
+      ]
+    },
+    {
+      "id": "V39-HO-15",
+      "split": "HOLDOUT",
+      "tests": [
+        {"source":"backend/src/test/java/com/projectflow/ProjectHistoryReconstructionTest.java","method":"reconstructsCurrentStateOnlyForDocumentProjectWithoutGitAndKeepsSensitiveContentUnread","gate":"maven-test"},
+        {"source":"backend/src/test/java/com/projectflow/ProjectMemoryGatewayTest.java","method":"exposesWarningsForEveryNonReadyProjectHistoryState","gate":"maven-test"}
+      ]
+    }
+  ]
+}

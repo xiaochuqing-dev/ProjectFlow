@@ -63,6 +63,15 @@ public class ProjectHistoryController {
         return ApiResponse.ok(historyService.overview(user.id(), projectId));
     }
 
+    @GetMapping("/current-state")
+    ApiResponse<ProjectCurrentStateResponse> currentState(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(historyService.currentState(user.id(), projectId));
+    }
+
     @GetMapping("/chapters")
     ApiResponse<HistoryChapterPageResponse> chapters(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,

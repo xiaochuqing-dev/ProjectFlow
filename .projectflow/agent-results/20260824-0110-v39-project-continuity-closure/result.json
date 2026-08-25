@@ -1,0 +1,68 @@
+{
+  "taskGoal": "在 V3.8.5 正式闭环后的最新 master 上设计并实现 ProjectFlow V3.9 项目持续认知与增量维护闭环，完成技术验收且不伪造真人评分。",
+  "baselineMaster": "ab29b1ff0f842c029b5cf121bd584bd40fcf74b2",
+  "branch": "codex/v3.9-project-continuity-closure",
+  "productionEvalSourceHead": "eb38c78fe70d3cf9280e716f7fc906d8729b15b1",
+  "pullRequest": {
+    "number": 17,
+    "url": "https://github.com/xiaochuqing-dev/ProjectFlow/pull/17",
+    "status": "DRAFT"
+  },
+  "actualChanges": [
+    "复用既有来源事件、历史快照、Window Planner/Checkpoint、Correction、Agent Context v2、Gateway/Hermes 和 Obsidian 链，实现统一有界 Continuity Delta，没有建立第二套 History、Fact、增量或投影引擎。",
+    "无变化显式 refresh 现为 0 模型请求，并保持 Story、Thread、Chapter、Current Project State、Context Package 与 Obsidian 语义身份稳定；小 delta 只重算受影响范围。",
+    "Correction 现保存有界原始 membership refs，只在同一稳定目标可证明时做 additive replay；rewrite replacement、refs 缺失或截断保持 conflict，不静默丢失或错绑。",
+    "新增持久化 Current Project State 作为 corrected history 的派生读模型，并将 state revision 接入 Native/Gateway/Frontend/Hermes、Agent Context Package 与 Obsidian；读路径不扫描、不调用模型、不写 ProjectFact。",
+    "Agent candidate、Correction 和 Fact ingestion 内部写入现只标记并发安全 dirty revision；数据库 Agent candidate 在下一次显式 refresh 作为 PROCESS_EVIDENCE 有界采集。",
+    "Obsidian Current-State-only delta 只更新 Project Overview 与 History Index，保留用户内容，再次同步为 0 write；不需要安装 Obsidian 桌面应用。",
+    "T0–T7 连续 Dogfood 发现并关闭了过期 Supporting 反向引用和 retry affectedFrom 漂移；修复后 Event conservation、成功 checkpoint 复用与最终 no-change 0 请求全部通过。",
+    "首次真实三 Provider run 由 Qwen 暴露一个 Chapter 代表簇锚定缺陷；修复在保留旧 Chapter 前验证完整 representation plan，并在回填时保留已选中的公开成果措辞。原失败已保留，两个精确回归和原 Dogfood 路径均通过。",
+    "修复后受影响真实矩阵让 Luna Responses/max、DeepSeek Chat/max 和 Qwen Messages/max 全部通过 qualification 19/19、Chapter regression 9/9 与 V3.9 continuity 3/3；安全工件及哈希已固化。"
+  ],
+  "keyFiles": [
+    "docs/projectflow-v3.9-reuse-and-current-state-audit.md",
+    "docs/projectflow-v3.9-product-contract.md",
+    "docs/projectflow-v3.9-incremental-continuity-contract.md",
+    "docs/projectflow-v3.9-current-project-state-contract.md",
+    "docs/projectflow-v3.9-agent-context-continuity.md",
+    "docs/projectflow-v3.9-obsidian-incremental-projection.md",
+    "docs/projectflow-v3.9-acceptance-report.md",
+    "docs/projectflow-v3.9-real-provider-results.md",
+    "docs/acceptance-evidence/v3.9/technical-acceptance-evidence.json",
+    "docs/acceptance-evidence/v3.9/continuity-ground-truth.json",
+    "docs/acceptance-evidence/v3.9/dogfood-sequence.json",
+    "backend/src/main/java/com/projectflow/service/ProjectContinuityDelta.java",
+    "backend/src/main/java/com/projectflow/service/ProjectContinuityDirtyMarker.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryReconstructionService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryReadService.java",
+    "integrations/obsidian/projectflow_obsidian.py"
+  ],
+  "verification": {
+    "build": "PASS：Backend compile/test-compile，Frontend lint、58/58 contracts 与 Next.js production build，根启动器 V3.9.0 的 backend/frontend 健康、正常退出与 3000/8080 端口释放。",
+    "tests": "PASS：Backend/H2 648 项，0 failure、0 error、7 conditional skip；PostgreSQL 16.14 Testcontainers 5/5；Playwright 9/9；Hermes 10/10；Obsidian 26/26；30/30 Ground Truth execution map 与 T0–T7 Dogfood；GitHub push/PR CI 全绿。",
+    "manualCheck": "PASS：复用边界、只读路径、失败保留、敏感内容、9 个 Provider 工件哈希、人工 worksheet 空白性、Draft PR 与 NO TAG/NO RELEASE 边界已复核。"
+  },
+  "providerRuns": [
+    {
+      "runId": 32659635453,
+      "status": "FAILED_PRESERVED",
+      "result": "Luna/DeepSeek 场景通过，Qwen continuity 3/3，Qwen Chapter 8/9；唯一失败有 1 个 unsupported Claim。"
+    },
+    {
+      "runId": 32666372066,
+      "status": "SUCCESS",
+      "result": "三 Provider qualification 57/57、Chapter regression 27/27、V3.9 continuity 9/9，九个提交工件安全校验通过。"
+    }
+  ],
+  "dogfoodSequence": {
+    "status": "PASS",
+    "steps": ["T0", "T1", "T2", "T3", "T4", "T5", "T6", "T7"]
+  },
+  "humanReviewStatus": "NOT_REVIEWED",
+  "unfinished": [
+    "12 个真人 Continuity 场景尚未评审，worksheet 字段保持空白。",
+    "PR #17 必须继续 Draft；Ready、merge、master CI、acceptance backfill、最终 master 验证与分支清理尚未授权。",
+    "V3.10 ENTRY、Tag 和 Release 均未授权。"
+  ],
+  "sedimentCandidates": []
+}

@@ -54,8 +54,9 @@ test("history presentation enums have natural first-layer labels", () => {
   assert.equal(projectHistoryRewriteStateLabel("STALE"), "来源已变化");
 });
 
-test("frontend API exposes read-only overview, chapter, story and thread readers", () => {
+test("frontend API exposes read-only current state, overview, chapter, story and thread readers", () => {
   for (const name of [
+    "getProjectCurrentState",
     "getProjectHistoryOverview",
     "getProjectHistoryChapter",
     "getProjectHistoryStory",
@@ -71,6 +72,13 @@ test("preview renders progressive overview, story states, evidence and evolution
   for (const label of ["最早可确认状态", "时间篇章", "原来状态", "本次变化", "当前结果", "查看来源事件、Commit 与 Evidence", "涉及文件", "查看 Evidence 详情", "所属演变链"]) {
     assert.match(pageSource, new RegExp(label));
   }
+});
+
+test("overview consumes the dedicated current-state read model", () => {
+  assert.match(pageSource, /getProjectCurrentState\(token, projectId\)/);
+  assert.match(pageSource, /currentState\.confirmedState/);
+  assert.match(pageSource, /currentState\.stateRevision/);
+  assert.match(pageSource, /currentState\.continuityDirty/);
 });
 
 test("default history layer hides internal enums behind engineering details", () => {

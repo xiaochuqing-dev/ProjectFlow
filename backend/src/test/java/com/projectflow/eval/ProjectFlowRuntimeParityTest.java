@@ -70,7 +70,8 @@ class ProjectFlowRuntimeParityTest {
 
     @Test
     void realWorkflowCollectsThreeProviderSuitesAcrossBoundedSequentialPhases() throws Exception {
-        String workflow = Files.readString(Path.of("../.github/workflows/quality-gates.yml"));
+        String workflow = Files.readString(Path.of("../.github/workflows/quality-gates.yml"))
+            .replace("\r\n", "\n");
 
         assertThat(workflow)
             .contains(
@@ -100,6 +101,8 @@ class ProjectFlowRuntimeParityTest {
                 "run_gate history-v385-qualification",
                 "run_gate history-v385-chapter-affected",
                 "-Dprojectflow.eval.scenario-scope=chapter",
+                "run_gate history-v39-continuity",
+                "-Dprojectflow.eval.scenario-scope=continuity",
                 "run_gate history-v385-scenarios",
                 "run_gate history-v385-dogfood",
                 "projectflow-real-model-qualification-${{ matrix.id }}",
@@ -118,6 +121,7 @@ class ProjectFlowRuntimeParityTest {
         assertThat(count(workflow, "run_gate history-v385-qualification")).isEqualTo(1);
         assertThat(count(workflow, "run_gate history-v385-scenarios")).isEqualTo(1);
         assertThat(count(workflow, "run_gate history-v385-dogfood")).isEqualTo(1);
+        assertThat(count(workflow, "run_gate history-v39-continuity")).isEqualTo(2);
     }
 
     private static int count(String value, String needle) {

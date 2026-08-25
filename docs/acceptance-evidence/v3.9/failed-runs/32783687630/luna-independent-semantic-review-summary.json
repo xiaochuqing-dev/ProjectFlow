@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "projectflow-v3.9-independent-semantic-review-failure-summary-v1",
+  "runId": 32783687630,
+  "jobId": 97612815028,
+  "headSha": "236bf279dafab4bf4460876797e97f954f40fa7f",
+  "providerId": "luna",
+  "protocol": "OPENAI_RESPONSES",
+  "result": "FAILED",
+  "failureCode": "REVIEW_FIELD_INVALID_ATTACHMENTSEMANTICALLYSUPPORTED",
+  "scenarioCount": 12,
+  "successfulScenarioCount": 0,
+  "failedScenarioCount": 12,
+  "diagnostics": {
+    "logicalModelCalls": 1,
+    "physicalRequestCount": 1,
+    "inputTokens": 3920,
+    "completionTokens": 31515,
+    "totalTokens": 35435,
+    "latencyMs": 277695,
+    "effectiveMaxTokensPerRequest": 65536,
+    "requestSucceeded": true,
+    "schemaMatched": true,
+    "truncated": false,
+    "retryType": "NONE",
+    "finishReason": "COMPLETED",
+    "normalizedFinishReason": "COMPLETE"
+  },
+  "artifactSha256": "5a8013a36c8c7c5308ddffb5d6b2f36b3631e23600551a2fc96336ac5a8a6785",
+  "observedRootCause": "The provider completed one bounded structured response, but at least one judgement representation did not match the evaluator's strict textual enum. The raw value was deliberately not persisted, so its exact representation remains unknown.",
+  "disposition": "KEEP_FAILURE_TIGHTEN_QUOTED_STRING_INSTRUCTION_AND_NORMALIZE_ONLY_BOOLEAN_YES_NO",
+  "security": {
+    "apiKeyPersisted": false,
+    "authorizationPersisted": false,
+    "promptPersisted": false,
+    "rawResponsePersisted": false,
+    "reasoningPersisted": false,
+    "absolutePathPersisted": false
+  }
+}

@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -86,6 +87,7 @@ import com.projectflow.service.ProjectCapabilityService;
 import com.projectflow.service.ProjectCapabilityQueryService;
 import com.projectflow.service.DashboardBootstrapService;
 import com.projectflow.service.ProjectHistoryCorrectionService;
+import com.projectflow.service.ProjectContinuityDirtyMarker;
 import com.projectflow.service.ProjectHistoryWindowCheckpointService;
 import com.projectflow.service.ProjectService;
 import com.projectflow.service.WorkSessionScanService;
@@ -139,6 +141,7 @@ class ProjectFlowPostgresIT {
     @Autowired ProjectCapabilityQueryService capabilityQueryService;
     @Autowired DashboardBootstrapService dashboardBootstrapService;
     @Autowired ProjectHistoryCorrectionService historyCorrectionService;
+    @Autowired ProjectContinuityDirtyMarker continuityDirtyMarker;
     @Autowired ProjectHistoryWindowCheckpointService historyWindowCheckpointService;
     @Autowired ProjectService projectService;
     @Autowired PlatformTransactionManager transactionManager;
@@ -429,6 +432,50 @@ class ProjectFlowPostgresIT {
             assertThat(historyWindowCheckpointRepository.findByProjectIdOrderByUpdatedAtAsc(projectId)).isEmpty();
         } finally {
             executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void serializesDirtyGenerationsInRealPostgresStartingFromLegacyNull() throws Exception {
+        WorkflowFixture fixture = createFixture("PostgreSQL dirty generation 并发验收");
+        UUID projectId = fixture.project().getId();
+        createHistorySnapshot(fixture.project(), "dirty-generation-source");
+        jdbcTemplate.update(
+            "update project_history_snapshots set continuity_dirty_generation = null where project_id = ?",
+            projectId
+        );
+        int writeCount = 8;
+        CountDownLatch ready = new CountDownLatch(writeCount);
+        CountDownLatch start = new CountDownLatch(1);
+        var executor = Executors.newFixedThreadPool(writeCount);
+        try {
+            var futures = java.util.stream.IntStream.range(0, writeCount)
+                .mapToObj(index -> executor.submit(() -> {
+                    ready.countDown();
+                    if (!start.await(20, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("dirty generation start timeout");
+                    }
+                    return continuityDirtyMarker.mark(
+                        projectId, "HISTORY_CORRECTION", "correction:same"
+                    );
+                }))
+                .toList();
+            assertThat(ready.await(20, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            List<String> revisions = futures.stream().map(future -> {
+                try { return future.get(30, TimeUnit.SECONDS); }
+                catch (Exception exception) { throw new AssertionError(exception); }
+            }).toList();
+
+            ProjectHistorySnapshot snapshot = historySnapshotRepository.findByProjectId(projectId).orElseThrow();
+            assertThat(Set.copyOf(revisions)).hasSize(writeCount);
+            assertThat(snapshot.getContinuityDirtyGeneration()).isEqualTo(writeCount);
+            assertThat(revisions).contains(snapshot.getContinuityDirtyRevision());
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+            assertThat(executor.awaitTermination(20, TimeUnit.SECONDS)).isTrue();
+            projectService.delete(fixture.userId(), projectId);
         }
     }
 

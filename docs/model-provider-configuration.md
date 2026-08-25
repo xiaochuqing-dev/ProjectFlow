@@ -1,5 +1,11 @@
 # Model Provider Configuration
 
+## V3.9 acceptance profiles
+
+V3.9 retains exactly GPT 5.6 Luna `gpt-5.6-luna` / `OPENAI_RESPONSES` / max, DeepSeek V4 Flash `deepseek-v4-flash` / `OPENAI_CHAT_COMPLETIONS` / max, and Qwen3.7 Plus `qwen3.7-plus` / `ANTHROPIC_MESSAGES` / max. All use the same continuity Schema, Evidence/Claim validators, bounded windows and production semantic contract; only transport/capability adaptation differs.
+
+The protected GitHub Repository Secret is reused through the workflow environment. Its value must never enter code, docs, command arguments, logs, Agent Result or artifacts. Deterministic gates run before any paid matrix; Provider failures remain separate evidence and do not erase engineering Delta or the last successful snapshot.
+
 ## V3.8.5 Final Chapter acceptance profiles
 
 The current Final Chapter matrix uses exactly these three profiles, all with `max` reasoning and the existing Provider-neutral Model Gateway:

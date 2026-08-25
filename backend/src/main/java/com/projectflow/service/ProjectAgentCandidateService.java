@@ -46,6 +46,7 @@ public class ProjectAgentCandidateService {
     private final LocalProjectPathGuard pathGuard;
     private final LargeFileContentService largeFileContentService;
     private final LocalCommandExecutor commandExecutor;
+    private final ProjectContinuityDirtyMarker continuityDirtyMarker;
 
     public ProjectAgentCandidateService(
         ProjectRepository projectRepository,
@@ -56,7 +57,8 @@ public class ProjectAgentCandidateService {
         SensitiveContentRedactor redactor,
         LocalProjectPathGuard pathGuard,
         LargeFileContentService largeFileContentService,
-        LocalCommandExecutor commandExecutor
+        LocalCommandExecutor commandExecutor,
+        ProjectContinuityDirtyMarker continuityDirtyMarker
     ) {
         this.projectRepository = projectRepository;
         this.factRepository = factRepository;
@@ -67,6 +69,7 @@ public class ProjectAgentCandidateService {
         this.pathGuard = pathGuard;
         this.largeFileContentService = largeFileContentService;
         this.commandExecutor = commandExecutor;
+        this.continuityDirtyMarker = continuityDirtyMarker;
     }
 
     @Transactional
@@ -96,7 +99,9 @@ public class ProjectAgentCandidateService {
         } catch (IllegalArgumentException exception) {
             throw new AppException("AGENT_CANDIDATE_INVALID", exception.getMessage(), HttpStatus.BAD_REQUEST);
         }
-        return response(candidateRepository.save(candidate));
+        candidate = candidateRepository.save(candidate);
+        continuityDirtyMarker.mark(projectId, "AGENT_RESULT_CANDIDATE", "agent-result:" + candidate.getId());
+        return response(candidate);
     }
 
     @Transactional
@@ -205,6 +210,7 @@ public class ProjectAgentCandidateService {
                 List.of("Agent 提交的是 UNKNOWN resolution candidate，仍需工程复验"), sourceAgentId
             )));
         }
+        continuityDirtyMarker.mark(projectId, "AGENT_RESULT_CANDIDATE", "agent-result:" + workResult.getId());
         return new AgentWorkResultResponse(
             projectId, workResult.getId(), changedFiles, List.copyOf(new LinkedHashSet<>(rereadEvidence)),
             sourceRevision, validationStatus, saved.stream().map(ProjectAgentCandidateService::response).toList(),

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -30,6 +31,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.projectflow.dto.ProjectHistoryDtos.ChangeStory;
+import com.projectflow.dto.ProjectHistoryDtos.ClaimAttribution;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryChapter;
+import com.projectflow.dto.ProjectHistoryDtos.HistoryCorrectionRequest;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderType;
 import com.projectflow.entity.EvidenceConfidence;
@@ -37,6 +42,7 @@ import com.projectflow.entity.ProjectFact;
 import com.projectflow.entity.ProjectFactEpistemicStatus;
 import com.projectflow.entity.ProjectFactOrigin;
 import com.projectflow.entity.ProjectFactRecordStatus;
+import com.projectflow.entity.ProjectAgentCandidate;
 import com.projectflow.entity.ProjectHistoryEvent.RewriteState;
 import com.projectflow.entity.ProjectHistorySnapshot;
 import com.projectflow.entity.ProjectMemory;
@@ -44,6 +50,7 @@ import com.projectflow.entity.ProjectSpace;
 import com.projectflow.entity.ProjectStatus;
 import com.projectflow.repository.AiProviderRepository;
 import com.projectflow.repository.ProjectFactRepository;
+import com.projectflow.repository.ProjectAgentCandidateRepository;
 import com.projectflow.repository.ProjectHistoryEventRepository;
 import com.projectflow.repository.ProjectHistorySnapshotRepository;
 import com.projectflow.repository.ProjectHistoryWindowCheckpointRepository;
@@ -53,11 +60,11 @@ import com.projectflow.service.ModelGatewayService;
 import com.projectflow.service.ModelOutputAdapter;
 import com.projectflow.service.ModelTaskType;
 import com.projectflow.service.ProjectHistoryCorrectionService;
+import com.projectflow.service.ProjectContinuityDirtyMarker;
 import com.projectflow.service.ProjectHistoryPromptBuilder;
 import com.projectflow.service.ProjectHistoryReadService;
 import com.projectflow.service.ProjectHistoryReconstructionService;
 import com.projectflow.service.ProjectHistoryWindowPlanner;
-import com.projectflow.dto.ProjectHistoryDtos.HistoryCorrectionRequest;
 import com.projectflow.support.AppException;
 
 @SpringBootTest
@@ -70,15 +77,161 @@ class ProjectHistoryReconstructionTest {
     @Autowired ProjectHistorySnapshotRepository snapshotRepository;
     @Autowired ProjectHistoryWindowCheckpointRepository checkpointRepository;
     @Autowired ProjectFactRepository factRepository;
+    @Autowired ProjectAgentCandidateRepository candidateRepository;
     @Autowired AiProviderRepository providerRepository;
     @Autowired ProjectHistoryReconstructionService reconstructionService;
     @Autowired ProjectHistoryCorrectionService correctionService;
     @Autowired ProjectHistoryReadService readService;
+    @Autowired ProjectContinuityDirtyMarker continuityDirtyMarker;
     @Autowired ModelOutputAdapter outputAdapter;
     @Autowired ObjectMapper objectMapper;
     @MockitoBean ModelGatewayService modelGateway;
 
     @TempDir Path temporaryRoot;
+
+    @Test
+    void collectsDatabaseAgentResultCandidateAndAcknowledgesInternalDirtyRevision() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path projectRoot = temporaryRoot.resolve("agent-candidate-continuity");
+        Files.createDirectories(projectRoot);
+        Files.writeString(projectRoot.resolve("report.md"), "initial report\n", StandardCharsets.UTF_8);
+        ProjectSpace project = project(userId, "Agent Candidate Continuity", projectRoot);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        ProjectAgentCandidate candidate = new ProjectAgentCandidate(
+            project.getId(), "WORK_RESULT", "Agent completed the report revision",
+            ProjectFactEpistemicStatus.PROCESS_EVIDENCE,
+            List.of("file:report.md#sha256=fixture"), "CURRENT", "agent-revision-1",
+            List.of(), "continuity-test-agent"
+        );
+        candidate.markValidationStatus("SOURCE_IDENTITY_REVALIDATED");
+        candidateRepository.saveAndFlush(candidate);
+        continuityDirtyMarker.mark(
+            project.getId(), "AGENT_RESULT_CANDIDATE", "agent-result:" + candidate.getId()
+        );
+
+        var pendingState = readService.currentState(userId, project.getId());
+        assertThat(pendingState.continuityDirty()).isTrue();
+        assertThat(pendingState.currentness()).contains("STALE");
+
+        var refreshed = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(refreshed.cacheHit()).isFalse();
+        assertThat(readService.events(
+            userId, project.getId(), "AGENT_RESULT", "AGENT_RESULT", null, null,
+            "PROCESS_EVIDENCE", "CURRENT", null, false, null, null, 0, 20
+        ).items()).anySatisfy(event -> {
+            assertThat(event.safeSourceLabel()).contains("report revision");
+            assertThat(event.affectedPaths()).contains("report.md");
+        });
+        Map<String, Object> diagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat((List<?>) diagnostics.get("continuityAgentResultRefs")).isNotEmpty();
+        assertThat(readService.currentState(userId, project.getId()).continuityDirty()).isFalse();
+
+        assertThat(reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false).cacheHit())
+            .isTrue();
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void oldRefreshCannotAcknowledgeSameTargetWriteMarkedDuringRefresh() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path projectRoot = temporaryRoot.resolve("dirty-generation-race");
+        Files.createDirectories(projectRoot);
+        Files.writeString(projectRoot.resolve("status.md"), "initial status\n", StandardCharsets.UTF_8);
+        ProjectSpace project = project(userId, "Dirty Generation Race", projectRoot);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+
+        String observed = continuityDirtyMarker.mark(
+            project.getId(), "HISTORY_CORRECTION", "correction:same"
+        );
+        AtomicReference<String> markedDuringRefresh = new AtomicReference<>();
+
+        reconstructionService.refresh(
+            userId, project.getId(), UUID.randomUUID(), true,
+            (stage, message) -> {
+                if ("HISTORY_ENGINEERING_RECONSTRUCTION".equals(stage)
+                    && markedDuringRefresh.get() == null) {
+                    markedDuringRefresh.set(continuityDirtyMarker.mark(
+                        project.getId(), "HISTORY_CORRECTION", "correction:same"
+                    ));
+                }
+            }
+        );
+
+        String latest = markedDuringRefresh.get();
+        assertThat(latest).isNotBlank().isNotEqualTo(observed);
+        var state = readService.currentState(userId, project.getId());
+        assertThat(state.continuityDirty()).isTrue();
+        assertThat(state.pendingContinuityRevision()).isEqualTo(latest);
+        assertThat(state.currentness()).contains("STALE");
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("continuityConsumedDirtyRevision", observed)
+            .containsEntry("continuityDirtyAcknowledged", false)
+            .containsEntry("continuityPendingDirtyRevision", latest);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void cacheHitCannotAcknowledgeSameTargetWriteMarkedAfterDiscovery() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path projectRoot = temporaryRoot.resolve("dirty-generation-cache-hit-race");
+        Files.createDirectories(projectRoot);
+        Files.writeString(projectRoot.resolve("status.md"), "stable status\n", StandardCharsets.UTF_8);
+        ProjectSpace project = project(userId, "Dirty Cache Hit Race", projectRoot);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+
+        String observed = continuityDirtyMarker.mark(
+            project.getId(), "HISTORY_CORRECTION", "correction:same"
+        );
+        AtomicReference<String> markedBeforeAcknowledge = new AtomicReference<>();
+
+        var outcome = reconstructionService.refresh(
+            userId, project.getId(), UUID.randomUUID(), false,
+            (stage, message) -> {
+                if ("PERSIST_HISTORY_SNAPSHOT".equals(stage)
+                    && markedBeforeAcknowledge.get() == null) {
+                    markedBeforeAcknowledge.set(continuityDirtyMarker.mark(
+                        project.getId(), "HISTORY_CORRECTION", "correction:same"
+                    ));
+                }
+            }
+        );
+
+        String latest = markedBeforeAcknowledge.get();
+        assertThat(outcome.cacheHit()).isTrue();
+        assertThat(latest).isNotBlank().isNotEqualTo(observed);
+        var state = readService.currentState(userId, project.getId());
+        assertThat(state.continuityDirty()).isTrue();
+        assertThat(state.pendingContinuityRevision()).isEqualTo(latest);
+        assertThat(state.currentness()).contains("STALE");
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("continuityConsumedDirtyRevision", observed)
+            .containsEntry("continuityDirtyAcknowledged", false)
+            .containsEntry("continuityPendingDirtyRevision", latest);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void cacheHitAcknowledgesOnlyTheObservedDirtyGeneration() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path projectRoot = temporaryRoot.resolve("dirty-generation-cache-hit-ack");
+        Files.createDirectories(projectRoot);
+        Files.writeString(projectRoot.resolve("status.md"), "stable status\n", StandardCharsets.UTF_8);
+        ProjectSpace project = project(userId, "Dirty Cache Hit Ack", projectRoot);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+
+        String observed = continuityDirtyMarker.mark(
+            project.getId(), "HISTORY_CORRECTION", "correction:same"
+        );
+        var outcome = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        assertThat(outcome.cacheHit()).isTrue();
+        assertThat(readService.currentState(userId, project.getId()).continuityDirty()).isFalse();
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("continuityConsumedDirtyRevision", observed)
+            .containsEntry("continuityDirtyAcknowledged", true)
+            .containsEntry("continuityPendingDirtyRevision", "");
+    }
 
     @Test
     void rebuildsSourceEventsStoriesAndCreatedModifiedRemovedRestoredThread() throws Exception {
@@ -206,6 +359,11 @@ class ProjectHistoryReconstructionTest {
         assertThat(sensitive.get(0).safeSourceLabel()).doesNotContain("should-never-be-read", projectRoot.toString());
         assertThat(readService.stories(userId, project.getId(), "sensitive-material", false, null, null, 0, 20).items())
             .isEmpty();
+        var currentState = readService.currentState(userId, project.getId());
+        assertThat(currentState.degraded()).isTrue();
+        assertThat(currentState.currentness()).isEqualTo("DEGRADED");
+        assertThat(currentState.modelCalled()).isFalse();
+        assertThat(currentState.confirmedState()).isNotBlank();
     }
 
     @Test
@@ -586,6 +744,11 @@ class ProjectHistoryReconstructionTest {
         commitAt(repository, "add email fallback", Instant.parse("2024-03-01T00:00:00Z"));
         ProjectSpace project = project(userId, "Incremental History", repository);
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        List<String> originalChapterIds = readService.chapters(userId, project.getId(), 0, 100).items().stream()
+            .map(item -> item.id()).toList();
+        List<String> originalThreadIds = readService.threads(userId, project.getId(), null, 0, 100).items().stream()
+            .map(item -> item.id()).toList();
+        String originalStateRevision = readService.currentState(userId, project.getId()).stateRevision();
 
         Files.writeString(auth, "class AuthService { boolean email; boolean oauth; }\n");
         commitAt(repository, "add oauth path", Instant.parse("2025-01-01T00:00:00Z"));
@@ -595,6 +758,27 @@ class ProjectHistoryReconstructionTest {
         assertThat(diagnostics.get("reconstructionMode")).isEqualTo("INCREMENTAL_OVERLAP_WINDOW");
         assertThat(((Number) diagnostics.get("reusedStoryCount")).intValue()).isGreaterThanOrEqualTo(2);
         assertThat(((Number) diagnostics.get("recomputedStoryCount")).intValue()).isGreaterThanOrEqualTo(1);
+        assertThat(((List<?>) diagnostics.get("reusedChapterIds")).stream().map(Object::toString).toList())
+            .containsAll(originalChapterIds);
+        assertThat(((List<?>) diagnostics.get("newChapterIds")).stream().map(Object::toString).toList()).isNotEmpty();
+        assertThat(((List<?>) diagnostics.get("continuedThreadIds")).stream().map(Object::toString).toList())
+            .containsAll(originalThreadIds);
+        assertThat(((Number) diagnostics.get("continuityDeltaSize")).intValue()).isPositive();
+        assertThat(((List<?>) diagnostics.get("continuityChangedPaths")).stream().map(Object::toString).toList())
+            .contains("src/AuthService.java");
+        assertThat(readService.chapters(userId, project.getId(), 0, 100).items().stream().map(item -> item.id()))
+            .containsSubsequence(originalChapterIds.toArray(String[]::new));
+        String changedStateRevision = readService.currentState(userId, project.getId()).stateRevision();
+        assertThat(changedStateRevision).isNotEqualTo(originalStateRevision);
+
+        var cached = reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(cached.cacheHit()).isTrue();
+        var cachedDiagnostics = readService.overview(userId, project.getId()).diagnostics();
+        assertThat(cachedDiagnostics).containsEntry("continuityNoOp", true);
+        assertThat(((List<?>) cachedDiagnostics.get("reusedChapterIds")).stream().map(Object::toString).toList())
+            .containsAll(readService.chapters(userId, project.getId(), 0, 100).items().stream().map(item -> item.id()).toList());
+        assertThat(readService.currentState(userId, project.getId()).stateRevision()).isEqualTo(changedStateRevision);
+        verifyNoInteractions(modelGateway);
     }
 
     @Test
@@ -925,6 +1109,70 @@ class ProjectHistoryReconstructionTest {
             .containsEntry("modelChapterGroundingFallbackCount", 1)
             .containsEntry("chaptersUsingDeterministicFallback", 1)
             .containsEntry("unsupportedClaimCount", 0);
+    }
+
+    @Test
+    void regroundsNarrativeValidChapterWhenItNoLongerRepresentsTheDominantCluster() throws Exception {
+        List<ChangeStory> stories = new ArrayList<>();
+        for (int index = 0; index < 6; index++) {
+            stories.add(representationStory(
+                "auth-" + index,
+                "authentication-flow",
+                "实现登录流程，形成可使用的功能",
+                index,
+                "IMPLEMENTED"
+            ));
+        }
+        ChangeStory minor = representationStory(
+            "readme",
+            "readme",
+            "完善项目使用说明，更新已有内容",
+            7,
+            "OBSERVED"
+        );
+        stories.add(minor);
+        HistoryChapter stale = new HistoryChapter(
+            "chapter-stale-representation",
+            minor.humanTitle(),
+            "这一时期完善项目使用说明，形成清晰的阅读指引。",
+            stories.get(0).occurredFrom(), minor.occurredTo(), List.of("SOURCE_BOUNDARY"),
+            stories.stream().map(ChangeStory::id).toList(), stories.size(), stories.size(),
+            "ENGINEERING_GROUPING", "FULL_WITHIN_DISCOVERED_SOURCES", List.of()
+        );
+
+        GroundedChapters grounded = groundChapters(stories, stale);
+
+        assertThat(grounded.fallbackCount()).isEqualTo(1);
+        assertThat(grounded.chapters()).singleElement().satisfies(chapter -> {
+            assertThat(chapter.title()).contains("登录流程").doesNotContain("项目使用说明");
+            assertThat(chapter.authority()).isEqualTo("ENGINEERING_REPRESENTATION_PLAN");
+        });
+    }
+
+    @Test
+    void regroundsARepresentativeOutcomeWithoutReplacingItsPublicWordingWithAGenericFocus() throws Exception {
+        ChangeStory report = representationStory(
+            "dated-review-report",
+            "project-code-review-report-2026-07-10",
+            "整理项目代码审查报告 2026 07 10文档，记录当前能够确认的变化",
+            0,
+            "OBSERVED"
+        );
+        HistoryChapter stale = new HistoryChapter(
+            "chapter-stale-generic-focus",
+            "整理旧的展示文本",
+            "这一时期整理旧的展示文本并保留记录。",
+            report.occurredFrom(), report.occurredTo(), List.of("SOURCE_BOUNDARY"),
+            List.of(report.id()), 1, 1,
+            "ENGINEERING_GROUPING", "FULL_WITHIN_DISCOVERED_SOURCES", List.of()
+        );
+
+        GroundedChapters grounded = groundChapters(List.of(report), stale);
+
+        assertThat(grounded.chapters()).singleElement().satisfies(chapter -> {
+            assertThat(chapter.title()).contains("代码审查报告");
+            assertThat(chapter.summary()).contains("代码审查报告 2026 07 10文档");
+        });
     }
 
     @Test
@@ -1817,6 +2065,56 @@ class ProjectHistoryReconstructionTest {
         String commandOutput = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         if (process.waitFor() != 0) throw new AssertionError("git fast-import failed: " + commandOutput);
         git(root, "reset", "--hard", "master");
+    }
+
+    private static ChangeStory representationStory(
+        String id,
+        String subject,
+        String title,
+        int dayOffset,
+        String claimState
+    ) {
+        Instant occurredAt = Instant.parse("2026-01-01T00:00:00Z").plusSeconds(dayOffset * 86_400L);
+        UUID eventId = UUID.nameUUIDFromBytes(("event:" + id).getBytes(StandardCharsets.UTF_8));
+        String evidence = "file:results/" + id + ".java";
+        ChangeStory story = new ChangeStory(
+            id, subject, title, title + "。", "此前尚未形成该结果。", title + "。", "当前保留这一结果。",
+            List.of("results"), "", List.of(), "", List.of(), List.of(), occurredAt, occurredAt,
+            1, 1, "ENGINEERING_GROUPING", "DETERMINISTIC", "FULL_WITHIN_DISCOVERED_SOURCES", List.of(),
+            List.of(eventId), List.of(evidence), "PRIMARY", "", List.of(), List.of(), List.of(),
+            List.of("results/" + id + ".java"), "AUTOMATIC", "", title, title + "。", List.of(),
+            false, false, "", "ACTIVE", List.of()
+        );
+        return story.withClaimAttribution(new ClaimAttribution(
+            subject, "IMPLEMENTED".equals(claimState) ? "IMPLEMENT" : "OBSERVE", claimState, title,
+            List.of(evidence), List.of(), List.of("SOURCE_BACKED"), "DIRECT", ""
+        ));
+    }
+
+    private GroundedChapters groundChapters(List<ChangeStory> stories, HistoryChapter chapter) throws Exception {
+        Class<?> snapshotType = java.util.Arrays.stream(ProjectHistoryReconstructionService.class.getDeclaredClasses())
+            .filter(type -> type.getSimpleName().equals("SnapshotResult")).findFirst().orElseThrow();
+        var snapshotConstructor = snapshotType.getDeclaredConstructor(List.class, List.class, List.class);
+        snapshotConstructor.setAccessible(true);
+        Object snapshot = snapshotConstructor.newInstance(List.of(chapter), stories, List.of());
+        var groundingMethod = ProjectHistoryReconstructionService.class.getDeclaredMethod(
+            "groundChaptersAfterStoryEnhancement", snapshotType, List.class
+        );
+        groundingMethod.setAccessible(true);
+        Object grounded = groundingMethod.invoke(reconstructionService, snapshot, List.of());
+        var fallbackAccessor = grounded.getClass().getDeclaredMethod("fallbackCount");
+        fallbackAccessor.setAccessible(true);
+        var resultAccessor = grounded.getClass().getDeclaredMethod("result");
+        resultAccessor.setAccessible(true);
+        Object result = resultAccessor.invoke(grounded);
+        var chaptersAccessor = snapshotType.getDeclaredMethod("chapters");
+        chaptersAccessor.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        List<HistoryChapter> chapters = (List<HistoryChapter>) chaptersAccessor.invoke(result);
+        return new GroundedChapters(chapters, (int) fallbackAccessor.invoke(grounded));
+    }
+
+    private record GroundedChapters(List<HistoryChapter> chapters, int fallbackCount) {
     }
 
     private void commit(Path root, String message) throws Exception {

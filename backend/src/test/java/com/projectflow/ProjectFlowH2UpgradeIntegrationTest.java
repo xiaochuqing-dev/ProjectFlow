@@ -31,6 +31,7 @@ import com.projectflow.entity.ProjectAnalysisJobStatus;
 import com.projectflow.entity.ProjectAnalysisJobType;
 import com.projectflow.entity.ProjectCapabilityCard;
 import com.projectflow.entity.ProjectSediment;
+import com.projectflow.entity.ProjectHistorySnapshot;
 import com.projectflow.entity.ProjectSpace;
 import com.projectflow.entity.ProjectStatus;
 import com.projectflow.repository.AiProviderRepository;
@@ -42,10 +43,55 @@ import com.projectflow.repository.ProjectRepository;
 import com.projectflow.repository.ProjectSedimentRepository;
 import com.projectflow.repository.ProjectFactCursorRepository;
 import com.projectflow.repository.ProjectFactRepository;
+import com.projectflow.repository.ProjectHistorySnapshotRepository;
 import com.projectflow.service.ProjectAnalysisJobRunner;
 import com.projectflow.service.ProjectAnalysisJobService;
+import com.projectflow.service.ProjectContinuityDirtyMarker;
 
 class ProjectFlowH2UpgradeIntegrationTest {
+    @Test
+    void upgradesLegacyHistorySnapshotWithoutDirtyGenerationAndStartsAtOne() throws Exception {
+        Path root = Files.createTempDirectory("projectflow-v39-dirty-generation-upgrade-");
+        String url = "jdbc:h2:file:" + root.resolve("projectflow").toAbsolutePath().normalize()
+            + ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE";
+        UUID projectId;
+
+        try (ConfigurableApplicationContext oldContext = start(url, "create")) {
+            ProjectRepository projects = oldContext.getBean(ProjectRepository.class);
+            ProjectSpace project = new ProjectSpace(UUID.randomUUID());
+            project.update(
+                "V3.9 dirty generation 旧库", "缺少 generation column 的旧快照", ProjectStatus.BUILDING,
+                List.of("Spring Boot"), "", LocalDate.of(2026, 8, 1), null
+            );
+            project = projects.saveAndFlush(project);
+            projectId = project.getId();
+            ProjectHistorySnapshot snapshot = new ProjectHistorySnapshot(projectId);
+            snapshot.complete(
+                "legacy-revision", "legacy-fingerprint", 1, Instant.EPOCH, Instant.EPOCH,
+                "legacy-strategy", "legacy-prompt", "{}", "[]", "[]", "[]", "{}", "{}",
+                UUID.randomUUID(), false
+            );
+            oldContext.getBean(ProjectHistorySnapshotRepository.class).saveAndFlush(snapshot);
+            oldContext.getBean(JdbcTemplate.class).execute(
+                "alter table project_history_snapshots drop column continuity_dirty_generation"
+            );
+        }
+
+        try (ConfigurableApplicationContext upgraded = start(url, "update")) {
+            ProjectHistorySnapshotRepository snapshots = upgraded.getBean(ProjectHistorySnapshotRepository.class);
+            assertThat(snapshots.findByProjectId(projectId).orElseThrow().getContinuityDirtyGeneration()).isZero();
+
+            String revision = upgraded.getBean(ProjectContinuityDirtyMarker.class).mark(
+                projectId, "HISTORY_CORRECTION", "correction:legacy"
+            );
+
+            assertThat(revision).startsWith("continuity-dirty:g1:");
+            assertThat(snapshots.findByProjectId(projectId).orElseThrow().getContinuityDirtyGeneration()).isEqualTo(1L);
+        } finally {
+            Files.walk(root).sorted(java.util.Comparator.reverseOrder()).forEach(path -> path.toFile().delete());
+        }
+    }
+
     @Test
     void migratesEveryLegacyProviderFamilyConservativelyAndIdempotently() {
         for (AiProviderType type : List.of(AiProviderType.DEEPSEEK, AiProviderType.OPENAI_COMPATIBLE, AiProviderType.CUSTOM)) {

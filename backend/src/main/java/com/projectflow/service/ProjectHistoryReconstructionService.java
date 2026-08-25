@@ -154,8 +154,10 @@ public class ProjectHistoryReconstructionService {
     ) throws Exception {
         HistoryProgress safeProgress = progress == null ? (stage, message) -> { } : progress;
         ProjectHistorySnapshot before = snapshotRepository.findByProjectId(projectId).orElse(null);
+        String observedDirtyRevision = before == null ? "" : before.getContinuityDirtyRevision();
         CollectionOutcome collected = null;
         PersistedEvents persisted = null;
+        ProjectContinuityDelta continuityDelta = null;
         List<ModelGatewayService.ModelCallDiagnostics> modelDiagnostics = new ArrayList<>();
         try {
             safeProgress.update("HISTORY_SOURCE_DISCOVERY", "正在有界读取并保存项目历程来源事件");
@@ -164,7 +166,20 @@ public class ProjectHistoryReconstructionService {
             CollectionOutcome completedCollection = collected;
             PersistedEvents completedPersistence = persisted;
             String currentFingerprint = fingerprint(completedPersistence.currentEvents());
+            String previousCorrectionRevision = previousPresentationRevision(before);
             String correctionRevision = correctionService.currentPresentationRevision(projectId, currentFingerprint);
+            continuityDelta = ProjectContinuityDelta.create(
+                completedPersistence.rewriteMode(),
+                before == null ? "" : before.getSourceEventFingerprint(),
+                currentFingerprint,
+                before == null ? "" : before.getProjectRevision(),
+                completedCollection.projectRevision(),
+                previousCorrectionRevision,
+                correctionRevision,
+                completedPersistence.affectedFrom(),
+                completedPersistence.mutations()
+            );
+            ProjectContinuityDelta completedDelta = continuityDelta;
             boolean cacheHit = !force
                 && completedCollection.sourceScanComplete()
                 && before != null
@@ -172,7 +187,7 @@ public class ProjectHistoryReconstructionService {
                 && currentFingerprint.equals(before.getSourceEventFingerprint())
                 && STRATEGY_VERSION.equals(before.getStrategyVersion())
                 && PROMPT_VERSION.equals(before.getPromptVersion())
-                && correctionRevision.equals(previousPresentationRevision(before))
+                && correctionRevision.equals(previousCorrectionRevision)
                 && !hasRetryableWindowCheckpoint(projectId)
                 && !hasPendingWindowDiagnostics(before);
             if (cacheHit) {
@@ -183,10 +198,20 @@ public class ProjectHistoryReconstructionService {
                     0, 0, 0, 0, 0, 0
                 );
                 carryForwardSnapshotDiagnostics(before, diagnostics);
+                diagnostics.putAll(completedDelta.diagnostics());
+                putContinuityStructureDiagnostics(noOpContinuityDiagnostics(before), diagnostics);
                 diagnostics.put("presentationRevision", correctionRevision);
+                diagnostics.put("continuityConsumedDirtyRevision", observedDirtyRevision);
+                safeProgress.update("PERSIST_HISTORY_SNAPSHOT", "正在保存已校验的项目历程快照");
                 transactionTemplate.executeWithoutResult(status -> {
                     ProjectHistorySnapshot snapshot = snapshotRepository.findLockedByProjectId(projectId).orElseThrow();
+                    String pendingDirtyRevision = snapshot.getContinuityDirtyRevision();
+                    boolean dirtyAcknowledged = pendingDirtyRevision.isBlank()
+                        || pendingDirtyRevision.equals(observedDirtyRevision);
+                    diagnostics.put("continuityDirtyAcknowledged", dirtyAcknowledged);
+                    diagnostics.put("continuityPendingDirtyRevision", dirtyAcknowledged ? "" : pendingDirtyRevision);
                     snapshot.recordCacheHit(jobId, json(diagnostics));
+                    snapshot.acknowledgeContinuityDirty(observedDirtyRevision);
                     snapshotRepository.save(snapshot);
                 });
                 return new HistoryRefreshOutcome(
@@ -197,7 +222,12 @@ public class ProjectHistoryReconstructionService {
 
             beginSnapshot(projectId, jobId, before == null || !currentFingerprint.equals(before.getSourceEventFingerprint()));
             safeProgress.update("HISTORY_ENGINEERING_RECONSTRUCTION", "正在确定性组织变化故事、时间篇章和演变链");
-            DeterministicResult deterministic = reconstruct(completedCollection, completedPersistence, before, force);
+            Instant reconstructionAffectedFrom = reconstructionAffectedFrom(
+                completedPersistence.affectedFrom(), before, currentFingerprint, projectId
+            );
+            DeterministicResult deterministic = reconstruct(
+                completedCollection, completedPersistence, before, force, reconstructionAffectedFrom
+            );
             ModelResult modelResult = enhanceWithModel(
                 userId, projectId, deterministic, completedPersistence.currentEvents(),
                 modelDiagnostics, safeProgress
@@ -235,6 +265,16 @@ public class ProjectHistoryReconstructionService {
                 modelResult.unprocessedWindowCount(),
                 modelResult.unprocessedStoryCount()
             );
+            diagnostics.putAll(completedDelta.diagnostics());
+            diagnostics.put(
+                "continuityReconstructionAffectedFrom",
+                reconstructionAffectedFrom == null ? "" : reconstructionAffectedFrom.toString()
+            );
+            diagnostics.put(
+                "continuityRetryScopeReused",
+                completedPersistence.affectedFrom() == null && reconstructionAffectedFrom != null
+            );
+            putContinuityStructureDiagnostics(deterministic.continuity(), diagnostics);
             diagnostics.put("modelDeterministicTitleFallbackCount", (int) finalResult.stories().stream()
                 .filter(story -> "MODEL_VALIDATED_WITH_DETERMINISTIC_TITLE".equals(story.summaryStatus()))
                 .count());
@@ -245,6 +285,7 @@ public class ProjectHistoryReconstructionService {
                 .filter(value -> "HISTORY_VALIDATION_RETRY".equals(value.retryType()))
                 .filter(value -> !value.compactRetrySucceeded()).count());
             diagnostics.put("presentationRevision", correctionRevision);
+            diagnostics.put("continuityConsumedDirtyRevision", observedDirtyRevision);
             diagnostics.put("totalWindowCount", modelResult.windowCount());
             diagnostics.put("succeededWindowCount", modelResult.succeededWindowCount());
             diagnostics.put("failedWindowCount", modelResult.failedWindowCount());
@@ -273,6 +314,11 @@ public class ProjectHistoryReconstructionService {
             transactionTemplate.executeWithoutResult(status -> {
                 ProjectHistorySnapshot snapshot = snapshotRepository.findLockedByProjectId(projectId)
                     .orElseGet(() -> new ProjectHistorySnapshot(projectId));
+                String pendingDirtyRevision = snapshot.getContinuityDirtyRevision();
+                boolean dirtyAcknowledged = pendingDirtyRevision.isBlank()
+                    || pendingDirtyRevision.equals(observedDirtyRevision);
+                diagnostics.put("continuityDirtyAcknowledged", dirtyAcknowledged);
+                diagnostics.put("continuityPendingDirtyRevision", dirtyAcknowledged ? "" : pendingDirtyRevision);
                 snapshot.complete(
                     completedCollection.projectRevision(), currentFingerprint, completedPersistence.currentEvents().size(),
                     earliest(completedPersistence.currentEvents()), latest(completedPersistence.currentEvents()),
@@ -280,6 +326,7 @@ public class ProjectHistoryReconstructionService {
                     json(overview), json(finalResult.chapters()), json(finalResult.stories()), json(finalResult.threads()),
                     json(coverage), json(diagnostics), jobId, degraded
                 );
+                snapshot.acknowledgeContinuityDirty(observedDirtyRevision);
                 snapshotRepository.save(snapshot);
                 cleanupObsoleteWindowCheckpoints(projectId, modelResult.activeCheckpointCacheKeys());
             });
@@ -302,6 +349,10 @@ public class ProjectHistoryReconstructionService {
                     Map.entry("chapterSynthesisCount", modelResult.chapterSynthesisCount()),
                     Map.entry("chapterSynthesisProcessedCount", modelResult.chapterSynthesisProcessedCount()),
                     Map.entry("chapterSynthesisPendingCount", modelResult.chapterSynthesisPendingCount()),
+                    Map.entry("continuityDeltaRevision", completedDelta.revision()),
+                    Map.entry("continuityDeltaSize", completedDelta.addedEventIds().size()
+                        + completedDelta.updatedEventIds().size() + completedDelta.staleEventIds().size()
+                        + completedDelta.invalidatedEventIds().size()),
                     Map.entry("modelStatus", modelResult.status())
                 )),
                 List.copyOf(modelDiagnostics), modelResult.used(), degraded, false
@@ -316,6 +367,7 @@ public class ProjectHistoryReconstructionService {
                 failureDiagnostics.put("sourceEventCount", persisted.currentEvents().size());
                 failureDiagnostics.put("rewriteMode", persisted.rewriteMode());
             }
+            if (continuityDelta != null) failureDiagnostics.putAll(continuityDelta.diagnostics());
             failSnapshot(
                 projectId, jobId, "PROJECT_HISTORY_REFRESH_FAILED", safeError(exception),
                 failureDiagnostics
@@ -336,17 +388,21 @@ public class ProjectHistoryReconstructionService {
             int preservedUnseen = 0;
             Instant affectedFrom = null;
             List<ProjectHistoryEvent> changed = new ArrayList<>();
+            List<ProjectContinuityDelta.Mutation> mutations = new ArrayList<>();
             for (CollectedEvent draft : collected.events()) {
                 incomingKeys.add(draft.stableEventKey());
                 ProjectHistoryEvent event = byKey.get(draft.stableEventKey());
                 boolean replace;
+                String mutationKind = "";
                 if (event == null) {
                     event = new ProjectHistoryEvent(projectId, draft.stableEventKey());
                     added++;
                     replace = true;
+                    mutationKind = "ADDED";
                 } else if (!draft.payloadHash().equals(event.getPayloadHash()) || event.getRewriteState() != RewriteState.CURRENT) {
                     updated++;
                     replace = true;
+                    mutationKind = "UPDATED";
                 } else {
                     reused++;
                     replace = false;
@@ -360,6 +416,10 @@ public class ProjectHistoryReconstructionService {
                         json(draft.coverage()), json(draft.limitations()), draft.rawSourceDeepLink(), draft.payloadHash()
                     );
                     changed.add(event);
+                    mutations.add(new ProjectContinuityDelta.Mutation(
+                        event.getId(), draft.stableEventKey(), mutationKind, draft.sourceType().name(),
+                        draft.affectedPaths().stream().map(redactor::redactOutboundText).toList(), draft.relationRefs()
+                    ));
                     affectedFrom = earlier(affectedFrom, draft.occurredAt());
                 }
             }
@@ -377,6 +437,11 @@ public class ProjectHistoryReconstructionService {
                 };
                 old.markRewriteState(next);
                 changed.add(old);
+                mutations.add(new ProjectContinuityDelta.Mutation(
+                    old.getId(), old.getStableEventKey(), next.name(), old.getSourceType().name(),
+                    strings(old.getAffectedPathsJson()).stream().map(redactor::redactOutboundText).toList(),
+                    strings(old.getRelationRefsJson())
+                ));
                 affectedFrom = earlier(affectedFrom, old.getOccurredAt());
                 if (next == RewriteState.INVALIDATED) invalidated++; else stale++;
             }
@@ -399,7 +464,7 @@ public class ProjectHistoryReconstructionService {
             else mode = "SOURCE_REFRESH";
             return new PersistedEvents(
                 current, added, updated, reused, stale, invalidated, staleTotal, invalidatedTotal,
-                preservedUnseen, affectedFrom, mode
+                preservedUnseen, affectedFrom, mode, List.copyOf(mutations)
             );
         });
     }
@@ -426,7 +491,8 @@ public class ProjectHistoryReconstructionService {
         CollectionOutcome collected,
         PersistedEvents persisted,
         ProjectHistorySnapshot previousSnapshot,
-        boolean force
+        boolean force,
+        Instant affectedFrom
     ) {
         List<EventView> events = persisted.currentEvents().stream().map(this::view).toList();
         List<EventView> semanticEvents = events.stream().filter(ProjectHistoryReconstructionService::semanticEligible).toList();
@@ -442,8 +508,8 @@ public class ProjectHistoryReconstructionService {
         String reconstructionMode = "FULL_REBUILD";
         if (!force && previousSnapshot != null && previousSnapshot.getLatestSuccessfulAt() != null
             && STRATEGY_VERSION.equals(previousSnapshot.getStrategyVersion())
-            && persisted.affectedFrom() != null) {
-            Instant cutoff = persisted.affectedFrom().minus(INCREMENTAL_OVERLAP);
+            && affectedFrom != null) {
+            Instant cutoff = affectedFrom.minus(INCREMENTAL_OVERLAP);
             Set<UUID> currentEventIds = eventsById.keySet();
             retainedStories = previousStories(previousSnapshot).stream()
                 .filter(story -> story.occurredTo().isBefore(cutoff))
@@ -469,16 +535,23 @@ public class ProjectHistoryReconstructionService {
         envelopes.addAll(recomputed);
         envelopes = new ArrayList<>(classifyPrimaryAndSupporting(envelopes, eventsById));
         envelopes = new ArrayList<>(compressRepetitivePrimaryStories(envelopes, eventsById));
+        envelopes = new ArrayList<>(canonicalizeRoleGraph(envelopes));
         envelopes.sort(Comparator.comparing((StoryEnvelope envelope) -> envelope.story().occurredFrom())
             .thenComparing(envelope -> envelope.story().id()));
         List<EvolutionThread> threads = threads(envelopes);
         List<ChangeStory> stories = applyLaterOutcomes(envelopes, threads);
-        List<HistoryChapter> chapters = chapters(stories, events);
+        ChapterContinuityResult chapterContinuity = incrementalChapters(
+            stories, events, previousSnapshot, retainedStories, affectedFrom, force
+        );
+        List<HistoryChapter> chapters = chapterContinuity.chapters();
         Set<String> recomputedStoryIds = recomputed.stream().map(item -> item.story().id())
             .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        ContinuityStructureDiagnostics continuity = continuityDiagnostics(
+            previousSnapshot, stories, threads, chapterContinuity
+        );
         return new DeterministicResult(
             new SnapshotResult(chapters, stories, threads), Set.copyOf(recomputedStoryIds),
-            reconstructionMode, retainedStories.size()
+            reconstructionMode, retainedStories.size(), continuity
         );
     }
 
@@ -716,6 +789,48 @@ public class ProjectHistoryReconstructionService {
         return result;
     }
 
+    /**
+     * Rebuild the bidirectional presentation relation from each Supporting
+     * story's single owner. Incremental overlap can retain an older Primary
+     * while recomputing and reattaching one of its Supporting stories; forward
+     * refs from the retained snapshot must not survive that reassignment.
+     * Invalid/orphan reverse links are conservatively restored to Primary.
+     */
+    private List<StoryEnvelope> canonicalizeRoleGraph(List<StoryEnvelope> input) {
+        Map<String, StoryEnvelope> byId = input.stream().collect(
+            LinkedHashMap::new, (map, value) -> map.put(value.story().id(), value), Map::putAll
+        );
+        Map<String, String> validOwners = new LinkedHashMap<>();
+        for (StoryEnvelope envelope : input) {
+            ChangeStory story = envelope.story();
+            if (!story.supporting() || story.primaryStoryId().isBlank()) continue;
+            StoryEnvelope owner = byId.get(story.primaryStoryId());
+            if (owner != null && owner.story().primary() && !owner.story().id().equals(story.id())) {
+                validOwners.put(story.id(), owner.story().id());
+            }
+        }
+        Map<String, List<String>> supportingByPrimary = new LinkedHashMap<>();
+        validOwners.forEach((support, primary) ->
+            supportingByPrimary.computeIfAbsent(primary, ignored -> new ArrayList<>()).add(support)
+        );
+        return input.stream().map(envelope -> {
+            ChangeStory story = envelope.story();
+            String owner = validOwners.get(story.id());
+            boolean supporting = owner != null;
+            List<String> supportingRefs = supporting
+                ? List.of()
+                : List.copyOf(supportingByPrimary.getOrDefault(story.id(), List.of()));
+            ChangeStory normalized = withPresentation(
+                story, story.humanTitle(), story.oneSentenceSummary(), story.beforeState(), story.change(),
+                story.afterState(), supporting ? "SUPPORTING" : "PRIMARY", supporting ? owner : "",
+                supportingRefs, story.presentationAuthority(), story.presentationRevision(),
+                story.userCorrectionRefs(), supporting || story.hiddenByDefault(), story.pinned(),
+                story.mergedIntoStoryId(), story.displayStatus(), story.correctionConflicts()
+            );
+            return new StoryEnvelope(normalized, envelope.transitions());
+        }).toList();
+    }
+
     private String presentationFamily(ChangeStory story) {
         String object = languageService.readableObject(
             story.primarySubjectKey(), story.technicalDetails(), story.affectedAreas()
@@ -821,6 +936,31 @@ public class ProjectHistoryReconstructionService {
         }
     }
 
+    private Instant reconstructionAffectedFrom(
+        Instant currentAffectedFrom,
+        ProjectHistorySnapshot previousSnapshot,
+        String currentFingerprint,
+        UUID projectId
+    ) {
+        if (currentAffectedFrom != null) return currentAffectedFrom;
+        if (previousSnapshot == null || currentFingerprint == null
+            || !currentFingerprint.equals(previousSnapshot.getSourceEventFingerprint())
+            || (!hasRetryableWindowCheckpoint(projectId) && !hasPendingWindowDiagnostics(previousSnapshot))) {
+            return null;
+        }
+        try {
+            JsonNode diagnostics = objectMapper.readTree(previousSnapshot.getDiagnosticsJson());
+            String value = diagnostics == null ? "" : diagnostics
+                .path("continuityReconstructionAffectedFrom").asText("").trim();
+            if (value.isBlank() && diagnostics != null) {
+                value = diagnostics.path("continuityAffectedFrom").asText("").trim();
+            }
+            return value.isBlank() ? null : Instant.parse(value);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     private void carryForwardSnapshotDiagnostics(ProjectHistorySnapshot snapshot, Map<String, Object> target) {
         if (snapshot == null || target == null || snapshot.getDiagnosticsJson() == null) return;
         try {
@@ -879,6 +1019,7 @@ public class ProjectHistoryReconstructionService {
     }
 
     private List<ChangeStory> previousStories(ProjectHistorySnapshot snapshot) {
+        if (snapshot == null) return List.of();
         try {
             return objectMapper.readValue(
                 snapshot.getStoriesJson() == null || snapshot.getStoriesJson().isBlank() ? "[]" : snapshot.getStoriesJson(),
@@ -1134,6 +1275,87 @@ public class ProjectHistoryReconstructionService {
         return byId.values().stream().sorted(Comparator.comparing(ChangeStory::occurredFrom).thenComparing(ChangeStory::id)).toList();
     }
 
+    private ChapterContinuityResult incrementalChapters(
+        List<ChangeStory> stories,
+        List<EventView> events,
+        ProjectHistorySnapshot previousSnapshot,
+        List<ChangeStory> retainedStories,
+        Instant affectedFrom,
+        boolean force
+    ) {
+        List<HistoryChapter> previous = previousChapters(previousSnapshot);
+        if (!force && previousSnapshot != null && previousSnapshot.getLatestSuccessfulAt() != null
+            && affectedFrom == null && !previous.isEmpty()) {
+            return new ChapterContinuityResult(
+                previous, List.of(), previous.stream().map(HistoryChapter::id).toList(), List.of(), List.of(),
+                chapterRepresentationRevision(previous)
+            );
+        }
+        if (force || previousSnapshot == null || previousSnapshot.getLatestSuccessfulAt() == null
+            || retainedStories == null || retainedStories.isEmpty()) {
+            List<HistoryChapter> rebuilt = chapters(stories, events);
+            Set<String> previousIds = previous.stream().map(HistoryChapter::id)
+                .collect(LinkedHashSet::new, Set::add, Set::addAll);
+            List<String> recomputed = rebuilt.stream().map(HistoryChapter::id).filter(previousIds::contains).toList();
+            List<String> created = rebuilt.stream().map(HistoryChapter::id).filter(id -> !previousIds.contains(id)).toList();
+            return new ChapterContinuityResult(
+                rebuilt, previous.stream().map(HistoryChapter::id).toList(), List.of(),
+                sortedStrings(recomputed), sortedStrings(created), chapterRepresentationRevision(rebuilt)
+            );
+        }
+        Set<String> retainedIds = retainedStories.stream().map(ChangeStory::id)
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        Set<String> currentStoryIds = stories.stream().map(ChangeStory::id)
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        List<HistoryChapter> reused = previous.stream()
+            .filter(chapter -> !chapter.storyRefs().isEmpty())
+            .filter(chapter -> retainedIds.containsAll(chapter.storyRefs()))
+            .filter(chapter -> currentStoryIds.containsAll(chapter.storyRefs()))
+            .toList();
+        Set<String> reusedStoryIds = reused.stream().flatMap(chapter -> chapter.storyRefs().stream())
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        List<ChangeStory> tail = stories.stream().filter(story -> !reusedStoryIds.contains(story.id())).toList();
+        List<HistoryChapter> rebuiltTail = chapters(tail, events);
+        if (!reused.isEmpty() && !rebuiltTail.isEmpty()) {
+            HistoryChapter first = rebuiltTail.get(0);
+            List<String> boundarySignals = first.boundarySignals().stream()
+                .filter(signal -> !"EARLIEST_DISCOVERED_EVENT".equals(signal)).toList();
+            if (boundarySignals.isEmpty()) boundarySignals = List.of("CONTINUITY_AFFECTED_RANGE");
+            List<HistoryChapter> adjusted = new ArrayList<>(rebuiltTail);
+            adjusted.set(0, new HistoryChapter(
+                first.id(), first.title(), first.summary(), first.from(), first.to(), boundarySignals,
+                first.storyRefs(), first.storyCount(), first.rawEventCount(), first.authority(), first.coverage(),
+                first.limitations(), first.presentationAuthority(), first.presentationRevision(), first.userDeclared(),
+                first.userCorrectionRefs(), first.hiddenByDefault(), first.pinned()
+            ));
+            rebuiltTail = List.copyOf(adjusted);
+        }
+        List<HistoryChapter> combined = Stream.concat(reused.stream(), rebuiltTail.stream())
+            .sorted(Comparator.comparing(HistoryChapter::from, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(HistoryChapter::id))
+            .toList();
+        Set<String> previousIds = previous.stream().map(HistoryChapter::id)
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        Set<String> reusedIds = reused.stream().map(HistoryChapter::id)
+            .collect(LinkedHashSet::new, Set::add, Set::addAll);
+        List<String> affected = previous.stream().map(HistoryChapter::id).filter(id -> !reusedIds.contains(id)).toList();
+        List<String> recomputed = rebuiltTail.stream().map(HistoryChapter::id).filter(previousIds::contains).toList();
+        List<String> created = rebuiltTail.stream().map(HistoryChapter::id).filter(id -> !previousIds.contains(id)).toList();
+        return new ChapterContinuityResult(
+            combined, sortedStrings(affected), sortedStrings(reusedIds), sortedStrings(recomputed), sortedStrings(created),
+            chapterRepresentationRevision(combined)
+        );
+    }
+
+    private static String chapterRepresentationRevision(List<HistoryChapter> chapters) {
+        StringBuilder value = new StringBuilder(ProjectHistoryChapterRepresentationPlanner.PLAN_VERSION);
+        for (HistoryChapter chapter : chapters == null ? List.<HistoryChapter>of() : chapters) {
+            value.append('|').append(chapter.id()).append(':');
+            chapter.storyRefs().forEach(ref -> value.append(ref.length()).append('#').append(ref));
+        }
+        return "chapter-representation:" + ProjectHistorySourceCollector.sha256(value.toString());
+    }
+
     private List<HistoryChapter> chapters(List<ChangeStory> stories, List<EventView> events) {
         if (stories.isEmpty()) return List.of();
         Set<UUID> tagEventIds = events.stream().filter(event -> event.category() == Category.TAG).map(EventView::id)
@@ -1197,13 +1419,9 @@ public class ProjectHistoryReconstructionService {
             group.forEach(story -> rawEvents.addAll(story.eventRefs()));
             String id = "chapter-" + ProjectHistorySourceCollector.sha256(group.get(0).id()).substring(0, 20);
             int titleClusterCount = Math.max(1, representation.dominantClusterCount());
-            String title = languageService.chapterTitle(outcomes, transitions, from, to, titleClusterCount);
-            int chapterPrimaryCount = (int) group.stream().filter(ChangeStory::primary).count();
-            int chapterSupportingCount = Math.max(0, group.size() - chapterPrimaryCount);
-            String summary = languageService.chapterSummary(
-                outcomes, chapterPrimaryCount, chapterSupportingCount,
-                Math.max(1, representation.selectedClusters().size())
-            );
+            String title = languageService.chapterRepresentativeTitle(outcomes, transitions, titleClusterCount);
+            int chapterSupportingCount = (int) group.stream().filter(ChangeStory::supporting).count();
+            String summary = languageService.chapterRepresentativeSummary(outcomes, chapterSupportingCount);
             List<String> limitations = new ArrayList<>();
             if (representation.coherenceRisk()) {
                 limitations.add("当前来源未提供足够强的阶段边界，已在最小安全粒度内保守保留多个代表成果。");
@@ -2589,9 +2807,11 @@ public class ProjectHistoryReconstructionService {
      * Story wording is model-owned presentation, while Chapter membership is
      * engineering-owned structure. A single-Story Chapter does not need the
      * second-stage Chapter model call, so its earlier deterministic wording can
-     * become stale after a valid Story paraphrase. Keep every structural field
-     * unchanged and rebuild only that stale presentation from the now-current
-     * Primary wording before the whole-snapshot validator runs.
+     * become stale after a valid Story paraphrase. Narrative-level grounding is
+     * not sufficient here: an old Chapter may still mention any Primary Story
+     * while omitting the current representative cluster or naming only a minor
+     * cluster. Keep every structural field unchanged and rebuild only Chapters
+     * that fail the complete current representation plan.
      */
     private ChapterGroundingResult groundChaptersAfterStoryEnhancement(
         SnapshotResult input,
@@ -2613,19 +2833,15 @@ public class ProjectHistoryReconstructionService {
             }
             List<ChangeStory> members = chapter.storyRefs().stream().map(storiesById::get)
                 .filter(java.util.Objects::nonNull).toList();
-            List<String> primaryWording = members.stream().filter(ChangeStory::primary)
-                .flatMap(story -> Stream.of(story.humanTitle(), story.oneSentenceSummary())).toList();
+            ProjectHistoryChapterRepresentationPlanner.Plan representation = chapterRepresentationPlanner.plan(members);
             try {
-                narrativeValidator.validateChapter(
-                    chapter.title(), chapter.summary(), languageService.chapterGrounding(primaryWording)
-                );
+                validateChapterRepresentation(chapter.title(), chapter.summary(), representation);
                 chapters.add(chapter);
                 continue;
-            } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation ignored) {
+            } catch (HistoryValidationException ignored) {
                 // The deterministic representation below is validated against
                 // the same current Story wording before it can replace anything.
             }
-            ProjectHistoryChapterRepresentationPlanner.Plan representation = chapterRepresentationPlanner.plan(members);
             List<String> outcomes = representation.representativeOutcomes();
             if (outcomes.isEmpty()) {
                 outcomes = members.stream().filter(ChangeStory::primary).map(ChangeStory::humanTitle)
@@ -2633,13 +2849,12 @@ public class ProjectHistoryReconstructionService {
             }
             List<Transition> transitions = members.stream().flatMap(story -> story.eventRefs().stream())
                 .map(eventsById::get).filter(java.util.Objects::nonNull).map(EventView::transition).distinct().toList();
-            String title = languageService.chapterTitle(
-                outcomes, transitions, chapter.from(), chapter.to(), Math.max(1, representation.dominantClusterCount())
+            String title = languageService.chapterRepresentativeTitle(
+                outcomes, transitions, Math.max(1, representation.dominantClusterCount())
             );
             int primaryCount = (int) members.stream().filter(ChangeStory::primary).count();
-            String summary = languageService.chapterSummary(
-                outcomes, primaryCount, Math.max(0, members.size() - primaryCount),
-                Math.max(1, representation.selectedClusters().size())
+            String summary = languageService.chapterRepresentativeSummary(
+                outcomes, Math.max(0, members.size() - primaryCount)
             );
             validateChapterRepresentation(title, summary, representation);
             chapters.add(new HistoryChapter(
@@ -3396,8 +3611,147 @@ public class ProjectHistoryReconstructionService {
         int invalidatedTotal,
         int preservedUnseen,
         Instant affectedFrom,
-        String rewriteMode
+        String rewriteMode,
+        List<ProjectContinuityDelta.Mutation> mutations
     ) {
+        private PersistedEvents {
+            currentEvents = currentEvents == null ? List.of() : List.copyOf(currentEvents);
+            mutations = mutations == null ? List.of() : List.copyOf(mutations);
+        }
+    }
+
+    private List<HistoryChapter> previousChapters(ProjectHistorySnapshot snapshot) {
+        if (snapshot == null) return List.of();
+        try {
+            return objectMapper.readValue(
+                snapshot.getChaptersJson() == null || snapshot.getChaptersJson().isBlank() ? "[]" : snapshot.getChaptersJson(),
+                new TypeReference<List<HistoryChapter>>() {}
+            );
+        } catch (JsonProcessingException exception) {
+            return List.of();
+        }
+    }
+
+    private List<EvolutionThread> previousThreads(ProjectHistorySnapshot snapshot) {
+        if (snapshot == null) return List.of();
+        try {
+            return objectMapper.readValue(
+                snapshot.getThreadsJson() == null || snapshot.getThreadsJson().isBlank() ? "[]" : snapshot.getThreadsJson(),
+                new TypeReference<List<EvolutionThread>>() {}
+            );
+        } catch (JsonProcessingException exception) {
+            return List.of();
+        }
+    }
+
+    private ContinuityStructureDiagnostics noOpContinuityDiagnostics(ProjectHistorySnapshot snapshot) {
+        List<ChangeStory> stories = previousStories(snapshot);
+        List<EvolutionThread> threads = previousThreads(snapshot);
+        List<HistoryChapter> chapters = previousChapters(snapshot);
+        return new ContinuityStructureDiagnostics(
+            List.of(), stories.stream().map(ChangeStory::id).toList(), List.of(), List.of(), List.of(),
+            List.of(), threads.stream().map(EvolutionThread::id).toList(), List.of(), List.of(), List.of(),
+            List.of(), chapters.stream().map(HistoryChapter::id).toList(), List.of(), List.of(),
+            chapterRepresentationRevision(chapters)
+        );
+    }
+
+    private ContinuityStructureDiagnostics continuityDiagnostics(
+        ProjectHistorySnapshot previousSnapshot,
+        List<ChangeStory> currentStories,
+        List<EvolutionThread> currentThreads,
+        ChapterContinuityResult chapterContinuity
+    ) {
+        Map<String, ChangeStory> previousStories = previousStories(previousSnapshot).stream().collect(
+            LinkedHashMap::new, (map, value) -> map.put(value.id(), value), Map::putAll
+        );
+        Map<String, ChangeStory> stories = currentStories.stream().collect(
+            LinkedHashMap::new, (map, value) -> map.put(value.id(), value), Map::putAll
+        );
+        List<String> continuedStories = new ArrayList<>();
+        List<String> unchangedStories = new ArrayList<>();
+        List<String> relinkedStories = new ArrayList<>();
+        for (ChangeStory story : currentStories) {
+            ChangeStory previous = previousStories.get(story.id());
+            if (previous == null) continue;
+            LinkedHashSet<UUID> oldMembers = new LinkedHashSet<>(previous.eventRefs());
+            LinkedHashSet<UUID> currentMembers = new LinkedHashSet<>(story.eventRefs());
+            if (oldMembers.equals(currentMembers)) unchangedStories.add(story.id());
+            else if (currentMembers.containsAll(oldMembers)) continuedStories.add(story.id());
+            else relinkedStories.add(story.id());
+        }
+        List<String> newStories = currentStories.stream().map(ChangeStory::id)
+            .filter(id -> !previousStories.containsKey(id)).toList();
+        List<String> invalidatedStories = previousStories.keySet().stream().filter(id -> !stories.containsKey(id)).toList();
+
+        Map<String, EvolutionThread> previousThreads = previousThreads(previousSnapshot).stream().collect(
+            LinkedHashMap::new, (map, value) -> map.put(value.id(), value), Map::putAll
+        );
+        Map<String, EvolutionThread> threads = currentThreads.stream().collect(
+            LinkedHashMap::new, (map, value) -> map.put(value.id(), value), Map::putAll
+        );
+        List<String> continuedThreads = new ArrayList<>();
+        List<String> unchangedThreads = new ArrayList<>();
+        List<String> relinkedThreads = new ArrayList<>();
+        for (EvolutionThread thread : currentThreads) {
+            EvolutionThread previous = previousThreads.get(thread.id());
+            if (previous == null) continue;
+            LinkedHashSet<String> oldMembers = new LinkedHashSet<>(previous.storyRefs());
+            LinkedHashSet<String> currentMembers = new LinkedHashSet<>(thread.storyRefs());
+            if (oldMembers.equals(currentMembers)) unchangedThreads.add(thread.id());
+            else if (currentMembers.containsAll(oldMembers)) continuedThreads.add(thread.id());
+            else relinkedThreads.add(thread.id());
+        }
+        List<String> newThreads = currentThreads.stream().map(EvolutionThread::id)
+            .filter(id -> !previousThreads.containsKey(id)).toList();
+        List<String> invalidatedThreads = previousThreads.keySet().stream().filter(id -> !threads.containsKey(id)).toList();
+        return new ContinuityStructureDiagnostics(
+            sortedStrings(continuedStories), sortedStrings(unchangedStories), sortedStrings(newStories), sortedStrings(relinkedStories),
+            sortedStrings(invalidatedStories), sortedStrings(continuedThreads), sortedStrings(unchangedThreads), sortedStrings(newThreads),
+            sortedStrings(relinkedThreads), sortedStrings(invalidatedThreads), chapterContinuity.affectedChapterIds(),
+            chapterContinuity.reusedChapterIds(), chapterContinuity.recomputedChapterIds(),
+            chapterContinuity.newChapterIds(), chapterContinuity.representationRevision()
+        );
+    }
+
+    private static void putContinuityStructureDiagnostics(
+        ContinuityStructureDiagnostics continuity,
+        Map<String, Object> diagnostics
+    ) {
+        diagnostics.put("continuedStoryIds", continuity.continuedStoryIds());
+        diagnostics.put("unchangedStoryIds", continuity.unchangedStoryIds());
+        diagnostics.put("newStoryIds", continuity.newStoryIds());
+        diagnostics.put("relinkedStoryIds", continuity.relinkedStoryIds());
+        diagnostics.put("invalidatedStoryIds", continuity.invalidatedStoryIds());
+        diagnostics.put("ambiguousStoryContinuityCandidateIds", List.of());
+        diagnostics.put("rejectedStoryContinuityCandidateIds", continuity.relinkedStoryIds());
+        diagnostics.put("continuedThreadIds", continuity.continuedThreadIds());
+        diagnostics.put("unchangedThreadIds", continuity.unchangedThreadIds());
+        diagnostics.put("newThreadIds", continuity.newThreadIds());
+        diagnostics.put("relinkedThreadIds", continuity.relinkedThreadIds());
+        diagnostics.put("invalidatedThreadIds", continuity.invalidatedThreadIds());
+        diagnostics.put("ambiguousThreadContinuityCandidateIds", List.of());
+        diagnostics.put("rejectedThreadContinuityCandidateIds", continuity.relinkedThreadIds());
+        diagnostics.put("affectedChapterIds", continuity.affectedChapterIds());
+        diagnostics.put("reusedChapterIds", continuity.reusedChapterIds());
+        diagnostics.put("recomputedChapterIds", continuity.recomputedChapterIds());
+        diagnostics.put("newChapterIds", continuity.newChapterIds());
+        diagnostics.put("chapterRepresentationRevision", continuity.chapterRepresentationRevision());
+        diagnostics.put("continuedStoryCount", continuity.continuedStoryIds().size());
+        diagnostics.put("unchangedStoryCount", continuity.unchangedStoryIds().size());
+        diagnostics.put("newStoryCount", continuity.newStoryIds().size());
+        diagnostics.put("continuedThreadCount", continuity.continuedThreadIds().size());
+        diagnostics.put("unchangedThreadCount", continuity.unchangedThreadIds().size());
+        diagnostics.put("newThreadCount", continuity.newThreadIds().size());
+        diagnostics.put("affectedChapterCount", continuity.affectedChapterIds().size());
+        diagnostics.put("reusedChapterCount", continuity.reusedChapterIds().size());
+        diagnostics.put("recomputedChapterCount", continuity.recomputedChapterIds().size());
+        diagnostics.put("newChapterCount", continuity.newChapterIds().size());
+    }
+
+    private static List<String> sortedStrings(Collection<String> values) {
+        return (values == null ? Stream.<String>empty() : values.stream())
+            .filter(value -> value != null && !value.isBlank()).distinct().sorted().toList();
     }
 
     private record EventView(
@@ -3437,7 +3791,45 @@ public class ProjectHistoryReconstructionService {
         SnapshotResult result,
         Set<String> recomputedStoryIds,
         String reconstructionMode,
-        int reusedStoryCount
+        int reusedStoryCount,
+        ContinuityStructureDiagnostics continuity
+    ) {
+    }
+
+    private record ChapterContinuityResult(
+        List<HistoryChapter> chapters,
+        List<String> affectedChapterIds,
+        List<String> reusedChapterIds,
+        List<String> recomputedChapterIds,
+        List<String> newChapterIds,
+        String representationRevision
+    ) {
+        private ChapterContinuityResult {
+            chapters = chapters == null ? List.of() : List.copyOf(chapters);
+            affectedChapterIds = affectedChapterIds == null ? List.of() : List.copyOf(affectedChapterIds);
+            reusedChapterIds = reusedChapterIds == null ? List.of() : List.copyOf(reusedChapterIds);
+            recomputedChapterIds = recomputedChapterIds == null ? List.of() : List.copyOf(recomputedChapterIds);
+            newChapterIds = newChapterIds == null ? List.of() : List.copyOf(newChapterIds);
+            representationRevision = representationRevision == null ? "" : representationRevision;
+        }
+    }
+
+    private record ContinuityStructureDiagnostics(
+        List<String> continuedStoryIds,
+        List<String> unchangedStoryIds,
+        List<String> newStoryIds,
+        List<String> relinkedStoryIds,
+        List<String> invalidatedStoryIds,
+        List<String> continuedThreadIds,
+        List<String> unchangedThreadIds,
+        List<String> newThreadIds,
+        List<String> relinkedThreadIds,
+        List<String> invalidatedThreadIds,
+        List<String> affectedChapterIds,
+        List<String> reusedChapterIds,
+        List<String> recomputedChapterIds,
+        List<String> newChapterIds,
+        String chapterRepresentationRevision
     ) {
     }
 

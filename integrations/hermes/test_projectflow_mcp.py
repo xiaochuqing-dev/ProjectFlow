@@ -81,6 +81,12 @@ class Handler(BaseHTTPRequestHandler):
                 data = {"project": {"projectId": PROJECT_ID, "name": "ProjectFlow"}, "factCount": 42}
             elif parsed.path.endswith("/history/overview"):
                 data = {"projectId": PROJECT_ID, "presentationRevision": "presentation:corrected", "status": "READY"}
+            elif parsed.path.endswith("/history/current-state"):
+                data = {
+                    "projectId": PROJECT_ID, "stateRevision": "current-state:fixture", "historyStatus": "READY",
+                    "currentness": "CURRENT", "presentationRevision": "presentation:corrected",
+                    "confirmedState": "当前项目状态已经由持久化修正后历程派生。", "modelCalled": False,
+                }
             elif parsed.path.endswith("/history/stories"):
                 data = {
                     "items": [{
@@ -224,12 +230,12 @@ class MCPProjectHistoryTest(unittest.TestCase):
                 "clientInfo": {"name": "contract-test", "version": "1"},
             })
             self.assertEqual("2025-11-25", initialized["result"]["protocolVersion"])
-            self.assertEqual("3.8.5", initialized["result"]["serverInfo"]["version"])
+            self.assertEqual("3.9.0", initialized["result"]["serverInfo"]["version"])
             tools = mcp.request("tools/list")["result"]["tools"]
         print(f"MCP_METRIC startup_and_discovery_ms={(time.perf_counter() - started) * 1000:.1f} tools={len(tools)}")
-        self.assertEqual(20, len(tools))
+        self.assertEqual(21, len(tools))
         self.assertEqual([
-            "list_projects", "get_project_snapshot", "get_project_history_overview",
+            "list_projects", "get_project_snapshot", "get_project_history_overview", "get_project_current_state",
             "list_project_history_chapters", "list_project_history_corrections", "list_project_change_stories",
             "list_project_evolution_threads", "list_project_history_events", "get_project_history_evidence",
             "search_project_memory", "get_recent_changes",
@@ -325,6 +331,9 @@ class MCPProjectHistoryTest(unittest.TestCase):
             overview = mcp.request("tools/call", {"name": "get_project_history_overview", "arguments": {
                 "projectId": PROJECT_ID,
             }})["result"]["structuredContent"]
+            current_state = mcp.request("tools/call", {"name": "get_project_current_state", "arguments": {
+                "projectId": PROJECT_ID,
+            }})["result"]["structuredContent"]
             story_page = mcp.request("tools/call", {"name": "list_project_change_stories", "arguments": {
                 "projectId": PROJECT_ID,
             }})["result"]["structuredContent"]
@@ -341,6 +350,8 @@ class MCPProjectHistoryTest(unittest.TestCase):
         chapter = chapter_page["items"][0]
         thread = thread_page["items"][0]
         self.assertEqual("SUPPORTING", story["role"])
+        self.assertEqual("current-state:fixture", current_state["stateRevision"])
+        self.assertFalse(current_state["modelCalled"])
         self.assertEqual("story-split-a", story["primaryStoryId"])
         self.assertEqual(["来源成员已变化"], story["correctionConflicts"])
         self.assertEqual(["story-split-a", "story-split-b"], chapter["storyRefs"])

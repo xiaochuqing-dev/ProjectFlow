@@ -1,5 +1,13 @@
 # CI quality gates
 
+## V3.9 Project Continuity Closure
+
+V3.9 keeps Backend/H2, PostgreSQL 16, frontend TypeScript/contracts/build, Playwright, Hermes, Obsidian, root launcher and sensitive-content as blocking gates. It adds the frozen 30-case continuity Ground Truth, no-op/identity/correction/current-state/context/projector invariants, three-Provider real acceptance, T0–T7 Dogfood and genuine human continuity review.
+
+Real acceptance remains explicit workflow dispatch and uses the existing protected Secret with the exact Luna Responses/max, DeepSeek Chat/max and Qwen Messages/max profiles. A later pass never deletes an earlier failure. Human review is not automated. No Tag or Release job is authorized.
+
+For production/eval source head `eb38c78fe70d3cf9280e716f7fc906d8729b15b1`, push run `32666198144` and PR run `32666201528` passed every ordinary blocking job. Explicit affected-set rerun `32666372066` repeated those jobs and passed all three 19/19 qualifications, all three 9/9 Chapter regressions and all three 3/3 V3.9 continuity suites. Earlier run `32659635453` remains recorded as failed because its Qwen Chapter regression exposed one unsupported claim; later success does not delete that evidence. The production/eval source head stays authoritative even though a later evidence-only commit may add sanitized artifacts and reports without changing backend, frontend, integrations or workflow code.
+
 ## V3.8.5 Final Chapter Closure execution
 
 Final Chapter Closure uses one same-head, explicitly dispatched three-Provider matrix: GPT 5.6 Luna `gpt-5.6-luna` over `OPENAI_RESPONSES`, DeepSeek V4 Flash `deepseek-v4-flash` over `OPENAI_CHAT_COMPLETIONS`, and Qwen3.7 Plus `qwen3.7-plus` over `ANTHROPIC_MESSAGES`. All three profiles use `max` reasoning. No alternative Qwen model may be substituted.

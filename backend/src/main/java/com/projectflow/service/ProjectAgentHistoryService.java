@@ -31,6 +31,7 @@ import com.projectflow.dto.ProjectMemoryGatewayDtos.MemorySearchResultResponse;
 import com.projectflow.dto.ProjectHistoryDtos.ChangeStory;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryChapter;
 import com.projectflow.dto.ProjectHistoryDtos.HistoryOverviewResponse;
+import com.projectflow.dto.ProjectHistoryDtos.ProjectCurrentStateResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.AnalysisToolEvidenceResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectEvidenceSourceResponse;
 import com.projectflow.dto.ProjectUnderstandingDtos.ProjectStructureIndexResponse;
@@ -301,9 +302,11 @@ public class ProjectAgentHistoryService {
                 + ",coverage=" + snapshot.historicalCoverage().overallCoverage()
                 + ",from=" + snapshot.historicalCoverage().earliestEvidenceAt()
                 + ",to=" + snapshot.historicalCoverage().latestEvidenceAt();
+        ProjectCurrentStateResponse currentState = null;
         if (historyReadService != null) {
             try {
-                history = correctedHistoryNarrative(userId, projectId, history, limitations);
+                currentState = historyReadService.currentState(userId, projectId);
+                history = correctedHistoryNarrative(userId, projectId, currentState, history, limitations);
             } catch (RuntimeException exception) {
                 limitations.add("项目历程展示层暂时无法读取，保留原有持久化历史覆盖诊断");
             }
@@ -340,7 +343,7 @@ public class ProjectAgentHistoryService {
             result = packageResponse(
                 project, snapshot, budget, generatedAt, task, scope, revisionMode, evidenceDepth,
                 strong, declared, inferred, conflicts, unknowns, evidence, verified, historical,
-                ranges, history, coverage, unreadScope, limitations, deepReadTargets, provenance,
+                ranges, history, currentState, coverage, unreadScope, limitations, deepReadTargets, provenance,
                 "PERSISTED_ONLY", truncated
             );
             int length = jsonLength(result);
@@ -353,7 +356,7 @@ public class ProjectAgentHistoryService {
                 result = packageResponse(
                     project, snapshot, budget, generatedAt, task, scope, revisionMode, evidenceDepth,
                     strong, declared, inferred, conflicts, unknowns, evidence, verified, historical,
-                    ranges, history, coverage, unreadScope, limitations, deepReadTargets, provenance,
+                    ranges, history, currentState, coverage, unreadScope, limitations, deepReadTargets, provenance,
                     "PERSISTED_ONLY", truncated || length > budget
                 );
                 break;
@@ -368,7 +371,7 @@ public class ProjectAgentHistoryService {
             result.currentStrongFacts(), result.declaredMaterial(), result.inferredCandidates(), result.conflicts(),
             result.unknowns(), result.keyEvidence(), result.latestVerifiedChanges(),
             result.relevantHistoricalRecords(), result.relatedRanges(), result.trustGuidance(),
-            result.historicalCoverage(), result.coverageDisclosure(), result.unreadScope(), result.limitations(),
+            result.historicalCoverage(), result.currentProjectState(), result.coverageDisclosure(), result.unreadScope(), result.limitations(),
             result.suggestedDeepReadTargets(), result.provenance(), result.generationMetadata(),
             result.sizeBudget(), actual, result.truncated()
         );
@@ -533,7 +536,13 @@ public class ProjectAgentHistoryService {
      * view.  Engineering references remain compact and explicitly marked as
      * drill-down material so a user declaration cannot be mistaken for a fact.
      */
-    private String correctedHistoryNarrative(UUID userId, UUID projectId, String fallback, List<String> limitations) {
+    private String correctedHistoryNarrative(
+        UUID userId,
+        UUID projectId,
+        ProjectCurrentStateResponse currentState,
+        String fallback,
+        List<String> limitations
+    ) {
         HistoryOverviewResponse overview = historyReadService.overview(userId, projectId);
         List<HistoryChapter> chapters = historyReadService.chapters(userId, projectId, 0, 12).items();
         List<ChangeStory> stories = historyReadService.stories(userId, projectId, null, false, null, null, 0, 16).items();
@@ -542,7 +551,7 @@ public class ProjectAgentHistoryService {
         text.append("来源修订：").append(overview.projectRevision()).append("；展示修订：")
             .append(overview.presentationRevision()).append("\n");
         text.append("最早状态：").append(bounded(overview.overview().earliestConfirmedState(), 500)).append("\n");
-        text.append("当前状态：").append(bounded(overview.overview().currentState(), 500)).append("\n");
+        text.append("当前状态：").append(bounded(currentState.confirmedState(), 500)).append("\n");
         if (!chapters.isEmpty()) {
             text.append("篇章：\n");
             for (HistoryChapter chapter : chapters) {
@@ -605,6 +614,7 @@ public class ProjectAgentHistoryService {
         List<AgentKnowledgeItem> historical,
         List<AgentSourceRangeResponse> ranges,
         String history,
+        ProjectCurrentStateResponse currentState,
         AgentCoverageDisclosureResponse coverage,
         List<String> unreadScope,
         List<String> limitations,
@@ -627,7 +637,8 @@ public class ProjectAgentHistoryService {
         );
         String packageRevision = packageRevision(
             project, sourceRevision, taskDescription, requestedScope, revisionPreference, evidenceDepth,
-            strong, declared, inferred, conflicts, unknowns, evidence, ranges, unreadScope, limitations
+            strong, declared, inferred, conflicts, unknowns, evidence, ranges, unreadScope, limitations,
+            currentState == null ? "" : currentState.stateRevision()
         );
         return new AgentContextPackageResponse(
             PACKAGE_VERSION, packageRevision, project.getId(), project.getName(), project.getStatus().name(),
@@ -636,7 +647,7 @@ public class ProjectAgentHistoryService {
             List.copyOf(strong), List.copyOf(declared), List.copyOf(inferred),
             List.copyOf(conflicts), List.copyOf(unknowns), List.copyOf(evidence),
             List.copyOf(verified), List.copyOf(historical), List.copyOf(ranges), trust,
-            history, currentCoverage, List.copyOf(new LinkedHashSet<>(unreadScope)),
+            history, currentState, currentCoverage, List.copyOf(new LinkedHashSet<>(unreadScope)),
             List.copyOf(new LinkedHashSet<>(limitations)),
             List.copyOf(new LinkedHashSet<>(deepReadTargets)),
             List.copyOf(new LinkedHashSet<>(provenance)),
@@ -663,7 +674,8 @@ public class ProjectAgentHistoryService {
         List<AgentEvidenceResponse> evidence,
         List<AgentSourceRangeResponse> ranges,
         List<String> unreadScope,
-        List<String> limitations
+        List<String> limitations,
+        String currentStateRevision
     ) {
         Map<String, Object> canonical = new LinkedHashMap<>();
         canonical.put("version", PACKAGE_VERSION);
@@ -686,6 +698,7 @@ public class ProjectAgentHistoryService {
         )).toList());
         canonical.put("unreadScope", unreadScope);
         canonical.put("limitations", List.copyOf(new LinkedHashSet<>(limitations)));
+        canonical.put("currentStateRevision", currentStateRevision == null ? "" : currentStateRevision);
         try {
             return "sha256:" + sha256(objectMapper.writeValueAsString(canonical));
         } catch (JsonProcessingException exception) {
