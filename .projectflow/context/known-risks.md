@@ -1,6 +1,6 @@
 # Known risks
 
-- V3.9 技术验收已在生产/eval 源码头 `eb38c78fe70d3cf9280e716f7fc906d8729b15b1` 完成：30-case deterministic map、T0–T7 Dogfood、Backend/H2、PostgreSQL/Playwright、Hermes、Obsidian、root launcher、敏感内容与普通同头 CI 通过；run `32666372066` 的三 Provider qualification 19/19、Chapter 9/9 和 continuity 3/3 全部通过。但真人 Continuity review 仍为 `NOT_REVIEWED`；Ready/merge/master/backfill/cleanup 未完成前，不得宣布 V3.9 Final PASS 或 V3.10 ENTRY。
+- V3.9 已按 Owner 授权的自动化加独立语义复核模式关闭：功能 Head `f3c3adbd79206fc21a8a5209774a0b71ef47e185` 的三 Provider 独立盲评 12/12、Chapter 9/9、continuity 3/3，普通 CI、merge 后 master CI 与干净主线启动器均通过。原真人 Continuity worksheet 仍为 `NOT_REVIEWED`；不得把关闭模式误写为 HUMAN_REVIEW_PASS，也不得补造评分。进入 V3.10 前仍需完成 acceptance-backfill merge、最终 master 验证和清理。
 - Current Project State 是 corrected History 的派生展示，不是 ProjectFact。它能诚实显示 READY/STALE/DEGRADED/UNKNOWN，但不能证明“完成、成熟、已部署、生产可用”；消费者不得把 state revision 当作事实 Evidence。
 - ProjectFlow 内部 Agent candidate、Correction、Fact ingestion 会写 continuity dirty revision，但不会自动刷新。外部 Git/文件变化没有 watcher，只能由下一次显式 source discovery 发现；不得宣称实时监控。
 - 数据库 Agent candidate 单次最多采集 200 条，超过上限会标记 coverage incomplete。Agent 声明仍是 PROCESS_EVIDENCE；即使后续与 Git Evidence 相关，也不能因自报或模型共识自动提升为 Strong Fact。

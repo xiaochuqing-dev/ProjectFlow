@@ -4,9 +4,9 @@
 
 ## 当前结论
 
-本地最终实现与技术回归已通过，状态为 `LOCAL_FINAL_GATES_PASS / REMOTE_GATES_PENDING`。V3.9 尚未在本文件中声明最终关闭：PR #17 仍为 Draft，三 Provider 独立语义复核、同头普通 CI、merge、master CI、根启动器复验、acceptance backfill 和 cleanup 必须按顺序完成后再追加最终事实。
+V3.9 最终状态为 `PASS_BY_OWNER_APPROVED_AUTOMATED_AND_INDEPENDENT_SEMANTIC_REVIEW`。功能 Head `f3c3adbd79206fc21a8a5209774a0b71ef47e185` 的普通 push/PR CI 与 Luna、DeepSeek、Qwen 同头真实验收已通过；PR #17 已合并为 master `d4bceed673d7cd630bc3b6663f673be6f2ac3c5b`，master CI 与干净主线根启动器复验也已通过。
 
-原 `human-continuity-review-worksheet.json` 保持 `NOT_REVIEWED` 且无字段被填写，规范化 SHA-256 仍为 `75f9f18836d87c77db0d8a89fd3541348d2b48f28673e68ffa57e96ff000f9df`。Owner 已通过 append-only policy 免除逐场手填，但本轮不声明 `HUMAN_REVIEW_PASS`，也不伪造评分或 reviewer judgement。
+原 `human-continuity-review-worksheet.json` 保持 `NOT_REVIEWED` 且无字段被填写，规范化 SHA-256 仍为 `75f9f18836d87c77db0d8a89fd3541348d2b48f28673e68ffa57e96ff000f9df`。Owner 已通过 append-only policy 免除逐场手填；最终关闭不声明 `HUMAN_REVIEW_PASS`，也不伪造评分或 reviewer judgement。
 
 ## 起点与隔离
 
@@ -46,6 +46,15 @@ Current Project State 现在只由可见 Primary Story 按 `occurredTo`、`occur
 
 第二次受保护 run `32783687630` 在 Head `236bf279dafab4bf4460876797e97f954f40fa7f` 上证明预算问题已关闭：Luna 单次请求正常 `COMPLETED`，未截断，31,515 completion tokens、35,435 total tokens，且 gateway schemaMatched=true。但返回的 `attachmentSemanticallySupported` 表示未通过 evaluator 只接收字符串枚举的解析，工件以 `REVIEW_FIELD_INVALID_ATTACHMENTSEMANTICALLYSUPPORTED` 失败，0/12，SHA-256 `5a8013a36c8c7c5308ddffb5d6b2f36b3631e23600551a2fc96336ac5a8a6785`。Raw response 按安全合同未持久化，因此不伪造其具体原始值。后续兼容修复只把 judgement 字段的 JSON boolean 规范化为语义等价 `yes`/`no`，仍拒绝数字、对象、数组、未知标签和 boolean confidence，同时在盲评指令中明确要求带引号的字符串。
 
-表示兼容修复后的 evaluator 合同 21 tests 通过，0 failure/error，2 个真实 Provider 环境性 skip；覆盖 judgement boolean、canonical 字符串大小写与空格、null、数字、数组、对象、未知标签、二值字段 uncertain、boolean confidence、非字符串 rationale 和 prompt quoted-string 合同。
+表示兼容修复后的 evaluator 合同 21 tests 通过，0 failure/error，2 个真实 Provider 环境性 skip；覆盖 judgement boolean、canonical 字符串大小写与空格、null、数字、数组、对象、未知标签、二值字段 uncertain、boolean confidence、非字符串 rationale 和 prompt quoted-string 合同。首次 run `32778908166` 的 Qwen 也保留为同一字段表示失败，安全摘要 SHA-256 为 `9567da98ae239684763dcd25c93ba0f1fd833451a3cc1ab9af73435fe7c1117f`。
 
-V3.9 不创建 Tag 或 GitHub Release，不提前实现 V4 GUI。只有远端三 Provider、PR CI、merge/master、backfill 与 cleanup 全部完成并形成 append-only 证据后，才能把最终状态更新为 `PASS_BY_OWNER_APPROVED_AUTOMATED_AND_INDEPENDENT_SEMANTIC_REVIEW`。
+## 最终远端验收与 GitHub 关闭
+
+- 功能 Head 的普通 push run `32786447074` 与 PR run `32786451347` 均为 SUCCESS；PostgreSQL 16、Backend/H2、Frontend、Playwright、Hermes、Obsidian 和敏感内容门禁通过。
+- Luna run `32786453448`、DeepSeek run `32788614128`、Qwen run `32788614204` 均锁定同一功能 Head。三者独立盲评均为 12/12，Chapter 均为 9/9，continuity 均为 3/3。
+- 主 Agent 对三份盲评中的 `no`、`uncertain`、独立性与真实性字段逐项复核。所有疑点都保留了独立 Story/Thread、冲突或有界 unknown；没有接受 false continuity、旧历史意外修改或 Strong Fact 提升，最终 P0/P1 为 0。
+- PR #17 于 2026-08-25 合并，merge commit 为 `d4bceed673d7cd630bc3b6663f673be6f2ac3c5b`。master run `32795545544` 全绿。
+- 干净 master 根启动器完成前端重建和前后端 readiness，build ID 为 `GdSSCpQDANn3ySz7SGewA`；退出后 3000/8080 无监听。
+- 机器可读关闭证据位于 `docs/acceptance-evidence/v3.9/final-acceptance-backfill.json`。原 worksheet 未修改，旧失败未覆盖，未创建 Tag 或 GitHub Release。
+
+V3.9 的 P0 与最终验收门已关闭。Frontend 4 个 high 依赖告警、GitHub Actions Node 20 退役告警、版本化迁移、OS Secret Store、发布运行包和升级恢复正式进入 V3.10 范围。

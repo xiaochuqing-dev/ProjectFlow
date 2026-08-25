@@ -1,0 +1,27 @@
+{
+  "taskGoal": "把 V3.9 功能合并、三模型同头语义验收、master 质量门和干净主线启动结果回填为可审计的最终关闭证据。",
+  "actualChanges": [
+    "PR #17 已按仓库惯例以 merge commit 合入 master，并记录最终功能 Head、merge SHA、普通 CI 与 master CI。",
+    "Luna、DeepSeek、Qwen 在同一功能 Head 完成独立盲评 12/12、Chapter 9/9 和 continuity 3/3；所有高风险分歧由主 Agent 复核，P0/P1 为 0。",
+    "保留两次 Luna 与一次 Qwen 独立盲评失败，成功运行不覆盖失败历史。",
+    "根启动器从干净 merge revision 重建并通过前后端健康检查，退出后 3000/8080 无监听。",
+    "原真人 worksheet 保持 NOT_REVIEWED，最终结论仅使用 Owner 授权的自动化加独立语义复核模式。"
+  ],
+  "keyFiles": [
+    "docs/acceptance-evidence/v3.9/final-acceptance-backfill.json",
+    "docs/acceptance-evidence/v3.9/failed-runs/32778908166/qwen-independent-semantic-review-summary.json",
+    "docs/acceptance-evidence/v3.9/evidence-index.md",
+    "docs/projectflow-v3.9-final-closure-report.md"
+  ],
+  "verification": {
+    "build": "PASS：Start-ProjectFlow.bat -NoBrowser 在 master d4bceed673d7cd630bc3b6663f673be6f2ac3c5b 上通过，Build ID GdSSCpQDANn3ySz7SGewA，退出后监听释放。",
+    "tests": "PASS：功能 Head push/PR CI 32786447074/32786451347 与 merge 后 master CI 32795545544 全绿；三 Provider 同头受保护验收均成功。",
+    "manualCheck": "PASS：Sol 高风险复核 P0/P1=0；原 worksheet canonical SHA 保持 75f9f18836d87c77db0d8a89fd3541348d2b48f28673e68ffa57e96ff000f9df；未声明 HUMAN_REVIEW_PASS。"
+  },
+  "unfinished": [
+    "Acceptance-backfill PR 仍需通过 required CI 后合并，并完成最终 master 验证与 V3.9 分支、临时 worktree 清理。"
+  ],
+  "sedimentCandidates": [
+    "真实 Provider 成功工件与失败历史应通过稳定哈希和 run 元数据引用，避免把完整响应或凭据复制进仓库。"
+  ]
+}
