@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "projectflow-v3.9-independent-semantic-review-failure-summary-v1",
+  "runId": 32778908166,
+  "jobId": 97603433580,
+  "headSha": "83d6f2b4a72d91c883aac843c980212d8f34d285",
+  "providerId": "qwen",
+  "protocol": "ANTHROPIC_MESSAGES",
+  "result": "FAILED",
+  "failureCode": "REVIEW_FIELD_INVALID_ATTACHMENTSEMANTICALLYSUPPORTED",
+  "scenarioCount": 12,
+  "successfulScenarioCount": 0,
+  "failedScenarioCount": 12,
+  "diagnostics": {
+    "logicalModelCalls": 1,
+    "physicalRequestCount": 1,
+    "inputTokens": 4014,
+    "completionTokens": 5979,
+    "totalTokens": 9993,
+    "latencyMs": 103991,
+    "effectiveMaxTokensPerRequest": 16384,
+    "requestSucceeded": true,
+    "schemaMatched": true,
+    "truncated": false,
+    "retryType": "NONE",
+    "finishReason": "END_TURN"
+  },
+  "artifactSha256": "9567da98ae239684763dcd25c93ba0f1fd833451a3cc1ab9af73435fe7c1117f",
+  "observedRootCause": "The provider completed one bounded structured response, but at least one judgement representation did not match the evaluator's strict textual enum. The raw value was deliberately not persisted, so its exact representation remains unknown.",
+  "disposition": "KEEP_FAILURE_TIGHTEN_QUOTED_STRING_INSTRUCTION_AND_NORMALIZE_ONLY_BOOLEAN_YES_NO",
+  "security": {
+    "apiKeyPersisted": false,
+    "authorizationPersisted": false,
+    "promptPersisted": false,
+    "rawResponsePersisted": false,
+    "reasoningPersisted": false,
+    "absolutePathPersisted": false
+  }
+}

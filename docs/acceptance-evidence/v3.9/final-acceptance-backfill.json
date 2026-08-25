@@ -1,0 +1,176 @@
+{
+  "schemaVersion": "projectflow-v3.9-final-acceptance-backfill-v1",
+  "recordedAt": "2026-08-25T09:03:00+08:00",
+  "closureMode": "PASS_BY_OWNER_APPROVED_AUTOMATED_AND_INDEPENDENT_SEMANTIC_REVIEW",
+  "state": "CLOSED",
+  "source": {
+    "baselineMaster": "ab29b1ff0f842c029b5cf121bd584bd40fcf74b2",
+    "finalFeatureHead": "f3c3adbd79206fc21a8a5209774a0b71ef47e185",
+    "featurePullRequest": 17,
+    "mergeCommit": "d4bceed673d7cd630bc3b6663f673be6f2ac3c5b",
+    "mergedAt": "2026-08-25T00:55:35Z"
+  },
+  "humanBoundary": {
+    "worksheetStatus": "NOT_REVIEWED",
+    "worksheetCanonicalSha256": "75f9f18836d87c77db0d8a89fd3541348d2b48f28673e68ffa57e96ff000f9df",
+    "manualScoresInvented": false,
+    "humanReviewPassClaimed": false,
+    "ownerPolicy": "final-owner-acceptance-policy.json"
+  },
+  "ordinaryCi": {
+    "featurePushRun": 32786447074,
+    "featurePullRequestRun": 32786451347,
+    "featureHead": "f3c3adbd79206fc21a8a5209774a0b71ef47e185",
+    "featureRunsResult": "SUCCESS",
+    "masterRun": 32795545544,
+    "masterHead": "d4bceed673d7cd630bc3b6663f673be6f2ac3c5b",
+    "masterRunResult": "SUCCESS",
+    "masterRequiredJobs": {
+      "backendUnitAndH2": "SUCCESS",
+      "postgresIntegration": "SUCCESS",
+      "frontendQuality": "SUCCESS",
+      "browserE2e": "SUCCESS",
+      "hermesMcp": "SUCCESS",
+      "obsidianProjection": "SUCCESS",
+      "sensitiveContent": "SUCCESS"
+    }
+  },
+  "realProviderAcceptance": [
+    {
+      "providerId": "luna",
+      "runId": 32786453448,
+      "headSha": "f3c3adbd79206fc21a8a5209774a0b71ef47e185",
+      "independentReview": {
+        "result": "COMPLETE_12_OF_12",
+        "artifactSha256": "abd0e524f06618109502ce53241fe0c17385895a90b898b4c7bac0f163408a7a",
+        "physicalRequestCount": 1,
+        "inputTokens": 3966,
+        "completionTokens": 29131,
+        "totalTokens": 33097,
+        "latencyMs": 307205,
+        "truncated": false
+      },
+      "chapter": {
+        "result": "PASS_9_OF_9",
+        "artifactSha256": "172bfece0d5223dd0c85a1c579402b5e03befd032e8f6bff355e2c6a54aaeec7",
+        "physicalRequestCount": 55,
+        "tokenCount": 339610,
+        "modelLatencyMs": 646759,
+        "validationRepairCount": 3
+      },
+      "continuity": {
+        "result": "PASS_3_OF_3",
+        "artifactSha256": "501a55809cebdb27722fbdcd49b05579af1a81859acff276c469cf6af400682a",
+        "physicalRequestCount": 15,
+        "tokenCount": 89139,
+        "modelLatencyMs": 149059,
+        "validationRepairCount": 0
+      }
+    },
+    {
+      "providerId": "deepseek",
+      "runId": 32788614128,
+      "headSha": "f3c3adbd79206fc21a8a5209774a0b71ef47e185",
+      "independentReview": {
+        "result": "COMPLETE_12_OF_12",
+        "artifactSha256": "de238b025bb0b7c87ff51cdab26585c847a120e604d5a4dbd17bbf19bb9801b2",
+        "physicalRequestCount": 1,
+        "inputTokens": 4316,
+        "completionTokens": 18075,
+        "totalTokens": 22391,
+        "latencyMs": 110263,
+        "truncated": false
+      },
+      "chapter": {
+        "result": "PASS_9_OF_9",
+        "artifactSha256": "b7ed76dafe7f738beea921e3e44de1af9fc1c4be9d1f05161c1c71193a51a6b4",
+        "physicalRequestCount": 55,
+        "tokenCount": 425932,
+        "modelLatencyMs": 806072,
+        "validationRepairCount": 3
+      },
+      "continuity": {
+        "result": "PASS_3_OF_3",
+        "artifactSha256": "b8dbc7185a648643e7c8b883884a11c8b1fb10f6c12504cc6291573c54cf471f",
+        "physicalRequestCount": 15,
+        "tokenCount": 104555,
+        "modelLatencyMs": 137849,
+        "validationRepairCount": 0
+      }
+    },
+    {
+      "providerId": "qwen",
+      "runId": 32788614204,
+      "headSha": "f3c3adbd79206fc21a8a5209774a0b71ef47e185",
+      "independentReview": {
+        "result": "COMPLETE_12_OF_12",
+        "artifactSha256": "795299415d904db0ad6512ad0d89978817365e515a497d8c46254aa08fcc3d89",
+        "physicalRequestCount": 1,
+        "inputTokens": 4056,
+        "completionTokens": 5857,
+        "totalTokens": 9913,
+        "latencyMs": 101634,
+        "truncated": false
+      },
+      "chapter": {
+        "result": "PASS_9_OF_9",
+        "artifactSha256": "793b6f90d4b2fc96779846ed47267c418530e85838b31768bb78e2557d9f071c",
+        "physicalRequestCount": 60,
+        "tokenCount": 450750,
+        "modelLatencyMs": 3127403,
+        "validationRepairCount": 5
+      },
+      "continuity": {
+        "result": "PASS_3_OF_3",
+        "artifactSha256": "263e9c5487ddf48bd386fe1711d3c793563faba4cff85a627b8d15bcc3455b76",
+        "physicalRequestCount": 15,
+        "tokenCount": 109515,
+        "modelLatencyMs": 816060,
+        "validationRepairCount": 0
+      }
+    }
+  ],
+  "solHighRiskReview": {
+    "result": "PASS",
+    "p0": 0,
+    "p1": 0,
+    "reviewedBoundaries": [
+      "Dirty revision monotonicity and stale acknowledgement races",
+      "Current State Primary-only ownership and consumer parity",
+      "Independent-review boolean normalization and strict rejection boundary",
+      "All no, uncertain and truthfulness concern judgements in three Provider artifacts"
+    ],
+    "conclusion": "All flagged uncertainty preserved separation, conflict or bounded unknown semantics; no false continuity attachment or silent history mutation was accepted."
+  },
+  "cleanMasterLauncher": {
+    "sourceRevision": "d4bceed673d7cd630bc3b6663f673be6f2ac3c5b",
+    "result": "PASS",
+    "frontendBuildId": "GdSSCpQDANn3ySz7SGewA",
+    "frontendReady": true,
+    "backendReady": true,
+    "listenersReleasedAfterExit": true
+  },
+  "failedRunsPreserved": [
+    "failed-runs/32659635453/qwen-chapter-regression-summary.json",
+    "failed-runs/32778908166/luna-independent-semantic-review-summary.json",
+    "failed-runs/32778908166/qwen-independent-semantic-review-summary.json",
+    "failed-runs/32783687630/luna-independent-semantic-review-summary.json"
+  ],
+  "security": {
+    "apiKeyPersisted": false,
+    "authorizationPersisted": false,
+    "promptPersisted": false,
+    "rawResponsePersisted": false,
+    "reasoningPersisted": false,
+    "absolutePathPersisted": false,
+    "originalWorksheetModified": false
+  },
+  "deferredToV310": [
+    "Frontend dependency audit reports four high-severity advisories and zero critical advisories.",
+    "GitHub Actions reports Node 20 action-runtime deprecation warnings.",
+    "Versioned migration, OS secret storage, release runtime and recovery remain V3.10 scope."
+  ],
+  "tagCreated": false,
+  "releaseCreated": false,
+  "v310Entry": "AUTHORIZED_AFTER_BACKFILL_MERGE_FINAL_MASTER_VERIFY_AND_CLEANUP"
+}

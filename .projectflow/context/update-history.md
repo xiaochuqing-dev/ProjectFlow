@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V3.9 最终关闭与验收回填 - 2026-08-25
+
+最终功能 Head `f3c3adbd79206fc21a8a5209774a0b71ef47e185` 关闭 dirty generation 竞态、Primary-only Current Project State 与独立语义评审表示边界。普通 push/PR CI 通过；Luna、DeepSeek、Qwen 各自完成同头独立盲评 12/12、Chapter 9/9 和 continuity 3/3，旧 Luna/Qwen 失败继续保留。Sol 高风险复核 P0/P1 为 0。PR #17 合并为 master `d4bceed673d7cd630bc3b6663f673be6f2ac3c5b`，master run `32795545544` 与干净主线根启动器通过。Owner-approved 结论为 `PASS_BY_OWNER_APPROVED_AUTOMATED_AND_INDEPENDENT_SEMANTIC_REVIEW`；原 worksheet 仍为 `NOT_REVIEWED`，无人工分数或 HUMAN_REVIEW_PASS。继续 NO TAG / NO RELEASE；Frontend 依赖、Actions runtime、版本化迁移、Secret Store、发布运行包与恢复进入 V3.10。
+
 ## ProjectFlow V3.9 Project Continuity Closure 核心实现 - 2026-08-24
 
 从 final master `ab29b1ff0f842c029b5cf121bd584bd40fcf74b2` 创建 `codex/v3.9-project-continuity-closure` 与 Draft PR #17。先冻结 15 Calibration + 15 Holdout、产品合同、复用审计与 Ground Truth 泄漏门禁，再在既有 History 链上实现有界 Continuity Delta、Story/Thread 连续性诊断、未受影响 Chapter 精确复用、Correction 安全 additive replay、Current Project State、Context Package revision 联动和 Obsidian Current-State-only 两文件更新。数据库 Agent Result candidate 现在作为 PROCESS_EVIDENCE 进入下一次显式刷新；Agent candidate、Correction 和 Fact ingestion 使用并发安全 dirty revision，刷新只确认开始时观察到的版本。新增 Native/Gateway/Frontend/Hermes Current State 读取，Hermes 版本升至 3.9.0、共 21 个只读工具。
