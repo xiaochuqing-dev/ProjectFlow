@@ -1,0 +1,30 @@
+{
+  "taskGoal": "在最终 V3.9 master 上完成 V3.10 Release Readiness 的非循环真实旧库补证、三 Provider 安全凭据路径 smoke、文档收口、PR 合并、master 复验和最终事实回填。",
+  "actualChanges": [
+    "新增不可跳过的真实旧版本升级门禁：由 exact V3.9 final 应用实际创建 H2 与 PostgreSQL 16 数据库，再验证精确 KNOWN_V39、备份恢复、受控 baseline、V2、凭据迁移、保护记录和重启幂等性，没有使用 V1 自造旧库或放宽 UNKNOWN。",
+    "新增 credential-smoke 工作流范围，复用现有 secure credential store、opaque secretRef、Model Gateway 和三个协议适配器，对 Luna、DeepSeek、Qwen 各执行一次最小真实结构化请求，不重跑历史语义矩阵。",
+    "PR #19 已在最终功能 Head 的 Linux、Windows 和三 Provider 门禁通过后转为 Ready，并以 merge commit 合入 master；merge 后 master 的 Quality 与 Windows 门禁再次通过。",
+    "新增机器可读的 V3.10 最终验收事实回填，并同步当前上下文、风险、更新历史和收口报告；该回填只记录已经发生的事实，不修改产品行为，也不预写自身 PR 的 Run ID 或 merge SHA。"
+  ],
+  "keyFiles": [
+    "backend/src/test/java/com/projectflow/migration/ProjectFlowRealV39UpgradeProofTest.java",
+    "backend/src/test/java/com/projectflow/migration/V39RepresentativeDataFixture.java",
+    ".github/workflows/quality-gates.yml",
+    "docs/acceptance-evidence/v3.10/final-feature-evidence.json",
+    "docs/acceptance-evidence/v3.10/final-acceptance-backfill.json",
+    "docs/projectflow-v3.10-final-closure-report.md",
+    "PROJECT_CONTEXT.md",
+    ".projectflow/context/known-risks.md",
+    ".projectflow/context/update-history.md"
+  ],
+  "verification": {
+    "build": "PASS：本地 release script contracts 与 Windows portable 构建链通过；最终功能 Windows run 33242563193 和 merge 后 master Windows run 33246313553 均成功。",
+    "tests": "PASS：本地真实旧库证明 2/2 且零跳过，后端 717 项和 PostgreSQL integration 13 项零失败；最终功能 Quality run 33242563402、三 Provider run 33242565505、merge 后 master Quality run 33246313873 均成功。",
+    "manualCheck": "PASS：12 个高风险边界复核 P0=0、P1=0；旧库由 exact V3.9 final 生成，迁移后 plaintext Provider key 行数为 0，敏感内容、npm High/Critical 和 OSV 门禁通过；未创建 Tag/Release，未开始 V4 GUI。"
+  },
+  "unfinished": [],
+  "sedimentCandidates": [
+    "发布迁移应使用真实上一版本应用生成旧库，再由新版本完成备份、迁移和重启证明，避免用当前 baseline 自证兼容性。",
+    "真实 Provider 收口可以复用生产 secure credential path 做最小同头协议 smoke，同时把完整语义矩阵留在其原验收阶段。"
+  ]
+}

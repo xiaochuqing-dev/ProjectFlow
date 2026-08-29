@@ -1,0 +1,146 @@
+{
+  "schemaVersion": "projectflow-v3.10-final-acceptance-backfill-v1",
+  "recordedAt": "2026-08-29T17:58:38+08:00",
+  "state": "FINAL_ACCEPTANCE_FACTS_COMPLETE_PENDING_OWN_BACKFILL_PR",
+  "source": {
+    "baselineMaster": "dd5ee41b6afcbd7703fa0883dc115c11f4821447",
+    "legacyApplicationSource": "dd5ee41b6afcbd7703fa0883dc115c11f4821447",
+    "finalFeatureHead": "c0b4d9653ac6a579978d81b66d2554662e2007dd",
+    "featurePullRequest": 19,
+    "featurePullRequestState": "MERGED",
+    "mergeCommit": "2f56257c028657f3c67e0e413f938d723502147f",
+    "mergedAt": "2026-08-29T09:47:38Z",
+    "masterHeadAtBackfillBase": "2f56257c028657f3c67e0e413f938d723502147f"
+  },
+  "realV39Upgrade": {
+    "legacySchemaCreatedByExactOldApplication": true,
+    "legacySchemaCreatedByV1Fixture": false,
+    "h2": "PASS",
+    "postgresql16": "PASS",
+    "classification": "KNOWN_V39_EXACT",
+    "h2BackupAndRestore": "PASS",
+    "postgresDumpAndIsolatedRestore": "PASS",
+    "postgresBackupAcknowledgementBlock": "PASS",
+    "controlledV1BaselineAndV2": "PASS",
+    "protectedRecordLoss": 0,
+    "restartStable": true,
+    "requiredProofTests": 2,
+    "requiredProofSkipped": 0,
+    "featureRun": 33242563402,
+    "featureJob": 99074275051,
+    "masterRun": 33246313873
+  },
+  "secureProviderSmoke": {
+    "runId": 33242565505,
+    "headSha": "c0b4d9653ac6a579978d81b66d2554662e2007dd",
+    "scope": "credential-smoke",
+    "credentialPath": "SECURE_STORE_TO_OPAQUE_SECRET_REF_TO_MODEL_GATEWAY_TO_PROTOCOL_ADAPTER",
+    "historicalSemanticMatrixRerun": false,
+    "providers": [
+      {
+        "id": "luna",
+        "protocol": "OPENAI_RESPONSES",
+        "jobId": 99074282253,
+        "result": "SUCCESS"
+      },
+      {
+        "id": "deepseek",
+        "protocol": "OPENAI_CHAT_COMPLETIONS",
+        "jobId": 99074282351,
+        "result": "SUCCESS"
+      },
+      {
+        "id": "qwen",
+        "protocol": "ANTHROPIC_MESSAGES",
+        "jobId": 99074282346,
+        "result": "SUCCESS"
+      }
+    ]
+  },
+  "requiredCi": {
+    "finalFeature": {
+      "headSha": "c0b4d9653ac6a579978d81b66d2554662e2007dd",
+      "qualityRun": 33242563402,
+      "qualityResult": "SUCCESS",
+      "windowsRun": 33242563193,
+      "windowsResult": "SUCCESS",
+      "duplicatePushQualityRun": 33242560959,
+      "duplicatePushQualityAttempt": 2,
+      "duplicatePushQualityResult": "SUCCESS",
+      "duplicatePushWindowsRun": 33242560734,
+      "duplicatePushWindowsAttempt": 2,
+      "duplicatePushWindowsResult": "SUCCESS"
+    },
+    "mergeAfterMaster": {
+      "headSha": "2f56257c028657f3c67e0e413f938d723502147f",
+      "qualityRun": 33246313873,
+      "qualityResult": "SUCCESS",
+      "windowsRun": 33246313553,
+      "windowsResult": "SUCCESS"
+    },
+    "local": {
+      "realV39Proof": "PASS_2_OF_2_NO_SKIPS",
+      "releaseScriptContracts": "PASS",
+      "backendUnit": "PASS_717_FAILURES_0_ERRORS_0",
+      "postgresIntegration": "PASS_13_FAILURES_0_ERRORS_0"
+    }
+  },
+  "failedRunsPreserved": [
+    {
+      "runId": 33242086857,
+      "result": "FAILURE",
+      "safeReason": "workflow expression referenced runner temporary state before a runner existed"
+    },
+    {
+      "runId": 33242087387,
+      "result": "CANCELLED",
+      "safeReason": "obsolete Windows push run for a superseded feature head"
+    },
+    {
+      "runId": 33242089234,
+      "result": "CANCELLED",
+      "safeReason": "obsolete Windows pull-request run for a superseded feature head"
+    },
+    {
+      "runId": 33242560959,
+      "result": "ATTEMPT_1_CANCELLED_ATTEMPT_2_SUCCESS",
+      "safeReason": "same-head duplicate quality run was rerun so the PR retained only successful current checks"
+    },
+    {
+      "runId": 33242560734,
+      "result": "ATTEMPT_1_CANCELLED_ATTEMPT_2_SUCCESS",
+      "safeReason": "same-head duplicate Windows run was rerun so the PR retained only successful current checks"
+    }
+  ],
+  "security": {
+    "plaintextProviderKeyRowsAfterMigration": 0,
+    "apiKeyPersistedInRepositoryOrEvidence": false,
+    "authorizationPersisted": false,
+    "rawResponsePersisted": false,
+    "reasoningPersisted": false,
+    "machineAbsoluteSecretPathPersisted": false,
+    "npmProductionHighCriticalGate": "PASS",
+    "osvLockedDependencyGate": "PASS",
+    "sensitiveContentGate": "PASS"
+  },
+  "focusedHighRiskReview": {
+    "result": "PASS",
+    "p0": 0,
+    "p1": 0,
+    "reviewedBoundaryCount": 12,
+    "unknownSchemaPolicy": "BLOCK",
+    "releaseSchemaOwner": "FLYWAY",
+    "credentialMigration": "WRITE_READ_BACK_VERIFY_THEN_CLEAR",
+    "historyContinuityRegression": "PASS"
+  },
+  "formalClosure": {
+    "pullRequest19Ready": true,
+    "pullRequest19Merged": true,
+    "mergeAfterMasterVerified": true,
+    "acceptanceBackfillAtRecordTime": "PENDING_OWN_REQUIRED_CI_AND_MERGE",
+    "v4Entry": "APPROVED_AFTER_BACKFILL_MERGE_FINAL_MASTER_VERIFY_AND_CLEANUP"
+  },
+  "tagCreated": false,
+  "releaseCreated": false,
+  "v4GuiStarted": false
+}

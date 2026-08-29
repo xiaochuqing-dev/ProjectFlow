@@ -1,10 +1,10 @@
 # ProjectFlow V3.10 Final Release Closure Report
 
-Recorded at: 2026-08-29T16:08:47+08:00
+Recorded at: 2026-08-29T17:58:38+08:00
 
-## Status at feature evidence freeze
+## Final GitHub acceptance checkpoint
 
-V3.8.5 History Quality and V3.9 Project Continuity remain FINAL. V3.10 implementation evidence is complete with P0=0 and P1=0, but formal FINAL remains gated on PR #19 Ready/merge, merge-after master CI, acceptance backfill and cleanup. V4.0 Entry therefore remains PENDING at this report checkpoint.
+V3.8.5 History Quality and V3.9 Project Continuity remain FINAL. V3.10 implementation evidence is complete with P0=0 and P1=0; PR #19 is merged and its merge-after master Quality and Windows gates pass. This facts-only backfill intentionally does not invent its own PR checks or merge SHA. V3.10 FINAL and V4.0 Entry become effective only after this backfill passes required CI, merges, the resulting master is verified and task-created temporary resources are cleaned.
 
 NO TAG. NO GITHUB RELEASE. V4 GUI was not started.
 
@@ -12,7 +12,16 @@ NO TAG. NO GITHUB RELEASE. V4 GUI was not started.
 
 The task-book audit baseline matched GitHub: master `dd5ee41b6afcbd7703fa0883dc115c11f4821447`, Draft PR #19 and remote feature Head `f85b7d4ceada7d053a0bbe0d8b216eab32795e63`. Work continued in a separate clean tracking worktree so the original worktree and its user-owned untracked files were not changed.
 
-The final behavior-bearing implementation evidence Head is `3c3dac91160b23f52e4ea680e423e3886dbda8ed`. The following commit only synchronizes closure documentation and workflow dispatch cost; its exact final PR Head is intentionally recorded after merge in the acceptance backfill rather than fabricated inside a self-referential source file.
+The final behavior-bearing implementation evidence Head is `3c3dac91160b23f52e4ea680e423e3886dbda8ed`; the exact final PR Head is `c0b4d9653ac6a579978d81b66d2554662e2007dd`. PR #19 merged at `2026-08-29T09:47:38Z` as `2f56257c028657f3c67e0e413f938d723502147f`.
+
+## Final immutable GitHub facts
+
+- Final feature Quality run `33242563402`: PASS.
+- Final feature Windows run `33242563193`: PASS.
+- Same-head Luna, DeepSeek and Qwen secure credential-path run `33242565505`: PASS for all three protocols.
+- Merge-after master Quality run `33246313873`: PASS.
+- Merge-after master Windows run `33246313553`: PASS.
+- Machine-readable closure facts: `docs/acceptance-evidence/v3.10/final-acceptance-backfill.json`.
 
 ## Changes limited to the closure gaps
 
@@ -58,4 +67,4 @@ The focused 12-boundary review found no unresolved P0 or P1. UNKNOWN/partial sch
 
 There is no DOWN migration. PostgreSQL backup custody and restore drills remain an operator responsibility. DPAPI credentials are bound to the current Windows user and machine. Final product GUI, installer experience, short IDs, product-language polish and updater work remain V4.0 scope.
 
-At this checkpoint PR #19 is still Draft. Ready, merge, master checks, acceptance backfill, branch/worktree cleanup and final V4 Entry approval must use their later real GitHub facts; none is claimed early here.
+PR #19 is merged and merge-after master checks pass. This backfill commit records only those real facts; its own required CI, PR number, merge SHA, resulting final master and cleanup are verified after the commit rather than fabricated inside it. The V4 Entry decision is therefore conditional on those final mechanical gates.
