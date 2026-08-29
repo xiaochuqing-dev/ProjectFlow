@@ -1,5 +1,11 @@
 # Update history
 
+## ProjectFlow V3.10 PR 合并、master 复验与最终事实回填 - 2026-08-29
+
+最终功能 Head `c0b4d9653ac6a579978d81b66d2554662e2007dd` 的 Quality run `33242563402`、Windows run `33242563193` 与三 Provider secure credential-path run `33242565505` 全部通过；同头重复 push runs `33242560959`、`33242560734` 的已取消首轮也已在 attempt 2 成功，PR 状态恢复 CLEAN。PR #19 随后按 merge commit 惯例合并为 master `2f56257c028657f3c67e0e413f938d723502147f`，merge 后 master Quality `33246313873` 与 Windows `33246313553` 再次通过。
+
+新增 facts-only `final-acceptance-backfill.json`，记录 exact V3.9 双数据库升级、三协议 Provider smoke、feature/master CI、失败历史、安全结论与 P0/P1=0。该回填不改产品行为，也不预写自身尚未发生的 PR Run ID 或 merge SHA；V3.10 FINAL 与 V4.0 Entry 只在其 required CI/merge、最终 master 复验和任务临时资源清理完成后生效。继续 NO TAG / NO RELEASE，V4 GUI 尚未开始。
+
 ## ProjectFlow V3.10 最终真实性补证 - 2026-08-29
 
 从远程 PR #19 最新 Head `f85b7d4ceada7d053a0bbe0d8b216eab32795e63` 创建独立干净 worktree，保留原工作树的用户文件不变。新增 required `real-v39-upgrade-proof` Job：临时 checkout exact V3.9 final `dd5ee41b6afcbd7703fa0883dc115c11f4821447`，由旧应用自身 Hibernate startup 实际创建 H2 与 PostgreSQL 16 schema，写入 Project、Memory、Fact、History Event/Snapshot/Correction、Agent Candidate 和 Provider 代表记录，再由 V3.10 执行精确 signature、H2 备份、PostgreSQL dump/restore 与显式确认、controlled V1 baseline、V2、凭据迁移及重启幂等性校验。实际旧库与冻结 signature 精确一致，无需放宽 UNKNOWN 规则或改写 migration。

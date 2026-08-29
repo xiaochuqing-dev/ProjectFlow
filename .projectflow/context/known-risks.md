@@ -1,6 +1,6 @@
 # Known risks
 
-- V3.10 的实现、exact V3.9 H2/PostgreSQL 升级补证、三 Provider secure smoke 和实现 Head 的 CI/Windows 已通过，但在最终文档 Head CI、PR #19 merge、master 验证和 acceptance backfill 之前仍不能标记 FINAL。任一后续 required gate 失败都必须继续 BLOCKED。
+- V3.10 的实现、exact V3.9 H2/PostgreSQL 升级补证、三 Provider secure smoke、最终功能 Head 门禁、PR #19 merge 和 merge 后 master Quality/Windows 已通过。正式 FINAL 与 V4.0 Entry 只在本事实回填 PR 自身 required CI/merge、最终 master 复验和任务临时资源清理完成后生效；任一后续 required gate 失败仍必须 BLOCKED。
 - V3.10 不提供 Flyway DOWN migration；二进制回退前必须核对 schema 兼容性。外部 PostgreSQL 只强制显式备份确认，真实 `pg_dump` 的安全存放、恢复演练和保留策略仍属于运维者责任，不宣称为企业级备份。
 - Windows Provider 凭据由 current-user DPAPI 绑定当前用户和机器；迁移用户或设备时需重新配置，不存在 plaintext fallback。非 Windows release 环境在没有可用 secure store 时会明确降级/阻断需凭据的操作。
 - 最终 GUI、短 ID、正式中文产品标签、信息密度、安装引导和自动更新属于 V4.0；V3.10 只冻结 release foundation，未开始 V4 GUI。
