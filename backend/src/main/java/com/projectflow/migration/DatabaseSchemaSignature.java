@@ -27,10 +27,12 @@ import org.springframework.stereotype.Component;
 /**
  * Computes the bounded, dialect-neutral identity of the V3.9 schema.
  *
- * <p>The V1 SQL is generated from the V3.9 entity model and is also the
- * frozen representative fixture.  JDBC type names are reduced to families so
- * H2 ENUM/VARCHAR and PostgreSQL VARCHAR remain comparable, while table and
- * column membership plus nullability remain exact.</p>
+ * <p>The V1 SQL is the frozen V3.9 baseline. A required release gate separately
+ * creates H2 and PostgreSQL schemas with the exact final V3.9 application and
+ * proves that they match this signature, avoiding a circular V1-only proof.
+ * JDBC type names are reduced to families so H2 ENUM/VARCHAR and PostgreSQL
+ * VARCHAR remain comparable, while table and column membership plus
+ * nullability remain exact.</p>
  */
 @Component
 public final class DatabaseSchemaSignature {

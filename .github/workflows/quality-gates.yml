@@ -11,11 +11,12 @@ on:
         default: false
         type: boolean
       real_model_scope:
-        description: "真实模型范围；affected 复验 Chapter 代表性、非代码、repair 与 ProjectFlow Dogfood"
+        description: "真实模型范围；credential-smoke 只验证安全凭据路径与协议 adapter"
         required: false
         default: full
         type: choice
         options:
+          - credential-smoke
           - correction
           - affected
           - full
@@ -129,6 +130,53 @@ jobs:
         with:
           name: postgres-junit
           path: backend/target/failsafe-reports
+
+  real-v39-upgrade-proof:
+    name: real-v39-upgrade-proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PROJECTFLOW_V39_SOURCE_SHA: dd5ee41b6afcbd7703fa0883dc115c11f4821447
+      PROJECTFLOW_V39_SOURCE_ROOT: ${{ runner.temp }}/projectflow-v39-final
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: 从 exact V3.9 final 源码构建旧版本应用
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e "$PROJECTFLOW_V39_SOURCE_ROOT"
+          git worktree add --detach "$PROJECTFLOW_V39_SOURCE_ROOT" "$PROJECTFLOW_V39_SOURCE_SHA"
+          test "$(git -C "$PROJECTFLOW_V39_SOURCE_ROOT" rev-parse HEAD)" = "$PROJECTFLOW_V39_SOURCE_SHA"
+          mvn -B -f "$PROJECTFLOW_V39_SOURCE_ROOT/backend/pom.xml" -DskipTests package
+          test -f "$PROJECTFLOW_V39_SOURCE_ROOT/backend/target/projectflow-3.9.0.jar"
+      - name: 真实 V3.9 H2 与 PostgreSQL 16 升级证明
+        working-directory: backend
+        run: mvn -B -Dprojectflow.v39.real-proof.required=true -Dtest=ProjectFlowRealV39UpgradeProofTest test
+      - name: 确认真实旧库证明没有跳过
+        working-directory: backend
+        shell: bash
+        run: |
+          python -c "import xml.etree.ElementTree as E; r=E.parse('target/surefire-reports/TEST-com.projectflow.migration.ProjectFlowRealV39UpgradeProofTest.xml').getroot(); assert int(r.attrib['tests']) == 2 and int(r.attrib['skipped']) == 0 and int(r.attrib['failures']) == 0 and int(r.attrib['errors']) == 0"
+      - name: 清理 exact V3.9 临时 worktree
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$PROJECTFLOW_V39_SOURCE_ROOT" in
+            "$RUNNER_TEMP"/*) ;;
+            *) echo "Refusing to remove an unexpected worktree path"; exit 1 ;;
+          esac
+          if git worktree list --porcelain | grep -Fqx "worktree $PROJECTFLOW_V39_SOURCE_ROOT"; then
+            git worktree remove --force "$PROJECTFLOW_V39_SOURCE_ROOT"
+          fi
+          git worktree prune
 
   frontend-quality:
     runs-on: ubuntu-latest
@@ -298,7 +346,7 @@ jobs:
             echo "BLOCKED: ${{ matrix.display_name }} 真实验收 Secret 缺失"
             exit 1
           fi
-      - name: 真实 ${{ matrix.display_name }} 连接、Ground Truth 与资格验收
+      - name: 真实 ${{ matrix.display_name }} 连接、凭据路径与可选资格验收
         if: inputs.real_model_provider == 'all' || inputs.real_model_provider == 'both' || inputs.real_model_provider == matrix.id
         working-directory: backend
         env:
@@ -338,6 +386,14 @@ jobs:
             echo "::endgroup::"
           }
           run_gate provider-probe mvn -B -Dtest=ProjectFlowRealProviderProbeIT test
+          if [ "${{ inputs.real_model_scope }}" = "credential-smoke" ]; then
+            if [ "$failures" -ne 0 ]; then
+              echo "$EVAL_PREFIX credential smoke failed"
+              exit 1
+            fi
+            echo "credential-smoke scope: secure Provider probe passed; no historical evaluation matrix was run"
+            exit 0
+          fi
           if [ "${{ inputs.real_model_scope }}" = "full" ]; then
             run_gate history-v380 mvn -B -Dtest=ProjectHistoryRealModelIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-v380" test
             run_gate understanding-v375 mvn -B -Dtest=ProjectFlowRealModelEvalIT -Dprojectflow.eval.output-name="$EVAL_PREFIX-v375" test
@@ -361,7 +417,7 @@ jobs:
   optional-real-provider-scenarios:
     name: optional-real-provider-scenarios (${{ matrix.id }})
     needs: optional-real-provider-qualification
-    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.run_real_model }}
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.run_real_model && inputs.real_model_scope != 'credential-smoke' }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     strategy:
