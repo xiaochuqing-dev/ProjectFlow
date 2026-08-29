@@ -137,7 +137,6 @@ jobs:
     timeout-minutes: 60
     env:
       PROJECTFLOW_V39_SOURCE_SHA: dd5ee41b6afcbd7703fa0883dc115c11f4821447
-      PROJECTFLOW_V39_SOURCE_ROOT: ${{ runner.temp }}/projectflow-v39-final
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -151,11 +150,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test ! -e "$PROJECTFLOW_V39_SOURCE_ROOT"
-          git worktree add --detach "$PROJECTFLOW_V39_SOURCE_ROOT" "$PROJECTFLOW_V39_SOURCE_SHA"
-          test "$(git -C "$PROJECTFLOW_V39_SOURCE_ROOT" rev-parse HEAD)" = "$PROJECTFLOW_V39_SOURCE_SHA"
-          mvn -B -f "$PROJECTFLOW_V39_SOURCE_ROOT/backend/pom.xml" -DskipTests package
-          test -f "$PROJECTFLOW_V39_SOURCE_ROOT/backend/target/projectflow-3.9.0.jar"
+          source_root="$RUNNER_TEMP/projectflow-v39-final"
+          echo "PROJECTFLOW_V39_SOURCE_ROOT=$source_root" >> "$GITHUB_ENV"
+          test ! -e "$source_root"
+          git worktree add --detach "$source_root" "$PROJECTFLOW_V39_SOURCE_SHA"
+          test "$(git -C "$source_root" rev-parse HEAD)" = "$PROJECTFLOW_V39_SOURCE_SHA"
+          mvn -B -f "$source_root/backend/pom.xml" -DskipTests package
+          test -f "$source_root/backend/target/projectflow-3.9.0.jar"
       - name: 真实 V3.9 H2 与 PostgreSQL 16 升级证明
         working-directory: backend
         run: mvn -B -Dprojectflow.v39.real-proof.required=true -Dtest=ProjectFlowRealV39UpgradeProofTest test
