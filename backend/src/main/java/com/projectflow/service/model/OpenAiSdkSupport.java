@@ -4,6 +4,7 @@ import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.core.Timeout;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderAuthMode;
+import com.projectflow.service.AiProviderHeaderPolicy;
 import com.projectflow.service.AiProviderUrlGuard;
 
 final class OpenAiSdkSupport {
@@ -11,7 +12,10 @@ final class OpenAiSdkSupport {
 
     static OpenAIOkHttpClient.Builder clientBuilder(CanonicalModelRequest request, AiProviderUrlGuard urlGuard) {
         AiProvider provider = request.provider();
-        String key = provider.getApiKey() == null || provider.getApiKey().isBlank() ? "projectflow-no-key" : provider.getApiKey();
+        String key = request.credential();
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("Provider credential unavailable");
+        }
         OpenAIOkHttpClient.Builder builder = OpenAIOkHttpClient.builder()
             .baseUrl(urlGuard.sdkBaseUrl(provider.getBaseUrl(), provider.getProtocol(), provider.getEndpointOverride()))
             .apiKey(key)
@@ -30,15 +34,19 @@ final class OpenAiSdkSupport {
         } else if (mode == AiProviderAuthMode.NONE) {
             builder.removeHeaders("Authorization");
         }
-        provider.getSafeHeaders().forEach(builder::putHeader);
+        AiProviderHeaderPolicy.requireSafe(provider.getSafeHeaders()).forEach(builder::putHeader);
         return builder;
     }
 
     private static String headerName(AiProvider provider) {
-        return provider.getAuthHeaderName() == null ? "x-api-key" : provider.getAuthHeaderName();
+        return AiProviderHeaderPolicy.requireCredentialHeaderName(
+            provider.getAuthHeaderName() == null ? "x-api-key" : provider.getAuthHeaderName()
+        );
     }
 
     private static String queryName(AiProvider provider) {
-        return provider.getQueryKeyName() == null ? "api_key" : provider.getQueryKeyName();
+        return AiProviderHeaderPolicy.requireCredentialQueryName(
+            provider.getQueryKeyName() == null ? "api_key" : provider.getQueryKeyName()
+        );
     }
 }

@@ -4,9 +4,10 @@ import path from "node:path";
 const isWindows = process.platform === "win32";
 const windowsMaven = process.env.MAVEN_CMD ?? "mvn.cmd";
 const windowsMavenCommand = /\s/.test(windowsMaven) ? `"${windowsMaven}"` : windowsMaven;
+const backendProfiles = process.env.CI ? "embedded,ci" : "embedded";
 const backendCommand = isWindows
-  ? `${windowsMavenCommand} -q spring-boot:run "-Dspring-boot.run.profiles=embedded" "-Dspring-boot.run.arguments=--server.port=18080"`
-  : "mvn -q spring-boot:run -Dspring-boot.run.profiles=embedded -Dspring-boot.run.arguments=--server.port=18080";
+  ? `${windowsMavenCommand} -q spring-boot:run "-Dspring-boot.run.profiles=${backendProfiles}" "-Dspring-boot.run.arguments=--server.port=18080"`
+  : `mvn -q spring-boot:run -Dspring-boot.run.profiles=${backendProfiles} -Dspring-boot.run.arguments=--server.port=18080`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -42,6 +43,7 @@ export default defineConfig({
         PROJECTFLOW_JOB_CORE_THREADS: "1",
         PROJECTFLOW_JOB_MAX_THREADS: "2",
         PROJECTFLOW_JOB_QUEUE_CAPACITY: "4",
+        ...(process.env.CI ? { PROJECTFLOW_CREDENTIAL_STORE: "in-memory" } : {}),
         FRONTEND_ORIGIN: "http://127.0.0.1:13037",
       },
       url: "http://127.0.0.1:18037/actuator/health",

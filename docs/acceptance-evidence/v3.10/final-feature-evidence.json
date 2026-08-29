@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "projectflow-v3.10-final-feature-evidence-v1",
+  "recordedAt": "2026-08-29T16:08:47+08:00",
+  "state": "FEATURE_EVIDENCE_COMPLETE_PENDING_FORMAL_MERGE",
+  "source": {
+    "baselineMaster": "dd5ee41b6afcbd7703fa0883dc115c11f4821447",
+    "taskBookFeatureHead": "f85b7d4ceada7d053a0bbe0d8b216eab32795e63",
+    "implementationEvidenceHead": "3c3dac91160b23f52e4ea680e423e3886dbda8ed",
+    "featurePullRequest": 19,
+    "cleanWorktreeUsed": true,
+    "originalWorktreePreserved": true
+  },
+  "realV39Upgrade": {
+    "legacySourceSha": "dd5ee41b6afcbd7703fa0883dc115c11f4821447",
+    "legacySchemaCreatedByOldApplication": true,
+    "legacySchemaCreatedByV1Fixture": false,
+    "h2": "PASS",
+    "postgresql16": "PASS",
+    "classification": "KNOWN_V39_EXACT",
+    "h2Backup": "PASS",
+    "postgresDumpRestore": "PASS",
+    "backupAcknowledgementBlock": "PASS",
+    "controlledBaselineAndV2": "PASS",
+    "protectedRecordLoss": 0,
+    "restartStable": true,
+    "requiredCiRun": 33242125619
+  },
+  "secureProviderSmoke": {
+    "runId": 33242290300,
+    "headSha": "3c3dac91160b23f52e4ea680e423e3886dbda8ed",
+    "scope": "credential-smoke",
+    "historicalMatrixRerun": false,
+    "lunaResponses": "PASS",
+    "deepseekChatCompletions": "PASS",
+    "qwenAnthropicMessages": "PASS",
+    "credentialPath": "SECURE_STORE_TO_OPAQUE_SECRET_REF_TO_MODEL_GATEWAY_TO_PROTOCOL_ADAPTER",
+    "logicalSmokePerProvider": 1
+  },
+  "verification": {
+    "localRealV39Proof": "PASS_2_OF_2_NO_SKIPS",
+    "localReleaseScriptContracts": "PASS",
+    "localBackendUnit": "PASS_717_FAILURES_0_ERRORS_0",
+    "localPostgresIntegration": "PASS_13_FAILURES_0_ERRORS_0",
+    "featureQualityRun": 33242125619,
+    "featureQualityResult": "SUCCESS",
+    "featureWindowsRun": 33242125279,
+    "featureWindowsResult": "SUCCESS",
+    "npmProductionHighCriticalGate": "PASS",
+    "osvLockedDependencyGate": "PASS",
+    "sensitiveContent": "PASS"
+  },
+  "failedRunsPreserved": [
+    {
+      "runId": 33242086857,
+      "result": "FAILURE",
+      "safeReason": "workflow expression referenced runner temporary state before a runner existed"
+    },
+    {
+      "runId": 33242087387,
+      "result": "CANCELLED",
+      "safeReason": "obsolete Windows push run for superseded feature head"
+    },
+    {
+      "runId": 33242089234,
+      "result": "CANCELLED",
+      "safeReason": "obsolete Windows pull-request run for superseded feature head"
+    }
+  ],
+  "security": {
+    "plaintextProviderKeyRowsAfterMigration": 0,
+    "apiKeyPersistedInEvidence": false,
+    "authorizationPersisted": false,
+    "rawResponsePersisted": false,
+    "reasoningPersisted": false,
+    "machineAbsolutePathPersisted": false
+  },
+  "focusedHighRiskReview": {
+    "result": "PASS",
+    "p0": 0,
+    "p1": 0,
+    "unknownSchemaPolicy": "BLOCK",
+    "releaseSchemaOwner": "FLYWAY",
+    "historyContinuityRegression": "PASS"
+  },
+  "formalClosure": {
+    "pullRequestReady": false,
+    "pullRequestMerged": false,
+    "masterVerified": false,
+    "acceptanceBackfillMerged": false,
+    "v4Entry": "PENDING"
+  },
+  "tagCreated": false,
+  "releaseCreated": false,
+  "v4GuiStarted": false
+}

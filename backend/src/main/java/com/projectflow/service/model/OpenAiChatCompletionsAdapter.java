@@ -75,13 +75,10 @@ public class OpenAiChatCompletionsAdapter implements ModelProtocolAdapter {
                 exception.param().orElse(""), exception
             );
         } catch (RuntimeException exception) {
-            Throwable root = exception;
-            while (root.getCause() != null && root.getCause() != root) root = root.getCause();
-            throw new IOException(
-                "OpenAI Chat Completions SDK request failed: " + exception.getMessage()
-                    + " (" + root.getClass().getSimpleName() + ": " + root.getMessage() + ")",
-                exception
-            );
+            // SDK messages can contain request URLs, headers or provider
+            // payload details. Keep the cause for internal diagnostics, but
+            // expose only a fixed safe boundary message.
+            throw new IOException("OpenAI Chat Completions SDK request failed", exception);
         } finally {
             client.close();
         }

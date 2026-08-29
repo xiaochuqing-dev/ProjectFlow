@@ -1,19 +1,26 @@
 package com.projectflow.service;
 
 import java.time.Instant;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.context.ApplicationEventPublisher;
 
 import com.projectflow.dto.AiProviderDtos.AiProviderRequest;
@@ -34,18 +41,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class AiProviderService {
-    private static final Pattern HEADER_NAME = Pattern.compile("[A-Za-z0-9-]{1,120}");
-    private static final Set<String> RESERVED_HEADERS = Set.of(
-        "authorization", "x-api-key", "api-key", "content-type", "content-length", "host", "connection",
-        "proxy-authorization", "proxy-authenticate", "forwarded", "anthropic-version"
-    );
+    private static final Logger LOGGER = LoggerFactory.getLogger(AiProviderService.class);
     private final AiProviderRepository aiProviderRepository;
     private final AiProviderUrlGuard aiProviderUrlGuard;
     private final ModelGatewayService modelGatewayService;
     private final ApplicationEventPublisher eventPublisher;
     private final ModelCapabilityRegistry capabilityRegistry;
     private final ObjectMapper objectMapper;
+    private final ProviderCredentialStore providerCredentialStore;
 
+    /** Compatibility constructor retained for focused unit tests. */
     public AiProviderService(
         AiProviderRepository aiProviderRepository,
         AiProviderUrlGuard aiProviderUrlGuard,
@@ -54,12 +59,29 @@ public class AiProviderService {
         ModelCapabilityRegistry capabilityRegistry,
         ObjectMapper objectMapper
     ) {
+        this(
+            aiProviderRepository, aiProviderUrlGuard, modelGatewayService, eventPublisher,
+            capabilityRegistry, objectMapper, new InMemoryProviderCredentialStore()
+        );
+    }
+
+    @Autowired
+    public AiProviderService(
+        AiProviderRepository aiProviderRepository,
+        AiProviderUrlGuard aiProviderUrlGuard,
+        ModelGatewayService modelGatewayService,
+        ApplicationEventPublisher eventPublisher,
+        ModelCapabilityRegistry capabilityRegistry,
+        ObjectMapper objectMapper,
+        ProviderCredentialStore providerCredentialStore
+    ) {
         this.aiProviderRepository = aiProviderRepository;
         this.aiProviderUrlGuard = aiProviderUrlGuard;
         this.modelGatewayService = modelGatewayService;
         this.eventPublisher = eventPublisher;
         this.capabilityRegistry = capabilityRegistry;
         this.objectMapper = objectMapper;
+        this.providerCredentialStore = providerCredentialStore;
     }
 
     @Transactional
@@ -83,51 +105,61 @@ public class AiProviderService {
         String modelName = request.modelName().trim();
         AiProvider provider = aiProviderRepository
             .findByUserIdAndTypeAndBaseUrlAndModelNameAndProtocol(userId, request.type(), baseUrl, modelName, protocol)
+            .map(existing -> findOwnedForMutation(userId, existing.getId()))
             .orElseGet(() -> new AiProvider(userId));
-        String apiKey = blankToNull(request.apiKey());
         if (request.defaultEnabled()) ensureSingleDefault(userId, provider.getId());
-        provider.update(
-            request.name().trim(),
-            baseUrl,
-            apiKey == null ? provider.getApiKey() : apiKey,
-            modelName,
-            request.type(),
-            request.temperature(),
-            request.maxTokens(),
-            request.defaultEnabled(),
-            request.purposeTags()
+        AiProvider saved = saveProviderWithCredential(
+            provider, request, request.name().trim(), baseUrl, modelName
         );
-        configureProtocol(provider, request);
-        AiProvider saved = aiProviderRepository.save(provider);
         if (saved.isDefaultEnabled()) eventPublisher.publishEvent(new ModelProviderConfiguredEvent(userId));
         return toResponse(saved);
     }
 
     @Transactional
     public AiProviderResponse update(UUID userId, UUID providerId, AiProviderRequest request) {
-        AiProvider provider = findOwned(userId, providerId);
-        String submittedKey = blankToNull(request.apiKey());
-        String effectiveKey = request.clearApiKey() ? null : submittedKey == null ? provider.getApiKey() : submittedKey;
+        AiProvider provider = findOwnedForMutation(userId, providerId);
         if (request.defaultEnabled()) ensureSingleDefault(userId, provider.getId());
-        provider.update(
+        AiProvider saved = saveProviderWithCredential(
+            provider,
+            request,
             request.name().trim(),
             canonicalBaseUrl(request.baseUrl(), request.protocol() == null ? defaultProtocol(request.type()) : request.protocol()),
-            effectiveKey,
-            request.modelName().trim(),
-            request.type(),
-            request.temperature(),
-            request.maxTokens(),
-            request.defaultEnabled(),
-            request.purposeTags()
+            request.modelName().trim()
         );
-        configureProtocol(provider, request);
         if (provider.isDefaultEnabled()) eventPublisher.publishEvent(new ModelProviderConfiguredEvent(userId));
-        return toResponse(provider);
+        return toResponse(saved);
+    }
+
+    /**
+     * Migrates one legacy row using store write/read-back followed by the
+     * secretRef + plaintext clear in the surrounding database transaction.
+     */
+    @Transactional
+    public boolean migrateLegacyCredential(UUID userId, UUID providerId) {
+        AiProvider provider = findOwnedForMutation(userId, providerId);
+        String legacy = blankToNull(provider.getApiKey());
+        if (legacy == null) return false;
+        String oldRef = blankToNull(provider.getSecretRef());
+        String oldSecret = oldRef == null ? null : readStoredCredential(oldRef);
+        String newRef = null;
+        try {
+            newRef = writeAndVerifyCredential(provider, legacy, oldRef, oldSecret);
+            provider.setSecretRef(newRef);
+            provider.clearLegacyApiKey();
+            aiProviderRepository.saveAndFlush(provider);
+            scheduleStoreRollback(provider, newRef, oldRef, oldSecret);
+            if (oldRef != null && !oldRef.equals(newRef)) scheduleCredentialDeletion(oldRef);
+            return true;
+        } catch (RuntimeException failure) {
+            if (newRef != null) deleteAfterFailedPersistence(provider, newRef, oldRef, oldSecret);
+            provider.restoreCredentialState(oldRef, legacy);
+            throw failure;
+        }
     }
 
     @Transactional
     public void delete(UUID userId, UUID providerId) {
-        AiProvider provider = findOwned(userId, providerId);
+        AiProvider provider = findOwnedForMutation(userId, providerId);
         long otherProviders = aiProviderRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId).stream()
             .filter(item -> !item.getId().equals(providerId))
             .count();
@@ -138,7 +170,7 @@ public class AiProviderService {
                 HttpStatus.CONFLICT
             );
         }
-        aiProviderRepository.delete(provider);
+        scheduleProviderDeletion(provider);
     }
 
     @Transactional
@@ -178,9 +210,16 @@ public class AiProviderService {
                 throw new AppException("DEFAULT_PROVIDER_DELETE_FORBIDDEN", "默认 Provider 不会被重复清理删除。", HttpStatus.CONFLICT);
             }
         }
-        aiProviderRepository.deleteAll(requestedIds.stream().map(owned::get).toList());
+        // Re-read and lock every selected row before capturing its secretRef;
+        // otherwise a concurrent replacement could leave a newly written
+        // opaque reference orphaned after this batch deletion commits.
+        List<AiProvider> selected = requestedIds.stream()
+            .map(providerId -> aiProviderRepository.findLockedByIdAndUserId(providerId, userId)
+                .orElseThrow(() -> new AppException("AI_PROVIDER_NOT_FOUND", "模型配置不存在。", HttpStatus.NOT_FOUND)))
+            .toList();
+        scheduleProviderDeletion(selected);
         List<AiProviderResponse> remaining = aiProviderRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId)
-            .stream().map(this::toResponse).toList();
+            .stream().filter(provider -> !requestedIds.contains(provider.getId())).map(this::toResponse).toList();
         return new DuplicateCleanupResponse(requestedIds.size(), remaining);
     }
 
@@ -190,7 +229,7 @@ public class AiProviderService {
             return testResult(provider, true, true, "本地模拟 Provider 可用，但这不是真实模型验收。", "MOCK_ONLY", 0,
                 List.of("未调用真实模型。"), "UNAVAILABLE", "FAILED");
         }
-        if (provider.getAuthMode() != AiProviderAuthMode.NONE && (provider.getApiKey() == null || provider.getApiKey().isBlank())) {
+        if (provider.getAuthMode() != AiProviderAuthMode.NONE && !provider.hasConfiguredCredential()) {
             return testResult(provider, false, false, "请先配置 API Key，再测试连接。", "INCOMPATIBLE", 0,
                 List.of("缺少认证信息。"), "UNAVAILABLE", "FAILED");
         }
@@ -229,6 +268,12 @@ public class AiProviderService {
             .orElseThrow(() -> new AppException("AI_PROVIDER_NOT_FOUND", "AI provider was not found", HttpStatus.NOT_FOUND));
     }
 
+    private AiProvider findOwnedForMutation(UUID userId, UUID providerId) {
+        return aiProviderRepository.findLockedByIdAndUserId(providerId, userId).orElseThrow(() -> new AppException(
+            "AI_PROVIDER_NOT_FOUND", "AI provider was not found", HttpStatus.NOT_FOUND
+        ));
+    }
+
     private void ensureSingleDefault(UUID userId, UUID selectedProviderId) {
         aiProviderRepository.findByUserIdOrderByDefaultEnabledDescUpdatedAtDesc(userId).stream()
             .filter(AiProvider::isDefaultEnabled)
@@ -259,7 +304,7 @@ public class AiProviderService {
 
     private Comparator<AiProvider> keeperComparator() {
         return Comparator.<AiProvider>comparingInt(provider ->
-            (provider.isDefaultEnabled() ? 2 : 0) + (provider.getApiKey() == null || provider.getApiKey().isBlank() ? 0 : 1)
+            (provider.isDefaultEnabled() ? 2 : 0) + (provider.hasConfiguredCredential() ? 1 : 0)
         ).reversed().thenComparing(AiProvider::getUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder()));
     }
 
@@ -286,12 +331,285 @@ public class AiProviderService {
             provider.getMaxTokens(),
             provider.isDefaultEnabled(),
             provider.getPurposeTags(),
-            provider.getApiKey() != null && !provider.getApiKey().isBlank(),
+            provider.hasConfiguredCredential(),
+            credentialStatus(provider),
             provider.getLastProbeProfile(),
             provider.getLastProbedAt(),
             provider.getCreatedAt(),
             provider.getUpdatedAt()
         );
+    }
+
+    private AiProvider saveProviderWithCredential(
+        AiProvider provider,
+        AiProviderRequest request,
+        String name,
+        String baseUrl,
+        String modelName
+    ) {
+        String oldRef = blankToNull(provider.getSecretRef());
+        String oldLegacy = blankToNull(provider.getApiKey());
+        String submitted = blankToNull(request.apiKey());
+        String oldSecret = null;
+        String newRef = null;
+        boolean storeChanged = false;
+        try {
+            if (!request.clearApiKey() && submitted != null) {
+                if (oldRef != null) oldSecret = readStoredCredential(oldRef);
+                newRef = writeAndVerifyCredential(provider, submitted, oldRef, oldSecret);
+                storeChanged = true;
+            } else if (!request.clearApiKey() && oldRef != null) {
+                newRef = oldRef;
+            } else if (!request.clearApiKey() && oldLegacy != null) {
+                newRef = writeAndVerifyCredential(provider, oldLegacy, null, null);
+                storeChanged = true;
+            }
+
+            provider.updateWithSecretRef(
+                name,
+                baseUrl,
+                newRef,
+                modelName,
+                request.type(),
+                request.temperature(),
+                request.maxTokens(),
+                request.defaultEnabled(),
+                request.purposeTags()
+            );
+            configureProtocol(provider, request);
+            AiProvider saved = aiProviderRepository.saveAndFlush(provider);
+            if (storeChanged && newRef != null) {
+                scheduleStoreRollback(provider, newRef, oldRef, oldSecret);
+            }
+            if (oldRef != null && (newRef == null || !oldRef.equals(newRef))) {
+                scheduleCredentialDeletion(oldRef);
+            }
+            return saved;
+        } catch (RuntimeException failure) {
+            if (storeChanged && newRef != null) {
+                deleteAfterFailedPersistence(provider, newRef, oldRef, oldSecret);
+            }
+            provider.restoreCredentialState(oldRef, oldLegacy);
+            throw failure;
+        }
+    }
+
+    private String writeAndVerifyCredential(AiProvider provider, String secret, String oldRef, String oldSecret) {
+        String ref = null;
+        try {
+            ref = providerCredentialStore.writeAndVerify(provider.getId(), secret);
+            if (ref == null || ref.isBlank()) {
+                throw new ProviderCredentialStoreException("SECRET_STORE_VERIFY_FAILED", "凭据存储未返回有效引用。");
+            }
+            String readBack = providerCredentialStore.read(ref);
+            if (readBack == null || !MessageDigest.isEqual(
+                secret.getBytes(StandardCharsets.UTF_8), readBack.getBytes(StandardCharsets.UTF_8)
+            )) {
+                throw new ProviderCredentialStoreException("SECRET_STORE_VERIFY_FAILED", "凭据存储回读校验失败。");
+            }
+            return ref;
+        } catch (ProviderCredentialStoreException failure) {
+            rollbackStoreWrite(provider, ref, oldRef, oldSecret);
+            throw credentialAppException(failure.code(), false);
+        } catch (RuntimeException failure) {
+            rollbackStoreWrite(provider, ref, oldRef, oldSecret);
+            throw credentialAppException("SECRET_STORE_UNAVAILABLE", false);
+        }
+    }
+
+    private void rollbackStoreWrite(AiProvider provider, String ref, String oldRef, String oldSecret) {
+        try {
+            if (oldRef != null && oldSecret != null && (ref == null || Objects.equals(ref, oldRef))) {
+                providerCredentialStore.writeAndVerify(provider.getId(), oldSecret);
+            } else if (ref != null && !ref.isBlank()) {
+                providerCredentialStore.delete(ref);
+            }
+        } catch (RuntimeException cleanupFailure) {
+            LOGGER.warn("Provider credential write rollback incomplete code={} provider={}",
+                storeFailureCode(cleanupFailure), provider.getId());
+        }
+    }
+
+    private String readStoredCredential(String secretRef) {
+        try {
+            String secret = providerCredentialStore.read(secretRef);
+            if (secret == null || secret.isBlank()) {
+                throw new ProviderCredentialStoreException("SECRET_NOT_FOUND", "凭据不存在或已被删除。");
+            }
+            return secret;
+        } catch (ProviderCredentialStoreException failure) {
+            throw credentialAppException(failure.code(), false);
+        } catch (RuntimeException failure) {
+            throw credentialAppException("SECRET_STORE_UNAVAILABLE", false);
+        }
+    }
+
+    private void deleteAfterFailedPersistence(AiProvider provider, String newRef, String oldRef, String oldSecret) {
+        try {
+            if (oldRef != null && oldSecret != null && Objects.equals(newRef, oldRef)) {
+                providerCredentialStore.writeAndVerify(provider.getId(), oldSecret);
+            } else if (newRef != null && !newRef.isBlank()) {
+                providerCredentialStore.delete(newRef);
+            }
+        } catch (RuntimeException cleanupFailure) {
+            LOGGER.warn("Provider credential rollback incomplete code={} provider={}",
+                storeFailureCode(cleanupFailure), provider.getId());
+        }
+    }
+
+    private void scheduleProviderDeletion(AiProvider provider) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            aiProviderRepository.delete(provider);
+            aiProviderRepository.flush();
+            deleteCredentialIfPresent(provider.getSecretRef());
+            return;
+        }
+        String secretRef = blankToNull(provider.getSecretRef());
+        aiProviderRepository.delete(provider);
+        aiProviderRepository.flush();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    deleteCredentialIfPresent(secretRef);
+                } catch (RuntimeException cleanupFailure) {
+                    LOGGER.warn("Provider credential cleanup after committed deletion failed code={} provider={}",
+                        storeFailureCode(cleanupFailure), provider.getId());
+                }
+            }
+
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) {
+                    LOGGER.debug("Provider deletion rolled back; credential retained provider={}", provider.getId());
+                }
+            }
+        });
+    }
+
+    private void scheduleProviderDeletion(List<AiProvider> providers) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            aiProviderRepository.deleteAll(providers);
+            aiProviderRepository.flush();
+            providers.forEach(provider -> deleteCredentialIfPresent(provider.getSecretRef()));
+            return;
+        }
+        List<UUID> providerIds = providers.stream().map(AiProvider::getId).toList();
+        List<String> secretRefs = providers.stream().map(AiProvider::getSecretRef).toList();
+        aiProviderRepository.deleteAll(providers);
+        aiProviderRepository.flush();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                for (int index = 0; index < secretRefs.size(); index++) {
+                    try {
+                        deleteCredentialIfPresent(secretRefs.get(index));
+                    } catch (RuntimeException cleanupFailure) {
+                        LOGGER.warn("Duplicate provider credential cleanup after committed deletion failed code={} provider={}",
+                            storeFailureCode(cleanupFailure), providerIds.get(index));
+                    }
+                }
+            }
+
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) {
+                    LOGGER.debug("Duplicate provider deletion rolled back; credentials retained count={}", providerIds.size());
+                }
+            }
+        });
+    }
+
+    private void scheduleCredentialDeletion(String secretRef) {
+        if (secretRef == null || secretRef.isBlank()) return;
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            deleteCredentialIfPresent(secretRef);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    deleteCredentialIfPresent(secretRef);
+                } catch (RuntimeException cleanupFailure) {
+                    LOGGER.warn("Provider credential cleanup after committed replacement failed code={}",
+                        storeFailureCode(cleanupFailure));
+                }
+            }
+
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) {
+                    LOGGER.debug("Credential deletion deferred after database rollback");
+                }
+            }
+        });
+    }
+
+    private void scheduleStoreRollback(AiProvider provider, String newRef, String oldRef, String oldSecret) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) return;
+        UUID providerId = provider.getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_COMMITTED) return;
+                try {
+                    if (oldRef != null && oldSecret != null && Objects.equals(newRef, oldRef)) {
+                        providerCredentialStore.writeAndVerify(providerId, oldSecret);
+                    } else if (newRef != null && !newRef.isBlank()) {
+                        providerCredentialStore.delete(newRef);
+                    }
+                } catch (RuntimeException cleanupFailure) {
+                    LOGGER.warn("Provider credential transaction rollback incomplete code={} provider={}",
+                        storeFailureCode(cleanupFailure), providerId);
+                }
+            }
+        });
+    }
+
+    private void deleteCredentialIfPresent(String secretRef) {
+        if (secretRef == null || secretRef.isBlank()) return;
+        try {
+            providerCredentialStore.delete(secretRef);
+        } catch (ProviderCredentialStoreException failure) {
+            throw new AppException(
+                "SECRET_CLEANUP_FAILED",
+                "安全凭据清理失败，模型配置保留未删除。",
+                HttpStatus.CONFLICT
+            );
+        } catch (RuntimeException failure) {
+            throw new AppException(
+                "SECRET_CLEANUP_FAILED",
+                "安全凭据清理失败，模型配置保留未删除。",
+                HttpStatus.CONFLICT
+            );
+        }
+    }
+
+    private AppException credentialAppException(String code, boolean cleanup) {
+        String safeCode = code == null || code.isBlank()
+            ? (cleanup ? "SECRET_CLEANUP_FAILED" : "SECRET_STORE_UNAVAILABLE") : code;
+        return new AppException(
+            safeCode,
+            cleanup ? "安全凭据清理失败，请稍后重试。" : "安全凭据存储不可用，模型配置未保存。",
+            cleanup ? HttpStatus.CONFLICT : HttpStatus.SERVICE_UNAVAILABLE
+        );
+    }
+
+    private String storeFailureCode(Throwable failure) {
+        return failure instanceof ProviderCredentialStoreException exception
+            ? exception.code() : "SECRET_CLEANUP_FAILED";
+    }
+
+    private String credentialStatus(AiProvider provider) {
+        if (provider.getSecretRef() == null || provider.getSecretRef().isBlank()) {
+            return provider.getApiKey() == null || provider.getApiKey().isBlank() ? "MISSING" : "LEGACY_PLAINTEXT";
+        }
+        try {
+            return providerCredentialStore.status(provider.getSecretRef()).name();
+        } catch (RuntimeException failure) {
+            return "UNAVAILABLE";
+        }
     }
 
     private AiProviderResponse mockProvider() {
@@ -318,6 +636,7 @@ public class AiProviderService {
             true,
             List.of("项目分析", "材料解析", "成果生成"),
             false,
+            "MISSING",
             null,
             null,
             Instant.EPOCH,
@@ -346,31 +665,42 @@ public class AiProviderService {
         } else {
             aiProviderUrlGuard.sdkBaseUrl(request.baseUrl(), protocol, blankToNull(request.endpointOverride()));
         }
+        // Validate both new input and an existing row. A legacy row can carry
+        // unsafe JSON in safe_headers, so treating null request headers as
+        // already trusted would create an adapter-level credential bypass.
         Map<String, String> headers = request.safeHeaders() == null
-            ? provider.getSafeHeaders() : validateSafeHeaders(request.safeHeaders());
+            ? validateSafeHeaders(provider.getSafeHeaders()) : validateSafeHeaders(request.safeHeaders());
+        String credentialHeaderName = validateCredentialHeaderName(request.authHeaderName());
+        String credentialQueryName = validateCredentialQueryName(request.queryKeyName());
         provider.configureProtocol(
-            protocol, request.endpointOverride(), request.authMode(), request.authHeaderName(), request.queryKeyName(), headers,
+            protocol, request.endpointOverride(), request.authMode(), credentialHeaderName, credentialQueryName, headers,
             request.requestTimeoutSeconds(), request.supportsTemperature(), request.supportsJsonMode(),
             request.supportsStructuredOutput(), request.supportsReasoning(), request.supportsReasoningControl()
         );
     }
 
     private Map<String, String> validateSafeHeaders(Map<String, String> submitted) {
-        if (submitted == null || submitted.isEmpty()) return Map.of();
-        Map<String, String> result = new LinkedHashMap<>();
-        submitted.forEach((name, value) -> {
-            String normalized = name == null ? "" : name.trim();
-            String lower = normalized.toLowerCase(Locale.ROOT);
-            if (!HEADER_NAME.matcher(normalized).matches() || RESERVED_HEADERS.contains(lower)
-                || lower.startsWith("proxy-") || lower.startsWith("x-forwarded-")) {
-                throw new AppException("AI_PROVIDER_HEADER_BLOCKED", "该请求头不允许自定义：" + normalized, HttpStatus.BAD_REQUEST);
-            }
-            if (value == null || value.contains("\r") || value.contains("\n")) {
-                throw new AppException("AI_PROVIDER_HEADER_BLOCKED", "自定义请求头值无效。", HttpStatus.BAD_REQUEST);
-            }
-            result.put(normalized, value);
-        });
-        return result;
+        try {
+            return AiProviderHeaderPolicy.requireSafe(submitted);
+        } catch (IllegalArgumentException invalid) {
+            throw new AppException("AI_PROVIDER_HEADER_BLOCKED", "自定义请求头不允许包含凭据或受保护字段。", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private String validateCredentialHeaderName(String submitted) {
+        try {
+            return AiProviderHeaderPolicy.requireCredentialHeaderName(submitted);
+        } catch (IllegalArgumentException invalid) {
+            throw new AppException("AI_PROVIDER_HEADER_BLOCKED", "凭据请求头名称无效。", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private String validateCredentialQueryName(String submitted) {
+        try {
+            return AiProviderHeaderPolicy.requireCredentialQueryName(submitted);
+        } catch (IllegalArgumentException invalid) {
+            throw new AppException("AI_PROVIDER_HEADER_BLOCKED", "凭据查询参数名称无效。", HttpStatus.BAD_REQUEST);
+        }
     }
 
     private ProviderTestResponse testResult(

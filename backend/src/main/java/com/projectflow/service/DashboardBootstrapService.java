@@ -133,7 +133,7 @@ public class DashboardBootstrapService {
                 latestAnalysis.getCreatedAt()
             ),
             new DashboardProviderAvailability(
-                provider != null && provider.getApiKey() != null && !provider.getApiKey().isBlank(),
+                provider != null && provider.hasConfiguredCredential(),
                 provider == null ? "" : safe(provider.getName()),
                 provider == null ? "" : safe(provider.getModelName())
             ),

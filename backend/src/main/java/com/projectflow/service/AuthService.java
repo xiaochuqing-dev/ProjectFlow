@@ -16,8 +16,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.projectflow.dto.AuthDtos.AuthResponse;
 import com.projectflow.dto.AuthDtos.AuthUser;
@@ -31,7 +29,6 @@ import com.projectflow.support.AppException;
 
 @Service
 public class AuthService {
-    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
     private static final int PASSWORD_RESET_ATTEMPT_LIMIT = 5;
     private static final Duration PASSWORD_RESET_ATTEMPT_WINDOW = Duration.ofMinutes(1); // 1 分钟内最多尝试 5 次
 
@@ -54,13 +51,14 @@ public class AuthService {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.authenticationRequired = authenticationRequired;
-        this.passwordResetCode = configuredPasswordResetCode.isBlank()
-            ? UUID.randomUUID().toString()
-            : configuredPasswordResetCode.trim();
-        this.passwordResetCodeExpiresAt = Instant.now().plus(Duration.ofMinutes(passwordResetCodeValidMinutes));
-        if (authenticationRequired) {
-            logger.warn("本次启动的密码重置验证码：{}。验证码仅可使用一次，{} 分钟后失效。", passwordResetCode, passwordResetCodeValidMinutes);
+        String configuredCode = configuredPasswordResetCode == null ? "" : configuredPasswordResetCode.trim();
+        if (authenticationRequired && configuredCode.isBlank()) {
+            throw new IllegalStateException(
+                "PASSWORD_RESET_SECRET_REQUIRED: authentication requires an explicitly supplied password reset secret"
+            );
         }
+        this.passwordResetCode = configuredCode;
+        this.passwordResetCodeExpiresAt = Instant.now().plus(Duration.ofMinutes(passwordResetCodeValidMinutes));
     }
 
     @Transactional
@@ -100,11 +98,11 @@ public class AuthService {
                 passwordResetCode.getBytes(StandardCharsets.UTF_8),
                 request.recoveryCode().trim().getBytes(StandardCharsets.UTF_8)
             )) {
-            throw new AppException("INVALID_RECOVERY_CODE", "重置验证码无效或已过期，请从启动 ProjectFlow 的终端获取新的验证码", HttpStatus.UNAUTHORIZED);
+            throw new AppException("INVALID_RECOVERY_CODE", "重置验证码无效或已过期，请由管理员重新配置", HttpStatus.UNAUTHORIZED);
         }
 
         User user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new AppException("INVALID_RECOVERY_CODE", "重置验证码无效或已过期，请从启动 ProjectFlow 的终端获取新的验证码", HttpStatus.UNAUTHORIZED));
+            .orElseThrow(() -> new AppException("INVALID_RECOVERY_CODE", "重置验证码无效或已过期，请由管理员重新配置", HttpStatus.UNAUTHORIZED));
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         passwordResetCodeUsed = true;
         passwordResetAttempts.remove(email);

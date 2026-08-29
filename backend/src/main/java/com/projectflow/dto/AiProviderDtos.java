@@ -68,6 +68,7 @@ public final class AiProviderDtos {
         boolean defaultEnabled,
         List<String> purposeTags,
         boolean apiKeyConfigured,
+        String credentialStatus,
         String lastProbeProfile,
         Instant lastProbedAt,
         Instant createdAt,

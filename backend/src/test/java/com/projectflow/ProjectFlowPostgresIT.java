@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -90,6 +91,7 @@ import com.projectflow.service.ProjectHistoryCorrectionService;
 import com.projectflow.service.ProjectContinuityDirtyMarker;
 import com.projectflow.service.ProjectHistoryWindowCheckpointService;
 import com.projectflow.service.ProjectService;
+import com.projectflow.service.ProviderCredentialStore;
 import com.projectflow.service.WorkSessionScanService;
 import com.projectflow.support.AppException;
 import com.sun.net.httpserver.HttpServer;
@@ -98,6 +100,7 @@ import com.sun.net.httpserver.HttpServer;
     "spring.jpa.hibernate.ddl-auto=update",
     "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration"
 })
+@ActiveProfiles("ci")
 class ProjectFlowPostgresIT {
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
         .withDatabaseName("projectflow_test")
@@ -144,6 +147,7 @@ class ProjectFlowPostgresIT {
     @Autowired ProjectContinuityDirtyMarker continuityDirtyMarker;
     @Autowired ProjectHistoryWindowCheckpointService historyWindowCheckpointService;
     @Autowired ProjectService projectService;
+    @Autowired ProviderCredentialStore providerCredentialStore;
     @Autowired PlatformTransactionManager transactionManager;
     @Autowired JdbcTemplate jdbcTemplate;
     @Autowired ObjectMapper objectMapper;
@@ -567,8 +571,10 @@ class ProjectFlowPostgresIT {
         project.update(name, "真实容器测试", ProjectStatus.BUILDING, List.of("Spring Boot"), "", LocalDate.now(), null);
         project = projectRepository.saveAndFlush(project);
         AiProvider provider = new AiProvider(userId);
-        provider.update("固定 PostgreSQL E2E 模型", "http://127.0.0.1:" + modelPort + "/v1", "postgres-it-placeholder",
-            "projectflow-fixed-postgres", AiProviderType.OPENAI_COMPATIBLE, 0.1, 4000, true, List.of("POSTGRES_WORKFLOW_NOT_REAL_DEEPSEEK"));
+        String secretRef = providerCredentialStore.writeAndVerify(provider.getId(), "postgres-it-placeholder");
+        provider.updateWithSecretRef("固定 PostgreSQL E2E 模型", "http://127.0.0.1:" + modelPort + "/v1", secretRef,
+            "projectflow-fixed-postgres", AiProviderType.OPENAI_COMPATIBLE, 0.1, 4000, true,
+            List.of("POSTGRES_WORKFLOW_NOT_REAL_DEEPSEEK"));
         providerRepository.saveAndFlush(provider);
         return new WorkflowFixture(userId, project);
     }

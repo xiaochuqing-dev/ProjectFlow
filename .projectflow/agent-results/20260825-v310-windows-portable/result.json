@@ -1,0 +1,33 @@
+{
+  "taskGoal": "Implement the V3.10 B10-B13 Windows source-independent portable runtime boundary, including standalone frontend output, build/start/stop/backup/restore/manifest/checksum scripts, Windows CI smoke coverage and direct documentation.",
+  "actualChanges": [
+    "Configured Next to emit the standalone server artifact and added a release packager that assembles the Spring Boot jar, Next standalone/static/public files, jlink Java image, Node runtime, H2 runtime, scripts, manifest and checksums without putting runtime data in the install tree.",
+    "Added loopback-only release start/stop, external data-root layout and precedence, process identity/PID verification, foreign-port refusal, H2 backup/restore round-trip and current-user DPAPI smoke scripts.",
+    "Added pinned-commit Windows CI coverage for clean unpack, developer-tool-free runtime, restart, full install-tree immutability, dependency gates, Java credential/migration gates, synthetic V3.9 H2 baseline startup, backup/restore, port conflict and sensitive marker scans."
+  ],
+  "keyFiles": [
+    "frontend/next.config.ts",
+    "scripts/release/build-windows-portable.ps1",
+    "scripts/release/start-projectflow.ps1",
+    "scripts/release/stop-projectflow.ps1",
+    "scripts/release/backup-projectflow.ps1",
+    "scripts/release/restore-projectflow.ps1",
+    "scripts/release/manifest-projectflow.ps1",
+    "scripts/release/checksum-projectflow.ps1",
+    "scripts/release/dpapi-smoke.ps1",
+    "scripts/release/test-release-scripts.ps1",
+    ".github/workflows/windows-release.yml",
+    "docs/projectflow-v3.10-windows-portable-runtime.md"
+  ],
+  "verification": {
+    "build": "Frontend standalone build and frontend type check passed. Full portable build reached Next standalone successfully but backend Maven packaging was blocked by concurrent backend WindowsDpapiProviderCredentialStore JNA imports without the corresponding JNA dependency in the current pom; no backend files were edited by this task.",
+    "tests": "scripts/release/test-release-scripts.ps1 passed; all release PowerShell files parsed successfully; workflow YAML parsed successfully; H2 Shell BACKUP TO/Restore round-trip passed with an isolated fixture; dpapi-smoke.ps1 passed on Windows; git diff --check passed.",
+    "manualCheck": "Confirmed release profile activation, Flyway enablement, external backup/config/log/temp/cache injection, relative backend/frontend process arguments, hidden Start-Process usage, full checksum unexpected-file detection and pinned action commit references."
+  },
+  "unfinished": [
+    "The backend owner must add/fix the JNA dependency and Java WindowsDpapiProviderCredentialStoreTest required by the Windows workflow.",
+    "The backend owner must provide the final Flyway schema version and complete migration/credential runtime tests; the package manifest deliberately records unknown when that provenance is not supplied.",
+    "The Windows workflow has not run in GitHub Actions from this worktree; full package/runtime smoke remains pending the backend Maven build fix."
+  ],
+  "sedimentCandidates": []
+}

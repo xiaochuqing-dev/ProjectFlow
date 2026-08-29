@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderAuthMode;
+import com.projectflow.service.AiProviderHeaderPolicy;
 import com.projectflow.entity.ModelProtocol;
 import com.projectflow.service.AiProviderUrlGuard;
 
@@ -46,11 +47,11 @@ public class CompatibleRelayTransport {
     public CanonicalModelResponse execute(CanonicalModelRequest request) throws IOException {
         AiProvider provider = request.provider();
         URI endpoint = urlGuard.endpointUri(provider.getBaseUrl(), provider.getProtocol(), provider.getEndpointOverride());
-        HttpRequest.Builder builder = HttpRequest.newBuilder(authenticatedUri(endpoint, provider))
+        HttpRequest.Builder builder = HttpRequest.newBuilder(authenticatedUri(endpoint, request))
             .timeout(request.requestTimeout())
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload(request)), StandardCharsets.UTF_8));
-        applyHeaders(builder, provider);
+        applyHeaders(builder, request);
 
         HttpResponse<String> response;
         try {
@@ -120,18 +121,24 @@ public class CompatibleRelayTransport {
         return body;
     }
 
-    private URI authenticatedUri(URI endpoint, AiProvider provider) {
+    private URI authenticatedUri(URI endpoint, CanonicalModelRequest request) throws IOException {
+        AiProvider provider = request.provider();
         if (provider.getAuthMode() != AiProviderAuthMode.QUERY_API_KEY) return endpoint;
-        String name = provider.getQueryKeyName() == null ? "api_key" : provider.getQueryKeyName();
+        String name = AiProviderHeaderPolicy.requireCredentialQueryName(
+            provider.getQueryKeyName() == null ? "api_key" : provider.getQueryKeyName()
+        );
         String separator = endpoint.getRawQuery() == null ? "?" : "&";
-        return URI.create(endpoint.toASCIIString() + separator + encode(name) + "=" + encode(key(provider)));
+        return URI.create(endpoint.toASCIIString() + separator + encode(name) + "=" + encode(requiredCredential(request)));
     }
 
-    private void applyHeaders(HttpRequest.Builder builder, AiProvider provider) {
+    private void applyHeaders(HttpRequest.Builder builder, CanonicalModelRequest request) throws IOException {
+        AiProvider provider = request.provider();
         if (provider.getAuthMode() == AiProviderAuthMode.API_KEY_HEADER) {
-            builder.header(provider.getAuthHeaderName() == null ? "x-api-key" : provider.getAuthHeaderName(), key(provider));
+            builder.header(AiProviderHeaderPolicy.requireCredentialHeaderName(
+                provider.getAuthHeaderName() == null ? "x-api-key" : provider.getAuthHeaderName()
+            ), requiredCredential(request));
         }
-        provider.getSafeHeaders().forEach(builder::header);
+        AiProviderHeaderPolicy.requireSafe(provider.getSafeHeaders()).forEach(builder::header);
     }
 
     private CanonicalModelResponse parseChat(JsonNode root, HttpResponse<String> response) {
@@ -248,8 +255,12 @@ public class CompatibleRelayTransport {
         return response.headers().firstValue("x-request-id").orElse("");
     }
 
-    private String key(AiProvider provider) {
-        return provider.getApiKey() == null ? "" : provider.getApiKey();
+    private String requiredCredential(CanonicalModelRequest request) throws IOException {
+        String credential = request.credential();
+        if (credential == null || credential.isBlank()) {
+            throw new IOException("Provider credential unavailable");
+        }
+        return credential;
     }
 
     private String encode(String value) {

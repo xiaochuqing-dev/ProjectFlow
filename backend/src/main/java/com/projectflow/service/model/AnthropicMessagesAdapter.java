@@ -15,6 +15,7 @@ import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.projectflow.entity.AiProvider;
 import com.projectflow.entity.AiProviderAuthMode;
+import com.projectflow.service.AiProviderHeaderPolicy;
 import com.projectflow.entity.ModelProtocol;
 import com.projectflow.service.AiProviderUrlGuard;
 
@@ -80,7 +81,10 @@ public class AnthropicMessagesAdapter implements ModelProtocolAdapter {
 
     private AnthropicOkHttpClient.Builder clientBuilder(CanonicalModelRequest request) {
         AiProvider provider = request.provider();
-        String key = provider.getApiKey() == null || provider.getApiKey().isBlank() ? "projectflow-no-key" : provider.getApiKey();
+        String key = request.credential();
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("Provider credential unavailable");
+        }
         AiProviderAuthMode mode = provider.getAuthMode();
         AnthropicOkHttpClient.Builder builder = AnthropicOkHttpClient.builder()
             .baseUrl(urlGuard.sdkBaseUrl(provider.getBaseUrl(), provider.getProtocol(), provider.getEndpointOverride()))
@@ -94,7 +98,7 @@ public class AnthropicMessagesAdapter implements ModelProtocolAdapter {
         if (mode == AiProviderAuthMode.BEARER) {
             builder.authToken(key);
         } else builder.apiKey(key);
-        provider.getSafeHeaders().forEach(builder::putHeader);
+        AiProviderHeaderPolicy.requireSafe(provider.getSafeHeaders()).forEach(builder::putHeader);
         return builder;
     }
 

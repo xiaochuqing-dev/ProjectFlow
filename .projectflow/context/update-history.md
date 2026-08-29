@@ -1,5 +1,11 @@
 # Update history
 
+## ProjectFlow V3.10 最终真实性补证 - 2026-08-29
+
+从远程 PR #19 最新 Head `f85b7d4ceada7d053a0bbe0d8b216eab32795e63` 创建独立干净 worktree，保留原工作树的用户文件不变。新增 required `real-v39-upgrade-proof` Job：临时 checkout exact V3.9 final `dd5ee41b6afcbd7703fa0883dc115c11f4821447`，由旧应用自身 Hibernate startup 实际创建 H2 与 PostgreSQL 16 schema，写入 Project、Memory、Fact、History Event/Snapshot/Correction、Agent Candidate 和 Provider 代表记录，再由 V3.10 执行精确 signature、H2 备份、PostgreSQL dump/restore 与显式确认、controlled V1 baseline、V2、凭据迁移及重启幂等性校验。实际旧库与冻结 signature 精确一致，无需放宽 UNKNOWN 规则或改写 migration。
+
+本地 exact-old-code proof 2/2、release script contracts、凭据/迁移/备份/安全 focused tests 和 PostgreSQL profile 完整回归通过；后端单测 717 项零失败，PostgreSQL integration 13 项零失败。workflow 新增 `credential-smoke` 最小范围，只复用现有 `ProjectFlowRealProviderProbeIT`，不重跑历史大矩阵。实现证据 Head `3c3dac91160b23f52e4ea680e423e3886dbda8ed` 的 required quality run `33242125619`、Windows run `33242125279` 与三 Provider credential-smoke run `33242290300` 全部通过。首次远程运行 `33242086857` 因 Job 级 env 过早引用 runner context 而在解析阶段失败，该 Run 保留；修正后将临时路径放到执行步骤解析。PR merge、master 和 backfill 事实以 final closure report 与 acceptance backfill 为准。继续 NO TAG / NO RELEASE，未开始 V4 GUI。
+
 ## ProjectFlow V3.9 最终关闭与验收回填 - 2026-08-25
 
 最终功能 Head `f3c3adbd79206fc21a8a5209774a0b71ef47e185` 关闭 dirty generation 竞态、Primary-only Current Project State 与独立语义评审表示边界。普通 push/PR CI 通过；Luna、DeepSeek、Qwen 各自完成同头独立盲评 12/12、Chapter 9/9 和 continuity 3/3，旧 Luna/Qwen 失败继续保留。Sol 高风险复核 P0/P1 为 0。PR #17 合并为 master `d4bceed673d7cd630bc3b6663f673be6f2ac3c5b`，master run `32795545544` 与干净主线根启动器通过。Owner-approved 结论为 `PASS_BY_OWNER_APPROVED_AUTOMATED_AND_INDEPENDENT_SEMANTIC_REVIEW`；原 worksheet 仍为 `NOT_REVIEWED`，无人工分数或 HUMAN_REVIEW_PASS。继续 NO TAG / NO RELEASE；Frontend 依赖、Actions runtime、版本化迁移、Secret Store、发布运行包与恢复进入 V3.10。

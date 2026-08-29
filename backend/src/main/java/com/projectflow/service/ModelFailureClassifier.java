@@ -27,6 +27,9 @@ public final class ModelFailureClassifier {
     public static final String SCHEMA_REPAIR_FAILED = "SCHEMA_REPAIR_FAILED";
     public static final String SCHEMA_UNRECOGNIZED = SCHEMA_MISMATCH;
     public static final String EVIDENCE_REJECTED = "EVIDENCE_REJECTED";
+    public static final String SECRET_STORE_UNAVAILABLE = "SECRET_STORE_UNAVAILABLE";
+    public static final String SECRET_MIGRATION_FAILED = "SECRET_MIGRATION_FAILED";
+    public static final String SECRET_CLEANUP_FAILED = "SECRET_CLEANUP_FAILED";
     public static final String UNKNOWN_CALL_FAILED = "UNKNOWN_CALL_FAILED";
     // 兼容旧诊断读取；新写入统一使用上方 V3.3.8 语义。
     public static final String HTTP_401_OR_403 = PROVIDER_AUTH_FAILED;
@@ -52,6 +55,7 @@ public final class ModelFailureClassifier {
      */
     public static String classifyException(Exception failure) {
         if (failure == null) return UNKNOWN_CALL_FAILED;
+        if (failure instanceof ModelGatewayService.ModelCredentialException credential) return credential.code();
         if (failure instanceof ModelGatewayService.ModelHttpException) {
             return classifyHttpStatus(((ModelGatewayService.ModelHttpException) failure).statusCode());
         }
@@ -114,6 +118,8 @@ public final class ModelFailureClassifier {
             case SCHEMA_MISMATCH -> "模型返回 JSON 可以读取，但结构不符合目标；系统会执行一次定向 Schema 修复。";
             case SCHEMA_REPAIR_FAILED -> "模型结果结构偏离目标，定向 Schema 修复仍未成功；已保留旧结果。";
             case EVIDENCE_REJECTED -> "模型结果引用的证据不可用，本次先展示本地事实摘要。";
+            case SECRET_STORE_UNAVAILABLE, SECRET_MIGRATION_FAILED -> provider + " 的安全凭据存储不可用，未发起模型请求。";
+            case SECRET_CLEANUP_FAILED -> provider + " 的安全凭据清理失败，未删除模型配置。";
             default -> provider + " 调用失败，本次先展示本地事实摘要。";
         };
     }
