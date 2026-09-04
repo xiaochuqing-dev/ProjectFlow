@@ -8,6 +8,8 @@
 
 首次 CI 还暴露 Dogfood 对 checkout mtime 和固定中文标题的脆弱断言，以及 Tomcat、browserslist、postcss-selector-parser 的六条锁文件公告。本阶段只稳定测试 fixture/语义锚点，将 Tomcat 覆写到同一 10.1.x 补丁线的 10.1.59，并以 lock-only 更新传递前端依赖；未升级框架或修改 package.json。处置后本地后端 717 项零失败、前端 lint/build/59 contracts/隔离 Playwright 9 项与根启动器通过；实现 Head 7b25c67 的 push/PR Quality runs 33871166836/33871171845 和 Windows runs 33871166456/33871171203 通过，包含 PostgreSQL、OSV 和 Windows portable 证明。
 
+最终报告提交触发的重复 Windows PR run 33872093162 暴露 RUN-06 的 45 秒端口占用 fixture 会在较慢启动检测完成前自行释放；同 Head 的 push run 33872089083 通过。门禁只把临时监听保持上限延长到 180 秒，并继续在 `finally` 中立即清理，不改变 release runtime。
+
 ## ProjectFlow V3.10 PR 合并、master 复验与最终事实回填 - 2026-08-29
 
 最终功能 Head `c0b4d9653ac6a579978d81b66d2554662e2007dd` 的 Quality run `33242563402`、Windows run `33242563193` 与三 Provider secure credential-path run `33242565505` 全部通过；同头重复 push runs `33242560959`、`33242560734` 的已取消首轮也已在 attempt 2 成功，PR 状态恢复 CLEAN。PR #19 随后按 merge commit 惯例合并为 master `2f56257c028657f3c67e0e413f938d723502147f`，merge 后 master Quality `33246313873` 与 Windows `33246313553` 再次通过。

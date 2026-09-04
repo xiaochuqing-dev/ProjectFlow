@@ -7,7 +7,8 @@
     "冻结页面职责、History 的 Overview 到 Evidence 层级、正式中文与渐进披露、统一状态语义、semantic component contract、七个低保真 wireframe、四类非代码项目检查、route migration 与 API 到 View Model 映射。",
     "推荐 ProjectFlow 自有语义 token、源码拥有组件和成熟无障碍 headless primitive；Radix 为默认候选，React Aria 为复杂 collection 挑战者。桌面壳诚实保持 DESKTOP_SHELL_DECISION = DEFERRED，V4-B 先做 Electron/Tauri 可删除同机 PoC。",
     "仅修正 AppShell 与 Dashboard 的陈旧版本标签，没有重写页面、删除旧 route、修改 backend semantic contract 或引入设计系统与桌面壳生产依赖。",
-    "CI 暴露后，以固定历史 fixture 时间和语义锚点稳定 Dogfood 测试；以 Tomcat 10.1.59 属性覆写和最小前端 lock-only 更新清除六条依赖公告，没有升级框架或修改 package.json。"
+    "CI 暴露后，以固定历史 fixture 时间和语义锚点稳定 Dogfood 测试；以 Tomcat 10.1.59 属性覆写和最小前端 lock-only 更新清除六条依赖公告，没有升级框架或修改 package.json。",
+    "Windows 重复运行暴露端口占用 fixture 的 45 秒上限会早于慢 runner 的启动检测结束；门禁将临时监听上限延长到 180 秒，并继续在 finally 中及时清理，不改变产品运行时。"
   ],
   "keyFiles": [
     "docs/projectflow-v4-gui-foundation-current-state-audit.md",
@@ -19,6 +20,7 @@
     "backend/src/test/java/com/projectflow/ProjectHistoryDogfoodAcceptanceTest.java",
     "backend/pom.xml",
     "frontend/package-lock.json",
+    ".github/workflows/windows-release.yml",
     "PROJECT_CONTEXT.md",
     ".projectflow/AGENT_PROTOCOL.md",
     ".projectflow/context/known-risks.md",

@@ -20,6 +20,8 @@ V4.0-A 已完成 GUI Foundation 与信息架构的范围冻结和决策归档。
 
 本机 Docker Desktop Linux daemon 不可连接，因此没有把本地 PostgreSQL profile 写成已运行。实现 Head 7b25c67e12cf0c2919949753da69003c23360c58 的 GitHub push/PR Quality runs 33871166836/33871171845 已通过，实际覆盖 backend/H2、PostgreSQL、Browser E2E、OSV 锁文件、前端质量、真实 V3.9 升级证明、Hermes、Obsidian 和敏感内容门禁；Windows portable push/PR runs 33871166456/33871171203 也已通过。
 
+最终报告 Head 的重复 Windows PR run 33872093162 又暴露一处门禁时序上限：端口占用 fixture 仅保持 45 秒，而该 runner 的启动检测耗时约 44 秒，fixture 先释放后启动器成功，门禁因此正确报出“外部端口未被拒绝”；同 Head 的 push Windows run 33872089083 已通过。修复只把临时监听保持上限延长到 180 秒，`finally` 仍会在检测结束后立即停止监听，不改变产品运行时。该补丁的最终结果以 Draft PR 当前 checks 为准，不在提交前预写。
+
 三、核心决策
 
 产品信息架构采用 Hybrid 项目中心：全局项目库与全局设置配合项目工作区。进入项目后的第一屏为 Current State。History 保持 Overview、Chapter、Story、Thread、Raw Event、Evidence 的层级，不在首层暴露工程细节。
