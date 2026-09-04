@@ -1,5 +1,11 @@
 # Update history
 
+## ProjectFlow V4.0-A GUI Foundation 与 IA 冻结 - 2026-09-04
+
+从当时最新 origin/master 创建 clean worktree 和 codex/v4.0-gui-foundation-ia，原工作区的用户修改与未跟踪文件保持不动。审计当前 route、Shell、主要页面、shared components、token、API/read model 和旧产品债务后，推荐 Hybrid 项目中心 IA：全局项目库/全局设置，项目内 Current State、History、Agent Context、Project Settings / Integrations；Current State 是进入项目后的默认第一屏，Evidence 与工程 diagnostics 继续下钻。
+
+本阶段冻结正式中文与渐进披露、统一状态系统、semantic component contract、七个页面合同、低保真 wireframe、非代码项目适配、route migration 和 API → View Model 映射。设计系统方向为 ProjectFlow 自有语义 token、源码拥有组件和成熟无障碍 headless primitive。桌面壳结论为 DESKTOP_SHELL_DECISION = DEFERRED，V4-B 需以现有 runtime 做 Electron/Tauri 可删除 PoC。只修正两个陈旧 V3.9 可见版本标签；未重写 AppShell、未删除旧 route、未改 backend semantic contract、未安装 production dependency，也未创建 Tag/Release。Draft PR 保持 Review Required，Owner 批准后才能进入 V4-B。
+
 ## ProjectFlow V3.10 PR 合并、master 复验与最终事实回填 - 2026-08-29
 
 最终功能 Head `c0b4d9653ac6a579978d81b66d2554662e2007dd` 的 Quality run `33242563402`、Windows run `33242563193` 与三 Provider secure credential-path run `33242565505` 全部通过；同头重复 push runs `33242560959`、`33242560734` 的已取消首轮也已在 attempt 2 成功，PR 状态恢复 CLEAN。PR #19 随后按 merge commit 惯例合并为 master `2f56257c028657f3c67e0e413f938d723502147f`，merge 后 master Quality `33246313873` 与 Windows `33246313553` 再次通过。

@@ -1,4 +1,12 @@
-# ProjectFlow V3.10 Agent Protocol
+# ProjectFlow V4.0-A Agent Protocol
+
+V4.0-A 冻结 GUI Foundation 与 Information Architecture，不是最终视觉实现。产品心智以项目为中心、以 Evidence 为边界；推荐全局项目库/全局设置加项目工作区的 Hybrid IA。进入项目后的默认页面是 Current State，项目一级页面为 Current State、History、Agent Context、Project Settings / Integrations。Evidence、Correction、完整 ID/Hash、Commit、路径和内部 diagnostics 保持按需下钻。用户层直接遵守 docs/product-language-and-progressive-disclosure-contract.md，不得把内部 enum、长 ID 或工程聚类结构当作普通用户文案。
+
+Current Project State 继续是 persisted、model-free、corrected-history derived read model，不是 ProjectFact。History 继续保持 Overview → Chapter → Story → Thread → Raw Event → Evidence；Agent Context 继续消费 persisted-only、有界且脱敏的 Context Package。UI 缺字段时优先复用或窄幅扩展现有 History/Gateway read model，禁止为了页面方便创建第二套 Project State、History、Memory、Agent Context 或事实来源。GET 不得因此触发扫描、Git 或模型。
+
+V4.0-A 不删除旧 route，不全量改写 AppShell，不引入生产 Desktop Shell 依赖，不实现最终 token、主题、Dashboard、History 或 Story Card。设计系统方向是 ProjectFlow 自有语义 token、源码拥有组件和成熟无障碍 headless primitive；具体依赖需 V4-B 原型证据。桌面壳状态为 DESKTOP_SHELL_DECISION = DEFERRED，必须先用现有 Java、Node、Next standalone 和 loopback runtime 做 Electron/Tauri 可删除 PoC。Draft PR 保持 Review Required；Owner 未确认导航、第一屏、信息层级、旧入口降级和 Shell defer 前，不得 merge、Tag、Release 或开始 V4-B。
+
+# Retained ProjectFlow V3.10 Agent Protocol
 
 V3.10 final closure requires a non-circular upgrade gate: the exact final V3.9 application at `dd5ee41b6afcbd7703fa0883dc115c11f4821447` must create both the H2 and PostgreSQL 16 legacy schemas in temporary CI storage. Current V3.10 then owns classification, H2 backup or PostgreSQL dump acknowledgement, controlled V1 baseline, V2, secure credential migration, protected-record checks and stable restart. The current V1 SQL must never create the legacy input for this real-old-version proof, and the required proof must fail if either test is skipped. Final acceptance also requires one minimal real secure credential-path probe for each registered Responses, Chat Completions and Anthropic Messages profile on the same final feature Head; it does not rerun the historical semantic matrix.
 
