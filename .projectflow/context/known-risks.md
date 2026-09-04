@@ -6,6 +6,7 @@
 - Agent Context Package 后端已存在 persisted-only 读取，但前端尚无 typed client 和正式页面。Obsidian 目前只有显式 CLI，没有 Web REST status；V4 UI 不得假装已具备 Obsidian 连接/同步状态。
 - 旧 Dashboard、Timeline、Project Intelligence、Sediment、Dev Logs、Tasks 和多套历史/记录入口仍保留。V4-A 只定义主导航降级与迁移目标，不删除 route；实际 redirect/remove 必须等 V4-C 能力吸收、deep link 和回归验收。
 - 现有 shared primitives、Toast、手写 Dialog、focus、reduced-motion 与 ad-hoc Tailwind 尚未构成完整设计系统。V4-B 必须用真实 prototype 验证无障碍、长中文、900×600 内容视口候选和 Windows 125%/150% 缩放，不能把 V4-A 文档当实现证据。
+- V4.0-A 的 CI 新发现 Spring Boot 3.5.15 仍管理 Tomcat 10.1.55，以及两个前端传递开发依赖处于已知漏洞版本。本阶段以 `tomcat.version` 10.1.59 和最小 lock-only 更新处置，未升级框架或增加依赖。未来升级 Spring Boot 时必须复核该属性是否仍必要；前端不能用 production-only npm audit 代替全锁文件 OSV 门禁。
 - V3.10 的实现、exact V3.9 H2/PostgreSQL 升级补证、三 Provider secure smoke、最终功能 Head 门禁、PR #19 merge 和 merge 后 master Quality/Windows 已通过。正式 FINAL 与 V4.0 Entry 只在本事实回填 PR 自身 required CI/merge、最终 master 复验和任务临时资源清理完成后生效；任一后续 required gate 失败仍必须 BLOCKED。
 - V3.10 不提供 Flyway DOWN migration；二进制回退前必须核对 schema 兼容性。外部 PostgreSQL 只强制显式备份确认，真实 `pg_dump` 的安全存放、恢复演练和保留策略仍属于运维者责任，不宣称为企业级备份。
 - Windows Provider 凭据由 current-user DPAPI 绑定当前用户和机器；迁移用户或设备时需重新配置，不存在 plaintext fallback。非 Windows release 环境在没有可用 secure store 时会明确降级/阻断需凭据的操作。

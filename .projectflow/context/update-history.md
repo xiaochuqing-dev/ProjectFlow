@@ -6,6 +6,8 @@
 
 本阶段冻结正式中文与渐进披露、统一状态系统、semantic component contract、七个页面合同、低保真 wireframe、非代码项目适配、route migration 和 API → View Model 映射。设计系统方向为 ProjectFlow 自有语义 token、源码拥有组件和成熟无障碍 headless primitive。桌面壳结论为 DESKTOP_SHELL_DECISION = DEFERRED，V4-B 需以现有 runtime 做 Electron/Tauri 可删除 PoC。只修正两个陈旧 V3.9 可见版本标签；未重写 AppShell、未删除旧 route、未改 backend semantic contract、未安装 production dependency，也未创建 Tag/Release。Draft PR 保持 Review Required，Owner 批准后才能进入 V4-B。
 
+首次 CI 还暴露 Dogfood 对 checkout mtime 和固定中文标题的脆弱断言，以及 Tomcat、browserslist、postcss-selector-parser 的六条锁文件公告。本阶段只稳定测试 fixture/语义锚点，将 Tomcat 覆写到同一 10.1.x 补丁线的 10.1.59，并以 lock-only 更新传递前端依赖；未升级框架或修改 package.json。处置后本地后端 717 项零失败、前端 lint/build/59 contracts/隔离 Playwright 9 项与根启动器通过；实现 Head 7b25c67 的 push/PR Quality runs 33871166836/33871171845 和 Windows runs 33871166456/33871171203 通过，包含 PostgreSQL、OSV 和 Windows portable 证明。
+
 ## ProjectFlow V3.10 PR 合并、master 复验与最终事实回填 - 2026-08-29
 
 最终功能 Head `c0b4d9653ac6a579978d81b66d2554662e2007dd` 的 Quality run `33242563402`、Windows run `33242563193` 与三 Provider secure credential-path run `33242565505` 全部通过；同头重复 push runs `33242560959`、`33242560734` 的已取消首轮也已在 attempt 2 成功，PR 状态恢复 CLEAN。PR #19 随后按 merge commit 惯例合并为 master `2f56257c028657f3c67e0e413f938d723502147f`，merge 后 master Quality `33246313873` 与 Windows `33246313553` 再次通过。
