@@ -1,5 +1,23 @@
 # Update history
 
+## ProjectFlow V4.0-A Owner Review 合同修订 - 2026-09-05
+
+Owner 认可 PR #21 的 Hybrid 项目中心、Current State 默认第一屏、通用核心视图、Evidence 下钻、旧入口渐进降级、设计系统方向和 Desktop Shell defer。本轮只修正产品边界：Capability 改为可选次级视图；History 明确 Chapter 时间阶段轴与 Evolution Thread 长期主题轴；Agent Context 第一层产品化，精确 Context Package 进入工程详情；最终用户导航标签留给 V4-B 验证。
+
+同时冻结 Obsidian 配置与内容上下文入口的分工、Current State 带文字的更新主动作与保留旧结果的刷新闭环、默认安全数据位置的简化 Onboarding、全局 Provider CRUD/凭据与项目使用状态的 ownership、用户层正式中文命名候选，以及由四个核心页面驱动的 V4-B 最小组件范围。Desktop 可删除 PoC 优先只比较 Electron/Tauri，WebView2 direct host 只作研究对照；全局 Needs Attention 暂不升为一级导航。
+
+本轮只修改文档、上下文和追加式 Agent Result，不改生产 GUI、后端 API、route、Provider binding、Obsidian adapter 或依赖。PR #21 继续保持 Draft；状态为 READY_FOR_OWNER_REVIEW_UPDATED，Owner 最终确认前不 merge、不创建 Tag/Release，也不开始 V4-B。
+
+## ProjectFlow V4.0-A GUI Foundation 与 IA 冻结 - 2026-09-04
+
+从当时最新 origin/master 创建 clean worktree 和 codex/v4.0-gui-foundation-ia，原工作区的用户修改与未跟踪文件保持不动。审计当前 route、Shell、主要页面、shared components、token、API/read model 和旧产品债务后，推荐 Hybrid 项目中心 IA：全局项目库/全局设置，项目内 Current State、History、Agent Context、Project Settings / Integrations；Current State 是进入项目后的默认第一屏，Evidence 与工程 diagnostics 继续下钻。
+
+本阶段冻结正式中文与渐进披露、统一状态系统、semantic component contract、七个页面合同、低保真 wireframe、非代码项目适配、route migration 和 API → View Model 映射。设计系统方向为 ProjectFlow 自有语义 token、源码拥有组件和成熟无障碍 headless primitive。桌面壳结论为 DESKTOP_SHELL_DECISION = DEFERRED，V4-B 需以现有 runtime 做 Electron/Tauri 可删除 PoC。只修正两个陈旧 V3.9 可见版本标签；未重写 AppShell、未删除旧 route、未改 backend semantic contract、未安装 production dependency，也未创建 Tag/Release。Draft PR 保持 Review Required，Owner 批准后才能进入 V4-B。
+
+首次 CI 还暴露 Dogfood 对 checkout mtime 和固定中文标题的脆弱断言，以及 Tomcat、browserslist、postcss-selector-parser 的六条锁文件公告。本阶段只稳定测试 fixture/语义锚点，将 Tomcat 覆写到同一 10.1.x 补丁线的 10.1.59，并以 lock-only 更新传递前端依赖；未升级框架或修改 package.json。处置后本地后端 717 项零失败、前端 lint/build/59 contracts/隔离 Playwright 9 项与根启动器通过；实现 Head 7b25c67 的 push/PR Quality runs 33871166836/33871171845 和 Windows runs 33871166456/33871171203 通过，包含 PostgreSQL、OSV 和 Windows portable 证明。
+
+最终报告提交触发的重复 Windows PR run 33872093162 暴露 RUN-06 的 45 秒端口占用 fixture 会在较慢启动检测完成前自行释放；同 Head 的 push run 33872089083 通过。门禁只把临时监听保持上限延长到 180 秒，并继续在 `finally` 中立即清理，不改变 release runtime。
+
 ## ProjectFlow V3.10 PR 合并、master 复验与最终事实回填 - 2026-08-29
 
 最终功能 Head `c0b4d9653ac6a579978d81b66d2554662e2007dd` 的 Quality run `33242563402`、Windows run `33242563193` 与三 Provider secure credential-path run `33242565505` 全部通过；同头重复 push runs `33242560959`、`33242560734` 的已取消首轮也已在 attempt 2 成功，PR 状态恢复 CLEAN。PR #19 随后按 merge commit 惯例合并为 master `2f56257c028657f3c67e0e413f938d723502147f`，merge 后 master Quality `33246313873` 与 Windows `33246313553` 再次通过。

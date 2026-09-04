@@ -185,7 +185,7 @@ jobs:
           param([int]$Port)
           $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, $Port)
           $listener.Start()
-          try { Start-Sleep -Seconds 45 } finally { $listener.Stop() }
+          try { Start-Sleep -Seconds 180 } finally { $listener.Stop() }
           '@
           $process = Start-Process -FilePath powershell.exe -WindowStyle Hidden -PassThru -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',$holder,'8080')
           try {

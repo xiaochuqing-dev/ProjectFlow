@@ -1,0 +1,41 @@
+{
+  "taskGoal": "根据 Owner 对 Draft PR #21 的审阅反馈，小幅修订 V4.0-A GUI Foundation 与信息架构合同，保留既有核心方向，不进入 V4-B、最终 GUI 或 Desktop Shell 实现。",
+  "actualChanges": [
+    "记录 Owner 已认可 Hybrid 项目中心、Current State 默认第一屏、三个通用核心读取视图、Evidence 按需下钻、旧入口渐进降级、设计系统方向和 Desktop Shell defer；修订后仍等待最终确认。",
+    "把 Capability Map 重新定位为只适合部分项目的可选次级视图，软件以外项目不再被要求映射成能力，同时保留既有 Capability 能力和路由。",
+    "把 Project History 明确为互补的时间阶段轴与长期主题轴：Chapter 组织阶段内 Story，Evolution Thread 可跨 Chapter 连接相关 Story，不改变 backend membership 或 identity。",
+    "把 Agent Context 分成产品化用户第一层与精确工程详情：第一层围绕下一位 Agent 应知道的状态、事实、变化、冲突、未知、建议材料和内容限制，Context Package 内部字段按需下钻。",
+    "区分 Obsidian 的投影/Vault 配置入口和内容上下文中的日常 Note/投影入口，并明确没有 Web REST status 时不能伪造实时同步状态或第二套 Obsidian truth。",
+    "冻结 Current State 的显式文字主动作和刷新闭环：用户主动更新项目状态，后台刷新期间保留旧可信结果、滚动与展开状态，Job ID 只进入工程详情。",
+    "简化首次 Onboarding：普通用户先添加项目或材料，Provider 可跳过，数据默认使用推荐安全位置；数据目录、portable mode、backup 和 runtime 细节进入高级设置。",
+    "冻结 Provider ownership：全局设置拥有 CRUD、凭据、协议、模型和连接测试；项目设置只选择或展示已配置 Provider，不复制 CRUD、Secret 或 Credential Store。",
+    "新增用户层正式中文命名合同，并把 Chapter、Story 和 Agent Context 的最终用户词保留给 V4-B 真实 prototype 验证。",
+    "限制 V4-B 由 Project Library、Current State、Project History、Story Detail + Evidence Drawer 四个核心 prototype 驱动最小组件集合；Desktop PoC 优先只比较 Electron/Tauri，WebView2 direct host 仅作研究对照。"
+  ],
+  "keyFiles": [
+    "docs/projectflow-v4-gui-foundation-product-contract.md",
+    "docs/projectflow-v4-gui-foundation-phase-a-report.md",
+    "docs/projectflow-v4-design-system-and-desktop-foundation-research.md",
+    "PROJECT_CONTEXT.md",
+    ".projectflow/AGENT_PROTOCOL.md",
+    ".projectflow/context/known-risks.md",
+    ".projectflow/context/update-history.md",
+    ".projectflow/agent-results/20260905-025101-v40-gui-foundation-owner-review-revision/result.json"
+  ],
+  "verification": {
+    "build": "not_run：本轮只修改文档、上下文和 Agent Result，没有生产代码或依赖变化。",
+    "tests": "not_run：本轮没有生产代码或测试代码变化，不重复运行真实 Provider、后端或前端测试。",
+    "manualCheck": "PASS：git diff --check、JSON 解析、10 项修订标记、用户层 wireframe 措辞、仓库相对引用、机器绝对路径/凭据值/原始模型内容扫描和变更范围检查均通过；事实未变化的 current-state audit 保持不动。"
+  },
+  "unfinished": [
+    "Owner 仍需最终确认修订后的 V4.0-A；READY_FOR_OWNER_REVIEW_UPDATED 不是 FINAL PASS。",
+    "Chapter、Story 与 Agent Context 的最终用户标签需由 V4-B 高保真 prototype 验证。",
+    "Desktop Shell 尚未选型；Electron/Tauri 同机可删除 PoC 尚未执行。",
+    "V4-B 尚未开始，生产 GUI、设计 token 迁移、组件实现、Provider binding 与 Obsidian status adapter 均未实现。"
+  ],
+  "sedimentCandidates": [
+    "通用项目阅读应以 Current State、History 和 Agent Context 为核心；Capability 只在项目材料天然支持能力视角时作为次级增强。",
+    "Project History 的阶段阅读与长期主题阅读应并列互补；Thread 跨阶段连接 Story，不能因页面下钻顺序而被实现为 Chapter 子对象。",
+    "全局配置拥有 Provider 凭据与 CRUD，项目上下文只引用已配置能力；集成的配置入口与日常内容入口可以分离，但必须共享同一真实状态边界。"
+  ]
+}

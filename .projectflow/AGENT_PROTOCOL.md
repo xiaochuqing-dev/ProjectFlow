@@ -1,4 +1,14 @@
-# ProjectFlow V3.10 Agent Protocol
+# ProjectFlow V4.0-A Agent Protocol
+
+V4.0-A 冻结 GUI Foundation 与 Information Architecture，不是最终视觉实现。Owner 已认可 Hybrid 项目中心、Current State 第一屏、三个通用核心视图、Evidence 下钻、旧入口渐进降级、设计系统方向和 Desktop Shell defer；当前状态为 READY_FOR_OWNER_REVIEW_UPDATED，仍需 Owner 最终确认。ProjectFact 是唯一强事实来源；Current State、History、Agent Context 是通用核心读取/派生视图，Capability Map 只是适合部分项目的可选次级视图。完整 ID/Hash、Commit、路径和内部 diagnostics 保持按需下钻。
+
+Current Project State 继续是 persisted、model-free、corrected-history derived read model，不是 ProjectFact；用户第一层必须有带文字的“更新项目状态”主动作，刷新保留旧可信结果、滚动与展开状态。History 的时间轴为 Overview → Chapter → Story，主题轴为 Evolution Thread → 关联 Story → 必要 Evidence；Thread 可跨 Chapter，不能实现成 Chapter 子对象。Agent Context 继续消费 persisted-only、有界且脱敏的 Context Package，但第一层只展示项目状态、已确认事实、最近变化、Conflict/Unknown、建议材料、最近更新时间和正式中文限制，精确 package 字段进入工程详情。FINAL_USER_NAV_LABEL = TO_BE_VALIDATED_IN_V4_B。
+
+Provider CRUD、API Key/Secret、Credential Store、Endpoint、Protocol、模型和全局连接测试归全局设置；项目设置只选择/展示已配置 Provider，不复制 CRUD 或凭据。Obsidian 投影/Vault 配置归项目设置，已有真实投影时内容页可提供 Note/投影入口；没有 Web REST status 时不得伪造实时状态。首次 Onboarding 使用推荐安全数据位置，只要求添加项目/材料，Provider 可跳过；数据目录与 portable/runtime 细节归高级设置。
+
+V4.0-A 不删除旧 route，不全量改写 AppShell，不引入生产 Desktop Shell 依赖，不实现最终 token、主题、Dashboard、History 或 Story Card。V4-B 只先用 Project Library、Current State、Project History、Story + Evidence Drawer 等核心 prototype 驱动最小组件集合，semantic inventory 不是完整 UI Kit 清单。桌面壳状态为 DESKTOP_SHELL_DECISION = DEFERRED，优先在同一条件下比较 Electron/Tauri 两个可删除 PoC，WebView2 direct host 只作研究对照。Draft PR 继续保持 Review Required；Owner 最终确认前不得 merge、Tag、Release 或开始 V4-B。
+
+# Retained ProjectFlow V3.10 Agent Protocol
 
 V3.10 final closure requires a non-circular upgrade gate: the exact final V3.9 application at `dd5ee41b6afcbd7703fa0883dc115c11f4821447` must create both the H2 and PostgreSQL 16 legacy schemas in temporary CI storage. Current V3.10 then owns classification, H2 backup or PostgreSQL dump acknowledgement, controlled V1 baseline, V2, secure credential migration, protected-record checks and stable restart. The current V1 SQL must never create the legacy input for this real-old-version proof, and the required proof must fail if either test is skipped. Final acceptance also requires one minimal real secure credential-path probe for each registered Responses, Chat Completions and Anthropic Messages profile on the same final feature Head; it does not rerun the historical semantic matrix.
 

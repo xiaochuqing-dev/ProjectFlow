@@ -1,0 +1,44 @@
+{
+  "taskGoal": "从最新 origin/master 启动 ProjectFlow V4.0-A，完成当前 GUI 审计、产品心智与信息架构冻结、设计系统及桌面基础研究、低保真结构、迁移计划、诚实验证和 Owner Review 交接。",
+  "actualChanges": [
+    "保护原 checkout 的用户修改，从已核对的最新 origin/master 创建 clean worktree、准确分支和 Draft PR；未合并、未创建 Tag 或 Release。",
+    "完成 route、Shell、主要页面、共享组件、token、API/read model 与旧产品债务审计，并按 KEEP、REUSE、RESTRUCTURE、DEPRECATE_FROM_PRIMARY_NAV、LEGACY_COMPATIBILITY_ONLY、REMOVE_LATER 分类。",
+    "推荐以项目为中心且以 Evidence 为边界的长期认知与记忆工作区，冻结 Hybrid IA：全局项目库与设置，项目内 Current State、History、Agent Context、项目设置与集成；Current State 为项目默认第一屏。",
+    "冻结页面职责、History 的 Overview 到 Evidence 层级、正式中文与渐进披露、统一状态语义、semantic component contract、七个低保真 wireframe、四类非代码项目检查、route migration 与 API 到 View Model 映射。",
+    "推荐 ProjectFlow 自有语义 token、源码拥有组件和成熟无障碍 headless primitive；Radix 为默认候选，React Aria 为复杂 collection 挑战者。桌面壳诚实保持 DESKTOP_SHELL_DECISION = DEFERRED，V4-B 先做 Electron/Tauri 可删除同机 PoC。",
+    "仅修正 AppShell 与 Dashboard 的陈旧版本标签，没有重写页面、删除旧 route、修改 backend semantic contract 或引入设计系统与桌面壳生产依赖。",
+    "CI 暴露后，以固定历史 fixture 时间和语义锚点稳定 Dogfood 测试；以 Tomcat 10.1.59 属性覆写和最小前端 lock-only 更新清除六条依赖公告，没有升级框架或修改 package.json。",
+    "Windows 重复运行暴露端口占用 fixture 的 45 秒上限会早于慢 runner 的启动检测结束；门禁将临时监听上限延长到 180 秒，并继续在 finally 中及时清理，不改变产品运行时。"
+  ],
+  "keyFiles": [
+    "docs/projectflow-v4-gui-foundation-current-state-audit.md",
+    "docs/projectflow-v4-gui-foundation-product-contract.md",
+    "docs/projectflow-v4-design-system-and-desktop-foundation-research.md",
+    "docs/projectflow-v4-gui-foundation-phase-a-report.md",
+    "frontend/src/components/AppShell.tsx",
+    "frontend/src/app/dashboard/page.tsx",
+    "backend/src/test/java/com/projectflow/ProjectHistoryDogfoodAcceptanceTest.java",
+    "backend/pom.xml",
+    "frontend/package-lock.json",
+    ".github/workflows/windows-release.yml",
+    "PROJECT_CONTEXT.md",
+    ".projectflow/AGENT_PROTOCOL.md",
+    ".projectflow/context/known-risks.md",
+    ".projectflow/context/update-history.md"
+  ],
+  "verification": {
+    "build": "PASS：前端 production build 生成 23 个静态页面；根 Start-ProjectFlow.bat 从工作树外完成 npm ci、生产构建和嵌入式启动，backend health 与 frontend login 均为 200，退出后 3000/8080 无监听残留。",
+    "tests": "PASS：依赖处置后后端 717 项、0 failure、0 error、11 skipped；Tomcat core/el/websocket 均解析 10.1.59；前端 lint、59/59 contracts、全新隔离数据的 Playwright 9/9 通过。实现 Head 7b25c67 的 push/PR Quality runs 33871166836/33871171845 与 Windows runs 33871166456/33871171203 通过，实际包含 PostgreSQL、OSV、Browser、Hermes、Obsidian、敏感内容和 portable runtime 门禁。本机 PostgreSQL profile 因 Docker daemon 不可用未运行，没有伪写本地通过。",
+    "manualCheck": "PASS：复核四份主文档、相对引用、工作树差异与 Draft PR；未发现本轮新增的机器绝对路径、凭据或原始模型内容。原 checkout 的用户修改保持不动，PR 仍为 Draft，Owner 尚未批准，V4-B 尚未开始。"
+  },
+  "unfinished": [
+    "Owner 需要确认导航、Current State 第一屏、Current State/History/Agent Context 层级、旧入口降级和 Desktop Shell defer；READY_FOR_OWNER_REVIEW 不等于 FINAL PASS。",
+    "V4-B 才能探索视觉方向、真实 token 和核心 primitive，并用同一环境完成 Electron/Tauri 可删除 PoC。",
+    "Current State 的 compact Chapter/Thread 摘要、Project Library 的变化/覆盖摘要和 Obsidian Web status 仍是有条件的未来 gap；只能扩展既有 read model，不能创建第二套 truth。"
+  ],
+  "sedimentCandidates": [
+    "成熟产品的信息架构应以用户问题组织入口，内部模型、兼容 route 和工程诊断只作为支持层或 Evidence 下钻。",
+    "持久测试数据库与进程内 secret store 必须同生命周期；重跑涉及 opaque secretRef 的 E2E 时应使用全新隔离数据，避免把环境残留误判为产品回归。",
+    "跨日期历史 fixture 应锚定稳定证据时间，叙事质量断言应验证语义 family 与代表关系，不冻结可演进的完整中文措辞。"
+  ]
+}
