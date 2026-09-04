@@ -1,5 +1,13 @@
 # Update history
 
+## ProjectFlow V4.0-A Owner Review 合同修订 - 2026-09-05
+
+Owner 认可 PR #21 的 Hybrid 项目中心、Current State 默认第一屏、通用核心视图、Evidence 下钻、旧入口渐进降级、设计系统方向和 Desktop Shell defer。本轮只修正产品边界：Capability 改为可选次级视图；History 明确 Chapter 时间阶段轴与 Evolution Thread 长期主题轴；Agent Context 第一层产品化，精确 Context Package 进入工程详情；最终用户导航标签留给 V4-B 验证。
+
+同时冻结 Obsidian 配置与内容上下文入口的分工、Current State 带文字的更新主动作与保留旧结果的刷新闭环、默认安全数据位置的简化 Onboarding、全局 Provider CRUD/凭据与项目使用状态的 ownership、用户层正式中文命名候选，以及由四个核心页面驱动的 V4-B 最小组件范围。Desktop 可删除 PoC 优先只比较 Electron/Tauri，WebView2 direct host 只作研究对照；全局 Needs Attention 暂不升为一级导航。
+
+本轮只修改文档、上下文和追加式 Agent Result，不改生产 GUI、后端 API、route、Provider binding、Obsidian adapter 或依赖。PR #21 继续保持 Draft；状态为 READY_FOR_OWNER_REVIEW_UPDATED，Owner 最终确认前不 merge、不创建 Tag/Release，也不开始 V4-B。
+
 ## ProjectFlow V4.0-A GUI Foundation 与 IA 冻结 - 2026-09-04
 
 从当时最新 origin/master 创建 clean worktree 和 codex/v4.0-gui-foundation-ia，原工作区的用户修改与未跟踪文件保持不动。审计当前 route、Shell、主要页面、shared components、token、API/read model 和旧产品债务后，推荐 Hybrid 项目中心 IA：全局项目库/全局设置，项目内 Current State、History、Agent Context、Project Settings / Integrations；Current State 是进入项目后的默认第一屏，Evidence 与工程 diagnostics 继续下钻。

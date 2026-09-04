@@ -1,6 +1,6 @@
 ProjectFlow V4 设计系统与桌面基础研究
 
-复核日期：2026-09-04
+复核日期：2026-09-05
 
 状态：本报告只记录 V4.0-A 的研究结论和 V4-B 可删除 PoC 的证据要求。不安装依赖，不修改当前 UI，不选择桌面 shell，也不授权 installer、tray、自动更新或发布。
 
@@ -12,13 +12,15 @@ V4.0-A 应先建立 ProjectFlow semantic tokens 与 source-owned components。to
 
 source-owned component 指组件源码由仓库维护并可审计、可测试、可修订，不是把上游包当成不可见黑盒。建议后续只在 frontend/src/components/ui 形成少量可复用原子组件，并保留来源、版本和许可证记录。shadcn/ui 可作为这种交付方式的参考和受控源码来源；它不是本项目必须安装的运行时框架。复制后的代码由 ProjectFlow 负责升级、无障碍回归和安全修复，不能把本地修改误称为上游支持。
 
+Semantic component inventory 是语义目录，不是 V4-B 一次性实现计划。V4-B 先由 Project Library、Current State、Project History、Story Detail + Evidence Drawer 四个真实 prototype 驱动最小组件集合，必要时增加小型 Agent Context 样板；只有真实页面需要时才新增 primitive 或业务组件，不能先脱离页面制造完整 UI Kit。
+
 默认交互底座为 Radix。React Aria 是复杂 collection 的挑战者，只在 Table、ListBox、Tree、可选择集合、虚拟化前后的焦点与键盘模型等有真实复杂度的场景，以同一验收样本比较后再选用。Base UI 保持观察候选，不在 V4.0-A 引入。单一组件及同一交互族不得混用多个 primitive 系统；原生 button、input、label、dialog 语义优先，只有确有复合焦点、浮层、菜单或 collection 需求时才使用 primitive。
 
 CVA 仅可作为 source-owned component 的受类型约束 class variant 工具。它适合有限的 intent、size、density、emphasis 等公开视觉变体；不负责 token、状态机、焦点管理、ARIA、键盘行为、表格选择、页面布局或任意 class 拼接。交互状态应来自 primitive 的 data state 和语义属性，token 仍由全局入口定义。不得把每个页面、每个业务字段或所有 Tailwind 组合都做成 CVA variant。
 
 DESKTOP_SHELL_DECISION = DEFERRED
 
-这不是对 Electron、Tauri 或 WebView2 的否定，而是遵守现有 Java Core、Next delivery surface、V3.10 runtime、数据目录、迁移、备份与凭据边界。在 V4-B 的可删除 PoC 有真实 Windows 证据前，不能用包体宣传、生态印象或静态网页样例替代选择。
+这不是对 Electron、Tauri 或 WebView2 的否定，而是遵守现有 Java Core、Next delivery surface、V3.10 runtime、数据目录、迁移、备份与凭据边界。V4-B 的可删除 PoC 优先只实现 Electron 与 Tauri 两个候选；WebView2 direct host 保留为研究对照，用于理解 Tauri 的 Windows 渲染边界和未来 native host 可能性，但不同时实现第三套完整 host。在双候选有真实 Windows 证据前，不能用包体宣传、生态印象或静态网页样例替代选择。
 
 二、候选组件与兼容性复核
 
@@ -85,15 +87,17 @@ https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/evergreen-vs-
 
 PoC 的共同约束是独立、可一次性删除、不得改动 Java Core 语义、数据库 schema、迁移、Secret Store、ProjectFact、History、Gateway、Hermes 或 Obsidian。实验代码、构建产物和临时配置必须与生产路径分离；删除实验后浏览器交付和现有 Start-ProjectFlow.bat 行为保持不变。通过某一项只表示该候选具备继续评估资格，不等于 shell 已选定。
 
-启动与生命周期。Electron、Tauri 和 WebView2 host 都必须在干净 Windows 用户、无 Maven、npm、Git 和源码树依赖的条件下启动已验证的 Java runtime 与 Next 产物，完成 health check、正常退出、强制杀死 Core 后的 UI 诊断、重启和孤儿进程回收。证据包括版本清单、脱敏启动日志、失败原因和实际启动时间。任一容器依赖开发服务器、遗留端口或手工环境变量即失败。
+比较公平性。Electron 与 Tauri 必须使用同一 Windows 环境、同一硬件、同一 V3.10 runtime、同一 Java Core、同一 Next UI、同一 transport security、同一页面、同一测试样本和同一测量方法。比较冷启动、内存、CPU、package size、退出、orphan process、Java sidecar lifecycle、Windows 125%/150%、keyboard/focus、custom titlebar、file picker、drag/drop、native menu、安全、未来 installer/updater 边界和 CI 复杂度。PoC PASS 不等于 production shell chosen。
 
-安全 transport。每个候选必须在窄 IPC 与 loopback API 中选择一个受验证的 transport。loopback 必须使用随机端口、每进程 capability token、严格 Origin 与 Host、仅 loopback 绑定及退出失效；IPC 必须是按能力命名、参数校验、来源校验的窄 bridge。证据包括拒绝错误 token、错误 Origin、跨窗口或跨进程调用以及 renderer 注入尝试的结果。不得把凭据、任意路径、任意 shell 命令或完整 Node API 暴露给前端。
+启动与生命周期。Electron 与 Tauri host 都必须在干净 Windows 用户、无 Maven、npm、Git 和源码树依赖的条件下启动已验证的 Java runtime 与 Next 产物，完成 health check、正常退出、强制杀死 Core 后的 UI 诊断、重启和孤儿进程回收。证据包括版本清单、脱敏启动日志、失败原因和实际启动时间。任一容器依赖开发服务器、遗留端口或手工环境变量即失败。WebView2 direct host 只记录研究对照，不属于本轮完整实现矩阵。
+
+安全 transport。两个候选必须在窄 IPC 与 loopback API 中选择一个受验证的 transport。loopback 必须使用随机端口、每进程 capability token、严格 Origin 与 Host、仅 loopback 绑定及退出失效；IPC 必须是按能力命名、参数校验、来源校验的窄 bridge。证据包括拒绝错误 token、错误 Origin、跨窗口或跨进程调用以及 renderer 注入尝试的结果。不得把凭据、任意路径、任意 shell 命令或完整 Node API 暴露给前端。
 
 数据、迁移与凭据。PoC 必须在隔离的已有 H2 数据副本上证明备份、启动升级、失败保留与恢复；外部 PostgreSQL 仍按既有独立运维边界处理。必须证明 OS credential 路径在 shell 重启后可读取且不会进入 renderer、日志、页面、诊断或打包物。证据应包含成功和失败路径的脱敏结果；不得以新建空库或内存 fake 代替旧数据升级。
 
-UI 与无障碍。三个候选加载同一 Web UI、同一 semantic tokens 和同一 source-owned components。验证登录后主路径、加载、降级、冲突、键盘、焦点返回、缩放和屏幕阅读器关键路径。证据包括浏览器与容器的截图或自动化结果及人工 Windows 检查；UI 为适应容器而复制页面、调用 shell API 或降低无障碍要求即失败。
+UI 与无障碍。两个候选加载同一 Web UI、同一 semantic tokens 和同一 source-owned components。验证登录后主路径、加载、降级、冲突、键盘、焦点返回、缩放和屏幕阅读器关键路径。证据包括浏览器与容器的截图或自动化结果及人工 Windows 检查；UI 为适应容器而复制页面、调用 shell API 或降低无障碍要求即失败。
 
-资源与更新边界。对空闲、常规项目和大型仓库分析测量冷启动、空闲内存、CPU、包体、崩溃恢复和关闭时间，并记录硬件、Windows 版本与测量方法。Electron 还要记录 Chromium 与 Electron 更新责任；Tauri 和 WebView2 要分别记录 WebView2 运行时已存在、缺失、离线和受企业策略限制时的行为。installer、签名、tray、自动更新和回滚只能记录为后续风险，不在本 PoC 伪造完成状态。
+资源与更新边界。对空闲、常规项目和大型仓库分析测量冷启动、空闲内存、CPU、包体、崩溃恢复和关闭时间，并记录硬件、Windows 版本与测量方法。Electron 还要记录 Chromium 与 Electron 更新责任；Tauri 要记录 WebView2 运行时已存在、缺失、离线和受企业策略限制时的行为，并用 direct host 研究资料作为对照。installer、签名、tray、自动更新和回滚只能记录为后续风险，不在本 PoC 伪造完成状态。
 
 删除判定。每个实验必须有单独的来源目录、构建清单和删除说明；删除后运行当前浏览器启动与核心回归。若实验需要改动业务事实、持久化 schema、正式 runtime、用户数据根、生产导航或依赖锁文件，便不再是可删除 PoC，必须停止并另行取得范围批准。
 

@@ -1,10 +1,12 @@
 # ProjectFlow V4.0-A Agent Protocol
 
-V4.0-A 冻结 GUI Foundation 与 Information Architecture，不是最终视觉实现。产品心智以项目为中心、以 Evidence 为边界；推荐全局项目库/全局设置加项目工作区的 Hybrid IA。进入项目后的默认页面是 Current State，项目一级页面为 Current State、History、Agent Context、Project Settings / Integrations。Evidence、Correction、完整 ID/Hash、Commit、路径和内部 diagnostics 保持按需下钻。用户层直接遵守 docs/product-language-and-progressive-disclosure-contract.md，不得把内部 enum、长 ID 或工程聚类结构当作普通用户文案。
+V4.0-A 冻结 GUI Foundation 与 Information Architecture，不是最终视觉实现。Owner 已认可 Hybrid 项目中心、Current State 第一屏、三个通用核心视图、Evidence 下钻、旧入口渐进降级、设计系统方向和 Desktop Shell defer；当前状态为 READY_FOR_OWNER_REVIEW_UPDATED，仍需 Owner 最终确认。ProjectFact 是唯一强事实来源；Current State、History、Agent Context 是通用核心读取/派生视图，Capability Map 只是适合部分项目的可选次级视图。完整 ID/Hash、Commit、路径和内部 diagnostics 保持按需下钻。
 
-Current Project State 继续是 persisted、model-free、corrected-history derived read model，不是 ProjectFact。History 继续保持 Overview → Chapter → Story → Thread → Raw Event → Evidence；Agent Context 继续消费 persisted-only、有界且脱敏的 Context Package。UI 缺字段时优先复用或窄幅扩展现有 History/Gateway read model，禁止为了页面方便创建第二套 Project State、History、Memory、Agent Context 或事实来源。GET 不得因此触发扫描、Git 或模型。
+Current Project State 继续是 persisted、model-free、corrected-history derived read model，不是 ProjectFact；用户第一层必须有带文字的“更新项目状态”主动作，刷新保留旧可信结果、滚动与展开状态。History 的时间轴为 Overview → Chapter → Story，主题轴为 Evolution Thread → 关联 Story → 必要 Evidence；Thread 可跨 Chapter，不能实现成 Chapter 子对象。Agent Context 继续消费 persisted-only、有界且脱敏的 Context Package，但第一层只展示项目状态、已确认事实、最近变化、Conflict/Unknown、建议材料、最近更新时间和正式中文限制，精确 package 字段进入工程详情。FINAL_USER_NAV_LABEL = TO_BE_VALIDATED_IN_V4_B。
 
-V4.0-A 不删除旧 route，不全量改写 AppShell，不引入生产 Desktop Shell 依赖，不实现最终 token、主题、Dashboard、History 或 Story Card。设计系统方向是 ProjectFlow 自有语义 token、源码拥有组件和成熟无障碍 headless primitive；具体依赖需 V4-B 原型证据。桌面壳状态为 DESKTOP_SHELL_DECISION = DEFERRED，必须先用现有 Java、Node、Next standalone 和 loopback runtime 做 Electron/Tauri 可删除 PoC。Draft PR 保持 Review Required；Owner 未确认导航、第一屏、信息层级、旧入口降级和 Shell defer 前，不得 merge、Tag、Release 或开始 V4-B。
+Provider CRUD、API Key/Secret、Credential Store、Endpoint、Protocol、模型和全局连接测试归全局设置；项目设置只选择/展示已配置 Provider，不复制 CRUD 或凭据。Obsidian 投影/Vault 配置归项目设置，已有真实投影时内容页可提供 Note/投影入口；没有 Web REST status 时不得伪造实时状态。首次 Onboarding 使用推荐安全数据位置，只要求添加项目/材料，Provider 可跳过；数据目录与 portable/runtime 细节归高级设置。
+
+V4.0-A 不删除旧 route，不全量改写 AppShell，不引入生产 Desktop Shell 依赖，不实现最终 token、主题、Dashboard、History 或 Story Card。V4-B 只先用 Project Library、Current State、Project History、Story + Evidence Drawer 等核心 prototype 驱动最小组件集合，semantic inventory 不是完整 UI Kit 清单。桌面壳状态为 DESKTOP_SHELL_DECISION = DEFERRED，优先在同一条件下比较 Electron/Tauri 两个可删除 PoC，WebView2 direct host 只作研究对照。Draft PR 继续保持 Review Required；Owner 最终确认前不得 merge、Tag、Release 或开始 V4-B。
 
 # Retained ProjectFlow V3.10 Agent Protocol
 

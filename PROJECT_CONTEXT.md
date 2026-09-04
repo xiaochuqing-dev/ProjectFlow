@@ -1,10 +1,12 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-09-04
+Last updated: 2026-09-05
 
-V4.0-A GUI Foundation + Information Architecture 当前处于 Owner Review 阶段。推荐的产品心智是：ProjectFlow 以项目为中心、以 Evidence 为边界，持续保持当前状态、演变来路与 Agent 交接上下文可读。推荐 Hybrid IA：全局只保留项目库、项目切换和全局设置；项目内以“当前状态”为默认第一屏，并提供“项目历程、Agent 上下文、项目设置与集成”。Evidence、Correction、完整 ID/Hash 与工程 diagnostics 只按需下钻；旧 Dashboard、Timeline、Project Intelligence、Sediment、Dev Logs、Tasks 等先从主导航降级并保留兼容路由，不在 V4-A 删除。
+V4.0-A GUI Foundation + Information Architecture 已完成 Owner Review 小幅修订，状态为 READY_FOR_OWNER_REVIEW_UPDATED。Owner 已认可 Hybrid 项目中心、Current State 默认第一屏、Current State / History / Agent Context 核心层级、Evidence 按需下钻、旧入口渐进降级、semantic token + source-owned component + headless primitive 方向，以及 Desktop Shell defer；修订后的合同仍等待最终确认。全局只保留项目库、项目切换和全局设置；项目内保留当前状态、项目历程、Agent 上下文、项目设置与集成。Capability Map 是仅适合部分项目的可选次级视图，不是通用产品主轴。
 
-V4.0-A 只冻结产品与技术 Foundation，不实现最终 GUI。Current Project State 继续是 persisted、model-free、corrected-history derived read model，不是 ProjectFact。设计系统推荐 ProjectFlow 自有语义 token、源码拥有的业务组件与成熟无障碍 headless primitive；生产依赖待 V4-B 原型验证后引入。桌面壳结论为 DESKTOP_SHELL_DECISION = DEFERRED：Electron 与 Tauri 必须用现有 Java + Next standalone loopback runtime 做可删除同机 PoC 后再选，不能因流行印象锁定。V4-A Draft PR 不得自行 merge、Tag 或 Release；只有 Owner 审核 IA/Foundation 后才可进入 V4-B。
+V4.0-A 只冻结产品与技术 Foundation，不实现最终 GUI。ProjectFact 仍是唯一强事实来源；Current Project State 继续是 persisted、model-free、corrected-history derived read model。Current State 必须提供带文字的显式更新主动作并在刷新时保留旧可信结果。History 的 Chapter 时间阶段轴与 Evolution Thread 长期主题轴互补，Thread 可跨 Chapter。Agent Context 第一层只展示正式交接内容，Context Package 精确字段进入工程详情，最终用户导航标签由 V4-B 验证。Obsidian 配置归项目设置，真实可用的 Note/投影日常入口可出现在内容上下文；Provider CRUD 和凭据归全局设置，项目设置不复制管理系统。
+
+设计系统推荐 ProjectFlow 自有语义 token、源码拥有的业务组件与成熟无障碍 headless primitive；V4-B 由 Project Library、Current State、Project History、Story + Evidence Drawer 等核心 prototype 驱动最小组件集合，不一次性实现完整 UI Kit。桌面壳结论仍为 DESKTOP_SHELL_DECISION = DEFERRED：优先用现有 Java + Next standalone loopback runtime 做 Electron/Tauri 可删除同机 PoC，WebView2 direct host 只作研究对照。V4-A Draft PR 不得自行 merge、Tag 或 Release；Owner 最终确认修订后才可进入 V4-B。
 
 V3.10 Release Readiness 已完成 Flyway release schema ownership、精确 legacy schema fail-closed、H2 升级前备份/隔离恢复、PostgreSQL 备份确认、OS-backed Provider credential、loopback/external 运行安全、稳定用户数据目录、source-independent Windows portable runtime 与供应链/Windows gate。2026-08-29 收口轮次由 exact V3.9 final `dd5ee41b6afcbd7703fa0883dc115c11f4821447` 应用实际生成 H2 和 PostgreSQL 16 旧库，证明二者精确匹配 `KNOWN_V39`，并通过备份/恢复、controlled V1 baseline、V2、凭据迁移、保护记录不变和重启幂等性；没有使用 V1 SQL 自造旧库，也没有放宽 schema signature。最终功能 Head `c0b4d9653ac6a579978d81b66d2554662e2007dd` 的 Quality、Windows 与 Luna/Responses、DeepSeek/Chat、Qwen/Messages secure credential-path smoke 全部通过，PR #19 已合并为 master `2f56257c028657f3c67e0e413f938d723502147f`，merge 后 master Quality `33246313873` 与 Windows `33246313553` 再次通过。机器回填授权 V3.10 FINAL 与 V4.0 Entry 在该事实回填 PR 合并、最终 master 复验和任务临时资源清理完成后生效；继续 NO TAG、NO RELEASE，V4 GUI 尚未开始。
 

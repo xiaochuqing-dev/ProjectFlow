@@ -1,10 +1,10 @@
 # ProjectFlow V4.0-A 产品与信息架构合同
 
-状态：READY_FOR_OWNER_REVIEW
+状态：READY_FOR_OWNER_REVIEW_UPDATED
 
-复核日期：2026-09-04
+复核日期：2026-09-05
 
-本文冻结 V4 的产品心智、信息架构、页面职责、披露边界和交互语义，不冻结最终视觉，不代表 Owner 已批准，也不启动 V4-B。
+本文冻结 V4 的产品心智、信息架构、页面职责、披露边界和交互语义，不冻结最终视觉，也不启动 V4-B。Owner 已认可 Hybrid 项目中心、Current State 第一屏和渐进披露等核心方向；本次只修正审阅中发现的产品边界，修订后仍等待 Owner 最终确认。
 
 ## 1. 产品心智模型
 
@@ -15,7 +15,8 @@ ProjectFlow 是一个以项目为中心、以 Evidence 为边界，持续保持�
 这不是最终营销文案。它约束产品结构：
 
 - 核心对象是项目及其可追溯状态，不是任务数量、完成率或开发日志。
-- ProjectFact 是事实来源；Current Project State、History、Capability 和 Agent Context 是不同用途的读取或派生视图。
+- ProjectFact 是唯一强事实来源；Current Project State、Project History 和 Agent Context 是适用于通用电脑项目的核心读取或派生视图。
+- Capability Map 只适用于部分项目，是可选次级视图。软件项目可能天然适合按能力阅读；研究报告、演示文稿、品牌设计、数据分析等项目不得被迫映射为“能力”。
 - 用户先看到可理解的当前结果和演变故事，需要时才下钻到 Commit、路径、完整 ID、Evidence 和诊断。
 - 软件、研究文档、演示文稿、数据分析等项目使用同一套 Current State、History、Evidence 语言；Git 只是可能存在的来源。
 
@@ -62,9 +63,15 @@ ProjectFlow 是一个以项目为中心、以 Evidence 为边界，持续保持�
 
 全局 Rail 只承担项目库、项目切换、全局设置和未来统一搜索入口。项目子导航承担当前状态、项目历程、Agent 上下文和项目设置。路径、完整 SHA、Evidence ID、Provider 诊断和内部状态不进入 Rail。
 
+Agent Context / Context Package 继续作为内部精确概念。用户导航最终使用“Agent 上下文”“Agent 交接”还是“协作上下文”，必须由 V4-B 的真实界面验证，V4-A 不永久锁词：
+
+FINAL_USER_NAV_LABEL = TO_BE_VALIDATED_IN_V4_B
+
 ## 4. 启动与首页行为
 
-- 首次运行：进入独立 onboarding，完成项目来源、数据位置和可选 Provider 的最小设置；不显示营销型首页。
+- 首次运行：进入独立 onboarding，先添加第一个项目或选择项目材料；Provider 是可选步骤并允许跳过，不显示营销型首页。
+- 数据目录默认使用 ProjectFlow 已验证的推荐安全位置，不要求普通用户理解数据库、runtime root 或 LocalAppData，也不把数据目录选择作为首次使用门槛。
+- 数据目录、portable mode、backup location、runtime 与 diagnostics 只进入高级设置或专门的安装、迁移流程。
 - 已有有效最近项目：打开该项目的“当前状态”。
 - 没有有效最近项目或最近项目不可访问：打开“项目库”，说明原因并保留修复入口。
 - browser dev mode 与 desktop mode 使用同一应用路由行为；根路由只做上述可预测分流。
@@ -83,13 +90,25 @@ Current State 回答：“这个项目现在能确认到什么状态，哪些地
 - Unknown、Conflict、coverage、stale、degraded 与刷新注意；
 - 最近成功更新时间。
 
+Current State 不能退化为只读 Dashboard。第一层必须提供带正式文字的主要动作“更新项目状态”或经 V4-B 验证的等价中文，不能只放一个弱化的无文字刷新图标。产品闭环为：进入项目并阅读当前状态 → 发现 stale、新材料或主动更新需要 → 显式更新 → 保留旧可信结果并后台刷新 → Current State、History 与 Agent Context 按既有持久化链增量更新 → 继续阅读。
+
+刷新期间保留旧结果、滚动位置和展开状态，不整页白屏，不清空可信内容。RefreshStatus 使用正式中文说明阶段；Job ID 和内部状态只进入工程详情。
+
 旧 Dashboard 是 V3 工作流聚合页，混合项目接入、变化分析、任务、输出、活动、Provider 和工程状态。它不能作为 V4 首屏合同。V4-B 首屏先消费现有 Current State；只有实际性能证据证明多请求不可接受时，V4-C 才可在既有 History/Gateway 服务上补 compact workspace read model，禁止创建第二套 truth。
 
 ## 6. History 信息层级
 
-固定事实与阅读层级：
+默认阅读与下钻顺序可以表达为：
 
 Overview → Chapter → Story → Thread → Raw Event → Evidence
+
+该顺序是界面入口的串联，不是对象包含关系，尤其不表示 Thread 是 Story 或 Chapter 的普通子详情。Project History 至少有两条互补阅读轴：
+
+A. 时间阶段轴：Overview → Chapter → Story，回答“项目在不同阶段发生了什么？”
+
+B. 长期主题轴：Evolution Thread → 关联 Story → 必要 Evidence，回答“某一长期主题是怎样跨阶段演进的？”
+
+一个 Thread 可以跨多个 Chapter，一个 Story 可以参与 Thread；Thread 不是 Tag，也不是 Chapter 的子对象。Chapter 与 Thread 是互补导航。History Overview 默认以 Chapter 为主要入口，Current State 或 History Overview 可把少量活跃、最近 Thread 作为旁路入口；Thread 页面必须能返回相关 Story 与 Chapter。本修订不改变 backend membership 或 identity。
 
 - Overview：阶段时间线、当前或最近阶段、最近变化，以及产品化的覆盖、冲突和未知提示。
 - Chapter：一个真实阶段的标题、摘要、主要成果与 Story 集合；Supporting 信息按需展开。
@@ -121,12 +140,13 @@ Overview → Chapter → Story → Thread → Raw Event → Evidence
 
 - PAGE PURPOSE：成为进入项目后的默认第一屏。
 - PRIMARY USER QUESTION：这个项目现在做到哪里了？
-- PRIMARY ACTION：阅读当前可确认状态；必要时显式刷新。
-- SECONDARY ACTION：打开最近 Chapter、Thread、Unknown 或 Conflict。
-- FIRST-LAYER DATA：confirmed state、最近主要结果、最近变化、当前性、更新时间和注意项。
+- PRIMARY ACTION：使用带文字的“更新项目状态”或经 V4-B 验证的等价正式中文，显式启动既有持久化刷新链。
+- SECONDARY ACTION：阅读当前可确认状态；打开最近 Chapter、Thread、Unknown 或 Conflict。
+- FIRST-LAYER DATA：当前可确认状态、最近主要结果、最近变化、当前性、更新时间和注意项。
 - DRILLDOWN DATA：相关 Chapter/Story/Thread、完整覆盖限制、Evidence 和工程诊断。
 - EMPTY STATE：说明尚无可确认状态，并给出连接材料或首次刷新入口。
 - LOADING STATE：Current State Summary、最近变化和注意区使用稳定 skeleton。
+- REFRESHING STATE：旧可信结果、滚动位置和展开状态继续保留；正式中文 RefreshStatus 说明进度，Job ID 只在工程详情出现。
 - STALE / DEGRADED STATE：继续显示上次可确认结果，明确“可能不是最新”或“部分信息暂时无法更新”。
 - UNKNOWN / CONFLICT STATE：Unknown 表达证据不足，Conflict 并列显示矛盾信息和核查入口。
 - ERROR STATE：只有没有可信可用结果时使用错误态；保留刷新与服务检查。
@@ -136,9 +156,9 @@ Overview → Chapter → Story → Thread → Raw Event → Evidence
 - PAGE PURPOSE：解释项目如何一步步发展到当前状态。
 - PRIMARY USER QUESTION：这个项目是怎样走到现在的？
 - PRIMARY ACTION：按阶段浏览 Chapter。
-- SECONDARY ACTION：浏览最近变化、长期 Thread、覆盖限制和修正记录。
-- FIRST-LAYER DATA：Overview、阶段时间线、代表性 Chapter、最近变化与产品化覆盖提示。
-- DRILLDOWN DATA：Chapter、Story、Thread、Raw Event、Evidence 和 Audit。
+- SECONDARY ACTION：切换到长期 Evolution Thread 轴，或浏览最近变化、覆盖限制和修正记录。
+- FIRST-LAYER DATA：历程概览、时间阶段轴、代表性项目阶段、最近变化、少量活跃演变主线与产品化覆盖提示。
+- DRILLDOWN DATA：时间轴的 Chapter/Story、主题轴的 Thread/关联 Story，以及 Raw Event、Evidence 和 Audit。
 - EMPTY STATE：区分“尚未刷新”“确实没有历史”“项目没有 Git 但有其他材料”。
 - LOADING STATE：时间线位置与章节卡骨架固定，避免布局跳动。
 - STALE / DEGRADED STATE：保留最后成功历程，标注当前性和未覆盖范围。
@@ -150,7 +170,7 @@ Overview → Chapter → Story → Thread → Raw Event → Evidence
 - PAGE PURPOSE：阅读一个阶段的目标、成果和内部 Story。
 - PRIMARY USER QUESTION：这个阶段发生了什么，留下了什么结果？
 - PRIMARY ACTION：阅读阶段摘要并进入 Story。
-- SECONDARY ACTION：查看 Supporting 内容、Thread 关联和展示修正。
+- SECONDARY ACTION：查看 Supporting 内容、跨阶段 Thread 关联和展示修正。
 - FIRST-LAYER DATA：阶段标题、摘要、时间、主要成果、Story 列表。
 - DRILLDOWN DATA：成员事件、来源覆盖、完整 ID 与阶段诊断。
 - EMPTY STATE：阶段存在但没有可展示 Story 时说明材料边界。
@@ -164,7 +184,7 @@ Overview → Chapter → Story → Thread → Raw Event → Evidence
 - PAGE PURPOSE：用自然语言解释一次可追踪变化。
 - PRIMARY USER QUESTION：此前是什么、本次变了什么、现在结果是什么？
 - PRIMARY ACTION：阅读状态转换。
-- SECONDARY ACTION：修正展示；打开 Thread 或 Evidence。
+- SECONDARY ACTION：修正展示；打开相关 Thread 或 Evidence，并能从 Thread 返回所属 Chapter。
 - FIRST-LAYER DATA：标题、摘要、此前状态、本次变化、当前结果、时间、必要状态。
 - DRILLDOWN DATA：Raw Event、Commit、路径、完整 ID、claim/authority 与诊断。
 - EMPTY STATE：缺少某一段时明确“现有材料未能确认”，不补写故事。
@@ -175,16 +195,16 @@ Overview → Chapter → Story → Thread → Raw Event → Evidence
 
 ### 7.6 Agent 上下文
 
-- PAGE PURPOSE：展示可交给下一位 Agent 的有界、可追溯上下文。
+- PAGE PURPOSE：先用产品语言展示可交给下一位 Agent 的有界、可追溯内容，再按需提供精确工程详情。
 - PRIMARY USER QUESTION：如果现在换一个 Agent，它应该知道什么？
-- PRIMARY ACTION：检查并复制当前 context package。
-- SECONDARY ACTION：查看强事实、冲突、未知、覆盖和建议深读来源。
-- FIRST-LAYER DATA：当前项目状态、关键强事实、近期变化、冲突/未知摘要、包 revision 与生成范围。
-- DRILLDOWN DATA：关键 Evidence、历史范围、信任指引、预算与截断说明。
+- PRIMARY ACTION：复制交接内容。
+- SECONDARY ACTION：查看已确认的重要事实、冲突、未知和建议进一步查看的材料；按需打开工程详情。
+- FIRST-LAYER DATA：项目当前状态、已确认的重要事实、最近主要变化、仍未解决的冲突与未确认项、建议进一步查看的材料、交接内容最近更新时间，以及用正式中文表达的适用范围与内容限制。
+- DRILLDOWN DATA：Context Package、package revision、retrieval mode、persisted-only、budget、truncation、Evidence refs、trust guidance 和其他精确内部字段。
 - EMPTY STATE：说明当前没有足够持久化材料，不自动触发模型或扫描。
 - LOADING STATE：保持分区结构，复制操作禁用并说明原因。
-- STALE / DEGRADED STATE：继续展示上次包，明确其 revision 和限制。
-- UNKNOWN / CONFLICT STATE：作为 package 的正式内容，不包装成“已解决”。
+- STALE / DEGRADED STATE：继续展示上次交接内容，第一层说明最近更新时间、适用范围和内容限制；revision 进入工程详情。
+- UNKNOWN / CONFLICT STATE：作为交接内容的正式组成部分，不包装成“已解决”。
 - ERROR STATE：说明读取失败并提供重试；不在 GET 中隐式重建。
 
 ### 7.7 项目设置与集成
@@ -203,6 +223,20 @@ Overview → Chapter → Story → Thread → Raw Event → Evidence
 
 全局设置是另一职责页，负责账号、全局 Provider、运行环境、备份和全局集成，不与项目设置混放。
 
+Provider ownership 冻结如下：
+
+- 全局设置拥有 Provider CRUD、API Key / Secret 管理、Credential Store、Endpoint、Protocol、模型配置、默认 Provider、全局连接测试和全局安全状态。
+- 项目设置只负责选择当前项目使用哪个已配置 Provider、展示项目级状态与最近探测，并提供跳转到全局 Provider 设置。项目级 override 只有真实需求成立时才引入。
+- 项目设置不得再次保存 API Key、复制 Provider CRUD、创建第二套 Credential，或用“已配置”冒充“当前可用”。
+- 当前 backend 若没有项目级 Provider binding，只记录为条件性 gap；不得为了 GUI 先创造新的配置系统。
+
+Obsidian 的配置入口与日常使用入口分离：
+
+- 项目设置 / 集成页负责是否启用投影、Vault / projection 配置、当前能力是否配置、dry-run / validation / sync 设置，以及真实可用时的 capability / CLI status。
+- Current State、History、Chapter 或 Story 在已有对应投影且当前能力真实支持时，可提供“在 Obsidian 中打开”“查看投影状态”“上次同步时间”或“打开对应 Note”等上下文入口，用户不必每次先进入设置。
+- 当前只有既定 CLI 能力且没有 Web REST status，V4-B 不得伪造实时同步状态。未来只读 status adapter 只能扩展现有 integration boundary，不能成为第二套 Obsidian truth。
+- ProjectFlow 负责长期项目认知与结构；Obsidian 负责用户知识阅读、编辑和延展，双方互补而非替代。
+
 ## 8. Progressive Disclosure 与产品语言
 
 直接采用 docs/product-language-and-progressive-disclosure-contract.md，不另建冲突词典。
@@ -213,6 +247,24 @@ Overview → Chapter → Story → Thread → Raw Event → Evidence
 - Before、Change、After 分别显示为“此前状态”“本次变化”“当前结果”。
 - Git、Commit、PR、CI、API、Token、SHA、HTTP、JSON 等行业标准术语保留。
 - 不直接显示 internal enum、Representative Cluster JSON、Evidence UUID 列表和完整 SHA 墙。
+
+用户层命名合同：
+
+| 内部或工程概念 | 用户第一层默认表达 | 冻结状态 |
+| --- | --- | --- |
+| Current State | 当前状态 | 已冻结 |
+| History | 项目历程 | 已冻结 |
+| Chapter | 项目阶段 / 历程篇章 | V4-B prototype 决定最终词 |
+| Story | 变化故事 / 变化记录 | V4-B prototype 决定最终词 |
+| Evolution Thread | 演变主线 | 已冻结 |
+| Evidence | 证据 | 已冻结 |
+| Engineering Details | 工程详情 | 已冻结 |
+| Agent Context | Agent 上下文 / Agent 交接 | V4-B prototype 验证 |
+| Before | 此前状态 | 已冻结 |
+| Change | 本次变化 | 已冻结 |
+| After | 当前结果 | 已冻结 |
+
+Git、Commit、PR、CI、API、Token、SHA、HTTP、JSON 不翻译。本表只约束用户第一层默认展示；技术文档与工程详情仍可使用 Chapter、Story、Thread、Context Package、revision、persisted-only 等精确术语。
 
 标识合同：
 
@@ -253,6 +305,8 @@ Overview → Chapter → Story → Thread → Raw Event → Evidence
 ## 10. Semantic Component Contract
 
 组件 API 先冻结“表达什么”，不冻结最终外观。交互型组件优先使用成熟无障碍 primitive，业务组件不自行实现 focus trap、popover positioning 或键盘模型。
+
+下表是语义目录，不是 V4-B 一次性实现清单。真实核心页面驱动 component foundation；只有页面出现真实需要时才增加 primitive 或业务组件，不能先脱离页面制造完整 UI Kit。
 
 | 组件 | Purpose / Input semantics | 用户层 / 工程层 | Interaction 与 Accessibility | 长内容与状态 |
 | --- | --- | --- | --- | --- |
@@ -331,6 +385,7 @@ V4-A 不删除路由。分类描述目标角色，不代表本轮重定向。
 | /settings | PRIMARY_V4 | 全局 Provider、运行环境、账号和全局集成 |
 | Chapter / Story / Thread / Event / Evidence | DEEP_LINK_ONLY | 作为 History、Current State、Agent Context 的下钻 |
 | /dashboard | REDIRECT_LATER | 能力被 Current State、项目设置和辅助视图吸收；V4-C 验收后决定重定向 |
+| /project-intelligence/capabilities | OPTIONAL_SECONDARY_V4 | Capability Map 仅是适合部分软件项目的增强视图，不进入通用产品主轴 |
 | /project-intelligence 及子路由 | SECONDARY_V4 → LEGACY_COMPATIBILITY | 底层理解、能力、事实来源继续存在；用户层由新工作区表达 |
 | /timeline | LEGACY_COMPATIBILITY | 旧 Timeline 兼容，不等于 V4 Project History |
 | /sediment-review 及详情 | LEGACY_COMPATIBILITY | 旧确认工作流兼容；不回到 ProjectFact 主链 |
@@ -360,8 +415,8 @@ REMOVE_AFTER_ACCEPTANCE 候选只能在 V4-C 完成能力吸收、deep link 与�
 | Agent Context | GET project-memory/context-package；AgentContextPackageResponse | 后端有有界、脱敏、revisioned package；前端无类型和页面 | V4-B 增加只读 typed client，禁止前端重组第二份 package |
 | Project Memory | legacy memory；Gateway snapshot/recent/capabilities/brief | legacy 可编辑文本不是 V4 主 truth；Gateway 未内嵌 Current State | V4-B 优先 Gateway；V4-C 仅按性能证据组合 |
 | GitHub / local source | memory.localProjectPath、agent-bridge/health、github/status | 尚无统一脱敏 compact binding；两个状态包含 live check | V4-B 在设置中分别表达；V4-C 可在既有服务补脱敏摘要 |
-| Obsidian | 仅仓库内 CLI validate/dry-run/status/sync | 无 Web REST status，客户端不能可靠派生 | V4-B 只说明可选外部投影；Owner 批准后 V4-C 才研究受限 status adapter |
-| Provider | GET /ai-providers、POST test、bootstrap availability | 前端类型漏 credentialStatus；configured 不等于 available | V4-B 补类型和文案；实时可用性仍由显式 test |
+| Obsidian | 仅仓库内 CLI validate/dry-run/status/sync | 无 Web REST status，客户端不能可靠派生实时状态；内容页入口只能基于真实已有投影能力 | V4-B 分开配置与上下文使用入口；Owner 批准后 V4-C 才研究受限 status adapter |
+| Provider | GET /ai-providers、POST test、bootstrap availability | 全局 CRUD 已有；前端类型漏 credentialStatus；当前没有证据证明项目级 binding 已存在；configured 不等于 available | V4-B 保持全局 ownership，项目页只展示/跳转；项目 binding 仅在真实需求与 backend gap 明确后另行设计 |
 | 状态语义 | Overview、Current State、Correction、Job | 字段足够，缺统一前端 View Model | V4-B 建单一状态映射；不改 backend semantic contract |
 
 读取边界：
@@ -380,7 +435,8 @@ V4-B 可完成的前端工作：
 - 补 Agent Context、Chapter/Story/Thread/Event 列表、History refresh 和 Gateway 的 typed client；
 - 建立统一 View Model 与状态文案；
 - Current State 先使用 confirmedState、recentConfirmedChanges、currentness 和注意字段；
-- Provider 显示“已配置”而不是“可用”。
+- Current State 以带文字的“更新项目状态”作为核心场景，复用既有 job 轮询并保留旧可信结果；
+- Provider 显示“已配置”而不是“可用”，项目设置不复制全局 CRUD。
 
 只有证据成立才进入 V4-C 的候选：
 
@@ -409,12 +465,12 @@ V4-B 可完成的前端工作：
     ┌ Rail ┬ Project Header / Switcher ──────────────────┐
     │      │ 当前状态 | 项目历程 | Agent 上下文 | 设置   │
     │      ├─────────────────────────────────────────────┤
-    │      │ 当前能确认的状态                    [刷新]   │
+    │      │ 当前能确认的状态              [更新项目状态]│
     │      │ 一段可读摘要 · 最近成功更新时间             │
     │      ├──────── 最近主要结果 ───────────────────────┤
     │      │ 结果一   结果二   最近变化                   │
     │      ├──────── 当前阶段 / 活跃主题 ────────────────┤
-    │      │ Chapter 摘要     Thread 摘要                 │
+    │      │ 项目阶段摘要     演变主线摘要                 │
     │      └──────── 需要注意：Unknown / Conflict ──────┘
 
 ### 17.3 Project History Overview
@@ -422,11 +478,13 @@ V4-B 可完成的前端工作：
     ┌ Header / Project Subnav ───────────────────────────┐
     │ 项目历程                         当前性 / 覆盖提示 │
     ├────────────────────────────────────────────────────┤
-    │ ● 阶段一 ─── ● 阶段二 ─── ◉ 当前/最近阶段         │
+    │ 时间阶段轴：● 阶段一 ─ ● 阶段二 ─ ◉ 当前阶段     │
     ├────────────────────────────────────────────────────┤
-    │ Chapter cards：摘要、主要成果、时间、Story 数     │
+    │ 项目阶段卡：摘要、主要成果、时间、变化记录数      │
     ├────────────────────────────────────────────────────┤
-    │ 最近变化              长期 Evolution Threads       │
+    │ 最近变化                                            │
+    ├────────────────────────────────────────────────────┤
+    │ 演变主线：跨项目阶段连接相关变化记录               │
     └────────────────────────────────────────────────────┘
 
 ### 17.4 Chapter Detail
@@ -456,13 +514,14 @@ V4-B 可完成的前端工作：
 
 ### 17.6 Agent Context
 
-    ┌ Agent 上下文                    [复制 Context]      ┐
-    │ 包 revision · persisted-only · 覆盖/截断说明       │
+    ┌ Agent 上下文                  [复制交接内容]        ┐
+    │ 最近更新 · 适用范围 · 内容限制                     │
     ├────────────────────────────────────────────────────┤
-    │ 当前状态                 关键强事实                 │
-    │ 最近变化                 Conflict / Unknown        │
+    │ 当前状态                 已确认的重要事实           │
+    │ 最近变化                 未解决冲突 / 未确认项     │
     ├────────────────────────────────────────────────────┤
-    │ 建议深读来源                              [展开]    │
+    │ 建议进一步查看的材料                        [查看]  │
+    │ 工程详情：package revision / Evidence refs   [展开] │
     └────────────────────────────────────────────────────┘
 
 ### 17.7 Project Settings / Integrations
@@ -471,20 +530,34 @@ V4-B 可完成的前端工作：
     │ 本地材料        已连接               [查看详情]    │
     │ Git / GitHub    未配置 / 待检查       [设置]       │
     │ Agent bridge    可读取 / 部分不可用   [诊断]       │
-    │ Obsidian        可选 CLI 投影         [说明]       │
-    │ Provider        已配置，不代表已探测  [测试]       │
+    │ Obsidian        投影与 Vault 配置      [设置]       │
+    │ Provider        使用全局配置 / 待检查  [前往设置]  │
     └────────────────────────────────────────────────────┘
 
-## 18. Owner Review 与下一阶段边界
+当已有真实投影能力时，Current State、History、Chapter 与 Story 可在内容上下文提供 Obsidian Note 入口；该入口不伪造实时同步状态。
 
-Owner 需要确认：
+## 18. V4-B 核心 prototype 与桌面 PoC 范围
 
-1. 混合式项目中心导航是否符合直觉；
-2. 进入项目后默认显示 Current State 是否正确；
-3. Current State、History、Agent Context 的层级是否合理；
-4. Dashboard、Project Intelligence、Timeline、Sediment、Dev Logs、Tasks 等旧入口的降级是否合理；
-5. 接受 DESKTOP_SHELL_DECISION = DEFERRED，并在 V4-B 做可删除 PoC。
+V4-B 优先用四个真实核心 prototype 驱动视觉与组件基础：Project Library、Current State、Project History、Story Detail + Evidence Drawer；必要时再增加小型 Agent Context 样板。优先形成满足这些页面的最小组件集合，例如 AppFrame、ProjectSwitcher、ProjectSubNavigation、Button、StatusNotice、CurrentStateSummary、ChapterCard / Timeline、StoryCard / StateTransition、EvidenceDrawer、短标识/复制标识与 Loading/Empty primitives，具体数量不写死。
+
+Semantic component inventory 不得机械转换成一次性 implementation checklist。只有真实页面需要时才增加新 primitive 或业务组件。
+
+DESKTOP_SHELL_DECISION = DEFERRED。可删除 PoC 优先只比较 Electron 与 Tauri：在同一 Windows 环境、硬件、V3.10 runtime、Java Core、Next UI、transport security、页面、测试样本与测量方法下，对比冷启动、内存、CPU、包体、退出、孤儿进程、Java sidecar、125%/150% 缩放、键盘/焦点、titlebar、文件选择、拖放、原生菜单、安全、未来 installer/updater 边界和 CI 复杂度。WebView2 direct host 仅保留研究对照，不同时实现第三套完整 host。PoC PASS 不等于生产 shell 已选择。
+
+全局 Needs Attention 暂不提升为一级导航。V4-B 可先在 Project Library 展示注意计数和“需要注意”筛选，再根据真实多项目使用决定是否需要 Attention Center。
+
+## 19. Owner Review 与下一阶段边界
+
+Owner 已认可：
+
+1. Hybrid 项目中心与 Current State 默认第一屏；
+2. Current State、History、Agent Context 的核心层级；
+3. Evidence 按需下钻与旧入口渐进降级；
+4. ProjectFlow semantic token、source-owned component 与成熟 headless primitive；
+5. DESKTOP_SHELL_DECISION = DEFERRED。
+
+本次 Owner Review 已据反馈修正 Capability 可选层级、Chapter / Thread 双轴、Agent Context 第一层产品化、Obsidian 配置与上下文入口、Current State 显式更新闭环、Onboarding 默认数据位置、全局/项目 Provider ownership、用户层命名、V4-B 页面驱动组件范围和 Electron/Tauri 双 PoC 优先级。Owner 仍需最终确认修订后的 V4.0-A；用户导航与 Chapter/Story 的最终用词留给 V4-B prototype 验证。
 
 Owner 批准后，V4-B 直接基于本文探索视觉方向、真实 token 和核心 primitive 原型，不重新讨论页面集合。V4-A 不实现最终 GUI、不删除旧路由、不选择生产桌面壳、不创建 Tag/Release，也不自动进入 V4-B。
 
-V4.0-A GUI FOUNDATION = READY_FOR_OWNER_REVIEW
+V4.0-A GUI FOUNDATION = READY_FOR_OWNER_REVIEW_UPDATED
