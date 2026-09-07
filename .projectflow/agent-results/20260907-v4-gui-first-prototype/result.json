@@ -1,0 +1,40 @@
+{
+  "taskGoal": "依据用户提供的 V4.0-B 提示词与参考图完成六页 GUI 第一版原型、截图比对、阶段报告，并推送 GitHub Draft PR，等待 Owner 审核。",
+  "actualChanges": [
+    "建立项目库、当前状态、项目历程、Agent 交接、项目设置和全局设置六页，复刻三栏午夜蓝布局、左下山脉、主卡山谷和右下星球。",
+    "显式 demo 参数才加载设计示例；真实模式读取既有 Current State、History、Story/Evidence 和 Context Package，保留事实、冲突、未知与过期边界。",
+    "更新项目状态复用持久化 Job，防重复点击、跨页面恢复任务，缓存完成后重新读取，更新失败保留已有结果；交接复制包含未读和截断范围。",
+    "旧项目接入、ZIP、本地绑定、登录与模型配置入口保持可达；全局设置和项目设置明确区分凭据管理与项目使用策略。",
+    "生成六页及空、稀疏、失败、宽窄屏截图，制作并排与叠加比对，记录素材来源与设计债。",
+    "复用 V4-A 已验证的 Dogfood 文件时间/代表性断言修复、Tomcat 与前端传递依赖安全补丁、Windows 端口占用测试 fixture 修复。"
+  ],
+  "keyFiles": [
+    "frontend/src/app/workspace/[view]/page.tsx",
+    "frontend/src/app/workspace/workspace.css",
+    "frontend/src/components/workspace/Workspace.tsx",
+    "frontend/src/components/workspace/WorkspacePages.tsx",
+    "frontend/src/lib/workspace-preview.ts",
+    "frontend/src/lib/api.ts",
+    "frontend/src/components/AppShell.tsx",
+    "frontend/public/workspace/hero-valley.webp",
+    "frontend/e2e/workspace.spec.ts",
+    "frontend/e2e/project-history.spec.ts",
+    "frontend/playwright.workspace.config.ts",
+    "backend/src/test/java/com/projectflow/ProjectHistoryDogfoodAcceptanceTest.java",
+    "backend/pom.xml",
+    "frontend/package-lock.json",
+    ".github/workflows/windows-release.yml",
+    "docs/projectflow-v4.0-b-gui-first-prototype-report.md"
+  ],
+  "verification": {
+    "build": "TypeScript 与生产构建通过；根 Start-ProjectFlow.bat 从工作区外重建并启动，login、新 GUI、health 均为 200；按提示退出后端口无残留。",
+    "tests": "前端合同 59/59；补丁后真实前后端 Playwright 20/20；实际 Evidence 非空定向复验 1/1；最终生产 GUI 10/10；后端全量 717 项中 11 项条件跳过，残余 Dogfood 缓存失败停止并发写入后 3/3 复验通过；PostgreSQL 16 实际 7/7；npm audit 0 漏洞。最终依赖补丁后后端全量与 GitHub CI 待收尾回填。",
+    "manualCheck": "Agent 已目视检查参考图与实现并排图、六页、详情、稀疏与空状态，以及 390/640/1024/1600 宽度截图；Owner 尚未审核，没有虚构人工评分或真实 Provider 语义验收。"
+  },
+  "unfinished": [
+    "等待 Owner 视觉审核；本轮不合并、不打 Tag、不发布 Release。",
+    "完整真实 Thread 阅读和 Provider 编辑继续复用旧页面；项目级 Provider 绑定与 Obsidian GUI 同步留在后续阶段。",
+    "最终分支 CI 与依赖补丁后后端全量结果待收尾回填。"
+  ],
+  "sedimentCandidates": []
+}
