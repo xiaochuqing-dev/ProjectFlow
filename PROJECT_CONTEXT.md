@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-07
 
-V4.0-B GUI 第一版设计原型已在独立分支建立 `/workspace/projects`、`current`、`history`、`handoff`、`project-settings` 和 `settings` 六页。显式 `?demo=1` 才加载设计示例；正常入口读取既有项目、Current State、History 和 Context Package，刷新复用持久化 Job。视觉沿用用户给定的三栏午夜蓝参考图、左下山脉和右下星球。旧项目接入、ZIP、本地绑定、登录和模型配置入口继续可达。V4-A 的 PR #21 尚未合并，本轮只消费其 IA 合同；产品后端版本仍为 V3.10。本轮停在“GUI 第一版设计原型完成，等待 Owner 审核”，不代表 V4 正式发布或 Owner 验收通过。实现、截图、验证边界与后续设计债见 `docs/projectflow-v4.0-b-gui-first-prototype-report.md`。
+V4.0-B GUI 第一版设计原型已在独立分支建立 `/workspace/projects`、`current`、`history`、`handoff`、`project-settings` 和 `settings` 六页。显式 `?demo=1` 才加载设计示例；正常入口读取既有项目、Current State、History 和 Context Package，刷新复用持久化 Job。视觉沿用用户给定的三栏午夜蓝参考图、左下山脉和右下星球。旧项目接入、ZIP、本地绑定、登录和模型配置入口继续可达。V4-A 的 PR #21 尚未合并，本轮只消费其 IA 合同；产品后端版本仍为 V3.10。Owner 已反馈“这个版本不错”并明确授权推送，本轮以 Draft PR #22 交付第一版设计原型，尚未进入 V4 正式发布。实现、截图、验证边界与后续设计债见 `docs/projectflow-v4.0-b-gui-first-prototype-report.md`。
 
 V3.10 Release Readiness 已完成 Flyway release schema ownership、精确 legacy schema fail-closed、H2 升级前备份/隔离恢复、PostgreSQL 备份确认、OS-backed Provider credential、loopback/external 运行安全、稳定用户数据目录、source-independent Windows portable runtime 与供应链/Windows gate。2026-08-29 收口轮次由 exact V3.9 final `dd5ee41b6afcbd7703fa0883dc115c11f4821447` 应用实际生成 H2 和 PostgreSQL 16 旧库，证明二者精确匹配 `KNOWN_V39`，并通过备份/恢复、controlled V1 baseline、V2、凭据迁移、保护记录不变和重启幂等性；没有使用 V1 SQL 自造旧库，也没有放宽 schema signature。最终功能 Head `c0b4d9653ac6a579978d81b66d2554662e2007dd` 的 Quality、Windows 与 Luna/Responses、DeepSeek/Chat、Qwen/Messages secure credential-path smoke 全部通过，PR #19 已合并为 master `2f56257c028657f3c67e0e413f938d723502147f`，merge 后 master Quality `33246313873` 与 Windows `33246313553` 再次通过。机器回填授权 V3.10 FINAL 与 V4.0 Entry 在该事实回填 PR 合并、最终 master 复验和任务临时资源清理完成后生效；继续 NO TAG、NO RELEASE，V4 GUI 尚未开始。
 

@@ -1,6 +1,6 @@
 # ProjectFlow V4.0-B GUI 第一版设计原型报告
 
-日期：2026-09-07。状态：GUI 第一版设计原型完成，等待 Owner 审核。此状态只描述原型交付，不代表 Owner 已通过视觉验收。
+日期：2026-09-07。状态：GUI 第一版设计原型完成，已推送 [Draft PR #22](https://github.com/xiaochuqing-dev/ProjectFlow/pull/22)。Owner 已反馈“这个版本不错”并再次明确授权推送；这里记录原话和授权，不换算为量化视觉评分。本轮按设计原型范围交付，PR 保持 Draft。
 
 ## 目标与代码基线
 
@@ -86,20 +86,23 @@ V4.0-A 的 [PR #21](https://github.com/xiaochuqing-dev/ProjectFlow/pull/21) 在�
 
 ## 验证记录
 
-以下记录仅采用实际执行证据；最终门禁及 GitHub 地址在收尾时补入。
+以下记录采用实际执行证据。功能提交为 `42c40f76a4d4162bdd1fce1dedad5087511dbd74`；后续回填仅更新报告与 Agent result，不改变生产代码或测试。
 
 | 验证 | 当前观察结果 |
 | --- | --- |
 | TypeScript / frontend production build | 通过；新增路由包含在生产构建中 |
 | 前端合同测试 | 59/59 通过 |
 | 独立生产 GUI Playwright | 10/10 通过，覆盖六页、素材、几何、键盘、宽窄屏、空/稀疏/失败、真实 DTO、刷新恢复和缓存结果 |
-| 真实前后端 Playwright | 依赖补丁后 20/20 通过（2.5 分钟），包含原核心流程与新增 GUI 真实后端链路；另行增强真实 Evidence 非空断言并定向复验 1/1 通过 |
-| 后端/H2 | 全量 717 项执行，11 项条件测试跳过；首次发现历史测试文案/文件时间不稳定，修复后遗留的工作区 cacheHit 失败在停止并发写入、将运行日志移至忽略目录后消失。Dogfood 定向复验 3/3 通过，保留缓存命中断言；其余全量测试无失败 |
-| PostgreSQL 16 | Docker Desktop / PostgreSQL 16 实际运行 7/7 通过（6 项业务/并发约束 + 1 项 Flyway 迁移） |
+| 完整 Playwright | 依赖补丁后 20/20 通过（2.5 分钟）：10 条真实前后端流程 + 10 条 GUI/适配 fixture 检查；另行增强真实 Evidence 非空断言并定向复验 1/1 通过 |
+| 后端/H2 | 依赖补丁后全量 717 项：0 failure、0 error、11 项条件跳过；Dogfood 3/3 通过 |
+| PostgreSQL 16 | 同一最终依赖配置下，Docker Desktop / PostgreSQL 16 实际运行 7/7 通过（6 项业务/并发约束 + 1 项 Flyway 迁移）；完整 Failsafe profile 共 13 项，0 失败，另外 6 项显式选择的外部/真实模型评测未启用 |
 | 根目录启动器 | 工作区外调用相对路径 `Start-ProjectFlow.bat -NoBrowser`，重新安装并校验依赖、生产构建、启动成功。登录、新 GUI、后端 health 均为 200；Build ID 为 `GF0rm56bQ44s6BCs026cZ`。按启动器提示正常退出，3000/8080 无监听残留；见[原始启动证据](acceptance-evidence/v4.0-b/embedded-startup.json) |
 | 依赖审计 | 补丁后全量 `npm audit` 0 项漏洞；Spring Boot、Next、React 与生产依赖集合不变 |
-| GitHub CI | 待推送后记录 |
-| 视觉验收 | Agent 已检查截图；Owner 尚未审核，不填写人工评分 |
+| GitHub Quality CI | 功能提交的 [push run 34099041795](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34099041795) 与 [PR run 34099060412](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34099060412) 全部成功，包含 backend/H2、PostgreSQL、真实 V3.9 升级、frontend、browser、Hermes、Obsidian、敏感内容及 OSV 门禁；可选真实模型评测未启用 |
+| Windows CI | 功能提交的 [push run 34099040982](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34099040982) 与 [PR run 34099060000](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34099060000) 全部成功，覆盖 portable 构建、解包运行、备份/恢复、旧 H2 基线、端口冲突与敏感标记检查 |
+| 视觉验收 | Agent 已检查截图；Owner 对本版给出正面反馈并批准推送，没有填写或推算人工评分 |
+
+失败与修复记录：首轮全量后端暴露历史测试文案及 checkout 文件时间不稳定，采用 V4-A 已验证的测试层修正。随后一次当前工作区 cacheHit 失败，在停止并发写入、将运行日志移至忽略目录后消失；保留原缓存命中断言并完成 3/3 定向和最终全量复验。首轮浏览器失败分别来自路由公告与业务 alert 的重复匹配、将 Next 开发工具 POST 误计为业务写入，以及窄屏路由尚未稳定就打开抽屉；仅修正选择器、API 范围与等待条件，最终生产 GUI 和完整产品 E2E 均通过。没有放宽生产安全策略或冻结的历史期望。
 
 GUI 适配测试使用合成数据；真实前后端测试使用临时测试项目和本地固定模型服务，只证明工程链路，不声称真实 Provider 语义验收。后端 Dogfood 按已有测试读取 ProjectFlow 仓库自身；除此之外没有读取用户其他真实项目材料，没有新增付费模型调用验收，也未修改已冻结的历史语义样本。
 
@@ -109,4 +112,4 @@ GUI 适配测试使用合成数据；真实前后端测试使用临时测试项�
 
 真实历程暂展示已有有界章节/故事摘要，并提供完整旧历程入口；新主题主线在示例中可完整交互，真实完整 Thread 阅读仍使用原页面。新的全局设置可查看配置并进入既有 CRUD；项目级 Provider 绑定和 Obsidian GUI 同步没有虚构保存成功。上述边界均在界面标明。
 
-下一轮先由 Owner 评审基准截图、左下环境图和六页职责，收敛具体视觉意见；随后按优先级把既有 Thread 详情与 Provider 编辑交互迁入这套样式。无需重新设计事实引擎，也不应从本轮直接扩大到桌面壳或发布工程。
+下一轮基于 Owner 已给予正面反馈的这版，收敛更具体的视觉意见；随后按优先级把既有 Thread 详情与 Provider 编辑交互迁入这套样式。无需重新设计事实引擎，也不应从本轮直接扩大到桌面壳或发布工程。
