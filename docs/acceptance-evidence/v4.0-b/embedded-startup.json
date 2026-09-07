@@ -1,0 +1,11 @@
+﻿{
+    "version":  "3.10.0",
+    "sourceRevision":  "1712841b77fd1e8146ce4ab6beaf404e5b1f7a53",
+    "hasLocalChanges":  true,
+    "frontendDependencies":  "verified",
+    "frontendBuildId":  "GF0rm56bQ44s6BCs026cZ",
+    "frontendBuiltAt":  "2026-09-07T16:02:22.7642958+08:00",
+    "readyAt":  "2026-09-07T16:02:31.6399209+08:00",
+    "frontendUrl":  "http://127.0.0.1:3000/login",
+    "backendHealthUrl":  "http://127.0.0.1:8080/api/health"
+}

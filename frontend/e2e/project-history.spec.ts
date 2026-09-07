@@ -95,6 +95,29 @@ test("项目历程默认可读、工程证据可下钻且基础修正保持冲�
   expect(overview.overview.chapters.length).toBeLessThanOrEqual(8);
 });
 
+test("V4 工作区读取真实后端、显式更新并共享同一 Agent 交接与工程证据", async ({ page, request }) => {
+  const fixture = await createHistoryProject(request);
+  await page.goto(`/workspace/current?project=${fixture.projectId}`);
+  await expect(page.locator(".pf-hero h2")).toContainText("E2E 项目历程");
+  await expect(page.getByText("Corporation-Agent", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "更新项目状态", exact: true }).click();
+  await expect(page.getByRole("button", { name: "更新项目状态", exact: true })).toBeEnabled({ timeout: 90_000 });
+  const current = await api<{ confirmedState: string }>(request, "GET", `/projects/${fixture.projectId}/history/current-state`);
+  await expect(page.locator(".pf-hero-summary")).toHaveText(current.confirmedState);
+  await page.getByRole("navigation", { name: "主导航" }).getByRole("link", { name: "项目历程", exact: true }).click();
+  await expect(page.locator(".pf-chapter-reading h2")).toBeVisible();
+  await page.locator(".pf-story-card").first().click();
+  await expect(page.getByRole("dialog").getByRole("heading", { name: "当前结果" })).toBeVisible();
+  await page.getByRole("dialog").getByText("查看工程证据与来源", { exact: true }).click();
+  await expect(page.locator(".pf-source-details h4").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "打开完整来源与修正记录" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByRole("navigation", { name: "主导航" }).getByRole("link", { name: "Agent 交接", exact: true }).click();
+  await expect(page.getByRole("button", { name: "复制交接内容", exact: true })).toBeEnabled();
+  await expect(page.locator(".pf-handoff-document")).toContainText(current.confirmedState);
+  await expect(page.locator(".pf-handoff-document")).not.toContainText("示例内容只用于界面评审");
+});
+
 async function createHistoryProject(request: APIRequestContext) {
   const project = await api<{ id: string }>(request, "POST", "/projects", {
     name: `E2E 项目历程 ${Date.now()}-${Math.random().toString(16).slice(2)}`,

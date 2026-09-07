@@ -59,6 +59,12 @@ export function AppShell({ title, eyebrow, actions, children }: AppShellProps) {
             );
           })}
         </nav>
+        <Link className="mx-3 mt-6 rounded-field border border-line px-3 py-2 text-xs text-brand" href="/workspace/projects">
+          打开 V4 项目工作区
+        </Link>
+        <Link className="mx-3 mt-2 px-3 py-1 text-xs text-muted" href="/workspace/current?demo=1">
+          查看 GUI 设计示例
+        </Link>
       </aside>
 
       <section className="flex min-w-0 flex-1 flex-col">

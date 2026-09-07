@@ -1258,6 +1258,7 @@ export type ProjectAnalysisJobType =
   | "PROJECT_TIMELINE_REFRESH"
   | "PROJECT_CAPABILITY_MAP_REFRESH"
   | "PROJECT_UNDERSTANDING_REFRESH"
+  | "PROJECT_HISTORY_REFRESH"
   | "CAPABILITY_CARD_ANALYSIS";
 
 export type UnderstandingClaim = {
@@ -3275,6 +3276,31 @@ export function getProjectHistoryOverview(token: string, projectId: string): Pro
 
 export function getProjectCurrentState(token: string, projectId: string): Promise<ProjectCurrentState> {
   return projectHistoryGet<ProjectCurrentState>(token, `/projects/${projectId}/history/current-state`);
+}
+
+export function listProjectHistoryStories(token: string, projectId: string): Promise<{ items: ProjectHistoryStory[]; totalElements: number }> {
+  return projectHistoryGet(token, `/projects/${projectId}/history/stories?page=0&size=20`);
+}
+
+export function refreshProjectHistory(token: string, projectId: string): Promise<ProjectAnalysisJob> {
+  return requestJson(`/projects/${projectId}/history/refresh`, {
+    method: "POST", headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export type WorkspaceContextPackage = {
+  projectId: string; projectName: string; packageRevision: string; generatedAt: string;
+  currentProjectState: ProjectCurrentState | null;
+  currentStrongFacts: Array<{ itemId: string; statement: string; epistemicStatus: string }>;
+  latestVerifiedChanges: Array<{ itemId: string; statement: string }>;
+  conflicts: Array<{ itemId: string; statement: string }>;
+  unknowns: Array<{ itemId: string; statement: string }>;
+  suggestedDeepReadTargets: string[]; limitations: string[]; unreadScope: string[];
+  truncated: boolean;
+};
+
+export function getWorkspaceContextPackage(token: string, projectId: string): Promise<WorkspaceContextPackage> {
+  return projectHistoryGet(token, `/projects/${projectId}/project-memory/context-package?sizeBudget=8000`);
 }
 
 export function getProjectHistoryChapter(

@@ -193,10 +193,13 @@ class ProjectHistoryDogfoodAcceptanceTest {
             new ProjectHistoryLanguageService()
         ).plan(chapters.get(0).storyRefs().stream().map(storiesById::get)
             .filter(java.util.Objects::nonNull).toList());
-        assertThat(chapters.get(0).title()).contains("前后端项目骨架")
+        var dominantCluster = firstChapterPlan.selectedClusters().stream()
+            .filter(cluster -> "DOMINANT".equals(cluster.role())).findFirst().orElseThrow();
+        assertThat(dominantCluster.family()).isEqualTo("项目骨架");
+        assertThat(chapters.get(0).title()).contains(dominantCluster.humanLabel())
             .doesNotStartWith("补充环境配置示例")
             .doesNotStartWith("建立项目使用说明");
-        assertThat(firstChapterPlan.selectedClusters().get(0).humanLabel()).contains("前后端项目骨架");
+        assertThat(firstChapterPlan.requiredRepresentativeClusterIds()).contains(dominantCluster.id());
         assertThat(cached.cacheHit()).isTrue();
         verifyNoInteractions(modelGateway);
     }
@@ -215,6 +218,10 @@ class ProjectHistoryDogfoodAcceptanceTest {
         git(repository, "config", "user.email", "continuity-dogfood@example.invalid");
         git(repository, "fetch", "--no-tags", source.toString(), V39_CORE_HEAD);
         git(repository, "checkout", "--detach", V385_FINAL_BASELINE);
+        // Git checkout uses wall-clock mtimes, while Agent Result mtime is historical evidence.
+        // One fixture time keeps the frozen T0-T7 sequence stable across later calendar dates.
+        Instant fixtureTime = commitTime(repository, V385_FINAL_BASELINE);
+        normalizeWorkingTreeTimestamps(repository, fixtureTime);
 
         UUID userId = UUID.randomUUID();
         ProjectSpace project = project(userId, repository, V39_DOGFOOD_PROJECT_ID, "ProjectFlow V3.9 Continuity Dogfood");
@@ -236,6 +243,7 @@ class ProjectHistoryDogfoodAcceptanceTest {
         steps.add(t0.evidence());
 
         git(repository, "checkout", "--detach", V39_FREEZE_HEAD);
+        normalizeWorkingTreeTimestamps(repository, fixtureTime);
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         var t1 = observeStep(
             "T1", "V3.9 freeze documents and Agent Result", userId, project.getId(),
@@ -245,6 +253,7 @@ class ProjectHistoryDogfoodAcceptanceTest {
         steps.add(t1.evidence());
 
         git(repository, "checkout", "--detach", V39_CORE_HEAD);
+        normalizeWorkingTreeTimestamps(repository, fixtureTime);
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         var t2 = observeStep(
             "T2", "same continuity theme receives the V3.9 core implementation", userId, project.getId(),
@@ -1003,6 +1012,12 @@ class ProjectHistoryDogfoodAcceptanceTest {
                 Files.setLastModifiedTime(path, fixed);
             }
         }
+    }
+
+    private Instant commitTime(Path repository, String revision) throws Exception {
+        return Instant.ofEpochSecond(Long.parseLong(
+            git(repository, "show", "-s", "--format=%ct", revision).trim()
+        ));
     }
 
     private String git(Path root, String... args) throws Exception {
