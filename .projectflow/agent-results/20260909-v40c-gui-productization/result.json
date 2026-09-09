@@ -7,7 +7,7 @@
     "项目设置明确当前只有全局模型默认项；Obsidian 保留现有 CLI 操作边界，没有建立项目绑定 schema、同步引擎或桌面壳。",
     "修复既有依赖门禁发现的安全公告，定向更新至 Next 16.3.4、Sharp 0.35.4 和 Netty 4.1.137.Final。前端生产审计为零漏洞；Netty 补丁后的全量 Maven/PostgreSQL 与 Windows 启动均通过。",
     "完成生产前后端 E2E、后端/H2、实际 PostgreSQL 16、凭据、Hermes、Obsidian与 Windows 根启动验证；追加阶段报告及29张截图、测试摘要和无凭据 smoke 记录。",
-    "以依赖 PR #22 的 Draft PR #23 交付。Netty 补丁后的功能提交 f4145a5 已通过 push 与 pull_request 的全部 Quality/Windows required jobs；保留首轮 OSV 失败，未合并或发布。",
+    "以依赖 PR #22 的 Draft PR #23 交付。最终功能提交 ee02dd9 的 push 与 pull_request Quality/Windows 共20个必需检查通过；末轮浏览器32/32且无重试。保留 Netty 及抽屉失败记录，未合并或发布。",
     "末轮 PR 浏览器检查暴露初始化视图 effect 关闭刚打开的 Evidence 抽屉；现在只在实际页面切换时重置。保留原键盘断言并加强每次 Tab 后可见性，四倍 CPU 限速20/20、修复后生产E2E32/32和根启动器复验通过。"
   ],
   "keyFiles": [
@@ -30,14 +30,13 @@
   ],
   "verification": {
     "build": "PASS：TypeScript、Next 16.3.4 生产构建与 Windows 根启动器从工作区外重建当前工作树。",
-    "tests": "PASS：frontend contracts 63/63；GUI 生产 E2E 32/32；Netty 补丁后 backend/H2 717 项，0 failure/error、11 条件跳过，PostgreSQL 16 实际7/7；Hermes10/10、Obsidian27/27/no-op0写入；凭据与敏感内容回归通过；npm audit0漏洞。功能提交 f4145a5 的两组 GitHub Quality/Windows全部通过，含OSV、浏览器32/32和exact V3.9 H2/PostgreSQL升级证明。条件跳过与准确Run见本阶段verification.json和ci.json。 后续 dfaeb7a 的 PR 浏览器检查出现1条抽屉时序失败，已修复；4x CPU连续20/20、最终生产32/32再次通过，修复后CI待推送。",
+    "tests": "PASS：TypeScript、frontend contracts 63/63、最终生产E2E32/32、开发模式4x CPU抽屉连续20/20。Netty补丁后backend/H2 717项，0failure/error、11条件跳过；PostgreSQL16实际7/7；Hermes10/10、Obsidian27/27/no-op0写入；凭据及敏感内容回归通过。最终功能提交ee02dd9的Quality/Windows两组全部通过，包括OSV、浏览器32/32无重试和exact V3.9 H2/PostgreSQL升级证明。条件跳过、失败与准确Run见本阶段Evidence。",
     "manualCheck": "PASS：29 张真实浏览器截图经过 Agent 检查；390/640/1024/1280/1600 布局；Windows 欢迎页进入真实 V4 与 Provider 空 Key 表单，正常退出后3000/8080无监听。原用户工作树修改保持原样。未调用外部模型，不声称 Sol/xhigh 质量验收。"
   },
   "unfinished": [
     "项目级 Provider / Model 绑定不存在可靠持久化接口，后续单独设计；当前 UI 明确使用全局默认。",
     "Obsidian 配置和同步仍为现有 CLI；完整 Onboarding、展示修正/审计与 Desktop Shell 未在本阶段迁移。",
-    "外部真实模型 smoke 未运行；本地固定模型只证明协议及安全路径，不证明真实模型质量。",
-    "抽屉时序修复已通过本地验证，GitHub修复后门禁等待推送与回填；此前CI成功和末轮失败均保留。"
+    "外部真实模型 smoke 未运行；本地固定模型只证明协议及安全路径，不证明真实模型质量。"
   ],
   "sedimentCandidates": [
     "V4 Workspace 的真实 Thread → Story → Evidence 阅读与全局 Provider 管理已形成连续路径，具备隔离 Java E2E 与 Windows 启动证据；该结果是待项目验证的 Agent 过程证据。"

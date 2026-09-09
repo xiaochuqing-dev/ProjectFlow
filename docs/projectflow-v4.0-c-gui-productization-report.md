@@ -1,6 +1,6 @@
 # ProjectFlow V4.0-C GUI 产品化与深层交互迁移
 
-状态：以 Draft PR #23 交付；末轮 CI 暴露的抽屉时序问题已修复，正在复验。不是 V4 正式发布。日期：2026-09-09。
+状态：实现、本地验收和 GitHub 门禁完成，以 Draft PR #23 交付；不是 V4 正式发布。日期：2026-09-09。
 
 ## 目标与基线
 
@@ -105,7 +105,7 @@ Obsidian CORE 默认、opt-in、managed block 和模型零调用边界均保持�
 | 安全验收产物校验 | PASS，`V380_ACCEPTANCE_EVIDENCE_OK` |
 | 生产依赖审计 | PASS，Next 16.3.4 / Sharp 0.35.4，0 vulnerabilities |
 | Windows 根启动器 | PASS；从父目录相对调用、重建、真实 V4 入口、正常退出、3000/8080 无监听 |
-| GitHub required CI | f4145a5 的 4 次运行全部通过；dfaeb7a PR 浏览器发现抽屉时序问题，已修复且本地复验通过，修复后 CI 待完成 |
+| GitHub required CI | PASS，最终功能 ee02dd9 的 push / PR Quality 与 Windows 全部成功；PR 浏览器32/32无重试，外部真实模型为显式可选跳过 |
 | 外部真实模型 | NOT_RUN_NOT_NEEDED，未读取真实 Key 或发起付费调用 |
 
 ### 失败与修复记录
@@ -131,6 +131,8 @@ Netty 补丁后的根启动器复验也已通过，readyAt 为 `2026-09-09T16:16
 抽屉时序修复后第三次根启动器验证通过，readyAt 为 `2026-09-09T16:51:22.2306233+08:00`；同样通过真实入口、零写入和正常退出/端口检查，完整启动历史保存在 Windows Evidence。
 
 本轮已推送自己的分支并创建依赖 PR #22 的 [Draft PR #23](https://github.com/xiaochuqing-dev/ProjectFlow/pull/23)。首次 Quality 除 Netty OSV 外全部通过（浏览器 32/32，exact V3.9 H2/PostgreSQL 证明通过），Windows portable 两次运行均通过。Netty 补丁功能提交 `f4145a5fd97a50cff7752efb7da045352872e6b9` 的 [PR Quality](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34328476487)、[PR Windows](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34328475343)、[push Quality](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34328470853) 和 [push Windows](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34328470361) 全部成功。外部真实 Provider jobs 按本轮边界未启用。各次实际 Run 与 job 结果保存在 `acceptance-evidence/v4.0-c/ci.json`；后续仅回填文档的提交不冒充这些已完成运行的源码身份，最新 PR Head 的门禁以 GitHub 为准。
+
+最终抽屉修复功能提交 `ee02dd9f0267449ad396892f0adae55dedb2d0ca` 的 [PR Quality](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34331754666)、[PR Windows](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34331754020)、[push Quality](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34331751679) 和 [push Windows](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34331750290) 全部成功，合计20个必需检查。PR浏览器32/32且无重试，先前失败作为历史保留。此后只回填文档的提交仍由GitHub检查，机器Evidence记录的是实际验收功能Head。
 
 ## 未完成项、设计债与下一阶段
 

@@ -1,7 +1,7 @@
 {
   "stage": "V4.0-C Draft",
   "date": "2026-09-09",
-  "status": "LOCAL_PASS_CI_RETEST_PENDING",
+  "status": "PASS",
   "baseCommit": "7d5f30eff3a05105b7f3f60e07e352d297301ed5",
   "scope": "current productization working tree; CI commit identity is recorded separately",
   "checks": [
@@ -131,10 +131,10 @@
     },
     {
       "name": "GitHub required CI",
-      "status": "DRAWER_PATCH_RETEST_PENDING",
+      "status": "PASS",
       "evidence": "ci.json",
-      "verifiedHead": "f4145a5fd97a50cff7752efb7da045352872e6b9",
-      "note": "Quality and Windows portable passed for push and pull_request; optional external model jobs remain intentionally not run"
+      "verifiedHead": "ee02dd9f0267449ad396892f0adae55dedb2d0ca",
+      "note": "Final drawer correction: Quality and Windows passed for both events; PR browser 32 passed without retry"
     },
     {
       "name": "Packaged Netty modules",
@@ -240,6 +240,13 @@
       "productionE2eAfter": {
         "tests": 32,
         "passed": 32
+      },
+      "ciAfter": {
+        "status": "PASS",
+        "head": "ee02dd9f0267449ad396892f0adae55dedb2d0ca",
+        "browserTests": 32,
+        "flaky": 0,
+        "jobUrl": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34331754666/job/102401709324"
       }
     }
   ]
