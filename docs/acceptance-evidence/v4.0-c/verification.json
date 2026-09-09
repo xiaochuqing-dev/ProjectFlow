@@ -1,7 +1,7 @@
 {
   "stage": "V4.0-C Draft",
   "date": "2026-09-09",
-  "status": "LOCAL_PASS",
+  "status": "PASS",
   "baseCommit": "7d5f30eff3a05105b7f3f60e07e352d297301ed5",
   "scope": "current productization working tree; CI commit identity is recorded separately",
   "checks": [
@@ -131,8 +131,10 @@
     },
     {
       "name": "GitHub required CI",
-      "status": "PATCH_RETEST_PENDING",
-      "evidence": "ci.json"
+      "status": "PASS",
+      "evidence": "ci.json",
+      "verifiedHead": "f4145a5fd97a50cff7752efb7da045352872e6b9",
+      "note": "Quality and Windows portable passed for push and pull_request; optional external model jobs remain intentionally not run"
     },
     {
       "name": "Packaged Netty modules",
@@ -199,7 +201,7 @@
         "GHSA-c4c3-7fpv-j4q5",
         "GHSA-fccg-mwvh-qqg4"
       ],
-      "resolution": "Existing netty.version updated to 4.1.137.Final; full backend/PostgreSQL and Windows launcher passed; OSV rerun pending push",
+      "resolution": "Existing netty.version updated to 4.1.137.Final; full local Maven/PostgreSQL, Windows launcher and all GitHub required gates passed",
       "url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34327290670/job/102387368517"
     }
   ]

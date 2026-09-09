@@ -1,6 +1,6 @@
 # ProjectFlow V4.0-C GUI 产品化与深层交互迁移
 
-状态：实现与本地验收完成，Draft 交付阶段；不是 V4 正式发布。日期：2026-09-09。
+状态：实现、本地验收和 GitHub 门禁完成，以 Draft PR #23 交付；不是 V4 正式发布。日期：2026-09-09。
 
 ## 目标与基线
 
@@ -104,7 +104,7 @@ Obsidian CORE 默认、opt-in、managed block 和模型零调用边界均保持�
 | 安全验收产物校验 | PASS，`V380_ACCEPTANCE_EVIDENCE_OK` |
 | 生产依赖审计 | PASS，Next 16.3.4 / Sharp 0.35.4，0 vulnerabilities |
 | Windows 根启动器 | PASS；从父目录相对调用、重建、真实 V4 入口、正常退出、3000/8080 无监听 |
-| GitHub required CI | 首次除 Netty OSV 外全部通过，补丁后待复验；见 ci.json |
+| GitHub required CI | PASS，功能提交 f4145a5 的 push / pull_request Quality 与 Windows 共 4 次运行全部成功；外部真实模型为显式可选跳过 |
 | 外部真实模型 | NOT_RUN_NOT_NEEDED，未读取真实 Key 或发起付费调用 |
 
 ### 失败与修复记录
@@ -127,13 +127,13 @@ Backend/H2 的 11 项条件跳过包含 8 项显式外部语义评测、2 项 ex
 
 Netty 补丁后的根启动器复验也已通过，readyAt 为 `2026-09-09T16:16:55.4200491+08:00`。再次确认真实 V4 入口、空 Key 表单、零写入、正常退出和端口释放。生成 JAR 中七个 Netty 模块均为 `4.1.137.Final`；两次启动来源分别保存在 Windows Evidence 中。
 
-本轮已推送自己的分支并创建依赖 PR #22 的 [Draft PR #23](https://github.com/xiaochuqing-dev/ProjectFlow/pull/23)。首次 Quality 除 Netty OSV 外全部通过（浏览器 32/32，exact V3.9 H2/PostgreSQL 证明通过），Windows portable 两次运行均通过。Netty 补丁后 required CI 将继续复验；各次实际 Run 保存在 `acceptance-evidence/v4.0-c/ci.json`。
+本轮已推送自己的分支并创建依赖 PR #22 的 [Draft PR #23](https://github.com/xiaochuqing-dev/ProjectFlow/pull/23)。首次 Quality 除 Netty OSV 外全部通过（浏览器 32/32，exact V3.9 H2/PostgreSQL 证明通过），Windows portable 两次运行均通过。Netty 补丁功能提交 `f4145a5fd97a50cff7752efb7da045352872e6b9` 的 [PR Quality](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34328476487)、[PR Windows](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34328475343)、[push Quality](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34328470853) 和 [push Windows](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34328470361) 全部成功。外部真实 Provider jobs 按本轮边界未启用。各次实际 Run 与 job 结果保存在 `acceptance-evidence/v4.0-c/ci.json`；后续仅回填文档的提交不冒充这些已完成运行的源码身份，最新 PR Head 的门禁以 GitHub 为准。
 
 ## 未完成项、设计债与下一阶段
 
 本轮核心目标是迁移 Thread 与全局 Provider；项目级绑定、Obsidian GUI 同步、完整 Onboarding、修正/审计 GUI 迁移和 Desktop Shell 明确保留。长详情沿用后端已有有界快照，前端分页控制渲染；未来若遇到真实超大详情需求，再评估服务端详情分页，不在本轮增加第二套索引。
 
-下一步先由 Owner 体验 V4 连续工作路径并决定 Draft 的依赖顺序。可以单独研究 Desktop Shell 如何复用同一 Java Core/API，但本轮没有验证壳、安装器、自动更新或桌面发布条件，不能据此宣称可正式桌面发布。
+下一步先由 Owner 体验 V4 连续工作路径并决定 Draft 的依赖顺序。Web 主链、实际 Java 数据与 Windows 本地运行已通过本轮验证，已具备由 Owner 决定进入独立 Desktop Shell PoC 研究的基础；研究需复用同一 Java Core/API。本轮没有实施或验证壳、安装器、自动更新和桌面发布条件，不代表正式桌面发布已就绪。
 
 ## 关键文件与证据
 
