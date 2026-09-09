@@ -14,6 +14,7 @@ import {
   FileText,
   Folder,
   GitCommitHorizontal,
+  GitBranch,
   Home,
   Layers,
   Link2,
@@ -60,11 +61,15 @@ import {
 } from "./WorkspacePages";
 import { HistoryPage } from "./HistoryReader";
 import { StoryDialog } from "./WorkspaceStoryDialog";
+import { ProjectIntake } from "./ProjectIntake";
+import { WorklineReader } from "./WorklineReader";
 
 const navIcons = {
   projects: Folder,
   current: Activity,
   history: BookOpenText,
+  worklines: GitBranch,
+  intake: Plus,
   handoff: Sparkles,
   "project-settings": Settings,
   settings: Settings,
@@ -128,8 +133,18 @@ export function Workspace({ view }: { view: WorkspaceView }) {
     setLoading(true);
     const token = readSession().accessToken;
     const reads = [
-      listProjects(token).then((items) => {
+      listProjects(token).then(async (items) => {
         if (active) setProjects(items.map(projectCard));
+        const cards = await Promise.all(items.slice(0, 100).map(async (item) => {
+          const card = projectCard(item);
+          try {
+            const current = await getProjectCurrentState(token, item.id);
+            return { ...card, status: current.historyStatus === "NOT_INITIALIZED" ? "等待首次读取" : current.stale || current.continuityDirty ? "有变化待刷新" : current.degraded ? "部分数据待核对" : "已保存状态",
+              stale: current.stale || current.continuityDirty, degraded: current.degraded, attention: current.conflicts,
+              unknowns: current.unknowns, updated: current.latestSuccessfulAt ? new Date(current.latestSuccessfulAt).toLocaleString("zh-CN", { hour12: false }) : "尚未成功读取" };
+          } catch { return { ...card, status: "读取遇到问题", degraded: true, attention: ["状态读取失败，请打开项目重试。"] }; }
+        }));
+        if (active) setProjects([...cards, ...items.slice(100).map(projectCard)]);
       }),
     ];
     if (projectId)
@@ -386,7 +401,7 @@ export function Workspace({ view }: { view: WorkspaceView }) {
         </Link>
         <nav aria-label="主导航">
           {workspaceViews
-            .filter((v) => v !== "settings")
+            .filter((v) => v !== "settings" && v !== "intake")
             .map((item) => {
               const Icon = navIcons[item];
               return (
@@ -404,7 +419,7 @@ export function Workspace({ view }: { view: WorkspaceView }) {
         </nav>
         <div className="pf-recents-title">
           <span>最近项目</span>
-          <Link href="/projects" aria-label="添加项目">
+          <Link href="/workspace/intake" aria-label="添加项目">
             <Plus size={15} />
           </Link>
         </div>
@@ -482,7 +497,7 @@ export function Workspace({ view }: { view: WorkspaceView }) {
           <span>搜索项目、页面…</span>
           <kbd>Ctrl + K</kbd>
         </button>
-        {view === "current" ? (
+        {["current", "history", "worklines"].includes(view) ? (
           <Button
             className="pf-button pf-primary"
             onClick={refresh}
@@ -535,6 +550,8 @@ export function Workspace({ view }: { view: WorkspaceView }) {
                   projects: "每一个项目，都有值得延续的故事。",
                   current: "把握项目的现在，让下一步更清晰。",
                   history: "从最初的想法，到每一次真实的向前。",
+                  worklines: "根据 Git 与 PR 理解工作内容和合入状态。",
+                  intake: "从项目已有材料开始。",
                   handoff: "让下一位 Agent，从你已经走到的地方继续。",
                   "project-settings": "管理这个项目的来源、连接与使用策略。",
                   settings: "让 ProjectFlow 按你的方式运行。",
@@ -592,8 +609,9 @@ export function Workspace({ view }: { view: WorkspaceView }) {
         {!loading && view === "settings" && (
           <SettingsPage global demo={demo} project={project} href={href} />
         )}
+        {!loading && view === "intake" && <ProjectIntake existing={project?.source} demo={demo}/>}
         {!loading &&
-          !["projects", "settings"].includes(view) &&
+          !["projects", "settings", "intake"].includes(view) &&
           (!project ? (
             <section className="pf-empty">
               <Folder size={38} />
@@ -622,6 +640,7 @@ export function Workspace({ view }: { view: WorkspaceView }) {
                   onStory={showStory}
                 />
               )}
+              {view === "worklines" && <WorklineReader key={`${project.id}-${reload}`} projectId={project.id} demo={demo}/>}
               {view === "handoff" && (
                 <HandoffPage
                   key={`${project.id}-${reload}`}

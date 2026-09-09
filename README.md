@@ -1,6 +1,12 @@
 # ProjectFlow
 
-## V4 Workspace（V4.0-C Draft）
+## V4 Workspace（V4.0-D Draft）
+
+ProjectFlow 是用于理解项目现状、阅读真实变化并维护长期项目记忆的工作区。V4.0-D 将普通项目入口、创建和接入统一到午夜蓝 Workspace；当前页区分已观察结果、项目声明、系统归纳和未知，历程先显示变化概览，再按时间或长期主题阅读。开发工作线基于有界 Git / GitHub 证据，不把分支名或提交数量当成目的、进度或尚未合入的证明。
+
+普通入口是 `/workspace/projects`。`/projects`、项目详情、普通历程链接与 `/settings` 会转入 Workspace。创建、本地绑定、GitHub 地址、ZIP 和文本接入均使用 V4 页面及既有后端。根目录 `Start-ProjectFlow.bat` 可从任意目录启动；显式更新状态复用持久化 Job，查看页面不会扫描或调用模型。工程审计通过明确的兼容入口保留。
+
+本轮依赖 V4.0-C PR #23，保持 Draft；验收见 [V4.0-D 阶段报告](docs/projectflow-v4.0-d-real-project-understanding-report.md)。这不是正式 Release。以下 V4.0-C 段落保留为继承功能说明。
 
 当前分支在 V4.0-B 的午夜蓝三栏工作区上迁移长期演变主线与 Provider 管理，后端仍沿用 V3.10；这不是 V4 正式发布。启动欢迎页点击“进入 V4 工作区”即可打开 `/workspace/projects`，可连续使用当前状态、项目历程、Agent 交接和设置六个页面。兼容工作台仍可单独进入。仅显式 `?demo=1` 加载示例，真实读取失败不会切换为示例。
 

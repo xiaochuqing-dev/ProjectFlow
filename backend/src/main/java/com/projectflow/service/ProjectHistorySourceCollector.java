@@ -218,6 +218,58 @@ public class ProjectHistorySourceCollector {
         );
     }
 
+    public ProjectWorklineCollector.Snapshot collectWorklines(CollectionOutcome collection) {
+        if (!collection.gitAvailable()) return ProjectWorklineCollector.Snapshot.empty();
+        return new ProjectWorklineCollector(commandExecutor, redactor, objectMapper)
+            .collect(collection.projectRoot(), collection.project().getRepoUrl());
+    }
+
+    public record ProjectDeclaration(String text, String kind, String source, int line, String sourceHash, String observedAt) {}
+
+    /** Exact, bounded quotations; headings select declared plans, never inferred intentions. */
+    public List<ProjectDeclaration> collectDeclarations(CollectionOutcome collection) {
+        Path root = collection.projectRoot();
+        if (root == null) return List.of();
+        List<ProjectDeclaration> result = new ArrayList<>();
+        for (String relative : List.of("README.md", "README.zh-CN.md", "docs/roadmap.md", "ROADMAP.md")) {
+            ModelCancellationContext.throwIfCancelled();
+            Path path = root.resolve(relative);
+            try {
+                if (!Files.isRegularFile(path) || Files.isSymbolicLink(path) || !path.toRealPath().startsWith(root.toRealPath())
+                    || Files.size(path) > 64_000) continue;
+                String content = Files.readString(path, StandardCharsets.UTF_8);
+                String hash = sha256(content), at = Instant.now().toString();
+                boolean planSection = false, identityRead = false, fenced = false;
+                int line = 0, planLevel = 0;
+                for (String raw : content.split("\\R")) {
+                    line++;
+                    String text = raw.trim();
+                    if (text.startsWith("```") || text.startsWith("~~~")) { fenced = !fenced; continue; }
+                    if (fenced) continue;
+                    if (text.startsWith("#")) {
+                        int level = text.indexOf(' ');
+                        if (text.matches("(?i)^#{1,6}\\s+.*(?:roadmap|计划|下一步|milestone|路线图).*$")) {
+                            planSection = true; planLevel = level;
+                        } else if (level > 0 && level <= planLevel) planSection = false;
+                        continue;
+                    }
+                    if (text.isBlank() || text.startsWith("[!") || text.startsWith("![") || text.startsWith("<")
+                        || text.startsWith("```") || text.startsWith("|")) continue;
+                    String safe = redactor.redactOutboundText(text.replaceFirst("^[-*]\\s+(?:\\[[ xX]\\]\\s*)?", ""));
+                    if (safe.length() < 12) continue;
+                    if (safe.length() > 400) safe = safe.substring(0, 400);
+                    if (planSection && result.stream().filter(item -> item.kind().equals("PLAN")).count() < 8) {
+                        result.add(new ProjectDeclaration(safe, "PLAN", relative, line, hash, at));
+                    } else if (!planSection && !identityRead && relative.startsWith("README") && !text.startsWith("[") && !text.startsWith("-")) {
+                        result.add(new ProjectDeclaration(safe, "IDENTITY", relative, line, hash, at)); identityRead = true;
+                    }
+                    if (result.size() >= 12) return List.copyOf(result);
+                }
+            } catch (IOException ignored) { /* Missing documents are a valid unknown state. */ }
+        }
+        return List.copyOf(result);
+    }
+
     private Path resolveRoot(ProjectMemory memory, List<String> limitations) {
         if (memory == null || memory.getLocalProjectPath() == null || memory.getLocalProjectPath().isBlank()) return null;
         try {

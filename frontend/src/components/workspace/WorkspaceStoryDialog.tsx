@@ -60,7 +60,7 @@ export function StoryDialog({ story, project, demo, onClose }: {
           {sourcesOpen && detail?.events.slice(page * 10, (page + 1) * 10).map((event, index) => <EvidenceEvent key={`${detail.presentationRevision}:${event.id}`} projectId={project.id} event={event} initialOpen={index === 0} />)}
           <ReadingPages page={page} totalPages={Math.ceil((detail?.events.length ?? 0) / 10)} onPage={setPage} label="来源事件" />
           {!loading && detail && !detail.events.length && <p>此故事没有可进一步读取的来源事件，不能据此补充验证结果。</p>}
-          <Link href={`/projects/${project.id}/history?type=story&id=${encodeURIComponent(story.id)}`}>打开完整来源与修正记录<ExternalLink size={14} /></Link>
+          <Link href={`/projects/${project.id}/history?compat=1&type=story&id=${encodeURIComponent(story.id)}`}>工程兼容工具：来源审计与修正<ExternalLink size={14} /></Link>
         </>}
       </details>
       {detail && <details className="pf-source-details"><summary>查看故事工程详情</summary>

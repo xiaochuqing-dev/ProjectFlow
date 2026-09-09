@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Plus, Sparkles, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -8,6 +9,14 @@ import { createProject, deleteProject, listProjects, type Project } from "@/lib/
 import { readSession } from "@/lib/auth";
 
 export default function ProjectsPage() {
+  return <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0b1220", color: "#c7d5ed", padding: 32 }}>正在打开项目库…</div>}><ProjectsRoute/></Suspense>;
+}
+function ProjectsRoute() {
+  const query = useSearchParams(); const router = useRouter(); const compatibility = query.get("compat") === "1";
+  useEffect(() => { if (!compatibility) router.replace("/workspace/projects"); }, [compatibility, router]);
+  return compatibility ? <LegacyProjectsPage/> : <div style={{ minHeight: "100vh", background: "#0b1220", color: "#c7d5ed", padding: 32 }}>正在打开 V4 项目库…</div>;
+}
+function LegacyProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);

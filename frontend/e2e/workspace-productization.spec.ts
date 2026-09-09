@@ -88,9 +88,10 @@ async function fixture(page: Page) {
 test("real-mode Thread DTOs support paging, retained boundaries, Story and multiple Evidence sources", async ({ page }) => {
   const state = await fixture(page);
   await page.goto(`/workspace/history?project=${project.id}`);
+  await page.getByRole("button", { name: "按时间查看", exact: true }).click();
   await expect(page.locator(".pf-chapter-reading h2")).toHaveText(chapter.title);
   await capture(page, "history-chapter");
-  await page.getByRole("button", { name: "演变主线", exact: true }).click();
+  await page.getByRole("button", { name: "按长期主题查看", exact: true }).click();
   await expect(page.locator(".pf-thread-card")).toHaveCount(12);
   await expect(page.getByText("来源可能已变化", { exact: false })).toBeVisible();
   await capture(page, "history-thread-list");

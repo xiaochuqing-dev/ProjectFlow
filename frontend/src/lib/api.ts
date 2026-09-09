@@ -3195,6 +3195,26 @@ export type ProjectCurrentState = {
   latestSuccessfulAt: string | null;
 };
 
+export type ProjectWorkline = {
+  id: string; branch: string; head: string; purpose: string;
+  classification: "DECLARED" | "INFERRED" | "UNKNOWN";
+  state: string; mergeState: string; mergeBasis: string; lastActivity: string; firstSampleActivity: string;
+  ahead: number | null; behind: number | null; mergeBase: string; dependsOn: string;
+  localAvailable: boolean; remoteHeadDiffers: boolean; changedFiles: string[]; commitSubjects: string[]; authors: string[];
+  pullRequest: { number: number; title: string; excerpt: string; state: string; draft: boolean; base: string; head: string;
+    headSha: string; updatedAt: string; mergedAt: string; url: string; issues: string[]; checks: string } | null;
+  sources: { kind: string; label: string; reference: string; observedAt: string }[]; limitations: string[];
+};
+export type ProjectWorklinePage = {
+  observedAt: string; githubObservedAt: string; githubStatus: string; defaultBranch: string;
+  branchCount: number; truncated: boolean; stale: boolean; groups: Record<string, number>;
+  items: ProjectWorkline[]; page: number; totalPages: number; totalElements: number; limitations: string[];
+};
+export function getProjectWorklines(token: string, projectId: string, page = 0, group = "ALL", query = ""): Promise<ProjectWorklinePage> {
+  const params = new URLSearchParams({ page: String(page), size: "12", group, query });
+  return requestJson<ProjectWorklinePage>(`/projects/${projectId}/history/worklines?${params}`, { headers: { Authorization: `Bearer ${token}` } });
+}
+
 export type ProjectHistoryCorrection = {
   id: string;
   projectId: string;

@@ -46,7 +46,7 @@ test("项目分析自动记录事实并保持工作台快速恢复", async ({ pa
   await page.goto(`/dashboard?projectId=${fixture.projectId}`);
   await expect(page.getByText("最新分析批次")).toBeVisible({ timeout: 3_000 });
 
-  await page.goto("/settings");
+  await page.goto("/settings?compat=1");
   const snapshotReturnStartedAt = Date.now();
   const snapshotCalibration = page.waitForResponse((response) => response.url().includes(`/projects/${fixture.projectId}/dashboard-bootstrap`));
   await page.goto(`/dashboard?projectId=${fixture.projectId}`, { waitUntil: "domcontentloaded" });
@@ -71,7 +71,7 @@ test("项目分析自动记录事实并保持工作台快速恢复", async ({ pa
   await expect(page.getByText("最新分析批次")).toBeVisible({ timeout: 750 });
 
   await page.route(`**/api/projects/${fixture.projectId}/github/status`, (route) => route.abort());
-  await page.goto("/settings");
+  await page.goto("/settings?compat=1");
   await page.goto(`/dashboard?projectId=${fixture.projectId}`, { waitUntil: "domcontentloaded" });
   await expect(page.getByText("最新分析批次")).toBeVisible({ timeout: 750 });
   await expect(page.getByText(/GitHub.*刷新失败，核心分析结果已保留/)).toBeVisible({ timeout: 3_000 });

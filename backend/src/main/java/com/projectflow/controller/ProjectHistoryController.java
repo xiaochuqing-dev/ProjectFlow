@@ -72,6 +72,19 @@ public class ProjectHistoryController {
         return ApiResponse.ok(historyService.currentState(user.id(), projectId));
     }
 
+    @GetMapping("/worklines")
+    ApiResponse<com.projectflow.service.ProjectWorklineCollector.Page> worklines(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "12") int size,
+        @RequestParam(defaultValue = "ALL") String group,
+        @RequestParam(defaultValue = "") String query
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(historyService.worklines(user.id(), projectId, page, size, group, query));
+    }
+
     @GetMapping("/chapters")
     ApiResponse<HistoryChapterPageResponse> chapters(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,

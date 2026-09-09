@@ -2,6 +2,8 @@
 
 Last updated: 2026-09-09
 
+V4.0-D 在 PR #23 Head `703120998f2296b4e615cd785e651a351c5dc8c9` 上以独立 worktree 推进。普通项目、创建/接入、设置与旧普通 History 链接进入 V4；工程兼容工具必须显式进入。当前状态用来源门槛区分声明、推断和可确认结果，无来源计划与进度保持空。History 默认变化概览，另有按时间与按长期主题阅读。Workline 和有界 README/roadmap 声明作为既有 History snapshot 的版本化派生字段，在显式 Job 中读取，GET 仅分页读持久化内容；失败保留上次工作线并显示过期状态。没有新增 schema、引擎或 Git 写操作。真实 Dogfood、模型、Windows、CI 及剩余边界见本阶段报告；不得提前声称 Owner Review 或正式 Release 通过。
+
 V4.0-C 在 PR #22 实际 Head `7d5f30eff3a05105b7f3f60e07e352d297301ed5` 上以独立 worktree 和 `codex/v4.0-c-gui-productization` 分支推进。V4 History 已接入分页 Thread/Chapter、完整关联 Story、多来源 Evidence 和缺失/冲突/未知边界；全局设置已迁入 Provider CRUD、唯一默认选择、连接测试与安全凭据确认。共享原生 dialog、响应式抽屉和表单样式继续沿用 V4-B 视觉。没有新增后端引擎、schema 或依赖。项目级 Provider 绑定尚无持久化接口，Obsidian 仍为 CLI；项目接入、登录、历史修正和重复配置清理保留兼容入口。本轮只交付依赖 PR #22 的 Draft，不合并 PR #21/#22，不创建 Tag/Release，不启动 Desktop Shell。实际验证和交付状态以 `docs/projectflow-v4.0-c-gui-productization-report.md` 及其 Evidence 为准。
 
 V4.0-B GUI 第一版设计原型已在独立分支建立 `/workspace/projects`、`current`、`history`、`handoff`、`project-settings` 和 `settings` 六页。显式 `?demo=1` 才加载设计示例；正常入口读取既有项目、Current State、History 和 Context Package，刷新复用持久化 Job。视觉沿用用户给定的三栏午夜蓝参考图、左下山脉和右下星球。旧项目接入、ZIP、本地绑定、登录和模型配置入口继续可达。V4-A 的 PR #21 尚未合并，本轮只消费其 IA 合同；产品后端版本仍为 V3.10。Owner 已反馈“这个版本不错”并明确授权推送，本轮以 Draft PR #22 交付第一版设计原型，尚未进入 V4 正式发布。实现、截图、验证边界与后续设计债见 `docs/projectflow-v4.0-b-gui-first-prototype-report.md`。

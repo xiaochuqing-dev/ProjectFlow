@@ -10,6 +10,7 @@ import {
   type ProjectHistoryStory, type ProjectHistoryThread, type ProjectHistoryThreadDetail,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
+import { claimLabels } from "@/lib/workspace-claims";
 import { projectHistoryPresentationLabel, projectHistoryTransitionLabel } from "@/lib/project-history";
 import { persistedStory, workspaceHref, type WorkspaceProject, type WorkspaceStory } from "@/lib/workspace-preview";
 
@@ -18,7 +19,8 @@ type Props = { project: WorkspaceProject; demo: boolean; onStory: (story: Worksp
 export function HistoryPage({ project, demo, onStory }: Props) {
   const query = useSearchParams();
   const router = useRouter();
-  const axis = query.get("axis") === "threads" || query.has("thread") ? "threads" : "chapters";
+  const axis = query.get("axis") === "threads" || query.has("thread") ? "threads"
+    : query.has("chapter") || query.get("axis") === "time" ? "chapters" : "overview";
   const chapterId = query.get("chapter") || project.chapters.at(-1)?.id || "";
   const base = workspaceHref("history", demo, project.id);
   const [page, setPage] = useState(0);
@@ -71,22 +73,23 @@ export function HistoryPage({ project, demo, onStory }: Props) {
       <span className="pf-eyebrow">{project.name} / PROJECT JOURNEY</span><h2>每一次变化，都有来处。</h2><p>{project.summary}</p>
       <div><Clock3 size={14} />{project.chapters[0]?.range.split(" – ")[0] || "尚无历史起点"}<span>—</span>
         {project.chapters.at(-1)?.range.split(" – ").at(-1) || "等待材料"}
-        <span className="pf-chip recorded">{demo ? project.chapters.length : chapterList?.totalElements ?? project.chapters.length} 个已记录阶段</span></div>
+        <span className="pf-chip recorded">{demo ? project.chapters.length : chapterList?.totalElements ?? project.chapters.length} 个时间篇章 · 系统归纳</span></div>
     </div>
     {(project.stale || project.degraded) && <div className="pf-notice" role="status">
       {project.stale ? "来源可能已变化，以下保留上次已保存的历程。" : "部分内容待核对，以下保留已保存的历程。"}
     </div>}
     <div className="pf-history-axis">
       <div className="pf-segmented" aria-label="历程阅读方式">
+        <button aria-pressed={axis === "overview"} className={axis === "overview" ? "active" : ""} onClick={() => router.push(base, { scroll: false })}>变化概览</button>
         <button aria-pressed={axis === "chapters"} className={axis === "chapters" ? "active" : ""}
-          onClick={() => router.push(`${base}${chapterId ? `&chapter=${encodeURIComponent(chapterId)}` : ""}`, { scroll: false })}><BookOpenText size={16} />项目阶段</button>
+          onClick={() => router.push(`${base}&axis=time${chapterId ? `&chapter=${encodeURIComponent(chapterId)}` : ""}`, { scroll: false })}><BookOpenText size={16} />按时间查看</button>
         <button aria-pressed={axis === "threads"} className={axis === "threads" ? "active" : ""}
-          onClick={() => router.push(`${base}&axis=threads${selectedId ? `&chapter=${encodeURIComponent(selectedId)}` : ""}`, { scroll: false })}><Workflow size={16} />演变主线</button>
-      </div><span>{axis === "chapters" ? "按时间回看项目的不同篇章" : "跨篇章阅读同一个主题"}</span>
+          onClick={() => router.push(`${base}&axis=threads${selectedId ? `&chapter=${encodeURIComponent(selectedId)}` : ""}`, { scroll: false })}><Workflow size={16} />按长期主题查看</button>
+      </div><span>{axis === "chapters" ? "项目按时间先后经历了什么" : axis === "threads" ? "某个功能、问题或方向如何持续变化" : "先看最近发生了什么，再深入时间或主题"}</span>
     </div>
     {axis === "threads" ? <ThreadReader project={project} demo={demo} onStory={onStory}
       chapters={chapterList} chapterPage={page} onChapterPage={setPage} chapterLoading={listLoading}
-      chapterError={listError} onChapter={openChapter} onRetry={() => setRetry((n) => n + 1)} /> : <div className="pf-journey-layout">
+      chapterError={listError} onChapter={openChapter} onRetry={() => setRetry((n) => n + 1)} /> : axis === "overview" ? <section className="pf-history-overview"><h2>项目变化概览</h2><p>按实际发生时间阅读变化故事。标题与摘要是系统归纳，计划和冲突保留来源身份。</p>{project.stories.slice(0, 8).map(story => <StoryCard key={story.id} story={story} onStory={onStory}/>)}{!project.stories.length && <p className="pf-notice">尚无可读历史；当前材料不会被编排成虚构的成熟阶段。</p>}</section> : <div className="pf-journey-layout">
       <nav className="pf-chapter-nav" aria-label="项目阶段">
         {listLoading && <p role="status">正在读取篇章目录…</p>}
         {listError && <ReadError message={listError} onRetry={() => setRetry((n) => n + 1)} />}
@@ -225,7 +228,7 @@ function ThreadReader({ project, demo, onStory, chapters, chapterPage, onChapter
 
 export function StoryCard({ story, onStory }: { story: WorkspaceStory; onStory: (story: WorkspaceStory) => void }) {
   return <button className="pf-story-card" onClick={() => onStory(story)}>
-    <div><time>{story.date}</time><span className={`pf-chip ${story.status}`}>{story.status === "conflict" ? "存在冲突" : story.status === "attention" ? "待核对" : "变化记录"}</span></div>
+    <div><time>{story.date}</time><span className={`pf-chip ${story.status}`}>{story.classification ? claimLabels[story.classification] : story.status === "conflict" ? "存在冲突" : story.status === "attention" ? "待核对" : "变化记录"}</span></div>
     <h3>{story.title}</h3><p>{story.summary}</p><footer><span>阅读此前状态、本次变化与当前结果</span><ArrowRight size={16} /></footer>
   </button>;
 }

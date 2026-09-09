@@ -85,6 +85,7 @@ test("chapter, theme and evidence drilldowns retain context and keyboard focus",
   page,
 }) => {
   await open(page, "history");
+  await page.getByRole("button", { name: "按时间查看", exact: true }).click();
   await page.getByRole("button", { name: /CHAPTER 02/ }).click();
   await expect(page.locator(".pf-chapter-reading h2")).toHaveText(
     "多 Agent 能力建设",
@@ -101,7 +102,7 @@ test("chapter, theme and evidence drilldowns retain context and keyboard focus",
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(story).toBeFocused();
-  await page.getByRole("button", { name: "演变主线", exact: true }).click();
+  await page.getByRole("button", { name: "按长期主题查看", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "从独立执行到多 Agent 协作" }),
   ).toBeVisible();
@@ -272,6 +273,7 @@ function currentState(confirmedState = "上次可确认结果") {
     projectId: liveProject.id,
     confirmedState,
     recentConfirmedChanges: ["已确认的材料变化"],
+    relatedStoryRefs: ["saved-result"],
     latestSuccessfulAt: "2026-09-01T10:00:00Z",
     stale: true,
     degraded: false,
@@ -334,15 +336,16 @@ test("live reads never fall back to fixtures or promote ordinary stories", async
   await fixtureApi(page);
   await open(page, "current", "?project=fixture-project");
   await expect(page.locator(".pf-hero h2")).toHaveText(liveProject.name);
-  await expect(page.locator(".pf-changes")).toContainText("已确认的材料变化");
-  await expect(page.locator(".pf-changes")).not.toContainText(
+  const confirmed = page.locator(".pf-real-section").filter({ has: page.getByRole("heading", { name: "已经确认的结果" }) });
+  await expect(confirmed).toContainText("尚不足以展示可确认的结果");
+  await expect(confirmed).not.toContainText(
     "仅声明但未确认的历史描述",
   );
   await expect(page.getByText("78%", { exact: true })).toHaveCount(0);
   await expect(
     page.getByText("Corporation-Agent", { exact: true }),
   ).toHaveCount(0);
-  await expect(page.getByText(/项目有新材料或状态可能过期/)).toBeVisible();
+  await expect(page.getByText(/材料可能已变化/)).toBeVisible();
   await screenshot(page, "current-live-stale");
   await page.unrouteAll();
   await page.route("**/api/**", (route) =>
