@@ -262,6 +262,8 @@ test("demo Provider interactions issue no API requests and all supported widths 
 });
 
 test("compact Evidence drawer contains Tab focus, closes with Escape and restores its trigger", async ({ page }) => {
+  const session = await page.context().newCDPSession(page);
+  await session.send("Emulation.setCPUThrottlingRate", { rate: 4 });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/workspace/current?demo=1");
   const trigger = page.getByRole("button", { name: "展开工程证据", exact: true });
@@ -270,6 +272,7 @@ test("compact Evidence drawer contains Tab focus, closes with Escape and restore
   await expect(drawer).toBeVisible();
   for (let i = 0; i < 16; i++) {
     await page.keyboard.press("Tab");
+    await expect(drawer).toBeVisible();
     expect(await drawer.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   }
   await page.keyboard.press("Escape");
@@ -278,6 +281,7 @@ test("compact Evidence drawer contains Tab focus, closes with Escape and restore
   const navigation = page.getByRole("dialog", { name: "侧边栏" });
   for (let i = 0; i < 15; i++) {
     await page.keyboard.press("Tab");
+    await expect(navigation).toBeVisible();
     expect(await navigation.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   }
   await page.keyboard.press("Escape");

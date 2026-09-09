@@ -2,21 +2,21 @@
   "status": "PASS",
   "invokedFrom": "parent directory",
   "command": ".\\ProjectFlow-v4-gui-productization\\Start-ProjectFlow.bat -NoBrowser",
-  "source": "current working tree with Netty 4.1.137.Final patch",
+  "source": "current working tree with final drawer timing correction and Netty 4.1.137.Final",
   "startup": {
     "version": "3.10.0",
-    "sourceRevision": "f65bcc8ece95ebc8d09bf90806c49fcdec918ffb",
+    "sourceRevision": "dfaeb7a2a2864d451e7094074562921c002fde20",
     "hasLocalChanges": true,
     "frontendDependencies": "verified",
-    "frontendBuildId": "ThOUW7r5SRRLb_fiE9yGH",
-    "frontendBuiltAt": "2026-09-09T16:16:42.1913715+08:00",
-    "readyAt": "2026-09-09T16:16:55.4200491+08:00",
+    "frontendBuildId": "z8-hd_M9KNysl2gyAS95R",
+    "frontendBuiltAt": "2026-09-09T16:51:08.9474131+08:00",
+    "readyAt": "2026-09-09T16:51:22.2306233+08:00",
     "frontendUrl": "http://127.0.0.1:3000/login",
     "backendHealthUrl": "http://127.0.0.1:8080/api/health"
   },
   "ui": {
     "status": "PASS",
-    "checkedAt": "2026-09-09T08:17:04.019Z",
+    "checkedAt": "2026-09-09T08:52:05.99Z",
     "backendHealth": "PASS",
     "loginRoute": "existing local-mode redirect to welcome",
     "welcomeToV4": "PASS",
@@ -30,16 +30,29 @@
   "exitCode": 0,
   "remainingListeners3000And8080": 0,
   "forcedTermination": false,
-  "checkedAt": "2026-09-09T16:17:51.9543262+08:00",
-  "previousSuccessfulStartup": {
-    "version": "3.10.0",
-    "sourceRevision": "7d5f30eff3a05105b7f3f60e07e352d297301ed5",
-    "hasLocalChanges": true,
-    "frontendDependencies": "verified",
-    "frontendBuildId": "9mCEjnWbE3pIs33wbAI77",
-    "frontendBuiltAt": "2026-09-09T15:53:28.7806108+08:00",
-    "readyAt": "2026-09-09T15:53:46.1709395+08:00",
-    "frontendUrl": "http://127.0.0.1:3000/login",
-    "backendHealthUrl": "http://127.0.0.1:8080/api/health"
-  }
+  "checkedAt": "2026-09-09T16:53:16.2820695+08:00",
+  "previousSuccessfulStartups": [
+    {
+      "version": "3.10.0",
+      "sourceRevision": "7d5f30eff3a05105b7f3f60e07e352d297301ed5",
+      "hasLocalChanges": true,
+      "frontendDependencies": "verified",
+      "frontendBuildId": "9mCEjnWbE3pIs33wbAI77",
+      "frontendBuiltAt": "2026-09-09T15:53:28.7806108+08:00",
+      "readyAt": "2026-09-09T15:53:46.1709395+08:00",
+      "frontendUrl": "http://127.0.0.1:3000/login",
+      "backendHealthUrl": "http://127.0.0.1:8080/api/health"
+    },
+    {
+      "version": "3.10.0",
+      "sourceRevision": "f65bcc8ece95ebc8d09bf90806c49fcdec918ffb",
+      "hasLocalChanges": true,
+      "frontendDependencies": "verified",
+      "frontendBuildId": "ThOUW7r5SRRLb_fiE9yGH",
+      "frontendBuiltAt": "2026-09-09T16:16:42.1913715+08:00",
+      "readyAt": "2026-09-09T16:16:55.4200491+08:00",
+      "frontendUrl": "http://127.0.0.1:3000/login",
+      "backendHealthUrl": "http://127.0.0.1:8080/api/health"
+    }
+  ]
 }

@@ -99,6 +99,7 @@ export function Workspace({ view }: { view: WorkspaceView }) {
   const command = useRef<HTMLDialogElement>(null);
   const main = useRef<HTMLElement>(null);
   const shell = useRef<HTMLDivElement>(null);
+  const previousView = useRef(view);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startingRef = useRef(false);
   const scopeRef = useRef("");
@@ -266,6 +267,9 @@ export function Workspace({ view }: { view: WorkspaceView }) {
     };
   }, []);
   useEffect(() => {
+    // Initial hydration can finish after the first click; only navigation closes drawers.
+    if (previousView.current === view) return;
+    previousView.current = view;
     main.current?.scrollTo(0, 0);
     setMobileNav(false);
     setNarrowEvidence(false);

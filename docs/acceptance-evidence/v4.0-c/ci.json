@@ -1,5 +1,5 @@
 {
-  "status": "PASS",
+  "status": "DRAWER_PATCH_RETEST_PENDING",
   "branch": "codex/v4.0-c-gui-productization",
   "base": "codex/v4.0-b-gui-first-prototype",
   "dependencyPullRequest": 22,
@@ -236,11 +236,39 @@
   ],
   "verifiedHead": "f4145a5fd97a50cff7752efb7da045352872e6b9",
   "recordedAt": "2026-09-09T08:28:09.770Z",
-  "scope": "Final implementation and Netty patch; a later docs-only commit records these completed runs. Check GitHub for current PR-head status.",
+  "scope": "Last passing feature Head before the late drawer correction. New patch CI will replace the current verified identity after completion.",
   "requiredJobResults": {
     "success": 20,
     "failures": 0,
     "pending": 0,
     "optionalRealProviderSkipped": 4
+  },
+  "lateValidationFailure": {
+    "head": "dfaeb7a2a2864d451e7094074562921c002fde20",
+    "runId": 34329325825,
+    "jobId": 102393940592,
+    "url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34329325825/job/102393940592",
+    "job": "browser-e2e",
+    "tests": 32,
+    "passed": 31,
+    "failed": 1,
+    "retry": "same case failed again",
+    "case": "compact Evidence drawer contains Tab focus, closes with Escape and restores its trigger",
+    "traceFinding": "drawer closed before first Tab without another click, navigation or viewport change",
+    "resolution": "Initial view effect now skips drawer reset until view actually changes; preserve focus assertions and add visibility assertions after each Tab",
+    "localBefore": {
+      "tests": 12,
+      "passed": 12,
+      "note": "Quick local attempts did not reproduce the CI timing failure"
+    },
+    "localAfter": {
+      "tests": 20,
+      "passed": 20,
+      "cpuThrottle": 4
+    },
+    "productionE2eAfter": {
+      "tests": 32,
+      "passed": 32
+    }
   }
 }

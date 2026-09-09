@@ -8,6 +8,7 @@
 
 生产依赖门禁发现继承的 Next/Sharp 漏洞后，定向升级 Next 16.3.2 → 16.3.4、Sharp 0.35.3 → 0.35.4 及其对应原生包，审计恢复 0 漏洞；没有使用强制降级或关闭 required gate。
 首次 GitHub OSV 又检出 Netty 4.1.136.Final 的两项公告，核对官方修复后仅调整既有 `netty.version` 为 4.1.137.Final，未改变 Java 业务源码或模型协议。失败、补丁和复验记录追加于本阶段 Evidence。
+末轮 PR 浏览器检查发现初始视图 effect 可能关闭刚打开的 Evidence 抽屉；改为仅在实际页面切换时重置，保留键盘断言并加入每次 Tab 后仍可见检查。四倍 CPU 限速连续 20 轮已通过，最终整体验收以阶段报告为准。
 
 ## ProjectFlow V3.10 PR 合并、master 复验与最终事实回填 - 2026-08-29
 

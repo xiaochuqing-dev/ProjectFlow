@@ -1,6 +1,6 @@
 # ProjectFlow V4.0-C GUI 产品化与深层交互迁移
 
-状态：实现、本地验收和 GitHub 门禁完成，以 Draft PR #23 交付；不是 V4 正式发布。日期：2026-09-09。
+状态：以 Draft PR #23 交付；末轮 CI 暴露的抽屉时序问题已修复，正在复验。不是 V4 正式发布。日期：2026-09-09。
 
 ## 目标与基线
 
@@ -61,6 +61,7 @@ Thread → Story → Evidence 的普通阅读不再依赖旧 History 页面。�
 原生 `<dialog>` 提供焦点约束、Escape 与返回焦点；修复 React StrictMode 关闭/重开时队列事件误关弹窗。窄屏导航与 Evidence 抽屉将外部区域设为 inert、限制 Tab 并恢复触发器焦点。表单、详情、状态、分页按钮共享现有颜色与尺寸。
 
 截图检查另修复 640px 固定导航仍显示关闭按钮的问题：抽屉状态与 CSS 的 620px 断点一致，放大窗口时退出 modal 并恢复外部可交互区域；保留对应浏览器断言。
+验收回填提交的 PR CI 另暴露初始挂载后的视图重置可能关闭刚打开的 Evidence 抽屉。Trace 显示抽屉在第一下 Tab 前消失，期间没有关闭、导航或视口变化操作；现在仅在 `view` 实际改变时重置抽屉。原断言保留，增加每次 Tab 后仍可见的断言，并以四倍 CPU 限速执行同一用例。
 
 浏览器用例覆盖 390、640、1024、1280×801 和 1600 宽度；长中文和无空格引用能换行，Story/Evidence 和高级表单不横向溢出。截图与视觉检查结论见 [Evidence 索引](acceptance-evidence/v4.0-c/README.md)。
 
@@ -96,7 +97,7 @@ Obsidian CORE 默认、opt-in、managed block 和模型零调用边界均保持�
 | Frontend contracts | PASS，63/63 |
 | Production build | PASS，Next 16.3.4；最后入口/断点修正后重新构建 |
 | Production GUI | 独立生产 GUI 19/19 PASS；最后入口/断点修正后随完整生产 E2E 再验证 |
-| 完整前后端 E2E | dev 31/31 PASS；最终生产模式 32/32 PASS，包含最终入口/断点回归 |
+| 完整前后端 E2E | 最后抽屉时序修复后生产模式 32/32 PASS；另在开发模式四倍 CPU 限速连续验证抽屉 20/20 |
 | Backend/H2 full suite | Netty 4.1.137 补丁后复验 PASS，717 项、0 failure、0 error、11 项条件跳过；Dogfood 3/3 |
 | PostgreSQL 16 / migration | Netty 补丁后复验 PASS，实际运行 7/7（6 项业务/并发约束与 1 项 Flyway）；Failsafe 共 13 项，6 项可选外部评测未启用 |
 | Hermes | PASS，10/10 |
@@ -104,7 +105,7 @@ Obsidian CORE 默认、opt-in、managed block 和模型零调用边界均保持�
 | 安全验收产物校验 | PASS，`V380_ACCEPTANCE_EVIDENCE_OK` |
 | 生产依赖审计 | PASS，Next 16.3.4 / Sharp 0.35.4，0 vulnerabilities |
 | Windows 根启动器 | PASS；从父目录相对调用、重建、真实 V4 入口、正常退出、3000/8080 无监听 |
-| GitHub required CI | PASS，功能提交 f4145a5 的 push / pull_request Quality 与 Windows 共 4 次运行全部成功；外部真实模型为显式可选跳过 |
+| GitHub required CI | f4145a5 的 4 次运行全部通过；dfaeb7a PR 浏览器发现抽屉时序问题，已修复且本地复验通过，修复后 CI 待完成 |
 | 外部真实模型 | NOT_RUN_NOT_NEEDED，未读取真实 Key 或发起付费调用 |
 
 ### 失败与修复记录
@@ -116,6 +117,7 @@ Obsidian CORE 默认、opt-in、managed block 和模型零调用边界均保持�
 5. 依赖审计发现继承的 1 critical / 1 high，定向官方补丁后恢复 0 漏洞。
 6. 人工检查生成截图时发现 640px 导航关闭按钮多余；修复断点一致性，并验证从 390px 抽屉放大到 640px 后不残留 modal/inert。
 7. 首次 GitHub OSV job 因 Netty 两项继承漏洞失败；保留 [失败 job](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34327290670/job/102387368517)，定向更新官方 `4.1.137.Final`，未修改门禁、忽略公告或跳过扫描。
+8. 文档回填 `dfaeb7a` 的 push Quality 通过，但 [PR browser-e2e](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34329325825/job/102393940592) 为 31 passed / 1 failed，内建重试也失败。失败为窄屏抽屉被初始化视图重置关闭。本地原始快速用例 12/12 未复现；根据 CI Trace 修复重置时机，保留全部断言并增加可见性检查，修复后四倍 CPU 限速连续 20/20 通过。完整生产与 CI 按修复后版本复验，不把早先通过或本地未复现代替末轮结论。
 
 Backend/H2 的 11 项条件跳过包含 8 项显式外部语义评测、2 项 exact V3.9 旧版本补证、1 项可选 intake benchmark。本轮本地未重复构建旧版本应用，exact V3.9 H2/PostgreSQL 升级由 required CI 独立门禁验证。凭据相关本地回归包括 AiProviderCredentialSecurity 12/12、Credential Migration 4/4、Credential Store 2/2、Windows DPAPI 1/1、Gateway credential boundary 1/1；安全与 H2/Flyway 适用回归均随全量执行。
 
@@ -126,6 +128,7 @@ Backend/H2 的 11 项条件跳过包含 8 项显式外部语义评测、2 项 ex
 从工作区父目录相对调用 `Start-ProjectFlow.bat -NoBrowser`，实际执行依赖校验、Next 16.3.4 重建、Java 8080 与前端 3000 启动。`logs/last-embedded-build.json` 记录当前工作树有本地修改，readyAt 为 `2026-09-09T15:53:46.1709395+08:00`。浏览器验证 `/login` 的既有本地跳转、欢迎页主入口、真实空项目库与 Provider 空 Key 表单；无页面错误、无写请求、无 Demo fallback。按 Enter 正常退出，进程返回 0，再次确认 3000/8080 无监听，没有强制终止。此次只证明有本地修改时重建当前树，未把未执行的干净工作区远程同步路径记为本轮通过。
 
 Netty 补丁后的根启动器复验也已通过，readyAt 为 `2026-09-09T16:16:55.4200491+08:00`。再次确认真实 V4 入口、空 Key 表单、零写入、正常退出和端口释放。生成 JAR 中七个 Netty 模块均为 `4.1.137.Final`；两次启动来源分别保存在 Windows Evidence 中。
+抽屉时序修复后第三次根启动器验证通过，readyAt 为 `2026-09-09T16:51:22.2306233+08:00`；同样通过真实入口、零写入和正常退出/端口检查，完整启动历史保存在 Windows Evidence。
 
 本轮已推送自己的分支并创建依赖 PR #22 的 [Draft PR #23](https://github.com/xiaochuqing-dev/ProjectFlow/pull/23)。首次 Quality 除 Netty OSV 外全部通过（浏览器 32/32，exact V3.9 H2/PostgreSQL 证明通过），Windows portable 两次运行均通过。Netty 补丁功能提交 `f4145a5fd97a50cff7752efb7da045352872e6b9` 的 [PR Quality](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34328476487)、[PR Windows](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34328475343)、[push Quality](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34328470853) 和 [push Windows](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34328470361) 全部成功。外部真实 Provider jobs 按本轮边界未启用。各次实际 Run 与 job 结果保存在 `acceptance-evidence/v4.0-c/ci.json`；后续仅回填文档的提交不冒充这些已完成运行的源码身份，最新 PR Head 的门禁以 GitHub 为准。
 

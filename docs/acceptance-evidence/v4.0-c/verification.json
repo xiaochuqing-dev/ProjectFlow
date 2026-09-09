@@ -1,7 +1,7 @@
 {
   "stage": "V4.0-C Draft",
   "date": "2026-09-09",
-  "status": "PASS",
+  "status": "LOCAL_PASS_CI_RETEST_PENDING",
   "baseCommit": "7d5f30eff3a05105b7f3f60e07e352d297301ed5",
   "scope": "current productization working tree; CI commit identity is recorded separately",
   "checks": [
@@ -35,7 +35,7 @@
       "failures": 0,
       "skipped": 0,
       "includes": "20 Workspace UI tests, persisted History/Thread/Evidence, temporary Provider CRUD, legacy workflow",
-      "note": "Final GUI code before the backend-only Netty patch; patched backend validated again by full Maven, Windows and GitHub E2E"
+      "note": "Rerun after final drawer correction and Netty patch: 32 passed; includes 4x CPU drawer case"
     },
     {
       "name": "Development frontend and Java E2E",
@@ -131,7 +131,7 @@
     },
     {
       "name": "GitHub required CI",
-      "status": "PASS",
+      "status": "DRAWER_PATCH_RETEST_PENDING",
       "evidence": "ci.json",
       "verifiedHead": "f4145a5fd97a50cff7752efb7da045352872e6b9",
       "note": "Quality and Windows portable passed for push and pull_request; optional external model jobs remain intentionally not run"
@@ -150,6 +150,15 @@
         "transport"
       ],
       "note": "Read from BOOT-INF/lib of the actual Maven verify JAR"
+    },
+    {
+      "name": "Drawer timing repetition",
+      "status": "PASS",
+      "command": "npx playwright test e2e/workspace-productization.spec.ts --grep \"compact Evidence drawer\" --repeat-each=20",
+      "tests": 20,
+      "failures": 0,
+      "cpuThrottle": 4,
+      "mode": "development frontend with actual browser"
     }
   ],
   "retainedFailures": [
@@ -203,6 +212,35 @@
       ],
       "resolution": "Existing netty.version updated to 4.1.137.Final; full local Maven/PostgreSQL, Windows launcher and all GitHub required gates passed",
       "url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34327290670/job/102387368517"
+    },
+    {
+      "attempt": "docs-backfill PR browser-e2e on dfaeb7a",
+      "head": "dfaeb7a2a2864d451e7094074562921c002fde20",
+      "runId": 34329325825,
+      "jobId": 102393940592,
+      "url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34329325825/job/102393940592",
+      "job": "browser-e2e",
+      "tests": 32,
+      "passed": 31,
+      "failed": 1,
+      "retry": "same case failed again",
+      "case": "compact Evidence drawer contains Tab focus, closes with Escape and restores its trigger",
+      "traceFinding": "drawer closed before first Tab without another click, navigation or viewport change",
+      "resolution": "Initial view effect now skips drawer reset until view actually changes; preserve focus assertions and add visibility assertions after each Tab",
+      "localBefore": {
+        "tests": 12,
+        "passed": 12,
+        "note": "Quick local attempts did not reproduce the CI timing failure"
+      },
+      "localAfter": {
+        "tests": 20,
+        "passed": 20,
+        "cpuThrottle": 4
+      },
+      "productionE2eAfter": {
+        "tests": 32,
+        "passed": 32
+      }
     }
   ]
 }
