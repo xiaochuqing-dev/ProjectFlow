@@ -1,0 +1,34 @@
+{
+  "status": "PASS",
+  "invokedFrom": "parent directory",
+  "command": ".\\ProjectFlow-v4-gui-productization\\Start-ProjectFlow.bat -NoBrowser",
+  "source": "current working tree with local changes",
+  "startup": {
+    "version": "3.10.0",
+    "sourceRevision": "7d5f30eff3a05105b7f3f60e07e352d297301ed5",
+    "hasLocalChanges": true,
+    "frontendDependencies": "verified",
+    "frontendBuildId": "9mCEjnWbE3pIs33wbAI77",
+    "frontendBuiltAt": "2026-09-09T15:53:28.7806108+08:00",
+    "readyAt": "2026-09-09T15:53:46.1709395+08:00",
+    "frontendUrl": "http://127.0.0.1:3000/login",
+    "backendHealthUrl": "http://127.0.0.1:8080/api/health"
+  },
+  "ui": {
+    "status": "PASS",
+    "checkedAt": "2026-09-09T07:54:53.335Z",
+    "backendHealth": "PASS",
+    "loginRoute": "existing local-mode redirect to welcome",
+    "welcomeToV4": "PASS",
+    "realWorkspace": "PASS",
+    "providerDialog": "PASS",
+    "writes": 0,
+    "demoFallback": false,
+    "pageErrors": 0
+  },
+  "exitMethod": "Enter, then batch pause acknowledgement",
+  "exitCode": 0,
+  "remainingListeners3000And8080": 0,
+  "forcedTermination": false,
+  "checkedAt": "2026-09-09T15:57:23.2486252+08:00"
+}

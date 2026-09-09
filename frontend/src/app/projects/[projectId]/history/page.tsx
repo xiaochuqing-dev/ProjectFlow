@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ExternalLink, EyeOff, FileSearch, Pin, RotateCcw, Save } from "lucide-react";
+import { safeHistoryDeepLink } from "@/lib/project-history";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
@@ -519,9 +520,4 @@ function formatMoment(value: string | null | undefined) {
   if (!value) return "未知时间";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-CN", { hour12: false });
-}
-
-function safeHistoryDeepLink(value: string | null | undefined) {
-  const candidate = value?.trim() ?? "";
-  return /^(https:\/\/|\/projects\/|obsidian:\/\/)/i.test(candidate) ? candidate : "";
 }

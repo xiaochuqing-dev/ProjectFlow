@@ -1,0 +1,42 @@
+{
+  "taskGoal": "在 V4.0-B 基础上完成 GUI 产品化：把真实 Evolution Thread 核心阅读与全局 Provider 日常管理迁入 V4 Workspace，保留事实、安全凭据与 Demo 隔离边界。",
+  "actualChanges": [
+    "V4 History 增加分页 Chapter / Evolution Thread 目录、主题筛选、可恢复的 URL 状态和完整主线阅读；Story 与多事件 Evidence 在同一工作区渐进展开，保留过期、缺失、冲突与未知边界。",
+    "V4 全局设置支持真实 Provider 创建、编辑、默认选择、连接测试和确认删除；空 Key 编辑保留凭据，清除/替换需确认，安全 Header 不回显且普通编辑保留高级配置。",
+    "统一深层表单、弹窗、错误状态与响应式抽屉，修复 StrictMode 弹窗事件竞争及 640px 导航断点；欢迎页主入口进入 V4，Demo 写操作保持页面内模拟，真实读取失败显示错误。",
+    "项目设置明确当前只有全局模型默认项；Obsidian 保留现有 CLI 操作边界，没有建立项目绑定 schema、同步引擎或桌面壳。",
+    "修复既有依赖门禁发现的 Next / Sharp 公告风险，定向更新至 Next 16.3.4 / Sharp 0.35.4，生产依赖审计为零漏洞。",
+    "完成生产前后端 E2E、后端/H2、实际 PostgreSQL 16、凭据、Hermes、Obsidian与 Windows 根启动验证；追加阶段报告及29张截图、测试摘要和无凭据 smoke 记录。"
+  ],
+  "keyFiles": [
+    "frontend/src/components/workspace/HistoryReader.tsx",
+    "frontend/src/components/workspace/WorkspaceStoryDialog.tsx",
+    "frontend/src/components/workspace/ProviderManager.tsx",
+    "frontend/src/components/workspace/WorkspaceDialog.tsx",
+    "frontend/src/components/workspace/Workspace.tsx",
+    "frontend/src/components/workspace/WorkspacePages.tsx",
+    "frontend/src/app/workspace/workspace.css",
+    "frontend/src/app/page.tsx",
+    "frontend/src/lib/provider-settings.ts",
+    "frontend/e2e/workspace-productization.spec.ts",
+    "frontend/e2e/workspace-provider.spec.ts",
+    "frontend/e2e/project-history.spec.ts",
+    "docs/projectflow-v4.0-c-gui-productization-report.md",
+    "docs/acceptance-evidence/v4.0-c/verification.json",
+    "docs/acceptance-evidence/v4.0-c/ci.json"
+  ],
+  "verification": {
+    "build": "PASS：TypeScript、Next 16.3.4 生产构建与 Windows 根启动器从工作区外重建当前工作树。",
+    "tests": "PASS：frontend contracts 63/63；完整生产 E2E 32/32；backend/H2 717 项，0 failure/error、11 条件跳过；PostgreSQL 16 实际 7/7；Hermes 10/10；Obsidian 27/27、no-op 0 writes；凭据与敏感内容适用回归通过；npm audit 0 漏洞。GitHub required CI 待推送后回填；条件跳过见 verification.json。",
+    "manualCheck": "PASS：29 张真实浏览器截图经过 Agent 检查；390/640/1024/1280/1600 布局；Windows 欢迎页进入真实 V4 与 Provider 空 Key 表单，正常退出后3000/8080无监听。原用户工作树修改保持原样。未调用外部模型，不声称 Sol/xhigh 质量验收。"
+  },
+  "unfinished": [
+    "项目级 Provider / Model 绑定不存在可靠持久化接口，后续单独设计；当前 UI 明确使用全局默认。",
+    "Obsidian 配置和同步仍为现有 CLI；完整 Onboarding、展示修正/审计与 Desktop Shell 未在本阶段迁移。",
+    "外部真实模型 smoke 未运行；本地固定模型只证明协议及安全路径，不证明真实模型质量。",
+    "GitHub Draft PR 与 required CI 将在提交推送后记录；当前结果仅为本地验收。"
+  ],
+  "sedimentCandidates": [
+    "V4 Workspace 的真实 Thread → Story → Evidence 阅读与全局 Provider 管理已形成连续路径，具备隔离 Java E2E 与 Windows 启动证据；该结果是待项目验证的 Agent 过程证据。"
+  ]
+}

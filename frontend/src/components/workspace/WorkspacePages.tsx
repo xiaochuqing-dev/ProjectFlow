@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { ProviderManager } from "./ProviderManager";
 import {
   Activity,
   ArrowDownToLine,
@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   ChevronRight,
   Circle,
-  Clock3,
   Copy,
   Database,
   ExternalLink,
@@ -34,12 +33,10 @@ import {
   ShieldCheck,
   Sparkles,
   TriangleAlert,
-  Workflow,
   Zap,
 } from "lucide-react";
 import { Button, Card, SectionHeader } from "@/components/ui/primitives";
 import {
-  getProjectHistoryChapter,
   getWorkspaceContextPackage,
   listAiProviders,
   type AiProvider,
@@ -47,7 +44,6 @@ import {
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
 import {
-  persistedStory,
   type WorkspaceProject,
   type WorkspaceStory,
   type WorkspaceView,
@@ -472,230 +468,6 @@ export function LibraryPage({
   );
 }
 
-export function HistoryPage({
-  project,
-  demo,
-  onStory,
-}: PageProps & { onStory: StoryAction }) {
-  const query = useSearchParams();
-  const [axis, setAxis] = useState("项目阶段");
-  const [chapterId, setChapterId] = useState(
-    query.get("chapter") || project.chapters.at(-1)?.id || "",
-  );
-  const [stories, setStories] = useState<WorkspaceStory[]>(project.stories);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const chapter =
-    project.chapters.find((c) => c.id === chapterId) ?? project.chapters.at(-1);
-  useEffect(() => {
-    if (demo || !chapterId) return;
-    let active = true;
-    setLoading(true);
-    setError("");
-    getProjectHistoryChapter(readSession().accessToken, project.id, chapterId)
-      .then((detail) => {
-        if (active)
-          setStories(
-            detail.stories
-              .filter((s) => !s.hiddenByDefault)
-              .map(persistedStory),
-          );
-      })
-      .catch((e) => {
-        if (active) setError(e.message);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [chapterId, demo, project.id]);
-  return (
-    <div className="pf-history-page">
-      <div className="pf-history-lead">
-        <span className="pf-eyebrow">{project.name} / PROJECT JOURNEY</span>
-        <h2>每一次变化，都有来处。</h2>
-        <p>
-          {demo && project.id === "corporation"
-            ? "从核心框架到企业内测，沿着项目阶段，回看那些真正改变了项目的时刻。"
-            : project.summary}
-        </p>
-        <div>
-          <Clock3 size={14} />
-          {project.chapters[0]?.range.split(" – ")[0] || "尚无历史起点"}
-          <span>—</span>
-          {project.chapters.at(-1)?.range.split(" – ").at(-1) || "等待材料"}
-          <span className="pf-chip running">
-            {project.chapters.length} 个已记录阶段
-          </span>
-        </div>
-      </div>
-      <div className="pf-history-axis">
-        <div className="pf-segmented">
-          {["项目阶段", "演变主线"].map((item) => (
-            <button
-              aria-pressed={axis === item}
-              className={axis === item ? "active" : ""}
-              key={item}
-              onClick={() => setAxis(item)}
-            >
-              {item === "项目阶段" ? (
-                <BookOpenText size={16} />
-              ) : (
-                <Workflow size={16} />
-              )}
-              {item}
-            </button>
-          ))}
-        </div>
-        <span>只叙述已发生的变化</span>
-      </div>
-      {axis === "项目阶段" ? (
-        <div className="pf-journey-layout">
-          <nav className="pf-chapter-nav" aria-label="项目阶段">
-            {project.chapters.map((c, i) => (
-              <button
-                className={c.id === chapterId ? "active" : ""}
-                aria-pressed={c.id === chapterId}
-                onClick={() => setChapterId(c.id)}
-                key={c.id}
-              >
-                <span className="pf-chapter-node">{i + 1}</span>
-                <span>
-                  <small>CHAPTER {String(i + 1).padStart(2, "0")}</small>
-                  <strong>{c.title}</strong>
-                  <small>{c.range}</small>
-                </span>
-              </button>
-            ))}
-          </nav>
-          <div className="pf-chapter-reading">
-            {chapter ? (
-              <>
-                <header>
-                  <span className="pf-eyebrow">CHAPTER {chapter.version}</span>
-                  <h2>{chapter.title}</h2>
-                  <p>{chapter.summary}</p>
-                  <span>
-                    <Clock3 size={13} />
-                    {chapter.range}
-                  </span>
-                </header>
-                {loading ? (
-                  <p role="status">正在读取阶段内容…</p>
-                ) : (
-                  (demo
-                    ? stories.filter((s) => s.chapter === chapter.id)
-                    : stories
-                  ).map((story) => (
-                    <button
-                      className="pf-story-card"
-                      key={story.id}
-                      onClick={() => onStory(story)}
-                    >
-                      <div>
-                        <time>{story.date}</time>
-                        <span className={`pf-chip ${story.status}`}>
-                          {["confirmed", "recorded"].includes(story.status)
-                            ? "变化记录"
-                            : "需要关注"}
-                        </span>
-                      </div>
-                      <h3>{story.title}</h3>
-                      <p>{story.summary}</p>
-                      <footer>
-                        <span>阅读此前状态、本次变化与当前结果</span>
-                        <ArrowRight size={16} />
-                      </footer>
-                    </button>
-                  ))
-                )}
-                {demo && !stories.some((s) => s.chapter === chapter.id) && (
-                  <p className="pf-page-footnote">
-                    这个示例阶段保留概览，未添加更多变化记录。
-                  </p>
-                )}
-                {error && <p role="alert">{error}</p>}
-                <div className="pf-history-reading-end">
-                  <i />
-                  <span>每一段结果，都可以继续追溯</span>
-                  <i />
-                </div>
-              </>
-            ) : (
-              <div className="pf-inline-empty">
-                <BookOpenText size={35} />
-                <h3>这个项目还没有历程篇章</h3>
-                <p>当前材料不足以建立历史。已有当前状态仍可继续阅读。</p>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="pf-threads-view">
-          <h2>跨阶段，读懂一个主题的演变</h2>
-          <p>
-            演变主线连接不同阶段的变化记录，帮助理解同一个问题怎样被持续解决。
-          </p>
-          {demo && project.id === "corporation" ? (
-            <>
-              <section>
-                <div className="pf-thread-heading">
-                  <Workflow size={22} />
-                  <div>
-                    <h3>从独立执行到多 Agent 协作</h3>
-                    <small>多 Agent 能力建设 → 企业内测与优化</small>
-                  </div>
-                </div>
-                {[project.stories[2], project.stories[0]].map((s) => (
-                  <button key={s.id} onClick={() => onStory(s)}>
-                    <span className="pf-timeline-dot" />
-                    <span>
-                      <time>{s.date}</time>
-                      <strong>{s.title}</strong>
-                    </span>
-                    <ArrowRight size={16} />
-                  </button>
-                ))}
-              </section>
-              <section>
-                <div className="pf-thread-heading">
-                  <Database size={22} />
-                  <div>
-                    <h3>让企业知识进入协作流程</h3>
-                    <small>知识沉淀与权限边界</small>
-                  </div>
-                </div>
-                <button onClick={() => onStory(project.stories[1])}>
-                  <span className="pf-timeline-dot" />
-                  <span>
-                    <time>12月09日</time>
-                    <strong>接入企业知识库（内测版）</strong>
-                  </span>
-                  <ArrowRight size={16} />
-                </button>
-              </section>
-            </>
-          ) : (
-            <div className="pf-inline-empty">
-              <Workflow size={30} />
-              <h3>查看已保存的演变主线</h3>
-              <p>完整演变主线保留在已有项目历程中，本轮不重新归纳主题关系。</p>
-              {!demo && (
-                <Link href={`/projects/${project.id}/history`}>
-                  打开完整项目历程
-                  <ExternalLink size={14} />
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function HandoffPage({
   project,
   demo,
@@ -921,8 +693,10 @@ export function SettingsPage({
   const [loading, setLoading] = useState(!demo);
   const [quiet, setQuiet] = useState(false);
   useEffect(() => {
-    if (!demo) {
+    if (!demo && !global) {
       let active = true;
+      setLoading(true);
+      setError("");
       listAiProviders(readSession().accessToken)
         .then((items) => {
           if (active) setProviders(items);
@@ -937,7 +711,7 @@ export function SettingsPage({
         active = false;
       };
     }
-  }, [demo]);
+  }, [demo, global]);
   const selectedProvider = providers.find((p) => p.defaultEnabled);
   const managementUrl =
     global || tab === "Provider 策略"
@@ -988,102 +762,7 @@ export function SettingsPage({
             {error}
           </p>
         )}
-        {global && tab === "模型与 API" && (
-          <>
-            <Card className="pf-panel pf-provider-card" shadow="none">
-              <header>
-                <span className="pf-provider-icon">
-                  <Sparkles size={24} />
-                </span>
-                <div>
-                  <h3>
-                    {demo
-                      ? "OpenAI"
-                      : selectedProvider?.name || "尚未配置默认模型"}
-                  </h3>
-                  <p>{demo ? "示例 Provider 配置" : "使用全局默认 Provider"}</p>
-                </div>
-                <span className="pf-chip running">
-                  {demo
-                    ? "默认 · 示例"
-                    : selectedProvider
-                      ? "已配置"
-                      : loading
-                        ? "读取中"
-                        : "未配置"}
-                </span>
-              </header>
-              <div className="pf-fields">
-                <div>
-                  <label>模型</label>
-                  <p>
-                    {demo
-                      ? "示例模型"
-                      : selectedProvider?.modelName || "尚未选择"}
-                  </p>
-                </div>
-                <div>
-                  <label>Protocol</label>
-                  <p>
-                    {demo
-                      ? "OpenAI Responses"
-                      : selectedProvider?.protocol
-                        ? {
-                            OPENAI_RESPONSES: "OpenAI Responses",
-                            OPENAI_CHAT_COMPLETIONS: "OpenAI Chat Completions",
-                            ANTHROPIC_MESSAGES: "Anthropic Messages",
-                          }[selectedProvider.protocol]
-                        : "尚未配置"}
-                  </p>
-                </div>
-                <div className="wide">
-                  <label>Endpoint</label>
-                  <p>
-                    {demo
-                      ? "https://api.openai.com/v1"
-                      : selectedProvider?.baseUrl || "尚未配置"}
-                  </p>
-                </div>
-                <div className="wide">
-                  <label>API Key</label>
-                  <p>
-                    <span>••••••••••••••••</span>
-                    <ShieldCheck size={15} />
-                    <small>
-                      {demo
-                        ? "示例掩码"
-                        : selectedProvider?.apiKeyConfigured
-                          ? "已配置，凭据不回显"
-                          : "尚未配置凭据"}
-                    </small>
-                  </p>
-                </div>
-              </div>
-              <footer>
-                <span>
-                  <Circle size={8} />
-                  {demo
-                    ? "示例配置，未进行连接测试"
-                    : "已配置不代表当前服务可用"}
-                </span>
-                <Link className="pf-button" href="/settings">
-                  管理模型配置
-                  <ExternalLink size={14} />
-                </Link>
-              </footer>
-            </Card>
-            <div className="pf-settings-note">
-              <ShieldCheck size={20} />
-              <div>
-                <h3>一个配置入口，清晰的项目边界</h3>
-                <p>
-                  API Key、Endpoint、Protocol
-                  和默认模型在这里统一管理。项目设置中只显示项目使用策略。
-                </p>
-              </div>
-            </div>
-          </>
-        )}
+        {global && tab === "模型与 API" && <ProviderManager key={String(demo)} demo={demo} />}
         {!global && tab === "项目来源" && (
           <>
             <div className="pf-project-identity">
@@ -1197,9 +876,10 @@ export function SettingsPage({
             <details className="pf-source-details">
               <summary>查看已有同步方式</summary>
               <p>
-                使用 integrations/obsidian 中的配置样例，为已有 Vault
-                设置专用受管目录，再执行 validate、dry-run 或 sync。ProjectFlow
-                只更新受管内容，保留用户自己的笔记。
+                使用仓库内 integrations/obsidian/projectflow_obsidian.py，传入已有 Vault、
+                专用受管目录和项目 ID。先执行 validate 和 dry-run，核对后再执行 sync。
+                默认 CORE 投影保留有界阅读内容，更多故事与主线需要显式选择。
+                ProjectFlow 只更新受管内容，保留用户自己的笔记。
               </p>
             </details>
             <div className="pf-settings-note">
@@ -1216,7 +896,7 @@ export function SettingsPage({
               <Sparkles size={28} />
               <div>
                 <h3>使用全局默认 Provider</h3>
-                <p>当前项目沿用已配置的全局默认模型。</p>
+                <p>当前分析统一使用全局默认模型，不保存项目级覆盖。</p>
               </div>
             </div>
             <div className="pf-settings-row">
@@ -1224,7 +904,7 @@ export function SettingsPage({
                 <h3>
                   {demo
                     ? "OpenAI · 示例"
-                    : selectedProvider?.name || "尚未配置默认 Provider"}
+                    : loading ? "正在读取默认配置…" : error ? "默认配置暂不可读取" : selectedProvider?.name || "尚未配置默认 Provider"}
                 </h3>
                 <p>项目级绑定尚未开放；此处不会保存独立 API Key。</p>
               </div>
@@ -1270,7 +950,7 @@ export function SettingsPage({
               </label>
             </div>
             <p className="pf-page-footnote">
-              外观调整仅作用于当前预览。系统的减少动态效果偏好会自动生效。
+              外观调整仅作用于当前工作区。系统的减少动态效果偏好会自动生效。
             </p>
           </>
         )}
@@ -1306,7 +986,7 @@ export function SettingsPage({
               <Monitor size={30} />
               <div>
                 <h3>本地运行 · 浏览器工作区</h3>
-                <p>GUI V4.0-B 设计预览 · Java Core V3.10</p>
+                <p>V4.0-C 工作区 · Java Core V3.10</p>
               </div>
               <span className="pf-chip running">桌面壳待定</span>
             </div>

@@ -3,7 +3,7 @@ import { defineConfig } from "@playwright/test";
 // The isolated visual/adapter suite does not need a database or a model provider.
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "workspace.spec.ts",
+  testMatch: /workspace(?:-productization)?\.spec\.ts/,
   workers: 1,
   timeout: 45_000,
   reporter: "list",

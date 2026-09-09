@@ -57,7 +57,8 @@ const server = http.createServer(async (request, response) => {
   const prompt = Array.isArray(payload.messages)
     ? payload.messages.map((message) => String(message.content || "")).join("\n")
     : "";
-  const task = prompt.includes("CHAPTER_SYNTHESIS_JSON=") ? "project-history-chapter"
+  const task = prompt.includes("ProjectFlow 使用 ProjectFact 保存已发生开发结果") ? "provider-compatibility"
+    : prompt.includes("CHAPTER_SYNTHESIS_JSON=") ? "project-history-chapter"
     : prompt.includes("STORIES_JSON=") ? "project-history"
     : prompt.includes("项目理解器")
       || prompt.includes("Semantic Scout")
@@ -77,7 +78,9 @@ const server = http.createServer(async (request, response) => {
     return json(response, 503, { error: { message: "controlled E2E failure" } });
   }
 
-  const content = task === "project-history"
+  const content = task === "provider-compatibility"
+    ? JSON.stringify({ summary: "ProjectFlow 使用 ProjectFact 保存已经发生的开发结果。" })
+    : task === "project-history"
     ? projectHistoryContent(prompt)
     : task === "project-history-chapter"
       ? projectHistoryChapterContent(prompt)

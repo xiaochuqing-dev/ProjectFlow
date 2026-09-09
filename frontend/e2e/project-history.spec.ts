@@ -3,11 +3,14 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { removeTestRepository } from "./support/repository-cleanup";
+import { providerUpdatePayload } from "../src/lib/provider-settings";
+import type { AiProvider, ProjectHistoryThread } from "../src/lib/api";
 
 const backend = "http://127.0.0.1:18037/api";
 const headers = { Authorization: "Bearer local-user" };
 const repositories = new Set<string>();
 const projects = new Set<string>();
+const providers = new Set<string>();
 
 type Job = { id: string; status: string };
 type Story = { id: string; humanTitle: string; oneSentenceSummary: string };
@@ -19,6 +22,13 @@ test.afterEach(async ({ request }) => {
   projects.clear();
   for (const repository of repositories) removeTestRepository(repository);
   repositories.clear();
+  const saved = await api<AiProvider[]>(request, "GET", "/ai-providers");
+  for (const provider of saved.filter((item) => item.id && providers.has(item.id))) {
+    if (provider.defaultEnabled) await api(request, "PATCH", `/ai-providers/${provider.id}`, { ...providerUpdatePayload(provider), defaultEnabled: false });
+    const response = await request.delete(`${backend}/ai-providers/${provider.id}`, { headers });
+    expect(response.ok()).toBeTruthy();
+  }
+  providers.clear();
 });
 
 test("项目历程默认可读、工程证据可下钻且基础修正保持冲突安全", async ({ page, request }) => {
@@ -118,6 +128,39 @@ test("V4 工作区读取真实后端、显式更新并共享同一 Agent 交接�
   await expect(page.locator(".pf-handoff-document")).not.toContainText("示例内容只用于界面评审");
 });
 
+test("V4 真实持久化演变主线在 Workspace 内完成 Thread、Story、Evidence 阅读", async ({ page, request }) => {
+  const fixture = await createHistoryProject(request);
+  const job = await api<Job>(request, "POST", `/projects/${fixture.projectId}/history/refresh`, { force: false });
+  await waitForJob(request, job.id);
+  const threads = await api<{ items: ProjectHistoryThread[] }>(request, "GET", `/projects/${fixture.projectId}/history/threads?page=0&size=12`);
+  expect(threads.items.length).toBeGreaterThan(0);
+  const thread = threads.items[0];
+  const persisted = await api<{ stories: Story[] }>(request, "GET", `/projects/${fixture.projectId}/history/threads/${encodeURIComponent(thread.id)}`);
+  expect(persisted.stories.length).toBeGreaterThan(0);
+  const writes: string[] = [];
+  page.on("request", (r) => { if (new URL(r.url()).pathname.startsWith("/api/") && r.method() !== "GET") writes.push(r.method()); });
+  await page.goto(`/workspace/history?project=${fixture.projectId}`);
+  await page.getByRole("button", { name: "演变主线", exact: true }).click();
+  await page.locator(".pf-thread-card").filter({ hasText: thread.subjectLabel }).click();
+  await expect(page.locator(".pf-thread-detail-heading h2")).toHaveText(thread.subjectLabel);
+  await page.reload();
+  await expect(page.locator(".pf-thread-detail-heading h2")).toHaveText(thread.subjectLabel);
+  await page.locator(".pf-thread-story-list .pf-story-card").filter({ hasText: persisted.stories[0].humanTitle }).click();
+  const dialog = page.getByRole("dialog", { name: persisted.stories[0].humanTitle });
+  await expect(dialog.getByRole("heading", { name: persisted.stories[0].humanTitle, exact: true })).toBeVisible();
+  await dialog.getByText("查看工程证据与来源", { exact: true }).click();
+  await expect(dialog.locator(".pf-evidence-items h4").first()).toBeVisible();
+  await expect(dialog.locator(".pf-evidence-items").first()).toContainText(/commit:|file:/);
+  await expect(page.getByText("Corporation-Agent", { exact: true })).toHaveCount(0);
+  await expect(page).toHaveURL(/\/workspace\/history\?.*thread=/);
+  if (process.env.PROJECTFLOW_GUI_SCREENSHOTS) {
+    const directory = path.resolve(process.env.PROJECTFLOW_GUI_SCREENSHOTS);
+    mkdirSync(directory, { recursive: true });
+    await page.screenshot({ path: path.join(directory, "real-backend-thread-story-evidence.png") });
+  }
+  expect(writes).toEqual([]);
+});
+
 async function createHistoryProject(request: APIRequestContext) {
   const project = await api<{ id: string }>(request, "POST", "/projects", {
     name: `E2E 项目历程 ${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -129,7 +172,7 @@ async function createHistoryProject(request: APIRequestContext) {
     endDate: null,
   });
   projects.add(project.id);
-  await api(request, "POST", "/ai-providers", {
+  const provider = await api<AiProvider>(request, "POST", "/ai-providers", {
     name: `固定项目历程模型 ${Date.now()}-${Math.random().toString(16).slice(2)}`,
     baseUrl: "http://127.0.0.1:19037/v1",
     apiKey: "e2e-placeholder-key",
@@ -140,6 +183,7 @@ async function createHistoryProject(request: APIRequestContext) {
     defaultEnabled: true,
     purposeTags: ["PROJECT_HISTORY_UI_E2E_NOT_REAL_PROVIDER"],
   });
+  if (provider.id) providers.add(provider.id);
   const repository = createRepository();
   await api(request, "PATCH", `/projects/${project.id}/memory/local-path`, { localProjectPath: repository });
   return { projectId: project.id, repository };

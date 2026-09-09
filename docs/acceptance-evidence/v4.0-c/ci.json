@@ -1,0 +1,11 @@
+{
+  "status": "PENDING_PUSH",
+  "branch": "codex/v4.0-c-gui-productization",
+  "base": "codex/v4.0-b-gui-first-prototype",
+  "dependencyPullRequest": 22,
+  "draft": true,
+  "merge": false,
+  "tag": false,
+  "release": false,
+  "runs": []
+}

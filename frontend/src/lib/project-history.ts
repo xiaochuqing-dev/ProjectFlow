@@ -1,5 +1,10 @@
 export type ProjectHistoryEntityType = "overview" | "chapter" | "story" | "thread";
 
+export function safeHistoryDeepLink(value: string | null | undefined) {
+  const candidate = value?.trim() ?? "";
+  return /^(https:\/\/|\/projects\/|obsidian:\/\/)/i.test(candidate) ? candidate : "";
+}
+
 export function projectHistoryEntityType(value: string | null | undefined): ProjectHistoryEntityType {
   return value === "chapter" || value === "story" || value === "thread" ? value : "overview";
 }

@@ -1,5 +1,13 @@
 # Update history
 
+## ProjectFlow V4.0-C GUI 产品化与深层交互迁移 - 2026-09-09
+
+在独立工作树中从 V4-B PR #22 最新实际 Head 开发，保留用户原工作区的未提交内容。V4 History 现在可以分页选择真实演变主线，在工作区内阅读关联 Story、逐来源打开 Evidence、查看冲突/未知/覆盖缺口并返回时间篇章。全局设置支持既有 Provider 的创建、编辑、默认选择、连接测试和确认删除，沿用安全凭据路径，留空编辑保留原凭据，高级字段和 Header 值不会因普通编辑丢失。
+
+统一了原生弹窗、深层表单、状态反馈和窄屏抽屉焦点管理，修复开发模式重复初始化导致弹窗误关闭，以及从 Demo 切换到真实项目读取失败时仍保留示例侧栏的问题。项目级 Provider 策略与 Obsidian 按现有后端能力显示边界，没有新增 schema、同步引擎或桌面壳。测试、失败修复、截图、Windows 和 Draft PR/CI 事实集中记录于 `docs/projectflow-v4.0-c-gui-productization-report.md`，不回写旧冻结报告；继续 NO MERGE / NO TAG / NO RELEASE。
+
+生产依赖门禁发现继承的 Next/Sharp 漏洞后，定向升级 Next 16.3.2 → 16.3.4、Sharp 0.35.3 → 0.35.4 及其对应原生包，审计恢复 0 漏洞；没有使用强制降级或关闭 required gate。
+
 ## ProjectFlow V3.10 PR 合并、master 复验与最终事实回填 - 2026-08-29
 
 最终功能 Head `c0b4d9653ac6a579978d81b66d2554662e2007dd` 的 Quality run `33242563402`、Windows run `33242563193` 与三 Provider secure credential-path run `33242565505` 全部通过；同头重复 push runs `33242560959`、`33242560734` 的已取消首轮也已在 attempt 2 成功，PR 状态恢复 CLEAN。PR #19 随后按 merge commit 惯例合并为 master `2f56257c028657f3c67e0e413f938d723502147f`，merge 后 master Quality `33246313873` 与 Windows `33246313553` 再次通过。
