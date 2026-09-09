@@ -71,3 +71,24 @@ test("normal projects and settings routes stay in V4 and new project creation us
   await page.goto("/settings"); await expect(page).toHaveURL(/\/workspace\/settings/);
   await request.delete(`http://127.0.0.1:18037/api/projects/${id}`, { headers: { Authorization: "Bearer local-user" } });
 });
+
+test("current material understanding uses an explicit durable job and filters unknown evidence and invented progress", async ({ page }) => {
+  await fixture(page); let ready = false, writes = 0;
+  await page.route("**/understanding", async route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ data: ready ? {
+    projectId: project.id, analyzedAt: "2026-09-09T00:00:00Z", currentStatus: "CURRENT",
+    identity: { claims: [{ id: "identity", text: "项目材料描述了团队任务与文件协作工作区。", evidenceRefs: ["known"] }] },
+    capabilities: { claims: [{ id: "unknown", text: "不存在来源的能力不能展示", evidenceRefs: ["missing"] }, { id: "progress", text: "项目进度达到78%", evidenceRefs: ["known"] }] },
+    sourceMap: { sources: [{ id: "known", locator: "README.md", summary: "项目说明摘录", currentness: "CURRENT" }] }, unknowns: ["未进行功能运行验收"]
+  } : null }) }));
+  await page.route("**/understanding/refresh", async route => { writes++; await route.fulfill({ contentType: "application/json", body: JSON.stringify({ data: { id: "understanding-job", status: "RUNNING", stageMessage: "正在理解当前材料" } }) }); });
+  await page.route("**/analysis-jobs/understanding-job", async route => { ready = true; await route.fulfill({ contentType: "application/json", body: JSON.stringify({ data: { id: "understanding-job", status: "SUCCEEDED" } }) }); });
+  await page.goto(`/workspace/current?project=${project.id}`);
+  await expect(page.getByRole("button", { name: "理解当前材料", exact: true })).toBeEnabled(); expect(writes).toBe(0);
+  await page.getByRole("button", { name: "理解当前材料", exact: true }).click();
+  await expect(page.locator(".pf-hero-summary")).toHaveText("项目材料描述了团队任务与文件协作工作区。", { timeout: 15_000 });
+  expect(writes).toBe(1);
+  await expect(page.locator(".pf-material-understanding")).not.toContainText("不存在来源的能力");
+  await expect(page.locator(".pf-material-understanding")).not.toContainText("78%");
+  await page.locator(".pf-material-understanding summary").first().click();
+  await expect(page.locator(".pf-material-understanding")).toContainText("README.md");
+});

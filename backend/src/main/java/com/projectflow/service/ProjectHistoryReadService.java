@@ -381,6 +381,14 @@ public class ProjectHistoryReadService {
         UUID userId, UUID projectId, String subject, boolean attentionOnly, boolean includeHidden,
         Instant from, Instant to, int page, int size
     ) {
+        return stories(userId, projectId, subject, attentionOnly, includeHidden, from, to, page, size, false);
+    }
+
+    @Transactional(readOnly = true)
+    public HistoryStoryPageResponse stories(
+        UUID userId, UUID projectId, String subject, boolean attentionOnly, boolean includeHidden,
+        Instant from, Instant to, int page, int size, boolean recentFirst
+    ) {
         owned(userId, projectId);
         validateTimeRange(from, to);
         ProjectHistoryCorrectionService.CorrectedHistory corrected = corrected(userId, projectId);
@@ -394,7 +402,7 @@ public class ProjectHistoryReadService {
             .filter(story -> from == null || !story.occurredTo().isBefore(from))
             .filter(story -> to == null || !story.occurredFrom().isAfter(to))
             .sorted(Comparator.comparing(ChangeStory::pinned).reversed()
-                .thenComparing(ChangeStory::occurredFrom, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(recentFirst ? currentStoryOrder() : Comparator.comparing(ChangeStory::occurredFrom, Comparator.nullsLast(Comparator.naturalOrder())))
                 .thenComparing(ChangeStory::id))
             .toList();
         Slice<ChangeStory> slice = slice(values, page, size);
@@ -744,7 +752,10 @@ public class ProjectHistoryReadService {
 
     private <T> T value(String json, Class<T> type, T fallback) {
         try {
-            return objectMapper.readValue(safeJson(json, "{}"), type);
+            String safe = safeJson(json, "{}").trim();
+            if (safe.equals("{}") || safe.equals("null")) return fallback;
+            T parsed = objectMapper.readValue(safe, type);
+            return parsed == null ? fallback : parsed;
         } catch (JsonProcessingException exception) {
             return fallback;
         }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, BookOpenText, Clock3, Search, Workflow } from "lucide-react";
 import {
-  getProjectHistoryChapter, getProjectHistoryThread, listProjectHistoryChapters, listProjectHistoryThreads,
+  getProjectHistoryChapter, getProjectHistoryStory, getProjectHistoryThread, listProjectHistoryChapters, listProjectHistoryThreads,
   type ProjectHistoryChapter, type ProjectHistoryChapterDetail, type ProjectHistoryPage,
   type ProjectHistoryStory, type ProjectHistoryThread, type ProjectHistoryThreadDetail,
 } from "@/lib/api";
@@ -33,7 +33,20 @@ export function HistoryPage({ project, demo, onStory }: Props) {
   const [loading, setLoading] = useState(!demo);
   const [storyPage, setStoryPage] = useState(0);
   const [showSupporting, setShowSupporting] = useState(false);
+  const [deepLinkError, setDeepLinkError] = useState("");
+  const storyId = query.get("story");
+  const onStoryRef = useRef(onStory);
+  onStoryRef.current = onStory;
   const selectedId = chapterId || chapterList?.items.at(-1)?.id || "";
+
+  useEffect(() => {
+    if (demo || !storyId) return;
+    let active = true; setDeepLinkError("");
+    getProjectHistoryStory(readSession().accessToken, project.id, storyId)
+      .then(value => { if (active) onStoryRef.current(persistedStory(value.story)); })
+      .catch(() => { if (active) setDeepLinkError("这条旧链接的变化记录无法读取，其他项目历程仍可查看。"); });
+    return () => { active = false; };
+  }, [demo, project.id, storyId]);
 
   useEffect(() => {
     if (demo) return;
@@ -69,6 +82,7 @@ export function HistoryPage({ project, demo, onStory }: Props) {
 
   function openChapter(id: string) { router.push(`${base}&chapter=${encodeURIComponent(id)}`, { scroll: false }); }
   return <div className="pf-history-page">
+    {deepLinkError && <p className="pf-notice" role="status">{deepLinkError}</p>}
     <div className="pf-history-lead">
       <span className="pf-eyebrow">{project.name} / PROJECT JOURNEY</span><h2>每一次变化，都有来处。</h2><p>{project.summary}</p>
       <div><Clock3 size={14} />{project.chapters[0]?.range.split(" – ")[0] || "尚无历史起点"}<span>—</span>

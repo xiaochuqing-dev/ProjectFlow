@@ -113,6 +113,7 @@ public class ProjectHistoryController {
         @RequestParam(required = false) String subject,
         @RequestParam(defaultValue = "false") boolean attentionOnly,
         @RequestParam(defaultValue = "false") boolean includeHidden,
+        @RequestParam(defaultValue = "false") boolean recentFirst,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
         @RequestParam(defaultValue = "0") int page,
@@ -120,7 +121,7 @@ public class ProjectHistoryController {
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
         return ApiResponse.ok(historyService.stories(
-            user.id(), projectId, subject, attentionOnly, includeHidden, from, to, page, size
+            user.id(), projectId, subject, attentionOnly, includeHidden, from, to, page, size, recentFirst
         ));
     }
 

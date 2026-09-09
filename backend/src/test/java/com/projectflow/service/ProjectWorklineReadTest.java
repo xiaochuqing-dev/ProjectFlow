@@ -15,14 +15,38 @@ class ProjectWorklineReadTest {
     final ProjectRepository projects = mock(ProjectRepository.class);
     final ProjectHistorySnapshotRepository snapshots = mock(ProjectHistorySnapshotRepository.class);
     final ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
+    final ProjectHistoryCorrectionService corrections = mock(ProjectHistoryCorrectionService.class);
     final ProjectHistoryReadService reads = new ProjectHistoryReadService(projects, snapshots,
-        mock(ProjectHistoryEventRepository.class), mock(ProjectHistoryCorrectionService.class), mock(ProjectEvidenceTraceService.class),
+        mock(ProjectHistoryEventRepository.class), corrections, mock(ProjectEvidenceTraceService.class),
         new SensitiveContentRedactor(), mock(ProjectHistoryLanguageService.class), mapper);
     @Test void missingSnapshotsAreUnknownAndOwnershipIsRequired() {
         when(projects.findByIdAndUserId(project, user)).thenReturn(Optional.of(mock(ProjectSpace.class)));
         assertThat(reads.worklines(user, project, 0, 12, "ALL", "").items()).isEmpty();
         assertThatThrownBy(() -> reads.worklines(UUID.randomUUID(), project, 0, 12, "ALL", "")).hasMessage("项目不存在");
         verify(snapshots, never()).save(any());
+    }
+    @Test void firstRefreshWithEmptyJsonHasReadableCurrentStateAndOverview() {
+        when(projects.findByIdAndUserId(project, user)).thenReturn(Optional.of(mock(ProjectSpace.class)));
+        var history = new ProjectHistorySnapshot(project); history.begin(UUID.randomUUID(), true);
+        when(snapshots.findByProjectId(project)).thenReturn(Optional.of(history));
+        when(corrections.resolve(project, history)).thenReturn(new ProjectHistoryCorrectionService.CorrectedHistory(List.of(), List.of(), List.of(), "initial", List.of()));
+        assertThat(reads.currentState(user, project).historyStatus()).isEqualTo("RUNNING");
+        assertThat(reads.currentState(user, project).recentConfirmedChanges()).isEmpty();
+        assertThat(reads.overview(user, project).overview().chapters()).isEmpty();
+        verify(snapshots, never()).save(any());
+    }
+    @Test void recentStoryPagingSelectsLatestResultsBeforeApplyingThePageLimit() {
+        when(projects.findByIdAndUserId(project, user)).thenReturn(Optional.of(mock(ProjectSpace.class)));
+        var history = new ProjectHistorySnapshot(project);
+        when(snapshots.findByProjectId(project)).thenReturn(Optional.of(history));
+        var old = mock(com.projectflow.dto.ProjectHistoryDtos.ChangeStory.class);
+        var recent = mock(com.projectflow.dto.ProjectHistoryDtos.ChangeStory.class);
+        when(old.id()).thenReturn("old"); when(recent.id()).thenReturn("recent");
+        when(old.occurredFrom()).thenReturn(Instant.EPOCH); when(old.occurredTo()).thenReturn(Instant.EPOCH);
+        when(recent.occurredFrom()).thenReturn(Instant.EPOCH.plusSeconds(60)); when(recent.occurredTo()).thenReturn(Instant.EPOCH.plusSeconds(120));
+        when(corrections.resolve(project, history)).thenReturn(new ProjectHistoryCorrectionService.CorrectedHistory(List.of(), List.of(old, recent), List.of(), "r", List.of()));
+        assertThat(reads.stories(user, project, null, false, false, null, null, 0, 1, true).items()).containsExactly(recent);
+        assertThat(reads.stories(user, project, null, false, false, null, null, 0, 1).items()).containsExactly(old);
     }
     @Test void pagingAndFreshnessUsePersistedObservationsOnly() throws Exception {
         when(projects.findByIdAndUserId(project, user)).thenReturn(Optional.of(mock(ProjectSpace.class)));

@@ -139,7 +139,7 @@ export function Workspace({ view }: { view: WorkspaceView }) {
           const card = projectCard(item);
           try {
             const current = await getProjectCurrentState(token, item.id);
-            return { ...card, status: current.historyStatus === "NOT_INITIALIZED" ? "等待首次读取" : current.stale || current.continuityDirty ? "有变化待刷新" : current.degraded ? "部分数据待核对" : "已保存状态",
+            return { ...card, status: current.historyStatus === "RUNNING" ? "正在读取" : current.historyStatus === "NOT_INITIALIZED" ? "等待首次读取" : current.stale || current.continuityDirty ? "有变化待刷新" : current.degraded ? "部分数据待核对" : "已保存状态",
               stale: current.stale || current.continuityDirty, degraded: current.degraded, attention: current.conflicts,
               unknowns: current.unknowns, updated: current.latestSuccessfulAt ? new Date(current.latestSuccessfulAt).toLocaleString("zh-CN", { hour12: false }) : "尚未成功读取" };
           } catch { return { ...card, status: "读取遇到问题", degraded: true, attention: ["状态读取失败，请打开项目重试。"] }; }

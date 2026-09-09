@@ -3318,7 +3318,7 @@ export function getProjectCurrentState(token: string, projectId: string): Promis
 }
 
 export function listProjectHistoryStories(token: string, projectId: string): Promise<{ items: ProjectHistoryStory[]; totalElements: number }> {
-  return projectHistoryGet(token, `/projects/${projectId}/history/stories?page=0&size=20`);
+  return projectHistoryGet(token, `/projects/${projectId}/history/stories?page=0&size=20&recentFirst=true`);
 }
 
 export function refreshProjectHistory(token: string, projectId: string): Promise<ProjectAnalysisJob> {
