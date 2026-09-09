@@ -1,5 +1,18 @@
 # ProjectFlow
 
+## V4 Workspace（V4.0-C Draft）
+
+当前分支在 V4.0-B 的午夜蓝三栏工作区上迁移长期演变主线与 Provider 管理，后端仍沿用 V3.10；这不是 V4 正式发布。启动欢迎页点击“进入 V4 工作区”即可打开 `/workspace/projects`，可连续使用当前状态、项目历程、Agent 交接和设置六个页面。兼容工作台仍可单独进入。仅显式 `?demo=1` 加载示例，真实读取失败不会切换为示例。
+
+- `/workspace/history?project=<id>`：在“项目阶段”和“演变主线”间切换，按页阅读 Thread、关联 Story 和多个来源的 Evidence。核心阅读不再需要旧 History 页面；修正与完整审计仍保留兼容入口。
+- `/workspace/settings`：管理全局 Provider，完成创建、编辑、默认选择、连接测试和确认删除。已保存凭据不回显，编辑留空保留；替换或清除须确认。
+- `/workspace/project-settings?project=<id>`：管理项目来源并查看使用边界。当前后端只有全局默认 Provider，没有项目级模型绑定；Obsidian 仍使用仓库内 CLI，本页不假装保存策略或启动同步。
+- 项目接入、ZIP、本地绑定、登录、历史修正与批量重复配置清理仍保留既有入口。Desktop Shell、安装器和自动更新不在本轮范围内。
+
+实现、测试、截图和剩余边界见 [V4.0-C 阶段报告](docs/projectflow-v4.0-c-gui-productization-report.md) 与 [验收证据](docs/acceptance-evidence/v4.0-c/README.md)。本分支依赖仍为 Draft 的 PR #22；V4.0-A PR #21 只作为信息架构合同参考。
+
+## 已有 V3.x 产品基础
+
 ProjectFlow V3.10 is the release-readiness layer over the final V3.9 project-continuity and long-term project-memory foundation. V3.10 adds versioned, fail-closed schema migration, protected upgrade and recovery, OS-backed Provider credentials, explicit runtime security modes, stable user-data directories, a source-independent Windows portable runtime, and required dependency/Windows gates. It does not replace the V3.9 History, Continuity, Fact or projection engines and does not implement the final V4 GUI.
 
 Final closure verifies compatibility without a circular fixture: CI checks out exact V3.9 final `dd5ee41b6afcbd7703fa0883dc115c11f4821447`, starts that application to create real H2 and PostgreSQL 16 legacy schemas, seeds representative protected records, and then proves current V3.10 backup, controlled Flyway baseline/migration, secure credential migration and idempotent restart. The release remains NO TAG / NO GITHUB RELEASE; exact final merge and acceptance metadata are recorded only after PR #19, master verification and acceptance backfill complete.

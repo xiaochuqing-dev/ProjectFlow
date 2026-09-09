@@ -5,17 +5,14 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   Activity,
-  ArrowLeft,
   ArrowRight,
   Bell,
   BookOpenText,
   Check,
   ChevronRight,
   CircleHelp,
-  ExternalLink,
   FileText,
   Folder,
-  GitBranch,
   GitCommitHorizontal,
   Home,
   Layers,
@@ -34,15 +31,12 @@ import {
   getProject,
   getProjectCurrentState,
   getProjectHistoryOverview,
-  getProjectHistoryStory,
-  getProjectHistoryEvidence,
   getProjectAnalysisJob,
   listProjectAnalysisJobs,
   listProjectHistoryStories,
   listProjects,
   refreshProjectHistory,
   type ProjectAnalysisJob,
-  type ProjectHistoryEvidence,
 } from "@/lib/api";
 import { readSession } from "@/lib/auth";
 import {
@@ -60,11 +54,12 @@ import {
 import {
   CurrentPage,
   HandoffPage,
-  HistoryPage,
   LibraryPage,
   SettingsPage,
   ProjectMark,
 } from "./WorkspacePages";
+import { HistoryPage } from "./HistoryReader";
+import { StoryDialog } from "./WorkspaceStoryDialog";
 
 const navIcons = {
   projects: Folder,
@@ -103,6 +98,8 @@ export function Workspace({ view }: { view: WorkspaceView }) {
   const [search, setSearch] = useState("");
   const command = useRef<HTMLDialogElement>(null);
   const main = useRef<HTMLElement>(null);
+  const shell = useRef<HTMLDivElement>(null);
+  const previousView = useRef(view);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startingRef = useRef(false);
   const scopeRef = useRef("");
@@ -127,6 +124,7 @@ export function Workspace({ view }: { view: WorkspaceView }) {
       return;
     }
     setProject(null);
+    setProjects([]);
     setLoading(true);
     const token = readSession().accessToken;
     const reads = [
@@ -269,9 +267,46 @@ export function Workspace({ view }: { view: WorkspaceView }) {
     };
   }, []);
   useEffect(() => {
+    // Initial hydration can finish after the first click; only navigation closes drawers.
+    if (previousView.current === view) return;
+    previousView.current = view;
     main.current?.scrollTo(0, 0);
     setMobileNav(false);
+    setNarrowEvidence(false);
   }, [view]);
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth > 620) setMobileNav(false);
+      if (window.innerWidth > 1199) setNarrowEvidence(false);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  useEffect(() => {
+    if (!mobileNav && !narrowEvidence) return;
+    const root = shell.current;
+    const drawer = root?.querySelector<HTMLElement>(mobileNav ? ".pf-sidebar" : ".pf-evidence");
+    if (!root || !drawer) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const siblings = Array.from(root.children).filter((element) => element !== drawer && element instanceof HTMLElement) as HTMLElement[];
+    const inert = siblings.map((element) => element.inert);
+    siblings.forEach((element) => { element.inert = true; });
+    const focusables = () => Array.from(drawer.querySelectorAll<HTMLElement>("a[href],button:not(:disabled),input:not(:disabled),summary,[tabindex='0']"))
+      .filter((element) => element.getClientRects().length > 0);
+    focusables()[0]?.focus();
+    const onTab = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const items = focusables();
+      if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items.at(-1)?.focus(); }
+      else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0]?.focus(); }
+    };
+    drawer.addEventListener("keydown", onTab);
+    return () => {
+      drawer.removeEventListener("keydown", onTab);
+      siblings.forEach((element, index) => { element.inert = inert[index]; });
+      if (previous?.isConnected) previous.focus();
+    };
+  }, [mobileNav, narrowEvidence]);
   useEffect(() => {
     if (!toast) return;
     const id = setTimeout(() => setToast(""), 6500);
@@ -323,18 +358,21 @@ export function Workspace({ view }: { view: WorkspaceView }) {
   const refreshing =
     starting || demoRefreshing || Boolean(job && activeJob(job));
   const showStory = (story: WorkspaceStory) => {
+    setNarrowEvidence(false);
     setSelectedStory(story);
     setEvidenceOpen(true);
   };
 
   return (
     <div
+      ref={shell}
       className={`pf-workspace ${!evidenceOpen ? "pf-detail-closed" : ""} ${mobileNav ? "pf-nav-open" : ""} ${narrowEvidence ? "pf-narrow-evidence-open" : ""}`}
     >
       <a className="pf-skip" href="#workspace-main">
         跳到主要内容
       </a>
-      <aside className="pf-sidebar" aria-label="侧边栏">
+      <aside className="pf-sidebar" aria-label="侧边栏" role={mobileNav ? "dialog" : undefined} aria-modal={mobileNav || undefined}>
+        {mobileNav && <button className="pf-icon-button pf-nav-close" aria-label="收起导航" onClick={() => setMobileNav(false)}><X size={18} /></button>}
         <Link
           className="pf-brand"
           href={href("projects")}
@@ -399,7 +437,7 @@ export function Workspace({ view }: { view: WorkspaceView }) {
         <div className="pf-account">
           <span className="pf-avatar">P</span>
           <span>
-            <strong>ProjectFlow Team</strong>
+            <strong>{demo ? "ProjectFlow Team" : readSession().user.username}</strong>
             <small>专注 · 持续 · 更远</small>
           </span>
           <Link
@@ -417,7 +455,7 @@ export function Workspace({ view }: { view: WorkspaceView }) {
           className="pf-icon-button pf-mobile-menu"
           aria-label="展开导航"
           aria-expanded={mobileNav}
-          onClick={() => setMobileNav(!mobileNav)}
+          onClick={() => { setMobileNav(!mobileNav); setNarrowEvidence(false); }}
         >
           <Menu size={18} />
         </button>
@@ -505,15 +543,15 @@ export function Workspace({ view }: { view: WorkspaceView }) {
             </p>
           </div>
           <div className="pf-heading-meta">
-            <span>{demo ? "设计预览 · 示例数据" : "本地项目 · V4 预览"}</span>
+            <span>{demo ? "设计预览 · 示例数据" : "本地项目 · V4 工作区"}</span>
             <details className="pf-view-menu">
-              <summary aria-label="预览选项">···</summary>
+              <summary aria-label="工作区选项">···</summary>
               <div>
                 <Link href={workspaceHref("current", true, "corporation")}>
                   查看设计示例
                 </Link>
                 <Link href="/workspace/projects">打开真实项目</Link>
-                <Link href="/dashboard">原版工作台</Link>
+                <Link href="/dashboard">兼容工作台</Link>
               </div>
             </details>
           </div>
@@ -613,6 +651,7 @@ export function Workspace({ view }: { view: WorkspaceView }) {
           }}
           onStory={showStory}
           view={view}
+          modal={narrowEvidence}
         />
       ) : (
         <button
@@ -737,16 +776,18 @@ function EvidencePanel({
   onClose,
   onStory,
   view,
+  modal,
 }: {
   project: WorkspaceProject | null;
   demo: boolean;
   onClose: () => void;
   onStory: (story: WorkspaceStory) => void;
   view: WorkspaceView;
+  modal: boolean;
 }) {
   const [tab, setTab] = useState("最新提交");
   return (
-    <aside className="pf-evidence" aria-label="工程详情与证据">
+    <aside className="pf-evidence" aria-label="工程详情与证据" role={modal ? "dialog" : undefined} aria-modal={modal || undefined}>
       <div className="pf-evidence-title">
         <Link2 size={18} />
         <h2>{view === "settings" ? "配置说明 / 边界" : "工程详情 / 证据"}</h2>
@@ -779,10 +820,7 @@ function EvidencePanel({
             <h3>全局模型配置</h3>
             <p>API Key、Endpoint、Protocol 与默认模型统一在全局管理。</p>
             <p>项目设置只显示使用策略和配置入口。</p>
-            <Link href="/settings">
-              打开现有配置
-              <ExternalLink size={13} />
-            </Link>
+            <p>可在中央区域添加、编辑、测试和删除 Provider。未填写新 Key 会保留已有凭据。</p>
           </div>
         ) : tab === "最新提交" ? (
           <>
@@ -851,9 +889,7 @@ function EvidencePanel({
               <Link
                 className="pf-button pf-evidence-more"
                 href={
-                  demo
-                    ? workspaceHref("history", true, project.id)
-                    : `/projects/${project.id}/history`
+                  workspaceHref("history", demo, project.id)
                 }
               >
                 <Layers size={14} />
@@ -911,124 +947,5 @@ function EvidencePanel({
         {demo && <label>此处为设计示例，非真实项目记录</label>}
       </div>
     </aside>
-  );
-}
-
-function StoryDialog({
-  story,
-  project,
-  demo,
-  onClose,
-}: {
-  story: WorkspaceStory;
-  project: WorkspaceProject;
-  demo: boolean;
-  onClose: () => void;
-}) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const [evidence, setEvidence] = useState<ProjectHistoryEvidence | null>(null);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    dialog.current?.showModal();
-    let active = true;
-    if (!demo)
-      getProjectHistoryStory(readSession().accessToken, project.id, story.id)
-        .then(async (detail) => {
-          const event = detail.events[0];
-          if (!event) return;
-          const result = await getProjectHistoryEvidence(
-            readSession().accessToken,
-            project.id,
-            event.id,
-          );
-          if (active) setEvidence(result);
-        })
-        .catch((e) => {
-          if (active) setError(e.message);
-        });
-    return () => {
-      active = false;
-    };
-  }, [demo, project.id, story.id]);
-  return (
-    <dialog
-      ref={dialog}
-      className="pf-dialog pf-story-dialog"
-      onClose={onClose}
-      aria-labelledby="story-title"
-    >
-      <header>
-        <span>
-          <BookOpenText size={16} />
-          变化记录 · {story.date}
-        </span>
-        <button
-          className="pf-icon-button"
-          aria-label="关闭变化详情"
-          onClick={() => dialog.current?.close()}
-        >
-          <X size={20} />
-        </button>
-      </header>
-      <div className="pf-story-dialog-content">
-        <span className="pf-eyebrow">
-          {project.name}
-          {demo ? " · 示例数据" : ""}
-        </span>
-        <h2 id="story-title">{story.title}</h2>
-        <p>{story.summary}</p>
-        <div className="pf-transition">
-          {[
-            ["此前状态", story.before],
-            ["本次变化", story.change],
-            ["当前结果", story.after],
-          ].map(([label, value], index) => (
-            <section key={label}>
-              <span>0{index + 1}</span>
-              <div>
-                <h3>{label}</h3>
-                <p>{value || "现有材料尚未确认"}</p>
-              </div>
-            </section>
-          ))}
-        </div>
-        <details className="pf-source-details">
-          <summary>
-            <GitBranch size={16} />
-            查看工程证据与来源
-          </summary>
-          {demo ? (
-            <p>
-              演示 Commit {story.evidence}
-              。本原型中的人物、时间、提交和验证结果均为示例，不对应真实工程验收。
-            </p>
-          ) : (
-            <>
-              {error && <p role="alert">{error}</p>}
-              {evidence?.items.map((item) => (
-                <div key={item.reference}>
-                  <h4>{item.label}</h4>
-                  <p>{item.reference}</p>
-                  <p>{item.limitations.join("；")}</p>
-                </div>
-              ))}
-              <Link
-                href={`/projects/${project.id}/history?type=story&id=${encodeURIComponent(story.id)}`}
-              >
-                打开完整来源与修正记录
-                <ExternalLink size={14} />
-              </Link>
-            </>
-          )}
-        </details>
-      </div>
-      <footer>
-        <button className="pf-button" onClick={() => dialog.current?.close()}>
-          <ArrowLeft size={15} />
-          返回阅读
-        </button>
-        <span>工程证据始终保留，展示不会改变事实</span>
-      </footer>
-    </dialog>
   );
 }

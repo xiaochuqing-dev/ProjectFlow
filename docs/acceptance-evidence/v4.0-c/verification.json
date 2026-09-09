@@ -1,0 +1,253 @@
+{
+  "stage": "V4.0-C Draft",
+  "date": "2026-09-09",
+  "status": "PASS",
+  "baseCommit": "7d5f30eff3a05105b7f3f60e07e352d297301ed5",
+  "scope": "current productization working tree; CI commit identity is recorded separately",
+  "checks": [
+    {
+      "name": "TypeScript and lint",
+      "status": "PASS",
+      "command": "npm run lint",
+      "note": "lint is the existing tsc --noEmit command"
+    },
+    {
+      "name": "Frontend contract tests",
+      "status": "PASS",
+      "command": "npm run test:contracts",
+      "tests": 63,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "name": "Frontend production build",
+      "status": "PASS",
+      "command": "npm run build",
+      "next": "16.3.4",
+      "react": "19.2.8",
+      "sharp": "0.35.4"
+    },
+    {
+      "name": "Full production frontend and Java backend E2E",
+      "status": "PASS",
+      "command": "PROJECTFLOW_E2E_PRODUCTION=true npm run test:e2e",
+      "tests": 32,
+      "failures": 0,
+      "skipped": 0,
+      "includes": "20 Workspace UI tests, persisted History/Thread/Evidence, temporary Provider CRUD, legacy workflow",
+      "note": "Rerun after final drawer correction and Netty patch: 32 passed; includes 4x CPU drawer case"
+    },
+    {
+      "name": "Development frontend and Java E2E",
+      "status": "PASS",
+      "tests": 31,
+      "failures": 0,
+      "note": "Before final welcome entry and 640px resize assertions; final cases rerun in production suite"
+    },
+    {
+      "name": "Isolated production Workspace suite",
+      "status": "PASS",
+      "command": "npx playwright test --config=playwright.workspace.config.ts",
+      "tests": 19,
+      "failures": 0,
+      "note": "Before final welcome entry and 640px resize assertions; covered again in final production suite"
+    },
+    {
+      "name": "Backend and H2 full suite",
+      "status": "PASS",
+      "command": "PROJECTFLOW_RUN_POSTGRES_MIGRATION_TESTS=true mvn -q -Ppostgres-it verify",
+      "tests": 717,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 11,
+      "skipScope": "8 explicit external semantic evaluations, 2 exact V3.9 upgrade proofs, 1 optional intake benchmark",
+      "dogfood": {
+        "tests": 3,
+        "failures": 0,
+        "skipped": 0
+      },
+      "netty": "4.1.137.Final",
+      "note": "Full suite rerun after Netty security patch, exit 0"
+    },
+    {
+      "name": "PostgreSQL 16 Testcontainers and Flyway",
+      "status": "PASS",
+      "tests": 13,
+      "executed": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 6,
+      "skipScope": "optional public repository and real model evaluations",
+      "note": "Rerun after Netty 4.1.137.Final patch"
+    },
+    {
+      "name": "Credential regressions",
+      "status": "PASS",
+      "includedInBackendSuite": true,
+      "aiProviderSecurity": 12,
+      "credentialMigration": 4,
+      "credentialStore": 2,
+      "windowsDpapi": 1,
+      "gatewayBoundary": 1
+    },
+    {
+      "name": "Hermes",
+      "status": "PASS",
+      "command": "python integrations/hermes/test_projectflow_mcp.py",
+      "tests": 10,
+      "failures": 0
+    },
+    {
+      "name": "Obsidian",
+      "status": "PASS",
+      "command": "python integrations/obsidian/test_projectflow_obsidian.py",
+      "tests": 27,
+      "failures": 0,
+      "noOpWrites": 0
+    },
+    {
+      "name": "Sensitive acceptance artifacts",
+      "status": "PASS",
+      "command": "python scripts/verify_v380_acceptance_evidence.py",
+      "result": "V380_ACCEPTANCE_EVIDENCE_OK"
+    },
+    {
+      "name": "Production dependency audit",
+      "status": "PASS",
+      "command": "npm audit --omit=dev --audit-level=high",
+      "vulnerabilities": 0
+    },
+    {
+      "name": "Windows launcher",
+      "status": "PASS",
+      "evidence": "windows-launcher.json"
+    },
+    {
+      "name": "External real provider smoke",
+      "status": "NOT_RUN_NOT_NEEDED",
+      "credentialEnvironmentRead": false,
+      "externalModelRequests": 0,
+      "note": "Local fixed model and Windows DPAPI are not real Sol/xhigh qualification"
+    },
+    {
+      "name": "GitHub required CI",
+      "status": "PASS",
+      "evidence": "ci.json",
+      "verifiedHead": "ee02dd9f0267449ad396892f0adae55dedb2d0ca",
+      "note": "Final drawer correction: Quality and Windows passed for both events; PR browser 32 passed without retry"
+    },
+    {
+      "name": "Packaged Netty modules",
+      "status": "PASS",
+      "version": "4.1.137.Final",
+      "modules": [
+        "common",
+        "handler",
+        "resolver",
+        "buffer",
+        "transport-native-unix-common",
+        "codec",
+        "transport"
+      ],
+      "note": "Read from BOOT-INF/lib of the actual Maven verify JAR"
+    },
+    {
+      "name": "Drawer timing repetition",
+      "status": "PASS",
+      "command": "npx playwright test e2e/workspace-productization.spec.ts --grep \"compact Evidence drawer\" --repeat-each=20",
+      "tests": 20,
+      "failures": 0,
+      "cpuThrottle": 4,
+      "mode": "development frontend with actual browser"
+    }
+  ],
+  "retainedFailures": [
+    {
+      "attempt": "initial isolated GUI",
+      "tests": 16,
+      "passed": 14,
+      "failed": 2,
+      "cause": "Accessible dialog/field names mismatched existing assertions",
+      "resolution": "Restored story title labelling and explicit key field help association"
+    },
+    {
+      "attempt": "initial full development E2E",
+      "tests": 28,
+      "passed": 22,
+      "failed": 6,
+      "cause": "StrictMode native close event race and missing fixed-provider summary response",
+      "resolution": "Ignored stale native close event after reopen; completed the fixed model compatibility response"
+    },
+    {
+      "attempt": "targeted rerun",
+      "tests": 11,
+      "passed": 10,
+      "failed": 1,
+      "cause": "Fixed model compatibility response not yet supplied",
+      "resolution": "Retained UI/API ok assertions and supplied existing summary schema in local test server"
+    },
+    {
+      "attempt": "full E2E with legacy temporary DB",
+      "tests": 31,
+      "passed": 23,
+      "failed": 8,
+      "cause": "Prior database credential references pointed to the old test config directory",
+      "resolution": "Each run uses a new shared database and credential root"
+    },
+    {
+      "attempt": "production dependency audit before patch",
+      "critical": 1,
+      "high": 1,
+      "resolution": "Next 16.3.4 and Sharp 0.35.4"
+    },
+    {
+      "attempt": "initial GitHub OSV on f65bcc8",
+      "critical": 1,
+      "medium": 1,
+      "package": "io.netty:netty-handler",
+      "version": "4.1.136.Final",
+      "advisories": [
+        "GHSA-c4c3-7fpv-j4q5",
+        "GHSA-fccg-mwvh-qqg4"
+      ],
+      "resolution": "Existing netty.version updated to 4.1.137.Final; full local Maven/PostgreSQL, Windows launcher and all GitHub required gates passed",
+      "url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34327290670/job/102387368517"
+    },
+    {
+      "attempt": "docs-backfill PR browser-e2e on dfaeb7a",
+      "head": "dfaeb7a2a2864d451e7094074562921c002fde20",
+      "runId": 34329325825,
+      "jobId": 102393940592,
+      "url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34329325825/job/102393940592",
+      "job": "browser-e2e",
+      "tests": 32,
+      "passed": 31,
+      "failed": 1,
+      "retry": "same case failed again",
+      "case": "compact Evidence drawer contains Tab focus, closes with Escape and restores its trigger",
+      "traceFinding": "drawer closed before first Tab without another click, navigation or viewport change",
+      "resolution": "Initial view effect now skips drawer reset until view actually changes; preserve focus assertions and add visibility assertions after each Tab",
+      "localBefore": {
+        "tests": 12,
+        "passed": 12,
+        "note": "Quick local attempts did not reproduce the CI timing failure"
+      },
+      "localAfter": {
+        "tests": 20,
+        "passed": 20,
+        "cpuThrottle": 4
+      },
+      "productionE2eAfter": {
+        "tests": 32,
+        "passed": 32
+      },
+      "ciAfter": {
+        "status": "PASS",
+        "head": "ee02dd9f0267449ad396892f0adae55dedb2d0ca",
+        "browserTests": 32,
+        "flaky": 0,
+        "jobUrl": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34331754666/job/102401709324"
+      }
+    }
+  ]
+}

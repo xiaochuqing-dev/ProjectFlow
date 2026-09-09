@@ -204,9 +204,10 @@ test("settings keep provider credentials global and integration gaps explicit", 
   await page.getByRole("button", { name: "Obsidian", exact: true }).click();
   await expect(page.getByText("状态未读取", { exact: true })).toBeVisible();
   await open(page, "settings");
-  await expect(
-    page.getByRole("link", { name: "管理模型配置" }),
-  ).toHaveAttribute("href", "/settings");
+  await page.getByRole("button", { name: "添加 Provider", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "添加 Provider", exact: true })).toBeVisible();
+  await expect(page.getByLabel("API Key", { exact: true })).toHaveValue("");
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "外观", exact: true }).click();
   await page.getByRole("checkbox", { name: "弱化背景装饰" }).check();
   await expect(page.locator(".pf-workspace")).toHaveClass(/pf-quiet/);
@@ -246,7 +247,7 @@ test("compact layouts preserve navigation, evidence access and readable content"
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "展开工程证据", exact: true }).click();
   await expect(
-    page.getByRole("complementary", { name: "工程详情与证据" }),
+    page.getByRole("dialog", { name: "工程详情与证据" }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(

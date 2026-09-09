@@ -47,6 +47,8 @@ The default backend is `http://127.0.0.1:8080`. A different loopback endpoint ca
 
 `validate` checks that the Vault exists, the managed-root path is contained and writable, and optionally verifies project scope. `dry-run` reads the Gateway and returns the deterministic plan without creating the managed root. `status` reports the same pending plan plus last successful manifest state. `sync` executes one plan. Automatic watchers and frontend configuration are intentionally absent.
 
+V4.0-C Draft 的 `/workspace/project-settings?project=<id>` 在 Obsidian 分类中提供上述现有 CLI 的使用说明，并明确标记没有读取 Vault 状态。当前没有投影配置、状态或同步 REST API，页面不保存伪配置、不展示伪成功，也不自动执行 CLI。CORE 默认与 opt-in 边界保持不变。
+
 ## Default folder structure
 
 ```text

@@ -1,5 +1,13 @@
 # Known risks
 
+- V4.0-C 是基于 V4-B PR #22 的 stacked Draft。Thread → Story → Evidence 与全局 Provider 日常管理已迁入 Workspace；正式 V4 发布、Owner 最终体验、Desktop Shell 均未完成。验收状态见本阶段报告，不能由早期版本的通过记录代替。
+- 当前 Provider 只有全局默认选择，没有独立启用/禁用字段或项目级 Provider/Model 绑定。项目设置诚实展示此边界；不得加入仅页面保存的伪绑定。
+- Obsidian 目前只有仓库内 validate/dry-run/status/sync CLI，没有可供 Workspace 调用的配置或同步 REST API。页面提供说明，但没有读取 Vault 状态或完成 GUI 同步迁移。
+- Thread 与 Chapter 目录使用服务端分页，单个详情沿用后端有界持久化快照；前端每页显示 12 条 Story、10 个来源事件。详情不是服务端流式读取，局部失效和关联篇章跨页时会明确显示读取范围。
+- Provider 日常管理无需旧设置页；重复配置批量清理、History 展示修正/完整审计、项目接入、ZIP、本地绑定和登录仍保留兼容页面。连接测试仅证明当前协议和最小结构化任务，不能代替真实模型的长历史质量验收。
+- 本轮生产依赖审计发现继承的 Next 16.3.2 / Sharp 0.35.3 存在 critical/high 公告。按官方修复版本更新为 Next 16.3.4 / Sharp 0.35.4，当前 `npm audit --omit=dev --audit-level=high` 为 0 漏洞；下方历史审计记录不是当前依赖结论。
+- 首次 GitHub OSV 另检出 Netty 4.1.136.Final 的两项公告，已定向更新既有版本属性为 4.1.137.Final。补丁后的验收状态以 V4.0-C Evidence 为准；不将前端 npm 审计等同于全部后端依赖安全结论。
+
 - V3.10 的实现、exact V3.9 H2/PostgreSQL 升级补证、三 Provider secure smoke、最终功能 Head 门禁、PR #19 merge 和 merge 后 master Quality/Windows 已通过。正式 FINAL 与 V4.0 Entry 只在本事实回填 PR 自身 required CI/merge、最终 master 复验和任务临时资源清理完成后生效；任一后续 required gate 失败仍必须 BLOCKED。
 - V3.10 不提供 Flyway DOWN migration；二进制回退前必须核对 schema 兼容性。外部 PostgreSQL 只强制显式备份确认，真实 `pg_dump` 的安全存放、恢复演练和保留策略仍属于运维者责任，不宣称为企业级备份。
 - Windows Provider 凭据由 current-user DPAPI 绑定当前用户和机器；迁移用户或设备时需重新配置，不存在 plaintext fallback。非 Windows release 环境在没有可用 secure store 时会明确降级/阻断需凭据的操作。

@@ -1,0 +1,27 @@
+{
+  "status": "PASS_LOCAL_FIXED_PROVIDER",
+  "externalModelCalls": 0,
+  "realSecretUsed": false,
+  "credentialStore": "Windows current-user DPAPI through existing ProjectFlow Provider API",
+  "environment": "isolated per-run temporary database and credential directory",
+  "operations": {
+    "create": "PASS",
+    "editWithoutNewKey": "PASS",
+    "reload": "PASS",
+    "connectionAndMinimalStructuredSummary": "PASS",
+    "clearWithConfirmation": "PASS",
+    "deleteWithConfirmation": "PASS",
+    "temporaryProviderCleanup": "PASS"
+  },
+  "apiReadback": {
+    "apiKeyFieldReturned": false,
+    "secretRefFieldReturned": false,
+    "configuredFlagRetainedAfterBlankEdit": true,
+    "configuredFlagFalseAfterClear": true
+  },
+  "demoApiWrites": 0,
+  "limits": [
+    "Does not qualify a real external model or xhigh reasoning",
+    "Linux CI uses the existing test-only in-memory credential store"
+  ]
+}

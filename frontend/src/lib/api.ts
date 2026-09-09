@@ -3262,6 +3262,25 @@ export type ProjectHistoryThreadDetail = {
   stories: ProjectHistoryStory[];
 };
 
+export type ProjectHistoryPage<T> = {
+  projectId: string;
+  presentationRevision: string;
+  items: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export function listProjectHistoryThreads(token: string, projectId: string, page = 0, subject = ""): Promise<ProjectHistoryPage<ProjectHistoryThread>> {
+  const query = new URLSearchParams({ page: String(Math.max(0, page)), size: "12", subject });
+  return projectHistoryGet(token, `/projects/${projectId}/history/threads?${query}`);
+}
+
+export function listProjectHistoryChapters(token: string, projectId: string, page = 0): Promise<ProjectHistoryPage<ProjectHistoryChapter>> {
+  return projectHistoryGet(token, `/projects/${projectId}/history/chapters?page=${Math.max(0, page)}&size=20`);
+}
+
 function projectHistoryGet<T>(token: string, path: string): Promise<T> {
   return requestJson<T>(path, {
     headers: {

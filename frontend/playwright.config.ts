@@ -5,6 +5,9 @@ const isWindows = process.platform === "win32";
 const windowsMaven = process.env.MAVEN_CMD ?? "mvn.cmd";
 const windowsMavenCommand = /\s/.test(windowsMaven) ? `"${windowsMaven}"` : windowsMaven;
 const backendProfiles = process.env.CI ? "embedded,ci" : "embedded";
+// Keep database references and the secure store in the same isolated run root.
+// Reusing a legacy test database with a different credential directory is invalid.
+const testDataDir = path.resolve(__dirname, ".e2e-data", `${Date.now()}-${process.pid}`);
 const backendCommand = isWindows
   ? `${windowsMavenCommand} -q spring-boot:run "-Dspring-boot.run.profiles=${backendProfiles}" "-Dspring-boot.run.arguments=--server.port=18080"`
   : `mvn -q spring-boot:run -Dspring-boot.run.profiles=${backendProfiles} -Dspring-boot.run.arguments=--server.port=18080`;
@@ -38,7 +41,8 @@ export default defineConfig({
       command: backendCommand.replaceAll("18080", "18037"),
       cwd: path.resolve(__dirname, "../backend"),
       env: {
-        PROJECTFLOW_DATA_DIR: path.resolve(__dirname, ".e2e-data"),
+        PROJECTFLOW_DATA_DIR: testDataDir,
+        PROJECTFLOW_CONFIG_DIR: path.join(testDataDir, "config"),
         PROJECTFLOW_AUTH_REQUIRED: "false",
         PROJECTFLOW_JOB_CORE_THREADS: "1",
         PROJECTFLOW_JOB_MAX_THREADS: "2",
@@ -51,7 +55,7 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: "npm run dev -- --port 13037",
+      command: `npm run ${process.env.PROJECTFLOW_E2E_PRODUCTION === "true" ? "start" : "dev"} -- --port 13037`,
       cwd: __dirname,
       env: { NEXT_PUBLIC_API_PORT: "18037" },
       url: "http://127.0.0.1:13037",
