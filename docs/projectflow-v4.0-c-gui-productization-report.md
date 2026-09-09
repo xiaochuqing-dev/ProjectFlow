@@ -80,9 +80,11 @@ Obsidian CORE 默认、opt-in、managed block 和模型零调用边界均保持�
 
 ## 底层变更与安全补丁
 
-没有生产后端 Java、Fact/History/Thread 算法、Flyway schema、Gateway 协议、Durable Job、安全凭据模型或 release workflow 修改。新增前端 API wrapper 仅调用已有 GET/Provider endpoint。
+没有生产后端 Java、Fact/History/Thread 算法、Flyway schema、Gateway 协议、Durable Job、安全凭据模型或 release workflow 修改。新增前端 API wrapper 仅调用已有 GET/Provider endpoint。后端构建配置仅更新下述安全补丁版本。
 
 现有生产依赖门禁发现 Next 16.3.2 的 Windows/AVIF critical 与 Sharp 0.35.3 的 high 公告。按官方公告定向更新 Next 16.3.4、Sharp 0.35.4 及对应 native packages；保留 React 与其他依赖，未使用 `audit fix --force`。更新后生产审计为 0 漏洞。参考：[Next Windows 公告](https://github.com/vercel/next.js/security/advisories/GHSA-p293-qw3h-jr36)、[Next AVIF 公告](https://github.com/vercel/next.js/security/advisories/GHSA-2xp9-vwfh-vxw4)、[Sharp 0.35.4](https://github.com/lovell/sharp/releases/tag/v0.35.4)。
+
+第一次 GitHub required OSV 检查在 `f65bcc8` 检出继承的 `netty-handler 4.1.136.Final` 两项公告（OSV 计为 1 critical / 1 medium）。核对 Netty 官方公告后，仅将既有 `netty.version` 更新为 `4.1.137.Final`，不改变应用 API 或协议语义。此修复由 required dependency gate 的实际失败触发，不能在 GUI 层消除；后端、PostgreSQL、Gateway、Windows 启动和 CI 随补丁复验。参考：[Netty SNI 公告](https://github.com/netty/netty/security/advisories/GHSA-c4c3-7fpv-j4q5)、[Netty 握手重组公告](https://github.com/netty/netty/security/advisories/GHSA-fccg-mwvh-qqg4)。
 
 ## 验证记录
 
@@ -95,14 +97,14 @@ Obsidian CORE 默认、opt-in、managed block 和模型零调用边界均保持�
 | Production build | PASS，Next 16.3.4；最后入口/断点修正后重新构建 |
 | Production GUI | 独立生产 GUI 19/19 PASS；最后入口/断点修正后随完整生产 E2E 再验证 |
 | 完整前后端 E2E | dev 31/31 PASS；最终生产模式 32/32 PASS，包含最终入口/断点回归 |
-| Backend/H2 full suite | PASS，717 项、0 failure、0 error、11 项条件跳过；Dogfood 3/3 |
-| PostgreSQL 16 / migration | PASS，实际运行 7/7（6 项业务/并发约束与 1 项 Flyway）；Failsafe 共 13 项，6 项可选外部评测未启用 |
+| Backend/H2 full suite | Netty 4.1.137 补丁后复验 PASS，717 项、0 failure、0 error、11 项条件跳过；Dogfood 3/3 |
+| PostgreSQL 16 / migration | Netty 补丁后复验 PASS，实际运行 7/7（6 项业务/并发约束与 1 项 Flyway）；Failsafe 共 13 项，6 项可选外部评测未启用 |
 | Hermes | PASS，10/10 |
 | Obsidian | PASS，27/27；5000 Fact no-op 为 0 writes |
 | 安全验收产物校验 | PASS，`V380_ACCEPTANCE_EVIDENCE_OK` |
 | 生产依赖审计 | PASS，Next 16.3.4 / Sharp 0.35.4，0 vulnerabilities |
 | Windows 根启动器 | PASS；从父目录相对调用、重建、真实 V4 入口、正常退出、3000/8080 无监听 |
-| GitHub required CI | NOT_RUN 推送后记录 |
+| GitHub required CI | 首次除 Netty OSV 外全部通过，补丁后待复验；见 ci.json |
 | 外部真实模型 | NOT_RUN_NOT_NEEDED，未读取真实 Key 或发起付费调用 |
 
 ### 失败与修复记录
@@ -113,6 +115,7 @@ Obsidian CORE 默认、opt-in、managed block 和模型零调用边界均保持�
 4. 后续 31 项完整测试出现 8 项旧流程失败、23 项通过：先前临时数据库引用旧 config directory 的凭据。改为每次执行同根隔离 DB/secure store，未改安全存储规则或屏蔽测试。
 5. 依赖审计发现继承的 1 critical / 1 high，定向官方补丁后恢复 0 漏洞。
 6. 人工检查生成截图时发现 640px 导航关闭按钮多余；修复断点一致性，并验证从 390px 抽屉放大到 640px 后不残留 modal/inert。
+7. 首次 GitHub OSV job 因 Netty 两项继承漏洞失败；保留 [失败 job](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34327290670/job/102387368517)，定向更新官方 `4.1.137.Final`，未修改门禁、忽略公告或跳过扫描。
 
 Backend/H2 的 11 项条件跳过包含 8 项显式外部语义评测、2 项 exact V3.9 旧版本补证、1 项可选 intake benchmark。本轮本地未重复构建旧版本应用，exact V3.9 H2/PostgreSQL 升级由 required CI 独立门禁验证。凭据相关本地回归包括 AiProviderCredentialSecurity 12/12、Credential Migration 4/4、Credential Store 2/2、Windows DPAPI 1/1、Gateway credential boundary 1/1；安全与 H2/Flyway 适用回归均随全量执行。
 
@@ -122,7 +125,9 @@ Backend/H2 的 11 项条件跳过包含 8 项显式外部语义评测、2 项 ex
 
 从工作区父目录相对调用 `Start-ProjectFlow.bat -NoBrowser`，实际执行依赖校验、Next 16.3.4 重建、Java 8080 与前端 3000 启动。`logs/last-embedded-build.json` 记录当前工作树有本地修改，readyAt 为 `2026-09-09T15:53:46.1709395+08:00`。浏览器验证 `/login` 的既有本地跳转、欢迎页主入口、真实空项目库与 Provider 空 Key 表单；无页面错误、无写请求、无 Demo fallback。按 Enter 正常退出，进程返回 0，再次确认 3000/8080 无监听，没有强制终止。此次只证明有本地修改时重建当前树，未把未执行的干净工作区远程同步路径记为本轮通过。
 
-本轮只推送自己的分支并创建依赖 PR #22 的 Draft PR。实际提交、PR 与 CI Run 信息将在发生后记录于 `acceptance-evidence/v4.0-c/ci.json`，不提前编造成功结果。
+Netty 补丁后的根启动器复验也已通过，readyAt 为 `2026-09-09T16:16:55.4200491+08:00`。再次确认真实 V4 入口、空 Key 表单、零写入、正常退出和端口释放。生成 JAR 中七个 Netty 模块均为 `4.1.137.Final`；两次启动来源分别保存在 Windows Evidence 中。
+
+本轮已推送自己的分支并创建依赖 PR #22 的 [Draft PR #23](https://github.com/xiaochuqing-dev/ProjectFlow/pull/23)。首次 Quality 除 Netty OSV 外全部通过（浏览器 32/32，exact V3.9 H2/PostgreSQL 证明通过），Windows portable 两次运行均通过。Netty 补丁后 required CI 将继续复验；各次实际 Run 保存在 `acceptance-evidence/v4.0-c/ci.json`。
 
 ## 未完成项、设计债与下一阶段
 
