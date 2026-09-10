@@ -1,5 +1,17 @@
 # Update history
 
+## ProjectFlow V4.0-D 真实验收收尾 - 2026-09-10
+
+两份只读项目分别完成 History 与工作线读取，54 条可见陈述的高风险无来源项为 0，20 条分支独立核对通过。最新功能 Head 的后端/H2 739 项（12 skipped）、生产浏览器 37 项、PG16 和 Windows CI 通过。当前材料 Understanding 两份均在真实 Sol/xhigh 重试后失败；独立模型复审仍认为当前能力和历史变化过于笼统。已修复失败理解缓存、骨架观察措辞、窄屏证据按钮遮挡和来源时间说明，但阶段成功条件未全部满足，保留 Draft、Owner NOT_REVIEWED、Desktop Shell BLOCKED。完整来源和限制见 V4.0-D Evidence，不把工程通过写成语义通过。
+
+## ProjectFlow V4.0-D 真实项目理解 - 2026-09-09
+
+在 #23 的独立工作树上加入 Current 来源与主张门槛，移除无来源的完成百分比、阶段意图与下一里程碑。README/roadmap 的有界原文摘录保留为项目声明；History 默认变化概览，另有按时间和长期主题阅读。开发工作线在原 History Job 中用固定 Git/GitHub 参数收集，并作为原 snapshot 的版本化派生字段分页读取；无新 schema、Git 写操作或第二套引擎。
+
+普通项目库、项目详情、设置和历程链接转入 V4；创建、本地绑定、GitHub 地址、ZIP 和文本使用统一接入页面及既有后端。真实 Dogfood 又发现首轮空 snapshot 的 `{}` 读取异常、最近变化先取最早页、History 隐藏 10 分钟截止以及语义任务完成时页面先清理回调的问题，分别做定向修复并增加回归。当前材料说明复用已有 Understanding / Gateway / credential store，不改变事实来源。
+
+本轮真实 Sol/xhigh、只读 ProjectFlow / Corporation-Agent 样本、claim audit、独立模型评审、截图与 CI 结果集中追加到 V4.0-D 报告和 Evidence；早期失败不删除，不把自动或 Agent 审查写成 Owner Review。PR #24 保持依赖 #23 的 Draft，无自动合并、Tag、Release 或 Desktop Shell。
+
 ## ProjectFlow V4.0-C GUI 产品化与深层交互迁移 - 2026-09-09
 
 在独立工作树中从 V4-B PR #22 最新实际 Head 开发，保留用户原工作区的未提交内容。V4 History 现在可以分页选择真实演变主线，在工作区内阅读关联 Story、逐来源打开 Evidence、查看冲突/未知/覆盖缺口并返回时间篇章。全局设置支持既有 Provider 的创建、编辑、默认选择、连接测试和确认删除，沿用安全凭据路径，留空编辑保留原凭据，高级字段和 Header 值不会因普通编辑丢失。

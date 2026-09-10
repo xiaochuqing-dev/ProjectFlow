@@ -72,6 +72,19 @@ public class ProjectHistoryController {
         return ApiResponse.ok(historyService.currentState(user.id(), projectId));
     }
 
+    @GetMapping("/worklines")
+    ApiResponse<com.projectflow.service.ProjectWorklineCollector.Page> worklines(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @PathVariable UUID projectId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "12") int size,
+        @RequestParam(defaultValue = "ALL") String group,
+        @RequestParam(defaultValue = "") String query
+    ) {
+        AuthUser user = authService.currentUser(authorizationHeader);
+        return ApiResponse.ok(historyService.worklines(user.id(), projectId, page, size, group, query));
+    }
+
     @GetMapping("/chapters")
     ApiResponse<HistoryChapterPageResponse> chapters(
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
@@ -100,6 +113,7 @@ public class ProjectHistoryController {
         @RequestParam(required = false) String subject,
         @RequestParam(defaultValue = "false") boolean attentionOnly,
         @RequestParam(defaultValue = "false") boolean includeHidden,
+        @RequestParam(defaultValue = "false") boolean recentFirst,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
         @RequestParam(defaultValue = "0") int page,
@@ -107,7 +121,7 @@ public class ProjectHistoryController {
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
         return ApiResponse.ok(historyService.stories(
-            user.id(), projectId, subject, attentionOnly, includeHidden, from, to, page, size
+            user.id(), projectId, subject, attentionOnly, includeHidden, from, to, page, size, recentFirst
         ));
     }
 

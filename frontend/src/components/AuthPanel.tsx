@@ -43,7 +43,7 @@ export function AuthPanel({ mode }: AuthPanelProps) {
       saveSession(result);
       // 登录/注册成功后清掉可能残留的旧工作台快照，避免新会话看到上一个用户的数据。
       clearDashboardSnapshot();
-      router.push("/dashboard");
+      router.push("/workspace/projects");
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "请求失败，请稍后重试");
     } finally {

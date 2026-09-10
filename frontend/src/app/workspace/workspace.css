@@ -1,4 +1,4 @@
-/* V4 Workspace: scoped tokens keep the existing application and its routes intact. */
+/* V4 Workspace: shared visual language for project reading and intake. */
 .pf-workspace,
 .pf-dialog {
   --pf-canvas: #041020;
@@ -2527,6 +2527,7 @@
   }
 }
 @media (max-width: 1199px) {
+  .pf-main { margin-bottom: 60px; }
   .pf-workspace {
     grid-template-columns: 180px minmax(0, 1fr);
   }
@@ -3009,4 +3010,57 @@
 .pf-nav-close { display: none; }
 @media (max-width: 620px) {
   .pf-nav-close { display: flex; position: absolute; top: 12px; right: 6px; z-index: 2; }
+}
+
+/* V4-D: readable provenance, worklines and project intake reuse the V4 surfaces. */
+.pf-claim-badge { display: inline-flex; align-items: center; color: #87d4e5; font-size: 11px; line-height: 1.5; padding: 3px 7px; border: 1px solid #254454; border-radius: 5px; }
+.pf-real-current .pf-hero { height: auto; min-height: 230px; padding-bottom: 20px; }
+.pf-real-current .pf-hero-heading { align-items: start; }
+.pf-real-current .pf-hero-heading p { white-space: normal; max-width: 64ch; }
+.pf-real-current .pf-hero-summary { max-width: 80ch; -webkit-line-clamp: unset; overflow: visible; }
+.pf-real-current .pf-hero-stats { display: flex; flex-wrap: wrap; gap: 12px 28px; }
+.pf-real-current .pf-hero-stats > *, .pf-current-sources, .pf-current-sources a { display: flex; align-items: center; gap: 8px; }
+.pf-current-sources { margin: 12px 0; }
+.pf-real-section { padding: 22px; }
+.pf-real-section h2, .pf-history-overview h2 { font-size: 18px; margin-bottom: 10px; }
+.pf-real-section > p, .pf-history-overview > p { color: var(--pf-body); margin-bottom: 16px; }
+.pf-real-section .pf-story-card { margin-top: 12px; }
+.pf-section-line { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.pf-section-line a { display: flex; gap: 5px; align-items: center; }
+.pf-history-axis, .pf-workline-filters { flex-wrap: wrap; gap: 12px; }
+.pf-history-overview { display: grid; gap: 14px; }
+.pf-workline-filters { display: flex; margin: 18px 0; }
+.pf-workline-filters .pf-segmented, .pf-intake-modes { flex-wrap: wrap; gap: 4px; }
+.pf-workline-list { display: grid; gap: 12px; }
+.pf-workline-card { display: block; text-align: left; background: var(--pf-surface); border: 1px solid var(--pf-border); border-radius: 11px; padding: 18px; min-width: 0; }
+.pf-workline-card:hover { border-color: #337183; background: #0b2134; }
+.pf-workline-card.quiet { background: #071728; border-color: #172b40; }
+.pf-workline-card h3 { font-size: 16px; line-height: 1.6; margin: 10px 0; overflow-wrap: anywhere; }
+.pf-workline-card p { color: var(--pf-body); margin: 8px 0; }
+.pf-workline-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; }
+.pf-branch-name { display: flex; align-items: flex-start; gap: 6px; overflow-wrap: anywhere; word-break: break-word; }
+.pf-workline-card footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 15px; color: var(--pf-muted); font-size: 11px; }
+.pf-workline-card footer span { display: flex; gap: 5px; align-items: center; color: #8ddde8; }
+.pf-workline-dialog { padding: 0 20px 20px; }
+.pf-workline-dialog > .pf-dialog-heading { margin-inline: -20px; }
+.pf-workline-dialog > h2, .pf-workline-dialog > h3 { margin: 18px 0 8px; font-size: 18px; }
+.pf-workline-dialog p { margin: 10px 0; }
+.pf-workline-dialog .pf-source-details { overflow-wrap: anywhere; }
+.pf-intake-modes { margin: 22px 0; }
+.pf-intake-form { max-width: 760px; padding: 24px; display: grid; gap: 18px; }
+.pf-intake-form label { display: grid; gap: 8px; font-size: 13px; color: var(--pf-body); }
+.pf-intake-form input, .pf-intake-form textarea { width: 100%; min-width: 0; background: #071522; border: 1px solid #29405a; border-radius: 7px; padding: 11px; color: var(--pf-text); }
+.pf-intake-form textarea { min-height: 110px; resize: vertical; }
+.pf-intake-form small { font-size: 11px; color: var(--pf-muted); }
+.pf-intake-actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.pf-intake-form input[type=file] { font-size: 12px; }
+@media (max-width: 640px) {
+  .pf-real-section, .pf-intake-form { padding: 16px; }
+  .pf-workline-card { padding: 14px; }
+  .pf-real-current .pf-hero-heading { flex-wrap: wrap; }
+  .pf-real-current .pf-hero-heading > div { min-width: 0; flex: 1; }
+  .pf-real-current .pf-hero-heading h2 { font-size: 21px; overflow-wrap: anywhere; }
+  .pf-real-current .pf-hero-heading > .pf-chip { margin-left: 0; }
+  .pf-current-sources { flex-wrap: wrap; }
+  .pf-history-axis .pf-segmented { flex-wrap: wrap; }
 }

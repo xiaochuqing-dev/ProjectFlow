@@ -391,6 +391,22 @@ class ProjectUnderstandingServiceTest {
     }
 
     @Test
+    void explicitRefreshRetriesFailedFirstUnderstandingEvenWhenFilesAreUnchanged() throws Exception {
+        Files.createDirectories(root.resolve("src"));
+        Files.writeString(root.resolve("src/main.java"), "class Main {}\n");
+        providers.set(List.of(provider()));
+        when(gateway.callStructured(any(), any(), any(ModelTaskType.class))).thenThrow(new IOException("offline"));
+
+        assertThatThrownBy(() -> service.refresh(userId, projectId))
+            .isInstanceOf(ProjectUnderstandingService.UnderstandingModelException.class);
+        assertThat(service.get(userId, projectId).quality().semanticStatus()).isEqualTo("MODEL_FAILED");
+        assertThatThrownBy(() -> service.refresh(userId, projectId))
+            .isInstanceOf(ProjectUnderstandingService.UnderstandingModelException.class);
+
+        verify(gateway, org.mockito.Mockito.times(2)).callStructured(any(), any(), any(ModelTaskType.class));
+    }
+
+    @Test
     void failedSemanticRefreshKeepsPreviousSnapshotAndMarksItStale() throws Exception {
         Files.createDirectories(root.resolve("src"));
         Files.writeString(root.resolve("src/main.java"), "class Main {}\n");

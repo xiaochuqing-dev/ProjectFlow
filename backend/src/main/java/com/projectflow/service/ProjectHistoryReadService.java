@@ -95,6 +95,7 @@ public class ProjectHistoryReadService {
             new HistoryOverviewContent("", "", List.of(), List.of(), List.of(), List.of()));
         HistoryOverviewContent displayOverview = correctedOverview(automaticOverview, corrected);
         Map<String, Object> displayDiagnostics = new LinkedHashMap<>(map(snapshot.getDiagnosticsJson()));
+        displayDiagnostics.remove("worklinesV1"); // Served by the bounded workline read endpoint.
         displayDiagnostics.put("presentationRevision", corrected.presentationRevision());
         displayDiagnostics.put("activeCorrectionCount", corrected.corrections().size());
         displayDiagnostics.put("continuityDirty", !snapshot.getContinuityDirtyRevision().isBlank());
@@ -189,6 +190,41 @@ public class ProjectHistoryReadService {
             recentChanges, threadRefs, storyRefs, chapterRefs, conflicts, unknowns, limitations,
             stale, degraded, false, snapshot.getLatestSuccessfulAt()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public ProjectWorklineCollector.Page worklines(UUID userId, UUID projectId, int page, int size, String group, String query) {
+        owned(userId, projectId);
+        ProjectHistorySnapshot history = snapshotRepository.findByProjectId(projectId).orElse(null);
+        ProjectWorklineCollector.Snapshot snapshot = ProjectWorklineCollector.Snapshot.empty();
+        if (history != null) {
+            Object saved = map(history.getDiagnosticsJson()).get("worklinesV1");
+            if (saved != null) {
+                try { snapshot = objectMapper.convertValue(saved, ProjectWorklineCollector.Snapshot.class); }
+                catch (IllegalArgumentException ignored) { /* Older snapshots safely request a refresh. */ }
+            }
+        }
+        Map<String, Long> groups = new LinkedHashMap<>();
+        List<String> order = List.of("MAIN", "REVIEW", "DEPENDENT", "DEVELOPING", "UNKNOWN", "INACTIVE", "HISTORY");
+        for (String state : order) groups.put(state, snapshot.items().stream().filter(item -> state.equals(item.state())).count());
+        String search = query == null ? "" : query.substring(0, Math.min(query.length(), 200)).toLowerCase(Locale.ROOT);
+        List<ProjectWorklineCollector.Workline> filtered = snapshot.items().stream()
+            .filter(item -> group == null || group.isBlank() || "ALL".equals(group) || group.equals(item.state()))
+            .filter(item -> (item.branch() + " " + item.purpose()).toLowerCase(Locale.ROOT).contains(search))
+            .sorted(Comparator.comparingInt((ProjectWorklineCollector.Workline item) -> order.indexOf(item.state()))
+                .thenComparing(ProjectWorklineCollector.Workline::lastActivity, Comparator.reverseOrder()))
+            .toList();
+        int boundedSize = Math.max(1, Math.min(size, 30));
+        int boundedPage = Math.max(0, Math.min(page, 10000));
+        int from = Math.min(filtered.size(), boundedPage * boundedSize);
+        boolean stale = history != null && (history.getStatus() != ProjectHistorySnapshot.Status.READY
+            || !history.getContinuityDirtyRevision().isBlank());
+        try { stale |= Instant.parse(snapshot.observedAt()).isBefore(Instant.now().minus(java.time.Duration.ofHours(24))); }
+        catch (Exception ignored) { stale = true; }
+        return new ProjectWorklineCollector.Page(snapshot.observedAt(), snapshot.githubObservedAt(), snapshot.githubStatus(),
+            snapshot.defaultBranch(), snapshot.branchCount(), snapshot.truncated(), stale, groups,
+            filtered.subList(from, Math.min(filtered.size(), from + boundedSize)), boundedPage,
+            (filtered.size() + boundedSize - 1) / boundedSize, filtered.size(), snapshot.limitations());
     }
 
     private List<ChangeStory> currentPrimaryStories(
@@ -345,6 +381,14 @@ public class ProjectHistoryReadService {
         UUID userId, UUID projectId, String subject, boolean attentionOnly, boolean includeHidden,
         Instant from, Instant to, int page, int size
     ) {
+        return stories(userId, projectId, subject, attentionOnly, includeHidden, from, to, page, size, false);
+    }
+
+    @Transactional(readOnly = true)
+    public HistoryStoryPageResponse stories(
+        UUID userId, UUID projectId, String subject, boolean attentionOnly, boolean includeHidden,
+        Instant from, Instant to, int page, int size, boolean recentFirst
+    ) {
         owned(userId, projectId);
         validateTimeRange(from, to);
         ProjectHistoryCorrectionService.CorrectedHistory corrected = corrected(userId, projectId);
@@ -358,7 +402,7 @@ public class ProjectHistoryReadService {
             .filter(story -> from == null || !story.occurredTo().isBefore(from))
             .filter(story -> to == null || !story.occurredFrom().isAfter(to))
             .sorted(Comparator.comparing(ChangeStory::pinned).reversed()
-                .thenComparing(ChangeStory::occurredFrom, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(recentFirst ? currentStoryOrder() : Comparator.comparing(ChangeStory::occurredFrom, Comparator.nullsLast(Comparator.naturalOrder())))
                 .thenComparing(ChangeStory::id))
             .toList();
         Slice<ChangeStory> slice = slice(values, page, size);
@@ -708,7 +752,10 @@ public class ProjectHistoryReadService {
 
     private <T> T value(String json, Class<T> type, T fallback) {
         try {
-            return objectMapper.readValue(safeJson(json, "{}"), type);
+            String safe = safeJson(json, "{}").trim();
+            if (safe.equals("{}") || safe.equals("null")) return fallback;
+            T parsed = objectMapper.readValue(safe, type);
+            return parsed == null ? fallback : parsed;
         } catch (JsonProcessingException exception) {
             return fallback;
         }

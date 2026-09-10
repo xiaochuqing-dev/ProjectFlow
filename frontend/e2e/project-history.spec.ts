@@ -42,7 +42,7 @@ test("项目历程默认可读、工程证据可下钻且基础修正保持冲�
   const initial = await api<CorrectionList>(request, "GET", `/projects/${fixture.projectId}/history/corrections?page=0&size=50`);
 
   await selectProject(page, fixture.projectId);
-  await page.goto(`/projects/${fixture.projectId}/history?type=story&id=${encodeURIComponent(story.id)}`);
+  await page.goto(`/projects/${fixture.projectId}/history?compat=1&type=story&id=${encodeURIComponent(story.id)}`);
   await expect(page.getByRole("heading", { name: story.humanTitle })).toBeVisible();
   await expect(page.getByText(/主要变化|支撑工作/, { exact: true })).toBeVisible();
   await expect(page.getByText("自动整理", { exact: true })).toBeVisible();
@@ -113,14 +113,17 @@ test("V4 工作区读取真实后端、显式更新并共享同一 Agent 交接�
   await page.getByRole("button", { name: "更新项目状态", exact: true }).click();
   await expect(page.getByRole("button", { name: "更新项目状态", exact: true })).toBeEnabled({ timeout: 90_000 });
   const current = await api<{ confirmedState: string }>(request, "GET", `/projects/${fixture.projectId}/history/current-state`);
-  await expect(page.locator(".pf-hero-summary")).toHaveText(current.confirmedState);
+  const savedStories = await api<{ items: Array<{ humanTitle: string }> }>(request, "GET", `/projects/${fixture.projectId}/history/stories?recentFirst=true&size=20`);
+  expect(savedStories.items.length).toBeGreaterThan(0);
+  await expect(page.locator(".pf-change-row strong").first()).toHaveText(savedStories.items[0].humanTitle);
   await page.getByRole("navigation", { name: "主导航" }).getByRole("link", { name: "项目历程", exact: true }).click();
+  await page.getByRole("button", { name: "按时间查看", exact: true }).click();
   await expect(page.locator(".pf-chapter-reading h2")).toBeVisible();
   await page.locator(".pf-story-card").first().click();
   await expect(page.getByRole("dialog").getByRole("heading", { name: "当前结果" })).toBeVisible();
   await page.getByRole("dialog").getByText("查看工程证据与来源", { exact: true }).click();
   await expect(page.locator(".pf-source-details h4").first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "打开完整来源与修正记录" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "工程兼容工具：来源审计与修正" })).toBeVisible();
   await page.keyboard.press("Escape");
   await page.getByRole("navigation", { name: "主导航" }).getByRole("link", { name: "Agent 交接", exact: true }).click();
   await expect(page.getByRole("button", { name: "复制交接内容", exact: true })).toBeEnabled();
@@ -140,7 +143,7 @@ test("V4 真实持久化演变主线在 Workspace 内完成 Thread、Story、Evi
   const writes: string[] = [];
   page.on("request", (r) => { if (new URL(r.url()).pathname.startsWith("/api/") && r.method() !== "GET") writes.push(r.method()); });
   await page.goto(`/workspace/history?project=${fixture.projectId}`);
-  await page.getByRole("button", { name: "演变主线", exact: true }).click();
+  await page.getByRole("button", { name: "按长期主题查看", exact: true }).click();
   await page.locator(".pf-thread-card").filter({ hasText: thread.subjectLabel }).click();
   await expect(page.locator(".pf-thread-detail-heading h2")).toHaveText(thread.subjectLabel);
   await page.reload();

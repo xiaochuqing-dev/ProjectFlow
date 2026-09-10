@@ -31,10 +31,16 @@ import { readSession } from "@/lib/auth";
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<AppShell eyebrow="个人设置" title="设置"><div className="min-h-[calc(100vh-4rem)] bg-surface p-8"><div className="h-1 bg-slate-950" /></div></AppShell>}>
-      <SettingsPageContent />
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0b1220", color: "#c7d5ed", padding: 32 }}>正在打开设置…</div>}>
+      <SettingsRoute />
     </Suspense>
   );
+}
+
+function SettingsRoute() {
+  const query = useSearchParams(); const router = useRouter(); const compatibility = query.get("compat") === "1";
+  useEffect(() => { if (!compatibility) router.replace("/workspace/settings"); }, [compatibility, router]);
+  return compatibility ? <SettingsPageContent/> : <div style={{ minHeight: "100vh", background: "#0b1220", color: "#c7d5ed", padding: 32 }}>正在打开 V4 全局设置…</div>;
 }
 
 function SettingsPageContent() {

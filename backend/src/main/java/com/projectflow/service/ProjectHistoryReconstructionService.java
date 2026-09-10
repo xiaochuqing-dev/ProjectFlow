@@ -162,6 +162,9 @@ public class ProjectHistoryReconstructionService {
         try {
             safeProgress.update("HISTORY_SOURCE_DISCOVERY", "正在有界读取并保存项目历程来源事件");
             collected = sourceCollector.collect(userId, projectId);
+            safeProgress.update("HISTORY_WORKLINE_DISCOVERY", "正在读取开发工作线与可选 GitHub 状态");
+            ProjectWorklineCollector.Snapshot worklines = sourceCollector.collectWorklines(collected);
+            var declarations = sourceCollector.collectDeclarations(collected);
             persisted = upsert(projectId, collected);
             CollectionOutcome completedCollection = collected;
             PersistedEvents completedPersistence = persisted;
@@ -198,6 +201,8 @@ public class ProjectHistoryReconstructionService {
                     0, 0, 0, 0, 0, 0
                 );
                 carryForwardSnapshotDiagnostics(before, diagnostics);
+                diagnostics.put("worklinesV1", worklines);
+                diagnostics.put("declarationsV1", declarations);
                 diagnostics.putAll(completedDelta.diagnostics());
                 putContinuityStructureDiagnostics(noOpContinuityDiagnostics(before), diagnostics);
                 diagnostics.put("presentationRevision", correctionRevision);
@@ -278,6 +283,8 @@ public class ProjectHistoryReconstructionService {
             diagnostics.put("modelDeterministicTitleFallbackCount", (int) finalResult.stories().stream()
                 .filter(story -> "MODEL_VALIDATED_WITH_DETERMINISTIC_TITLE".equals(story.summaryStatus()))
                 .count());
+            diagnostics.put("worklinesV1", worklines);
+            diagnostics.put("declarationsV1", declarations);
             diagnostics.put("modelChapterGroundingFallbackCount", chapterGrounding.fallbackCount());
             diagnostics.put("modelValidationRepairCount", (int) modelDiagnostics.stream()
                 .filter(value -> "HISTORY_VALIDATION_RETRY".equals(value.retryType())).count());
@@ -482,7 +489,14 @@ public class ProjectHistoryReconstructionService {
         transactionTemplate.executeWithoutResult(status -> {
             ProjectHistorySnapshot snapshot = snapshotRepository.findLockedByProjectId(projectId)
                 .orElseGet(() -> new ProjectHistorySnapshot(projectId));
-            snapshot.fail(code, summary, json(diagnostics), jobId);
+            Map<String, Object> retained = new LinkedHashMap<>(diagnostics);
+            try {
+                JsonNode previous = objectMapper.readTree(snapshot.getDiagnosticsJson());
+                for (String field : List.of("worklinesV1", "declarationsV1")) {
+                    if (previous != null && previous.has(field)) retained.put(field, previous.get(field));
+                }
+            } catch (JsonProcessingException ignored) { /* Unreadable older extensions remain unknown. */ }
+            snapshot.fail(code, summary, json(retained), jobId);
             snapshotRepository.save(snapshot);
         });
     }

@@ -1,0 +1,1429 @@
+{
+  "reviewType": "AGENT_SOURCE_AUDIT",
+  "reviewedAt": "2026-09-10T04:41:27.226306+00:00",
+  "method": "27 visible statements per project, checked against exact declarations, persisted Story/event read APIs and independent Git/PR workline checks.",
+  "gateScope": "High-risk intent, progress, plan, release, merge and dependency assertions; source-binding correctness is separate from semantic wording precision.",
+  "result": "HIGH_RISK_SOURCE_GATE_PASSES_WITH_SEMANTIC_LIMITATIONS",
+  "limitations": [
+    "This is Agent source inspection, not human or Owner review. Model claims do not become verified facts.",
+    "Generic observed Story wording and fallback event-time provenance remain quality issues; no perfect semantic-accuracy claim is made.",
+    "Passing reference checks alone is not evidence that a product capability was run or verified."
+  ],
+  "projects": [
+    {
+      "project": "Corporation-Agent",
+      "sampleCount": 27,
+      "highRiskUnsupportedCount": 0,
+      "sourceBindingFailureCount": 0,
+      "limitedWordingCount": 14,
+      "claims": [
+        {
+          "id": "Corporation-Agent-01",
+          "claim": "按身份、角色和权限工作的企业 Agent Workspace。v2.2.0 让任务要求、申请沟通和成果审核支持文字与文件，并通过事务内 Domain Event 为相关人员生成站内通知。普通沟通与通知均不调用模型；用户明确要求查询或分析时才创建 AgentRun。保留软件审批、团队任务、成果版本、语音、会话历史和恢复能力。",
+          "classification": "DECLARED",
+          "source": {
+            "file": "README.md",
+            "line": 3,
+            "hash": "e7a0421077a1351a1ae817a24b95237f6882fb5024a1e8e5ef3c0d8bb35496bb"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Exact bounded project statement. This audit does not turn its claimed functionality into verified runtime behavior."
+        },
+        {
+          "id": "Corporation-Agent-02",
+          "claim": "暂无明确计划记录。没有已读取的来源支持下一里程碑、完成百分比或预计发布时间。",
+          "classification": "UNKNOWN",
+          "source": {
+            "declarationsV1": "No PLAN excerpts in this bounded read",
+            "readScope": [
+              "README.md",
+              "README.zh-CN.md",
+              "docs/roadmap.md",
+              "ROADMAP.md"
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Valid only within the stated read scope. Corporation-Agent contains other historical implementation plans outside this four-file extraction; do not interpret this as no plan anywhere."
+        },
+        {
+          "id": "Corporation-Agent-03",
+          "claim": "文档中的声明可能包含历史计划，不代表当前承诺或已经完成。",
+          "classification": "UNKNOWN",
+          "source": {
+            "sourceRule": "DECLARED does not establish completion/current commitment"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "The interface explicitly limits the authority and freshness of plans."
+        },
+        {
+          "id": "Corporation-Agent-04",
+          "claim": "建立项目文档，形成可继续查看的初始成果",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-3f44ffc4393496fd1c10",
+            "stateCeiling": "OBSERVED",
+            "directEvidence": [
+              "commit:7c0cde39d938e4eafa8a021da88ec492ba10827e",
+              "file:docs/reports/Corporation-Agent_v2.0.0_Report.md",
+              "commit:5d80bee2e75081c989d4c5edd929f11b9cd5278a",
+              "file:docs/reports/Corporation-Agent_v2.1.0_Report.md"
+            ],
+            "evidenceRefs": [
+              "commit:7c0cde39d938e4eafa8a021da88ec492ba10827e",
+              "file:docs/reports/Corporation-Agent_v2.0.0_Report.md",
+              "commit:5d80bee2e75081c989d4c5edd929f11b9cd5278a",
+              "file:docs/reports/Corporation-Agent_v2.1.0_Report.md"
+            ],
+            "readableEvents": 11,
+            "eventRefs": [
+              "ac8ba91b-2951-4603-bab1-2114cd341951",
+              "8ce0c875-91cd-47d4-ba66-5e5e9c68f825",
+              "b8d71aa2-21c6-4f28-8d3c-b5e7b6db1fc8",
+              "d883e27d-2a78-4311-b8a8-6c12f3cf7a24"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "dc0aa3127d85c10d8c5b74f556cb0fa6100b115e",
+                "exists": true
+              },
+              {
+                "commit": "f80553c61aaf19b19e729d47739d6b8f35c1dffd",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "Corporation-Agent-05",
+          "claim": "这一阶段首次形成项目文档，主要内容已纳入项目记录。",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-3f44ffc4393496fd1c10",
+            "stateCeiling": "OBSERVED",
+            "directEvidence": [
+              "commit:7c0cde39d938e4eafa8a021da88ec492ba10827e",
+              "file:docs/reports/Corporation-Agent_v2.0.0_Report.md",
+              "commit:5d80bee2e75081c989d4c5edd929f11b9cd5278a",
+              "file:docs/reports/Corporation-Agent_v2.1.0_Report.md"
+            ],
+            "evidenceRefs": [
+              "commit:7c0cde39d938e4eafa8a021da88ec492ba10827e",
+              "file:docs/reports/Corporation-Agent_v2.0.0_Report.md",
+              "commit:5d80bee2e75081c989d4c5edd929f11b9cd5278a",
+              "file:docs/reports/Corporation-Agent_v2.1.0_Report.md"
+            ],
+            "readableEvents": 11,
+            "eventRefs": [
+              "ac8ba91b-2951-4603-bab1-2114cd341951",
+              "8ce0c875-91cd-47d4-ba66-5e5e9c68f825",
+              "b8d71aa2-21c6-4f28-8d3c-b5e7b6db1fc8",
+              "d883e27d-2a78-4311-b8a8-6c12f3cf7a24"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "dc0aa3127d85c10d8c5b74f556cb0fa6100b115e",
+                "exists": true
+              },
+              {
+                "commit": "f80553c61aaf19b19e729d47739d6b8f35c1dffd",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "Corporation-Agent-06",
+          "claim": "观察到后端代码结构的文件变化",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-07e2928d4098174fef1e",
+            "stateCeiling": "OBSERVED",
+            "directEvidence": [
+              "file:backend/alembic/versions/20260909_06_communication.py",
+              "file:backend/app/agent/notification_tools.py",
+              "file:backend/app/api/notifications.py",
+              "file:backend/app/models/communication.py"
+            ],
+            "evidenceRefs": [
+              "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6",
+              "file:backend/alembic/versions/20260909_06_communication.py",
+              "file:backend/app/agent/notification_tools.py",
+              "file:backend/app/api/notifications.py"
+            ],
+            "readableEvents": 34,
+            "eventRefs": [
+              "d2154a4e-19fe-4b7f-a825-d5e3fb2c08d8",
+              "346c3227-0bf6-4190-8bc0-d0628c4de47e",
+              "bba5fde3-880f-4434-b018-8cf3f0632334",
+              "54174426-4309-4d08-980a-7adb5fc99b1f"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "6a0fed928c64f8fea85872bc1e927886c2f948e6",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid. The visible mapper limits broad scaffold wording to observed file changes; it does not repeat the source read model's unsupported first-creation implication."
+        },
+        {
+          "id": "Corporation-Agent-07",
+          "claim": "来源记录了相关文件的新增或修改，具体功能结果仍需进一步确认。",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-07e2928d4098174fef1e",
+            "stateCeiling": "OBSERVED",
+            "directEvidence": [
+              "file:backend/alembic/versions/20260909_06_communication.py",
+              "file:backend/app/agent/notification_tools.py",
+              "file:backend/app/api/notifications.py",
+              "file:backend/app/models/communication.py"
+            ],
+            "evidenceRefs": [
+              "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6",
+              "file:backend/alembic/versions/20260909_06_communication.py",
+              "file:backend/app/agent/notification_tools.py",
+              "file:backend/app/api/notifications.py"
+            ],
+            "readableEvents": 34,
+            "eventRefs": [
+              "d2154a4e-19fe-4b7f-a825-d5e3fb2c08d8",
+              "346c3227-0bf6-4190-8bc0-d0628c4de47e",
+              "bba5fde3-880f-4434-b018-8cf3f0632334",
+              "54174426-4309-4d08-980a-7adb5fc99b1f"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "6a0fed928c64f8fea85872bc1e927886c2f948e6",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid. The visible mapper limits broad scaffold wording to observed file changes; it does not repeat the source read model's unsupported first-creation implication."
+        },
+        {
+          "id": "Corporation-Agent-08",
+          "claim": "观察到前端代码结构的文件变化",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-4d9b4c0e95186109da1f",
+            "stateCeiling": "OBSERVED",
+            "directEvidence": [
+              "file:frontend/src/api/notifications.ts",
+              "file:frontend/src/components/CommunicationAttachments.tsx",
+              "file:frontend/src/components/NotificationPanel.tsx",
+              "file:frontend/package.json"
+            ],
+            "evidenceRefs": [
+              "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6",
+              "file:frontend/src/api/notifications.ts",
+              "file:frontend/src/components/CommunicationAttachments.tsx",
+              "file:frontend/src/components/NotificationPanel.tsx"
+            ],
+            "readableEvents": 18,
+            "eventRefs": [
+              "1e320883-ec0d-4b44-ac24-9de9e0d24f70",
+              "03405ad3-a2ab-48a3-98fb-25ea8ef05854",
+              "5802d8cf-388e-4543-9e55-28e0e16c6e0e",
+              "e4d8424f-1004-42fb-b9da-484ebcbd4411"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "6a0fed928c64f8fea85872bc1e927886c2f948e6",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid. The visible mapper limits broad scaffold wording to observed file changes; it does not repeat the source read model's unsupported first-creation implication."
+        },
+        {
+          "id": "Corporation-Agent-09",
+          "claim": "来源记录了相关文件的新增或修改，具体功能结果仍需进一步确认。",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-4d9b4c0e95186109da1f",
+            "stateCeiling": "OBSERVED",
+            "directEvidence": [
+              "file:frontend/src/api/notifications.ts",
+              "file:frontend/src/components/CommunicationAttachments.tsx",
+              "file:frontend/src/components/NotificationPanel.tsx",
+              "file:frontend/package.json"
+            ],
+            "evidenceRefs": [
+              "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6",
+              "file:frontend/src/api/notifications.ts",
+              "file:frontend/src/components/CommunicationAttachments.tsx",
+              "file:frontend/src/components/NotificationPanel.tsx"
+            ],
+            "readableEvents": 18,
+            "eventRefs": [
+              "1e320883-ec0d-4b44-ac24-9de9e0d24f70",
+              "03405ad3-a2ab-48a3-98fb-25ea8ef05854",
+              "5802d8cf-388e-4543-9e55-28e0e16c6e0e",
+              "e4d8424f-1004-42fb-b9da-484ebcbd4411"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "6a0fed928c64f8fea85872bc1e927886c2f948e6",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid. The visible mapper limits broad scaffold wording to observed file changes; it does not repeat the source read model's unsupported first-creation implication."
+        },
+        {
+          "id": "Corporation-Agent-10",
+          "claim": "建立项目材料，形成可继续查看的初始成果",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-6729cf0223aa89261a0c",
+            "stateCeiling": "OBSERVED",
+            "directEvidence": [
+              "file:scripts/browser_communication.mjs",
+              "file:scripts/communication_smoke.py",
+              "file:scripts/storage_backup.py",
+              "file:scripts/real-model-smoke.ps1"
+            ],
+            "evidenceRefs": [
+              "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6",
+              "file:scripts/browser_communication.mjs",
+              "file:scripts/communication_smoke.py",
+              "file:scripts/storage_backup.py"
+            ],
+            "readableEvents": 7,
+            "eventRefs": [
+              "b9091cf3-39cf-404c-a827-dfef576d7501",
+              "b0578a9d-491b-454f-8848-58d26230bab5",
+              "7ad8feda-5398-47b3-9685-8ed045a1226f",
+              "293d7687-9f5b-49df-87ee-51a569ba6ccd"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "6a0fed928c64f8fea85872bc1e927886c2f948e6",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "Corporation-Agent-11",
+          "claim": "这一阶段首次形成项目材料，主要内容已纳入项目记录。",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-6729cf0223aa89261a0c",
+            "stateCeiling": "OBSERVED",
+            "directEvidence": [
+              "file:scripts/browser_communication.mjs",
+              "file:scripts/communication_smoke.py",
+              "file:scripts/storage_backup.py",
+              "file:scripts/real-model-smoke.ps1"
+            ],
+            "evidenceRefs": [
+              "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6",
+              "file:scripts/browser_communication.mjs",
+              "file:scripts/communication_smoke.py",
+              "file:scripts/storage_backup.py"
+            ],
+            "readableEvents": 7,
+            "eventRefs": [
+              "b9091cf3-39cf-404c-a827-dfef576d7501",
+              "b0578a9d-491b-454f-8848-58d26230bab5",
+              "7ad8feda-5398-47b3-9685-8ed045a1226f",
+              "293d7687-9f5b-49df-87ee-51a569ba6ccd"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "6a0fed928c64f8fea85872bc1e927886c2f948e6",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "Corporation-Agent-12",
+          "claim": "完善环境配置示例，更新已有内容",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-9ea47e6e69ec64a417a5",
+            "stateCeiling": "OBSERVED",
+            "directEvidence": [
+              "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6"
+            ],
+            "evidenceRefs": [
+              "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "bcc55c50-8e61-4603-89f6-ca2a65757865"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "6a0fed928c64f8fea85872bc1e927886c2f948e6",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test."
+        },
+        {
+          "id": "Corporation-Agent-13",
+          "claim": "这次调整补充了环境配置示例的内容，原有记录仍可继续核对。",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-9ea47e6e69ec64a417a5",
+            "stateCeiling": "OBSERVED",
+            "directEvidence": [
+              "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6"
+            ],
+            "evidenceRefs": [
+              "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "bcc55c50-8e61-4603-89f6-ca2a65757865"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "6a0fed928c64f8fea85872bc1e927886c2f948e6",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test."
+        },
+        {
+          "id": "Corporation-Agent-14",
+          "claim": "建立项目文档，形成可继续查看的初始成果",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-f252f4c0c4a4b6c2016e",
+            "stateCeiling": "OBSERVED",
+            "directEvidence": [
+              "file:docs/plans/v2.1.0.md",
+              "file:docs/reports/Corporation-Agent_v2.1.0_Report.md",
+              "file:docs/plans/v2.2.0.md",
+              "file:docs/reports/Corporation-Agent_v2.2.0_Report.md"
+            ],
+            "evidenceRefs": [
+              "commit:221321914cafc1da8eb42ae3fa99b97d1233860f",
+              "file:docs/plans/v2.1.0.md",
+              "file:docs/reports/Corporation-Agent_v2.1.0_Report.md",
+              "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6"
+            ],
+            "readableEvents": 28,
+            "eventRefs": [
+              "0af70714-e8e2-4631-a261-43249015bfe6",
+              "81a14b69-19f3-4795-b668-62daea8bf017",
+              "b775f6b0-9223-4314-ac09-a5605f1a7699",
+              "82911356-aacc-4e24-bfa5-de7ae39863ff"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "221321914cafc1da8eb42ae3fa99b97d1233860f",
+                "exists": true
+              },
+              {
+                "commit": "6a0fed928c64f8fea85872bc1e927886c2f948e6",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "Corporation-Agent-15",
+          "claim": "这一阶段首次形成项目文档，主要内容已纳入项目记录。",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-f252f4c0c4a4b6c2016e",
+            "stateCeiling": "OBSERVED",
+            "directEvidence": [
+              "file:docs/plans/v2.1.0.md",
+              "file:docs/reports/Corporation-Agent_v2.1.0_Report.md",
+              "file:docs/plans/v2.2.0.md",
+              "file:docs/reports/Corporation-Agent_v2.2.0_Report.md"
+            ],
+            "evidenceRefs": [
+              "commit:221321914cafc1da8eb42ae3fa99b97d1233860f",
+              "file:docs/plans/v2.1.0.md",
+              "file:docs/reports/Corporation-Agent_v2.1.0_Report.md",
+              "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6"
+            ],
+            "readableEvents": 28,
+            "eventRefs": [
+              "0af70714-e8e2-4631-a261-43249015bfe6",
+              "81a14b69-19f3-4795-b668-62daea8bf017",
+              "b775f6b0-9223-4314-ac09-a5605f1a7699",
+              "82911356-aacc-4e24-bfa5-de7ae39863ff"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "221321914cafc1da8eb42ae3fa99b97d1233860f",
+                "exists": true
+              },
+              {
+                "commit": "6a0fed928c64f8fea85872bc1e927886c2f948e6",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "Corporation-Agent-16",
+          "claim": "建立项目材料，形成当前可查看的内容",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-fe3c811f900de880271f",
+            "stateCeiling": "OBSERVED",
+            "directEvidence": [
+              "file:VERSION"
+            ],
+            "evidenceRefs": [
+              "commit:e51aaf42ba21994d43bd3fbc8e2cb2fb88b91c40",
+              "file:VERSION",
+              "commit:221321914cafc1da8eb42ae3fa99b97d1233860f",
+              "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6"
+            ],
+            "readableEvents": 3,
+            "eventRefs": [
+              "201d96e8-d448-461f-a127-e285abace02b",
+              "68bad6ff-6549-4b1e-a6ed-5305b034877a",
+              "6a15f8ee-9da3-4bbd-8475-c4901a34b6a6"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "221321914cafc1da8eb42ae3fa99b97d1233860f",
+                "exists": true
+              },
+              {
+                "commit": "6a0fed928c64f8fea85872bc1e927886c2f948e6",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "Corporation-Agent-17",
+          "claim": "本阶段首次加入项目材料，并对已记录的内容作了调整。",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-fe3c811f900de880271f",
+            "stateCeiling": "OBSERVED",
+            "directEvidence": [
+              "file:VERSION"
+            ],
+            "evidenceRefs": [
+              "commit:e51aaf42ba21994d43bd3fbc8e2cb2fb88b91c40",
+              "file:VERSION",
+              "commit:221321914cafc1da8eb42ae3fa99b97d1233860f",
+              "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6"
+            ],
+            "readableEvents": 3,
+            "eventRefs": [
+              "201d96e8-d448-461f-a127-e285abace02b",
+              "68bad6ff-6549-4b1e-a6ed-5305b034877a",
+              "6a15f8ee-9da3-4bbd-8475-c4901a34b6a6"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "221321914cafc1da8eb42ae3fa99b97d1233860f",
+                "exists": true
+              },
+              {
+                "commit": "6a0fed928c64f8fea85872bc1e927886c2f948e6",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "Corporation-Agent-18",
+          "claim": "补充项目材料，形成可供本地设置参考的配置内容",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-80cdb7b4b47c9c2cdd8c",
+            "stateCeiling": "CONFIGURED",
+            "directEvidence": [
+              "file:.github/workflows/ci.yml"
+            ],
+            "evidenceRefs": [
+              "commit:4298984d38d4a74a17b827184851853573a32ac2",
+              "file:.github/workflows/ci.yml",
+              "commit:29174cdc0846b809d6b76b99c7c9d4aa4a8a9508",
+              "commit:e51aaf42ba21994d43bd3fbc8e2cb2fb88b91c40"
+            ],
+            "readableEvents": 4,
+            "eventRefs": [
+              "64c9e1ac-43ba-4b52-bc4c-00e4a9c1f008",
+              "0d6eabc0-c70d-46f6-8025-3d76e566f79e",
+              "e392243b-5920-47e8-8256-efe949a15ded",
+              "f3bfe7ad-8275-4ee7-b2cd-5a2df93d94d9"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "e51aaf42ba21994d43bd3fbc8e2cb2fb88b91c40",
+                "exists": true
+              },
+              {
+                "commit": "6a0fed928c64f8fea85872bc1e927886c2f948e6",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "Corporation-Agent-19",
+          "claim": "本阶段增加了项目材料，涉及范围仅限已经记录的配置内容。",
+          "classification": "INFERRED",
+          "source": {
+            "storyId": "story-80cdb7b4b47c9c2cdd8c",
+            "stateCeiling": "CONFIGURED",
+            "directEvidence": [
+              "file:.github/workflows/ci.yml"
+            ],
+            "evidenceRefs": [
+              "commit:4298984d38d4a74a17b827184851853573a32ac2",
+              "file:.github/workflows/ci.yml",
+              "commit:29174cdc0846b809d6b76b99c7c9d4aa4a8a9508",
+              "commit:e51aaf42ba21994d43bd3fbc8e2cb2fb88b91c40"
+            ],
+            "readableEvents": 4,
+            "eventRefs": [
+              "64c9e1ac-43ba-4b52-bc4c-00e4a9c1f008",
+              "0d6eabc0-c70d-46f6-8025-3d76e566f79e",
+              "e392243b-5920-47e8-8256-efe949a15ded",
+              "f3bfe7ad-8275-4ee7-b2cd-5a2df93d94d9"
+            ],
+            "independentCommitChecks": [
+              {
+                "commit": "e51aaf42ba21994d43bd3fbc8e2cb2fb88b91c40",
+                "exists": true
+              },
+              {
+                "commit": "6a0fed928c64f8fea85872bc1e927886c2f948e6",
+                "exists": true
+              }
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "Corporation-Agent-20",
+          "claim": "1 条已读取分支",
+          "classification": "OBSERVED",
+          "source": {
+            "audit": "branch-workline-audit.json",
+            "project": "Corporation-Agent"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Independent branch inventory matches the bounded collector output."
+        },
+        {
+          "id": "Corporation-Agent-21",
+          "claim": "主线：main",
+          "classification": "OBSERVED",
+          "source": {
+            "git": "refs/remotes/origin/HEAD"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "The source default branch is read, not guessed from a conventional name."
+        },
+        {
+          "id": "Corporation-Agent-22",
+          "claim": "提交已包含在主线",
+          "classification": "OBSERVED",
+          "source": {
+            "branch": "main",
+            "head": "f80553c61aaf19b19e729d47739d6b8f35c1dffd",
+            "gitContainment": true
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Exact default HEAD has zero ahead/behind; this does not prove all feature capabilities run."
+        },
+        {
+          "id": "Corporation-Agent-23",
+          "claim": "已读取最近 8 条提交，用途暂无明确声明",
+          "classification": "INFERRED",
+          "source": {
+            "branch": "main",
+            "commitSampleSize": 8
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "The sample discloses no explicit purpose; the branch name is not used to invent one."
+        },
+        {
+          "id": "Corporation-Agent-24",
+          "claim": "GitHub 已读取",
+          "classification": "OBSERVED",
+          "source": {
+            "githubStatus": "AVAILABLE",
+            "observedAt": "2026-09-10T04:09:12.971088800Z"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Read-time availability only; not a permanent connectivity guarantee."
+        },
+        {
+          "id": "Corporation-Agent-25",
+          "claim": "最后活动 2026-09-09T16:11:45+08:00",
+          "classification": "OBSERVED",
+          "source": {
+            "git": "HEAD commit timestamp",
+            "head": "f80553c61aaf19b19e729d47739d6b8f35c1dffd"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Commit activity is not branch creation time."
+        },
+        {
+          "id": "Corporation-Agent-26",
+          "claim": "采样起点 2026-09-08T12:56:40+08:00；它不是分支创建时间。",
+          "classification": "OBSERVED",
+          "source": {
+            "git": "bounded last-eight-commit sample"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "The interface expressly avoids an unsupported creation-date claim."
+        },
+        {
+          "id": "Corporation-Agent-27",
+          "claim": "活动时间取本地提交或 PR 更新；提交样本首日不是分支创建日期。没有关联 PR 不代表未合并。",
+          "classification": "UNKNOWN",
+          "source": {
+            "audit": "branch-workline-audit.json",
+            "rule": "no PR does not imply unmerged"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "The main branch is contained; no PR/review/intent is manufactured for a one-branch project."
+        }
+      ]
+    },
+    {
+      "project": "ProjectFlow",
+      "sampleCount": 27,
+      "highRiskUnsupportedCount": 0,
+      "sourceBindingFailureCount": 0,
+      "limitedWordingCount": 16,
+      "claims": [
+        {
+          "id": "ProjectFlow-01",
+          "claim": "ProjectFlow 是用于理解项目现状、阅读真实变化并维护长期项目记忆的工作区。V4.0-D 将普通项目入口、创建和接入统一到午夜蓝 Workspace；当前页区分已观察结果、项目声明、系统归纳和未知，历程先显示变化概览，再按时间或长期主题阅读。开发工作线基于有界 Git / GitHub 证据，不把分支名或提交数量当成目的、进度或尚未合入的证明。",
+          "classification": "DECLARED",
+          "source": {
+            "file": "README.md",
+            "line": 5,
+            "hash": "912e02de4b8e5970ecb0dde144b0be4090f95c27c5283a8fd8c86b7c2c82c57f"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Exact bounded project statement. This audit does not turn its claimed functionality into verified runtime behavior."
+        },
+        {
+          "id": "ProjectFlow-02",
+          "claim": "暂无明确计划记录。没有已读取的来源支持下一里程碑、完成百分比或预计发布时间。",
+          "classification": "UNKNOWN",
+          "source": {
+            "declarationsV1": "No PLAN excerpts in this bounded read",
+            "readScope": [
+              "README.md",
+              "README.zh-CN.md",
+              "docs/roadmap.md",
+              "ROADMAP.md"
+            ]
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Valid only within the stated read scope. Corporation-Agent contains other historical implementation plans outside this four-file extraction; do not interpret this as no plan anywhere."
+        },
+        {
+          "id": "ProjectFlow-03",
+          "claim": "文档中的声明可能包含历史计划，不代表当前承诺或已经完成。",
+          "classification": "UNKNOWN",
+          "source": {
+            "sourceRule": "DECLARED does not establish completion/current commitment"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "The interface explicitly limits the authority and freshness of plans."
+        },
+        {
+          "id": "ProjectFlow-04",
+          "claim": "说明项目材料的设计，形成可查阅的方案",
+          "classification": "DECLARED",
+          "source": {
+            "storyId": "story-b40811b3e0408ec753af",
+            "stateCeiling": "DECLARED",
+            "directEvidence": [
+              "github-pr:24"
+            ],
+            "evidenceRefs": [
+              "github-pr:24"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "2fc14ab8-dd89-40d8-91e5-c7919a7efb62"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-05",
+          "claim": "项目材料中已经说明项目材料的设计内容，实际实现情况仍待确认。",
+          "classification": "DECLARED",
+          "source": {
+            "storyId": "story-b40811b3e0408ec753af",
+            "stateCeiling": "DECLARED",
+            "directEvidence": [
+              "github-pr:24"
+            ],
+            "evidenceRefs": [
+              "github-pr:24"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "2fc14ab8-dd89-40d8-91e5-c7919a7efb62"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-06",
+          "claim": "整理dirty marker 改为 snapshot，记录当前能够确认的变化",
+          "classification": "UNKNOWN",
+          "source": {
+            "storyId": "story-bb6b03b2e5d555a3a221",
+            "stateCeiling": "UNKNOWN",
+            "directEvidence": [],
+            "evidenceRefs": [
+              "agent-result:.projectflow/agent-results/20260825-v39-final-continuity-closure/result.json"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "1c82d311-87f7-4cf5-9ee2-11a6d4bacbe2"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Process/indirect evidence cannot prove the action or result; UI preserves UNKNOWN. The displayed date may be source-file observation time and is not independently proven as development occurrence. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-07",
+          "claim": "现有来源只能确认dirty marker 改为 snapshot发生过变化，具体动作和结果仍不完整。",
+          "classification": "UNKNOWN",
+          "source": {
+            "storyId": "story-bb6b03b2e5d555a3a221",
+            "stateCeiling": "UNKNOWN",
+            "directEvidence": [],
+            "evidenceRefs": [
+              "agent-result:.projectflow/agent-results/20260825-v39-final-continuity-closure/result.json"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "1c82d311-87f7-4cf5-9ee2-11a6d4bacbe2"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Process/indirect evidence cannot prove the action or result; UI preserves UNKNOWN. The displayed date may be source-file observation time and is not independently proven as development occurrence. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-08",
+          "claim": "整理项目材料，记录当前能够确认的变化",
+          "classification": "UNKNOWN",
+          "source": {
+            "storyId": "story-a4813d6e1a86fad29320",
+            "stateCeiling": "UNKNOWN",
+            "directEvidence": [],
+            "evidenceRefs": [
+              "agent-result:.projectflow/agent-results/20260807-v385-final-qualification/result.json",
+              "file:.github/workflows/quality-gates.yml",
+              "file:docs/projectflow-v3.8.5-acceptance-report.md",
+              "file:docs/acceptance-evidence/v3.8.5/evidence-index.md"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "dd78883e-aea6-4d13-8c6a-d0becb0a5b1d"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Process/indirect evidence cannot prove the action or result; UI preserves UNKNOWN. The displayed date may be source-file observation time and is not independently proven as development occurrence. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-09",
+          "claim": "现有来源只能确认项目材料发生过变化，具体动作和结果仍不完整。",
+          "classification": "UNKNOWN",
+          "source": {
+            "storyId": "story-a4813d6e1a86fad29320",
+            "stateCeiling": "UNKNOWN",
+            "directEvidence": [],
+            "evidenceRefs": [
+              "agent-result:.projectflow/agent-results/20260807-v385-final-qualification/result.json",
+              "file:.github/workflows/quality-gates.yml",
+              "file:docs/projectflow-v3.8.5-acceptance-report.md",
+              "file:docs/acceptance-evidence/v3.8.5/evidence-index.md"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "dd78883e-aea6-4d13-8c6a-d0becb0a5b1d"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Process/indirect evidence cannot prove the action or result; UI preserves UNKNOWN. The displayed date may be source-file observation time and is not independently proven as development occurrence. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-10",
+          "claim": "整理源码功能，记录当前能够确认的变化",
+          "classification": "UNKNOWN",
+          "source": {
+            "storyId": "story-fa588a6766f944c2a4b4",
+            "stateCeiling": "UNKNOWN",
+            "directEvidence": [],
+            "evidenceRefs": [
+              "agent-result:.projectflow/agent-results/20260720-173433-v344-obsidian-projection/result.json",
+              "file:integrations/obsidian/projectflow_obsidian.py",
+              "file:integrations/obsidian/test_projectflow_obsidian.py",
+              "file:run-projectflow-obsidian.ps1"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "43654f3e-d753-491b-ac29-01a765ec24ff"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Process/indirect evidence cannot prove the action or result; UI preserves UNKNOWN. The displayed date may be source-file observation time and is not independently proven as development occurrence. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-11",
+          "claim": "现有来源只能确认源码功能发生过变化，具体动作和结果仍不完整。",
+          "classification": "UNKNOWN",
+          "source": {
+            "storyId": "story-fa588a6766f944c2a4b4",
+            "stateCeiling": "UNKNOWN",
+            "directEvidence": [],
+            "evidenceRefs": [
+              "agent-result:.projectflow/agent-results/20260720-173433-v344-obsidian-projection/result.json",
+              "file:integrations/obsidian/projectflow_obsidian.py",
+              "file:integrations/obsidian/test_projectflow_obsidian.py",
+              "file:run-projectflow-obsidian.ps1"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "43654f3e-d753-491b-ac29-01a765ec24ff"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Process/indirect evidence cannot prove the action or result; UI preserves UNKNOWN. The displayed date may be source-file observation time and is not independently proven as development occurrence. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-12",
+          "claim": "整理清理了前端 next 和后端 target，记录当前能够确认的变化",
+          "classification": "UNKNOWN",
+          "source": {
+            "storyId": "story-4ec566677bdbbd6c73ef",
+            "stateCeiling": "UNKNOWN",
+            "directEvidence": [],
+            "evidenceRefs": [
+              "agent-result:.projectflow/agent-results/20260714-0103-generated-artifact-cleanup/result.json"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "290218f8-c5e5-4557-9982-27e81f0a8010"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Process/indirect evidence cannot prove the action or result; UI preserves UNKNOWN. The displayed date may be source-file observation time and is not independently proven as development occurrence. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-13",
+          "claim": "现有来源只能确认清理了前端 next 和后端 target发生过变化，具体动作和结果仍不完整。",
+          "classification": "UNKNOWN",
+          "source": {
+            "storyId": "story-4ec566677bdbbd6c73ef",
+            "stateCeiling": "UNKNOWN",
+            "directEvidence": [],
+            "evidenceRefs": [
+              "agent-result:.projectflow/agent-results/20260714-0103-generated-artifact-cleanup/result.json"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "290218f8-c5e5-4557-9982-27e81f0a8010"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Process/indirect evidence cannot prove the action or result; UI preserves UNKNOWN. The displayed date may be source-file observation time and is not independently proven as development occurrence. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-14",
+          "claim": "整理登录流程，记录当前能够确认的变化",
+          "classification": "UNKNOWN",
+          "source": {
+            "storyId": "story-23465c1f1cf3e2f67148",
+            "stateCeiling": "UNKNOWN",
+            "directEvidence": [],
+            "evidenceRefs": [
+              "agent-result:.projectflow/agent-results/20260710-login-diagnosis/result.json",
+              "file:backend/src/main/java/com/projectflow/service/AuthService.java",
+              "file:backend/src/main/java/com/projectflow/controller/AuthController.java",
+              "file:backend/src/main/java/com/projectflow/dto/AuthDtos.java"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "ab2f2281-205b-443d-b7ca-374a57b7e7c7"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Process/indirect evidence cannot prove the action or result; UI preserves UNKNOWN. The displayed date may be source-file observation time and is not independently proven as development occurrence. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-15",
+          "claim": "现有来源只能确认登录流程发生过变化，具体动作和结果仍不完整。",
+          "classification": "UNKNOWN",
+          "source": {
+            "storyId": "story-23465c1f1cf3e2f67148",
+            "stateCeiling": "UNKNOWN",
+            "directEvidence": [],
+            "evidenceRefs": [
+              "agent-result:.projectflow/agent-results/20260710-login-diagnosis/result.json",
+              "file:backend/src/main/java/com/projectflow/service/AuthService.java",
+              "file:backend/src/main/java/com/projectflow/controller/AuthController.java",
+              "file:backend/src/main/java/com/projectflow/dto/AuthDtos.java"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "ab2f2281-205b-443d-b7ca-374a57b7e7c7"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Process/indirect evidence cannot prove the action or result; UI preserves UNKNOWN. The displayed date may be source-file observation time and is not independently proven as development occurrence. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-16",
+          "claim": "整理项目代码审查报告 2026 07 10文档，记录当前能够确认的变化",
+          "classification": "UNKNOWN",
+          "source": {
+            "storyId": "story-c9941498da72112c7e58",
+            "stateCeiling": "UNKNOWN",
+            "directEvidence": [],
+            "evidenceRefs": [
+              "agent-result:.projectflow/agent-results/20260710-181828-project-review/result.json",
+              "file:docs/项目代码审查报告-2026-07-10.txt",
+              "file:docs/开源个人使用产品逻辑审查报告-2026-07-10.txt",
+              "file:.projectflow/agent-results/20260710-181828-project-review/result.json"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "cef6adbd-08b8-4d87-a5d0-48d2b87f7c23"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Process/indirect evidence cannot prove the action or result; UI preserves UNKNOWN. The displayed date may be source-file observation time and is not independently proven as development occurrence. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-17",
+          "claim": "现有来源只能确认项目代码审查报告 2026 07 10文档发生过变化，具体动作和结果仍不完整。",
+          "classification": "UNKNOWN",
+          "source": {
+            "storyId": "story-c9941498da72112c7e58",
+            "stateCeiling": "UNKNOWN",
+            "directEvidence": [],
+            "evidenceRefs": [
+              "agent-result:.projectflow/agent-results/20260710-181828-project-review/result.json",
+              "file:docs/项目代码审查报告-2026-07-10.txt",
+              "file:docs/开源个人使用产品逻辑审查报告-2026-07-10.txt",
+              "file:.projectflow/agent-results/20260710-181828-project-review/result.json"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "cef6adbd-08b8-4d87-a5d0-48d2b87f7c23"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Process/indirect evidence cannot prove the action or result; UI preserves UNKNOWN. The displayed date may be source-file observation time and is not independently proven as development occurrence. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-18",
+          "claim": "说明项目材料的设计，形成可查阅的方案",
+          "classification": "DECLARED",
+          "source": {
+            "storyId": "story-dddac926a6753ccac169",
+            "stateCeiling": "DECLARED",
+            "directEvidence": [
+              "github-pr:23"
+            ],
+            "evidenceRefs": [
+              "github-pr:23"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "53e3c8b4-7a9b-443d-8e19-0824d2393b10"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-19",
+          "claim": "项目材料中已经说明项目材料的设计内容，实际实现情况仍待确认。",
+          "classification": "DECLARED",
+          "source": {
+            "storyId": "story-dddac926a6753ccac169",
+            "stateCeiling": "DECLARED",
+            "directEvidence": [
+              "github-pr:23"
+            ],
+            "evidenceRefs": [
+              "github-pr:23"
+            ],
+            "readableEvents": 1,
+            "eventRefs": [
+              "53e3c8b4-7a9b-443d-8e19-0824d2393b10"
+            ],
+            "independentCommitChecks": []
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "LIMITED",
+          "assessment": "Persisted Story and readable source events agree on the bounded state. This is not an execution test. Generic wording does not identify the actual user-visible feature; semantic usability is limited even when bindings are valid."
+        },
+        {
+          "id": "ProjectFlow-20",
+          "claim": "19 条已读取分支",
+          "classification": "OBSERVED",
+          "source": {
+            "audit": "branch-workline-audit.json",
+            "project": "ProjectFlow"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Independent branch inventory matches the bounded collector output."
+        },
+        {
+          "id": "ProjectFlow-21",
+          "claim": "主线：master",
+          "classification": "OBSERVED",
+          "source": {
+            "git": "refs/remotes/origin/HEAD"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": false,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "The source default branch is read, not guessed from a conventional name."
+        },
+        {
+          "id": "ProjectFlow-22",
+          "claim": "提交已包含在主线",
+          "classification": "OBSERVED",
+          "source": {
+            "branch": "master",
+            "head": "1712841b77fd1e8146ce4ab6beaf404e5b1f7a53",
+            "gitContainment": true
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Exact default HEAD has zero ahead/behind; this does not prove all feature capabilities run."
+        },
+        {
+          "id": "ProjectFlow-23",
+          "claim": "已读取最近 8 条提交，用途暂无明确声明",
+          "classification": "INFERRED",
+          "source": {
+            "branch": "master",
+            "commitSampleSize": 8
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "The sample discloses no explicit purpose; the branch name is not used to invent one."
+        },
+        {
+          "id": "ProjectFlow-24",
+          "claim": "ProjectFlow V4.0-C：Thread 与 Provider 迁入 V4 工作区",
+          "classification": "DECLARED",
+          "source": {
+            "pr": 23,
+            "field": "title"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Exact PR title remains a project declaration, not a verification result."
+        },
+        {
+          "id": "ProjectFlow-25",
+          "claim": "依赖 codex/v4.0-b-gui-first-prototype",
+          "classification": "OBSERVED",
+          "source": {
+            "pr": 23,
+            "base": "codex/v4.0-b-gui-first-prototype",
+            "head": "codex/v4.0-c-gui-productization"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Independent open PR base/head verifies the stacked dependency."
+        },
+        {
+          "id": "ProjectFlow-26",
+          "claim": "V4.0-D: evidence-backed current state, worklines and unified intake",
+          "classification": "DECLARED",
+          "source": {
+            "pr": 24,
+            "field": "title"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Exact PR title remains a project declaration, not a verification result."
+        },
+        {
+          "id": "ProjectFlow-27",
+          "claim": "依赖 codex/v4.0-c-gui-productization",
+          "classification": "OBSERVED",
+          "source": {
+            "pr": 24,
+            "base": "codex/v4.0-c-gui-productization",
+            "head": "codex/v4.0-d-real-project-understanding"
+          },
+          "sourceSupportsClaim": true,
+          "uiClassificationCorrect": true,
+          "claimCeilingCrossed": false,
+          "highRisk": true,
+          "wordingPrecision": "SUFFICIENT",
+          "assessment": "Independent open PR base/head verifies the stacked dependency."
+        }
+      ]
+    }
+  ]
+}

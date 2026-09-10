@@ -231,7 +231,11 @@ public class ProjectAnalysisJobService {
             if (type == ProjectAnalysisJobType.PROJECT_TIMELINE_REFRESH) {
                 job.configureBudgets(48, 400_000, 600_000L);
             } else if (type == ProjectAnalysisJobType.PROJECT_HISTORY_REFRESH) {
-                job.configureBudgets(1, 120_000, 600_000L);
+                // Real multi-window histories can exceed ten minutes while remaining
+                // bounded by the existing window, request, token and cancellation gates.
+                AnalysisTimePolicy.RuntimePolicy effective = analysisTimePolicy.automatic();
+                job.configureBudgets(1, 120_000, effective.maxAnalysisDurationMs());
+                job.recordInputSummary(policySummary(effective));
             } else if (type == ProjectAnalysisJobType.PROJECT_CAPABILITY_MAP_REFRESH) {
                 job.configureBudgets(64, 600_000, 600_000L);
             } else if (type == ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH) {

@@ -1,6 +1,10 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-09-09
+Last updated: 2026-09-10
+
+V4.0-D 在 PR #23 Head `703120998f2296b4e615cd785e651a351c5dc8c9` 上以独立 worktree 推进。普通项目、创建/接入、设置与旧普通 History 链接进入 V4；工程兼容工具必须显式进入。当前状态用来源门槛区分声明、推断和可确认结果，无来源计划与进度保持空。History 默认变化概览，另有按时间与按长期主题阅读。Workline 和有界 README/roadmap 声明作为既有 History snapshot 的版本化派生字段，在显式 Job 中读取，GET 仅分页读持久化内容；失败保留上次工作线并显示过期状态。没有新增 schema、引擎或 Git 写操作。真实 Dogfood、模型、Windows、CI 及剩余边界见本阶段报告；不得提前声称 Owner Review 或正式 Release 通过。
+
+V4.0-D 真实验收修正：History 的 AUTO 复用已有 AnalysisTimePolicy；MODEL_FAILED / FAILED_DEGRADED 不得把显式语义重试短路为无变化成功。Current 材料按钮复用既有 Understanding Job 与持久化来源，失败保留本地观察。宽泛 OBSERVED 前后端骨架只能表述文件变化，不证明整套应用首次建立或功能验收。真实 19/1 分支与来源门槛可核对，但历史具体功能措辞及部分发生时间边界仍限制可理解性；Desktop Shell Entry 保持 BLOCKED，Owner Review 保持 NOT_REVIEWED。
 
 V4.0-C 在 PR #22 实际 Head `7d5f30eff3a05105b7f3f60e07e352d297301ed5` 上以独立 worktree 和 `codex/v4.0-c-gui-productization` 分支推进。V4 History 已接入分页 Thread/Chapter、完整关联 Story、多来源 Evidence 和缺失/冲突/未知边界；全局设置已迁入 Provider CRUD、唯一默认选择、连接测试与安全凭据确认。共享原生 dialog、响应式抽屉和表单样式继续沿用 V4-B 视觉。没有新增后端引擎、schema 或依赖。项目级 Provider 绑定尚无持久化接口，Obsidian 仍为 CLI；项目接入、登录、历史修正和重复配置清理保留兼容入口。本轮只交付依赖 PR #22 的 Draft，不合并 PR #21/#22，不创建 Tag/Release，不启动 Desktop Shell。实际验证和交付状态以 `docs/projectflow-v4.0-c-gui-productization-report.md` 及其 Evidence 为准。
 

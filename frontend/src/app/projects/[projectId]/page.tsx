@@ -1,13 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { CalendarDays, Code2, FolderGit2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { getProject, type Project } from "@/lib/api";
 import { readSession } from "@/lib/auth";
 
 export default function ProjectDetailPage() {
+  const params = useParams<{ projectId: string }>(); const router = useRouter(); const query = useSearchParams();
+  const compatibility = query.get("compat") === "1";
+  useEffect(() => { if (!compatibility) router.replace(`/workspace/current?project=${encodeURIComponent(params.projectId)}`); }, [compatibility, params.projectId, router]);
+  return compatibility ? <LegacyProjectDetailPage/> : <div style={{ minHeight: "100vh", background: "#0b1220", color: "#c7d5ed", padding: 32 }}>正在打开项目…</div>;
+}
+
+function LegacyProjectDetailPage() {
   const params = useParams<{ projectId: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState("");

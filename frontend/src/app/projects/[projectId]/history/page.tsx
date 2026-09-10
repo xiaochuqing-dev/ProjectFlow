@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ExternalLink, EyeOff, FileSearch, Pin, RotateCcw, Save } from "lucide-react";
 import { safeHistoryDeepLink } from "@/lib/project-history";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -46,6 +46,20 @@ type LoadedHistory =
   | { type: "thread"; value: ProjectHistoryThreadDetail };
 
 export default function ProjectHistoryPreviewPage() {
+  const params = useParams<{ projectId: string }>(); const query = useSearchParams(); const router = useRouter();
+  const compatibility = query.get("compat") === "1";
+  const type = query.get("type"), id = query.get("id");
+  useEffect(() => {
+    if (!compatibility) {
+      const target = new URLSearchParams({ project: params.projectId });
+      if (id && (type === "story" || type === "chapter" || type === "thread")) target.set(type, id);
+      router.replace(`/workspace/history?${target}`);
+    }
+  }, [compatibility, params.projectId, router, type, id]);
+  return compatibility ? <EngineeringHistoryPage/> : <div style={{ minHeight: "100vh", background: "#0b1220", color: "#c7d5ed", padding: 32 }}>正在打开项目历程…</div>;
+}
+
+function EngineeringHistoryPage() {
   const params = useParams<{ projectId: string }>();
   const searchParams = useSearchParams();
   const entityType = projectHistoryEntityType(searchParams.get("type"));

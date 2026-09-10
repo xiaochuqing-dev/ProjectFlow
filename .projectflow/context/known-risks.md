@@ -1,5 +1,12 @@
 # Known risks
 
+- V4.0-D 最终两份真实当前材料理解均因 HTTP/2 CANCEL 失败，保留 MODEL_FAILED / STALE 本地观察；成功的 History 不代表当前能力理解成功。每份异常可确认两次请求，Job DTO 的零计数来自包装诊断丢失，Token 和费用不可据此记为零。独立 Sol/xhigh 第二轮仍为 NEEDS_REVISION，Desktop Shell Entry 为 BLOCKED。
+- V4.0-D 为依赖 #23 的 Draft，Owner Review 仍须独立记录。Current / History / Workline 的来源门槛与界面回归不能代替真实项目语义审计；本轮真实模型失败和后续恢复分别保留在阶段 Evidence。
+- 首次真实大历史分析暴露了既有 History Job 的固定 10 分钟截止。已复用 AnalysisTimePolicy.AUTO，保留原窗口、请求、Token、Provider 超时、取消和 checkpoint 边界；不得为一次失败全量清空缓存或重新分析已成功窗口。
+- 真实仓库的一些历史故事仍只获得“项目骨架/材料”级别的保守说明。当前材料语义说明复用已有 Understanding Job，明确标为系统归纳，并按已知来源 ID 过滤；不得用文档宣传、推断或模型共识填补“已确认结果”。
+- 分支读取限制为 300 条、60 条详细对比、100 个近期 PR、8 个开放 PR 的补充详情与 60 秒总收集预算。无精确 PR 合入证据时 ahead/behind 不能证明未合入；本地与远端 HEAD 不一致会披露。尚未读取的远程协作记录保持未知。
+- V4 正常创建、Local/GitHub/ZIP/文本接入及普通项目/设置/历程路径已收敛。History 修正、旧事实工具和重复 Provider 批量清理仍作为工程兼容工具保留。GitHub 地址接入不包含新的 clone 引擎；完整代码理解仍需要本地目录。文本没有源码与 Git 时不产生分支或完整历史。
+
 - V4.0-C 是基于 V4-B PR #22 的 stacked Draft。Thread → Story → Evidence 与全局 Provider 日常管理已迁入 Workspace；正式 V4 发布、Owner 最终体验、Desktop Shell 均未完成。验收状态见本阶段报告，不能由早期版本的通过记录代替。
 - 当前 Provider 只有全局默认选择，没有独立启用/禁用字段或项目级 Provider/Model 绑定。项目设置诚实展示此边界；不得加入仅页面保存的伪绑定。
 - Obsidian 目前只有仓库内 validate/dry-run/status/sync CLI，没有可供 Workspace 调用的配置或同步 REST API。页面提供说明，但没有读取 Vault 状态或完成 GUI 同步迁移。

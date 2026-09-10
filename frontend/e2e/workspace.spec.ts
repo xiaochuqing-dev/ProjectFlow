@@ -85,6 +85,7 @@ test("chapter, theme and evidence drilldowns retain context and keyboard focus",
   page,
 }) => {
   await open(page, "history");
+  await page.getByRole("button", { name: "按时间查看", exact: true }).click();
   await page.getByRole("button", { name: /CHAPTER 02/ }).click();
   await expect(page.locator(".pf-chapter-reading h2")).toHaveText(
     "多 Agent 能力建设",
@@ -101,7 +102,7 @@ test("chapter, theme and evidence drilldowns retain context and keyboard focus",
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(story).toBeFocused();
-  await page.getByRole("button", { name: "演变主线", exact: true }).click();
+  await page.getByRole("button", { name: "按长期主题查看", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "从独立执行到多 Agent 协作" }),
   ).toBeVisible();
@@ -272,6 +273,7 @@ function currentState(confirmedState = "上次可确认结果") {
     projectId: liveProject.id,
     confirmedState,
     recentConfirmedChanges: ["已确认的材料变化"],
+    relatedStoryRefs: ["saved-result"],
     latestSuccessfulAt: "2026-09-01T10:00:00Z",
     stale: true,
     degraded: false,
@@ -280,6 +282,11 @@ function currentState(confirmedState = "上次可确认结果") {
     limitations: ["只覆盖已读取材料"],
     presentationRevision: "r1",
   };
+}
+function savedStories(title: string) {
+  return { items: [{ id: "saved-result", humanTitle: title, oneSentenceSummary: title,
+    role: "PRIMARY", evidenceRefs: ["file:report.md"], eventRefs: ["source-event"], occurredTo: "2026-09-01",
+    unknowns: [], conflicts: [], claimAttribution: { subject: "报告内容", state: "OBSERVED", outcome: title, directEvidenceRefs: ["file:report.md"] } }], totalElements: 1 };
 }
 const overview = {
   projectId: liveProject.id,
@@ -334,15 +341,16 @@ test("live reads never fall back to fixtures or promote ordinary stories", async
   await fixtureApi(page);
   await open(page, "current", "?project=fixture-project");
   await expect(page.locator(".pf-hero h2")).toHaveText(liveProject.name);
-  await expect(page.locator(".pf-changes")).toContainText("已确认的材料变化");
-  await expect(page.locator(".pf-changes")).not.toContainText(
+  const confirmed = page.locator(".pf-real-section").filter({ has: page.getByRole("heading", { name: "直接证据支持的变化" }) });
+  await expect(confirmed).toContainText("尚不足以展示可确认的结果");
+  await expect(confirmed).not.toContainText(
     "仅声明但未确认的历史描述",
   );
   await expect(page.getByText("78%", { exact: true })).toHaveCount(0);
   await expect(
     page.getByText("Corporation-Agent", { exact: true }),
   ).toHaveCount(0);
-  await expect(page.getByText(/项目有新材料或状态可能过期/)).toBeVisible();
+  await expect(page.getByText(/材料可能已变化/)).toBeVisible();
   await screenshot(page, "current-live-stale");
   await page.unrouteAll();
   await page.route("**/api/**", (route) =>
@@ -360,6 +368,15 @@ test("live reads never fall back to fixtures or promote ordinary stories", async
     page.getByText("Corporation-Agent", { exact: true }),
   ).toHaveCount(0);
   await screenshot(page, "current-service-error");
+  await page.unrouteAll();
+  await fixtureApi(page);
+  await page.route("**/api/projects", (route) => route.fulfill({
+    status: 503, contentType: "application/json",
+    body: JSON.stringify({ error: { message: "项目列表暂不可用" } }),
+  }));
+  await open(page, "projects", "");
+  await expect(page.locator(".pf-main").getByRole("alert")).toContainText("项目列表暂不可用");
+  await expect(page.getByText("这里将保存你的项目故事", { exact: true })).toHaveCount(0);
 });
 
 test("explicit refresh keeps prior content, resumes its job, and sends one POST", async ({
@@ -388,6 +405,7 @@ test("explicit refresh keeps prior content, resumes its job, and sends one POST"
     if (pathname.endsWith("/analysis-jobs")) return created ? [job] : [];
     if (pathname.endsWith("/current-state"))
       return currentState(polls >= 3 ? "更新后的可确认结果" : "上次可确认结果");
+    if (pathname.endsWith("/stories")) return savedStories(polls >= 3 ? "更新后的可确认结果" : "上次可确认结果");
     return undefined;
   });
   await open(page, "current", "?project=fixture-project");
@@ -395,12 +413,12 @@ test("explicit refresh keeps prior content, resumes its job, and sends one POST"
   await expect(
     page.getByRole("button", { name: "正在更新状态", exact: true }),
   ).toBeDisabled();
-  await expect(page.locator(".pf-hero-summary")).toHaveText("上次可确认结果");
+  await expect(page.locator(".pf-real-section .pf-story-card h3")).toHaveText("上次可确认结果");
   await page.reload();
   await expect(
     page.getByRole("button", { name: "正在更新状态", exact: true }),
   ).toBeDisabled();
-  await expect(page.locator(".pf-hero-summary")).toHaveText(
+  await expect(page.locator(".pf-real-section .pf-story-card h3")).toHaveText(
     "更新后的可确认结果",
     { timeout: 15_000 },
   );
@@ -464,11 +482,12 @@ test("a reused completed refresh reloads saved results and a rejected update pre
       return currentState(
         refreshed ? "已完成任务中的保存结果" : "上次可确认结果",
       );
+    if (pathname.endsWith("/stories")) return savedStories(refreshed ? "已完成任务中的保存结果" : "上次可确认结果");
     return undefined;
   });
   await open(page, "current", "?project=fixture-project");
   await page.getByRole("button", { name: "更新项目状态", exact: true }).click();
-  await expect(page.locator(".pf-hero-summary")).toHaveText(
+  await expect(page.locator(".pf-real-section .pf-story-card h3")).toHaveText(
     "已完成任务中的保存结果",
   );
   await page.route("**/history/refresh", (route) =>
@@ -480,7 +499,7 @@ test("a reused completed refresh reloads saved results and a rejected update pre
   );
   await page.getByRole("button", { name: "更新项目状态", exact: true }).click();
   await expect(page.getByText("本次更新被拒绝", { exact: true })).toBeVisible();
-  await expect(page.locator(".pf-hero-summary")).toHaveText(
+  await expect(page.locator(".pf-real-section .pf-story-card h3")).toHaveText(
     "已完成任务中的保存结果",
   );
 });

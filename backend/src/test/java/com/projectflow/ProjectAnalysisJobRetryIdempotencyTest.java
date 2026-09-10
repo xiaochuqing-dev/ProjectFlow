@@ -130,6 +130,9 @@ class ProjectAnalysisJobRetryIdempotencyTest {
         var forced = service.startProjectHistoryRefresh(userId, project.getId(), true);
 
         assertThat(forced.id()).isEqualTo(ordinary.id());
+        assertThat(ordinary.maxDurationMs()).isEqualTo(com.projectflow.service.AnalysisTimePolicy.NO_OVERALL_DEADLINE_MS);
+        assertThat(ordinary.maxRequestCount()).isPositive();
+        assertThat(ordinary.maxTotalTokens()).isPositive();
         assertThat(jobRepository.count()).isEqualTo(1);
         verify(jobRunner, times(1)).execute(ordinary.id());
     }

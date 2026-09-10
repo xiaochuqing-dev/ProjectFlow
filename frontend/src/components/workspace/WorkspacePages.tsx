@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ProviderManager } from "./ProviderManager";
+import { RealCurrentPage } from "./RealCurrentPage";
+import { ProjectIntake } from "./ProjectIntake";
 import {
   Activity,
   ArrowDownToLine,
@@ -77,6 +79,7 @@ export function CurrentPage({
   href,
   onStory,
 }: PageProps & { href: Href; onStory: StoryAction }) {
+  if (!demo) return <RealCurrentPage project={project} href={href} onStory={onStory}/>;
   const fullDemo = demo && project.id === "corporation";
   return (
     <div className="pf-current-page">
@@ -367,7 +370,7 @@ export function LibraryPage({
           <h2>让每一个想法，持续向前。</h2>
           <p>打开项目，找回当前状态、来时的路径与下一次交接的起点。</p>
         </div>
-        <Link className="pf-button pf-primary" href="/projects">
+        <Link className="pf-button pf-primary" href="/workspace/intake">
           <Plus size={16} />
           添加项目
         </Link>
@@ -410,7 +413,7 @@ export function LibraryPage({
             <h3>{p.name}</h3>
             <p className="pf-library-description">{p.description}</p>
             <p className="pf-library-summary">
-              {p.source ? "打开项目，读取已保存的状态与历程。" : p.judgment}
+              {p.source ? `${p.repoUrl ? "GitHub 来源已配置" : "本地 / 项目资料"} · ${p.status === "已添加" ? "尚未读取数据状态" : p.status}` : p.judgment}
             </p>
             <div className="pf-library-card-foot">
               <span>
@@ -420,7 +423,7 @@ export function LibraryPage({
                     {p.attention.length + p.unknowns.length} 项需要注意
                   </>
                 ) : (
-                  "等待下一次向前"
+                  demo ? "等待下一次向前" : "尚未发现已记录的注意事项"
                 )}
               </span>
               <ArrowRight size={17} />
@@ -441,7 +444,7 @@ export function LibraryPage({
                 ? "试试其他关键词或切换到全部项目。"
                 : "从已有目录、文档或 ZIP 开始，无需先准备 Git 仓库。"}
             </p>
-            <Link className="pf-button" href="/projects">
+            <Link className="pf-button" href="/workspace/intake">
               添加或导入项目
               <Plus size={15} />
             </Link>
@@ -454,7 +457,7 @@ export function LibraryPage({
           <h3>从你已有的材料开始</h3>
           <p>本地目录、ZIP、研究文档，都是一个项目的起点。</p>
         </div>
-        <Link href="/projects" className="pf-text-link">
+        <Link href="/workspace/intake" className="pf-text-link">
           绑定目录 / 导入 ZIP
           <ArrowRight size={16} />
         </Link>
@@ -715,10 +718,10 @@ export function SettingsPage({
   const selectedProvider = providers.find((p) => p.defaultEnabled);
   const managementUrl =
     global || tab === "Provider 策略"
-      ? "/settings"
+      ? "/workspace/settings"
       : project && !demo
-        ? `/projects/${project.id}`
-        : "/projects";
+        ? `/workspace/intake?project=${project.id}`
+        : "/workspace/intake";
   const icons = global
     ? [Sparkles, Moon, Database, Monitor]
     : [Folder, GitBranch, BookOpen, Sparkles, Settings];
@@ -763,7 +766,8 @@ export function SettingsPage({
           </p>
         )}
         {global && tab === "模型与 API" && <ProviderManager key={String(demo)} demo={demo} />}
-        {!global && tab === "项目来源" && (
+        {!global && tab === "项目来源" && !demo && project?.source && <ProjectIntake existing={project.source}/>}
+        {!global && tab === "项目来源" && demo && (
           <>
             <div className="pf-project-identity">
               <ProjectMark color={project?.color} />
@@ -842,7 +846,7 @@ export function SettingsPage({
               </div>
               <div>
                 <label>分支协作</label>
-                <p>后续提供</p>
+                <p><Link href={href("worklines")}>查看开发工作线与来源</Link></p>
               </div>
             </div>
             <p className="pf-settings-explanation">

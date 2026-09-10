@@ -33,7 +33,7 @@ export default function Home() {
             <ArrowRight className="h-5 w-5" />
           </Link>
           <Link className="ml-5 inline-flex py-4 text-sm text-blue-100/70 underline underline-offset-4 hover:text-white" href="/dashboard">
-            兼容工作台
+            工程兼容工具
           </Link>
         </div>
 

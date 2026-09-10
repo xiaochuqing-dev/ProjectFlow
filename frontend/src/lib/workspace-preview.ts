@@ -4,11 +4,14 @@ import type {
   ProjectHistoryOverview,
   ProjectHistoryStory,
 } from "./api";
+import { supportedClaim, type ClaimClassification } from "./workspace-claims";
 
 export const workspaceViews = [
   "projects",
   "current",
   "history",
+  "worklines",
+  "intake",
   "handoff",
   "project-settings",
   "settings",
@@ -18,6 +21,8 @@ export const viewLabels: Record<WorkspaceView, string> = {
   projects: "项目库",
   current: "当前状态",
   history: "项目历程",
+  worklines: "开发工作线",
+  intake: "添加项目",
   handoff: "Agent 交接",
   "project-settings": "项目设置",
   settings: "全局设置",
@@ -34,6 +39,9 @@ export type WorkspaceStory = {
   evidence: string;
   status: "confirmed" | "attention" | "conflict" | "recorded";
   chapter: string;
+  classification?: ClaimClassification;
+  sourceRefs?: string[];
+  confirmedOutcome?: boolean;
 };
 export type WorkspaceChapter = {
   id: string;
@@ -62,6 +70,8 @@ export type WorkspaceProject = {
   degraded?: boolean;
   source?: Project;
   confirmedChanges?: string[];
+  sourceStoryRefs?: string[];
+  declarations?: { text: string; kind: string; source: string; line: number; sourceHash: string; observedAt: string }[];
 };
 
 // Hand-authored design fixtures. These are never sent to the API or stored as project facts.
@@ -201,7 +211,7 @@ export function projectCard(project: Project): WorkspaceProject {
     summary: "尚未读取当前状态。",
     judgment: "尚未读取当前状态",
     status: "已添加",
-    updated: "尚未读取",
+    updated: project.updatedAt ? new Date(project.updatedAt).toLocaleString("zh-CN", { hour12: false }) : "更新时间未知",
     phase: "尚未确认",
     phaseRange: "",
     stories: [],
@@ -226,10 +236,11 @@ export function persistedProject(
     version: String(index + 1).padStart(2, "0"),
   }));
   const latest = chapters.at(-1);
+  const summary = supportedClaim({ text: current.confirmedState || "", kind: "SUMMARY", classification: "INFERRED", sources: current.relatedStoryRefs ?? [] });
   return {
     ...projectCard(project),
-    summary: current.confirmedState || "尚无可确认的当前状态",
-    judgment: current.confirmedState || "尚无可确认的当前状态",
+    summary: summary?.text || "尚无有来源的当前状态摘要",
+    judgment: summary?.text || "尚无有来源的当前状态摘要",
     status: current.degraded
       ? "部分可用"
       : current.stale || current.continuityDirty
@@ -240,7 +251,7 @@ export function persistedProject(
           hour12: false,
         })
       : "尚未成功更新",
-    phase: latest?.title || "尚未确认阶段",
+    phase: latest?.title || "尚无时间篇章",
     phaseRange: latest?.range || "",
     chapters,
     attention: current.conflicts ?? [],
@@ -255,18 +266,29 @@ export function persistedProject(
     stale: current.stale || current.continuityDirty,
     degraded: current.degraded,
     confirmedChanges: current.recentConfirmedChanges ?? [],
+    sourceStoryRefs: current.relatedStoryRefs ?? [],
+    declarations: Array.isArray(history.diagnostics?.declarationsV1)
+      ? history.diagnostics.declarationsV1 as WorkspaceProject["declarations"] : [],
   };
 }
 
 export function persistedStory(story: ProjectHistoryStory): WorkspaceStory {
+  const claim = story.claimAttribution;
+  const sources = claim?.directEvidenceRefs ?? story.evidenceRefs ?? [];
+  const classification: ClaimClassification = story.conflicts?.length ? "CONFLICTED"
+    : claim && ["PLANNED", "DECLARED"].includes(claim.state) ? "DECLARED"
+    : sources.length ? "INFERRED" : "UNKNOWN";
+  // A broad filesystem subject proves file changes, not first creation of the whole application.
+  const observedStructure = claim?.state === "OBSERVED" && /^(前后端|前端|后端)项目骨架$/.test(claim.subject)
+    && sources.some(ref => ref.startsWith("file:"));
   return {
     id: story.id,
-    title: story.humanTitle,
-    summary: story.oneSentenceSummary,
+    title: observedStructure ? `观察到${claim.subject.replace("项目骨架", "代码结构")}的文件变化` : story.humanTitle,
+    summary: observedStructure ? "来源记录了相关文件的新增或修改，具体功能结果仍需进一步确认。" : story.oneSentenceSummary,
     date: story.occurredTo?.slice(0, 10) || "时间未知",
-    before: story.beforeState,
-    change: story.change,
-    after: story.afterState,
+    before: observedStructure ? "这份记录没有独立确认该部分的完整此前状态。" : story.beforeState,
+    change: observedStructure ? "本次来源记录了相关文件的新增或修改。" : story.change,
+    after: observedStructure ? "相关文件变化已进入项目记录；这不代表整套功能已完成运行验收。" : story.afterState,
     evidence: story.eventRefs?.[0] || "",
     status: story.conflicts?.length
       ? "conflict"
@@ -274,6 +296,10 @@ export function persistedStory(story: ProjectHistoryStory): WorkspaceStory {
         ? "attention"
         : "recorded",
     chapter: "",
+    classification,
+    sourceRefs: sources,
+    confirmedOutcome: Boolean(claim && ["OBSERVED", "VERIFIED", "IMPLEMENTED", "REMOVED", "RESTORED"].includes(claim.state)
+      && supportedClaim({ text: claim.outcome, kind: "OUTCOME", classification: "OBSERVED", sources }) && !story.conflicts?.length),
   };
 }
 

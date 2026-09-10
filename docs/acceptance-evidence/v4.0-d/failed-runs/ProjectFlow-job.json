@@ -1,0 +1,13 @@
+{
+  "jobType": "PROJECT_HISTORY_REFRESH",
+  "status": "EXPIRED",
+  "stage": "EXPIRED",
+  "failureCode": "DURATION_BUDGET_EXCEEDED",
+  "errorMessage": "任务已达到显式总体时长上限，已停止后续请求。",
+  "requestCount": 4,
+  "promptTokens": 27689,
+  "completionTokens": 10804,
+  "totalTokens": 38493,
+  "elapsedMs": 600579,
+  "maxDurationMs": 600000
+}
