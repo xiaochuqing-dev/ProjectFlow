@@ -6,6 +6,19 @@ const source = readFileSync("src/lib/workspace-claims.ts", "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 const runtime = { exports: {} }; new Function("exports", "module", compiled)(runtime.exports, runtime);
 const { supportedClaim, claimLabels } = runtime.exports;
+const previewCompiled = ts.transpileModule(readFileSync("src/lib/workspace-preview.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+const preview = { exports: {} }; new Function("exports", "module", "require", previewCompiled)(preview.exports, preview, () => runtime.exports);
+
+test("observed scaffold files cannot claim first creation or runtime completion", () => {
+  const story = { id: "observed", humanTitle: "建立后端项目骨架", oneSentenceSummary: "首次建立后端项目骨架", beforeState: "此前不存在后端", afterState: "后端已经完成", change: "建立后端", occurredTo: "2026-09-09", eventRefs: ["e"], conflicts: [], unknowns: [], claimAttribution: { subject: "后端项目骨架", state: "OBSERVED", outcome: "文件已有变化", directEvidenceRefs: ["file:backend/new-feature.java"] } };
+  const visible = preview.exports.persistedStory(story);
+  assert.equal(visible.title, "观察到后端代码结构的文件变化");
+  assert.match(visible.before, /没有独立确认/);
+  assert.match(visible.after, /不代表.*运行验收/);
+  assert.equal(visible.classification, "INFERRED");
+  const implemented = preview.exports.persistedStory({ ...story, claimAttribution: { ...story.claimAttribution, state: "IMPLEMENTED" } });
+  assert.equal(implemented.title, story.humanTitle);
+});
 test("no source means no plan or progress", () => {
   for (const kind of ["PLAN", "MILESTONE", "PROGRESS", "MATURITY", "USER_GOAL"]) assert.equal(supportedClaim({ text: "下一步", kind, classification: "DECLARED", sources: [] }), null);
 });

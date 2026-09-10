@@ -452,7 +452,7 @@ public class ProjectUnderstandingService {
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             preservePreviousAsStale(current);
-            throw new IllegalStateException("项目理解任务已中断；已保留上一次成功理解", exception);
+            throw new IllegalStateException("项目理解任务已中断；已保留上一次保存的理解", exception);
         } catch (Exception exception) {
             if (current == null) {
                 persistSnapshot(projectId, withModelFailure(deterministic));
@@ -462,7 +462,7 @@ public class ProjectUnderstandingService {
             throw new UnderstandingModelException(
                 current == null
                     ? "模型语义归纳失败；结构索引和确定性理解已保存"
-                    : "模型语义归纳失败；结构索引已更新，上一次成功理解已保留",
+                    : "模型语义归纳失败；结构索引已更新，上一次保存的理解已保留",
                 exception
             );
         }

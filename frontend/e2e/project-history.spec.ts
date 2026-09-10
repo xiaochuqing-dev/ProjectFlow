@@ -113,7 +113,9 @@ test("V4 工作区读取真实后端、显式更新并共享同一 Agent 交接�
   await page.getByRole("button", { name: "更新项目状态", exact: true }).click();
   await expect(page.getByRole("button", { name: "更新项目状态", exact: true })).toBeEnabled({ timeout: 90_000 });
   const current = await api<{ confirmedState: string }>(request, "GET", `/projects/${fixture.projectId}/history/current-state`);
-  await expect(page.locator(".pf-hero-summary")).toHaveText(current.confirmedState);
+  const savedStories = await api<{ items: Array<{ humanTitle: string }> }>(request, "GET", `/projects/${fixture.projectId}/history/stories?recentFirst=true&size=20`);
+  expect(savedStories.items.length).toBeGreaterThan(0);
+  await expect(page.locator(".pf-change-row strong").first()).toHaveText(savedStories.items[0].humanTitle);
   await page.getByRole("navigation", { name: "主导航" }).getByRole("link", { name: "项目历程", exact: true }).click();
   await page.getByRole("button", { name: "按时间查看", exact: true }).click();
   await expect(page.locator(".pf-chapter-reading h2")).toBeVisible();

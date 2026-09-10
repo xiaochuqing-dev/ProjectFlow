@@ -33,11 +33,11 @@ export function WorklineReader({ projectId, demo }: { projectId: string; demo: b
     {data && <p className="pf-page-footnote">本地观察：{date(data.observedAt)} · {sourceLabels[data.githubStatus] || "GitHub 状态未知"}：{date(data.githubObservedAt)}</p>}
     {data?.stale && <div className="pf-notice" role="status">以下是保存的观察，可能已过期。更新项目状态可重新核对来源。</div>}
     {data && !["AVAILABLE", "NOT_READ"].includes(data.githubStatus) && <div className="pf-notice">远程协作信息不完整；本地工作线仍可阅读，PR 状态保持未知。</div>}
-    <div className="pf-workline-filters">
+    {(data?.branchCount ?? 0) > 1 && <div className="pf-workline-filters">
       <div className="pf-segmented" aria-label="工作线分类">{Object.entries(labels).filter(([key]) => key === "ALL" || (data?.groups[key] ?? 0) > 0).map(([key, label]) =>
         <button key={key} aria-pressed={group === key} className={group === key ? "active" : ""} onClick={() => { setGroup(key); setPage(0); }}>{label} <span>{key === "ALL" ? data?.branchCount ?? 0 : data?.groups[key]}</span></button>)}</div>
-      <form className="pf-thread-search" onSubmit={e => { e.preventDefault(); setQuery(search.trim()); setPage(0); }}><Search size={16}/><input aria-label="搜索开发工作线" value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索分支或工作内容"/><button className="pf-button">搜索</button></form>
-    </div>
+      <form className="pf-thread-search" onSubmit={e => { e.preventDefault(); setQuery(search.trim()); setPage(0); }}><label className="pf-filter-search"><Search size={16}/><input aria-label="搜索开发工作线" value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索分支或工作内容" maxLength={160}/></label><button className="pf-button">搜索</button></form>
+    </div>}
     {loading && <p role="status">正在读取已保存的工作线…</p>}
     {error && <ReadError message={error} onRetry={() => setRetry(n => n + 1)}/>}
     {!loading && !error && <div className="pf-workline-list">{data?.items.map(item => <button key={item.id} className={`pf-workline-card ${item.state === "HISTORY" || item.state === "INACTIVE" ? "quiet" : ""}`} onClick={() => setSelected(item)}>

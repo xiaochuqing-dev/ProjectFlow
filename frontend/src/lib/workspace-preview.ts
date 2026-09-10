@@ -278,14 +278,17 @@ export function persistedStory(story: ProjectHistoryStory): WorkspaceStory {
   const classification: ClaimClassification = story.conflicts?.length ? "CONFLICTED"
     : claim && ["PLANNED", "DECLARED"].includes(claim.state) ? "DECLARED"
     : sources.length ? "INFERRED" : "UNKNOWN";
+  // A broad filesystem subject proves file changes, not first creation of the whole application.
+  const observedStructure = claim?.state === "OBSERVED" && /^(前后端|前端|后端)项目骨架$/.test(claim.subject)
+    && sources.some(ref => ref.startsWith("file:"));
   return {
     id: story.id,
-    title: story.humanTitle,
-    summary: story.oneSentenceSummary,
+    title: observedStructure ? `观察到${claim.subject.replace("项目骨架", "代码结构")}的文件变化` : story.humanTitle,
+    summary: observedStructure ? "来源记录了相关文件的新增或修改，具体功能结果仍需进一步确认。" : story.oneSentenceSummary,
     date: story.occurredTo?.slice(0, 10) || "时间未知",
-    before: story.beforeState,
-    change: story.change,
-    after: story.afterState,
+    before: observedStructure ? "这份记录没有独立确认该部分的完整此前状态。" : story.beforeState,
+    change: observedStructure ? "本次来源记录了相关文件的新增或修改。" : story.change,
+    after: observedStructure ? "相关文件变化已进入项目记录；这不代表整套功能已完成运行验收。" : story.afterState,
     evidence: story.eventRefs?.[0] || "",
     status: story.conflicts?.length
       ? "conflict"

@@ -283,6 +283,11 @@ function currentState(confirmedState = "上次可确认结果") {
     presentationRevision: "r1",
   };
 }
+function savedStories(title: string) {
+  return { items: [{ id: "saved-result", humanTitle: title, oneSentenceSummary: title,
+    role: "PRIMARY", evidenceRefs: ["file:report.md"], eventRefs: ["source-event"], occurredTo: "2026-09-01",
+    unknowns: [], conflicts: [], claimAttribution: { subject: "报告内容", state: "OBSERVED", outcome: title, directEvidenceRefs: ["file:report.md"] } }], totalElements: 1 };
+}
 const overview = {
   projectId: liveProject.id,
   presentationRevision: "r1",
@@ -391,6 +396,7 @@ test("explicit refresh keeps prior content, resumes its job, and sends one POST"
     if (pathname.endsWith("/analysis-jobs")) return created ? [job] : [];
     if (pathname.endsWith("/current-state"))
       return currentState(polls >= 3 ? "更新后的可确认结果" : "上次可确认结果");
+    if (pathname.endsWith("/stories")) return savedStories(polls >= 3 ? "更新后的可确认结果" : "上次可确认结果");
     return undefined;
   });
   await open(page, "current", "?project=fixture-project");
@@ -398,12 +404,12 @@ test("explicit refresh keeps prior content, resumes its job, and sends one POST"
   await expect(
     page.getByRole("button", { name: "正在更新状态", exact: true }),
   ).toBeDisabled();
-  await expect(page.locator(".pf-hero-summary")).toHaveText("上次可确认结果");
+  await expect(page.locator(".pf-real-section .pf-story-card h3")).toHaveText("上次可确认结果");
   await page.reload();
   await expect(
     page.getByRole("button", { name: "正在更新状态", exact: true }),
   ).toBeDisabled();
-  await expect(page.locator(".pf-hero-summary")).toHaveText(
+  await expect(page.locator(".pf-real-section .pf-story-card h3")).toHaveText(
     "更新后的可确认结果",
     { timeout: 15_000 },
   );
@@ -467,11 +473,12 @@ test("a reused completed refresh reloads saved results and a rejected update pre
       return currentState(
         refreshed ? "已完成任务中的保存结果" : "上次可确认结果",
       );
+    if (pathname.endsWith("/stories")) return savedStories(refreshed ? "已完成任务中的保存结果" : "上次可确认结果");
     return undefined;
   });
   await open(page, "current", "?project=fixture-project");
   await page.getByRole("button", { name: "更新项目状态", exact: true }).click();
-  await expect(page.locator(".pf-hero-summary")).toHaveText(
+  await expect(page.locator(".pf-real-section .pf-story-card h3")).toHaveText(
     "已完成任务中的保存结果",
   );
   await page.route("**/history/refresh", (route) =>
@@ -483,7 +490,7 @@ test("a reused completed refresh reloads saved results and a rejected update pre
   );
   await page.getByRole("button", { name: "更新项目状态", exact: true }).click();
   await expect(page.getByText("本次更新被拒绝", { exact: true })).toBeVisible();
-  await expect(page.locator(".pf-hero-summary")).toHaveText(
+  await expect(page.locator(".pf-real-section .pf-story-card h3")).toHaveText(
     "已完成任务中的保存结果",
   );
 });
