@@ -336,7 +336,7 @@ test("live reads never fall back to fixtures or promote ordinary stories", async
   await fixtureApi(page);
   await open(page, "current", "?project=fixture-project");
   await expect(page.locator(".pf-hero h2")).toHaveText(liveProject.name);
-  const confirmed = page.locator(".pf-real-section").filter({ has: page.getByRole("heading", { name: "已经确认的结果" }) });
+  const confirmed = page.locator(".pf-real-section").filter({ has: page.getByRole("heading", { name: "直接证据支持的变化" }) });
   await expect(confirmed).toContainText("尚不足以展示可确认的结果");
   await expect(confirmed).not.toContainText(
     "仅声明但未确认的历史描述",

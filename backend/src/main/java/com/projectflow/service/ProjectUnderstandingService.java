@@ -142,7 +142,9 @@ public class ProjectUnderstandingService {
         ProjectUnderstandingSnapshot current = understandingRepository.findByProjectId(projectId).orElse(null);
         boolean semanticUpgradeRequired = current != null
             && provider != null
-            && "MODEL_UNAVAILABLE".equals(current.getSemanticStatus());
+            && ("MODEL_UNAVAILABLE".equals(current.getSemanticStatus())
+                || "MODEL_FAILED".equals(current.getSemanticStatus())
+                || "FAILED_DEGRADED".equals(current.getSemanticStatus()));
         boolean cacheCandidate = current != null
             && current.getStructureIndexVersion().equals(CompositeProjectStructureIndexer.INDEX_VERSION)
             && current.getModelAnalysisVersion().equals(MODEL_ANALYSIS_VERSION)

@@ -568,7 +568,7 @@ export function Workspace({ view }: { view: WorkspaceView }) {
                   查看设计示例
                 </Link>
                 <Link href="/workspace/projects">打开真实项目</Link>
-                <Link href="/dashboard">兼容工作台</Link>
+                <Link href="/dashboard">工程兼容工具</Link>
               </div>
             </details>
           </div>

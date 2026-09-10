@@ -78,6 +78,7 @@ test("current material understanding uses an explicit durable job and filters un
     projectId: project.id, analyzedAt: "2026-09-09T00:00:00Z", currentStatus: "CURRENT",
     identity: { claims: [{ id: "identity", text: "项目材料描述了团队任务与文件协作工作区。", evidenceRefs: ["known"] }] },
     capabilities: { claims: [{ id: "unknown", text: "不存在来源的能力不能展示", evidenceRefs: ["missing"] }, { id: "progress", text: "项目进度达到78%", evidenceRefs: ["known"] }] },
+    quality: { modelUsed: true, semanticStatus: "EXPLAINED", cacheHit: false, limitations: [] },
     sourceMap: { sources: [{ id: "known", locator: "README.md", summary: "项目说明摘录", currentness: "CURRENT" }] }, unknowns: ["未进行功能运行验收"]
   } : null }) }));
   await page.route("**/understanding/refresh", async route => { writes++; await route.fulfill({ contentType: "application/json", body: JSON.stringify({ data: { id: "understanding-job", status: "RUNNING", stageMessage: "正在理解当前材料" } }) }); });

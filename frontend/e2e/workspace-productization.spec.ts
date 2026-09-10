@@ -298,7 +298,7 @@ test("local welcome and login entry lead into V4 while compatibility remains rea
   const state = await fixture(page);
   await page.goto("/login");
   await expect(page.getByRole("link", { name: "进入 V4 工作区", exact: true })).toHaveAttribute("href", "/workspace/projects");
-  await expect(page.getByRole("link", { name: "兼容工作台", exact: true })).toHaveAttribute("href", "/dashboard");
+  await expect(page.getByRole("link", { name: "工程兼容工具", exact: true })).toHaveAttribute("href", "/dashboard");
   await page.getByRole("link", { name: "进入 V4 工作区", exact: true }).click();
   await expect(page.locator(".pf-page-heading h1")).toHaveText("项目库");
   await expect(page.getByText("设计预览 · 示例数据", { exact: true })).toHaveCount(0);

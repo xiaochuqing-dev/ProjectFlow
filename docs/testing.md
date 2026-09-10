@@ -1,5 +1,11 @@
 # Testing
 
+## V4.0-D acceptance boundary
+
+`ProjectWorklineCollectorTest`, `ProjectWorklineReadTest` and `ProjectDeclarationReadTest` cover bounded Git/PR collection, exact merged HEAD and ambiguous ancestry, unavailable GitHub, source declarations, owned persisted reads and recent-story pagination. `ProjectUnderstandingServiceTest` covers retrying a failed first semantic attempt with unchanged files while retaining the zero-model no-change path for successful/no-model snapshots. Workspace E2E covers current material job recovery, claim display ceilings, intake redirects and real/demo isolation.
+
+Actual repository Dogfood, independent source sampling, Sol/xhigh model review, Agent visual inspection and Owner Review are separate evidence types. Required CI success does not prove semantic completeness. V4.0-D evidence lives under `docs/acceptance-evidence/v4.0-d/`; a failed real Provider attempt must remain recorded even after a later successful retry. No keys or full model inputs/outputs belong in these artifacts.
+
 ## V3.9 continuity gates
 
 The frozen V3.9 dataset contains exactly 15 Calibration and 15 Holdout cases under `docs/acceptance-evidence/v3.9/continuity-ground-truth.json`; production Prompt builders are tested to exclude its IDs and answers. Deterministic coverage exercises Delta bounds/no-op, Story/Thread identity, Chapter-tail reuse, additive Correction replay versus rewrite conflict, Current State and Context revisions, internal dirty acknowledgement, database Agent Result collection, non-Git material, rewrite/failure/checkpoint behavior and cross-project safety.

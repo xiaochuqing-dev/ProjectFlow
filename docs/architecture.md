@@ -1,5 +1,13 @@
 # Architecture
 
+## V4.0-D persisted Workspace reads
+
+The normal project library, intake, current state, history and settings routes converge on the V4 Workspace. Engineering compatibility routes require an explicit entry. Current material understanding reuses the existing explicit Understanding Job and persisted snapshot; a read never starts a model call. Failed first semantic attempts remain visible local observations and cannot satisfy the unchanged successful-understanding cache shortcut on an explicit retry.
+
+Development Worklines are a replaceable `worklinesV1` extension in the existing History snapshot diagnostics. The explicit History Job collects bounded local Git and optional GitHub PR metadata; owned GET worklines performs only persisted filtering and pagination. A PR title/body is DECLARED; changed-area wording is INFERRED; merge state uses exact merged PR HEAD or verified Git containment. Non-default open PR base/head supports dependency, while ahead count alone never proves unmerged work. There is no new entity, schema migration, Git client, watcher or Fact writer.
+
+`declarationsV1` retains bounded document excerpts with relative source, line, content hash and read time. It is not a comprehensive plan inventory or proof that a historical plan remains current. History refresh now uses the existing AUTO time policy instead of a hardcoded ten-minute overall limit; cancellation and request/token/window bounds stay in force. Actual acceptance and remaining semantic limits are in [the V4.0-D report](projectflow-v4.0-d-real-project-understanding-report.md).
+
 ## V3.9 Project Continuity Closure
 
 V3.9 extends the existing explicit History refresh chain: source collection → Event upsert → `ProjectContinuityDelta` → affected Story/Thread → affected Chapter tail → corrected history → Current Project State → Agent Context/Gateway/Hermes/Obsidian. It adds no second History, Fact, incremental engine, projector, model client, watcher or daemon.

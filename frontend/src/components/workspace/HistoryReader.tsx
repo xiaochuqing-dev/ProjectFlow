@@ -84,7 +84,7 @@ export function HistoryPage({ project, demo, onStory }: Props) {
   return <div className="pf-history-page">
     {deepLinkError && <p className="pf-notice" role="status">{deepLinkError}</p>}
     <div className="pf-history-lead">
-      <span className="pf-eyebrow">{project.name} / PROJECT JOURNEY</span><h2>每一次变化，都有来处。</h2><p>{project.summary}</p>
+      <span className="pf-eyebrow">{project.name} / PROJECT JOURNEY</span><h2>每一次变化，都有来处。</h2>{demo && <p>{project.summary}</p>}
       <div><Clock3 size={14} />{project.chapters[0]?.range.split(" – ")[0] || "尚无历史起点"}<span>—</span>
         {project.chapters.at(-1)?.range.split(" – ").at(-1) || "等待材料"}
         <span className="pf-chip recorded">{demo ? project.chapters.length : chapterList?.totalElements ?? project.chapters.length} 个时间篇章 · 系统归纳</span></div>

@@ -6,16 +6,17 @@ ProjectFlow 是用于理解项目现状、阅读真实变化并维护长期项�
 
 普通入口是 `/workspace/projects`。`/projects`、项目详情、普通历程链接与 `/settings` 会转入 Workspace。创建、本地绑定、GitHub 地址、ZIP 和文本接入均使用 V4 页面及既有后端。根目录 `Start-ProjectFlow.bat` 可从任意目录启动；显式更新状态复用持久化 Job，查看页面不会扫描或调用模型。工程审计通过明确的兼容入口保留。
 
-本轮依赖 V4.0-C PR #23，保持 Draft；验收见 [V4.0-D 阶段报告](docs/projectflow-v4.0-d-real-project-understanding-report.md)。这不是正式 Release。以下 V4.0-C 段落保留为继承功能说明。
+本轮 PR #24 依赖 V4.0-C PR #23，保持 Draft；验收见 [V4.0-D 阶段报告](docs/projectflow-v4.0-d-real-project-understanding-report.md)。这不是正式 Release。
 
-当前分支在 V4.0-B 的午夜蓝三栏工作区上迁移长期演变主线与 Provider 管理，后端仍沿用 V3.10；这不是 V4 正式发布。启动欢迎页点击“进入 V4 工作区”即可打开 `/workspace/projects`，可连续使用当前状态、项目历程、Agent 交接和设置六个页面。兼容工作台仍可单独进入。仅显式 `?demo=1` 加载示例，真实读取失败不会切换为示例。
+启动欢迎页点击“进入 V4 工作区”即可打开项目库，可连续使用当前状态、项目历程、工作线、Agent 交接和设置。仅显式 `?demo=1` 加载示例，真实读取失败不会切换为示例。当前材料理解与历程更新复用已有持久化任务；长历史使用 checkpoint 恢复，AUTO 不再套用隐藏的 10 分钟总截止。
 
-- `/workspace/history?project=<id>`：在“项目阶段”和“演变主线”间切换，按页阅读 Thread、关联 Story 和多个来源的 Evidence。核心阅读不再需要旧 History 页面；修正与完整审计仍保留兼容入口。
+- `/workspace/history?project=<id>`：先读变化概览，再按时间或长期主题阅读，Story 可下钻多个来源的 Evidence。修正与完整审计仍保留工程兼容入口。
+- `/workspace/worklines?project=<id>`：按主线、开发、待审、依赖、历史与未知分组分页；分别披露本地 Git 和 GitHub 读取时间。
 - `/workspace/settings`：管理全局 Provider，完成创建、编辑、默认选择、连接测试和确认删除。已保存凭据不回显，编辑留空保留；替换或清除须确认。
 - `/workspace/project-settings?project=<id>`：管理项目来源并查看使用边界。当前后端只有全局默认 Provider，没有项目级模型绑定；Obsidian 仍使用仓库内 CLI，本页不假装保存策略或启动同步。
-- 项目接入、ZIP、本地绑定、登录、历史修正与批量重复配置清理仍保留既有入口。Desktop Shell、安装器和自动更新不在本轮范围内。
+- `/workspace/intake`：创建项目、绑定本地目录、填写 GitHub 地址、导入 ZIP 或文本材料。历史修正与批量重复配置清理保留工程兼容入口。Desktop Shell、安装器和自动更新不在本轮范围内。
 
-实现、测试、截图和剩余边界见 [V4.0-C 阶段报告](docs/projectflow-v4.0-c-gui-productization-report.md) 与 [验收证据](docs/acceptance-evidence/v4.0-c/README.md)。本分支依赖仍为 Draft 的 PR #22；V4.0-A PR #21 只作为信息架构合同参考。
+继承的 V4.0-C 功能与历史验收保留于 [V4.0-C 阶段报告](docs/projectflow-v4.0-c-gui-productization-report.md)。当前 stacked dependency 为 #24 → #23 → #22；V4.0-A PR #21 仍仅作为信息架构合同参考。
 
 ## 已有 V3.x 产品基础
 
