@@ -1,0 +1,14 @@
+{
+  "project": "Corporation-Agent",
+  "jobId": "29ec31a9-7542-4d4f-a7c3-a9a5e75e201b",
+  "status": "FAILED",
+  "elapsedMs": 1205276,
+  "jobReportedRequestCount": 0,
+  "telemetryAvailability": "UNAVAILABLE_ON_WRAPPED_FAILURE",
+  "observedTransportRequestCount": 2,
+  "transportCountSource": "Sanitized exception metadata: ModelTransportException after 2 requests",
+  "transportFailureType": "HTTP2_STREAM_RESET_CANCEL",
+  "configuredRequestTimeoutSeconds": 900,
+  "failureOrigin": "UNDETERMINED: the SDK received a cancelled HTTP/2 stream; no server-side cause is established",
+  "qualityConclusion": "FAILED; retained MODEL_FAILED local observations, no successful material understanding"
+}

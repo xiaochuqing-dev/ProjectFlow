@@ -599,7 +599,7 @@ export function Workspace({ view }: { view: WorkspaceView }) {
             <span>正在读取已保存的项目内容…</span>
           </div>
         )}
-        {!loading && view === "projects" && (
+        {!loading && view === "projects" && (!error || projects.length > 0) && (
           <LibraryPage
             projects={projects}
             demo={demo}

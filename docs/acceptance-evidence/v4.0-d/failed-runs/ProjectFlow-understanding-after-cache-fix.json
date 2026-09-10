@@ -1,0 +1,14 @@
+{
+  "project": "ProjectFlow",
+  "jobId": "8af75156-0ca8-4d10-b724-ed0e4d6ad465",
+  "status": "FAILED",
+  "elapsedMs": 1207037,
+  "jobReportedRequestCount": 0,
+  "telemetryAvailability": "UNAVAILABLE_ON_WRAPPED_FAILURE",
+  "observedTransportRequestCount": 2,
+  "transportCountSource": "Sanitized exception metadata: ModelTransportException after 2 requests",
+  "transportFailureType": "HTTP2_STREAM_RESET_CANCEL",
+  "configuredRequestTimeoutSeconds": 900,
+  "failureOrigin": "UNDETERMINED: the SDK received a cancelled HTTP/2 stream; no server-side cause is established",
+  "qualityConclusion": "FAILED; retained MODEL_FAILED local observations, no successful material understanding"
+}

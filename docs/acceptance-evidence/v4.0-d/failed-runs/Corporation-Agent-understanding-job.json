@@ -1,0 +1,13 @@
+{
+  "jobType": "PROJECT_UNDERSTANDING_REFRESH",
+  "status": "FAILED",
+  "stage": "FAILED",
+  "failureCode": "EXECUTION_FAILED",
+  "errorMessage": "模型语义归纳失败；结构索引和确定性理解已保存",
+  "requestCount": 0,
+  "promptTokens": 0,
+  "completionTokens": 0,
+  "totalTokens": 0,
+  "elapsedMs": 601847,
+  "maxDurationMs": 9223372036854775807
+}

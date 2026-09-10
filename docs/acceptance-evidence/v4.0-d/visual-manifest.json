@@ -1,0 +1,1360 @@
+{
+  "recordedAt": "2026-09-10T05:22:52.803263+00:00",
+  "reviewType": "AGENT_VISUAL_REVIEW",
+  "ownerReview": "NOT_REVIEWED",
+  "modelReview": "Separate MODEL_REVIEW in model-review-summary.json; no human scores",
+  "browser": "Headless installed Microsoft Edge controlled by Playwright",
+  "runtimeBuildId": "tLqXMhRCTZTQrMKAGUYHg",
+  "finalRealOrOnboardingCount": 53,
+  "finalInjectedAnomalyCount": 3,
+  "retainedEarlierFixtureCount": 39,
+  "widths": [
+    390,
+    640,
+    1024,
+    1280,
+    1600
+  ],
+  "height": 801,
+  "pageJavaScriptErrors": 0,
+  "automatedGeometry": "All 44 real-project captures check that the narrow evidence control does not overlap the scrolling main area; Current/Worklines also check horizontal overflow at all five widths.",
+  "visualSampleFiles": [
+    "screenshots/real/projectflow-current-1280.png",
+    "screenshots/real/corporation-current-390.png",
+    "screenshots/real/corporation-current-640.png",
+    "screenshots/real/projectflow-worklines-1024.png",
+    "screenshots/real/projectflow-worklines-1600.png",
+    "screenshots/real/corporation-worklines-390.png",
+    "screenshots/real/projectflow-history-overview.png",
+    "screenshots/real/projectflow-evidence.png",
+    "screenshots/real/corporation-evidence.png",
+    "screenshots/real/projectflow-pr23-detail.png",
+    "screenshots/real/projectflow-pr24-detail.png",
+    "screenshots/real/settings-redirect.png",
+    "screenshots/real/intake-local.png",
+    "screenshots/real/intake-github.png",
+    "screenshots/real/intake-zip.png",
+    "screenshots/synthetic/current-conflict-unknown.png",
+    "screenshots/synthetic/workline-github-unavailable-stale.png",
+    "screenshots/synthetic/library-backend-error.png"
+  ],
+  "visualAssessment": {
+    "layout": "PASS_WITH_DISCLOSED_READING_LIMITATIONS",
+    "sourceLabelsAndBoundaries": "Visible project declarations, system summaries, local observations, missing model understanding, and source warnings",
+    "narrowScreens": "Evidence control outside the scrolling main area; natural one-branch view without redundant filters",
+    "modals": "Settled Story/Evidence and branch detail can be read; branch detail has internal padding",
+    "normalRoutes": "Midnight V4 project library, intake and global settings; explicit compatibility tools remain separate",
+    "limitations": [
+      "Generic historical wording and current capability understanding remain incomplete.",
+      "Long source excerpts remain more technical than first-level summaries.",
+      "All files have dimensions/hashes; visual inspection is the listed representative sample, not a claim of manual examination of every pixel in every retained fixture."
+    ]
+  },
+  "records": [
+    {
+      "file": "screenshots/real/corporation-library.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/projects",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "1c132cd5b540314028aae019ba7351555e11638725ed287d333b6401b7fffe02",
+      "bytes": 455446
+    },
+    {
+      "file": "screenshots/real/corporation-current.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/current",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "a0662143323747a6f373ff878d9d3eda865e279a5ec3a7a6d22bb5536e546fce",
+      "bytes": 566629
+    },
+    {
+      "file": "screenshots/real/corporation-current-390.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 390,
+        "height": 801
+      },
+      "route": "/workspace/current",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 390,
+      "height": 801,
+      "sha256": "a68f1de0fb25578c4a4012cd34fc79a7247649b89c4a1788dd2567a9d5636038",
+      "bytes": 197777
+    },
+    {
+      "file": "screenshots/real/corporation-current-640.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 640,
+        "height": 801
+      },
+      "route": "/workspace/current",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 640,
+      "height": 801,
+      "sha256": "691dee85593918b46563cea4a8e957f9ff06cccc54484243361f45564af0cfff",
+      "bytes": 323045
+    },
+    {
+      "file": "screenshots/real/corporation-current-1024.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1024,
+        "height": 801
+      },
+      "route": "/workspace/current",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1024,
+      "height": 801,
+      "sha256": "d55328bcdafba8b5c12d938f701a64bee85f4941216d312220c1543cdab62eae",
+      "bytes": 440416
+    },
+    {
+      "file": "screenshots/real/corporation-current-1280.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/current",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "a0662143323747a6f373ff878d9d3eda865e279a5ec3a7a6d22bb5536e546fce",
+      "bytes": 566629
+    },
+    {
+      "file": "screenshots/real/corporation-current-1600.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1600,
+        "height": 801
+      },
+      "route": "/workspace/current",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1600,
+      "height": 801,
+      "sha256": "300ec60dde4440f116b6766e8ff0c1efef0349aa563e65a03f89e2840b2d00e8",
+      "bytes": 649847
+    },
+    {
+      "file": "screenshots/real/corporation-plan-boundary.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/current",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "693903809670781d966c21877001e27d51e47d50481017703de8aa85430b3425",
+      "bytes": 455573
+    },
+    {
+      "file": "screenshots/real/corporation-history-overview.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/history",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "541293f836436ff006b50bf507ef389e95dfab2d5908b7b6189046835fa24d6c",
+      "bytes": 506146
+    },
+    {
+      "file": "screenshots/real/corporation-history-time.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/history",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "ff916a63a53bfd1172a237cfc6d41c89b7c7ffca6a4e05b48f1ff45fdac8ed42",
+      "bytes": 437556
+    },
+    {
+      "file": "screenshots/real/corporation-history-threads.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/history",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "f10662f02865ffbe34d9e77b06777cf1c15e64edbf5959edfe3e24a6644c75e4",
+      "bytes": 420279
+    },
+    {
+      "file": "screenshots/real/corporation-thread-detail.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/history",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "57e1ed0be8b03c4011fcb2ce464e068d19e3012d8be71dab28fbdfe2be963fe3",
+      "bytes": 443093
+    },
+    {
+      "file": "screenshots/real/corporation-story.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/history",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "24189964a97c26f3f99f643ba3038964330246b17dcf75dfa5ded625d8da08de",
+      "bytes": 193181
+    },
+    {
+      "file": "screenshots/real/corporation-evidence.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/history",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "338c23f0de314582c1890fd6964001a6090161c99c516160a6bdb86346567bb4",
+      "bytes": 184764
+    },
+    {
+      "file": "screenshots/real/corporation-worklines.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "c83e2072a0edc6725618c38023d012ebd910ae309396f046ce64d366ad659067",
+      "bytes": 397331
+    },
+    {
+      "file": "screenshots/real/corporation-worklines-390.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 390,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 390,
+      "height": 801,
+      "sha256": "3b2811d2b335a270f2c386ec1255f903b6accaff791ed84dee612dc8ef2af989",
+      "bytes": 104566
+    },
+    {
+      "file": "screenshots/real/corporation-worklines-640.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 640,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 640,
+      "height": 801,
+      "sha256": "b554b7c831d9107abc221a9eb9c5ba06eb9e6c60239e4e6712aa2b57d404d794",
+      "bytes": 229058
+    },
+    {
+      "file": "screenshots/real/corporation-worklines-1024.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1024,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1024,
+      "height": 801,
+      "sha256": "7da3f5228245017421178c9cba4212ae2bf80bead208da0bb82f2901eb452e0d",
+      "bytes": 273356
+    },
+    {
+      "file": "screenshots/real/corporation-worklines-1280.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "c83e2072a0edc6725618c38023d012ebd910ae309396f046ce64d366ad659067",
+      "bytes": 397331
+    },
+    {
+      "file": "screenshots/real/corporation-worklines-1600.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1600,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1600,
+      "height": 801,
+      "sha256": "50f0f9a10f68740633c0110402b6b7508c78faf278eea7e5370d9e0c3f7e9424",
+      "bytes": 442352
+    },
+    {
+      "file": "screenshots/real/corporation-workline-detail.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "b384d223a33d370d279891b652aed3770b25ac9ae66fcf54fd5f9783704746ea",
+      "bytes": 171801
+    },
+    {
+      "file": "screenshots/real/projectflow-library.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/projects",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "5ba6b7d634c3f6552658d748b5f426653ec2bf21012c5072784699f6d8ae8ecc",
+      "bytes": 455446
+    },
+    {
+      "file": "screenshots/real/projectflow-current.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/current",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "b1ee4c206ec80b9209d665591551e244b278c1f407503c6ed3c3c1966d58dd51",
+      "bytes": 569068
+    },
+    {
+      "file": "screenshots/real/projectflow-current-390.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 390,
+        "height": 801
+      },
+      "route": "/workspace/current",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 390,
+      "height": 801,
+      "sha256": "e57212baa7caee5a1d0cc3fa76ff1a8cbcbe9fc1cf226f250d4273d7f925476f",
+      "bytes": 200218
+    },
+    {
+      "file": "screenshots/real/projectflow-current-640.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 640,
+        "height": 801
+      },
+      "route": "/workspace/current",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 640,
+      "height": 801,
+      "sha256": "00478292cb68dc7eefd1687ab7e6d9b970a64e279ffbb0a0bca64773f6ae5d61",
+      "bytes": 327476
+    },
+    {
+      "file": "screenshots/real/projectflow-current-1024.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1024,
+        "height": 801
+      },
+      "route": "/workspace/current",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1024,
+      "height": 801,
+      "sha256": "8299bbafc97c0f08d005213476de3ff3d923938a96612a30c4c0bd2163721f8f",
+      "bytes": 441068
+    },
+    {
+      "file": "screenshots/real/projectflow-current-1280.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/current",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "b1ee4c206ec80b9209d665591551e244b278c1f407503c6ed3c3c1966d58dd51",
+      "bytes": 569068
+    },
+    {
+      "file": "screenshots/real/projectflow-current-1600.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1600,
+        "height": 801
+      },
+      "route": "/workspace/current",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1600,
+      "height": 801,
+      "sha256": "bf7379c63841490d46a2f69b8ce43fe53dda35c969116acff7b46b5087026092",
+      "bytes": 651276
+    },
+    {
+      "file": "screenshots/real/projectflow-plan-boundary.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/current",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "53d75e32119348a77ae3ff86f07d96659a000f4eeb5f4d02f0721c529fc4aefb",
+      "bytes": 462529
+    },
+    {
+      "file": "screenshots/real/projectflow-history-overview.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/history",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "731c7cd16745118654d8be89d818ac95b79925a1f54b03ec26862686df598c63",
+      "bytes": 510169
+    },
+    {
+      "file": "screenshots/real/projectflow-history-time.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/history",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "b4f93a98a410d9cd55119a1e6380487c212bd1b6ece6b20f3b91697aac632ef1",
+      "bytes": 441706
+    },
+    {
+      "file": "screenshots/real/projectflow-history-threads.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/history",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "71930aeb647620c66b05fb992c8eb109767b85029c0c3888a4563a2a3e5525c8",
+      "bytes": 421926
+    },
+    {
+      "file": "screenshots/real/projectflow-thread-detail.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/history",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "f6517f4401ecaec01ac810496d50288a249fcb885e97ba3b25f1daea2668f6ba",
+      "bytes": 444669
+    },
+    {
+      "file": "screenshots/real/projectflow-story.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/history",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "38e53dccc689a4575f6df529a1c976435cd62c5a83d4141d41911b68fc957499",
+      "bytes": 194442
+    },
+    {
+      "file": "screenshots/real/projectflow-evidence.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/history",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "2f825be44106e0903fcd94a120a4cc70ea3fd9bce778fddb8b3a416de8442bae",
+      "bytes": 191969
+    },
+    {
+      "file": "screenshots/real/projectflow-worklines.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "c9013c74d55d68b775e6a94ef843b9835ed90f09123b707a6623dfcbeeb99bb7",
+      "bytes": 437898
+    },
+    {
+      "file": "screenshots/real/projectflow-worklines-390.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 390,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 390,
+      "height": 801,
+      "sha256": "6b937cd6c17fcb1688588edf2f8ae1170e983c9e917c1100b2ca4a88d10d7a38",
+      "bytes": 115718
+    },
+    {
+      "file": "screenshots/real/projectflow-worklines-640.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 640,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 640,
+      "height": 801,
+      "sha256": "ed23959626add831e3fa202def7ed236f36e89259a145db557889099f8423e75",
+      "bytes": 245293
+    },
+    {
+      "file": "screenshots/real/projectflow-worklines-1024.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1024,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1024,
+      "height": 801,
+      "sha256": "c56d4d3f480d33a1ee1c952a31dec0ac07c746fc99321877bd42b50e1ad73c8b",
+      "bytes": 302043
+    },
+    {
+      "file": "screenshots/real/projectflow-worklines-1280.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "c9013c74d55d68b775e6a94ef843b9835ed90f09123b707a6623dfcbeeb99bb7",
+      "bytes": 437898
+    },
+    {
+      "file": "screenshots/real/projectflow-worklines-1600.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1600,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1600,
+      "height": 801,
+      "sha256": "ff11c8a58fda7456391cbea6ac0be7893fc5e146fab0c374272f63cf36a6cc30",
+      "bytes": 481525
+    },
+    {
+      "file": "screenshots/real/projectflow-workline-detail.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "938603150ee364588b8dcb311e634243a04f1996c4a627dd81ed23de5dd3d193",
+      "bytes": 181418
+    },
+    {
+      "file": "screenshots/real/projectflow-pr23-detail.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "f0393250fdf293fa052f30cd2630cfac19ae06bb5431ab52212568782bd9f593",
+      "bytes": 206796
+    },
+    {
+      "file": "screenshots/real/projectflow-pr24-detail.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/worklines",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "03202dd9cb47655e99cafc8c45dae6a61a740646c10a62176b68e7b337978a08",
+      "bytes": 206091
+    },
+    {
+      "file": "screenshots/real/login.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "228596edaffc1fcccd44f9ecff30956d64137cfc6d1a9ad3e5593a298dcb46bd",
+      "bytes": 68839,
+      "limitations": "Local no-auth acceptance mode; login route and welcome navigation were observed, not password authentication."
+    },
+    {
+      "file": "screenshots/real/welcome.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "228596edaffc1fcccd44f9ecff30956d64137cfc6d1a9ad3e5593a298dcb46bd",
+      "bytes": 68839,
+      "limitations": "Local no-auth acceptance mode; login route and welcome navigation were observed, not password authentication."
+    },
+    {
+      "file": "screenshots/real/projects-legacy-redirect.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/projects",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "1c132cd5b540314028aae019ba7351555e11638725ed287d333b6401b7fffe02",
+      "bytes": 455446
+    },
+    {
+      "file": "screenshots/real/intake-local.png",
+      "kind": "REAL_PRODUCTION_INTAKE_FORM_WITHOUT_SUBMISSION",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/intake",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "a849998e70b7768c5e79f238758c75114c283c18ea9f83525181be3c22a0b0e5",
+      "bytes": 374554
+    },
+    {
+      "file": "screenshots/real/settings-redirect.png",
+      "kind": "REAL_BACKEND",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/settings",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "3c0bb7101631853624f18191b0535e2327b06e5f1071be52c506276969e573ff",
+      "bytes": 315059
+    },
+    {
+      "file": "screenshots/real/intake-github.png",
+      "kind": "REAL_PRODUCTION_INTAKE_FORM_WITHOUT_SUBMISSION",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/intake",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "fb14900f420da513511809b8450a84f8a906e373b1e44caab0bf795d917c555b",
+      "bytes": 370549
+    },
+    {
+      "file": "screenshots/real/intake-zip.png",
+      "kind": "REAL_PRODUCTION_INTAKE_FORM_WITHOUT_SUBMISSION",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/intake",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "ef82d8740de853a4530cd223f5bcf8b772e0f21dbacb2ef15461bfb01883bee3",
+      "bytes": 346147
+    },
+    {
+      "file": "screenshots/real/intake-text.png",
+      "kind": "REAL_PRODUCTION_INTAKE_FORM_WITHOUT_SUBMISSION",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/intake",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "55e010f67618a7702cd15ad75edd4d64057831ecfe988343fbb0fb3f0611907e",
+      "bytes": 360633
+    },
+    {
+      "file": "screenshots/real/intake-new.png",
+      "kind": "REAL_PRODUCTION_INTAKE_FORM_WITHOUT_SUBMISSION",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "route": "/workspace/intake",
+      "evidenceOverlapsMain": false,
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "79313312d1e9e094f9426cc575092ecf67e5e793c3a597ba87820ab2c1a0a092",
+      "bytes": 351563
+    },
+    {
+      "file": "screenshots/synthetic/workline-github-unavailable-stale.png",
+      "kind": "SYNTHETIC_API_FAILURE_OR_STATE",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "6be9c009e81eee981e580897db35d150e9428faeef82195091229cb82887d813",
+      "bytes": 420417
+    },
+    {
+      "file": "screenshots/synthetic/current-conflict-unknown.png",
+      "kind": "SYNTHETIC_API_FAILURE_OR_STATE",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "4ab87050d05f56f62044dbc829a928129d7354bfa47e29eefcdfab26acb4c100",
+      "bytes": 437837
+    },
+    {
+      "file": "screenshots/synthetic/library-backend-error.png",
+      "kind": "SYNTHETIC_API_FAILURE_OR_STATE",
+      "viewport": {
+        "width": 1280,
+        "height": 801
+      },
+      "captureSet": "FINAL_ROOT_PRODUCTION_BUILD",
+      "width": 1280,
+      "height": 801,
+      "sha256": "49335417d44a3166248db44a7a22bd40698190f93241e316bb80339d561d1794",
+      "bytes": 284963,
+      "faultScope": "Project catalog API returns 503; auth/local runtime config remains available. This is not a full-backend-startup-outage test."
+    },
+    {
+      "file": "screenshots/synthetic/current-1024.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1024,
+      "height": 768,
+      "sha256": "26ce87245599a83ec99b58bf857c1d23e4e87829e23a318329ae21f661cbb5d6",
+      "bytes": 537967
+    },
+    {
+      "file": "screenshots/synthetic/current-390.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 390,
+      "height": 844,
+      "sha256": "19b1dbcd754c7bb73d1b8ce6ae1d4d6844fab40157fb1f754c02d4e51fe6ff48",
+      "bytes": 230415
+    },
+    {
+      "file": "screenshots/synthetic/current-640.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 640,
+      "height": 800,
+      "sha256": "68e83cb1803375e7327c0af4cbf28b9539e655131858a28678829f21a2ad661b",
+      "bytes": 366056
+    },
+    {
+      "file": "screenshots/synthetic/current-desktop.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 801,
+      "sha256": "ecc7761f3761cab4763e66b78fb82a9699c17d20a07156627155e8b92cb88295",
+      "bytes": 665243
+    },
+    {
+      "file": "screenshots/synthetic/current-empty.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "e8922857676816f3c9ef55c0192534b126f4a6b452440b5e5a8499c5ef7382ec",
+      "bytes": 489820
+    },
+    {
+      "file": "screenshots/synthetic/current-live-stale.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "a571862f984196c7a70edad03924897851da21c118266775c11aca1db6fbc24c",
+      "bytes": 496771
+    },
+    {
+      "file": "screenshots/synthetic/current-service-error.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "1e0c601b30a577091cf52a1cce291cdd3fd4a619d6df48b0fc2c346374fd7cd4",
+      "bytes": 288977
+    },
+    {
+      "file": "screenshots/synthetic/current-sparse.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "b9f64a7b78a0b4235b4844550a6d1151dc5ce5dc33737152b25505139abbc446",
+      "bytes": 499038
+    },
+    {
+      "file": "screenshots/synthetic/current-wide.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1600,
+      "height": 1000,
+      "sha256": "cfc52183263e53052ef4047b10a4271f4514efafa6461c1e1932ac5d97ef8b76",
+      "bytes": 829763
+    },
+    {
+      "file": "screenshots/synthetic/handoff-desktop.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 801,
+      "sha256": "66b7d86ab060c6cdaef9598228e53ff1bd7dcf76ca14ea763446626165057137",
+      "bytes": 497530
+    },
+    {
+      "file": "screenshots/synthetic/history-chapter.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "4512721d2f92d48a9de2d7028b673d308818030df0ddb9cca32f27624252ec88",
+      "bytes": 431277
+    },
+    {
+      "file": "screenshots/synthetic/history-desktop.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 801,
+      "sha256": "28adf0960bdff23edf51e181be96e536f093bda84eec39dabf461670397ee2a5",
+      "bytes": 515516
+    },
+    {
+      "file": "screenshots/synthetic/history-thread-list.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "2906b3a61aacd29190983073c88785910322b6f25e7c73d9cfd1dc98aa842c9a",
+      "bytes": 439303
+    },
+    {
+      "file": "screenshots/synthetic/history-threads.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "f139723a43595bc6c487ed7228115a1d132f8c56971675739bb6ac5f6dea0167",
+      "bytes": 440313
+    },
+    {
+      "file": "screenshots/synthetic/project-settings-desktop.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 801,
+      "sha256": "fd60e3a320b6ea6fa5e07b602a2daf5c72a61b5e740a19c562264ab5387dfb52",
+      "bytes": 395505
+    },
+    {
+      "file": "screenshots/synthetic/project-settings-github.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "108a5a67a5817bd54958c1a54d06dd0801ab97ee331ddf8c6ca727920005c9bb",
+      "bytes": 368943
+    },
+    {
+      "file": "screenshots/synthetic/projects-desktop.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 801,
+      "sha256": "ea2c964a51134dc33d99586d704374e6d3d85a8cb95ce5a090f26874dd9638ac",
+      "bytes": 555679
+    },
+    {
+      "file": "screenshots/synthetic/provider-connection-error.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "6fcb2a4701c504110cccf400aca81acc741339be9c6966ea3b245483b1be09c9",
+      "bytes": 302522
+    },
+    {
+      "file": "screenshots/synthetic/provider-edit.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "e2cba6123b34cab6a44ac1a43b9533fdf523567075e7b095b89b4c6281eef34b",
+      "bytes": 133971
+    },
+    {
+      "file": "screenshots/synthetic/provider-form-1024.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1024,
+      "height": 900,
+      "sha256": "0b77bc87a48ad825ecc1eafa5dece74bcc797c5f9dd7a58faabd33388aea054e",
+      "bytes": 110596
+    },
+    {
+      "file": "screenshots/synthetic/provider-form-1280.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 801,
+      "sha256": "b59e58522bdfcf5253de56bcb46c2d26171160edfb99849b8a6c860f06a50b10",
+      "bytes": 147697
+    },
+    {
+      "file": "screenshots/synthetic/provider-form-1600.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1600,
+      "height": 900,
+      "sha256": "d0c82a4157f93a70bbd65377f3d318bdcdd2365bc1ac20b815589265e24a8541",
+      "bytes": 188575
+    },
+    {
+      "file": "screenshots/synthetic/provider-form-390.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 390,
+      "height": 900,
+      "sha256": "e6ca7895e7f6dc8e1a50abac748614f7a55e8ee63e9eaaf9d2364ce88b78658e",
+      "bytes": 41939
+    },
+    {
+      "file": "screenshots/synthetic/provider-form-640.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 640,
+      "height": 900,
+      "sha256": "083ce298b3aabc2324da361cf8a79be53e73dbd6a74f350b155cff7419f7e631",
+      "bytes": 49669
+    },
+    {
+      "file": "screenshots/synthetic/provider-list.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "42cd85c30d823c0793652d632635a368814846a874d439a3165229a824b6c309",
+      "bytes": 301663
+    },
+    {
+      "file": "screenshots/synthetic/provider-save-error.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "180917d07c0e0028662a2460e576d3f8ed79366a5501348c8989ec627212f79d",
+      "bytes": 132396
+    },
+    {
+      "file": "screenshots/synthetic/real-backend-provider-credential.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "c4e322fb2c5c25d0fe9e3470a56ddee2b5101abd53b4b0167518f9fb04d18ad6",
+      "bytes": 232287
+    },
+    {
+      "file": "screenshots/synthetic/real-backend-thread-story-evidence.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "a17c92f489bfbf0eaf3273f93fda48f7f28f2077af0faa12dd556890a7910173",
+      "bytes": 143801
+    },
+    {
+      "file": "screenshots/synthetic/settings-desktop.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 801,
+      "sha256": "e0e3360c2c487a6c0790cba67acb37cb8a2164c47f0ef01bc14b824e3f5dffad",
+      "bytes": 323145
+    },
+    {
+      "file": "screenshots/synthetic/story-evidence-1600.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1600,
+      "height": 900,
+      "sha256": "fb6cd862ac8a951ba15bf955bf60cc409626c400e90ae19fd419bd4ed07c3f60",
+      "bytes": 209969
+    },
+    {
+      "file": "screenshots/synthetic/story-evidence-390.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 390,
+      "height": 900,
+      "sha256": "6a93fe572f75f4662fbd2fcf79a22db18d8eadeac3855d0b4a30bcb49539b301",
+      "bytes": 43099
+    },
+    {
+      "file": "screenshots/synthetic/story-evidence-detail.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "7f3223b65a15663d1615b90e5fb0f0e8b99a1435a69abff1884f64c613fe61cd",
+      "bytes": 163465
+    },
+    {
+      "file": "screenshots/synthetic/story-evidence.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "a8e783b9a9eba0b280d8882bc114df93b49a3020ea78767f80e0168ebffac7ff",
+      "bytes": 158816
+    },
+    {
+      "file": "screenshots/synthetic/thread-detail.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 720,
+      "sha256": "cef96b5a3e25e020858c2802dc9b05dd71ab14575c298a2dcac2cddef15101cc",
+      "bytes": 401662
+    },
+    {
+      "file": "screenshots/synthetic/thread-reading-1024.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1024,
+      "height": 900,
+      "sha256": "22b991c3306bfef14d7a323367673f237e1ef47229f53c69849c846dffa77c47",
+      "bytes": 345945
+    },
+    {
+      "file": "screenshots/synthetic/thread-reading-1280.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1280,
+      "height": 801,
+      "sha256": "df44c719ff2135a68c4f40880ce900e1281f69733aab507ef9b5b55502363743",
+      "bytes": 447099
+    },
+    {
+      "file": "screenshots/synthetic/thread-reading-1600.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 1600,
+      "height": 900,
+      "sha256": "df63863e5509eed16b667c5286bad76484dcee1782472d0e8b413239bdba845c",
+      "bytes": 523451
+    },
+    {
+      "file": "screenshots/synthetic/thread-reading-390.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 390,
+      "height": 900,
+      "sha256": "5212e34392d1ba4a1e5cf842158a7f3696d24471d7031e1cb24a007ce8b9b224",
+      "bytes": 131414
+    },
+    {
+      "file": "screenshots/synthetic/thread-reading-640.png",
+      "kind": "EARLIER_SYNTHETIC_BROWSER_CONTRACT_CAPTURE",
+      "captureSet": "EARLIER_V4D_TEST_RUN",
+      "sourceRevision": "NOT_RETAINED_FOR_THIS_IMAGE",
+      "finalVisualAcceptanceEvidence": false,
+      "limitations": "Retained fixture/Demo test image. Do not infer final production layout or real repository semantics from it.",
+      "width": 640,
+      "height": 900,
+      "sha256": "a384444cdedb72107743a5f5170b807d75890094145f7b7dfb5ddc381f716fd7",
+      "bytes": 284578
+    }
+  ]
+}

@@ -103,7 +103,7 @@ export function HistoryPage({ project, demo, onStory }: Props) {
     </div>
     {axis === "threads" ? <ThreadReader project={project} demo={demo} onStory={onStory}
       chapters={chapterList} chapterPage={page} onChapterPage={setPage} chapterLoading={listLoading}
-      chapterError={listError} onChapter={openChapter} onRetry={() => setRetry((n) => n + 1)} /> : axis === "overview" ? <section className="pf-history-overview"><h2>项目变化概览</h2><p>按实际发生时间阅读变化故事。标题与摘要是系统归纳，计划和冲突保留来源身份。</p>{project.stories.slice(0, 8).map(story => <StoryCard key={story.id} story={story} onStory={onStory}/>)}{!project.stories.length && <p className="pf-notice">尚无可读历史；当前材料不会被编排成虚构的成熟阶段。</p>}</section> : <div className="pf-journey-layout">
+      chapterError={listError} onChapter={openChapter} onRetry={() => setRetry((n) => n + 1)} /> : axis === "overview" ? <section className="pf-history-overview"><h2>项目变化概览</h2><p>按已记录的来源时间阅读变化；时间依据不完整时，以证据中的限制为准。标题与摘要是系统归纳，计划和冲突保留来源身份。</p>{project.stories.slice(0, 8).map(story => <StoryCard key={story.id} story={story} onStory={onStory}/>)}{!project.stories.length && <p className="pf-notice">尚无可读历史；当前材料不会被编排成虚构的成熟阶段。</p>}</section> : <div className="pf-journey-layout">
       <nav className="pf-chapter-nav" aria-label="项目阶段">
         {listLoading && <p role="status">正在读取篇章目录…</p>}
         {listError && <ReadError message={listError} onRetry={() => setRetry((n) => n + 1)} />}

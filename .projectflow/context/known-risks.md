@@ -1,5 +1,6 @@
 # Known risks
 
+- V4.0-D 最终两份真实当前材料理解均因 HTTP/2 CANCEL 失败，保留 MODEL_FAILED / STALE 本地观察；成功的 History 不代表当前能力理解成功。每份异常可确认两次请求，Job DTO 的零计数来自包装诊断丢失，Token 和费用不可据此记为零。独立 Sol/xhigh 第二轮仍为 NEEDS_REVISION，Desktop Shell Entry 为 BLOCKED。
 - V4.0-D 为依赖 #23 的 Draft，Owner Review 仍须独立记录。Current / History / Workline 的来源门槛与界面回归不能代替真实项目语义审计；本轮真实模型失败和后续恢复分别保留在阶段 Evidence。
 - 首次真实大历史分析暴露了既有 History Job 的固定 10 分钟截止。已复用 AnalysisTimePolicy.AUTO，保留原窗口、请求、Token、Provider 超时、取消和 checkpoint 边界；不得为一次失败全量清空缓存或重新分析已成功窗口。
 - 真实仓库的一些历史故事仍只获得“项目骨架/材料”级别的保守说明。当前材料语义说明复用已有 Understanding Job，明确标为系统归纳，并按已知来源 ID 过滤；不得用文档宣传、推断或模型共识填补“已确认结果”。

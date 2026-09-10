@@ -1,0 +1,169 @@
+{
+  "recordedAt": "2026-09-10T05:09:41.504122+00:00",
+  "phase": "V4.0-D",
+  "deliveryState": "DRAFT_WITH_EXPLICIT_QUALITY_BLOCKERS",
+  "overallPhaseSuccess": false,
+  "desktopShellEntry": "BLOCKED",
+  "ownerReview": "NOT_REVIEWED",
+  "implementationHead": "2c14bf1182817038908fbcf06fbb93cb37b15e98",
+  "finalRuntimeCodeManifest": "windows-launcher.json",
+  "scope": "Source implementation, real repository reads, deterministic tests, provider attempts and semantic readability are assessed separately.",
+  "checks": {
+    "backendH2": {
+      "tests": 739,
+      "skipped": 12,
+      "failures": 0,
+      "errors": 0,
+      "suites": 186,
+      "executed": 727,
+      "source": "GitHub Actions 34438810299 backend-junit",
+      "head": "2c14bf1182817038908fbcf06fbb93cb37b15e98"
+    },
+    "postgres16": {
+      "status": "PASS",
+      "integrationExecuted": 6,
+      "flywayExecuted": 1,
+      "conditionalRealModelITSkipped": 6,
+      "source": "34438810299 postgres-junit"
+    },
+    "realV39H2PostgresUpgrade": {
+      "status": "PASS",
+      "source": "34438810299 real-v39-upgrade-proof"
+    },
+    "frontendTypeScriptProductionBuild": {
+      "status": "PASS",
+      "source": [
+        "34438810299 frontend-quality",
+        "outside-worktree root launcher"
+      ]
+    },
+    "frontendContracts": {
+      "status": "PASS",
+      "tests": 69
+    },
+    "productionJavaFrontendPlaywright": {
+      "status": "PASS",
+      "tests": 37,
+      "source": "34438810299 browser-e2e; 37 passed (3.4m)",
+      "providerBoundary": "Fixed compatible model responses; not real Sol semantics"
+    },
+    "localAffectedBrowserRecovery": {
+      "status": "PASS",
+      "tests": 18,
+      "source": "workspace, workspace-understanding and project-history suites; real isolated Java and Edge"
+    },
+    "understandingRetryRegression": {
+      "status": "PASS",
+      "tests": 13,
+      "scope": "Failed first semantic snapshot is retryable with unchanged input; no false cached success"
+    },
+    "hermes": {
+      "status": "PASS",
+      "localTests": 10,
+      "ci": "34438810299 hermes-mcp"
+    },
+    "obsidian": {
+      "status": "PASS",
+      "localTests": 27,
+      "ci": "34438810299 obsidian-projection"
+    },
+    "credentialSensitiveContentOSV": {
+      "status": "PASS",
+      "scope": "Registered CI gates; no credential values in evidence",
+      "ci": "34438810299"
+    },
+    "windowsPortable": {
+      "status": "PASS",
+      "ci": "34438809883"
+    },
+    "rootLauncher": {
+      "status": "PASS",
+      "evidence": "windows-launcher.json"
+    },
+    "realRepositoryReadThrough": {
+      "status": "PASS_WITH_SEMANTIC_LIMITATIONS",
+      "projects": 2,
+      "pages": "Library, Current, History overview/time/themes, Thread, Story, Evidence, Worklines and PR detail",
+      "evidence": "visual-manifest.json"
+    },
+    "claimSourceAudit": {
+      "status": "PASS_WITH_WORDING_LIMITATIONS",
+      "samples": 54,
+      "highRiskUnsupported": 0,
+      "sourceBindingFailures": 0
+    },
+    "branchWorklineAudit": {
+      "status": "PASS",
+      "realBranches": 20,
+      "projectCounts": [
+        19,
+        1
+      ],
+      "evidence": "branch-workline-audit.json"
+    },
+    "realSolXhighHistory": {
+      "status": "EXECUTED_WITH_SUCCESSES_AND_RETAINED_FAILURES",
+      "evidence": "real-model-usage.json",
+      "allHistoryModelCovered": false
+    },
+    "realSolXhighCurrentMaterial": {
+      "status": "FAILED_BOTH_PROJECTS",
+      "retainedLocalObservations": true,
+      "normalizedTokenUsage": "UNAVAILABLE"
+    },
+    "independentModelReview": {
+      "status": "NEEDS_REVISION",
+      "evidence": "model-review-summary.json"
+    },
+    "agentVisualReview": {
+      "status": "PASS_WITH_DISCLOSED_READING_LIMITATIONS",
+      "evidence": "visual-manifest.json"
+    },
+    "ownerReview": {
+      "status": "NOT_REVIEWED",
+      "scores": null
+    },
+    "localLibraryErrorRegression": {
+      "status": "PASS",
+      "tests": 1,
+      "scope": "Project list 503 displays retry error without claiming an empty/zero-project library; extended existing live-read browser scenario"
+    },
+    "deliverySecretScan": {
+      "status": "PASS",
+      "scope": "Exact USER RELAY credential scan plus credential-pattern and private-location scan over pending deliverable text files; reviewed visual samples; no credential value persisted",
+      "matches": 0
+    }
+  },
+  "retainedFailures": "failed-runs/",
+  "remaining": [
+    "Concrete current capability understanding is incomplete after Provider transport failures.",
+    "Historical wording remains too generic for a new user to identify substantial product changes.",
+    "Older process evidence can lack proven occurrence time.",
+    "Owner experience review has not occurred."
+  ],
+  "prohibitedActionsPerformed": {
+    "sourceDogfoodRepositoryWrites": false,
+    "originalWorkspaceEdits": false,
+    "ready": false,
+    "merge": false,
+    "forcePush": false,
+    "tag": false,
+    "release": false,
+    "desktopShellIntegration": false
+  },
+  "headBoundary": "Frozen CI runs retain their exact feature Head. Final narrow-screen layout and wording fixes are checked by the root build and new visual captures; the eventual delivery commit is checked again by PR CI.",
+  "finalDisplayCorrections": [
+    "Narrow evidence control outside scroll area",
+    "Workline dialog padding",
+    "Recorded source-time limitations",
+    "503 catalog errors do not imply an empty library"
+  ],
+  "packageIntegrity": {
+    "status": "PASS",
+    "recordedAt": "2026-09-10T05:24:45.192995+00:00",
+    "requiredFiles": 10,
+    "reportSections": 26,
+    "validatedScreenshotHashes": 95,
+    "runtimeCodeBlobs": "MATCH_CURRENT_WORKTREE"
+  }
+}

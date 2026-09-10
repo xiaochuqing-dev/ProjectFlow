@@ -1,5 +1,9 @@
 # Update history
 
+## ProjectFlow V4.0-D 真实验收收尾 - 2026-09-10
+
+两份只读项目分别完成 History 与工作线读取，54 条可见陈述的高风险无来源项为 0，20 条分支独立核对通过。最新功能 Head 的后端/H2 739 项（12 skipped）、生产浏览器 37 项、PG16 和 Windows CI 通过。当前材料 Understanding 两份均在真实 Sol/xhigh 重试后失败；独立模型复审仍认为当前能力和历史变化过于笼统。已修复失败理解缓存、骨架观察措辞、窄屏证据按钮遮挡和来源时间说明，但阶段成功条件未全部满足，保留 Draft、Owner NOT_REVIEWED、Desktop Shell BLOCKED。完整来源和限制见 V4.0-D Evidence，不把工程通过写成语义通过。
+
 ## ProjectFlow V4.0-D 真实项目理解 - 2026-09-09
 
 在 #23 的独立工作树上加入 Current 来源与主张门槛，移除无来源的完成百分比、阶段意图与下一里程碑。README/roadmap 的有界原文摘录保留为项目声明；History 默认变化概览，另有按时间和长期主题阅读。开发工作线在原 History Job 中用固定 Git/GitHub 参数收集，并作为原 snapshot 的版本化派生字段分页读取；无新 schema、Git 写操作或第二套引擎。

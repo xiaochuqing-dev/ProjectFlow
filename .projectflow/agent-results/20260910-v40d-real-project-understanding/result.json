@@ -1,0 +1,38 @@
+{
+  "taskGoal": "完成 V4.0-D 真实项目理解、事实与声明边界、History/开发工作线、普通 GUI 收敛，并以真实项目、模型与工程证据形成可审查的 Draft 交付。",
+  "actualChanges": [
+    "Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。",
+    "项目历程默认显示变化概览，再按时间或长期主题阅读；近期排序在分页前完成，Story 与工程 Evidence 下钻保留来源强弱。",
+    "开发工作线复用显式 History Job 进行有界 Git/PR 读取，持久化分页展示主线、开发、依赖和历史；精确 PR HEAD 与包含关系判合入，无可靠证据保持未知。",
+    "项目库、项目详情、设置和历程普通路由进入 V4；本地、GitHub、ZIP、文本和新建项目复用现有接入 API。列表读取失败不再显示零项目空库。",
+    "真实 Dogfood 暴露的空 snapshot 读取、隐藏十分钟截止、失败 Understanding 缓存、完成回调和窄屏证据遮挡得到定向修复。",
+    "两份只读真实项目完成 History 运行和工作线来源审计，54 条主张与 20 条分支完成核对；两次独立 Sol/xhigh 模型评审、真实请求失败、95 张分类型截图和 CI/Windows 记录已归档。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/ProjectWorklineCollector.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistorySourceCollector.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryReadService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java",
+    "frontend/src/components/workspace/RealCurrentPage.tsx",
+    "frontend/src/components/workspace/WorklineReader.tsx",
+    "frontend/src/components/workspace/HistoryReader.tsx",
+    "frontend/src/components/workspace/Workspace.tsx",
+    "frontend/src/lib/workspace-claims.ts",
+    "docs/projectflow-v4.0-d-real-project-understanding-report.md",
+    "docs/acceptance-evidence/v4.0-d/verification.json"
+  ],
+  "verification": {
+    "build": "最终显示修正已通过 Windows 根入口从工作区外相对路径生产构建与前后端启动，Enter 正常退出，3000/8080 无监听残留。",
+    "tests": "功能 Head 2c14bf1 CI：backend/H2 739（12 skipped，727 执行）、PG16 integration 6 + Flyway 1、前端 contracts 69、生产浏览器 37、Windows portable 等通过；本地受影响浏览器 18、最终列表错误回归 1、Hermes 10、Obsidian 27 通过。最终交付 Head 的 checks 另由 Draft PR 记录，不把前一 Head 当后一 Head。",
+    "manualCheck": "AGENT_VISUAL_REVIEW 与 AGENT_SOURCE_AUDIT 已执行；高风险无来源陈述 0，20 条真实分支核对通过。MODEL_REVIEW 第二轮仍 NEEDS_REVISION；Owner Review = NOT_REVIEWED，无真人分数。"
+  },
+  "unfinished": [
+    "两份真实当前材料 Understanding 在 Sol/xhigh、900 秒配置下均因 HTTP/2 CANCEL 失败；保留本地观察，缺少成功当前能力语义结果。",
+    "History 仍有过于笼统的材料/骨架描述，旧 Agent 文件的实际发生时间未充分证明；尚不能宣称新用户理解目标全部达成。",
+    "包装失败的 Job DTO 缺失规范化请求/Token 诊断；安全异常证明每份两次请求，Token 与费用未知。",
+    "Owner Review 未进行；Desktop Shell Entry = BLOCKED；PR 保持 Draft，没有 Ready、merge、Tag、Release 或 Desktop Shell 集成。"
+  ],
+  "sedimentCandidates": [
+    "真实 Git/PR 工作线与 Current 声明边界已可通过 V4 普通入口阅读；这是待工程验证的 Agent 工作结果记录，不自动提升为 ProjectFact。"
+  ]
+}

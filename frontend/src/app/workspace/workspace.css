@@ -2527,6 +2527,7 @@
   }
 }
 @media (max-width: 1199px) {
+  .pf-main { margin-bottom: 60px; }
   .pf-workspace {
     grid-template-columns: 180px minmax(0, 1fr);
   }
@@ -3040,6 +3041,8 @@
 .pf-branch-name { display: flex; align-items: flex-start; gap: 6px; overflow-wrap: anywhere; word-break: break-word; }
 .pf-workline-card footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 15px; color: var(--pf-muted); font-size: 11px; }
 .pf-workline-card footer span { display: flex; gap: 5px; align-items: center; color: #8ddde8; }
+.pf-workline-dialog { padding: 0 20px 20px; }
+.pf-workline-dialog > .pf-dialog-heading { margin-inline: -20px; }
 .pf-workline-dialog > h2, .pf-workline-dialog > h3 { margin: 18px 0 8px; font-size: 18px; }
 .pf-workline-dialog p { margin: 10px 0; }
 .pf-workline-dialog .pf-source-details { overflow-wrap: anywhere; }

@@ -1,0 +1,93 @@
+{
+  "reviewType": "OBSERVED_WINDOWS_ROOT_LAUNCHER_RUN",
+  "status": "PASS",
+  "platform": "Windows",
+  "entry": "Start-ProjectFlow.bat -NoBrowser",
+  "callerDirectory": "Parent of the isolated worktree, outside repository root",
+  "relativeEntry": "./ProjectFlow-v4-real-understanding/Start-ProjectFlow.bat -NoBrowser",
+  "runtimeRecord": {
+    "version": "3.10.0",
+    "sourceRevision": "2c14bf1182817038908fbcf06fbb93cb37b15e98",
+    "hasLocalChanges": true,
+    "frontendDependencies": "verified",
+    "frontendBuildId": "tLqXMhRCTZTQrMKAGUYHg",
+    "frontendBuiltAt": "2026-09-10T13:22:05.6602080+08:00",
+    "readyAt": "2026-09-10T13:22:14.1631592+08:00",
+    "frontendUrl": "http://127.0.0.1:3000/login",
+    "backendHealthUrl": "http://127.0.0.1:8080/api/health"
+  },
+  "configurationScope": "Current launcher process and isolated worktree data/config only",
+  "modelEffort": "xhigh",
+  "credentialStore": "Current-user DPAPI in isolated acceptance configuration; credential not exported",
+  "authMode": "Local acceptance mode with auth disabled; this verifies entry routing, not password login",
+  "buildSource": {
+    "head": "2c14bf1182817038908fbcf06fbb93cb37b15e98",
+    "hasLocalChanges": true,
+    "changedExecutableInputs": [
+      {
+        "path": "frontend/src/app/workspace/workspace.css",
+        "rawWindowsWorktreeSha256": "c240c2844312a62206248fa4ea48698f9040e20ce4d7f6a12df2f31e9288191b",
+        "gitBlobId": "a652d0729a3dfd71046ffbc9d5edebd6f993855f"
+      },
+      {
+        "path": "frontend/src/components/workspace/HistoryReader.tsx",
+        "rawWindowsWorktreeSha256": "50e1aee87a42c9a7fa5914079af2062450999a9aa5846276c6011cb0a9399f3c",
+        "gitBlobId": "113315d328cbfe073aeb6b29d6a39206304ad28d"
+      },
+      {
+        "path": "frontend/src/components/workspace/Workspace.tsx",
+        "rawWindowsWorktreeSha256": "f470a686370964a2082def7c3c171084b00a7f398b7d17f70f1507ceb03e0265",
+        "gitBlobId": "8485ce3d2deab9fe9c2bbe593e6f8681dece87cb"
+      },
+      {
+        "path": "frontend/e2e/workspace.spec.ts",
+        "rawWindowsWorktreeSha256": "5bcedc07826e29d018563534de1364c8d92e4aa2368aedfdbae22a6e7332d8ed",
+        "gitBlobId": "f5504d4a599faab275f6bdc5e531fcb1e5e883cb"
+      }
+    ]
+  },
+  "observedPaths": [
+    "/login",
+    "/",
+    "/projects",
+    "/workspace/projects",
+    "/workspace/intake",
+    "/workspace/current",
+    "/workspace/history",
+    "/workspace/worklines",
+    "/settings"
+  ],
+  "observedReading": [
+    "Both real projects opened",
+    "Current and local semantic-failure state",
+    "History overview/time/themes",
+    "Thread, Story, expanded Evidence",
+    "Single/multiple worklines and PR details",
+    "Global Provider settings",
+    "Local/GitHub/ZIP/text/new intake forms"
+  ],
+  "screenshots": "visual-manifest.json",
+  "normalExit": {
+    "exitMethod": "Enter in root launcher, then batch pause key",
+    "exitCode": 0,
+    "observedAt": "2026-09-10T05:23:36.1498130Z",
+    "listeningPorts": [],
+    "checkedPorts": [
+      3000,
+      8080
+    ],
+    "forcedTermination": false
+  },
+  "sourceProtection": {
+    "dogfoodCloneClean": {
+      "ProjectFlow": true,
+      "Corporation-Agent": true
+    },
+    "originalWorkspace": "Existing dirty original checkout was not modified; only isolated D worktree was edited"
+  },
+  "limitations": [
+    "No desktop shell was built or released.",
+    "Opening intake forms is separate from API/E2E creation/import submission checks.",
+    "Backend semantic HTTP2 failures remain failures even though the web runtime and controlled exit passed."
+  ]
+}

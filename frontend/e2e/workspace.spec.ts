@@ -368,6 +368,15 @@ test("live reads never fall back to fixtures or promote ordinary stories", async
     page.getByText("Corporation-Agent", { exact: true }),
   ).toHaveCount(0);
   await screenshot(page, "current-service-error");
+  await page.unrouteAll();
+  await fixtureApi(page);
+  await page.route("**/api/projects", (route) => route.fulfill({
+    status: 503, contentType: "application/json",
+    body: JSON.stringify({ error: { message: "项目列表暂不可用" } }),
+  }));
+  await open(page, "projects", "");
+  await expect(page.locator(".pf-main").getByRole("alert")).toContainText("项目列表暂不可用");
+  await expect(page.getByText("这里将保存你的项目故事", { exact: true })).toHaveCount(0);
 });
 
 test("explicit refresh keeps prior content, resumes its job, and sends one POST", async ({

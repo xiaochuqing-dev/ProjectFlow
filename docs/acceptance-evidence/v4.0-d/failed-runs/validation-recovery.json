@@ -1,0 +1,31 @@
+{
+  "type": "OBSERVED_FAILURE_AND_RECOVERY",
+  "runs": [
+    {
+      "scope": "Local production E2E misconfiguration",
+      "result": "STOPPED_AFTER_FIRST_FAILURE",
+      "cause": "The root production bundle embedded API port 8080 while the E2E harness used isolated API port 18037.",
+      "action": "Stopped the harness, checked that its ports were released and the real acceptance Provider remained unchanged, then used the correctly configured harness.",
+      "notCountedAsPass": true
+    },
+    {
+      "scope": "Full local browser run after removing the mixed hero summary",
+      "result": "34_PASS_3_FAIL",
+      "cause": "Three assertions still expected the old hero paragraph; the refresh/recovery contract now validates visible persisted changes instead.",
+      "recovery": "Affected workspace, understanding and real History suites: 18 passed. The final CI reruns all browser tests."
+    },
+    {
+      "scope": "Unchanged retry of a failed first Understanding",
+      "result": "SUCCEEDED_WITH_ZERO_CALLS_BUT_NO_SEMANTIC_RECOVERY",
+      "cause": "MODEL_FAILED was accepted by the inventory-only shortcut.",
+      "action": "Explicit refresh excludes failed/degraded semantics from the success cache shortcut when a Provider is available; successful unchanged/no-model behavior remains cached.",
+      "regression": "ProjectUnderstandingServiceTest: 13 passed."
+    },
+    {
+      "scope": "Observed scaffold wording",
+      "result": "OVERBROAD_FIRST_CREATION_WORDING",
+      "cause": "Existing backend/frontend files predate the newly added files, so a broad OBSERVED subject cannot prove first creation of the entire scaffold.",
+      "action": "Visible title and before/change/after are capped at file observations; exact implementation states are not rewritten. Original persisted source remains available."
+    }
+  ]
+}
