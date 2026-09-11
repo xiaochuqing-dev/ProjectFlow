@@ -3,6 +3,7 @@ import type {
   ProjectCurrentState,
   ProjectHistoryOverview,
   ProjectHistoryStory,
+  ProjectUnderstandingSnapshot,
 } from "./api";
 import { supportedClaim, type ClaimClassification } from "./workspace-claims";
 
@@ -285,7 +286,7 @@ export function persistedStory(story: ProjectHistoryStory): WorkspaceStory {
     id: story.id,
     title: observedStructure ? `观察到${claim.subject.replace("项目骨架", "代码结构")}的文件变化` : story.humanTitle,
     summary: observedStructure ? "来源记录了相关文件的新增或修改，具体功能结果仍需进一步确认。" : story.oneSentenceSummary,
-    date: story.occurredTo?.slice(0, 10) || "时间未知",
+    date: `${story.timeProvenance?.label || "来源时间依据未知"} · ${story.occurredTo?.slice(0, 10) || "日期未知"}`,
     before: observedStructure ? "这份记录没有独立确认该部分的完整此前状态。" : story.beforeState,
     change: observedStructure ? "本次来源记录了相关文件的新增或修改。" : story.change,
     after: observedStructure ? "相关文件变化已进入项目记录；这不代表整套功能已完成运行验收。" : story.afterState,
@@ -301,6 +302,26 @@ export function persistedStory(story: ProjectHistoryStory): WorkspaceStory {
     confirmedOutcome: Boolean(claim && ["OBSERVED", "VERIFIED", "IMPLEMENTED", "REMOVED", "RESTORED"].includes(claim.state)
       && supportedClaim({ text: claim.outcome, kind: "OUTCOME", classification: "OBSERVED", sources }) && !story.conflicts?.length),
   };
+}
+
+export function currentMaterialClaims(snapshot: ProjectUnderstandingSnapshot | null) {
+  const known = new Set((snapshot?.sourceMap?.sources ?? []).map(source => source.id));
+  const priority = ["PURPOSE", "CAPABILITIES", "INTEGRATION_RELATIONS", "CURRENT_STATE", "ENGINEERING_STATE"];
+  const sections = [...(snapshot?.dynamicProfile?.sections ?? [])]
+    .filter(section => priority.includes(section.type))
+    .sort((left, right) => priority.indexOf(left.type) - priority.indexOf(right.type));
+  const seen = new Set<string>();
+  return [...sections, snapshot?.identity, snapshot?.capabilities, snapshot?.engineeringState]
+    .flatMap(section => section?.claims ?? [])
+    .map(claim => ({ ...claim, evidenceRefs: claim.evidenceRefs.filter(ref => known.has(ref)),
+      classification: (claim.epistemicStatus === "DECLARED" ? "DECLARED"
+        : claim.epistemicStatus === "CONFLICTED" ? "CONFLICTED"
+        : claim.epistemicStatus === "UNKNOWN" ? "UNKNOWN" : "INFERRED") as ClaimClassification }))
+    .filter(claim => {
+      if (seen.has(claim.text) || !supportedClaim({ text: claim.text, kind: "SUMMARY",
+        classification: claim.classification, sources: claim.evidenceRefs })) return false;
+      seen.add(claim.text); return true;
+    }).slice(0, 8);
 }
 
 export function workspaceHref(

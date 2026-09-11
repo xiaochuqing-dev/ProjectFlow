@@ -152,7 +152,7 @@ public final class ProjectHistoryLanguageService {
                 object
             );
             case IMPLEMENTED -> new Presentation(
-                transition == Transition.MODIFIED ? "完善" + object + "，更新已有实现" : "实现" + object + "，形成可使用的功能",
+                transition == Transition.MODIFIED ? "完善" + object + "，更新已有实现" : "新增" + object + "的实现代码",
                 "相关代码已经形成" + object + "的实现，具体范围可在工程详情中核对。",
                 transition == Transition.CREATED ? "此前代码中还没有" + object + "的实现。" : "此前代码中已经有" + object + "的基础实现。",
                 transition == Transition.CREATED ? "这一阶段加入了实现" + object + "所需的代码。" : "这一阶段补充或调整了" + object + "的实现代码。",
@@ -183,8 +183,29 @@ public final class ProjectHistoryLanguageService {
                 object + "的结果仍需核对，当前不作为已完成事实。",
                 object
             );
-            case REMOVED, RESTORED, OBSERVED -> observed;
+            case OBSERVED -> observedFiles(transition, object, paths, observed);
+            case REMOVED, RESTORED -> observed;
         };
+    }
+
+    private static Presentation observedFiles(Transition transition, String object, List<String> paths, Presentation fallback) {
+        if (paths == null || paths.stream().noneMatch(path -> path.matches("(?i).*\\.(java|kt|go|rs|py|js|jsx|ts|tsx|vue|svelte|cs|cpp|c|h)$"))) return fallback;
+        String action = switch (transition == null ? Transition.UNKNOWN_TRANSITION : transition) {
+            case CREATED -> "新增";
+            case REMOVED -> "移除";
+            case RENAMED -> "重命名";
+            case MOVED -> "移动";
+            case RESTORED -> "恢复";
+            default -> "修改";
+        };
+        return new Presentation(
+            action + object + "，保留文件变更记录",
+            "来源记录了" + object + "的" + action + "。可确认相应文件变化，不能据此确认功能运行验收通过。",
+            "变更前的完整功能状态未得到独立验证。",
+            "本次" + action + object + "，涉及范围可从来源明细核对。",
+            "对应文件已留下变更记录；功能效果、测试结果和上线状态仍需各自的证据。",
+            object
+        );
     }
 
     public String readableObject(String subject, List<String> paths, List<String> labels) {

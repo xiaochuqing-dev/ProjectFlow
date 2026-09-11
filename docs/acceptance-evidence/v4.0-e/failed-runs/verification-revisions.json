@@ -1,0 +1,30 @@
+{
+  "runs": [
+    {
+      "finding": "Prompt version and frozen whole-artifact equality failed after legitimate derived changes",
+      "action": "Updated prompt expectation and created E continuity artifact; preserved V3.9 frozen evidence and live scenario assertions",
+      "final": "PASS"
+    },
+    {
+      "finding": "Specific filename examples fragmented broad chapter families; representative coverage fell to about 0.46",
+      "action": "Retained broad project-area and generic commit inventory families; precise owner and authority rules unchanged",
+      "final": "PASS above unchanged 0.60 coverage threshold"
+    },
+    {
+      "finding": "One deterministic chapter title leaked internal next/target terminology",
+      "action": "Rejected raw ASCII subject labels at the existing human-label boundary; kept technical details in Evidence",
+      "final": "PASS, technicalLeakCount=0"
+    },
+    {
+      "finding": "Exact V3.9 upgrade proof initially lacked declared source SHA environment value",
+      "action": "Set existing required source root and exact SHA; old app created both legacy schemas",
+      "final": "2 tests PASS, no skips"
+    },
+    {
+      "finding": "Portable build refused dirty source tree before packaging",
+      "action": "Preserved clean-source guard; build scheduled after local implementation commit",
+      "final": "PENDING"
+    }
+  ],
+  "rawLogsIncluded": false
+}

@@ -1,5 +1,14 @@
 # Architecture
 
+## V4.0-E reliability and semantic boundaries
+
+Understanding retains the same 0/1/2 logical-call chain. The existing snapshot JSON privately holds a validated Scout/profile checkpoint keyed to intake/history and provider/model/protocol/effort; it is omitted from public DTOs. Recovery reruns bounded providers and eligible Final Synthesis only. Failed final synthesis is explicitly degraded and cannot satisfy a no-change success shortcut; prior trusted results and the recovery checkpoint survive failure. No schema or ProjectFact writer was added.
+
+Job transport accounting is bound per execution, propagated into the Gateway executor, and persisted during heartbeat/finalization. Actual adapter entry is the counting boundary. Known reported sums are distinct from nullable exact totals; an unchanged read has no transport attempts. Long reasoning Responses use the official SDK streaming API without delta persistence. Explicit upstream stream-read errors share the existing bounded transport retry.
+
+History specificity reuses precise subject membership and bounded file inventory. Broad areas keep their original representative family and OBSERVED ceiling; filename examples cannot promote them. Story DTO time provenance distinguishes commit/tag/PR event, Agent Git record, source observation, mixed and unknown times. Existing Workline collection, ownership, immutable GET, PR authority and V4 route boundaries are unchanged.
+
+
 ## V4.0-D persisted Workspace reads
 
 The normal project library, intake, current state, history and settings routes converge on the V4 Workspace. Engineering compatibility routes require an explicit entry. Current material understanding reuses the existing explicit Understanding Job and persisted snapshot; a read never starts a model call. Failed first semantic attempts remain visible local observations and cannot satisfy the unchanged successful-understanding cache shortcut on an explicit retry.

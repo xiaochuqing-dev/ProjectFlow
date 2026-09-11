@@ -718,7 +718,10 @@ public class ProjectHistorySourceCollector {
                 Scope.HISTORICAL, Category.PULL_REQUEST,
                 value.path("mergedAt").asText("").isBlank() ? Transition.MODIFIED : Transition.MERGED,
                 label, paths, subjects, evidence, relations, Authority.DECLARED, ProjectFactEpistemicStatus.DECLARED,
-                Map.of("source", "github-cli", "bodyExcerptIncluded", !rationale.isBlank()),
+                Map.of("source", "github-cli", "bodyExcerptIncluded", !rationale.isBlank(),
+                    "timeBasis", !value.path("mergedAt").asText("").isBlank() ? "PR_MERGED_AT"
+                        : !value.path("closedAt").asText("").isBlank() ? "PR_CLOSED_AT"
+                        : !value.path("updatedAt").asText("").isBlank() ? "PR_UPDATED_AT" : "PR_CREATED_AT"),
                 List.of("PR 标题和有界正文摘要只作为 DECLARED 原因证据，不证明实现或验证结果。 "),
                 safeGitHubLink(value.path("url").asText(""))
             ));
@@ -752,7 +755,9 @@ public class ProjectHistorySourceCollector {
                 Category.ISSUE, Transition.MODIFIED, label, List.of(), List.of("issue-" + number),
                 List.of("github-issue:" + number), List.of(), Authority.DECLARED,
                 ProjectFactEpistemicStatus.DECLARED,
-                Map.of("source", "github-cli", "bodyExcerptIncluded", !rationale.isBlank()),
+                Map.of("source", "github-cli", "bodyExcerptIncluded", !rationale.isBlank(),
+                    "timeBasis", !value.path("closedAt").asText("").isBlank() ? "ISSUE_CLOSED_AT"
+                        : !value.path("updatedAt").asText("").isBlank() ? "ISSUE_UPDATED_AT" : "ISSUE_CREATED_AT"),
                 List.of("Issue 标题和有界正文摘要只作为 DECLARED 原因证据，不证明实现或验证结果。 "),
                 safeGitHubLink(value.path("url").asText(""))
             ));
@@ -925,13 +930,23 @@ public class ProjectHistorySourceCollector {
                 List<String> evidence = new ArrayList<>();
                 evidence.add("agent-result:" + relative);
                 keyFiles.stream().limit(40).forEach(file -> evidence.add("file:" + file));
+                // Reuse already collected Git metadata. A clone's mtime is an
+                // observation, never the date on which this work happened.
+                boolean uncommitted = events.values().stream().anyMatch(item ->
+                    "git-status".equals(item.coverage().get("source")) && item.affectedPaths().contains(relative));
+                Instant recorded = uncommitted ? null : events.values().stream()
+                    .filter(item -> "git-name-status".equals(item.coverage().get("source"))
+                        && item.affectedPaths().contains(relative))
+                    .map(CollectedEvent::occurredAt).max(Instant::compareTo).orElse(null);
+                String timeBasis = recorded == null ? "SOURCE_OBSERVATION_TIME" : "AGENT_GIT_RECORD_TIME";
+                if (recorded == null) recorded = Files.getLastModifiedTime(normalized).toInstant();
                 add(events, event(
                     projectId, SourceType.AGENT_RESULT, relative, sha256(bytes), projectRevision,
-                    Files.getLastModifiedTime(normalized).toInstant(), "Agent", Scope.HISTORICAL,
+                    recorded, "Agent", Scope.HISTORICAL,
                     Category.AGENT_RESULT, Transition.MODIFIED, label, keyFiles,
                     keyFiles.stream().map(ProjectHistorySourceCollector::historySubjectKey).distinct().limit(20).toList(),
                     evidence, List.of(), Authority.PROCESS_EVIDENCE, ProjectFactEpistemicStatus.PROCESS_EVIDENCE,
-                    Map.of("source", "agent-result", "claimOnly", true),
+                    Map.of("source", "agent-result", "claimOnly", true, "timeBasis", timeBasis),
                     List.of("Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。 "), ""
                 ));
             }
@@ -1179,6 +1194,18 @@ public class ProjectHistorySourceCollector {
             .filter(value -> !value.isBlank()).toList(), 30);
         String link = safeDeepLink(deepLink);
         Instant safeOccurred = occurredAt == null ? Instant.EPOCH : occurredAt;
+        Map<String, Object> timedCoverage = new LinkedHashMap<>(coverage);
+        String source = String.valueOf(coverage.getOrDefault("source", ""));
+        String basis = occurredAt == null ? "UNKNOWN" : switch (source) {
+            case "git", "git-name-status", "explicit-commit-reference" -> "GIT_COMMIT_TIME";
+            case "git-tag-metadata" -> "GIT_TAG_TIME";
+            case "git-status" -> "SOURCE_OBSERVATION_TIME";
+            case "project-fact" -> "FACT_SOURCE_TIME";
+            default -> "SOURCE_OBSERVATION_TIME";
+        };
+        timedCoverage.putIfAbsent("timeBasis", basis);
+        timedCoverage.put("timeLabel", com.projectflow.dto.ProjectHistoryDtos.TimeProvenance.fromBases(
+            List.of(String.valueOf(timedCoverage.get("timeBasis")))).label());
         LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
         payload.put("sourceType", sourceType.name());
         payload.put("sourceIdentity", identity);
@@ -1193,14 +1220,14 @@ public class ProjectHistorySourceCollector {
         payload.put("relations", relations);
         payload.put("authority", authority.name());
         payload.put("epistemicStatus", epistemicStatus.name());
-        payload.put("coverage", coverage);
+        payload.put("coverage", timedCoverage);
         payload.put("limitations", safeLimitations);
         payload.put("deepLink", link);
         String payloadHash = sha256(json(payload));
         return new CollectedEvent(
             stableKey, sourceType, identity, revision, safeLabel(projectRevision, 180), safeOccurred, safeOccurred,
             safeLabel(actorLabel, 160), scope, category, transition, safeLabel(safeSourceLabel, 1_000), paths, subjects,
-            evidence, relations, authority, epistemicStatus, Map.copyOf(coverage), safeLimitations, link, payloadHash
+            evidence, relations, authority, epistemicStatus, Map.copyOf(timedCoverage), safeLimitations, link, payloadHash
         );
     }
 

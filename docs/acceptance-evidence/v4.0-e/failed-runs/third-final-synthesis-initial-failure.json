@@ -1,0 +1,53 @@
+{
+  "jobId": "5da915d2-191a-407e-a1fe-25e77b305478",
+  "stage": "SUCCEEDED",
+  "requestCount": 2,
+  "finalSynthesisStatus": "FAILED_DEGRADED",
+  "elapsedMs": 379262,
+  "transportTelemetry": {
+    "requestCount": 2,
+    "completedRequestCount": 1,
+    "failedRequestCount": 1,
+    "inFlightRequestCount": 0,
+    "usageAvailability": "PARTIAL",
+    "promptTokens": null,
+    "completionTokens": null,
+    "totalTokens": null,
+    "reportedPromptTokens": 7240,
+    "reportedCompletionTokens": 17088,
+    "reportedTotalTokens": 24328,
+    "latencyMs": 377940,
+    "attempts": [
+      {
+        "sequence": 1,
+        "taskType": "PROJECT_UNDERSTANDING_SNAPSHOT",
+        "protocol": "OPENAI_RESPONSES",
+        "reasoningEffort": "xhigh",
+        "retryReason": "NONE",
+        "status": "RESPONSE_RECEIVED",
+        "latencyMs": 313979,
+        "failureCode": "",
+        "transportFailureType": "",
+        "promptTokens": 7240,
+        "completionTokens": 17088,
+        "totalTokens": 24328
+      },
+      {
+        "sequence": 2,
+        "taskType": "PROJECT_UNDERSTANDING_FINAL_SYNTHESIS",
+        "protocol": "OPENAI_RESPONSES",
+        "reasoningEffort": "xhigh",
+        "retryReason": "NONE",
+        "status": "FAILED",
+        "latencyMs": 63961,
+        "failureCode": "UNKNOWN_CALL_FAILED",
+        "transportFailureType": "HTTP_ERROR",
+        "promptTokens": null,
+        "completionTokens": null,
+        "totalTokens": null
+      }
+    ]
+  },
+  "misleadingLegacyQualityStatus": "SUCCEEDED",
+  "finding": "Validated Scout survived, but final HTTP failure was reported as ordinary success by old status logic. Explicit recovery and warning/cache guards were added."
+}

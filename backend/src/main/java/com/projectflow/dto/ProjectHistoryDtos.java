@@ -143,6 +143,35 @@ public final class ProjectHistoryDtos {
         }
     }
 
+    public record TimeProvenance(String basis, String label, boolean eventTimeKnown, List<String> sourceBases) {
+        public static TimeProvenance fromBases(List<String> values) {
+            List<String> bases = values == null ? List.of() : values.stream()
+                .map(value -> value == null || value.isBlank() ? "UNKNOWN" : value).distinct().sorted().toList();
+            if (bases.isEmpty()) bases = List.of("UNKNOWN");
+            String basis = bases.size() == 1 ? bases.get(0) : "MIXED";
+            String label = switch (basis) {
+                case "GIT_COMMIT_TIME" -> "提交时间";
+                case "GIT_TAG_TIME" -> "标签记录时间";
+                case "PR_MERGED_AT" -> "合入时间";
+                case "PR_CLOSED_AT" -> "提案关闭时间";
+                case "PR_UPDATED_AT" -> "提案更新时间";
+                case "PR_CREATED_AT" -> "提案创建时间";
+                case "ISSUE_CLOSED_AT" -> "议题关闭时间";
+                case "ISSUE_UPDATED_AT" -> "议题更新时间";
+                case "ISSUE_CREATED_AT" -> "议题创建时间";
+                case "AGENT_GIT_RECORD_TIME" -> "工作结果入库时间";
+                case "FACT_SOURCE_TIME" -> "事实来源时间";
+                case "SOURCE_OBSERVATION_TIME" -> "来源观察时间，发生时间未知";
+                case "MIXED" -> "多种来源时间，详见证据";
+                default -> "来源时间依据未知";
+            };
+            boolean known = bases.stream().allMatch(value -> List.of("GIT_COMMIT_TIME", "GIT_TAG_TIME", "PR_MERGED_AT").contains(value));
+            return new TimeProvenance(basis, label, known, bases);
+        }
+
+        public static TimeProvenance unknown() { return fromBases(List.of()); }
+    }
+
     public record ChangeStory(
         String id,
         String primarySubjectKey,
@@ -183,8 +212,61 @@ public final class ProjectHistoryDtos {
         String mergedIntoStoryId,
         String displayStatus,
         List<String> correctionConflicts,
-        ClaimAttribution claimAttribution
+        ClaimAttribution claimAttribution,
+        TimeProvenance timeProvenance
     ) {
+        public ChangeStory(
+        String id,
+        String primarySubjectKey,
+        String humanTitle,
+        String oneSentenceSummary,
+        String beforeState,
+        String change,
+        String afterState,
+        List<String> affectedAreas,
+        String reason,
+        List<String> reasonEvidenceRefs,
+        String laterOutcome,
+        List<String> conflicts,
+        List<String> unknowns,
+        Instant occurredFrom,
+        Instant occurredTo,
+        int evidenceCount,
+        int rawEventCount,
+        String authority,
+        String summaryStatus,
+        String coverage,
+        List<String> limitations,
+        List<UUID> eventRefs,
+        List<String> evidenceRefs,
+        String role,
+        String primaryStoryId,
+        List<String> supportingChangeRefs,
+        List<String> technicalAtomRefs,
+        List<String> commitSummaries,
+        List<String> technicalDetails,
+        String presentationAuthority,
+        String presentationRevision,
+        String automaticTitle,
+        String automaticSummary,
+        List<String> userCorrectionRefs,
+        boolean hiddenByDefault,
+        boolean pinned,
+        String mergedIntoStoryId,
+        String displayStatus,
+        List<String> correctionConflicts,
+        ClaimAttribution claimAttribution
+        ) {
+            this(id, primarySubjectKey, humanTitle, oneSentenceSummary, beforeState, change, afterState, affectedAreas,
+                reason, reasonEvidenceRefs, laterOutcome, conflicts, unknowns, occurredFrom, occurredTo, evidenceCount,
+                rawEventCount, authority, summaryStatus, coverage, limitations, eventRefs, evidenceRefs, role,
+                primaryStoryId, supportingChangeRefs, technicalAtomRefs, commitSummaries, technicalDetails,
+                presentationAuthority, presentationRevision, automaticTitle, automaticSummary, userCorrectionRefs,
+                hiddenByDefault, pinned, mergedIntoStoryId, displayStatus, correctionConflicts, claimAttribution,
+                TimeProvenance.unknown());
+        }
+
+
         public ChangeStory(
             String id,
             String primarySubjectKey,
@@ -280,6 +362,7 @@ public final class ProjectHistoryDtos {
             technicalDetails = immutable(technicalDetails);
             userCorrectionRefs = immutable(userCorrectionRefs);
             correctionConflicts = immutable(correctionConflicts);
+            timeProvenance = timeProvenance == null ? TimeProvenance.unknown() : timeProvenance;
             claimAttribution = claimAttribution == null ? ClaimAttribution.empty() : claimAttribution;
             role = role == null || role.isBlank() ? "PRIMARY" : role.trim().toUpperCase(java.util.Locale.ROOT);
             primaryStoryId = primaryStoryId == null ? "" : primaryStoryId.trim();
@@ -302,7 +385,7 @@ public final class ProjectHistoryDtos {
                 rawEventCount, authority, summaryStatus, coverage, limitations, eventRefs, evidenceRefs, role,
                 primaryStoryId, supportingChangeRefs, technicalAtomRefs, commitSummaries, technicalDetails,
                 presentationAuthority, presentationRevision, automaticTitle, automaticSummary, userCorrectionRefs,
-                hiddenByDefault, pinned, mergedIntoStoryId, displayStatus, correctionConflicts, value
+                hiddenByDefault, pinned, mergedIntoStoryId, displayStatus, correctionConflicts, value, timeProvenance
             );
         }
 

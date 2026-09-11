@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Activity, ArrowRight, BookOpenText, GitBranch } from "lucide-react";
-import { type WorkspaceProject, type WorkspaceStory, type WorkspaceView } from "@/lib/workspace-preview";
+import { currentMaterialClaims, type WorkspaceProject, type WorkspaceStory, type WorkspaceView } from "@/lib/workspace-preview";
 import { claimLabels, supportedClaim, type WorkspaceClaim } from "@/lib/workspace-claims";
 import { ProjectMark } from "./WorkspacePages";
 import { StoryCard, HistoryBoundaries } from "./HistoryReader";
@@ -20,7 +20,7 @@ export function RealCurrentPage({ project, href, onStory }: { project: Workspace
     <section className="pf-panel pf-hero"><div className="pf-hero-art"/><div className="pf-hero-heading"><ProjectMark color={project.color}/><div><h2>{project.name}</h2><p>{identity?.text || project.description}</p></div><span className="pf-chip recorded">{project.status}</span></div>
       <p className="pf-claim-badge">{identity ? `项目声明摘录 · ${identity.source}:${identity.line}` : "项目填写资料 · 尚未核实"}</p>
       {summary && <p className="pf-hero-summary">{summary.text}</p>}
-      {summary && <div className="pf-current-sources"><span className="pf-claim-badge">系统归纳</span>{materialSummary ? <a href="#current-material-sources">查看当前材料来源 <ArrowRight size={14}/></a> : <Link href={href("history")}>根据已保存的变化记录 <ArrowRight size={14}/></Link>}</div>}
+      {summary && <div className="pf-current-sources"><span className="pf-claim-badge">{claimLabels[summary.classification]}</span><a href="#current-material-sources">查看当前材料来源 <ArrowRight size={14}/></a></div>}
       <div className="pf-hero-stats"><div><Activity size={18}/> 最近成功读取：{project.updated}</div><Link href={href("worklines")}><GitBranch size={17}/>查看开发工作线</Link></div>
     </section>
     {(project.stale || project.degraded) && <div className="pf-notice" role="status">{project.stale ? "材料可能已变化，当前展示上次保存结果。" : "部分来源或历史尚不完整；以下结论只覆盖已读取内容。"}</div>}
@@ -69,9 +69,8 @@ function CurrentMaterialUnderstanding({ project, onSummary }: { project: Workspa
     return () => { active = false; clearTimeout(timer); };
   }, [job, running, project.id]);
   useEffect(() => {
-    const known = new Set((snapshot?.sourceMap?.sources ?? []).map(source => source.id));
-    const first = snapshot?.quality?.modelUsed ? snapshot.identity?.claims?.find(claim => claim.evidenceRefs.some(ref => known.has(ref))) : null;
-    onSummary(first ? supportedClaim({ text: first.text, kind: "SUMMARY", classification: "INFERRED", sources: first.evidenceRefs.filter(ref => known.has(ref)) }) : null);
+    const first = snapshot?.quality?.modelUsed ? currentMaterialClaims(snapshot)[0] : null;
+    onSummary(first ? supportedClaim({ text: first.text, kind: "SUMMARY", classification: first.classification, sources: first.evidenceRefs }) : null);
   }, [snapshot, onSummary]);
   async function refresh() {
     if (starting || running) return; setStarting(true); setError("");
@@ -80,16 +79,17 @@ function CurrentMaterialUnderstanding({ project, onSummary }: { project: Workspa
     finally { setStarting(false); }
   }
   const sources = new Map((snapshot?.sourceMap?.sources ?? []).map(source => [source.id, source]));
-  const claims = [snapshot?.identity, snapshot?.capabilities, snapshot?.engineeringState].flatMap(section => section?.claims ?? [])
-    .map(claim => ({ ...claim, evidenceRefs: claim.evidenceRefs.filter(ref => sources.has(ref)) }))
-    .filter(claim => supportedClaim({ text: claim.text, kind: "SUMMARY", classification: "INFERRED", sources: claim.evidenceRefs })).slice(0, 8);
+  const claims = currentMaterialClaims(snapshot);
+  const claimRows = claims.map(claim => <details className="pf-source-details" key={claim.id}><summary><span className="pf-claim-badge">{claimLabels[claim.classification]}</span> {claim.text}</summary>{claim.evidenceRefs.map(ref => { const source = sources.get(ref)!; return <p key={ref}>{source.locator} · {source.summary} · {source.currentness === "CURRENT" ? "读取时为当前材料" : source.currentness === "STALE" ? "材料可能过期" : "当前性待核实"}</p>; })}</details>);
   return <section id="current-material-sources" className="pf-panel pf-real-section pf-material-understanding"><div className="pf-section-line"><h2>当前材料说明了什么</h2><button className="pf-button" disabled={starting || running} onClick={refresh}>{starting || running ? "正在理解当前材料…" : "理解当前材料"}</button></div>
     <p>根据当前材料归纳项目用途与能力。以下是有来源的系统归纳；文档宣称的能力不等于本次已经验证。</p>
     {running && <p className="pf-notice" role="status">{job?.stageMessage || "任务已进入后台，可离开后回来查看。"}</p>}
     {error && <p className="pf-notice" role="alert">{error}</p>}
+    {snapshot?.finalSynthesisStatus === "FAILED_DEGRADED" && <p className="pf-notice" role="status">最终归纳尚未完成。以下保留已校验的第一阶段理解；可点击“理解当前材料”恢复后续阶段。</p>}
     {snapshot && <p className="pf-claim-badge">{snapshot.quality?.modelUsed ? "系统归纳" : "本地观察"} · 读取于 {new Date(snapshot.analyzedAt).toLocaleString("zh-CN")} · {snapshot.currentStatus === "STALE" ? "材料已变化，需更新" : "仅覆盖该次读取"}</p>}
     {snapshot && !snapshot.quality?.modelUsed && <p className="pf-notice">尚无成功的模型理解；以下保留本地观察。可点击“理解当前材料”重试，文件数量不能说明产品功能已经实现。</p>}
-    {claims.map(claim => <details className="pf-source-details" key={claim.id}><summary>{claim.text}</summary>{claim.evidenceRefs.map(ref => { const source = sources.get(ref)!; return <p key={ref}>{source.locator} · {source.summary} · {source.currentness === "CURRENT" ? "读取时为当前材料" : source.currentness === "STALE" ? "材料可能过期" : "当前性待核实"}</p>; })}</details>)}
+    {claimRows.slice(0, 3)}
+    {claimRows.length > 3 && <details className="pf-source-details"><summary>更多材料说明与依据（{claimRows.length - 3} 项）</summary>{claimRows.slice(3)}</details>}
     {!claims.length && !running && <p className="pf-notice">尚无有来源的语义说明。可在配置模型后显式读取当前材料。</p>}
     {snapshot?.unknowns?.length ? <details className="pf-source-details"><summary>理解范围与未知</summary>{snapshot.unknowns.slice(0, 8).map((unknown, i) => <p key={i}>{unknown}</p>)}</details> : null}
   </section>;

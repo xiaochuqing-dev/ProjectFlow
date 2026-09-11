@@ -1,5 +1,14 @@
 # Testing
 
+## V4.0-E acceptance boundary
+
+`ModelRequestTelemetryTest` exercises wrapped failures, known/unknown usage, transport reset, explicit HTTP-200 upstream stream-read failure versus other HTTP-200 errors, bounded retries, timeout and cancellation. `OpenAiResponsesStreamingTest` uses a loopback SSE server to verify terminal completion, missing terminal failure and disabled remote storage. These tests are synthetic contracts, not real Provider acceptance.
+
+`ProjectUnderstandingServiceTest` verifies source-bound Scout reuse, no-change zero calls, legacy failed-final cache invalidation, changed-source invalidation, and preservation across detached snapshot instances. History regressions cover concrete cross-project subjects, no broad-owner promotion, generic commit inventories, source-aware Agent/file/PR time and Chinese first-layer text. Existing frozen Ground Truth is unchanged; the E continuity artifact compares safety invariants while live scenario assertions verify bounded recomputation, cache reuse and stable unaffected identities.
+
+Real Sol/xhigh Current, History, failures/recovery, independent visible-product review, source audits, Windows and CI are separately recorded in `docs/acceptance-evidence/v4.0-e/`. Required unit/PG/H2/legacy/credential/projection/browser gates cannot substitute for MODEL_REVIEW or Owner Review.
+
+
 ## V4.0-D acceptance boundary
 
 `ProjectWorklineCollectorTest`, `ProjectWorklineReadTest` and `ProjectDeclarationReadTest` cover bounded Git/PR collection, exact merged HEAD and ambiguous ancestry, unavailable GitHub, source declarations, owned persisted reads and recent-story pagination. `ProjectUnderstandingServiceTest` covers retrying a failed first semantic attempt with unchanged files while retaining the zero-model no-change path for successful/no-model snapshots. Workspace E2E covers current material job recovery, claim display ceilings, intake redirects and real/demo isolation.

@@ -165,6 +165,22 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
             && !containsAny(firstLayer, GENERIC_FIRST_LAYER);
     }
 
+    /** Do not discard concrete evidence concepts in favor of a generic but
+     * technically truthful sentence. Sources without such concepts retain
+     * their conservative fallback; usefulness never increases authority. */
+    public boolean semanticallyUseful(String title, String summary, String evidenceSubject) {
+        if (!hasActionObjectResult(title, summary)) return false;
+        String subject = text(evidenceSubject);
+        String concepts = subject.contains("（含")
+            ? subject.substring(subject.indexOf("（含") + 2).replace("相关文件）", "")
+            : subject.replace("相关代码", "").replace("文档", "");
+        if (Set.of("", "项目", "项目材料", "项目骨架", "前端项目骨架", "后端项目骨架", "前后端项目骨架",
+            "项目阶段", "项目阶段成果", "阶段成果记录", "项目成果记录", "源码功能").contains(concepts)) return true;
+        String wording = text(title) + " " + text(summary);
+        return java.util.Arrays.stream(concepts.split("、")).filter(value -> value.length() >= 2)
+            .anyMatch(wording::contains);
+    }
+
     public void validateChapter(String title, String summary, List<String> primaryStoryWording) {
         String safeTitle = text(title);
         String safeSummary = text(summary);

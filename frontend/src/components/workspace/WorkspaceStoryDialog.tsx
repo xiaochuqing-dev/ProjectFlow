@@ -115,7 +115,7 @@ function EvidenceEvent({ projectId, event, initialOpen }: { projectId: string; e
       {evidence?.truncated && <p className="pf-notice">证据详情已达到安全读取上限，当前仅显示有界结果。</p>}
     </div>}
     <details className="pf-source-details"><summary>原始提交与来源信息</summary>
-      <p>{event.safeSourceLabel}</p><p>{event.occurredAt}</p><p>证据身份：{event.epistemicStatus} · {event.authority}</p>
+      <p>{event.safeSourceLabel}</p><p>{String(event.coverage?.timeLabel || "来源记录时间；不代表功能完成时间")} · {event.occurredAt}</p><p>证据身份：{event.epistemicStatus} · {event.authority}</p>
       {event.affectedPaths.map((file) => <p key={file}>{file}</p>)}
       {sourceLink && <a href={sourceLink} target={sourceLink.startsWith("https://") ? "_blank" : undefined} rel="noreferrer">打开原始来源<ExternalLink size={13} /></a>}
     </details>

@@ -1,5 +1,11 @@
 # Known risks
 
+- V4.0-E 的两份真实 Sol/xhigh Current 已成功；此前 D 的 HTTP/2 CANCEL 与 E 的 History reset、上游流读取中断全部保留。不能把 relay/上游/SDK/Windows 中任一方当作已证实根因；SSE、两次有界 retry 和 Scout checkpoint 是已实施的缓解，不能保证网络永不失败。
+- E 的请求遥测区分已报告用量与完整精确用量。失败没有 terminal usage 时必须 UNKNOWN/PARTIAL，不补零、不估费用；恢复只复用当前来源、模型、协议和 effort 一致的规范化 checkpoint。旧成功缓存若 finalSynthesisStatus 为 FAILED_DEGRADED，显式刷新必须重试。
+- 更具体的文件名/文档主体仍不证明运行可用。Agent 入库时间只代表过程记录；文件观察时间不能冒充功能完成日期。普通无可靠发生时间的资料继续显示未知。
+- E 的语义评审、Windows、CI、Desktop Shell 技术入口与待处理债以本轮 Evidence 为准。下面 D/C/V3.x 条目保留当时失败与限制，不自动代表 E 当前结论；Owner Review 不因 MODEL_REVIEW 或自动测试而变为通过。
+
+
 - V4.0-D 最终两份真实当前材料理解均因 HTTP/2 CANCEL 失败，保留 MODEL_FAILED / STALE 本地观察；成功的 History 不代表当前能力理解成功。每份异常可确认两次请求，Job DTO 的零计数来自包装诊断丢失，Token 和费用不可据此记为零。独立 Sol/xhigh 第二轮仍为 NEEDS_REVISION，Desktop Shell Entry 为 BLOCKED。
 - V4.0-D 为依赖 #23 的 Draft，Owner Review 仍须独立记录。Current / History / Workline 的来源门槛与界面回归不能代替真实项目语义审计；本轮真实模型失败和后续恢复分别保留在阶段 Evidence。
 - 首次真实大历史分析暴露了既有 History Job 的固定 10 分钟截止。已复用 AnalysisTimePolicy.AUTO，保留原窗口、请求、Token、Provider 超时、取消和 checkpoint 边界；不得为一次失败全量清空缓存或重新分析已成功窗口。

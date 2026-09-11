@@ -1,0 +1,20 @@
+{
+  "result": "SUCCEEDED_ON_RETRY_IN_E; earlier D failures remain unchanged",
+  "scope": "Unmodified D production Gateway; real Corporation-Agent Current",
+  "job": {
+    "status": "SUCCEEDED",
+    "stage": "SUCCEEDED",
+    "requestCount": 1,
+    "elapsedMs": 675804,
+    "promptTokens": 8743,
+    "completionTokens": 8221,
+    "totalTokens": 16964
+  },
+  "actualUnderstandingMetrics": {
+    "modelRequestCount": 2,
+    "inputTokens": 17754,
+    "outputTokens": 32259,
+    "totalTokens": 50013
+  },
+  "finding": "Current success is intermittent. Job reported only the last phase; cache rerun also repeated that historical usage. This does not establish a client/relay/upstream/Windows reset origin."
+}

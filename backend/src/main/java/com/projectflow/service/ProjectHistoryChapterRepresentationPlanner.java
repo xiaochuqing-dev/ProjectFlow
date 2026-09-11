@@ -314,7 +314,16 @@ public final class ProjectHistoryChapterRepresentationPlanner {
     }
 
     private String family(ChangeStory story) {
-        String label = label(story);
+        // Examples improve presentation, not membership. Keep broad area
+        // owners in their established family; changing the sample filenames
+        // must not fragment one area into unrelated outcome clusters.
+        if (safe(story.primarySubjectKey()).startsWith("project-area-")
+            && !story.technicalDetails().isEmpty()) return "项目骨架";
+        String label = language.readableObject(story.primarySubjectKey(), story.technicalDetails(), List.of());
+        // Commit-wide code inventories are broad owners, like area inventories;
+        // filename examples must not turn them into precise capability families.
+        if (safe(story.primarySubjectKey()).startsWith("change-") && label.startsWith("相关代码（含"))
+            return "项目骨架";
         // Generic presentation labels are deliberately one low-weight digest
         // family. Splitting them again by internal subject keys lets dozens of
         // tiny document/material clusters dilute the real phase outcomes.

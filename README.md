@@ -1,6 +1,9 @@
 # ProjectFlow
 
-## V4 Workspace（V4.0-D Draft）
+## V4 Workspace（V4.0-E Draft）
+
+V4.0-E 修复长时间 Responses 读取、真实请求计数和失败阶段恢复；Current 按有来源的用途与能力展开，History 的文件对象和时间来源更具体。ProjectFlow 与 Corporation-Agent 已完成真实 Sol/xhigh Current；独立语义评审、完整门禁和 Desktop Shell 技术入口以 [V4.0-E 报告](docs/projectflow-v4.0-e-semantic-quality-debt-closure-report.md) 及其 Evidence 的最终状态为准。Owner Review 独立记录，仍是依赖 #24 的 Draft。
+
 
 ProjectFlow 是用于理解项目现状、阅读真实变化并维护长期项目记忆的工作区。V4.0-D 将普通项目入口、创建和接入统一到午夜蓝 Workspace；当前页区分已观察结果、项目声明、系统归纳和未知，历程先显示变化概览，再按时间或长期主题阅读。开发工作线基于有界 Git / GitHub 证据，不把分支名或提交数量当成目的、进度或尚未合入的证明。
 

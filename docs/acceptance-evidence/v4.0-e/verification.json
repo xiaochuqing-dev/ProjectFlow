@@ -1,0 +1,175 @@
+{
+  "recordedAt": "2026-09-11T19:52:55.114810+00:00",
+  "state": "IN_PROGRESS",
+  "backend": {
+    "fullRun": "mvn -q -Ppostgres-it verify, followed by affected telemetry/streaming/understanding/job tests and package",
+    "latestReports": {
+      "tests": 756,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 11
+    },
+    "focusedLatest": [
+      {
+        "name": "com.projectflow.ProjectAnalysisJobServiceTest",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "1.742"
+      },
+      {
+        "name": "com.projectflow.service.model.OpenAiResponsesStreamingTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.844"
+      },
+      {
+        "name": "com.projectflow.service.ModelRequestTelemetryTest",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "2.625"
+      },
+      {
+        "name": "com.projectflow.service.ProjectUnderstandingServiceTest",
+        "tests": "14",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "1.74"
+      }
+    ]
+  },
+  "postgres16": {
+    "command": "PROJECTFLOW_RUN_POSTGRES_MIGRATION_TESTS=true mvn -q -Ppostgres-it verify",
+    "reports": [
+      {
+        "name": "com.projectflow.eval.ProjectFlowRealModelEvalIT",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "0.041"
+      },
+      {
+        "name": "com.projectflow.eval.ProjectFlowRealProviderProbeIT",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "0.002"
+      },
+      {
+        "name": "com.projectflow.eval.ProjectHistoryPublicRepositoryIT",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "13.757"
+      },
+      {
+        "name": "com.projectflow.eval.ProjectHistoryRealModelIT",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "0.002"
+      },
+      {
+        "name": "com.projectflow.eval.ProjectUnderstandingRealModelIT",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "0.004"
+      },
+      {
+        "name": "com.projectflow.migration.ProjectFlowFlywayPostgresIT",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "6.82"
+      },
+      {
+        "name": "com.projectflow.ProjectFlowPostgresIT",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "11.311"
+      },
+      {
+        "name": "com.projectflow.RealDeepSeekIT",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "0.001"
+      }
+    ],
+    "totals": {
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 6
+    }
+  },
+  "exactV39Upgrade": {
+    "sourceHead": "dd5ee41b6afcbd7703fa0883dc115c11f4821447",
+    "h2": "PASS",
+    "postgres16": "PASS",
+    "tests": 2,
+    "skipped": 0,
+    "seconds": 46.22,
+    "scope": "Exact old application creates legacy schema; separate controlled baseline/migration/credential/protected-record/restart proof"
+  },
+  "frontend": {
+    "lint": "PASS",
+    "contracts": 71,
+    "contractsFailed": 0,
+    "productionBuild": "PASS",
+    "playwright": {
+      "passed": 37,
+      "failed": 0,
+      "duration": "2.7 minutes",
+      "source": "Real backend/browser and fixed compatible model service; not real Sol acceptance"
+    }
+  },
+  "hermes": {
+    "passed": 10,
+    "failed": 0,
+    "startupMs": 193,
+    "concurrency": 6
+  },
+  "obsidian": {
+    "passed": 27,
+    "failed": 0,
+    "scale": {
+      "facts": 5000,
+      "months": 36,
+      "capabilities": 100,
+      "evolutions": 1000,
+      "files": 183,
+      "firstSyncMs": 505,
+      "writes": 184,
+      "noChangeWrites": 0
+    }
+  },
+  "rootLauncher": {
+    "status": "PASS",
+    "artifact": "windows-launcher.json",
+    "backendHealth": 200,
+    "frontend": 200,
+    "relativeWorktreeBuild": true,
+    "localChangesProtected": true
+  },
+  "releaseScriptContracts": "PASS",
+  "windowsPortable": "PENDING_CLEAN_COMMIT_BUILD",
+  "osv": "PENDING_CI",
+  "sensitiveScan": "PENDING_FINAL"
+}

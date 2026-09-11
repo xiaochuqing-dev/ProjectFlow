@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v14";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v15";
     public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v9";
     static final int MAX_PROMPT_CHARS = 60_000;
     public static final String VALIDATION_REPAIR_MARKER = "\nHISTORY_VALIDATION_REPAIR=";
@@ -53,6 +53,7 @@ public final class ProjectHistoryPromptBuilder {
         humanTitle 只用一句话表达“做了什么 + 对象 + 形成的结果”；oneSentenceSummary 补充范围或影响；Before 只讲此前状态；Change 只讲本阶段动作；After 只讲最终状态。五段不得复读同一句话。
         OUTPUT_TEMPLATE_JSON 已预填工程层确定性安全草稿。只有在不改变 ID、事实、状态和 Evidence 的前提下才能改进文字；不确定时逐字段原样保留预填内容。
         subjectDisplayConcept 是第一层唯一允许的主要对象；不得输出 raw subject、路径、文件名、class、internal slug、截断 token 或输入外的新实体。
+        若对象包含“含某些对象相关文件”，这些只是区域中的具体文件例子，不代表整项功能已实现。保留可读的具体对象与动作，不得退化成只有“项目材料、项目骨架、结构文件”的通用摘要。文件变化可确认；运行验收、上线和完整能力需要各自的直接证据。
         claimState、claimAction、supportedOutcome、supportClass、allowedClaims 与 forbiddenClaims 是硬边界。PLANNED 不得写成 IMPLEMENTED，DECLARED 不得写成 VERIFIED，CONFIGURED 不得写成已部署，未给直接验证 Evidence 不得写稳定或生产可用。
         directSupportSummary 是与当前 subject/action 直接匹配的有界支持；indirectContextSummary 只解释上下文，明确不能提升 Claim。不得因为同 Commit、相邻时间、相同区域或 Supporting Story 把间接上下文借给当前 Claim。
         downgradeReason 必须被遵守：只能在工程层给出的 supportedOutcome 内改写，不得自行提高状态。

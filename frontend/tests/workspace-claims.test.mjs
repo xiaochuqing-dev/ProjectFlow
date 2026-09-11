@@ -22,6 +22,22 @@ test("observed scaffold files cannot claim first creation or runtime completion"
 test("no source means no plan or progress", () => {
   for (const kind of ["PLAN", "MILESTONE", "PROGRESS", "MATURITY", "USER_GOAL"]) assert.equal(supportedClaim({ text: "下一步", kind, classification: "DECLARED", sources: [] }), null);
 });
+test("history dates retain event versus observation provenance including legacy unknowns", () => {
+  const base = { id: "time", humanTitle: "新增发票相关代码", oneSentenceSummary: "可确认文件新增", occurredTo: "2026-01-02T00:00:00Z", eventRefs: ["e"], evidenceRefs: ["file:invoice"], conflicts: [], unknowns: [] };
+  assert.match(preview.exports.persistedStory(base).date, /来源时间依据未知/);
+  assert.match(preview.exports.persistedStory({ ...base, timeProvenance: { label: "提交时间" } }).date, /提交时间 · 2026-01-02/);
+  assert.match(preview.exports.persistedStory({ ...base, timeProvenance: { label: "来源观察时间，发生时间未知" } }).date, /发生时间未知/);
+});
+test("current explains sourced purpose before inventory and keeps declarations distinct", () => {
+  const claim = (id, text, epistemicStatus, evidenceRefs = ["readme"]) => ({ id, text, epistemicStatus, evidenceRefs });
+  const state = { sourceMap: { sources: [{ id: "readme" }] }, identity: { claims: [claim("metrics", "扫描了100个文件", "OBSERVED")] },
+    dynamicProfile: { sections: [ { type: "CURRENT_STATE", claims: [claim("metrics", "扫描了100个文件", "OBSERVED")] },
+      { type: "PURPOSE", claims: [claim("purpose", "文档声明这是一个发票审核应用", "DECLARED"), claim("unknown", "状态未知", "UNKNOWN"), claim("invalid", "完成上线", "INFERRED", ["missing"])] } ] } };
+  const result = preview.exports.currentMaterialClaims(state);
+  assert.equal(result[0].id, "purpose"); assert.equal(result[0].classification, "DECLARED");
+  assert.equal(result.filter(item => item.id === "metrics").length, 1);
+  assert.equal(result.length, 2);
+});
 test("roadmap declaration stays declared and inference cannot become intent", () => {
   const claim = { text: "支持离线导入", kind: "PLAN", classification: "DECLARED", sources: ["README.md:14"] };
   assert.equal(supportedClaim(claim).classification, "DECLARED");

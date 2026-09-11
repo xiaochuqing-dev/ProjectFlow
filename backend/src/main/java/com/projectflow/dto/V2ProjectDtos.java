@@ -157,9 +157,9 @@ public final class V2ProjectDtos {
         int maxAttempts,
         int requestCount,
         int maxRequestCount,
-        int promptTokens,
-        int completionTokens,
-        int totalTokens,
+        Integer promptTokens,
+        Integer completionTokens,
+        Integer totalTokens,
         int maxTotalTokens,
         long elapsedMs,
         long maxDurationMs,
@@ -172,7 +172,8 @@ public final class V2ProjectDtos {
         String retryReason,
         String analysisDeadlineMode,
         String qualityMode,
-        boolean overallDeadlineEnabled
+        boolean overallDeadlineEnabled,
+        com.projectflow.service.ModelRequestTelemetryContext.Snapshot transportTelemetry
     ) {
     }
 

@@ -345,7 +345,10 @@ class ProjectHistoryReconstructionTest {
         assertThat(readService.events(
             userId, project.getId(), "DOCUMENT", null, null, null, null, "CURRENT",
             null, false, null, null, 0, 20
-        ).items()).hasSize(3);
+        ).items()).hasSize(3).allSatisfy(event -> {
+            assertThat(event.coverage().get("timeBasis")).isEqualTo("SOURCE_OBSERVATION_TIME");
+            assertThat(event.coverage().get("timeLabel")).asString().contains("发生时间未知");
+        });
         assertThat(readService.events(
             userId, project.getId(), "FILESYSTEM", null, null, null, null, "CURRENT",
             "site", false, null, null, 0, 20
@@ -364,6 +367,29 @@ class ProjectHistoryReconstructionTest {
         assertThat(currentState.currentness()).isEqualTo("DEGRADED");
         assertThat(currentState.modelCalled()).isFalse();
         assertThat(currentState.confirmedState()).isNotBlank();
+    }
+
+    @Test
+    void agentResultUsesGitRecordTimeInsteadOfCloneMtime() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("agent-time");
+        Path result = repository.resolve(".projectflow/agent-results/example/result.json");
+        Files.createDirectories(result.getParent());
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Files.writeString(result, "{\"taskGoal\":\"补充发票审核说明\",\"actualChanges\":[\"更新发票审核范围\"],\"keyFiles\":[\"docs/invoice.md\"]}");
+        Instant recordedAt = Instant.parse("2024-03-01T00:00:00Z");
+        commitAt(repository, "record invoice work", recordedAt);
+        Files.setLastModifiedTime(result, java.nio.file.attribute.FileTime.from(Instant.parse("2026-01-01T00:00:00Z")));
+        ProjectSpace project = project(userId, "Agent chronology", repository);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        var events = readService.events(userId, project.getId(), "AGENT_RESULT", null, null, null, null,
+            "CURRENT", null, false, null, null, 0, 20).items();
+        assertThat(events).hasSize(1);
+        assertThat(events.get(0).occurredAt()).isEqualTo(recordedAt);
+        assertThat(events.get(0).coverage().get("timeBasis")).isEqualTo("AGENT_GIT_RECORD_TIME");
+        assertThat(events.get(0).authority()).isEqualTo("PROCESS_EVIDENCE");
     }
 
     @Test

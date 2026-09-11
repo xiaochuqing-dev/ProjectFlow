@@ -1264,7 +1264,7 @@ export type ProjectAnalysisJobType =
 export type UnderstandingClaim = {
   id: string;
   text: string;
-  epistemicStatus: "OBSERVED" | "INFERRED" | "EXPLAINED";
+  epistemicStatus: "OBSERVED" | "INFERRED" | "EXPLAINED" | "DECLARED" | "PROCESS_EVIDENCE" | "UNKNOWN" | "CONFLICTED";
   confidence: "HIGH" | "MEDIUM" | "LOW";
   evidenceRefs: string[];
 };
@@ -1710,9 +1710,15 @@ export type ProjectAnalysisJob = {
   maxAttempts: number;
   requestCount: number;
   maxRequestCount: number;
-  promptTokens: number;
-  completionTokens: number;
-  totalTokens: number;
+  promptTokens: number | null;
+  completionTokens: number | null;
+  totalTokens: number | null;
+  transportTelemetry?: {
+    requestCount: number; completedRequestCount: number; failedRequestCount: number;
+    inFlightRequestCount: number; usageAvailability: "ACTUAL" | "PARTIAL" | "UNKNOWN" | "NOT_CALLED";
+    reportedPromptTokens: number; reportedCompletionTokens: number; reportedTotalTokens: number;
+    latencyMs: number;
+  } | null;
   maxTotalTokens: number;
   elapsedMs: number;
   maxDurationMs: number;
@@ -3073,6 +3079,7 @@ export type ProjectHistoryStory = {
   displayStatus?: string;
   correctionConflicts?: string[];
   claimAttribution?: ProjectHistoryClaimAttribution;
+  timeProvenance?: { basis: string; label: string; eventTimeKnown: boolean; sourceBases: string[] };
 };
 
 export type ProjectHistoryClaimAttribution = {
@@ -3107,6 +3114,7 @@ export type ProjectHistoryThread = {
 
 export type ProjectHistoryEvent = {
   id: string;
+  coverage?: { timeBasis?: string; timeLabel?: string };
   occurredAt: string;
   sourceType: string;
   category: string;

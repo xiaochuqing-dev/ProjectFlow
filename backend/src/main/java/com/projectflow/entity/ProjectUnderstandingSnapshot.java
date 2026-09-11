@@ -92,6 +92,10 @@ public class ProjectUnderstandingSnapshot {
         this.currentStatus = "STALE";
     }
 
+    public void recordCheckpointJson(String value) {
+        this.snapshotJson = value;
+    }
+
     public UUID getId() {
         return id;
     }

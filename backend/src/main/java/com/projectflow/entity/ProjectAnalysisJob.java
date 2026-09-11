@@ -301,6 +301,14 @@ public class ProjectAnalysisJob {
         this.heartbeatAt = Instant.now();
     }
 
+    /** Replaces process counters with observed Gateway attempts; never adds the same request twice. */
+    public void recordTransportTelemetry(int requests, int prompt, int completion, int total) {
+        this.requestCount = Math.max(0, requests);
+        this.promptTokens = Math.max(0, prompt);
+        this.completionTokens = Math.max(0, completion);
+        this.totalTokens = Math.max(0, total);
+    }
+
     public boolean hasDurationBudget(Instant now) {
         if (!com.projectflow.service.AnalysisTimePolicy.hasOverallDeadline(getMaxDurationMs())) return true;
         Instant base = startedAt == null ? (createdAt == null ? now : createdAt) : startedAt;

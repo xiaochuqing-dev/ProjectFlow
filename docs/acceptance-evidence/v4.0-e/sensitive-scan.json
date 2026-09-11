@@ -1,0 +1,7 @@
+{
+  "filesScanned": 1228,
+  "status": "PASS",
+  "findings": [],
+  "scope": "All tracked and non-ignored text files, including MD/TXT and actual authorized relay values",
+  "scannedAt": "2026-09-11T19:55:53.2259205Z"
+}

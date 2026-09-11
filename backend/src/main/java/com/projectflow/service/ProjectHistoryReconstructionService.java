@@ -53,7 +53,7 @@ import com.projectflow.service.ProjectHistorySourceCollector.CollectionOutcome;
  */
 @Service
 public class ProjectHistoryReconstructionService {
-    static final String STRATEGY_VERSION = "project-history-v385-chapter-representation-v1";
+    static final String STRATEGY_VERSION = "project-history-v40e-specificity-time-v2";
     static final String PROMPT_VERSION = ProjectHistoryPromptBuilder.PROMPT_VERSION;
     private static final int MODEL_STORY_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
     private static final int MODEL_EVENT_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_EVENT_LIMIT;
@@ -1062,7 +1062,7 @@ public class ProjectHistoryReconstructionService {
             story.technicalAtomRefs(), story.commitSummaries(), story.technicalDetails(), story.presentationAuthority(),
             story.presentationRevision(), story.automaticTitle(), story.automaticSummary(), story.userCorrectionRefs(),
             story.hiddenByDefault(), story.pinned(), story.mergedIntoStoryId(), story.displayStatus(),
-            story.correctionConflicts(), story.claimAttribution()
+            story.correctionConflicts(), story.claimAttribution(), story.timeProvenance()
         );
     }
 
@@ -1094,7 +1094,7 @@ public class ProjectHistoryReconstructionService {
             role, primaryStoryId, supportingChangeRefs, original.technicalAtomRefs(), original.commitSummaries(),
             original.technicalDetails(), presentationAuthority, presentationRevision,
             original.automaticTitle(), original.automaticSummary(), userCorrectionRefs, hiddenByDefault, pinned,
-            mergedIntoStoryId, displayStatus, correctionConflicts, original.claimAttribution()
+            mergedIntoStoryId, displayStatus, correctionConflicts, original.claimAttribution(), original.timeProvenance()
         );
     }
 
@@ -1199,7 +1199,8 @@ public class ProjectHistoryReconstructionService {
             "DETERMINISTIC", complete ? "FULL_WITHIN_DISCOVERED_SOURCES" : "PARTIAL", limitations, eventRefs, evidence,
             "PRIMARY", "", List.of(), atomRefs, commitSummaries, technicalDetails, "AUTOMATIC", "",
             humanTitle, summary, List.of(), false, false, "", "ACTIVE", List.of(),
-            claimAttribution(narrativeEnvelope)
+            claimAttribution(narrativeEnvelope), com.projectflow.dto.ProjectHistoryDtos.TimeProvenance.fromBases(
+                events.stream().map(EventView::timeBasis).toList())
         );
         return new StoryEnvelope(story, transitions);
     }
@@ -1253,7 +1254,7 @@ public class ProjectHistoryReconstructionService {
             String key = entry.getKey();
             result.add(new EvolutionThread(
                 "thread-" + ProjectHistorySourceCollector.sha256(key).substring(0, 20), key,
-                languageService.threadLabel(key), "PROJECT_SUBJECT",
+                ordered.get(ordered.size() - 1).story().claimAttribution().subject(), "PROJECT_SUBJECT",
                 ordered.stream().map(envelope -> envelope.story().id()).toList(), transitions,
                 ordered.get(ordered.size() - 1).story().afterState(),
                 gaps(ordered), conflicts, unknowns, evidenceCount, null
@@ -2569,7 +2570,7 @@ public class ProjectHistoryReconstructionService {
                 throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, "History model returned vague wording");
             }
             boolean deterministicTitleFallback = false;
-            if (!narrativeValidator.hasActionObjectResult(title, summary)) {
+            if (!narrativeValidator.semanticallyUseful(title, summary, original.claimAttribution().subject())) {
                 title = original.humanTitle();
                 summary = original.oneSentenceSummary();
                 deterministicTitleFallback = true;
@@ -3243,8 +3244,16 @@ public class ProjectHistoryReconstructionService {
             event.getSourceRevision(), event.getOccurredAt(), event.getCategory(), event.getTransition(),
             event.getSafeSourceLabel(), strings(event.getAffectedPathsJson()), strings(event.getSubjectKeysJson()),
             strings(event.getEvidenceRefsJson()), strings(event.getRelationRefsJson()), event.getAuthority(),
-            event.getEpistemicStatus(), strings(event.getLimitationsJson())
+            event.getEpistemicStatus(), strings(event.getLimitationsJson()), timeBasis(event)
         );
+    }
+
+    private String timeBasis(ProjectHistoryEvent event) {
+        try {
+            return objectMapper.readTree(event.getCoverageJson()).path("timeBasis").asText("UNKNOWN");
+        } catch (Exception ignored) {
+            return "UNKNOWN";
+        }
     }
 
     private static boolean semanticEligible(EventView event) {
@@ -3463,7 +3472,7 @@ public class ProjectHistoryReconstructionService {
             original.commitSummaries(), original.technicalDetails(), original.presentationAuthority(),
             original.presentationRevision(), original.automaticTitle(), original.automaticSummary(),
             original.userCorrectionRefs(), original.hiddenByDefault(), original.pinned(), original.mergedIntoStoryId(),
-            original.displayStatus(), original.correctionConflicts(), original.claimAttribution()
+            original.displayStatus(), original.correctionConflicts(), original.claimAttribution(), original.timeProvenance()
         );
     }
 
@@ -3784,7 +3793,8 @@ public class ProjectHistoryReconstructionService {
         List<String> relationRefs,
         Authority authority,
         ProjectFactEpistemicStatus epistemicStatus,
-        List<String> limitations
+        List<String> limitations,
+        String timeBasis
     ) {
     }
 

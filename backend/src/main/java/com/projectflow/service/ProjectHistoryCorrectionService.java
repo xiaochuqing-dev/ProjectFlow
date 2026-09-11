@@ -582,7 +582,7 @@ public class ProjectHistoryCorrectionService {
             secondary ? splitAutomaticSummary(original.automaticSummary()) : original.automaticSummary(),
             append(original.userCorrectionRefs(), correction.getId().toString()), original.hiddenByDefault(),
             secondary ? false : original.pinned(),
-            "", "ACTIVE", original.correctionConflicts(), claimAttribution(original, selectedEvents)
+            "", "ACTIVE", original.correctionConflicts(), claimAttribution(original, selectedEvents), original.timeProvenance()
         );
     }
 
@@ -624,7 +624,8 @@ public class ProjectHistoryCorrectionService {
             append(sources.stream().flatMap(story -> story.userCorrectionRefs().stream()).distinct().toList(), correction.getId().toString()),
             left.hiddenByDefault(), sources.stream().anyMatch(ChangeStory::pinned), "", "ACTIVE",
             sources.stream().flatMap(story -> story.correctionConflicts().stream()).distinct().toList(),
-            mergedAttribution(sources)
+            mergedAttribution(sources), com.projectflow.dto.ProjectHistoryDtos.TimeProvenance.fromBases(
+                sources.stream().flatMap(story -> story.timeProvenance().sourceBases().stream()).toList())
         );
     }
 
@@ -820,7 +821,7 @@ public class ProjectHistoryCorrectionService {
             story.technicalAtomRefs(), story.commitSummaries(), story.technicalDetails(), USER_DECLARED_PRESENTATION,
             correction.getId().toString(), story.automaticTitle(), story.automaticSummary(),
             append(story.userCorrectionRefs(), correction.getId().toString()), story.hiddenByDefault(), story.pinned(),
-            story.mergedIntoStoryId(), story.displayStatus(), story.correctionConflicts(), story.claimAttribution()
+            story.mergedIntoStoryId(), story.displayStatus(), story.correctionConflicts(), story.claimAttribution(), story.timeProvenance()
         );
     }
 
@@ -849,7 +850,7 @@ public class ProjectHistoryCorrectionService {
             story.supportingChangeRefs(), story.technicalAtomRefs(), story.commitSummaries(), story.technicalDetails(),
             USER_DECLARED_PRESENTATION, correction.getId().toString(), story.automaticTitle(), story.automaticSummary(),
             append(story.userCorrectionRefs(), correction.getId().toString()), hidden, pinned, mergedInto, status,
-            story.correctionConflicts(), story.claimAttribution()
+            story.correctionConflicts(), story.claimAttribution(), story.timeProvenance()
         );
     }
 
@@ -926,7 +927,7 @@ public class ProjectHistoryCorrectionService {
             value.evidenceRefs(), value.role(), value.primaryStoryId(), append(value.supportingChangeRefs(), support), value.technicalAtomRefs(),
             value.commitSummaries(), value.technicalDetails(), USER_DECLARED_PRESENTATION, correction.getId().toString(), value.automaticTitle(),
             value.automaticSummary(), append(value.userCorrectionRefs(), correction.getId().toString()), value.hiddenByDefault(), value.pinned(), value.mergedIntoStoryId(),
-            value.displayStatus(), value.correctionConflicts(), value.claimAttribution()));
+            value.displayStatus(), value.correctionConflicts(), value.claimAttribution(), value.timeProvenance()));
     }
 
     private void removeFromSupporting(Map<String, ChangeStory> stories, String support) {
@@ -940,7 +941,7 @@ public class ProjectHistoryCorrectionService {
                 value.role(), value.primaryStoryId(), refs, value.technicalAtomRefs(), value.commitSummaries(), value.technicalDetails(),
                 value.presentationAuthority(), value.presentationRevision(), value.automaticTitle(), value.automaticSummary(), value.userCorrectionRefs(),
                 value.hiddenByDefault(), value.pinned(), value.mergedIntoStoryId(), value.displayStatus(), value.correctionConflicts(),
-                value.claimAttribution());
+                value.claimAttribution(), value.timeProvenance());
         });
     }
 
@@ -1532,7 +1533,7 @@ public class ProjectHistoryCorrectionService {
             story.primaryStoryId(), story.supportingChangeRefs(), story.technicalAtomRefs(), story.commitSummaries(), story.technicalDetails(),
             story.presentationAuthority(), story.presentationRevision(), story.automaticTitle(), story.automaticSummary(), story.userCorrectionRefs(),
             story.hiddenByDefault(), story.pinned(), story.mergedIntoStoryId(), "CONFLICT", union(story.correctionConflicts(), List.of(correctionId + ":" + reason)),
-            story.claimAttribution());
+            story.claimAttribution(), story.timeProvenance());
     }
 
     private ClaimAttribution claimAttribution(ChangeStory original, List<ProjectHistoryEvent> events) {
