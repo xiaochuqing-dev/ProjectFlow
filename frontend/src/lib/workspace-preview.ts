@@ -286,7 +286,7 @@ export function persistedStory(story: ProjectHistoryStory): WorkspaceStory {
     id: story.id,
     title: observedStructure ? `观察到${claim.subject.replace("项目骨架", "代码结构")}的文件变化` : story.humanTitle,
     summary: observedStructure ? "来源记录了相关文件的新增或修改，具体功能结果仍需进一步确认。" : story.oneSentenceSummary,
-    date: `${story.timeProvenance?.label || "来源时间依据未知"} · ${story.occurredTo?.slice(0, 10) || "日期未知"}`,
+    date: `${story.timeProvenance?.label || "来源时间依据未知"} · ${story.occurredFrom?.slice(0, 10) && story.occurredFrom.slice(0, 10) !== story.occurredTo?.slice(0, 10) ? story.occurredFrom.slice(0, 10) + " – " : ""}${story.occurredTo?.slice(0, 10) || "日期未知"}`,
     before: observedStructure ? "这份记录没有独立确认该部分的完整此前状态。" : story.beforeState,
     change: observedStructure ? "本次来源记录了相关文件的新增或修改。" : story.change,
     after: observedStructure ? "相关文件变化已进入项目记录；这不代表整套功能已完成运行验收。" : story.afterState,
@@ -313,7 +313,10 @@ export function currentMaterialClaims(snapshot: ProjectUnderstandingSnapshot | n
   const seen = new Set<string>();
   return [...sections, snapshot?.identity, snapshot?.capabilities, snapshot?.engineeringState]
     .flatMap(section => section?.claims ?? [])
-    .map(claim => ({ ...claim, evidenceRefs: claim.evidenceRefs.filter(ref => known.has(ref)),
+    .map(claim => ({ ...claim,
+      text: claim.text.replace(/规模为 (EMPTY|SMALL|MEDIUM|LARGE|HUGE)\b/g, (_, scale: string) =>
+        `规模为 ${{ EMPTY: "空目录", SMALL: "小型", MEDIUM: "中型", LARGE: "大型", HUGE: "超大型" }[scale] ?? scale}`),
+      evidenceRefs: claim.evidenceRefs.filter(ref => known.has(ref)),
       classification: (claim.epistemicStatus === "DECLARED" ? "DECLARED"
         : claim.epistemicStatus === "CONFLICTED" ? "CONFLICTED"
         : claim.epistemicStatus === "UNKNOWN" ? "UNKNOWN" : "INFERRED") as ClaimClassification }))

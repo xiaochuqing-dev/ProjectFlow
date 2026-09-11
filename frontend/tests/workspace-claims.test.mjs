@@ -27,6 +27,7 @@ test("history dates retain event versus observation provenance including legacy 
   assert.match(preview.exports.persistedStory(base).date, /来源时间依据未知/);
   assert.match(preview.exports.persistedStory({ ...base, timeProvenance: { label: "提交时间" } }).date, /提交时间 · 2026-01-02/);
   assert.match(preview.exports.persistedStory({ ...base, timeProvenance: { label: "来源观察时间，发生时间未知" } }).date, /发生时间未知/);
+  assert.match(preview.exports.persistedStory({ ...base, occurredFrom: "2026-01-01T00:00:00Z", timeProvenance: { label: "提交时间" } }).date, /2026-01-01 – 2026-01-02/);
 });
 test("current explains sourced purpose before inventory and keeps declarations distinct", () => {
   const claim = (id, text, epistemicStatus, evidenceRefs = ["readme"]) => ({ id, text, epistemicStatus, evidenceRefs });

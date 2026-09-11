@@ -99,7 +99,7 @@ export function HistoryPage({ project, demo, onStory }: Props) {
           onClick={() => router.push(`${base}&axis=time${chapterId ? `&chapter=${encodeURIComponent(chapterId)}` : ""}`, { scroll: false })}><BookOpenText size={16} />按时间查看</button>
         <button aria-pressed={axis === "threads"} className={axis === "threads" ? "active" : ""}
           onClick={() => router.push(`${base}&axis=threads${selectedId ? `&chapter=${encodeURIComponent(selectedId)}` : ""}`, { scroll: false })}><Workflow size={16} />按长期主题查看</button>
-      </div><span>{axis === "chapters" ? "项目按时间先后经历了什么" : axis === "threads" ? "某个功能、问题或方向如何持续变化" : "先看最近发生了什么，再深入时间或主题"}</span>
+      </div><span>{axis === "chapters" ? "按来源时间阅读各组变化；日期可以重叠" : axis === "threads" ? "某个功能、问题或方向如何持续变化" : "先看最近发生了什么，再深入时间或主题"}</span>
     </div>
     {axis === "threads" ? <ThreadReader project={project} demo={demo} onStory={onStory}
       chapters={chapterList} chapterPage={page} onChapterPage={setPage} chapterLoading={listLoading}

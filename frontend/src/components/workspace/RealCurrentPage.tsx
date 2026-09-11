@@ -17,11 +17,11 @@ export function RealCurrentPage({ project, href, onStory }: { project: Workspace
   const summary = materialSummary;
   const confirmed = project.stories.filter(story => story.confirmedOutcome).slice(0, 4);
   return <div className="pf-current-page pf-real-current">
-    <section className="pf-panel pf-hero"><div className="pf-hero-art"/><div className="pf-hero-heading"><ProjectMark color={project.color}/><div><h2>{project.name}</h2><p>{identity?.text || project.description}</p></div><span className="pf-chip recorded">{project.status}</span></div>
+    <section className="pf-panel pf-hero"><div className="pf-hero-art"/><div className="pf-hero-heading"><ProjectMark color={project.color}/><div><h2>{project.name}</h2><p>{identity ? `项目说明中写道：${identity.text}` : project.description}</p></div><span className="pf-chip recorded">{project.status}</span></div>
       <p className="pf-claim-badge">{identity ? `项目声明摘录 · ${identity.source}:${identity.line}` : "项目填写资料 · 尚未核实"}</p>
       {summary && <p className="pf-hero-summary">{summary.text}</p>}
       {summary && <div className="pf-current-sources"><span className="pf-claim-badge">{claimLabels[summary.classification]}</span><a href="#current-material-sources">查看当前材料来源 <ArrowRight size={14}/></a></div>}
-      <div className="pf-hero-stats"><div><Activity size={18}/> 最近成功读取：{project.updated}</div><Link href={href("worklines")}><GitBranch size={17}/>查看开发工作线</Link></div>
+      <div className="pf-hero-stats"><div><Activity size={18}/> 历程与工作线读取：{project.updated}</div><Link href={href("worklines")}><GitBranch size={17}/>查看开发工作线</Link></div>
     </section>
     {(project.stale || project.degraded) && <div className="pf-notice" role="status">{project.stale ? "材料可能已变化，当前展示上次保存结果。" : "部分来源或历史尚不完整；以下结论只覆盖已读取内容。"}</div>}
     <CurrentMaterialUnderstanding project={project} onSummary={setMaterialSummary}/>
@@ -80,7 +80,7 @@ function CurrentMaterialUnderstanding({ project, onSummary }: { project: Workspa
   }
   const sources = new Map((snapshot?.sourceMap?.sources ?? []).map(source => [source.id, source]));
   const claims = currentMaterialClaims(snapshot);
-  const claimRows = claims.map(claim => <details className="pf-source-details" key={claim.id}><summary><span className="pf-claim-badge">{claimLabels[claim.classification]}</span> {claim.text}</summary>{claim.evidenceRefs.map(ref => { const source = sources.get(ref)!; return <p key={ref}>{source.locator} · {source.summary} · {source.currentness === "CURRENT" ? "读取时为当前材料" : source.currentness === "STALE" ? "材料可能过期" : "当前性待核实"}</p>; })}</details>);
+  const claimRows = claims.map(claim => <details className="pf-source-details" key={claim.id}><summary><span className="pf-claim-badge">{claimLabels[claim.classification]}</span> {claim.text}</summary>{claim.evidenceRefs.map(ref => { const source = sources.get(ref)!; return <div key={ref}><p>{source.locator || "工具读取材料"} · {source.currentness === "CURRENT" ? "读取时为当前材料" : source.currentness === "STALE" ? "材料可能过期" : "当前性待核实"}</p><details><summary>工程读取详情</summary><p>{source.summary}</p></details></div>; })}</details>);
   return <section id="current-material-sources" className="pf-panel pf-real-section pf-material-understanding"><div className="pf-section-line"><h2>当前材料说明了什么</h2><button className="pf-button" disabled={starting || running} onClick={refresh}>{starting || running ? "正在理解当前材料…" : "理解当前材料"}</button></div>
     <p>根据当前材料归纳项目用途与能力。以下是有来源的系统归纳；文档宣称的能力不等于本次已经验证。</p>
     {running && <p className="pf-notice" role="status">{job?.stageMessage || "任务已进入后台，可离开后回来查看。"}</p>}

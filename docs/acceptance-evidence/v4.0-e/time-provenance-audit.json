@@ -1,16 +1,16 @@
 {
-  "recordedAt": "2026-09-11T19:40:45.283501+00:00",
+  "recordedAt": "2026-09-11T20:13:20.525791+00:00",
   "rule": "Event, process record and observation times stay separate; file names never supply occurrence dates.",
   "projects": [
     {
       "project": "ProjectFlow",
-      "totalReadableStories": 214,
+      "totalReadableStories": 240,
       "timeBases": {
         "PR_UPDATED_AT": 4,
         "AGENT_GIT_RECORD_TIME": 10,
-        "GIT_COMMIT_TIME": 171,
+        "GIT_COMMIT_TIME": 196,
         "PR_MERGED_AT": 20,
-        "MIXED": 9
+        "MIXED": 10
       }
     },
     {

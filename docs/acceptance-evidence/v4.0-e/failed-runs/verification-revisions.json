@@ -23,7 +23,27 @@
     {
       "finding": "Portable build refused dirty source tree before packaging",
       "action": "Preserved clean-source guard; build scheduled after local implementation commit",
-      "final": "PENDING"
+      "final": "PASS: clean ecc4d7c portable build, two bundled-runtime launches, DPAPI, backup/restore and manifest verification"
+    },
+    {
+      "final": "Deterministic gates PASS; required Sol review in progress",
+      "action": "Preserved review and UI inputs; attached duplicate inventory as supporting evidence, retained source limits, exposed date ranges and clarified labels",
+      "finding": "First semantic review found repeated commit inventory, unsupported document first-existence wording, ambiguous chapter labels and hidden date ranges"
+    },
+    {
+      "final": "Full backend and continuity tests PASS",
+      "action": "Reused one bounded source-label helper across generation, model input and validation",
+      "finding": "Narrative generation and validation used different source-label samples"
+    },
+    {
+      "final": "Full Dogfood test and unchanged coverage threshold PASS",
+      "action": "Kept the broad representation family and gave its mixed-area headline a matching label",
+      "finding": "Broad chapter headline retained a narrower human label"
+    },
+    {
+      "final": "Actual open Workline evidence dialog captured",
+      "action": "Captured only dialog[open]; no product defect claimed from that capture error",
+      "finding": "Initial Workline screenshot selected a closed command-palette dialog"
     }
   ],
   "rawLogsIncluded": false

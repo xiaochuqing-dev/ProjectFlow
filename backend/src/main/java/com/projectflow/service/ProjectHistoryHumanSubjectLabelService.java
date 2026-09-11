@@ -50,6 +50,15 @@ public final class ProjectHistoryHumanSubjectLabelService {
         String labelSample = String.join(" ", safeLabels).toLowerCase(Locale.ROOT);
         String combined = subjectSample + " " + pathSample + " " + labelSample;
         String semanticText = subjectSample + " " + labelSample;
+        if (subjectSample.matches("(?:pull-request|issue)-\\d+")) {
+            String number = subjectSample.substring(subjectSample.lastIndexOf('-') + 1);
+            String type = subjectSample.startsWith("pull-request-") ? "合并请求" : "议题";
+            List<String> titles = safeLabels.stream().map(value -> value.split("；说明：", 2)[0]
+                .replaceFirst("(?i)^(?:Pull Request|Issue)\\s*#\\d+[：:]?\\s*", "")).toList();
+            String topic = sourceObject(titles);
+            if (topic.isBlank()) topic = concreteObjects(List.of(), String.join(" ", titles));
+            return type + number + (topic.isBlank() ? "的变更说明" : "（" + topic + "）");
+        }
         String skeleton = skeletonLabel(safePaths);
         Set<String> pathSubjectKeys = safePaths.stream()
             .map(ProjectHistorySourceCollector::historySubjectKey)
@@ -76,6 +85,7 @@ public final class ProjectHistoryHumanSubjectLabelService {
             && safePaths.stream().anyMatch(path -> CODE_EXTENSIONS.contains(extension(path)))) {
             String changedObjects = concreteObjects(safePaths, "");
             if (!changedObjects.isBlank()) return "相关代码（含" + changedObjects + "文件）";
+            return "一次提交的代码与配套文件";
         }
 
         String sourceFile = subjectPathAnchored && objectPaths.size() == 1 ? objectPaths.get(0)
@@ -87,6 +97,23 @@ public final class ProjectHistoryHumanSubjectLabelService {
         if (fileName.equals("version")) return "项目版本记录";
         if (fileName.matches("(?:docker-)?compose\\.ya?ml")) return "容器服务编排配置";
         if (sourceFile.replace('\\', '/').startsWith(".github/workflows/")) return "持续集成工作流配置";
+        if (documentOnly(safePaths) && !sourceFile.isBlank()
+            && (fileName.contains("report") || fileName.contains("validation"))) {
+            String topic = fileName.contains("reliability") ? "运行可靠性"
+                : fileName.contains("closeout") || fileName.contains("closure") ? "阶段收尾"
+                : fileName.contains("validation") ? "验证记录" : "";
+            java.util.regex.Matcher task = Pattern.compile("(?i)task[-_ ]?(\\d+)").matcher(fileName);
+            java.util.regex.Matcher version = Pattern.compile("(?i)(?:^|[-_])v(\\d+(?:\\.\\d+)*)").matcher(fileName);
+            String taskLabel = task.find() ? "任务" + task.group(1) : "";
+            String versionLabel = version.find() ? "版本" + version.group(1) : "";
+            String title = topic + (topic.isBlank() ? taskLabel : "")
+                + (fileName.contains("report") ? "报告" : "文档");
+            List<String> qualifiers = new java.util.ArrayList<>();
+            if (!versionLabel.isBlank()) qualifiers.add(versionLabel);
+            if (!topic.isBlank() && !taskLabel.isBlank()) qualifiers.add(taskLabel);
+            if (!topic.isBlank() || !taskLabel.isBlank())
+                return title + (qualifiers.isEmpty() ? "" : "（" + String.join(" · ", qualifiers) + "）");
+        }
 
         if (isEnvironmentExample(subjectSample) || isEnvironmentExample(sourceFile)) return "环境配置示例";
         if (containsAny(combined, ".gitignore", "gitignore", "ignore rules", "忽略规则")) return "版本库忽略规则";

@@ -20,6 +20,16 @@ class ProjectHistoryChapterRepresentationPlannerTest {
     private final ProjectHistoryChapterRepresentationPlanner planner =
         new ProjectHistoryChapterRepresentationPlanner(language);
 
+    @Test void aBroadCodeClusterDoesNotHeadlineOnlyOneMemberArea() {
+        var plan = planner.plan(List.of(
+            story("front", "project-area-frontend", "新增前端代码文件", 0, "OBSERVED", "PRIMARY", ""),
+            story("back", "project-area-backend", "新增后端代码文件", 1, "OBSERVED", "PRIMARY", "")
+        ));
+        assertThat(plan.clusters()).hasSize(1);
+        assertThat(plan.selectedClusters().get(0).headlineOutcome()).contains("多处代码文件");
+        assertThat(plan.representativePrimaryCoverage()).isEqualTo(1);
+    }
+
     @Test
     void a_largeCoherentPhaseKeepsRelatedOutcomeClustersInOneChapter() {
         List<ChangeStory> stories = new ArrayList<>(

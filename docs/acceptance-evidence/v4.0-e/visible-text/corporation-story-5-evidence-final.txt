@@ -1,228 +1,115 @@
 变化详情
-Corporation-Agent · 提交时间 · 2026-09-09
-修改相关代码（含通知、沟通、协作文件），留下可核对的变更记录
+Corporation-Agent · 提交时间 · 2026-09-08 – 2026-09-09
+新增项目文档，保留文件变更记录
 
-此次修改涉及通知、沟通和协作文件；现有来源只能确认文件发生变化，不能说明功能已通过运行验收。
+来源记录了项目文档的新增。可确认相应文件变化，不能据此确认功能运行验收通过。
 
 01
 此前状态
 
-变更前的完整功能状态没有得到独立验证。
+变更前的完整状态未得到独立确认；这组文件记录不能证明该类内容此前完全不存在。
 
 02
 本次变化
 
-本阶段修改了相关代码，包括通知、沟通和协作文件，具体范围可在来源明细中核对。
+本次新增项目文档，涉及范围可从来源明细核对。
 
 03
 当前结果
 
-这些文件现已留下修改记录；功能效果、测试结果和上线状态仍需分别提供证据。
+对应文件已留下变更记录；功能效果、测试结果和上线状态仍需各自的证据。
 
 尚未确认
 目前没有足够信息确认为什么做这次调整。
 继续阅读相关主线
-相关代码（含通知、沟通、协作文件）
+项目文档
 查看工程证据与来源
-完善前后端项目骨架，并保留原始提交信息供核对。
+建立项目文档，形成可继续查看的初始成果
 
-Git 记录 · 修改 · 当前有效
+Git 记录 · 新增 · 当前有效
 
 收起 Evidence 详情
-feat: add enterprise communication and notifications for v2.2.0
+新增 docs/plans/v2.1.0.md
 
-commit:6a0fed928c64f8fea85872bc1e927886c2f948e6
+commit:221321914cafc1da8eb42ae3fa99b97d1233860f
 
 当前性：当前有效 · 验证：OBSERVED
 
-覆盖：{"timeLabel":"提交时间","fileChangeCount":89,"source":"git","timeBasis":"GIT_COMMIT_TIME"} · 版本：6a0fed928c64f8fea85872bc1e927886c2f948e6
+覆盖：{"timeLabel":"提交时间","metadataOnly":false,"source":"git-name-status","timeBasis":"GIT_COMMIT_TIME"} · 版本：221321914cafc1da8eb42ae3fa99b97d1233860f
+
+新增 docs/plans/v2.1.0.md
+
+file:docs/plans/v2.1.0.md
+
+当前性：当前有效 · 验证：OBSERVED
+
+覆盖：{"timeLabel":"提交时间","metadataOnly":false,"source":"git-name-status","timeBasis":"GIT_COMMIT_TIME"} · 版本：221321914cafc1da8eb42ae3fa99b97d1233860f
 
 原始提交与来源信息
 
-feat: add enterprise communication and notifications for v2.2.0
+新增 docs/plans/v2.1.0.md
 
-提交时间 · 2026-09-09T08:06:25Z
+提交时间 · 2026-09-08T15:10:41Z
 
 证据身份：OBSERVED · SOURCE_BACKED
 
-.github/workflows/ci.yml
+docs/plans/v2.1.0.md
 
-README.md
+建立项目文档，形成可继续查看的初始成果
 
-VERSION
+Git 记录 · 新增 · 当前有效
 
-backend/.env.example
+查看 Evidence 详情
+原始提交与来源信息
+建立项目文档，形成可继续查看的初始成果
 
-backend/alembic/versions/20260909_06_communication.py
+Git 记录 · 新增 · 当前有效
 
-backend/app/agent/collaboration_text.py
+查看 Evidence 详情
+原始提交与来源信息
+建立项目文档，形成可继续查看的初始成果
 
-backend/app/agent/notification_tools.py
+Git 记录 · 新增 · 当前有效
 
-backend/app/agent/run_events.py
+查看 Evidence 详情
+原始提交与来源信息
+建立项目使用说明，形成可继续查看的初始成果
 
-backend/app/agent/runtime.py
+Git 记录 · 新增 · 当前有效
 
-backend/app/agent/scope.py
+查看 Evidence 详情
+原始提交与来源信息
+建立数据分析结果，形成可继续查看的初始成果
 
-backend/app/agent/tools.py
+Git 记录 · 新增 · 当前有效
 
-backend/app/api/artifacts.py
+查看 Evidence 详情
+原始提交与来源信息
+建立数据分析结果，形成可继续查看的初始成果
 
-backend/app/api/notifications.py
+Git 记录 · 新增 · 当前有效
 
-backend/app/api/router.py
+查看 Evidence 详情
+原始提交与来源信息
+建立设计稿，形成可继续查看的初始成果
 
-backend/app/core/config.py
+Git 记录 · 新增 · 当前有效
 
-backend/app/main.py
+查看 Evidence 详情
+原始提交与来源信息
+建立设计稿，形成可继续查看的初始成果
 
-backend/app/models/__init__.py
+Git 记录 · 新增 · 当前有效
 
-backend/app/models/communication.py
+查看 Evidence 详情
+原始提交与来源信息
+建立设计稿，形成可继续查看的初始成果
 
-backend/app/schemas/artifacts.py
+Git 记录 · 新增 · 当前有效
 
-backend/app/schemas/collaboration.py
-
-backend/app/schemas/contracts.py
-
-backend/app/schemas/files.py
-
-backend/app/schemas/notifications.py
-
-backend/app/services/artifacts.py
-
-backend/app/services/collaboration.py
-
-backend/app/services/communication.py
-
-backend/app/services/notifications.py
-
-backend/app/services/software_requests.py
-
-backend/app/services/storage_governance.py
-
-backend/app/services/storage_maintenance.py
-
-backend/pyproject.toml
-
-backend/tests/test_agent_contract.py
-
-backend/tests/test_communication.py
-
-backend/tests/test_communication_migration.py
-
-backend/tests/test_migration.py
-
-backend/tests/test_storage_governance.py
-
-backend/uv.lock
-
-docs/plans/v2.2.0.md
-
-docs/reports/Corporation-Agent_v2.2.0_Report.md
-
-docs/reports/assets/v2.2.0/README.md
-
-docs/reports/assets/v2.2.0/browser-evidence.json
-
-docs/reports/assets/v2.2.0/communication-evidence.json
-
-docs/reports/assets/v2.2.0/employee-information-reply-1440x900.png
-
-docs/reports/assets/v2.2.0/employee-long-conversation-1600x900.png
-
-docs/reports/assets/v2.2.0/employee-notification-unread-1440x900.png
-
-docs/reports/assets/v2.2.0/employee-notifications-read-1600x900.png
-
-docs/reports/assets/v2.2.0/employee-rejection-result-1440x900.png
-
-docs/reports/assets/v2.2.0/employee-revision-detail-1600x900.png
-
-docs/reports/assets/v2.2.0/employee-task-reference-preview-1440x900.png
-
-docs/reports/assets/v2.2.0/manager-composer-empty-1280x720.png
-
-docs/reports/assets/v2.2.0/manager-information-attachment-1440x900.png
-
-docs/reports/assets/v2.2.0/manager-long-conversation-1280x720.png
-
-docs/reports/assets/v2.2.0/manager-reject-attachment-1280x720.png
-
-docs/reports/assets/v2.2.0/manager-revision-attachment-1600x900.png
-
-docs/reports/assets/v2.2.0/manager-task-create-upload-1280x720.png
-
-docs/reports/assets/v2.2.0/regression-speech-1280x720.png
-
-docs/reports/assets/v2.2.0/regression-v1-recovery-1280x720.png
-
-docs/reports/assets/v2.2.0/regression-v2-task-1440x900.png
-
-docs/reports/assets/v2.2.0/v1-browser-evidence.json
-
-docs/reports/assets/v2.2.0/v1-real-evidence.json
-
-docs/reports/assets/v2.2.0/v2-regression-evidence.json
-
-docs/reports/assets/v2.2.0/v21-regression-evidence.json
-
-docs/reports/assets/v2.2.0/validation-evidence.json
-
-frontend/package-lock.json
-
-frontend/package.json
-
-frontend/src/api/artifacts.ts
-
-frontend/src/api/corporation.ts
-
-frontend/src/api/notifications.ts
-
-frontend/src/components/ChatComposer.tsx
-
-frontend/src/components/CommunicationAttachments.tsx
-
-frontend/src/components/NotificationPanel.tsx
-
-frontend/src/components/RequestDetail.tsx
-
-frontend/src/components/TaskSubmissions.tsx
-
-frontend/src/features/agent/useAgentChat.ts
-
-frontend/src/index.css
-
-frontend/src/layouts/AppShell.tsx
-
-frontend/src/lib/productCopy.ts
-
-frontend/src/pages/CollaborationPage.tsx
-
-frontend/src/pages/InboxPage.tsx
-
-frontend/src/types/artifacts.ts
-
-frontend/src/types/collaboration.ts
-
-frontend/src/types/index.ts
-
-scripts/browser_communication.mjs
-
-scripts/communication_smoke.py
-
-scripts/real-model-smoke.ps1
-
-scripts/real_model_smoke.py
-
-scripts/run_reliability_smoke.py
-
-scripts/storage_backup.py
-
-scripts/storage_gc.py
-
+查看 Evidence 详情
+原始提交与来源信息
+第 1 / 3 页
 工程兼容工具：来源审计与修正
 查看故事工程详情
 返回阅读

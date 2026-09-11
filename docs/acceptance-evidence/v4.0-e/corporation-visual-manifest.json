@@ -1,6 +1,6 @@
 {
   "project": "corporation",
-  "capturedAt": "2026-09-11T19:52:29.422Z",
+  "capturedAt": "2026-09-11T20:30:43.420Z",
   "source": "Actual production build and persisted real backend; DOM-visible text only, no DTO inputs",
   "errors": [],
   "rows": [
@@ -229,7 +229,10 @@
     {
       "view": "workline-detail-final",
       "text": "visible-text/corporation-workline-detail-final.txt",
-      "images": [],
+      "images": [
+        "screenshots/corporation-workline-detail-final-1.png",
+        "screenshots/corporation-workline-detail-final-2.png"
+      ],
       "viewport": {
         "width": 1440,
         "height": 1000

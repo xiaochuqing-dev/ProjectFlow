@@ -189,9 +189,19 @@ public final class ProjectHistoryChapterRepresentationPlanner {
         if (headlineOutcome.isBlank() && !representativeOutcomes.isEmpty()) {
             headlineOutcome = representativeOutcomes.get(0);
         }
+        if ("项目骨架".equals(builder.family) && stories.stream().map(ChangeStory::primarySubjectKey).distinct().count() > 1) {
+            label = "多处代码文件";
+            String objects = ProjectHistoryHumanSubjectLabelService.concreteObjects(stories.stream()
+                .flatMap(story -> story.technicalDetails().stream()).distinct().limit(120).toList(), "");
+            headlineOutcome = "记录多处代码文件的变化" + (objects.isBlank() ? "" : "（含" + objects + "相关文件）");
+        }
         List<String> grounding = stories.stream()
             .flatMap(story -> Stream.of(story.humanTitle(), story.oneSentenceSummary()))
             .filter(value -> value != null && !value.isBlank()).distinct().toList();
+        if (!grounding.contains(headlineOutcome)) {
+            grounding = new ArrayList<>(grounding);
+            grounding.add(headlineOutcome);
+        }
         List<String> states = stories.stream().map(ChangeStory::claimAttribution)
             .filter(java.util.Objects::nonNull).map(value -> value.state()).filter(value -> value != null && !value.isBlank())
             .map(value -> value.toUpperCase(Locale.ROOT)).distinct().toList();

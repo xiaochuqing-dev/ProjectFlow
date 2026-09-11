@@ -9,6 +9,35 @@ import com.projectflow.service.ProjectHistoryNarrativeEntailmentValidator.ClaimS
 
 class ProjectHistorySemanticUsefulnessTest {
 
+    @Test void pullRequestContextNamesItsScopeWithoutPromotingAuthorClaims() {
+        var value = new ProjectHistoryLanguageService().fallback(ClaimState.DECLARED, Transition.MODIFIED,
+            "pull-request-51", List.of(), List.of("Pull Request #51：feat: invoice payment review；说明：tests passed"),
+            List.of("MODIFIED"));
+        assertThat(value.title()).contains("合并请求51", "发票", "支付", "来源声明").doesNotContain("项目材料");
+        assertThat(value.summary()).contains("不能单独证明");
+        assertThat(value.after()).doesNotContain("已经实现", "验证通过", "已经合入");
+    }
+
+    @Test void mixedDocumentObservationsNeverClaimFirstExistenceOfAllDocuments() {
+        var value = new ProjectHistoryLanguageService().fallback(ClaimState.OBSERVED, Transition.CREATED,
+            "project-area-docs", List.of("docs/guide.md", "docs/reports/check.md"), List.of(),
+            List.of("MODIFIED", "CREATED"));
+        assertThat(value.title()).contains("新增和修改", "项目文档").doesNotContain("首次", "初始成果");
+        assertThat(value.before()).contains("不能证明").doesNotContain("此前项目中还没有");
+        assertThat(value.change()).doesNotContain("首次");
+    }
+
+    @Test void reportTopicsUseSourceIdentifiersWithoutInventingDatesOrProjectRules() {
+        var labels = new ProjectHistoryHumanSubjectLabelService();
+        assertThat(labels.label("acme-v1-task01-report", List.of("docs/Acme_V1_Task01_Report.md"), List.of()))
+            .isEqualTo("任务01报告（版本1）");
+        assertThat(labels.label("other-v1-task02-run-reliability-report",
+            List.of("docs/Other_V1_Task02_Run_Reliability_Report.md"), List.of()))
+            .isEqualTo("运行可靠性报告（版本1 · 任务02）");
+        assertThat(labels.label("change-import", List.of(".gitignore", "src/Frob.java"), List.of()))
+            .doesNotContain("忽略规则");
+    }
+
     @org.junit.jupiter.api.Test
     void commitInventoryIsNotMislabelledByOneEnvironmentFile() {
         var labels = new ProjectHistoryHumanSubjectLabelService();
@@ -26,6 +55,15 @@ class ProjectHistorySemanticUsefulnessTest {
     }
     private final ProjectHistoryLanguageService language = new ProjectHistoryLanguageService();
     private final ProjectHistoryNarrativeEntailmentValidator validator = new ProjectHistoryNarrativeEntailmentValidator();
+
+    @Test void sourceStateNeverInventsAnUnobservedBeforeState() {
+        for (var state : List.of(ClaimState.PLANNED, ClaimState.DECLARED, ClaimState.CONFIGURED,
+                ClaimState.IMPLEMENTED, ClaimState.VERIFIED)) {
+            var wording = language.fallback(state, Transition.CREATED, "login",
+                List.of("backend/LoginService.java"), List.of(), List.of("CREATED"));
+            assertThat(wording.before()).doesNotContain("还没有", "已经有", "首次");
+        }
+    }
 
     @Test void areaNamesConcreteFilesWithoutClaimingFunctionalCompletion() {
         var paths = List.of("frontend/src/NotificationPanel.tsx", "frontend/src/CommunicationAttachments.tsx");

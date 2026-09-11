@@ -53,7 +53,7 @@ import com.projectflow.service.ProjectHistorySourceCollector.CollectionOutcome;
  */
 @Service
 public class ProjectHistoryReconstructionService {
-    static final String STRATEGY_VERSION = "project-history-v40e-specificity-time-v2";
+    static final String STRATEGY_VERSION = "project-history-v40e-specificity-time-v3";
     static final String PROMPT_VERSION = ProjectHistoryPromptBuilder.PROMPT_VERSION;
     private static final int MODEL_STORY_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
     private static final int MODEL_EVENT_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_EVENT_LIMIT;
@@ -704,6 +704,22 @@ public class ProjectHistoryReconstructionService {
             List<String> labels = members.stream().map(EventView::label).filter(value -> value != null && !value.isBlank())
                 .distinct().limit(20).toList();
             List<Transition> transitions = members.stream().map(EventView::transition).distinct().toList();
+            // A commit inventory adds context to its separately represented
+            // file changes; it is not another independent development result.
+            Set<String> inventoryCommits = members.stream().flatMap(event -> commitRefs(event).stream())
+                .collect(java.util.stream.Collectors.toSet());
+            boolean representedInventory = !members.isEmpty()
+                && members.stream().allMatch(event -> event.category() == Category.COMMIT)
+                && !inventoryCommits.isEmpty()
+                && ordered.stream().filter(other -> !other.story().id().equals(story.id()))
+                    .flatMap(other -> other.story().eventRefs().stream()).map(eventsById::get)
+                    .filter(java.util.Objects::nonNull)
+                    .anyMatch(event -> event.category() == Category.FILE_CHANGE
+                        && commitRefs(event).stream().anyMatch(inventoryCommits::contains));
+            if (representedInventory) {
+                potentialSupportingIds.add(story.id());
+                continue;
+            }
             boolean independent = members.size() >= 3 && members.stream().allMatch(event -> event.category() == Category.FILE_CHANGE)
                 || members.stream().anyMatch(event ->
                 Set.of(Category.COMMIT, Category.MERGE, Category.PULL_REQUEST, Category.ISSUE, Category.PROJECT_FACT, Category.AGENT_RESULT)
@@ -1151,10 +1167,11 @@ public class ProjectHistoryReconstructionService {
         Instant to = events.get(events.size() - 1).occurredAt();
         List<Transition> transitions = storyTransitions(events);
         Transition outcome = primaryTransition(transitions);
+        List<String> labels = narrativeSourceLabels(events);
         String subjectLabel = languageService.readableObject(
             subjectKey,
             events.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(),
-            events.stream().map(EventView::label).filter(value -> value != null && !value.isBlank()).distinct().limit(10).toList()
+            labels
         );
         List<UUID> eventRefs = events.stream().map(EventView::id).distinct().toList();
         List<String> evidence = events.stream().flatMap(event -> event.evidenceRefs().stream()).distinct().limit(100).toList();
@@ -1162,9 +1179,6 @@ public class ProjectHistoryReconstructionService {
         affectedAreas.add(subjectLabel);
         events.stream().flatMap(event -> event.paths().stream()).map(ProjectHistoryReconstructionService::area)
             .filter(value -> !value.isBlank()).distinct().limit(5).forEach(affectedAreas::add);
-        List<String> labels = events.stream()
-            .filter(event -> event.category() != Category.FILE_CHANGE)
-            .map(EventView::label).filter(value -> !value.isBlank()).distinct().limit(3).toList();
         ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope narrativeEnvelope = narrativeEnvelope(
             subjectKey, subjectLabel, outcome, events, hasReasonEligibleEvidence(events)
         );
@@ -1203,6 +1217,11 @@ public class ProjectHistoryReconstructionService {
                 events.stream().map(EventView::timeBasis).toList())
         );
         return new StoryEnvelope(story, transitions);
+    }
+
+    private static List<String> narrativeSourceLabels(List<EventView> events) {
+        return events.stream().filter(event -> event.category() != Category.FILE_CHANGE)
+            .map(EventView::label).filter(value -> value != null && !value.isBlank()).distinct().limit(8).toList();
     }
 
     /**
@@ -1419,8 +1438,8 @@ public class ProjectHistoryReconstructionService {
         groups = splitChapterRepresentationBoundaries(groups, signals);
         List<HistoryChapter> result = new ArrayList<>();
         for (List<ChangeStory> group : groups) {
-            Instant from = group.get(0).occurredFrom();
-            Instant to = group.get(group.size() - 1).occurredTo();
+            Instant from = group.stream().map(ChangeStory::occurredFrom).min(Instant::compareTo).orElseThrow();
+            Instant to = group.stream().map(ChangeStory::occurredTo).max(Instant::compareTo).orElseThrow();
             ProjectHistoryChapterRepresentationPlanner.Plan representation = chapterRepresentationPlanner.plan(group);
             List<String> outcomes = representation.representativeOutcomes();
             if (outcomes.isEmpty()) {
@@ -2417,8 +2436,7 @@ public class ProjectHistoryReconstructionService {
             String subjectLabel = languageService.readableObject(
                 story.primarySubjectKey(),
                 members.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(),
-                members.stream().filter(event -> event.category() != Category.FILE_CHANGE)
-                    .map(EventView::label).filter(value -> value != null && !value.isBlank()).distinct().limit(8).toList()
+                narrativeSourceLabels(members)
             );
             ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
                 story.primarySubjectKey(), subjectLabel,
@@ -2604,8 +2622,7 @@ public class ProjectHistoryReconstructionService {
             String subjectLabel = languageService.readableObject(
                 original.primarySubjectKey(),
                 members.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(),
-                members.stream().filter(event -> event.category() != Category.FILE_CHANGE)
-                    .map(EventView::label).filter(value -> value != null && !value.isBlank()).distinct().limit(8).toList()
+                narrativeSourceLabels(members)
             );
             ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
                 original.primarySubjectKey(), subjectLabel,
@@ -2926,8 +2943,7 @@ public class ProjectHistoryReconstructionService {
                 String subjectLabel = languageService.readableObject(
                     story.primarySubjectKey(),
                     members.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(),
-                    members.stream().filter(event -> event.category() != Category.FILE_CHANGE)
-                        .map(EventView::label).filter(value -> value != null && !value.isBlank()).distinct().limit(8).toList()
+                    narrativeSourceLabels(members)
                 );
                 ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
                     story.primarySubjectKey(), subjectLabel, primaryTransition(storyTransitions(members)), members,

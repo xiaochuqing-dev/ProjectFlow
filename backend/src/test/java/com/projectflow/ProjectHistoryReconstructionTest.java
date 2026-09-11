@@ -647,6 +647,8 @@ class ProjectHistoryReconstructionTest {
             .isLessThanOrEqualTo(12);
         assertThat(stories.items()).extracting(item -> item.primarySubjectKey())
             .contains("project-area-backend", "project-area-frontend", "project-area-docs");
+        assertThat(stories.items()).noneMatch(item -> item.primarySubjectKey().startsWith("change-"));
+        assertThat(stories.items()).allSatisfy(item -> assertThat(item.beforeState()).doesNotContain("此前项目中还没有"));
         assertThat(stories.items()).extracting(item -> item.humanTitle())
             .noneMatch(title -> title.matches(".*(BackendModule|FeaturePage|guide-\\d+|后端区域|前端区域|Controller|Service).*"));
         assertThat(stories.items()).extracting(item -> item.humanTitle())

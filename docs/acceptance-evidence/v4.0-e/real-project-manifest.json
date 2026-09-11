@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-09-11T19:40:45.283501+00:00",
+  "recordedAt": "2026-09-11T20:13:20.525791+00:00",
   "projects": [
     {
       "project": "ProjectFlow",
@@ -30,7 +30,7 @@
       "commitCount": 9,
       "workingTreeClean": true,
       "modelSemanticStatus": "SUCCEEDED",
-      "finalSynthesisStatus": "FAILED_DEGRADED",
+      "finalSynthesisStatus": "SUCCEEDED",
       "currentStatus": "CURRENT",
       "sourceMode": "frozen read-only local clone; no source edits or runtime validation in clone"
     }

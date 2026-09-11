@@ -1,0 +1,116 @@
+变化详情
+Corporation-Agent · 提交时间 · 2026-09-09
+新增后端代码（含通知、沟通、协作相关文件），留下可核对的变更记录
+
+此次新增涉及通知、沟通和协作相关文件；现有来源只能确认文件发生变化，不能说明相关功能已通过运行验收。
+
+01
+此前状态
+
+变更前的完整功能状态没有得到独立验证。
+
+02
+本次变化
+
+本阶段新增了后端代码，涉及通知、沟通和协作相关文件，具体范围可在来源明细中核对。
+
+03
+当前结果
+
+相关后端文件现已留下变更记录；功能效果、测试结果和上线状态仍需分别提供证据。
+
+尚未确认
+目前没有足够信息确认为什么做这次调整。
+继续阅读相关主线
+后端代码（含通知、沟通、协作相关文件）
+查看工程证据与来源
+建立后端项目骨架，形成可继续查看的初始成果
+
+Git 记录 · 新增 · 当前有效
+
+收起 Evidence 详情
+新增 backend/alembic/versions/20260909_06_communication.py
+
+commit:6a0fed928c64f8fea85872bc1e927886c2f948e6
+
+当前性：当前有效 · 验证：OBSERVED
+
+覆盖：{"timeLabel":"提交时间","metadataOnly":false,"source":"git-name-status","timeBasis":"GIT_COMMIT_TIME"} · 版本：6a0fed928c64f8fea85872bc1e927886c2f948e6
+
+新增 backend/alembic/versions/20260909_06_communication.py
+
+file:backend/alembic/versions/20260909_06_communication.py
+
+当前性：当前有效 · 验证：OBSERVED
+
+覆盖：{"timeLabel":"提交时间","metadataOnly":false,"source":"git-name-status","timeBasis":"GIT_COMMIT_TIME"} · 版本：6a0fed928c64f8fea85872bc1e927886c2f948e6
+
+原始提交与来源信息
+
+新增 backend/alembic/versions/20260909_06_communication.py
+
+提交时间 · 2026-09-09T08:06:25Z
+
+证据身份：OBSERVED · SOURCE_BACKED
+
+backend/alembic/versions/20260909_06_communication.py
+
+建立后端项目骨架，形成可继续查看的初始成果
+
+Git 记录 · 新增 · 当前有效
+
+查看 Evidence 详情
+原始提交与来源信息
+建立后端项目骨架，形成可继续查看的初始成果
+
+Git 记录 · 新增 · 当前有效
+
+查看 Evidence 详情
+原始提交与来源信息
+建立后端项目骨架，形成可继续查看的初始成果
+
+Git 记录 · 新增 · 当前有效
+
+查看 Evidence 详情
+原始提交与来源信息
+建立后端项目骨架，形成可继续查看的初始成果
+
+Git 记录 · 新增 · 当前有效
+
+查看 Evidence 详情
+原始提交与来源信息
+建立后端项目骨架，形成可继续查看的初始成果
+
+Git 记录 · 新增 · 当前有效
+
+查看 Evidence 详情
+原始提交与来源信息
+建立后端项目骨架，形成可继续查看的初始成果
+
+Git 记录 · 新增 · 当前有效
+
+查看 Evidence 详情
+原始提交与来源信息
+建立后端项目骨架，形成可继续查看的初始成果
+
+Git 记录 · 新增 · 当前有效
+
+查看 Evidence 详情
+原始提交与来源信息
+建立后端项目骨架，形成可继续查看的初始成果
+
+Git 记录 · 新增 · 当前有效
+
+查看 Evidence 详情
+原始提交与来源信息
+建立后端项目骨架，形成可继续查看的初始成果
+
+Git 记录 · 新增 · 当前有效
+
+查看 Evidence 详情
+原始提交与来源信息
+第 1 / 4 页
+工程兼容工具：来源审计与修正
+查看故事工程详情
+返回阅读
+工程证据始终保留，展示不会改变事实

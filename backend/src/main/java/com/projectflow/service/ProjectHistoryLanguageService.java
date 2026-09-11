@@ -124,13 +124,24 @@ public final class ProjectHistoryLanguageService {
     ) {
         Presentation observed = fallback(transition, subject, paths, sourceLabels, transitions);
         String object = observed.object();
+        if (claimState == ProjectHistoryNarrativeEntailmentValidator.ClaimState.DECLARED
+            && subject != null && subject.matches("(?:pull-request|issue)-\\d+")) {
+            return new Presentation(
+                "记录" + object + "的来源声明",
+                "作者的文字说明涉及" + object + "；这些陈述不能单独证明实现或验证结果。",
+                "这份来源未独立证明变更前的完整状态。",
+                "本次保留作者对变更范围的说明，可继续下钻核对原始来源。",
+                "来源声明已经记录；合入、实现和验证状态需要各自的直接证据。",
+                object
+            );
+        }
         ProjectHistoryNarrativeEntailmentValidator.ClaimState state = claimState == null
             ? ProjectHistoryNarrativeEntailmentValidator.ClaimState.UNKNOWN : claimState;
         return switch (state) {
             case PLANNED -> new Presentation(
                 "规划" + object + "，明确后续建设方向",
                 "现有材料记录了" + object + "的目标和范围，但还不能确认已经实现。",
-                "此前材料中还没有明确记录" + object + "的规划。",
+                "现有来源未独立确认此前" + object + "规划的完整状态。",
                 "这一阶段在项目材料中补充了" + object + "的规划。",
                 "项目已经记录" + object + "的方向，实际实现状态仍需代码证据确认。",
                 object
@@ -138,7 +149,7 @@ public final class ProjectHistoryLanguageService {
             case DECLARED -> new Presentation(
                 "说明" + object + "的设计，形成可查阅的方案",
                 "项目材料中已经说明" + object + "的设计内容，实际实现情况仍待确认。",
-                "此前还没有完整记录" + object + "的设计说明。",
+                "此前" + object + "设计说明的完整状态未得到独立确认。",
                 "这一阶段补充了" + object + "的设计和范围说明。",
                 "项目中已有" + object + "的方案记录，但不能据此判断功能已经实现。",
                 object
@@ -146,7 +157,7 @@ public final class ProjectHistoryLanguageService {
             case CONFIGURED -> new Presentation(
                 "补充" + object + "，完善项目配置基础",
                 "这一阶段增加了" + object + "，为后续本地设置提供参考。",
-                "此前项目中还没有这份" + object + "。",
+                "此前" + object + "的内容需要对照来源版本核对。",
                 "本次加入了" + object + "及其可参考的配置内容。",
                 "项目中已有" + object + "，实际运行状态仍需其他证据确认。",
                 object
@@ -154,7 +165,7 @@ public final class ProjectHistoryLanguageService {
             case IMPLEMENTED -> new Presentation(
                 transition == Transition.MODIFIED ? "完善" + object + "，更新已有实现" : "新增" + object + "的实现代码",
                 "相关代码已经形成" + object + "的实现，具体范围可在工程详情中核对。",
-                transition == Transition.CREATED ? "此前代码中还没有" + object + "的实现。" : "此前代码中已经有" + object + "的基础实现。",
+                "现有证据未完整覆盖变更前" + object + "的实现状态。",
                 transition == Transition.CREATED ? "这一阶段加入了实现" + object + "所需的代码。" : "这一阶段补充或调整了" + object + "的实现代码。",
                 object + "已有代码实现，但稳定性仍需验证证据支持。",
                 object
@@ -162,7 +173,7 @@ public final class ProjectHistoryLanguageService {
             case VERIFIED -> new Presentation(
                 "验证" + object + "，补充自动化检查依据",
                 "现有验证来源覆盖了" + object + "，验证范围可在工程详情中继续核对。",
-                "此前还没有当前这组针对" + object + "的验证记录。",
+                "现有来源只覆盖这组检查，不能据此判断此前" + object + "的验证情况。",
                 "这一阶段为" + object + "增加或更新了自动化验证。",
                 object + "已有自动化验证记录，但不能据此推断生产环境稳定。",
                 object
@@ -183,13 +194,13 @@ public final class ProjectHistoryLanguageService {
                 object + "的结果仍需核对，当前不作为已完成事实。",
                 object
             );
-            case OBSERVED -> observedFiles(transition, object, paths, observed);
+            case OBSERVED -> observedFiles(transition, object, paths, transitions, observed);
             case REMOVED, RESTORED -> observed;
         };
     }
 
-    private static Presentation observedFiles(Transition transition, String object, List<String> paths, Presentation fallback) {
-        if (paths == null || paths.stream().noneMatch(path -> path.matches("(?i).*\\.(java|kt|go|rs|py|js|jsx|ts|tsx|vue|svelte|cs|cpp|c|h)$"))) return fallback;
+    private static Presentation observedFiles(Transition transition, String object, List<String> paths, List<String> transitions, Presentation fallback) {
+        if (paths == null || paths.isEmpty()) return fallback;
         String action = switch (transition == null ? Transition.UNKNOWN_TRANSITION : transition) {
             case CREATED -> "新增";
             case REMOVED -> "移除";
@@ -198,10 +209,11 @@ public final class ProjectHistoryLanguageService {
             case RESTORED -> "恢复";
             default -> "修改";
         };
+        if (transitions != null && transitions.contains("CREATED") && transitions.contains("MODIFIED")) action = "新增和修改";
         return new Presentation(
             action + object + "，保留文件变更记录",
             "来源记录了" + object + "的" + action + "。可确认相应文件变化，不能据此确认功能运行验收通过。",
-            "变更前的完整功能状态未得到独立验证。",
+            "变更前的完整状态未得到独立确认；这组文件记录不能证明该类内容此前完全不存在。",
             "本次" + action + object + "，涉及范围可从来源明细核对。",
             "对应文件已留下变更记录；功能效果、测试结果和上线状态仍需各自的证据。",
             object

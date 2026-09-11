@@ -1,0 +1,169 @@
+{
+  "project": "Corporation-Agent",
+  "views": [
+    {
+      "view": "current-final",
+      "text": "visible-text/corporation-current-final.txt",
+      "images": [
+        "screenshots/corporation-current-final-1.png",
+        "screenshots/corporation-current-final-2.png",
+        "screenshots/corporation-current-final-3.png"
+      ]
+    },
+    {
+      "view": "current-sources-final",
+      "text": "visible-text/corporation-current-sources-final.txt",
+      "images": [
+        "screenshots/corporation-current-sources-final-1.png"
+      ]
+    },
+    {
+      "view": "history-default-final",
+      "text": "visible-text/corporation-history-default-final.txt",
+      "images": [
+        "screenshots/corporation-history-default-final-1.png",
+        "screenshots/corporation-history-default-final-2.png",
+        "screenshots/corporation-history-default-final-3.png"
+      ]
+    },
+    {
+      "view": "story-1-final",
+      "text": "visible-text/corporation-story-1-final.txt",
+      "images": [
+        "screenshots/corporation-story-1-final-1.png",
+        "screenshots/corporation-story-1-final-2.png"
+      ]
+    },
+    {
+      "view": "story-1-evidence-final",
+      "text": "visible-text/corporation-story-1-evidence-final.txt",
+      "images": [
+        "screenshots/corporation-story-1-evidence-final-1.png",
+        "screenshots/corporation-story-1-evidence-final-2.png",
+        "screenshots/corporation-story-1-evidence-final-3.png",
+        "screenshots/corporation-story-1-evidence-final-4.png",
+        "screenshots/corporation-story-1-evidence-final-5.png"
+      ]
+    },
+    {
+      "view": "story-2-final",
+      "text": "visible-text/corporation-story-2-final.txt",
+      "images": [
+        "screenshots/corporation-story-2-final-1.png",
+        "screenshots/corporation-story-2-final-2.png"
+      ]
+    },
+    {
+      "view": "story-2-evidence-final",
+      "text": "visible-text/corporation-story-2-evidence-final.txt",
+      "images": [
+        "screenshots/corporation-story-2-evidence-final-1.png"
+      ]
+    },
+    {
+      "view": "story-3-final",
+      "text": "visible-text/corporation-story-3-final.txt",
+      "images": [
+        "screenshots/corporation-story-3-final-1.png",
+        "screenshots/corporation-story-3-final-2.png"
+      ]
+    },
+    {
+      "view": "story-3-evidence-final",
+      "text": "visible-text/corporation-story-3-evidence-final.txt",
+      "images": [
+        "screenshots/corporation-story-3-evidence-final-1.png"
+      ]
+    },
+    {
+      "view": "story-4-final",
+      "text": "visible-text/corporation-story-4-final.txt",
+      "images": [
+        "screenshots/corporation-story-4-final-1.png",
+        "screenshots/corporation-story-4-final-2.png"
+      ]
+    },
+    {
+      "view": "story-4-evidence-final",
+      "text": "visible-text/corporation-story-4-evidence-final.txt",
+      "images": [
+        "screenshots/corporation-story-4-evidence-final-1.png"
+      ]
+    },
+    {
+      "view": "story-5-final",
+      "text": "visible-text/corporation-story-5-final.txt",
+      "images": [
+        "screenshots/corporation-story-5-final-1.png",
+        "screenshots/corporation-story-5-final-2.png"
+      ]
+    },
+    {
+      "view": "story-5-evidence-final",
+      "text": "visible-text/corporation-story-5-evidence-final.txt",
+      "images": [
+        "screenshots/corporation-story-5-evidence-final-1.png"
+      ]
+    },
+    {
+      "view": "history-time-final",
+      "text": "visible-text/corporation-history-time-final.txt",
+      "images": [
+        "screenshots/corporation-history-time-final-1.png",
+        "screenshots/corporation-history-time-final-2.png"
+      ]
+    },
+    {
+      "view": "threads-directory-final",
+      "text": "visible-text/corporation-threads-directory-final.txt",
+      "images": [
+        "screenshots/corporation-threads-directory-final-1.png",
+        "screenshots/corporation-threads-directory-final-2.png",
+        "screenshots/corporation-threads-directory-final-3.png"
+      ]
+    },
+    {
+      "view": "thread-first-final",
+      "text": "visible-text/corporation-thread-first-final.txt",
+      "images": [
+        "screenshots/corporation-thread-first-final-1.png",
+        "screenshots/corporation-thread-first-final-2.png"
+      ]
+    },
+    {
+      "view": "worklines-final",
+      "text": "visible-text/corporation-worklines-final.txt",
+      "images": [
+        "screenshots/corporation-worklines-final-1.png",
+        "screenshots/corporation-worklines-final-2.png"
+      ]
+    },
+    {
+      "view": "workline-detail-final",
+      "text": "visible-text/corporation-workline-detail-final.txt",
+      "images": []
+    },
+    {
+      "view": "current-390-final",
+      "text": "visible-text/corporation-current-390-final.txt",
+      "images": [
+        "screenshots/corporation-current-390-final-1.png"
+      ]
+    },
+    {
+      "view": "history-390-final",
+      "text": "visible-text/corporation-history-390-final.txt",
+      "images": [
+        "screenshots/corporation-history-390-final-1.png"
+      ]
+    },
+    {
+      "view": "worklines-390-final",
+      "text": "visible-text/corporation-worklines-390-final.txt",
+      "images": [
+        "screenshots/corporation-worklines-390-final-1.png"
+      ]
+    }
+  ],
+  "selection": "Default Current and all eight default recent stories; first five sequential Story/Evidence details; default time chapter including supporting records; first theme directory/detail; single-branch Workline; narrow viewport. No selection by quality."
+}
