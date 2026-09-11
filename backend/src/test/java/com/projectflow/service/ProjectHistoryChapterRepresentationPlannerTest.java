@@ -27,7 +27,11 @@ class ProjectHistoryChapterRepresentationPlannerTest {
         ));
         assertThat(plan.clusters()).hasSize(1);
         assertThat(plan.selectedClusters().get(0).headlineOutcome()).contains("多处代码文件");
+        assertThat(plan.selectedClusters().get(0).representativeOutcomes().get(0)).contains("多处代码文件");
         assertThat(plan.representativePrimaryCoverage()).isEqualTo(1);
+        var validator = new ProjectHistoryNarrativeEntailmentValidator();
+        assertThat(validator.preservesChapterScope("新增后端代码", plan.clusters().get(0).grounding())).isFalse();
+        assertThat(validator.preservesChapterScope("记录前后端代码的变更", plan.clusters().get(0).grounding())).isTrue();
     }
 
     @Test

@@ -156,7 +156,7 @@ function ThreadReader({ project, demo, onStory, chapters, chapterPage, onChapter
     setLoading(true); setError("");
     const token = readSession().accessToken;
     const read = threadId ? getProjectHistoryThread(token, project.id, threadId).then((value) => { if (active) setDetail(value); })
-      : listProjectHistoryThreads(token, project.id, page, subject).then((value) => { if (active) { listScope.current = `${page}:${subject}`; setList(value); } });
+      : listProjectHistoryThreads(token, project.id, page, subject, true).then((value) => { if (active) { listScope.current = `${page}:${subject}`; setList(value); } });
     read.catch((e) => { if (active) setError(e.message); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [demo, project.id, project.updated, threadId, page, subject, retry]);
@@ -184,7 +184,7 @@ function ThreadReader({ project, demo, onStory, chapters, chapterPage, onChapter
       {error && <ReadError message={error} onRetry={() => setRetry((n) => n + 1)} />}
       {(thread || example) ? <>
         <header className="pf-thread-detail-heading">
-          <span className="pf-eyebrow">长期主题{demo ? " · 示例" : ""}</span>
+          <span className="pf-eyebrow">{thread?.subjectType === "RECORD_CONTEXT" ? "相关记录线索" : "长期主题"}{demo ? " · 示例" : ""}</span>
           <h2 ref={heading} tabIndex={-1}>{example?.subjectLabel ?? thread?.subjectLabel}</h2>
           <p>{(example?.summary ?? thread?.currentOutcome) || "现有记录尚未确认主题的当前结果。"}</p>
           {!demo && <span><Clock3 size={14} />关联变化覆盖：{historyDateRange(ordered[0]?.occurredFrom, latestStoryTime(ordered))}</span>}
@@ -213,7 +213,7 @@ function ThreadReader({ project, demo, onStory, chapters, chapterPage, onChapter
         </details>}
       </> : !loading && !error && <p className="pf-notice">没有找到这条主线，请返回目录重新选择。</p>}
     </> : <>
-      <h2>跨阶段，读懂一个主题的演变</h2><p>主题连接不同篇章中的真实变化；它不是项目完成度，也不替代时间篇章。</p>
+      <h2>跨阶段，读懂一个主题的演变</h2><p>主题需要同一明确对象的多条变化。单次提交和目录文件清单保留在变化与证据中；没有连续来源时，不生成长期主题。</p>
       <form className="pf-thread-search" onSubmit={(event) => { event.preventDefault(); router.push(`${base}&axis=threads&subject=${encodeURIComponent(search.trim())}`, { scroll: false }); }}>
         <label className="pf-filter-search"><Search size={15} /><input aria-label="搜索演变主线" placeholder="按主题查找…" value={search} onChange={(event) => setSearch(event.target.value)} maxLength={200} /></label>
         <button className="pf-button" type="submit">查找</button>

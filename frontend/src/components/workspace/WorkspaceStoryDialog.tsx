@@ -25,21 +25,39 @@ export function StoryDialog({ story, project, demo, onClose }: {
   const [retry, setRetry] = useState(0);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [page, setPage] = useState(0);
+  const [focusedId, setFocusedId] = useState(story.id);
+  const [related, setRelated] = useState<ProjectHistoryStoryDetail[]>([]);
+  const [relatedError, setRelatedError] = useState("");
+  const [relatedPage, setRelatedPage] = useState(0);
+  useEffect(() => { setFocusedId(story.id); }, [story.id]);
   useEffect(() => {
     if (demo) return;
     let active = true;
     setLoading(true); setError("");
-    getProjectHistoryStory(readSession().accessToken, project.id, story.id)
+    setRelated([]); setRelatedError(""); setRelatedPage(0); setPage(0);
+    getProjectHistoryStory(readSession().accessToken, project.id, focusedId)
       .then((value) => { if (active) setDetail(value); })
       .catch((e) => { if (active) setError(e.message); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [demo, project.id, story.id, retry]);
+  }, [demo, project.id, focusedId, retry]);
+  useEffect(() => {
+    if (demo || !detail) return;
+    let active = true;
+    setRelated([]); setRelatedError("");
+    const refs = (detail.story.supportingChangeRefs ?? []).slice(relatedPage * 6, (relatedPage + 1) * 6);
+    Promise.all(refs.map(id => getProjectHistoryStory(readSession().accessToken, project.id, id)))
+      .then(values => { if (active) setRelated(values); })
+      .catch(() => { if (active) setRelatedError("关联范围暂时未读全，可重新读取这条变化。"); });
+    return () => { active = false; };
+  }, [demo, project.id, detail, relatedPage]);
   const display = detail ? persistedStory(detail.story) : story;
+  const longTermThreads = detail?.threads.filter(thread => thread.subjectType !== "RECORD_CONTEXT" && thread.storyRefs.length >= 2) ?? [];
   const missingEvents = detail ? detail.story.eventRefs.filter((id) => !detail.events.some((event) => event.id === id)).length : 0;
   return <WorkspaceDialog title="变化详情" labelledBy="workspace-story-title" onClose={onClose} className="pf-story-dialog">
     <div className="pf-story-dialog-content">
       <span className="pf-eyebrow">{project.name}{demo ? " · 示例数据" : ""} · {display.date}</span>
+      {focusedId !== story.id && <button className="pf-text-link" onClick={() => setFocusedId(story.id)}><ArrowLeft size={14} />返回主变化</button>}
       <h2 id="workspace-story-title">{display.title}</h2><p>{display.summary}</p>
       {loading && <p role="status">正在读取完整故事…</p>}
       {error && <ReadError message={`完整故事读取失败，以下保留已读取的摘要。${error}`} onRetry={() => setRetry((n) => n + 1)} />}
@@ -47,11 +65,17 @@ export function StoryDialog({ story, project, demo, onClose }: {
         <span>0{index + 1}</span><div><h3>{label}</h3><p>{value || "现有材料尚未确认"}</p></div>
       </section>)}</div>
       {detail && <>
+        {!!detail.story.supportingChangeRefs?.length && <section className="pf-story-context"><h3>关联的具体变化</h3>
+          <p>以下范围属于这项变化的来源脉络，可逐项阅读动作与证据。</p>
+          {relatedError && <ReadError message={relatedError} onRetry={() => setRetry(n => n + 1)} />}
+          {related.map(value => <button className="pf-story-card" key={value.story.id} onClick={() => setFocusedId(value.story.id)}><h4>{value.story.humanTitle}</h4><p>{value.story.change}</p><span>阅读这个范围与来源</span></button>)}
+          <ReadingPages page={relatedPage} totalPages={Math.ceil(detail.story.supportingChangeRefs.length / 6)} onPage={setRelatedPage} label="关联变化范围" />
+        </section>}
         {detail.story.reason && <section className="pf-story-context"><h3>已记录的原因</h3><p>{detail.story.reason}</p></section>}
         {detail.story.laterOutcome && <section className="pf-story-context"><h3>后续结果</h3><p>{detail.story.laterOutcome}</p></section>}
         <HistoryBoundaries conflicts={[...detail.story.conflicts, ...(detail.story.correctionConflicts ?? [])]}
           unknowns={detail.story.unknowns} limitations={[...detail.story.limitations, ...(missingEvents ? [`${missingEvents} 个来源事件暂时不可读取。`] : [])]} />
-        {!!detail.threads.length && <div className="pf-story-threads"><h3>继续阅读相关主线</h3>{detail.threads.map((thread) => <Link className="pf-button" key={thread.id}
+        {!!longTermThreads.length && <div className="pf-story-threads"><h3>继续阅读相关主线</h3>{longTermThreads.map((thread) => <Link className="pf-button" key={thread.id}
           href={`${workspaceHref("history", demo, project.id)}&axis=threads&thread=${encodeURIComponent(thread.id)}`} onClick={onClose}><Workflow size={14} />{thread.subjectLabel}</Link>)}</div>}
       </>}
       <details className="pf-source-details" onToggle={(event) => setSourcesOpen(event.currentTarget.open)}>
@@ -60,7 +84,7 @@ export function StoryDialog({ story, project, demo, onClose }: {
           {sourcesOpen && detail?.events.slice(page * 10, (page + 1) * 10).map((event, index) => <EvidenceEvent key={`${detail.presentationRevision}:${event.id}`} projectId={project.id} event={event} initialOpen={index === 0} />)}
           <ReadingPages page={page} totalPages={Math.ceil((detail?.events.length ?? 0) / 10)} onPage={setPage} label="来源事件" />
           {!loading && detail && !detail.events.length && <p>此故事没有可进一步读取的来源事件，不能据此补充验证结果。</p>}
-          <Link href={`/projects/${project.id}/history?compat=1&type=story&id=${encodeURIComponent(story.id)}`}>工程兼容工具：来源审计与修正<ExternalLink size={14} /></Link>
+          <Link href={`/projects/${project.id}/history?compat=1&type=story&id=${encodeURIComponent(focusedId)}`}>工程兼容工具：来源审计与修正<ExternalLink size={14} /></Link>
         </>}
       </details>
       {detail && <details className="pf-source-details"><summary>查看故事工程详情</summary>

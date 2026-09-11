@@ -84,8 +84,11 @@ public final class ProjectHistoryHumanSubjectLabelService {
         if (subjectSample.startsWith("change-")
             && safePaths.stream().anyMatch(path -> CODE_EXTENSIONS.contains(extension(path)))) {
             String changedObjects = concreteObjects(safePaths, "");
-            if (!changedObjects.isBlank()) return "相关代码（含" + changedObjects + "文件）";
-            return "一次提交的代码与配套文件";
+            String scope = skeleton.isBlank() ? "代码" : skeleton.replace("项目骨架", "代码");
+            if (safePaths.stream().anyMatch(path -> path.replace('\\', '/').startsWith("docs/"))) scope += "、文档";
+            if (safePaths.stream().anyMatch(path -> path.replace('\\', '/').startsWith("scripts/"))) scope += "与脚本";
+            if (!changedObjects.isBlank()) return changedObjects + "相关的" + scope;
+            return scope + "与配套文件";
         }
 
         String sourceFile = subjectPathAnchored && objectPaths.size() == 1 ? objectPaths.get(0)
@@ -97,6 +100,18 @@ public final class ProjectHistoryHumanSubjectLabelService {
         if (fileName.equals("version")) return "项目版本记录";
         if (fileName.matches("(?:docker-)?compose\\.ya?ml")) return "容器服务编排配置";
         if (sourceFile.replace('\\', '/').startsWith(".github/workflows/")) return "持续集成工作流配置";
+        if (!objectPaths.isEmpty() && objectPaths.stream().allMatch(path ->
+            path.toLowerCase(Locale.ROOT).matches(".*(?:report|报告).*\\.(?:md|docx?|pdf|txt)"))) {
+            LinkedHashSet<String> versions = new LinkedHashSet<>();
+            for (String path : objectPaths) {
+                var version = Pattern.compile("(?i)(?:^|[-_])v(\\d+(?:\\.\\d+)+)")
+                    .matcher(path.substring(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1));
+                if (version.find()) versions.add(version.group(1));
+            }
+            if (!versions.isEmpty()) return "项目报告（版本" + String.join("、", versions.stream().limit(4).toList()) + "）";
+        }
+        if (!safePaths.isEmpty() && safePaths.stream().allMatch(path ->
+            Set.of("png", "jpg", "jpeg", "webp").contains(extension(path)))) return "图片资料";
         if (documentOnly(safePaths) && !sourceFile.isBlank()
             && (fileName.contains("report") || fileName.contains("validation"))) {
             String topic = fileName.contains("reliability") ? "运行可靠性"

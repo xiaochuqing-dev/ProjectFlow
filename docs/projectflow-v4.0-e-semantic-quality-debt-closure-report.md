@@ -97,15 +97,17 @@ relay/上游 reset 的最终来源仍未证明；SSE 与阶段恢复降低影响
 ## 23. Owner manual review guide
 
 1. 在本阶段工作树启动 `Start-ProjectFlow.bat`。
-2. 打开 ProjectFlow，阅读 Current。
-3. 查看最近 3–5 个真实变化。
-4. 展开 Story 与 Evidence，确认来源和时间。
-5. 查看多分支 Workline 与 Draft 依赖。
-6. 切到 Corporation-Agent，比较单分支展示。
-7. 确认没有来源的计划和进度没有被补写。
-8. 判断第一次使用能否理解项目及判断依据。
+2. 在项目库打开 ProjectFlow。
+3. 阅读 Current，区分材料声明、当前归纳与未知。
+4. 查看最近 3–5 个真实变化。
+5. 展开 Story 与 Evidence，确认关联范围、来源和时间。
+6. 查看多分支 Workline 与 Draft 依赖。
+7. 切到 Corporation-Agent。
+8. 比较其单 branch 展示。
+9. 确认没有来源的计划和进度没有被补写。
+10. 判断第一次使用能否理解项目及判断依据。
 
-完整十步路径与本地验收实例入口在最终交付说明中给出。Agent 不填写 HUMAN_PASS。
+Agent 不填写 HUMAN_PASS；Owner 的判断独立于工程与模型评审。
 
 ## 24. STACK_CONSOLIDATION_READINESS
 

@@ -1,9 +1,9 @@
 {
-  "textFiles": 1265,
-  "status": "PASS",
-  "scannedAt": "2026-09-11T20:35:49.8516091Z",
-  "exactExistingCredentialAndEndpointChecked": true,
-  "scope": "Tracked and non-ignored untracked text; CI secret pattern plus exact existing User credential/endpoint values; machine paths checked in new E evidence.",
   "findings": [],
-  "includesMarkdownAndText": true
+  "scope": "Tracked and non-ignored untracked text; CI secret pattern plus exact existing User credential/endpoint values; machine paths checked in new E evidence.",
+  "exactExistingCredentialAndEndpointChecked": true,
+  "status": "PASS",
+  "includesMarkdownAndText": true,
+  "scannedAt": "2026-09-11T21:56:58.6901756Z",
+  "textFiles": 1303
 }

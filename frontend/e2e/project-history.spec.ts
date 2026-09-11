@@ -132,12 +132,13 @@ test("V4 工作区读取真实后端、显式更新并共享同一 Agent 交接�
 });
 
 test("V4 真实持久化演变主线在 Workspace 内完成 Thread、Story、Evidence 阅读", async ({ page, request }) => {
-  const fixture = await createHistoryProject(request);
+  const fixture = await createHistoryProject(request, true);
   const job = await api<Job>(request, "POST", `/projects/${fixture.projectId}/history/refresh`, { force: false });
   await waitForJob(request, job.id);
-  const threads = await api<{ items: ProjectHistoryThread[] }>(request, "GET", `/projects/${fixture.projectId}/history/threads?page=0&size=12`);
+  const threads = await api<{ items: ProjectHistoryThread[] }>(request, "GET", `/projects/${fixture.projectId}/history/threads?page=0&size=12&longTermOnly=true`);
   expect(threads.items.length).toBeGreaterThan(0);
   const thread = threads.items[0];
+  expect(thread.storyRefs.length).toBeGreaterThanOrEqual(2);
   const persisted = await api<{ stories: Story[] }>(request, "GET", `/projects/${fixture.projectId}/history/threads/${encodeURIComponent(thread.id)}`);
   expect(persisted.stories.length).toBeGreaterThan(0);
   const writes: string[] = [];
@@ -164,7 +165,7 @@ test("V4 真实持久化演变主线在 Workspace 内完成 Thread、Story、Evi
   expect(writes).toEqual([]);
 });
 
-async function createHistoryProject(request: APIRequestContext) {
+async function createHistoryProject(request: APIRequestContext, withContinuity = false) {
   const project = await api<{ id: string }>(request, "POST", "/projects", {
     name: `E2E 项目历程 ${Date.now()}-${Math.random().toString(16).slice(2)}`,
     description: "验证普通用户可读的项目历程与基础展示修正",
@@ -187,12 +188,12 @@ async function createHistoryProject(request: APIRequestContext) {
     purposeTags: ["PROJECT_HISTORY_UI_E2E_NOT_REAL_PROVIDER"],
   });
   if (provider.id) providers.add(provider.id);
-  const repository = createRepository();
+  const repository = createRepository(withContinuity);
   await api(request, "PATCH", `/projects/${project.id}/memory/local-path`, { localProjectPath: repository });
   return { projectId: project.id, repository };
 }
 
-function createRepository() {
+function createRepository(withContinuity = false) {
   const repository = path.resolve(process.cwd(), ".e2e-data", "history-repositories", `${Date.now()}-${Math.random().toString(16).slice(2)}`);
   mkdirSync(path.join(repository, "presentation"), { recursive: true });
   repositories.add(repository);
@@ -201,7 +202,16 @@ function createRepository() {
   git(repository, "config", "user.name", "ProjectFlow History E2E");
   writeFileSync(path.join(repository, "presentation", "launch-brief.md"), "# Launch brief\n\nA reviewable outline.\n", "utf8");
   git(repository, "add", ".");
-  git(repository, "commit", "-m", "create launch brief with reviewable outline");
+  execFileSync("git", ["commit", "-m", "create launch brief with reviewable outline"], {
+    cwd: repository, stdio: "pipe", env: { ...process.env, ...(withContinuity ? { GIT_AUTHOR_DATE: "2026-06-01T10:00:00Z", GIT_COMMITTER_DATE: "2026-06-01T10:00:00Z" } : {}) },
+  });
+  if (withContinuity) {
+    writeFileSync(path.join(repository, "presentation", "launch-brief.md"), "# Launch brief\n\nA reviewable outline with revised source notes.\n", "utf8");
+    git(repository, "add", ".");
+    execFileSync("git", ["commit", "-m", "update launch brief after review"], {
+      cwd: repository, stdio: "pipe", env: { ...process.env, GIT_AUTHOR_DATE: "2026-08-01T10:00:00Z", GIT_COMMITTER_DATE: "2026-08-01T10:00:00Z" },
+    });
+  }
   return repository;
 }
 

@@ -1,0 +1,533 @@
+{
+  "schemaVersion": "1.0",
+  "reviewType": "MODEL_REVIEW",
+  "reviewer": {
+    "actualModel": "gpt-5.6-sol",
+    "reasoningEffort": "xhigh",
+    "perspective": "首次使用者的独立产品语义评审",
+    "independence": "结论只基于清单列出的最终用户可见文本与截图；工程测试、实现说明和人工批准均未作为评审依据。"
+  },
+  "scope": {
+    "projectReviewed": "Corporation-Agent",
+    "corporationAgentVerdict": "NEEDS_REVISION",
+    "overallReviewStatus": "WAITING_FOR_PROJECTFLOW_VISIBLE_INPUT",
+    "selection": "全部默认八条变化、前五条依序详情及其 Evidence、默认时间篇章、长期主题目录与首个主题详情、单分支 Workline 与依据弹窗、清单中的全部响应式视图。",
+    "decisionRationale": "项目身份、证据来源和已声明/系统归纳/未知边界基本清楚，但最近变化、时间篇章和长期主题仍主要按文件类别或单个制品命名；同一提交被拆成多个高度重叠的 Story，详情又重复相同模板，首次使用者无法可靠回答最近完成了什么、各变化如何组成一个结果、主题如何跨阶段演进。"
+  },
+  "inputsRead": {
+    "manifest": "failed-runs/sol-review-round1/visible-input.json",
+    "visibleTextRoot": "failed-runs/sol-review-round1",
+    "visibleTexts": [
+      "visible-text/corporation-current-final.txt",
+      "visible-text/corporation-current-sources-final.txt",
+      "visible-text/corporation-history-default-final.txt",
+      "visible-text/corporation-story-1-final.txt",
+      "visible-text/corporation-story-1-evidence-final.txt",
+      "visible-text/corporation-story-2-final.txt",
+      "visible-text/corporation-story-2-evidence-final.txt",
+      "visible-text/corporation-story-3-final.txt",
+      "visible-text/corporation-story-3-evidence-final.txt",
+      "visible-text/corporation-story-4-final.txt",
+      "visible-text/corporation-story-4-evidence-final.txt",
+      "visible-text/corporation-story-5-final.txt",
+      "visible-text/corporation-story-5-evidence-final.txt",
+      "visible-text/corporation-history-time-final.txt",
+      "visible-text/corporation-threads-directory-final.txt",
+      "visible-text/corporation-thread-first-final.txt",
+      "visible-text/corporation-worklines-final.txt",
+      "visible-text/corporation-workline-detail-final.txt",
+      "visible-text/corporation-current-390-final.txt",
+      "visible-text/corporation-history-390-final.txt",
+      "visible-text/corporation-worklines-390-final.txt",
+      "visible-text/corporation-current-640-final.txt",
+      "visible-text/corporation-history-640-final.txt",
+      "visible-text/corporation-worklines-640-final.txt",
+      "visible-text/corporation-current-1024-final.txt",
+      "visible-text/corporation-history-1024-final.txt",
+      "visible-text/corporation-worklines-1024-final.txt",
+      "visible-text/corporation-current-1280-final.txt",
+      "visible-text/corporation-history-1280-final.txt",
+      "visible-text/corporation-worklines-1280-final.txt",
+      "visible-text/corporation-current-1600-final.txt",
+      "visible-text/corporation-history-1600-final.txt",
+      "visible-text/corporation-worklines-1600-final.txt"
+    ]
+  },
+  "screenshotsViewed": {
+    "allManifestImagesVisuallyInspected": true,
+    "views": [
+      {
+        "view": "current-final",
+        "images": [
+          "screenshots/corporation-current-final-1.png",
+          "screenshots/corporation-current-final-2.png",
+          "screenshots/corporation-current-final-3.png"
+        ]
+      },
+      {
+        "view": "current-sources-final",
+        "images": [
+          "screenshots/corporation-current-sources-final-1.png"
+        ]
+      },
+      {
+        "view": "history-default-final",
+        "images": [
+          "screenshots/corporation-history-default-final-1.png",
+          "screenshots/corporation-history-default-final-2.png",
+          "screenshots/corporation-history-default-final-3.png"
+        ]
+      },
+      {
+        "view": "story-1-final",
+        "images": [
+          "screenshots/corporation-story-1-final-1.png",
+          "screenshots/corporation-story-1-final-2.png"
+        ]
+      },
+      {
+        "view": "story-1-evidence-final",
+        "images": [
+          "screenshots/corporation-story-1-evidence-final-1.png",
+          "screenshots/corporation-story-1-evidence-final-2.png",
+          "screenshots/corporation-story-1-evidence-final-3.png",
+          "screenshots/corporation-story-1-evidence-final-4.png",
+          "screenshots/corporation-story-1-evidence-final-5.png"
+        ]
+      },
+      {
+        "view": "story-2-final",
+        "images": [
+          "screenshots/corporation-story-2-final-1.png",
+          "screenshots/corporation-story-2-final-2.png"
+        ]
+      },
+      {
+        "view": "story-2-evidence-final",
+        "images": [
+          "screenshots/corporation-story-2-evidence-final-1.png"
+        ]
+      },
+      {
+        "view": "story-3-final",
+        "images": [
+          "screenshots/corporation-story-3-final-1.png",
+          "screenshots/corporation-story-3-final-2.png"
+        ]
+      },
+      {
+        "view": "story-3-evidence-final",
+        "images": [
+          "screenshots/corporation-story-3-evidence-final-1.png"
+        ]
+      },
+      {
+        "view": "story-4-final",
+        "images": [
+          "screenshots/corporation-story-4-final-1.png",
+          "screenshots/corporation-story-4-final-2.png"
+        ]
+      },
+      {
+        "view": "story-4-evidence-final",
+        "images": [
+          "screenshots/corporation-story-4-evidence-final-1.png"
+        ]
+      },
+      {
+        "view": "story-5-final",
+        "images": [
+          "screenshots/corporation-story-5-final-1.png",
+          "screenshots/corporation-story-5-final-2.png"
+        ]
+      },
+      {
+        "view": "story-5-evidence-final",
+        "images": [
+          "screenshots/corporation-story-5-evidence-final-1.png"
+        ]
+      },
+      {
+        "view": "history-time-final",
+        "images": [
+          "screenshots/corporation-history-time-final-1.png",
+          "screenshots/corporation-history-time-final-2.png"
+        ]
+      },
+      {
+        "view": "threads-directory-final",
+        "images": [
+          "screenshots/corporation-threads-directory-final-1.png",
+          "screenshots/corporation-threads-directory-final-2.png",
+          "screenshots/corporation-threads-directory-final-3.png"
+        ]
+      },
+      {
+        "view": "thread-first-final",
+        "images": [
+          "screenshots/corporation-thread-first-final-1.png",
+          "screenshots/corporation-thread-first-final-2.png"
+        ]
+      },
+      {
+        "view": "worklines-final",
+        "images": [
+          "screenshots/corporation-worklines-final-1.png",
+          "screenshots/corporation-worklines-final-2.png"
+        ]
+      },
+      {
+        "view": "workline-detail-final",
+        "images": [
+          "screenshots/corporation-workline-detail-final-1.png",
+          "screenshots/corporation-workline-detail-final-2.png"
+        ]
+      },
+      {
+        "view": "current-390-final",
+        "images": [
+          "screenshots/corporation-current-390-final-1.png"
+        ]
+      },
+      {
+        "view": "history-390-final",
+        "images": [
+          "screenshots/corporation-history-390-final-1.png"
+        ]
+      },
+      {
+        "view": "worklines-390-final",
+        "images": [
+          "screenshots/corporation-worklines-390-final-1.png"
+        ]
+      },
+      {
+        "view": "current-640-final",
+        "images": [
+          "screenshots/corporation-current-640-final-1.png"
+        ]
+      },
+      {
+        "view": "history-640-final",
+        "images": [
+          "screenshots/corporation-history-640-final-1.png"
+        ]
+      },
+      {
+        "view": "worklines-640-final",
+        "images": [
+          "screenshots/corporation-worklines-640-final-1.png"
+        ]
+      },
+      {
+        "view": "current-1024-final",
+        "images": [
+          "screenshots/corporation-current-1024-final-1.png"
+        ]
+      },
+      {
+        "view": "history-1024-final",
+        "images": [
+          "screenshots/corporation-history-1024-final-1.png"
+        ]
+      },
+      {
+        "view": "worklines-1024-final",
+        "images": [
+          "screenshots/corporation-worklines-1024-final-1.png"
+        ]
+      },
+      {
+        "view": "current-1280-final",
+        "images": [
+          "screenshots/corporation-current-1280-final-1.png"
+        ]
+      },
+      {
+        "view": "history-1280-final",
+        "images": [
+          "screenshots/corporation-history-1280-final-1.png"
+        ]
+      },
+      {
+        "view": "worklines-1280-final",
+        "images": [
+          "screenshots/corporation-worklines-1280-final-1.png"
+        ]
+      },
+      {
+        "view": "current-1600-final",
+        "images": [
+          "screenshots/corporation-current-1600-final-1.png"
+        ]
+      },
+      {
+        "view": "history-1600-final",
+        "images": [
+          "screenshots/corporation-history-1600-final-1.png"
+        ]
+      },
+      {
+        "view": "worklines-1600-final",
+        "images": [
+          "screenshots/corporation-worklines-1600-final-1.png"
+        ]
+      }
+    ]
+  },
+  "dimensionJudgments": [
+    {
+      "dimension": "项目身份",
+      "status": "PASS",
+      "judgment": "项目名、项目类型和 README 声明的用途在首屏清楚可见；详细能力被标为“项目说明中写道”或“项目明确声明”，没有伪装成运行验收。",
+      "evidence": [
+        "visible-text/corporation-current-final.txt:42",
+        "visible-text/corporation-current-final.txt:46-63",
+        "screenshots/corporation-current-final-1.png"
+      ]
+    },
+    {
+      "dimension": "能确认的当前结果",
+      "status": "NEEDS_REVISION",
+      "judgment": "可确认 README 声明、PostgreSQL 样本配置、版本一致性和读取时工作树状态，但“当前状态”的主要内容仍是文档声明与文件变化，缺少对当前已观察结果的高信息密度总结。",
+      "evidence": [
+        "visible-text/corporation-current-final.txt:57-64",
+        "visible-text/corporation-current-sources-final.txt:77-102",
+        "screenshots/corporation-current-sources-final-1.png"
+      ]
+    },
+    {
+      "dimension": "最近实质变化",
+      "status": "NEEDS_REVISION",
+      "judgment": "八条默认变化被完整展示，但多数只说明文档、前端、后端或配置文件发生新增/修改；Story 2、3、4 的可见 Evidence 都指向同一提交，却作为多个并列变化呈现，无法让首次使用者看出这一批开发形成了什么整体结果。",
+      "evidence": [
+        "visible-text/corporation-history-default-final.txt:56-109",
+        "visible-text/corporation-story-2-evidence-final.txt:32-50",
+        "visible-text/corporation-story-3-evidence-final.txt:32-50",
+        "visible-text/corporation-story-4-evidence-final.txt:32-50",
+        "screenshots/corporation-history-default-final-1.png",
+        "screenshots/corporation-history-default-final-2.png",
+        "screenshots/corporation-history-default-final-3.png"
+      ]
+    },
+    {
+      "dimension": "来源追踪",
+      "status": "PASS_WITH_LIMITATIONS",
+      "judgment": "Story Evidence 提供 commit、文件路径、提交时间、OBSERVED/SOURCE_BACKED 身份和时间依据，Workline 也给出本地 HEAD 与观察时间；但派生的 Evidence 标题较模板化，“当前有效”的含义缺少用户可见解释。",
+      "evidence": [
+        "visible-text/corporation-story-1-evidence-final.txt:29-50",
+        "visible-text/corporation-workline-detail-final.txt:19-23",
+        "screenshots/corporation-story-1-evidence-final-2.png",
+        "screenshots/corporation-workline-detail-final-1.png"
+      ]
+    },
+    {
+      "dimension": "声明、推断与未知边界",
+      "status": "PASS",
+      "judgment": "README 声明、系统归纳、工具读取材料和未知项被分别标识；各 Story 明确指出文件变化不能证明功能运行验收，变更前状态、原因、测试和上线状态也保持未知。主叙事没有把原始提交消息中的“passing CI”升级为已验证结论。",
+      "evidence": [
+        "visible-text/corporation-current-final.txt:57-63",
+        "visible-text/corporation-current-sources-final.txt:105-121",
+        "visible-text/corporation-story-1-final.txt:8-23",
+        "visible-text/corporation-story-1-evidence-final.txt:32-50",
+        "screenshots/corporation-story-1-final-1.png"
+      ]
+    },
+    {
+      "dimension": "单分支呈现",
+      "status": "PASS_WITH_LIMITATIONS",
+      "judgment": "界面清楚说明只读取 main、最近八条提交、用途无明确声明、远程协作缺失且 PR 状态未知；领先/落后为 0 也附带不能证明工作合入状态的限制。当前样本只有主线，因此无法评价多分支或 PR 归并。",
+      "evidence": [
+        "visible-text/corporation-worklines-final.txt:45-58",
+        "visible-text/corporation-workline-detail-final.txt:7-23",
+        "screenshots/corporation-worklines-final-1.png",
+        "screenshots/corporation-workline-detail-final-1.png"
+      ]
+    },
+    {
+      "dimension": "时间含义",
+      "status": "NEEDS_REVISION",
+      "judgment": "提交时间、观察时间、读取时间和日期可重叠均有明确标签，但 Chapter 09 的标题/摘要只强调后端和环境配置，而其下实际包含文档、沟通/备份/存储、前端和后端四类变化，篇章叙事不能准确覆盖成员记录。",
+      "evidence": [
+        "visible-text/corporation-history-time-final.txt:49",
+        "visible-text/corporation-history-time-final.txt:83-115",
+        "screenshots/corporation-history-time-final-1.png",
+        "screenshots/corporation-history-time-final-2.png"
+      ]
+    },
+    {
+      "dimension": "无来源或过强结论",
+      "status": "PASS_WITH_LIMITATIONS",
+      "judgment": "未发现把功能完成、测试通过或上线状态无条件当成事实的主结论；最明显的风险来自 Evidence 卡片普遍使用“当前有效”，以及“建立数据分析结果，形成可继续查看的初始成果”等派生表述，其用户可见依据只展示为文件新增/修改，语义强度和当前性含义需要收紧。",
+      "evidence": [
+        "visible-text/corporation-story-1-evidence-final.txt:29-36",
+        "visible-text/corporation-story-1-evidence-final.txt:84-102",
+        "screenshots/corporation-story-1-evidence-final-3.png",
+        "screenshots/corporation-story-1-evidence-final-4.png"
+      ]
+    },
+    {
+      "dimension": "Story、Chapter、Thread 重复与具体程度",
+      "status": "NEEDS_REVISION",
+      "judgment": "Story 详情的此前状态、当前结果和未知原因在前五条中几乎逐字重复；Thread 目录包含“一次提交的代码与配套文件”“任务01报告（版本1）”及大量只有一条关联变化的文件类别，首个 Thread 详情又复述同一 Story，未形成可持续阅读的产品主题或跨阶段演变。",
+      "evidence": [
+        "visible-text/corporation-story-1-final.txt:8-23",
+        "visible-text/corporation-story-2-final.txt:8-23",
+        "visible-text/corporation-story-3-final.txt:8-23",
+        "visible-text/corporation-story-4-final.txt:8-23",
+        "visible-text/corporation-story-5-final.txt:8-23",
+        "visible-text/corporation-threads-directory-final.txt:49-126",
+        "visible-text/corporation-thread-first-final.txt:52-65",
+        "screenshots/corporation-threads-directory-final-1.png",
+        "screenshots/corporation-thread-first-final-1.png"
+      ]
+    },
+    {
+      "dimension": "响应式语义可达性",
+      "status": "PASS",
+      "judgment": "390、640、1024、1280、1600 宽度下，项目身份、变化卡片、Workline 限制和工程证据入口仍可见；窄屏折叠侧栏和底部工程证据入口没有改变核心语义。",
+      "evidence": [
+        "screenshots/corporation-current-390-final-1.png",
+        "screenshots/corporation-history-390-final-1.png",
+        "screenshots/corporation-worklines-390-final-1.png",
+        "screenshots/corporation-current-640-final-1.png",
+        "screenshots/corporation-history-1024-final-1.png",
+        "screenshots/corporation-worklines-1600-final-1.png"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "id": "CA-SOL-001",
+      "severity": "MAJOR",
+      "title": "默认八条变化主要是文件分类，且同一提交被拆成多个并列 Story",
+      "finding": "八条变化中，文档新增/修改、前端、后端、沟通/备份/存储等记录大量重叠。前五条详情显示 Story 2、3、4 的首个 Evidence 使用同一 commit 6a0fed928c64f8fea85872bc1e927886c2f948e6，但页面把它们作为三条相邻的“最近变化”，没有说明它们属于同一开发批次或共同形成的结果。",
+      "impact": "首次使用者会把一个提交中的不同文件区域误读为多个独立成果，也无法回答最近真正完成或推进了什么。",
+      "locations": [
+        "visible-text/corporation-history-default-final.txt:56-109",
+        "visible-text/corporation-story-2-evidence-final.txt:32-50",
+        "visible-text/corporation-story-3-evidence-final.txt:32-50",
+        "visible-text/corporation-story-4-evidence-final.txt:32-50",
+        "screenshots/corporation-history-default-final-1.png",
+        "screenshots/corporation-history-default-final-2.png"
+      ],
+      "revisionNeeded": "把同一开发批次的重叠文件分类收束为一个主 Story，或明确标成同一 Story 的子范围；标题应描述证据能支持的具体结果，不能只枚举目录或文件类型。"
+    },
+    {
+      "id": "CA-SOL-002",
+      "severity": "MAJOR",
+      "title": "长期主题不是可识别的功能、问题或方向",
+      "finding": "主题目录包含“一次提交的代码与配套文件”“任务01报告”“任务01报告（版本1）”“相关代码（含工作区、报告、对话文件）”等制品名或文件集合，多数只有一条关联变化；首个主题详情仅复述一条 Story，并仍然没有目的或演变。",
+      "impact": "“按长期主题查看”无法帮助用户追踪一个能力或问题如何跨阶段变化，反而增加 Story、Chapter、Thread 三层重复。",
+      "locations": [
+        "visible-text/corporation-threads-directory-final.txt:49-126",
+        "visible-text/corporation-thread-first-final.txt:52-65",
+        "screenshots/corporation-threads-directory-final-1.png",
+        "screenshots/corporation-threads-directory-final-2.png",
+        "screenshots/corporation-threads-directory-final-3.png",
+        "screenshots/corporation-thread-first-final-1.png"
+      ],
+      "revisionNeeded": "只生成具有可辨识语义且能跨变化连接的主题；单个报告版本或单次提交若没有长期关系，应留在 Evidence/Story，不应升级为 Thread。"
+    },
+    {
+      "id": "CA-SOL-003",
+      "severity": "MAJOR",
+      "title": "Chapter 09 的叙事没有覆盖其展示的成员变化",
+      "finding": "Chapter 09 标题和摘要强调“后端代码（含通知、沟通、协作）”与环境配置，但同一篇章正文展示的四条变化依次为项目文档、沟通/备份/存储代码、前端代码和后端代码。",
+      "impact": "用户依据篇章标题形成的阶段理解与篇章实际内容不一致；文档、前端和存储相关变化被降格为未说明的“支撑工作”。",
+      "locations": [
+        "visible-text/corporation-history-time-final.txt:83-115",
+        "screenshots/corporation-history-time-final-1.png",
+        "screenshots/corporation-history-time-final-2.png"
+      ],
+      "revisionNeeded": "篇章标题和摘要必须覆盖全部主要成员 Story；无法形成共同主题时，应拆分篇章或使用中性的时间窗口摘要并列出各主线。"
+    },
+    {
+      "id": "CA-SOL-004",
+      "severity": "MODERATE",
+      "title": "前五条 Story 详情使用同一低信息模板",
+      "finding": "五条详情均使用“变更前完整状态未确认”“相关文件已留下变更记录”“实际效果/测试/上线需证据”“没有足够信息确认为什么调整”的近似模板，打开详情后几乎没有比列表更多的具体信息。",
+      "impact": "Story 的“此前状态—本次变化—当前结果”结构形式完整，但用户付出打开详情的成本后仍无法获得该变化特有的上下文或结果。",
+      "locations": [
+        "visible-text/corporation-story-1-final.txt:8-23",
+        "visible-text/corporation-story-2-final.txt:8-23",
+        "visible-text/corporation-story-3-final.txt:8-23",
+        "visible-text/corporation-story-4-final.txt:8-23",
+        "visible-text/corporation-story-5-final.txt:8-23",
+        "screenshots/corporation-story-2-final-1.png",
+        "screenshots/corporation-story-5-final-1.png"
+      ],
+      "revisionNeeded": "保留未知边界，同时让每条 Story 至少提供一项该变化独有的信息，例如具体制品、受影响流程、同批提交关系或可观察的当前状态；没有独有内容时不应生成独立 Story。"
+    },
+    {
+      "id": "CA-SOL-005",
+      "severity": "MODERATE",
+      "title": "当前状态能识别项目，但不能高效说明当前已知结果",
+      "finding": "首屏项目身份明确，来源展开后也能看到版本、规模、工作树和配置事实；然而首屏主体仍以 README 能力声明、一个 docker-compose 配置和文件变化为主，没有把“已观察到什么、只声明了什么、最关键未知是什么”压缩为可快速判断的当前结果。",
+      "impact": "用户能知道这是哪个项目，却仍需逐项展开材料才能理解当前证据边界和实际可确认状态。",
+      "locations": [
+        "visible-text/corporation-current-final.txt:42-64",
+        "visible-text/corporation-current-sources-final.txt:77-121",
+        "screenshots/corporation-current-final-1.png",
+        "screenshots/corporation-current-sources-final-1.png"
+      ],
+      "revisionNeeded": "在项目身份后给出紧凑的当前结果摘要，分别列出已观察事实、仅有文档声明、关键未知；避免把文件清单当作当前结果。"
+    },
+    {
+      "id": "CA-SOL-006",
+      "severity": "MODERATE",
+      "title": "Evidence 的派生标题与“当前有效”标签语义不够克制",
+      "finding": "历史 Git 记录普遍标为“当前有效”，但用户可见内容没有解释它指提交仍在主线、文件仍存在，还是结论仍适用于当前版本；同一证据列表还出现“建立数据分析结果，形成可继续查看的初始成果”等从文件新增推导的泛化标题。",
+      "impact": "用户可能把历史记录的可追溯性理解为当前产品状态已证实，或把文件存在理解为已形成可用成果。",
+      "locations": [
+        "visible-text/corporation-story-1-evidence-final.txt:29-36",
+        "visible-text/corporation-story-1-evidence-final.txt:84-102",
+        "screenshots/corporation-story-1-evidence-final-3.png",
+        "screenshots/corporation-story-1-evidence-final-4.png"
+      ],
+      "revisionNeeded": "明确“当前有效”的判定对象，或改为“该提交已观察/仍在读取历史中”；Evidence 标题只描述可见的新增、修改和具体制品，不增加“成果”含义。"
+    }
+  ],
+  "positiveFindings": [
+    {
+      "finding": "项目身份清楚，README 声明被明确标为声明而非验收事实。",
+      "evidence": [
+        "visible-text/corporation-current-final.txt:42-63"
+      ]
+    },
+    {
+      "finding": "主 Story 持续说明文件变化不等于功能、测试或上线通过；原始提交消息中的“passing CI”没有被升级为已验证结论。",
+      "evidence": [
+        "visible-text/corporation-story-1-final.txt:4-23",
+        "visible-text/corporation-story-1-evidence-final.txt:32-50"
+      ]
+    },
+    {
+      "finding": "来源链可追到 commit、文件、时间和证据身份，时间依据也被明确写为 GIT_COMMIT_TIME。",
+      "evidence": [
+        "visible-text/corporation-story-2-evidence-final.txt:32-52"
+      ]
+    },
+    {
+      "finding": "单分支情况下没有编造 PR 或远程状态，并明确说明领先/落后计数不能证明工作合入。",
+      "evidence": [
+        "visible-text/corporation-worklines-final.txt:45-58",
+        "visible-text/corporation-workline-detail-final.txt:7-23"
+      ]
+    }
+  ],
+  "uncoveredDimensions": [
+    "ProjectFlow 项目的最终用户可见输入尚未提供，因此不能给出整体 MODEL_REVIEW 结论。",
+    "清单只顺序打开前五条 Story；第 6 至第 8 条只有默认列表摘要，未覆盖其详情语义。",
+    "Story Evidence 中显示存在后续分页（Story 1 第 2 页、Story 3 第 2 页、Story 4 第 2 至 4 页、Story 5 第 2 至 3 页），清单未提供这些页的最终可见截图或文本。",
+    "长期主题目录只覆盖第 1/3 页并只打开第一个主题，不能评价后续主题详情。",
+    "只有 main 单分支且 GitHub 未配置，无法评价真实多分支、PR 目标、合入状态或远程协作语义。",
+    "截图与可见文本不覆盖搜索、分页后的完整交互、异常/空状态、键盘或屏幕阅读器行为。",
+    "workline-detail-final 的第二张截图没有可辨识内容；依据弹窗的语义判断来自第一张截图和对应可见文本。"
+  ],
+  "completion": {
+    "corporationAgentReviewComplete": true,
+    "projectFlowReviewComplete": false,
+    "overallReviewComplete": false
+  }
+}

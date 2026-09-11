@@ -73,7 +73,7 @@ export function projectHistorySourceTypeLabel(value: string | null | undefined) 
 
 export function projectHistoryRewriteStateLabel(value: string | null | undefined) {
   const labels: Record<string, string> = {
-    CURRENT: "当前有效",
+    CURRENT: "在本次读取的历史中",
     STALE: "来源已变化",
     INVALIDATED: "已失效",
   };

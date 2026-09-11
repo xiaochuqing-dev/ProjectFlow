@@ -15,8 +15,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v16";
-    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v9";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v17";
+    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v10";
     static final int MAX_PROMPT_CHARS = 60_000;
     public static final String VALIDATION_REPAIR_MARKER = "\nHISTORY_VALIDATION_REPAIR=";
     private static final String VALIDATION_REPAIR_INSTRUCTIONS = """
@@ -55,6 +55,7 @@ public final class ProjectHistoryPromptBuilder {
         subjectDisplayConcept 是第一层唯一允许的主要对象；不得输出 raw subject、路径、文件名、class、internal slug、截断 token 或输入外的新实体。
         若对象包含“含某些对象相关文件”，这些只是区域中的具体文件例子，不代表整项功能已实现。保留可读的具体对象与动作，不得退化成只有“项目材料、项目骨架、结构文件”的通用摘要。文件变化可确认；运行验收、上线和完整能力需要各自的直接证据。
         多个文件的新增或修改不证明整个文档类别、代码区域或功能此前不存在。保留模板给出的此前状态未知、混合动作与来源时间范围，不得改写为首次建立整类内容。
+        Change 中模板给出的具体组件、接口、脚本和文档范围应保留，避免五条不同变化都改成相同的“文件已有变化”。批量提交的主 Story 与关联子范围是一批变化，不是独立成果。
         claimState、claimAction、supportedOutcome、supportClass、allowedClaims 与 forbiddenClaims 是硬边界。PLANNED 不得写成 IMPLEMENTED，DECLARED 不得写成 VERIFIED，CONFIGURED 不得写成已部署，未给直接验证 Evidence 不得写稳定或生产可用。
         directSupportSummary 是与当前 subject/action 直接匹配的有界支持；indirectContextSummary 只解释上下文，明确不能提升 Claim。不得因为同 Commit、相邻时间、相同区域或 Supporting Story 把间接上下文借给当前 Claim。
         downgradeReason 必须被遵守：只能在工程层给出的 supportedOutcome 内改写，不得自行提高状态。
@@ -72,6 +73,7 @@ public final class ProjectHistoryPromptBuilder {
         标题必须直接代表 dominantClusterIds 中至少一个主成果簇；两个 co-dominant 主成果可自然形成双中心标题。摘要必须覆盖全部 required Representative Cluster，让普通用户能够复述这一时期实际完成了什么，再把 Supporting 保留为次要工程信息。不得以数量开头，不得把 Story subject 拼接成标题，不得把文件、测试、配置或验证数量描述为用户成果。
         representativeOutcomes、representativeStorySummaries、allowedClaimStates、unknowns、conflicts 与 forbiddenOverclaims 是硬边界。不得把一个成果簇的状态、结果或 Evidence 强度借给另一个成果簇，也不得引入 represented cluster 之外的新结果。
         deterministicFallback 是工程层已验证的完整输出草稿。只有能同时满足全部成果簇和状态上限时才改写；任何不确定都必须原样返回 deterministicFallback。
+        一个簇若包含前端、后端、文档或脚本多个主要范围，摘要必须覆盖这些范围，不能只选其中一个范围代表整体。
         不得仅用“围绕某主题推进”“相关成果逐步形成并得到完善”“完成相关建设”等空泛句式。不得使用“相关变化”“工程分组”“形成初始结果”“进入当前时间点可确认的新状态”等内部模板表达。
         如果部分 Story 摘要因边界被省略，只能根据工程层成果簇及代表摘要保守归纳，不得补造遗漏内容。
         禁止重要性、成熟度、里程碑、成功判断、下一步、计划或建议。禁止创造 ID、Evidence、文件、数字、原因或项目状态。

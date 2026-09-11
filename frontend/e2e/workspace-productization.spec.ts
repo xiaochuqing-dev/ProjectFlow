@@ -33,7 +33,7 @@ async function capture(page: Page, name: string) {
 }
 
 async function fixture(page: Page) {
-  const state = { providers: [{ ...provider }], writes: [] as Array<{ method: string; pathname: string; body: AiProviderPayload | null }>, failures: new Set<string>(), waits: new Map<string, Promise<void>>(), threadSummary: threads[0].currentOutcome, emptyThreads: false, emptyProviders: false };
+  const state = { providers: [{ ...provider }], writes: [] as Array<{ method: string; pathname: string; body: AiProviderPayload | null }>, failures: new Set<string>(), waits: new Map<string, Promise<void>>(), threadSummary: threads[0].currentOutcome, emptyThreads: false, emptyProviders: false, relatedStoryRefs: [] as string[] };
   await page.route("**/api/**", async (route) => {
     const req = route.request(), url = new URL(req.url()), pathname = url.pathname, method = req.method();
     await state.waits.get(`${method}:${pathname}`);
@@ -73,7 +73,7 @@ async function fixture(page: Page) {
     else if (pathname.endsWith("/stories")) data = { items: stories, totalElements: stories.length };
     else if (pathname.includes("/stories/")) {
       const story = stories.find((s) => pathname.endsWith(`/${s.id}`))!;
-      data = { projectId: project.id, presentationRevision: "revision-1", story, threads: [threads[0]], events: story.eventRefs.map((id, i) => ({
+      data = { projectId: project.id, presentationRevision: "revision-1", story: { ...story, supportingChangeRefs: story.id === "story-0" ? state.relatedStoryRefs : [] }, threads: [threads[0]], events: story.eventRefs.map((id, i) => ({
         id, occurredAt: story.occurredTo, sourceType: "GIT", category: "DOCUMENT", transition: "MODIFIED", userSummary: `核对简报来源 ${i + 1}`, safeSourceLabel: "update reviewable launch brief",
         affectedPaths: ["presentation/launch-brief.md"], evidenceRefs: ["file:presentation/launch-brief.md"], authority: "GIT", epistemicStatus: "OBSERVED", limitations: [], rawSourceDeepLink: "javascript:alert(1)", rewriteState: "STALE",
       })) };
@@ -131,6 +131,21 @@ test("real-mode Thread DTOs support paging, retained boundaries, Story and multi
   await expect(page.locator(".pf-chapter-reading h2")).toHaveText(chapter.title);
   expect(state.writes).toEqual([]);
   await expect(page.getByText("Corporation-Agent", { exact: true })).toHaveCount(0);
+});
+
+test("a grouped Story opens its related range and Evidence, then returns to the parent", async ({ page }) => {
+  const state = await fixture(page);
+  state.relatedStoryRefs = ["story-1"];
+  await page.goto(`/workspace/history?project=${project.id}`);
+  await page.locator(".pf-history-overview .pf-story-card").first().click();
+  await expect(page.locator("dialog[open] .pf-story-context .pf-story-card")).toHaveCount(1);
+  await page.locator("dialog[open] .pf-story-context .pf-story-card").click();
+  await expect(page.locator("#workspace-story-title")).toHaveText(stories[1].humanTitle);
+  await page.getByText("查看工程证据与来源", { exact: true }).click();
+  await expect(page.locator("dialog[open] .pf-evidence-items h4")).toHaveText("发布简报来源");
+  await page.getByRole("button", { name: "返回主变化", exact: true }).click();
+  await expect(page.locator("#workspace-story-title")).toHaveText(stories[0].humanTitle);
+  expect(state.writes).toEqual([]);
 });
 
 test("Thread empty, unavailable and search states stay distinct without demo fallback", async ({ page }) => {

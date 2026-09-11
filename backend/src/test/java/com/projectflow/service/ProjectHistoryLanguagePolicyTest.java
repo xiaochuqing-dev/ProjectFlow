@@ -14,6 +14,22 @@ class ProjectHistoryLanguagePolicyTest {
     private final ProjectHistoryLanguageService language = new ProjectHistoryLanguageService();
 
     @Test
+    void observedDetailsNameDistinctArtifactsWithoutInventingFunctionOrInitialState() {
+        var value = language.fallback(ProjectHistoryNarrativeEntailmentValidator.ClaimState.OBSERVED,
+            Transition.CREATED, "change-123", List.of("frontend/src/components/InvoicePanel.tsx",
+                "backend/app/api/payments.py", "docs/payment-guide.md"), List.of(), List.of("CREATED"));
+        assertThat(value.title()).contains("发票", "支付", "前后端");
+        assertThat(value.change()).contains("发票界面组件", "支付接口文件", "支付文档");
+        assertThat(value.before()).doesNotContain("此前不存在", "首次建立");
+        assertThat(value.after()).contains("仍待独立证据");
+        assertThat(new ProjectHistoryNarrativeEntailmentValidator().hasActionObjectResult(
+            "修改通知接口文件", "通知接口文件留下可核对的变更记录，运行结果仍未验证。"
+        )).isTrue();
+        assertThat(language.readableObject("browser-failure", List.of("reports/assets/browser-failure.png"), List.of()))
+            .isEqualTo("图片资料");
+    }
+
+    @Test
     void describesSoftwareAndNonCodeArtifactsWithoutProjectSpecificOrInternalLanguage() {
         assertNeutral("quarterly-review", "slides/quarterly-review.pptx", "演示文稿");
         assertNeutral("research-conclusion", "paper/research-conclusion.md", "文档");

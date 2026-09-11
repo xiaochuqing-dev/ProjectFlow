@@ -59,7 +59,7 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         "当前行为得到更新", "项目开始具备这项能力"
     );
     private static final List<String> TITLE_ACTION_MARKERS = List.of(
-        "新增", "新建", "建立", "整理", "完善", "更新", "恢复", "移除", "撤销", "重新", "替换", "拆分", "合并",
+        "新增", "新建", "建立", "整理", "完善", "更新", "修改", "恢复", "移除", "撤销", "重新", "替换", "拆分", "合并",
         "调整", "记录", "保留", "隐藏", "统一", "形成", "推进", "规划", "实现", "完成", "创建", "编写", "补充", "保存", "应用", "搭建"
     );
     private static final List<String> TITLE_RESULT_MARKERS = List.of(
@@ -219,6 +219,14 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
      */
     public boolean representsChapterOutcome(String wording, List<String> clusterGrounding) {
         return sharesConcreteOutcome(text(wording), values(clusterGrounding));
+    }
+
+    public boolean preservesChapterScope(String wording, List<String> clusterGrounding) {
+        String context = String.join(" ", values(clusterGrounding)).replace("前后端", "前端 后端");
+        String actual = text(wording).replace("前后端", "前端 后端")
+            .replace("多处代码", "前端 后端代码").replace("界面", "前端").replace("服务端", "后端");
+        List<String> scopes = List.of("前端", "后端", "文档", "脚本").stream().filter(context::contains).toList();
+        return scopes.size() < 2 || scopes.stream().allMatch(actual::contains);
     }
 
     public List<String> normalizeUnknowns(String modelUnknown, boolean sourceStateUnknown) {

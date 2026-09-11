@@ -3300,8 +3300,9 @@ export type ProjectHistoryPage<T> = {
   totalPages: number;
 };
 
-export function listProjectHistoryThreads(token: string, projectId: string, page = 0, subject = ""): Promise<ProjectHistoryPage<ProjectHistoryThread>> {
+export function listProjectHistoryThreads(token: string, projectId: string, page = 0, subject = "", longTermOnly = false): Promise<ProjectHistoryPage<ProjectHistoryThread>> {
   const query = new URLSearchParams({ page: String(Math.max(0, page)), size: "12", subject });
+  if (longTermOnly) query.set("longTermOnly", "true");
   return projectHistoryGet(token, `/projects/${projectId}/history/threads?${query}`);
 }
 

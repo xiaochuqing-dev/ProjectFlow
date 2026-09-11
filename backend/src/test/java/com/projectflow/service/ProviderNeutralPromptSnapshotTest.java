@@ -15,7 +15,7 @@ class ProviderNeutralPromptSnapshotTest {
         String prompt = builder.buildProduction(new ProjectHistoryPromptBuilder.PromptInput(List.of(), List.of())).prompt();
         String instructions = prompt.substring(0, prompt.indexOf("\nSTORIES_JSON="));
 
-        assertThat(ProjectHistoryPromptBuilder.PROMPT_VERSION).isEqualTo("project-history-synthesis-v16");
+        assertThat(ProjectHistoryPromptBuilder.PROMPT_VERSION).isEqualTo("project-history-synthesis-v17");
         assertThat(instructions).contains(
             "可改字段只有 Story 的 humanTitle、oneSentenceSummary、beforeWording、changeWording、afterWording、reason、reasonEvidenceRefs、unknownWording",
             "role、primaryStoryId、supportingChangeRefs、storyRefs、时间、verified semantic、claimState",
@@ -45,7 +45,7 @@ class ProviderNeutralPromptSnapshotTest {
         )).prompt();
         String chapterRepair = builder.validationRepair(chapterPrompt, "CONTRACT");
         assertThat(ProjectHistoryPromptBuilder.CHAPTER_PROMPT_VERSION)
-            .isEqualTo("project-history-chapter-synthesis-v9");
+            .isEqualTo("project-history-chapter-synthesis-v10");
         assertThat(ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS.minimalSchema())
             .contains("representedClusterIds");
         assertThat(chapterRepair).contains(

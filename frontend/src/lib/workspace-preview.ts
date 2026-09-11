@@ -311,10 +311,13 @@ export function currentMaterialClaims(snapshot: ProjectUnderstandingSnapshot | n
     .filter(section => priority.includes(section.type))
     .sort((left, right) => priority.indexOf(left.type) - priority.indexOf(right.type));
   const seen = new Set<string>();
-  return [...sections, snapshot?.identity, snapshot?.capabilities, snapshot?.engineeringState]
-    .flatMap(section => section?.claims ?? [])
+  const identity = snapshot?.identity?.claims ?? [];
+  return [...sections.filter(section => section.type === "PURPOSE").flatMap(section => section.claims),
+    ...identity.filter(claim => claim.epistemicStatus === "DECLARED"),
+    ...sections.flatMap(section => section.claims), ...identity,
+    ...(snapshot?.capabilities?.claims ?? []), ...(snapshot?.engineeringState?.claims ?? [])]
     .map(claim => ({ ...claim,
-      text: claim.text.replace(/规模为 (EMPTY|SMALL|MEDIUM|LARGE|HUGE)\b/g, (_, scale: string) =>
+      text: claim.text.replace(/(?:规模(?:分类)?|仓库分类)为 (EMPTY|SMALL|MEDIUM|LARGE|HUGE)\b/g, (_, scale: string) =>
         `规模为 ${{ EMPTY: "空目录", SMALL: "小型", MEDIUM: "中型", LARGE: "大型", HUGE: "超大型" }[scale] ?? scale}`),
       evidenceRefs: claim.evidenceRefs.filter(ref => known.has(ref)),
       classification: (claim.epistemicStatus === "DECLARED" ? "DECLARED"

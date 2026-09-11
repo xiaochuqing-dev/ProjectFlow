@@ -8,6 +8,10 @@ Job transport accounting is bound per execution, propagated into the Gateway exe
 
 History specificity reuses precise subject membership and bounded file inventory. Broad areas keep their original representative family and OBSERVED ceiling; filename examples cannot promote them. Story DTO time provenance distinguishes commit/tag/PR event, Agent Git record, source observation, mixed and unknown times. Existing Workline collection, ownership, immutable GET, PR authority and V4 route boundaries are unchanged.
 
+Within a generic code commit, the commit inventory is the main change and its area ranges remain linked Supporting Stories. Different commits do not collapse into one broad area Story. Chapter reuse requires matching strategy/representation versions and complete owner groups; reading-density boundaries never detach children. A low-coverage interleaved chapter may split at a real chronological boundary when representative coverage improves, without asserting a development phase or maturity. Models receive the same aggregate scope that validation checks.
+
+Existing Thread identities remain readable for continuity. Single-record and broad inventory associations are marked `RECORD_CONTEXT`; the normal V4 directory requests `longTermOnly=true`, which filters before pagination and retains multi-record precise subjects. Story dialogs expose supporting ranges through existing owned read APIs. No new storage or Fact mutation is involved.
+
 
 ## V4.0-D persisted Workspace reads
 

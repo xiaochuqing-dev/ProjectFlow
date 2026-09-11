@@ -39,6 +39,14 @@ test("current explains sourced purpose before inventory and keeps declarations d
   assert.equal(result.filter(item => item.id === "metrics").length, 1);
   assert.equal(result.length, 2);
 });
+test("identity still precedes inventory when the model has no PURPOSE section", () => {
+  const inventory = { id: "inventory", text: "扫描12个文件，仓库分类为 MEDIUM", epistemicStatus: "OBSERVED", evidenceRefs: ["manifest"] };
+  const identity = { id: "purpose", text: "项目说明写明用于发票审核", epistemicStatus: "DECLARED", evidenceRefs: ["readme"] };
+  const result = preview.exports.currentMaterialClaims({ sourceMap: { sources: [{ id: "readme" }, { id: "manifest" }] },
+    identity: { claims: [inventory, identity] }, dynamicProfile: { sections: [{ type: "CURRENT_STATE", claims: [inventory, identity] }] } });
+  assert.equal(result[0].id, "purpose");
+  assert.match(result[1].text, /规模为 中型/);
+});
 test("roadmap declaration stays declared and inference cannot become intent", () => {
   const claim = { text: "支持离线导入", kind: "PLAN", classification: "DECLARED", sources: ["README.md:14"] };
   assert.equal(supportedClaim(claim).classification, "DECLARED");

@@ -1,0 +1,165 @@
+{
+  "recordedAt": "2026-09-11T21:23:53.092188+00:00",
+  "method": "Primary agent manual source review of every current-material claim eligible for the visible reading section, including expanded claims. Separate independent Sol review receives only UI.",
+  "status": "PASS",
+  "highRiskUnsupportedClaims": 0,
+  "reviewedClaims": 11,
+  "claims": [
+    {
+      "project": "ProjectFlow",
+      "claim": "README 声明 ProjectFlow 用于理解项目现状、阅读真实变化并维护长期项目记忆。",
+      "sourceClassification": "DECLARED",
+      "sourceRefs": [
+        "source:b335630551682c19a781"
+      ],
+      "filteredUnresolvedRefs": [],
+      "inspectedSource": "README.md:5",
+      "finding": "Purpose is explicitly a README declaration, not verified runtime behavior.",
+      "status": "SUPPORTED_WITH_STATED_LIMITS"
+    },
+    {
+      "project": "ProjectFlow",
+      "claim": "仓库包含 quality-gates.yml、后端测试文件和 docker-compose.yml；backend/pom.xml 还配置 postgres-it profile 及 Maven Failsafe 的 integration-test 和 verify goal，前端 package lock 声明 @playwright/test。",
+      "sourceClassification": "OBSERVED",
+      "sourceRefs": [
+        "source:751d272fa1b2e5a74683",
+        "source:80716f683e587ae57905",
+        "source:e45e45baeda1c1e73482",
+        "tool:manifest:a538c0c3092803514018",
+        "tool:manifest:2b247d5099ff9ad927aa"
+      ],
+      "filteredUnresolvedRefs": [],
+      "inspectedSource": "backend/pom.xml:182; frontend/package-lock.json; .github/workflows/quality-gates.yml",
+      "finding": "Profile, Failsafe goals, Playwright dependency and files exist. No passing execution is inferred.",
+      "status": "SUPPORTED_WITH_STATED_LIMITS"
+    },
+    {
+      "project": "ProjectFlow",
+      "claim": "当前 Git worktree 为 CLEAN，记录 332 个提交且无 Tag；历史覆盖报告尚无提交与 ProjectFact 关联。",
+      "sourceClassification": "OBSERVED",
+      "sourceRefs": [
+        "git:summary",
+        "intake:scan"
+      ],
+      "filteredUnresolvedRefs": [
+        "git:head"
+      ],
+      "inspectedSource": "git status --porcelain; git rev-list --count HEAD; git tag; persisted history coverage",
+      "finding": "Frozen clone is clean, 332 commits and no tags. Zero Fact coverage is a property of this isolated intake, not of the source project.",
+      "status": "SUPPORTED_WITH_STATED_LIMITS"
+    },
+    {
+      "project": "ProjectFlow",
+      "claim": "扫描统计为 1321 个文件、712 个源码文件、约 130442 LOC，仓库分类为 LARGE。",
+      "sourceClassification": "OBSERVED",
+      "sourceRefs": [
+        "intake:scan"
+      ],
+      "filteredUnresolvedRefs": [],
+      "inspectedSource": "persisted intake:scan",
+      "finding": "Counts are reported scan estimates within intake coverage; this audit does not independently recalculate LOC.",
+      "status": "SUPPORTED_WITH_STATED_LIMITS"
+    },
+    {
+      "project": "Corporation-Agent",
+      "claim": "README 将项目声明为按身份、角色和权限工作的企业 Agent Workspace。",
+      "sourceClassification": "DECLARED",
+      "sourceRefs": [
+        "source:b335630551682c19a781"
+      ],
+      "filteredUnresolvedRefs": [],
+      "inspectedSource": "README.md:3",
+      "finding": "Enterprise Agent Workspace identity is a source declaration.",
+      "status": "SUPPORTED_WITH_STATED_LIMITS"
+    },
+    {
+      "project": "Corporation-Agent",
+      "claim": "README 声明普通沟通和通知不调用模型，仅在用户明确查询或分析时创建 AgentRun。",
+      "sourceClassification": "DECLARED",
+      "sourceRefs": [
+        "source:b335630551682c19a781"
+      ],
+      "filteredUnresolvedRefs": [],
+      "inspectedSource": "README.md:3",
+      "finding": "Ordinary communication and notification model-use behavior remains a README declaration.",
+      "status": "SUPPORTED_WITH_STATED_LIMITS"
+    },
+    {
+      "project": "Corporation-Agent",
+      "claim": "docker-compose.yml 样本配置 PostgreSQL 17-alpine，并将数据库端口绑定到本机回环地址。",
+      "sourceClassification": "OBSERVED",
+      "sourceRefs": [
+        "source:e45e45baeda1c1e73482"
+      ],
+      "filteredUnresolvedRefs": [],
+      "inspectedSource": "docker-compose.yml:3; docker-compose.yml:10",
+      "finding": "PostgreSQL 17-alpine and loopback binding are configuration observations, not a running database assertion.",
+      "status": "SUPPORTED_WITH_STATED_LIMITS"
+    },
+    {
+      "project": "Corporation-Agent",
+      "claim": "README 标题、backend/pyproject.toml 和 frontend/package-lock.json 根包均记录版本 2.2.0。",
+      "sourceClassification": "OBSERVED",
+      "sourceRefs": [
+        "source:b335630551682c19a781",
+        "tool:manifest:a07ff4cda46ba5eb70c4",
+        "tool:manifest:2b247d5099ff9ad927aa"
+      ],
+      "filteredUnresolvedRefs": [],
+      "inspectedSource": "README.md:1; backend/pyproject.toml:3; frontend/package-lock.json:3",
+      "finding": "All three version fields are 2.2.0. No release or deployment is inferred.",
+      "status": "SUPPORTED_WITH_STATED_LIMITS"
+    },
+    {
+      "project": "Corporation-Agent",
+      "claim": "WORKTREE_STATUS 在工具读取时未发现 staged、unstaged 或 untracked 路径。",
+      "sourceClassification": "OBSERVED",
+      "sourceRefs": [
+        "tool:worktree:90be26d973c673dfdc0b"
+      ],
+      "filteredUnresolvedRefs": [],
+      "inspectedSource": "git status --porcelain",
+      "finding": "Frozen clone remains clean; reading-time wording does not assert subsequent state.",
+      "status": "SUPPORTED_WITH_STATED_LIMITS"
+    },
+    {
+      "project": "Corporation-Agent",
+      "claim": "扫描记录 287 个文件，其中 163 个为源码文件，估算约 21757 行代码，规模分类为 MEDIUM。",
+      "sourceClassification": "OBSERVED",
+      "sourceRefs": [
+        "intake:scan"
+      ],
+      "filteredUnresolvedRefs": [],
+      "inspectedSource": "persisted intake:scan",
+      "finding": "Counts remain intake estimates, not product outcome or maturity.",
+      "status": "SUPPORTED_WITH_STATED_LIMITS"
+    },
+    {
+      "project": "Corporation-Agent",
+      "claim": "测试、构建、质量或部署信号来自真实文件盘点。",
+      "sourceClassification": "OBSERVED",
+      "sourceRefs": [
+        "intake:scan"
+      ],
+      "filteredUnresolvedRefs": [
+        "git:head",
+        "e:b803fcb7f17ed923",
+        "e:b335630551682c19",
+        "e:9f2cf60079756e94",
+        "e:e45e45baeda1c1e7",
+        "e:05720dbbdd14dbf6",
+        "e:4a2d9aa3e849b134",
+        "e:da6498268e99511d",
+        "e:aacea3e16f9fecd3"
+      ],
+      "inspectedSource": "persisted intake inventory and source map",
+      "finding": "Only presence of engineering files is asserted, not execution success.",
+      "status": "SUPPORTED_WITH_STATED_LIMITS"
+    }
+  ],
+  "limitations": [
+    "No functional runtime validation of the dogfood source repositories is claimed.",
+    "Inventory estimates are checked against persisted intake, not independently recomputed.",
+    "Final UI correspondence is covered separately by the final visual manifest."
+  ]
+}

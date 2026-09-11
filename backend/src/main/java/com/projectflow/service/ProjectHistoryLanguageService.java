@@ -211,13 +211,44 @@ public final class ProjectHistoryLanguageService {
         };
         if (transitions != null && transitions.contains("CREATED") && transitions.contains("MODIFIED")) action = "新增和修改";
         return new Presentation(
-            action + object + "，保留文件变更记录",
-            "来源记录了" + object + "的" + action + "。可确认相应文件变化，不能据此确认功能运行验收通过。",
-            "变更前的完整状态未得到独立确认；这组文件记录不能证明该类内容此前完全不存在。",
-            "本次" + action + object + "，涉及范围可从来源明细核对。",
-            "对应文件已留下变更记录；功能效果、测试结果和上线状态仍需各自的证据。",
+            action + object,
+            "这组来源包含" + pathScope(paths) + "的变更记录。可确认文件已" + action + "，不能据此确认功能运行验收通过。",
+            "现有来源未覆盖" + object + "变更前的完整内容，不能证明该类内容的初始状态。",
+            "本次" + action + "的具体范围包括：" + pathExamples(paths) + "。完整范围可在来源明细核对。",
+            object + "已留下可追溯的" + action + "记录；这些记录证明代码或材料变化，功能效果和验证结果仍待独立证据。",
             object
         );
+    }
+
+    private static String pathScope(List<String> paths) {
+        LinkedHashSet<String> scopes = new LinkedHashSet<>();
+        for (String raw : paths) {
+            String path = raw.replace('\\', '/').toLowerCase(Locale.ROOT);
+            scopes.add(path.startsWith("frontend/") ? "前端代码" : path.startsWith("backend/") ? "后端代码"
+                : path.startsWith("docs/") ? "项目文档" : path.startsWith("scripts/") ? "项目脚本"
+                : path.startsWith(".github/workflows/") ? "持续集成配置" : "配套文件");
+        }
+        return String.join("、", scopes);
+    }
+
+    private static String pathExamples(List<String> paths) {
+        LinkedHashSet<String> examples = new LinkedHashSet<>();
+        for (String raw : paths) {
+            String path = raw.replace('\\', '/');
+            String lower = path.toLowerCase(Locale.ROOT);
+            String objects = ProjectHistoryHumanSubjectLabelService.concreteObjects(List.of(path), "");
+            if (objects.isBlank()) continue;
+            String kind = lower.contains("/test") || lower.startsWith("test") ? "测试文件"
+                : lower.contains("/components/") ? "界面组件"
+                : lower.contains("/api/") ? "接口文件"
+                : lower.contains("/services/") || lower.endsWith("service.java") ? "服务代码"
+                : lower.contains("/models/") ? "数据模型文件"
+                : lower.startsWith("scripts/") ? "脚本"
+                : DOCUMENT_EXTENSIONS.contains(extension(path)) ? "文档" : "相关文件";
+            examples.add(objects + kind);
+            if (examples.size() == 5) break;
+        }
+        return examples.isEmpty() ? pathScope(paths) : String.join("、", examples);
     }
 
     public String readableObject(String subject, List<String> paths, List<String> labels) {

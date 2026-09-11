@@ -645,16 +645,22 @@ class ProjectHistoryReconstructionTest {
             .as("stories=%s", stories.items().stream()
                 .map(item -> item.primarySubjectKey() + ":" + item.humanTitle()).toList())
             .isLessThanOrEqualTo(12);
-        assertThat(stories.items()).extracting(item -> item.primarySubjectKey())
+        assertThat(stories.items()).hasSize(1);
+        var primary = stories.items().get(0);
+        assertThat(primary.primarySubjectKey()).startsWith("change-");
+        assertThat(primary.supportingChangeRefs()).hasSize(3);
+        var all = readService.stories(userId, project.getId(), null, false, true, null, null, 0, 100).items();
+        assertThat(all).extracting(item -> item.primarySubjectKey())
             .contains("project-area-backend", "project-area-frontend", "project-area-docs");
-        assertThat(stories.items()).noneMatch(item -> item.primarySubjectKey().startsWith("change-"));
-        assertThat(stories.items()).allSatisfy(item -> assertThat(item.beforeState()).doesNotContain("此前项目中还没有"));
-        assertThat(stories.items()).extracting(item -> item.humanTitle())
-            .noneMatch(title -> title.matches(".*(BackendModule|FeaturePage|guide-\\d+|后端区域|前端区域|Controller|Service).*"));
-        assertThat(stories.items()).extracting(item -> item.humanTitle())
-            .anyMatch(title -> title.contains("前端项目骨架"))
-            .anyMatch(title -> title.contains("后端项目骨架"))
-            .anyMatch(title -> title.contains("项目文档"));
+        assertThat(all.stream().filter(item -> item.supporting()).toList()).allSatisfy(item -> {
+            assertThat(item.primaryStoryId()).isEqualTo(primary.id());
+            assertThat(item.eventRefs()).isNotEmpty();
+        });
+        assertThat(primary.humanTitle()).contains("前后端");
+        assertThat(primary.change()).contains("前端代码", "后端代码", "项目文档");
+        assertThat(readService.overview(userId, project.getId()).diagnostics().get("eventConservation")).isEqualTo(true);
+        assertThat(readService.threads(userId, project.getId(), null, true, 0, 100).items()).isEmpty();
+        assertThat(readService.threads(userId, project.getId(), null, 0, 100).items()).isNotEmpty();
     }
 
     @Test

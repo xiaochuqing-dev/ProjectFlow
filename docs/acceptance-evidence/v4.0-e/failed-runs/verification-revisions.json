@@ -44,6 +44,51 @@
       "final": "Actual open Workline evidence dialog captured",
       "action": "Captured only dialog[open]; no product defect claimed from that capture error",
       "finding": "Initial Workline screenshot selected a closed command-palette dialog"
+    },
+    {
+      "finding": "Required Sol/xhigh visible-product review remained NEEDS_REVISION after initial text cleanup",
+      "action": "Freeze exact screenshots and text; restructure same-commit groups, preserve related Evidence, and only derive multi-record precise Threads",
+      "final": "Real revalidation in progress"
+    },
+    {
+      "finding": "New Chapter scope gate correctly rejected a deterministic fallback that omitted document scope",
+      "action": "Keep document/script scope in commit labels and representative headlines; reuse diverse bounded paths in every narrative boundary",
+      "final": "Focused real reconstruction contract and Chapter tests PASS"
+    },
+    {
+      "finding": "Real grouped History failed because old Chapter membership was reused after Primary/Supporting ownership changed; Corporation job d127e21b-d8af-4d63-83de-07e3ab775291 FAILED and ProjectFlow db6c79cd-58fc-4a03-acc0-186e578fdc68 was explicitly cancelled before further paid work",
+      "action": "Require compatible grouping/representation version and complete owner groups before Chapter reuse; density boundaries keep each Primary with all children. Preserve successful wording checkpoints and prior snapshot.",
+      "final": "Two frozen repositories pass zero-model reconstruction; real recovery pending"
+    },
+    {
+      "finding": "Removing one-record Threads broke established continuity identities",
+      "action": "Preserve those IDs as RECORD_CONTEXT and keep default engineering API compatibility; V4 requests long-term multi-record precise subjects before pagination.",
+      "final": "PASS: full backend continuity replay and the 38-case browser suite"
+    },
+    {
+      "finding": "Chapter output template omitted the aggregate scope, while a new scope guard also over-applied to ordinary user documentation",
+      "action": "Include broad aggregate wording in bounded representative outcomes; apply cross-area scope validation only to broad code inventory families, retaining ordinary semantic grounding for documents.",
+      "final": "Two real repositories pass deterministic preflight; no model calls used"
+    },
+    {
+      "finding": "New concrete labels exposed low representative coverage in interleaved histories",
+      "action": "Allow a bounded chronological reading split when it materially improves insufficient coverage. Keep the original 0.60 acceptance threshold and avoid splitting coherent histories by count alone.",
+      "final": "PASS: full Dogfood suite retains the original 0.60 threshold and source conservation"
+    },
+    {
+      "finding": "Real Corporation recovery reused one successful window, but the remaining window was rejected because the action vocabulary did not recognize the ordinary Chinese verb 修改",
+      "action": "Add 修改 to the existing action vocabulary with a focused source-bounded regression; retain all authority and source checks. Do not replay the already successful window.",
+      "final": "Fix prepared; deterministic and real recovery pending"
+    },
+    {
+      "finding": "The persisted Thread browser test used one commit and expected a long-term Thread, conflicting with the new source-continuity rule; 37 other browser tests passed",
+      "action": "Build a temporary repository with two time-separated changes to the same artifact; query the same longTermOnly read as the V4 UI and retain all navigation, Evidence and zero-write assertions.",
+      "final": "PASS: full browser rerun, 38 passed, 0 failed"
+    },
+    {
+      "finding": "The first final full suite failed only the current-worktree no-change cache assertion; 761 other cases completed without a failure (including 11 opt-in skips).",
+      "action": "Repeated the unchanged full gate while keeping its source input stable; no threshold or cache assertion was weakened. The original false result is retained; the precise transient cause was not established.",
+      "final": "PASS on rerun: 762 total, 751 passed, 11 opt-in skips; dedicated exact V3.9 tests subsequently passed 2/2 with zero skips."
     }
   ],
   "rawLogsIncluded": false

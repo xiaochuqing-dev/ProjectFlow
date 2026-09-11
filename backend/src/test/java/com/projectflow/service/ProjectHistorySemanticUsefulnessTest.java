@@ -68,7 +68,8 @@ class ProjectHistorySemanticUsefulnessTest {
     @Test void areaNamesConcreteFilesWithoutClaimingFunctionalCompletion() {
         var paths = List.of("frontend/src/NotificationPanel.tsx", "frontend/src/CommunicationAttachments.tsx");
         var wording = language.fallback(ClaimState.OBSERVED, Transition.CREATED, "project-area-frontend", paths, List.of(), List.of());
-        assertThat(wording.title()).contains("通知", "沟通", "附件", "文件变更");
+        assertThat(wording.title()).contains("通知", "沟通", "附件");
+        assertThat(wording.summary()).contains("变更记录");
         assertThat(wording.title()).doesNotContain("已经实现", "已完成", "上线", "NotificationPanel", "项目骨架");
         assertThat(wording.summary()).contains("不能据此确认功能运行验收通过");
         assertThat(validator.semanticallyUseful(wording.title(), wording.summary(), wording.object())).isTrue();

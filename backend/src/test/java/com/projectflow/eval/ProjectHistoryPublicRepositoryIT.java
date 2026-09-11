@@ -66,6 +66,39 @@ class ProjectHistoryPublicRepositoryIT {
     @TempDir Path temporaryRoot;
 
     @Test
+    void preflightsExplicitLocalReadOnlyRepositoriesWithoutModelCalls() throws Exception {
+        String input = System.getProperty("projectflow.history.local-repositories", "");
+        Assumptions.assumeFalse(input.isBlank(), "Local read-only preflight requires explicit repository paths");
+        List<Map<String, Object>> results = new ArrayList<>();
+        UUID userId = UUID.randomUUID();
+        for (String value : input.split(";")) {
+            Path root = Path.of(value).toAbsolutePath().normalize();
+            String head = git(root, "rev-parse", "HEAD").trim();
+            String status = git(root, "status", "--porcelain");
+            RepositoryFixture fixture = new RepositoryFixture(root.getFileName().toString(), "Explicit local preflight", "", head, 0, UUID.randomUUID());
+            ProjectSpace project = project(userId, fixture, root);
+            reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+            var overview = readService.overview(userId, project.getId());
+            assertThat(overview.diagnostics().get("eventConservation")).isEqualTo(true);
+            assertThat(overview.diagnostics().get("invalidEvidenceRefCount")).isEqualTo(0);
+            assertThat(overview.diagnostics().get("unsupportedStrongFactCount")).isEqualTo(0);
+            var chapters = readService.chapters(userId, project.getId(), 0, 100).items();
+            for (var chapter : chapters) {
+                assertThat(readService.chapter(userId, project.getId(), chapter.id()).stories())
+                    .anyMatch(story -> story.primary());
+            }
+            assertThat(git(root, "rev-parse", "HEAD").trim()).isEqualTo(head);
+            assertThat(git(root, "status", "--porcelain")).isEqualTo(status);
+            results.add(Map.of("project", fixture.name(), "head", head, "events", overview.sourceEventCount(),
+                "chapters", chapters.size(), "modelRequests", 0, "eventConservation", true,
+                "repositoryUnchanged", true));
+        }
+        verifyNoInteractions(modelGateway);
+        Path output = Path.of("target", "local-history-preflight.json");
+        Files.writeString(output, objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(results), StandardCharsets.UTF_8);
+    }
+
+    @Test
     void validatesThreeDifferentPublicProjectShapesWithBoundedReadOnlyGitWindows() throws Exception {
         Assumptions.assumeTrue(
             Boolean.getBoolean("projectflow.history.public-repos.enabled"),

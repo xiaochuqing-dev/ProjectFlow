@@ -8,6 +8,8 @@
 
 Real Sol/xhigh Current, History, failures/recovery, independent visible-product review, source audits, Windows and CI are separately recorded in `docs/acceptance-evidence/v4.0-e/`. Required unit/PG/H2/legacy/credential/projection/browser gates cannot substitute for MODEL_REVIEW or Owner Review.
 
+`ProjectHistoryPublicRepositoryIT#preflightsExplicitLocalReadOnlyRepositoriesWithoutModelCalls` accepts an explicit semicolon-separated `projectflow.history.local-repositories` list. It exercises production reconstruction without a Provider, verifies complete Chapter owner groups, event conservation and zero model calls, and compares repository HEAD/status before and after. Normal CI skips this local-path-only preflight; the regular frozen and generated-repository gates remain required. The persisted Thread browser fixture now contains two time-separated commits to the same artifact instead of treating a single record as a long-term theme.
+
 
 ## V4.0-D acceptance boundary
 

@@ -21,7 +21,7 @@ import java.util.stream.Stream;
  * Story presentation. It never changes facts, Evidence, roles or Claim state.
  */
 public final class ProjectHistoryChapterRepresentationPlanner {
-    public static final String PLAN_VERSION = "project-history-chapter-representation-v2";
+    public static final String PLAN_VERSION = "project-history-chapter-representation-v3";
     static final int MAX_REPRESENTATIVE_CLUSTERS = 4;
     static final int MAX_REPRESENTATIVE_STORIES_PER_CLUSTER = 3;
     static final int MIN_PRIMARY_PER_SPLIT = 4;
@@ -57,8 +57,9 @@ public final class ProjectHistoryChapterRepresentationPlanner {
     }
 
     /**
-     * Split only at a strong chronological semantic shift. Supporting stories
-     * follow their Primary owner, so membership remains complete and disjoint.
+     * Split at a strong chronological semantic shift, or a chronological
+     * reading boundary that materially improves insufficient coverage.
+     * Supporting stories follow their Primary owner; no phase maturity is inferred.
      */
     public List<List<ChangeStory>> split(List<ChangeStory> members) {
         return split(ordered(members), 0);
@@ -191,9 +192,15 @@ public final class ProjectHistoryChapterRepresentationPlanner {
         }
         if ("项目骨架".equals(builder.family) && stories.stream().map(ChangeStory::primarySubjectKey).distinct().count() > 1) {
             label = "多处代码文件";
+            String context = stories.stream().map(ChangeStory::oneSentenceSummary)
+                .collect(java.util.stream.Collectors.joining(" "));
+            if (context.contains("文档")) label += "及文档";
+            if (context.contains("脚本")) label += "与脚本";
             String objects = ProjectHistoryHumanSubjectLabelService.concreteObjects(stories.stream()
                 .flatMap(story -> story.technicalDetails().stream()).distinct().limit(120).toList(), "");
-            headlineOutcome = "记录多处代码文件的变化" + (objects.isBlank() ? "" : "（含" + objects + "相关文件）");
+            headlineOutcome = "记录" + label + "的变化" + (objects.isBlank() ? "" : "（含" + objects + "相关文件）");
+            representativeOutcomes = Stream.concat(Stream.of(headlineOutcome), representativeOutcomes.stream())
+                .distinct().limit(MAX_REPRESENTATIVE_STORIES_PER_CLUSTER).toList();
         }
         List<String> grounding = stories.stream()
             .flatMap(story -> Stream.of(story.humanTitle(), story.oneSentenceSummary()))
@@ -235,7 +242,6 @@ public final class ProjectHistoryChapterRepresentationPlanner {
             if (left.clusters().isEmpty() || right.clusters().isEmpty()) continue;
             Cluster leftTop = left.clusters().get(0);
             Cluster rightTop = right.clusters().get(0);
-            if (related(leftTop, rightTop)) continue;
             double leftConcentration = (double) leftTop.primaryStoryCount() / leftPrimary.size();
             double rightConcentration = (double) rightTop.primaryStoryCount() / rightPrimary.size();
             Instant leftTo = leftPrimary.get(leftPrimary.size() - 1).occurredTo();
@@ -243,11 +249,14 @@ public final class ProjectHistoryChapterRepresentationPlanner {
             long gapDays = leftTo == null || rightFrom == null ? 0L
                 : Math.max(0L, Duration.between(leftTo, rightFrom).toDays());
             boolean concentratedShift = leftConcentration >= 0.35 && rightConcentration >= 0.35;
-            if (!concentratedShift && gapDays < 3L) continue;
             double combinedCoverage = (left.representativePrimaryCoverage() * leftPrimary.size()
                 + right.representativePrimaryCoverage() * rightPrimary.size()) / primary.size();
             double gain = combinedCoverage - base.representativePrimaryCoverage();
-            if (gain < 0.08 && gapDays < 7L) continue;
+            boolean semanticShift = !related(leftTop, rightTop)
+                && (concentratedShift || gapDays >= 3L) && (gain >= 0.08 || gapDays >= 7L);
+            boolean coverageBoundary = base.representativePrimaryCoverage() < LOW_REPRESENTATIVE_COVERAGE
+                && gain >= 0.08 && leftTo != null && rightFrom != null && leftTo.isBefore(rightFrom);
+            if (!semanticShift && !coverageBoundary) continue;
             double balance = (double) Math.min(leftPrimary.size(), rightPrimary.size()) / primary.size();
             double score = gain * 3.0 + balance + Math.min(1.0, gapDays / 14.0)
                 + Math.min(leftConcentration, rightConcentration);
@@ -332,14 +341,15 @@ public final class ProjectHistoryChapterRepresentationPlanner {
         String label = language.readableObject(story.primarySubjectKey(), story.technicalDetails(), List.of());
         // Commit-wide code inventories are broad owners, like area inventories;
         // filename examples must not turn them into precise capability families.
-        if (safe(story.primarySubjectKey()).startsWith("change-") && label.startsWith("相关代码（含"))
+        if (safe(story.primarySubjectKey()).startsWith("change-") && label.contains("代码"))
             return "项目骨架";
         // Generic presentation labels are deliberately one low-weight digest
         // family. Splitting them again by internal subject keys lets dozens of
         // tiny document/material clusters dilute the real phase outcomes.
         String value = label;
         if (value.isBlank()) value = story.affectedAreas().stream().findFirst().orElse("project-material");
-        value = value.replaceAll("(?i)[0-9a-f]{12,}", " ").replaceAll("\\d+", " ")
+        value = value.replaceAll("（版本[^）]*）", "")
+            .replaceAll("(?i)[0-9a-f]{12,}", " ").replaceAll("\\d+", " ")
             .replaceAll("[\\s_-]+", " ").trim().toLowerCase(Locale.ROOT);
         if (value.isBlank()) return "project-material";
         return semanticFamily(value);

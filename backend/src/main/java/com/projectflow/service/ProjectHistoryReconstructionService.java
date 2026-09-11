@@ -53,7 +53,7 @@ import com.projectflow.service.ProjectHistorySourceCollector.CollectionOutcome;
  */
 @Service
 public class ProjectHistoryReconstructionService {
-    static final String STRATEGY_VERSION = "project-history-v40e-specificity-time-v3";
+    static final String STRATEGY_VERSION = "project-history-v40e-specificity-time-v4";
     static final String PROMPT_VERSION = ProjectHistoryPromptBuilder.PROMPT_VERSION;
     private static final int MODEL_STORY_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
     private static final int MODEL_EVENT_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_EVENT_LIMIT;
@@ -190,6 +190,7 @@ public class ProjectHistoryReconstructionService {
                 && currentFingerprint.equals(before.getSourceEventFingerprint())
                 && STRATEGY_VERSION.equals(before.getStrategyVersion())
                 && PROMPT_VERSION.equals(before.getPromptVersion())
+                && hasCurrentChapterPlan(before)
                 && correctionRevision.equals(previousCorrectionRevision)
                 && !hasRetryableWindowCheckpoint(projectId)
                 && !hasPendingWindowDiagnostics(before);
@@ -589,7 +590,8 @@ public class ProjectHistoryReconstructionService {
                 .sorted(storyEventOrder).toList();
             List<EventView> group = new ArrayList<>();
             for (EventView event : subjectEvents) {
-                if (!group.isEmpty() && newStory(group, event)) {
+                if (!group.isEmpty() && (newStory(group, event)
+                    || entry.getKey().startsWith("project-area-") && !commitRefs(event).isEmpty() && !sharesCommit(group, event))) {
                     envelopes.add(story(entry.getKey(), group, complete, storyEventOrder));
                     group = new ArrayList<>();
                 }
@@ -694,6 +696,20 @@ public class ProjectHistoryReconstructionService {
         Set<String> potentialSupportingIds = new LinkedHashSet<>();
         Set<String> supportingIds = new LinkedHashSet<>();
         Map<String, String> attachments = new LinkedHashMap<>();
+        Map<String, Set<String>> commitsByStory = new LinkedHashMap<>();
+        Map<String, String> inventoryByCommit = new LinkedHashMap<>();
+        for (StoryEnvelope envelope : ordered) {
+            ChangeStory story = envelope.story();
+            List<EventView> members = story.eventRefs().stream().map(eventsById::get)
+                .filter(java.util.Objects::nonNull).toList();
+            Set<String> commits = members.stream().flatMap(event -> commitRefs(event).stream())
+                .collect(java.util.stream.Collectors.toSet());
+            commitsByStory.put(story.id(), commits);
+            if (commits.size() == 1 && !members.isEmpty()
+                && members.stream().allMatch(event -> event.category() == Category.COMMIT)) {
+                inventoryByCommit.putIfAbsent(commits.iterator().next(), story.id());
+            }
+        }
         for (StoryEnvelope envelope : ordered) {
             ChangeStory story = envelope.story();
             List<EventView> members = story.eventRefs().stream().map(eventsById::get)
@@ -704,22 +720,19 @@ public class ProjectHistoryReconstructionService {
             List<String> labels = members.stream().map(EventView::label).filter(value -> value != null && !value.isBlank())
                 .distinct().limit(20).toList();
             List<Transition> transitions = members.stream().map(EventView::transition).distinct().toList();
-            // A commit inventory adds context to its separately represented
-            // file changes; it is not another independent development result.
-            Set<String> inventoryCommits = members.stream().flatMap(event -> commitRefs(event).stream())
-                .collect(java.util.stream.Collectors.toSet());
-            boolean representedInventory = !members.isEmpty()
-                && members.stream().allMatch(event -> event.category() == Category.COMMIT)
-                && !inventoryCommits.isEmpty()
-                && ordered.stream().filter(other -> !other.story().id().equals(story.id()))
-                    .flatMap(other -> other.story().eventRefs().stream()).map(eventsById::get)
-                    .filter(java.util.Objects::nonNull)
-                    .anyMatch(event -> event.category() == Category.FILE_CHANGE
-                        && commitRefs(event).stream().anyMatch(inventoryCommits::contains));
-            if (representedInventory) {
+            // A bulk commit is one change, with its area records as readable
+            // subranges. Exact commit identity prevents folding other revisions
+            // or independent multi-commit subjects into an unrelated result.
+            Set<String> commits = commitsByStory.get(story.id());
+            String inventory = commits.size() == 1 ? inventoryByCommit.get(commits.iterator().next()) : null;
+            if (inventory != null && story.primarySubjectKey().startsWith("project-area-")
+                && !members.isEmpty() && members.stream().allMatch(event -> event.category() == Category.FILE_CHANGE)) {
                 potentialSupportingIds.add(story.id());
+                attachments.put(story.id(), inventory);
+                supportingIds.add(story.id());
                 continue;
             }
+            if (inventoryByCommit.containsValue(story.id())) continue;
             boolean independent = members.size() >= 3 && members.stream().allMatch(event -> event.category() == Category.FILE_CHANGE)
                 || members.stream().anyMatch(event ->
                 Set.of(Category.COMMIT, Category.MERGE, Category.PULL_REQUEST, Category.ISSUE, Category.PROJECT_FACT, Category.AGENT_RESULT)
@@ -732,6 +745,7 @@ public class ProjectHistoryReconstructionService {
         for (StoryEnvelope envelope : ordered) {
             ChangeStory story = envelope.story();
             if (!potentialSupportingIds.contains(story.id())) continue;
+            if (attachments.containsKey(story.id())) continue;
             String target = nearestPrimary(story, ordered, eventsById, potentialSupportingIds);
             if (target != null) {
                 supportingIds.add(story.id());
@@ -1170,7 +1184,7 @@ public class ProjectHistoryReconstructionService {
         List<String> labels = narrativeSourceLabels(events);
         String subjectLabel = languageService.readableObject(
             subjectKey,
-            events.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(),
+            narrativePaths(events),
             labels
         );
         List<UUID> eventRefs = events.stream().map(EventView::id).distinct().toList();
@@ -1184,7 +1198,7 @@ public class ProjectHistoryReconstructionService {
         );
         ProjectHistoryLanguageService.Presentation presentation = languageService.fallback(
             narrativeEnvelope.claimState(), outcome, subjectKey,
-            events.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(), labels,
+            narrativePaths(events), labels,
             transitions.stream().map(Enum::name).toList()
         );
         String change = presentation.change();
@@ -1204,8 +1218,7 @@ public class ProjectHistoryReconstructionService {
             .filter(event -> event.category() == Category.COMMIT || event.category() == Category.MERGE)
             .map(event -> languageService.commitSummary(event.label(), event.transition(), event.paths()))
             .distinct().limit(12).toList();
-        List<String> technicalDetails = events.stream().flatMap(event -> event.paths().stream())
-            .filter(value -> value != null && !value.isBlank()).distinct().limit(30).toList();
+        List<String> technicalDetails = narrativePaths(events).stream().limit(30).toList();
         List<String> atomRefs = events.stream().map(EventView::stableKey).distinct().limit(100).toList();
         ChangeStory story = new ChangeStory(
             id, subjectKey, humanTitle, summary, before, change, after, List.copyOf(affectedAreas), "", List.of(), "",
@@ -1217,6 +1230,34 @@ public class ProjectHistoryReconstructionService {
                 events.stream().map(EventView::timeBasis).toList())
         );
         return new StoryEnvelope(story, transitions);
+    }
+
+    private boolean hasCurrentChapterPlan(ProjectHistorySnapshot snapshot) {
+        if (snapshot == null || snapshot.getDiagnosticsJson() == null) return false;
+        try {
+            return ProjectHistoryChapterRepresentationPlanner.PLAN_VERSION.equals(
+                objectMapper.readTree(snapshot.getDiagnosticsJson()).path("chapterRepresentationPlanVersion").asText(""));
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private static List<String> narrativePaths(List<EventView> events) {
+        Map<String, List<String>> areas = new LinkedHashMap<>();
+        events.stream().flatMap(event -> event.paths().stream()).distinct()
+            .forEach(path -> areas.computeIfAbsent(area(path), ignored -> new ArrayList<>()).add(path));
+        List<String> result = new ArrayList<>();
+        for (int index = 0; result.size() < 40; index++) {
+            boolean added = false;
+            for (List<String> paths : areas.values()) {
+                if (index < paths.size() && result.size() < 40) {
+                    result.add(paths.get(index));
+                    added = true;
+                }
+            }
+            if (!added) break;
+        }
+        return List.copyOf(result);
     }
 
     private static List<String> narrativeSourceLabels(List<EventView> events) {
@@ -1273,7 +1314,9 @@ public class ProjectHistoryReconstructionService {
             String key = entry.getKey();
             result.add(new EvolutionThread(
                 "thread-" + ProjectHistorySourceCollector.sha256(key).substring(0, 20), key,
-                ordered.get(ordered.size() - 1).story().claimAttribution().subject(), "PROJECT_SUBJECT",
+                ordered.get(ordered.size() - 1).story().claimAttribution().subject(),
+                ordered.size() < 2 || key.startsWith("change-") || key.startsWith("project-area-")
+                    ? "RECORD_CONTEXT" : "PROJECT_SUBJECT",
                 ordered.stream().map(envelope -> envelope.story().id()).toList(), transitions,
                 ordered.get(ordered.size() - 1).story().afterState(),
                 gaps(ordered), conflicts, unknowns, evidenceCount, null
@@ -1318,15 +1361,22 @@ public class ProjectHistoryReconstructionService {
         boolean force
     ) {
         List<HistoryChapter> previous = previousChapters(previousSnapshot);
+        Map<String, ChangeStory> storiesById = stories.stream().collect(
+            LinkedHashMap::new, (map, story) -> map.put(story.id(), story), Map::putAll);
+        boolean compatibleGrouping = previousSnapshot != null
+            && STRATEGY_VERSION.equals(previousSnapshot.getStrategyVersion()) && hasCurrentChapterPlan(previousSnapshot);
         if (!force && previousSnapshot != null && previousSnapshot.getLatestSuccessfulAt() != null
-            && affectedFrom == null && !previous.isEmpty()) {
+            && compatibleGrouping && affectedFrom == null && !previous.isEmpty()
+            && previous.stream().allMatch(chapter -> completeChapterRoleGroups(chapter, storiesById))
+            && previous.stream().flatMap(chapter -> chapter.storyRefs().stream())
+                .collect(java.util.stream.Collectors.toSet()).equals(storiesById.keySet())) {
             return new ChapterContinuityResult(
                 previous, List.of(), previous.stream().map(HistoryChapter::id).toList(), List.of(), List.of(),
                 chapterRepresentationRevision(previous)
             );
         }
         if (force || previousSnapshot == null || previousSnapshot.getLatestSuccessfulAt() == null
-            || retainedStories == null || retainedStories.isEmpty()) {
+            || !compatibleGrouping || retainedStories == null || retainedStories.isEmpty()) {
             List<HistoryChapter> rebuilt = chapters(stories, events);
             Set<String> previousIds = previous.stream().map(HistoryChapter::id)
                 .collect(LinkedHashSet::new, Set::add, Set::addAll);
@@ -1345,6 +1395,7 @@ public class ProjectHistoryReconstructionService {
             .filter(chapter -> !chapter.storyRefs().isEmpty())
             .filter(chapter -> retainedIds.containsAll(chapter.storyRefs()))
             .filter(chapter -> currentStoryIds.containsAll(chapter.storyRefs()))
+            .filter(chapter -> completeChapterRoleGroups(chapter, storiesById))
             .toList();
         Set<String> reusedStoryIds = reused.stream().flatMap(chapter -> chapter.storyRefs().stream())
             .collect(LinkedHashSet::new, Set::add, Set::addAll);
@@ -1390,8 +1441,29 @@ public class ProjectHistoryReconstructionService {
         return "chapter-representation:" + ProjectHistorySourceCollector.sha256(value.toString());
     }
 
+    private static boolean completeChapterRoleGroups(HistoryChapter chapter, Map<String, ChangeStory> stories) {
+        Set<String> refs = new LinkedHashSet<>(chapter.storyRefs());
+        return refs.stream().map(stories::get).anyMatch(story -> story != null && story.primary())
+            && refs.stream().allMatch(ref -> {
+                ChangeStory story = stories.get(ref);
+                return story != null && (story.primary() ? refs.containsAll(story.supportingChangeRefs())
+                    : refs.contains(story.primaryStoryId()));
+            });
+    }
+
     private List<HistoryChapter> chapters(List<ChangeStory> stories, List<EventView> events) {
         if (stories.isEmpty()) return List.of();
+        Map<String, List<ChangeStory>> supporting = new LinkedHashMap<>();
+        stories.stream().filter(ChangeStory::supporting).forEach(story ->
+            supporting.computeIfAbsent(story.primaryStoryId(), ignored -> new ArrayList<>()).add(story));
+        List<ChangeStory> ordered = new ArrayList<>();
+        stories.stream().filter(ChangeStory::primary).forEach(story -> {
+            ordered.add(story);
+            ordered.addAll(supporting.getOrDefault(story.id(), List.of()));
+        });
+        if (ordered.size() != stories.size()) {
+            throw new HistoryValidationException(ValidationKind.CONTRACT, "Chapter input has an incomplete Primary/Supporting group");
+        }
         Set<UUID> tagEventIds = events.stream().filter(event -> event.category() == Category.TAG).map(EventView::id)
             .collect(LinkedHashSet::new, Set::add, Set::addAll);
         List<List<ChangeStory>> groups = new ArrayList<>();
@@ -1406,8 +1478,10 @@ public class ProjectHistoryReconstructionService {
         int eventLimit = Math.max(120, Math.min(720, stories.stream().mapToInt(ChangeStory::rawEventCount).sum() / Math.max(1, Math.min(8, primaryCount))));
         Duration spanLimit = primaryCount > 160 ? Duration.ofDays(45) : primaryCount > 80 ? Duration.ofDays(75) : Duration.ofDays(120);
         int currentEventCount = 0;
-        for (ChangeStory story : stories) {
-            if (!current.isEmpty()) {
+        for (ChangeStory story : ordered) {
+            // Density and time boundaries separate development results, never
+            // detach their related ranges into a chapter with no main result.
+            if (!current.isEmpty() && story.primary()) {
                 ChangeStory previous = current.get(current.size() - 1);
                 Duration gap = Duration.between(previous.occurredTo(), story.occurredFrom());
                 boolean boundary = gap.compareTo(CHAPTER_GAP) > 0
@@ -1469,7 +1543,7 @@ public class ProjectHistoryReconstructionService {
                 "ENGINEERING_REPRESENTATION_PLAN", "FULL_WITHIN_DISCOVERED_SOURCES", List.copyOf(limitations)
             ));
         }
-        return result;
+        return result.stream().sorted(Comparator.comparing(HistoryChapter::from).thenComparing(HistoryChapter::id)).toList();
     }
 
     private List<List<ChangeStory>> splitChapterRepresentationBoundaries(
@@ -2168,7 +2242,9 @@ public class ProjectHistoryReconstructionService {
             );
         }
         for (ProjectHistoryChapterRepresentationPlanner.Cluster cluster : representation.selectedClusters()) {
-            if (!narrativeValidator.representsChapterOutcome(summary, cluster.grounding())) {
+            if (!narrativeValidator.representsChapterOutcome(summary, cluster.grounding())
+                || ("项目骨架".equals(cluster.family())
+                    && !narrativeValidator.preservesChapterScope(summary, cluster.grounding()))) {
                 throw new HistoryValidationException(
                     ValidationKind.UNSUPPORTED_CLAIM,
                     "History chapter summary omitted representative cluster " + cluster.id()
@@ -2435,7 +2511,7 @@ public class ProjectHistoryReconstructionService {
             List<EventView> members = story.eventRefs().stream().map(views::get).filter(java.util.Objects::nonNull).toList();
             String subjectLabel = languageService.readableObject(
                 story.primarySubjectKey(),
-                members.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(),
+                narrativePaths(members),
                 narrativeSourceLabels(members)
             );
             ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
@@ -2621,7 +2697,7 @@ public class ProjectHistoryReconstructionService {
                 .filter(java.util.Objects::nonNull).toList();
             String subjectLabel = languageService.readableObject(
                 original.primarySubjectKey(),
-                members.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(),
+                narrativePaths(members),
                 narrativeSourceLabels(members)
             );
             ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
@@ -2942,7 +3018,7 @@ public class ProjectHistoryReconstructionService {
                     .filter(java.util.Objects::nonNull).toList();
                 String subjectLabel = languageService.readableObject(
                     story.primarySubjectKey(),
-                    members.stream().flatMap(event -> event.paths().stream()).distinct().limit(40).toList(),
+                    narrativePaths(members),
                     narrativeSourceLabels(members)
                 );
                 ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
