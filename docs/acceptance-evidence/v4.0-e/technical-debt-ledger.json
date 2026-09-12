@@ -229,6 +229,18 @@
       "status": "DEFERRED_NON_BLOCKING",
       "remainingRisk": "At 390px, a fixed evidence entry can temporarily cover the lower-right text while scrolling.",
       "recommendedPhase": "Desktop PoC usability pass"
+    },
+    {
+      "id": "E-P1-05",
+      "debt": "Unchanged source metadata invalidates History checkpoints after restart",
+      "source": "V4.0-E real ProjectFlow restart, closed-backup/API comparison and coverage serialization proof",
+      "priority": "P1",
+      "userImpact": "Already successful model windows can be recomputed unnecessarily",
+      "engineeringRisk": "Iteration order changes opaque source fingerprints without a content change",
+      "treatment": "When hashes differ, compare every source field and parsed JSON; keep the original hash and checkpoint for equal content",
+      "status": "FULL_TESTS_PASS_REAL_RESTART_PENDING",
+      "remainingRisk": "Final real restart and zero-call History checks are still pending",
+      "recommendedPhase": "V4.0-E"
     }
   ]
 }

@@ -36,7 +36,7 @@ Job 级 collector 在实际进入 adapter 时记录 attempt，跨线程显式传
 
 ## 8. Current Understanding results
 
-ProjectFlow 与 Corporation-Agent 均已通过真实 Sol / Responses / xhigh Current，分别两次请求。最新源码 `8dd9d6c` 上无变化重跑分别为 836 毫秒与 99 毫秒；第三项目为 19 毫秒，三份均为零请求、NOT_CALLED。重启及刷新前后完整 Current API 响应一致，旧零调用结果也继续保留。具体用量与阶段状态见 `real-model-usage.json`；History 的成功没有用于替代 Current 验收。
+ProjectFlow 与 Corporation-Agent 均已通过真实 Sol / Responses / xhigh Current，分别两次请求。此前源码 `8dd9d6c` 上无变化重跑分别为 836 毫秒与 99 毫秒；第三项目为 19 毫秒，三份均为零请求、NOT_CALLED。重启及刷新前后完整 Current API 响应一致，旧零调用结果也继续保留。具体用量与阶段状态见 `real-model-usage.json`；History 的成功没有用于替代 Current 验收。
 
 ## 9. Semantic specificity changes
 
@@ -106,7 +106,7 @@ Current 先展示用途与有来源说明，其余盘点可展开。每条声明
 
 ## 20. Backend / PostgreSQL / Windows
 
-最新源码 `8dd9d6cfeda2dfbb76118ca0f3e1b4f99a0bd6f4` 的后端/H2 全套 781 项：770 通过、11 项按既有 opt-in 边界跳过。PostgreSQL 16 集成 7 项通过且无跳过；exact V3.9 的 H2/PostgreSQL 旧库升级证明 2 项通过、无跳过，耗时 47.056 秒。前端类型检查、73 项契约和 38 项 Playwright 通过，浏览器全套耗时 3.1 分钟。Playwright 使用真实前后端、Next 开发模式与固定兼容模型，不作为真实 Sol 证明。该源码的生产包和 Windows 正在复验，旧功能源码的证据独立保留。
+最新功能源码 `b6da7f0745dfc4af91c62871a034dbdc3f20187b` 的后端/H2 全套 782 项：771 通过、11 项按既有 opt-in 边界跳过。PostgreSQL 16 集成 7 项通过且无跳过；exact V3.9 的 H2/PostgreSQL 旧库升级证明 2 项通过、无跳过，耗时 48.272 秒。前端类型检查、73 项契约和 38 项 Playwright 通过，浏览器全套耗时 3.0 分钟。Playwright 使用真实前后端、Next 开发模式与固定兼容模型，不作为真实 Sol 证明。该源码的生产包和 Windows 正在复验，旧功能源码的证据独立保留。
 
 Hermes 10 项、Obsidian 27 项通过；5,000 facts 规模的 Obsidian 无变化同步为零写入。最新便携包源提交为 `a1d4e5f443ca61900769a526e73e3564d48cf54a`，与功能源码 `80c5402` 仅有文档和证据差异。两次 bundled-runtime 启动、DPAPI、manifest、备份恢复和退出端口释放均通过；运行 PATH 不含 Maven/npm/Git。完整真实项目页面另外验收，不能把便携包 HTTP 证明扩大为完整产品验收。根启动器、OSV 与本分支 CI 仍待最终记录。
 
@@ -157,7 +157,7 @@ GitHub 复核时 #21–#24 均为开放 Draft，master 仍为 `1712841b77fd1e814
 | #22 | master | `7d5f30eff3a05105b7f3f60e07e352d297301ed5` |
 | #23 | codex/v4.0-b-gui-first-prototype | `703120998f2296b4e615cd785e651a351c5dc8c9` |
 | #24 | codex/v4.0-c-gui-productization | `81730744a325ccc2391009b367ca4ba95aef6d14` |
-| V4.0-E | codex/v4.0-d-real-project-understanding | 功能源码 `8dd9d6cfeda2dfbb76118ca0f3e1b4f99a0bd6f4`；最终证据提交与 PR 待记录 |
+| V4.0-E | codex/v4.0-d-real-project-understanding | 功能源码 `b6da7f0745dfc4af91c62871a034dbdc3f20187b`；最终证据提交与 PR 待记录 |
 
 正确顺序为 #22 → #23 → #24 → E，逐步重新定位 base 并验证 master；本轮不执行合并。#21 的 Windows 端口等待改动已经包含，Tomcat 安全基线被后续版本承接，Dogfood 时间夹具被后续实现承接，AppShell 旧版本标题改为显式工程兼容入口。不能笼统称 #21 全部已吸收：以下四份文档和两份 Agent Result 不在 E 树中，须在后续合并整理时显式保留或归档。
 
