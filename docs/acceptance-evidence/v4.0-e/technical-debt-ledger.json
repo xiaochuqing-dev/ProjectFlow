@@ -169,6 +169,30 @@
       "status": "DEFERRED_NON_BLOCKING",
       "remainingRisk": "One LOW visible wording issue; no runtime or deployment acceptance is asserted.",
       "recommendedPhase": "Focused History wording maintenance"
+    },
+    {
+      "id": "E-P1-03",
+      "debt": "Refresh time and source-label clarity",
+      "source": "Corporation independent Sol/xhigh round six, three non-blocking findings",
+      "priority": "P1",
+      "userImpact": "Different material/history read times need explicit timezone/run context; generic tool labels and main-to-itself ancestry wording require extra reading.",
+      "engineeringRisk": "A cosmetic change must not relabel source statements or imply remote/PR authority.",
+      "treatment": "Retain the review findings and verify the actual UTC timestamps; they belong to different reads, not a proven conversion defect.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "Current source cards and the single-main short label remain less direct than Story/Evidence details.",
+      "recommendedPhase": "Desktop PoC usability pass"
+    },
+    {
+      "id": "E-P1-04",
+      "debt": "Legacy Job budget fields use a different scope from aggregate transport telemetry",
+      "source": "Actual History Job metadata and ProjectAnalysisJobService/Runner inspection",
+      "priority": "P1",
+      "userImpact": "Engineering API consumers must not treat maxRequestCount=1 or maxTotalTokens=120000 as the aggregate History execution ceiling; normal V4 pages do not render those fields.",
+      "engineeringRisk": "The wrapper checks these defaults before entering History, while History bounds its own windows and each Gateway task. Combining their meanings silently would misstate limits.",
+      "treatment": "Preserve actual attempt/usage telemetry and document the mismatch; retain the existing limit of 16 Story windows and 4 Chapter synthesis windows per refresh, bounded per-task recovery and cancellation.",
+      "status": "DEFERRED_SCOPED_CONTRACT_UNIFICATION",
+      "remainingRisk": "The old generic Job budget fields remain unsuitable for displaying a whole History cost ceiling. No global budget/runner rewrite is claimed.",
+      "recommendedPhase": "Before exposing aggregate budget controls in Desktop"
     }
   ]
 }

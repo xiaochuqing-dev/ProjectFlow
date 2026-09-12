@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-09-11T20:33:07.495742+00:00",
+  "recordedAt": "2026-09-12T03:27:58.980052+00:00",
   "model": "gpt-5.6-sol",
   "protocol": "OPENAI_RESPONSES",
   "reasoningEffort": "xhigh",
@@ -89,6 +89,13 @@
       "evidenceClass": "DETERMINISTIC",
       "observed": "Existing active-job uniqueness, cancellation, window checkpoints, cache reuse, event conservation and read-only GET contracts passed the full backend/PostgreSQL suite.",
       "evidence": "verification.json; continuity-regression.json"
+    },
+    {
+      "id": "real-cancellation-and-runtime-restart",
+      "status": "PASS",
+      "evidenceClass": "REAL",
+      "observed": "Cancelling the obsolete History run retained telemetry for 18 completed transport attempts with 337959 reported tokens; the nineteenth client-cancelled attempt has unknown usage, so exact usage remains PARTIAL. Four clean successful Story windows and seven successful but wording-affected windows remained persisted. After database backup and runtime restart, all three successful Current response hashes and the prior complete History timestamp were unchanged.",
+      "evidence": "failed-runs/obsolete-history-run-cancelled.json"
     }
   ],
   "limitations": [

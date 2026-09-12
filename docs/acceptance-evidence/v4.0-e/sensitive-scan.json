@@ -1,9 +1,10 @@
 {
-  "includesMarkdownAndText": true,
-  "scope": "Tracked and non-ignored untracked text; CI secret pattern plus exact existing User credential/endpoint values; machine paths checked in new E evidence.",
-  "exactExistingCredentialAndEndpointChecked": true,
-  "findings": [],
   "status": "PASS",
-  "textFiles": 1614,
-  "scannedAt": "2026-09-12T02:59:57.5825469Z"
+  "scannedAt": "2026-09-12T03:53:14.872983+00:00",
+  "textFiles": 1628,
+  "includesMarkdownAndText": true,
+  "exactExistingCredentialAndEndpointChecked": true,
+  "filenameEnumeration": "Git NUL-separated UTF-8 filenames",
+  "findings": [],
+  "scope": "Tracked and non-ignored untracked text; CI secret patterns and exact existing Windows User credential/endpoint; machine paths in new E evidence."
 }

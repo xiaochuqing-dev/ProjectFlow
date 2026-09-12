@@ -1,0 +1,13 @@
+{
+  "type": "ACCEPTANCE_HELPER_FAILURE",
+  "attempts": 2,
+  "observed": "The local PowerShell scan helper stopped at Path.GetExtension with an illegal-path-character error. No scan PASS was inferred from either failed invocation.",
+  "origin": "The exact PowerShell filename-conversion cause was not established.",
+  "recovery": "A local Python helper enumerated Git filenames with NUL separation and UTF-8 decoding, then checked all tracked and non-ignored text against the same exact existing Windows User credential/endpoint values and sensitive-pattern rules.",
+  "recoveryStatus": "PASS",
+  "textFiles": 1628,
+  "findings": 0,
+  "credentialValuesPrintedOrStored": false,
+  "globalConfigurationChanged": false,
+  "evidence": "../sensitive-scan.json"
+}

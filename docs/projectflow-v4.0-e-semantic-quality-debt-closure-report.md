@@ -62,7 +62,9 @@ Git 用提交时间；PR 区分 merged/closed/updated/created；Tag 用真实标
 
 ## 12. ProjectFlow Dogfood
 
-使用冻结的 PR #24 只读 clone，Current 已成功。最终 History 耗时 2,749,896 毫秒，20 次实际请求；14 个窗口全部完成，篇章无失败或待处理项，4,312 个来源事件守恒，代表性覆盖为 0.6763，原 0.60 门槛未降低。第 10 次请求发生 HTTP/2 reset，第 11 次有界重试成功；总用量为 PARTIAL，已报告 297,306 tokens 不代表完整总量。随后无变化重跑耗时 20,799 毫秒、零请求。最终 34 份文本与 76 张截图已冻结，独立评审正在进行。
+使用冻结的 PR #24 只读 clone，Current 已成功。第五轮 History 耗时 2,749,896 毫秒，20 次实际请求；14 个窗口完成，4,312 个来源事件守恒，代表性覆盖为 0.6763。该轮一次 HTTP/2 reset 经有界重试恢复；已报告 297,306 tokens，总量 PARTIAL。随后无变化重跑零请求。但第五轮独立评审未通过，因此这些工程成功不计为最终语义验收。其 34 份文本、76 张截图与否定结论继续保留。
+
+第六轮运行中确认了单个坏字段仍会抹去同条有效内容，遂通过正式取消入口停止旧逻辑任务。19 次真实请求中，18 次收到响应，最后一次 CLIENT_CANCELLED；已报告 337,959 tokens，最后一次用量未知。12 个 checkpoint 保留：11 个成功、1 个取消；成功项中 4 个无须升级，7 个曾替换措辞。最新字段恢复实现只重算受影响窗口和未完成尾部，未修改只读 clone。
 
 ## 13. Corporation-Agent / third-project Dogfood
 
@@ -102,7 +104,7 @@ Current 先展示用途与有来源说明，其余盘点可展开。每条声明
 
 源码 `80c5402231df6e11a400d684ee68de68e1f78491` 的后端/H2 全套 780 项：769 通过、11 项按既有 opt-in 边界跳过。PostgreSQL 16 集成 7 项通过且无跳过；exact V3.9 final 应用创建的 H2 和 PostgreSQL 16 旧库升级证明 2 项通过、零跳过，耗时 43.628 秒。前端类型检查、73 项契约、生产构建与 38 项 Playwright 全通过；Playwright 使用真实前后端、Next 开发服务器和固定兼容模型，生产 UI 则单独构建并连接真实分析库，不能把固定模型当作 Sol。
 
-Hermes 10 项、Obsidian 27 项通过；5,000 facts 规模的 Obsidian 无变化同步为零写入。较早源码 `3baf330afed17e903967d20d1b81a83ccadfec60` 的 Windows 便携包和根启动证据已追加保留在 prior-verification；最新代码的便携包、根启动、OSV 与分支 CI 继续复验，不以旧证明冒充本轮结果。
+Hermes 10 项、Obsidian 27 项通过；5,000 facts 规模的 Obsidian 无变化同步为零写入。最新便携包源提交为 `a1d4e5f443ca61900769a526e73e3564d48cf54a`，与功能源码 `80c5402` 仅有文档和证据差异。两次 bundled-runtime 启动、DPAPI、manifest、备份恢复和退出端口释放均通过；运行 PATH 不含 Maven/npm/Git。完整真实项目页面另外验收，不能把便携包 HTTP 证明扩大为完整产品验收。根启动器、OSV 与本分支 CI 仍待最终记录。
 
 ## 21. Failures / recovery
 
@@ -117,6 +119,8 @@ Hermes 10 项、Obsidian 27 项通过；5,000 facts 规模的 Obsidian 无变化
 ## 22. Remaining debt
 
 relay/上游 reset 的最终来源仍未证明；SSE 与阶段恢复降低影响，不保证网络永不失败。普通文件没有真实发生时间就保持未知。项目级 Provider 绑定、Obsidian GUI、clone、legacy 工程工具和未来 Archify 按 Ledger 分期处理。
+
+另记录两项实际 P1：不同 read model 读取时刻和时区的提示可以更清楚；旧通用 Job DTO 的 `maxRequestCount=1`、`maxTotalTokens=120000` 不能表达多窗口 History 的聚合预算。History 实际按每轮最多 16 个 Story 窗口、4 个篇章窗口及各自 Gateway 请求/时间/token 上限执行，正常 V4 页面不展示这两个旧字段。后续若暴露桌面聚合预算控制，须先统一该契约，不能把旧字段宣传成当前全历程上限。
 
 ## 23. Owner manual review guide
 
@@ -137,7 +141,26 @@ Agent 不填写 HUMAN_PASS；Owner 的判断独立于工程与模型评审。
 
 ## 24. STACK_CONSOLIDATION_READINESS
 
-#22 基于 master，#23 基于 #22，#24 基于 #23，E 基于 #24。正确顺序为 #22 → #23 → #24 → E，逐步重新定位 base 并验证 master；本轮不执行合并。#21 的 backend、Actions 和普通 AppShell 基础已被后续包含，但四份 A 阶段 IA 文档和两份 Agent Result 不在 #22 树中，不能声称完全吸收。其审计/合同应在合并整理时显式保留或归档，不直接把 #21 全栈并入新 UI。
+GitHub 复核时 #21–#24 均为开放 Draft，master 仍为 `1712841b77fd1e8146ce4ab6beaf404e5b1f7a53`。B⊂C⊂D⊂E 已由 Git ancestry 验证；E 尚待本地完整验收后创建 Draft。
+
+| PR | base branch | actual head |
+| --- | --- | --- |
+| #21 | master | `d853e6f16d6a63562192eb51548f7b7949c2ffc9` |
+| #22 | master | `7d5f30eff3a05105b7f3f60e07e352d297301ed5` |
+| #23 | codex/v4.0-b-gui-first-prototype | `703120998f2296b4e615cd785e651a351c5dc8c9` |
+| #24 | codex/v4.0-c-gui-productization | `81730744a325ccc2391009b367ca4ba95aef6d14` |
+| V4.0-E | codex/v4.0-d-real-project-understanding | 功能源码 `80c5402231df6e11a400d684ee68de68e1f78491`；最终证据提交与 PR 待记录 |
+
+正确顺序为 #22 → #23 → #24 → E，逐步重新定位 base 并验证 master；本轮不执行合并。#21 的 Windows 端口等待改动已经包含，Tomcat 安全基线被后续版本承接，Dogfood 时间夹具被后续实现承接，AppShell 旧版本标题改为显式工程兼容入口。不能笼统称 #21 全部已吸收：以下四份文档和两份 Agent Result 不在 E 树中，须在后续合并整理时显式保留或归档。
+
+- `docs/projectflow-v4-design-system-and-desktop-foundation-research.md`
+- `docs/projectflow-v4-gui-foundation-current-state-audit.md`
+- `docs/projectflow-v4-gui-foundation-phase-a-report.md`
+- `docs/projectflow-v4-gui-foundation-product-contract.md`
+- `.projectflow/agent-results/20260904-2015-v40-gui-foundation-ia/result.json`
+- `.projectflow/agent-results/20260905-025101-v40-gui-foundation-owner-review-revision/result.json`
+
+显式 legacy dashboard 仍有 V3.9 eyebrow，#21 的 V3.10 字面标签没有被吸收。该旧页面不属于正常 V4 路由；关闭 #21 前须明确其处理决定，不直接把旧 UI 栈合进 V4。
 
 合并后 master 要重跑 Quality、PostgreSQL、exact legacy、Windows、敏感扫描和启动器。若需补最终合并 SHA/CI，仅追加 facts-only evidence backfill，不重写 ProjectFact。分支只有被确认合入、永久 Evidence 可达且 Owner 授权清理后才可删除。V4 A–E 的来源、失败、评审和升级证据永久保留。
 

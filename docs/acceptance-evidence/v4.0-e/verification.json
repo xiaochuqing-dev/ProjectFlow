@@ -1889,7 +1889,13 @@
   "acceptanceEvidenceContracts": "PASS",
   "releaseScriptContracts": "PASS",
   "rootLauncher": "PENDING_FINAL_RUNTIME",
-  "windowsPortable": "PENDING_FINAL_CLEAN_COMMIT_BUILD",
+  "windowsPortable": {
+    "status": "PASS",
+    "sourceHead": "a1d4e5f443ca61900769a526e73e3564d48cf54a",
+    "functionalSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491",
+    "evidence": "windows-portable.json",
+    "sourceDifference": "Documentation and evidence only; backend/frontend/scripts build inputs unchanged."
+  },
   "osv": "PENDING_CI",
   "sensitiveScan": "PENDING_FINAL"
 }
