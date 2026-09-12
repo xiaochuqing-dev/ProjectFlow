@@ -1,9 +1,16 @@
 param (
     [switch]$CheckOnly,
-    [switch]$NoBrowser
+    [switch]$NoBrowser,
+    [ValidateRange(1, 65535)]
+    [int]$BackendPort = 8080,
+    [ValidateRange(1, 65535)]
+    [int]$FrontendPort = 3000
 )
 
 $ErrorActionPreference = "Stop"
+if ($BackendPort -eq $FrontendPort) {
+    throw "BackendPort and FrontendPort must be different."
+}
 
 function Get-ProjectFlowFileSha256 {
     param (
@@ -305,12 +312,12 @@ try {
     $buildEvidencePath = Join-Path $logDir "last-embedded-build.json"
     Remove-Item -LiteralPath $buildEvidencePath -Force -ErrorAction SilentlyContinue
 
-    Stop-ProjectFlowProcesses -Port 3000
-    Stop-ProjectFlowProcesses -Port 8080
+    Stop-ProjectFlowProcesses -Port $FrontendPort
+    Stop-ProjectFlowProcesses -Port $BackendPort
     Clear-StaleEmbeddedDatabaseLock -DataDirectory $dataDir
 
-    $env:NEXT_PUBLIC_API_BASE_URL = "http://127.0.0.1:8080/api"
-    $env:NEXT_PUBLIC_API_PORT = "8080"
+    $env:NEXT_PUBLIC_API_BASE_URL = "http://127.0.0.1:$BackendPort/api"
+    $env:NEXT_PUBLIC_API_PORT = [string]$BackendPort
     if (-not $frontendDependenciesReady) {
         Invoke-Checked -Label "Installing frontend dependencies..." -FilePath $npmPath -Arguments @("ci") -WorkingDirectory $frontendDir
         Set-Content -LiteralPath $dependencyMarkerPath -Value $packageLockHash -Encoding ASCII
@@ -328,11 +335,11 @@ try {
     $frontendLog = Join-Path $logDir "frontend-embedded.log"
     Remove-Item -Force -ErrorAction SilentlyContinue $backendLog, $frontendLog
 
-    $frontendUrl = "http://127.0.0.1:3000/login"
-    $backendHealthUrl = "http://127.0.0.1:8080/api/health"
+    $frontendUrl = "http://127.0.0.1:$FrontendPort/login"
+    $backendHealthUrl = "http://127.0.0.1:$BackendPort/api/health"
 
-    $backendCommand = "`$env:SPRING_PROFILES_ACTIVE='embedded'; `$env:PROJECTFLOW_DATA_DIR=" + (Quote-ForPowerShell $dataDir) + "; `$env:FRONTEND_ORIGIN='http://127.0.0.1:3000,http://localhost:3000'; & " + (Quote-ForPowerShell $mavenPath) + " spring-boot:run"
-    $frontendCommand = "`$env:NEXT_PUBLIC_API_BASE_URL='http://127.0.0.1:8080/api'; & " + (Quote-ForPowerShell $npmPath) + " run start -- --hostname 127.0.0.1 --port 3000"
+    $backendCommand = "`$env:SPRING_PROFILES_ACTIVE='embedded'; `$env:SERVER_PORT='$BackendPort'; `$env:PROJECTFLOW_DATA_DIR=" + (Quote-ForPowerShell $dataDir) + "; `$env:FRONTEND_ORIGIN='http://127.0.0.1:$FrontendPort,http://localhost:$FrontendPort'; & " + (Quote-ForPowerShell $mavenPath) + " spring-boot:run"
+    $frontendCommand = "`$env:NEXT_PUBLIC_API_BASE_URL='http://127.0.0.1:$BackendPort/api'; & " + (Quote-ForPowerShell $npmPath) + " run start -- --hostname 127.0.0.1 --port $FrontendPort"
 
     Write-Host "Starting embedded backend..."
     $backendJob = Start-ProjectJob -Name "backend-embedded" -WorkingDirectory $backendDir -Command $backendCommand -LogPath $backendLog
@@ -364,6 +371,8 @@ try {
         readyAt = (Get-Date).ToString("o")
         frontendUrl = $frontendUrl
         backendHealthUrl = $backendHealthUrl
+        backendPort = $BackendPort
+        frontendPort = $FrontendPort
     } | ConvertTo-Json | Set-Content -LiteralPath $buildEvidencePath -Encoding UTF8
 
     if (-not $NoBrowser) {
