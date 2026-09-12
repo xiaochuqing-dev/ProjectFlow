@@ -199,3 +199,5 @@ Real-provider evaluation can select a separate Calibration or frozen Holdout res
 Provider capabilities are explicit inputs. `PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING=true` is used for a reasoning model whose name is not covered by the generic heuristic; the key remains process-only. Expected shapes and views are validated against production prompt and registry vocabulary before a formal run. An Evidence reference is valid only when it belongs to the current case allow-list. The older “evidence precision” metric measures selection specificity and is diagnostic; it is not used as an invalid-reference count.
 
 V4.0-E 新增声明归因、作者对象隔离、同窗恢复与大页元数据回归：英文/斜杠来源可阅读，第一层技术词泄漏仍拒绝，实际完成/验收主张仍受原门槛约束；超大 Git 页能恢复，单提交超限和截断路径仍明确不完整。实际全套、PG16、exact V3.9 与真实 Sol 结果分开记录在 E Evidence。
+
+重启兼容回归覆盖旧事件指纹与 JSON 对象字段顺序：全部来源字段相同则保留已有指纹，实际 coverage 值变化仍产生更新；不会把数组成员、时间、来源身份或权威变化当成无变化。真实运行的重启前后复用证据单独记录，合成回归不代替真实模型验收。

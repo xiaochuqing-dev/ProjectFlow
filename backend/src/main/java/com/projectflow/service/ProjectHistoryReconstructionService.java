@@ -15,6 +15,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.UUID;
@@ -409,7 +410,8 @@ public class ProjectHistoryReconstructionService {
                     added++;
                     replace = true;
                     mutationKind = "ADDED";
-                } else if (!draft.payloadHash().equals(event.getPayloadHash()) || event.getRewriteState() != RewriteState.CURRENT) {
+                } else if (event.getRewriteState() != RewriteState.CURRENT
+                    || (!draft.payloadHash().equals(event.getPayloadHash()) && !sameSourcePayload(event, draft))) {
                     updated++;
                     replace = true;
                     mutationKind = "UPDATED";
@@ -477,6 +479,33 @@ public class ProjectHistoryReconstructionService {
                 preservedUnseen, affectedFrom, mode, List.copyOf(mutations)
             );
         });
+    }
+
+    private boolean sameSourcePayload(ProjectHistoryEvent event, CollectedEvent draft) {
+        // Legacy fingerprints include Map iteration order, which can change across JVMs.
+        // Keep the existing hash and checkpoints only when every source field is equal.
+        try {
+            return event.getSourceType() == draft.sourceType()
+                && Objects.equals(event.getSourceIdentity(), draft.sourceIdentity())
+                && Objects.equals(event.getSourceRevision(), draft.sourceRevision())
+                && Objects.equals(event.getProjectRevision(), draft.projectRevision())
+                && Objects.equals(event.getOccurredAt(), draft.occurredAt())
+                && Objects.equals(event.getEffectiveAt(), draft.effectiveAt())
+                && Objects.equals(event.getActorLabel(), draft.actorLabel())
+                && event.getScope() == draft.scope() && event.getCategory() == draft.category()
+                && event.getTransition() == draft.transition()
+                && Objects.equals(event.getSafeSourceLabel(), draft.safeSourceLabel())
+                && event.getAuthority() == draft.authority() && event.getEpistemicStatus() == draft.epistemicStatus()
+                && Objects.equals(event.getRawSourceDeepLink(), draft.rawSourceDeepLink())
+                && objectMapper.readTree(event.getAffectedPathsJson()).equals(objectMapper.valueToTree(draft.affectedPaths()))
+                && objectMapper.readTree(event.getSubjectKeysJson()).equals(objectMapper.valueToTree(draft.subjectKeys()))
+                && objectMapper.readTree(event.getEvidenceRefsJson()).equals(objectMapper.valueToTree(draft.evidenceRefs()))
+                && objectMapper.readTree(event.getRelationRefsJson()).equals(objectMapper.valueToTree(draft.relationRefs()))
+                && objectMapper.readTree(event.getLimitationsJson()).equals(objectMapper.valueToTree(draft.limitations()))
+                && objectMapper.readTree(event.getCoverageJson()).equals(objectMapper.readTree(json(draft.coverage())));
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     private void beginSnapshot(UUID projectId, UUID jobId, boolean changed) {

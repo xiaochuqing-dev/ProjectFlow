@@ -1854,13 +1854,14 @@
     "lint": "PASS",
     "contracts": 73,
     "contractsFailed": 0,
-    "productionBuild": "PENDING_FINAL_PRODUCTION_BUILD",
+    "productionBuild": "PASS",
     "playwright": {
       "passed": 38,
       "failed": 0,
       "duration": "3.1m",
       "scope": "Real backend/browser and fixed compatible model service; not real Sol acceptance"
-    }
+    },
+    "productionBuildEvidence": "windows-portable.json"
   },
   "hermes": {
     "passed": 10,
@@ -1889,7 +1890,13 @@
   "acceptanceEvidenceContracts": "PASS",
   "releaseScriptContracts": "PASS",
   "rootLauncher": "PENDING_FINAL_RUNTIME",
-  "windowsPortable": "PENDING_FINAL_CLEAN_COMMIT_BUILD",
+  "windowsPortable": {
+    "status": "PASS",
+    "evidence": "windows-portable.json",
+    "sourceHead": "1e65d70ed0b921300ffae69ff75e65c968da52dc",
+    "functionalSourceHead": "8dd9d6cfeda2dfbb76118ca0f3e1b4f99a0bd6f4",
+    "sourceDifference": "Documentation/evidence only"
+  },
   "osv": "PENDING_CI",
   "sensitiveScan": "PENDING_FINAL"
 }

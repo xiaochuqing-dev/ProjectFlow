@@ -90,6 +90,46 @@ class ProjectHistoryReconstructionTest {
     @TempDir Path temporaryRoot;
 
     @Test
+    void reorderedCoverageKeepsLegacyEventFingerprintAndRealCoverageChangesStillInvalidate() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path root = temporaryRoot.resolve("coverage-order-restart");
+        Path result = root.resolve(".projectflow/agent-results/review/result.json");
+        Files.createDirectories(result.getParent());
+        Files.writeString(result, "{\"actualChanges\":[\"审核记录增加来源说明\"],\"keyFiles\":[\"src/Review.java\"]}");
+        ProjectSpace project = project(userId, "Coverage order", root);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        var event = eventRepository.findByProjectId(project.getId()).stream()
+            .filter(value -> value.getSourceType().name().equals("AGENT_RESULT")).findFirst().orElseThrow();
+        JsonNode coverage = objectMapper.readTree(event.getCoverageJson());
+        var reversed = objectMapper.createObjectNode();
+        List<String> keys = new ArrayList<>();
+        coverage.fieldNames().forEachRemaining(keys::add);
+        java.util.Collections.reverse(keys);
+        keys.forEach(key -> reversed.set(key, coverage.get(key)));
+        // Model a legacy JVM's order-dependent fingerprint without changing any source field.
+        String legacyHash = "a".repeat(64);
+        org.springframework.test.util.ReflectionTestUtils.setField(event, "coverageJson", reversed.toString());
+        org.springframework.test.util.ReflectionTestUtils.setField(event, "payloadHash", legacyHash);
+        eventRepository.saveAndFlush(event);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(eventRepository.findById(event.getId()).orElseThrow().getPayloadHash()).isEqualTo(legacyHash);
+        assertThat(readService.overview(userId, project.getId()).diagnostics()).containsEntry("updatedEventCount", 0);
+        assertThat(reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false).cacheHit()).isTrue();
+
+        // Different metadata is a real mutation, even when its keys have the same names.
+        reversed.put("claimOnly", false);
+        org.springframework.test.util.ReflectionTestUtils.setField(event, "coverageJson", reversed.toString());
+        eventRepository.saveAndFlush(event);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(readService.overview(userId, project.getId()).diagnostics()).containsEntry("updatedEventCount", 1);
+        assertThat(objectMapper.readTree(eventRepository.findById(event.getId()).orElseThrow().getCoverageJson())
+            .path("claimOnly").asBoolean()).isTrue();
+        assertThat(factRepository.countByProjectId(project.getId())).isZero();
+        verifyNoInteractions(modelGateway);
+    }
+
+    @Test
     void agentStatementPreservesVerificationAndUnfinishedScopeWithoutBecomingFact() throws Exception {
         UUID userId = UUID.randomUUID();
         Path root = temporaryRoot.resolve("invoice-process-record");

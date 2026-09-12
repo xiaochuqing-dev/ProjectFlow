@@ -18,6 +18,8 @@ Story-only semantic recovery preserves validated siblings and, within a rejected
 
 The ordinary title/summary fallback also retains an independently useful field when replacing its weaker partner. The retained field must pass the existing usefulness check on its own, and the combined Story still passes the complete authority validator. A pair that omits the supported result retains the deterministic fallback. This local validation change adds no model call and does not invalidate already valid checkpoints.
 
+Legacy source fingerprints can depend on JSON object iteration order across JVMs. When a collected hash differs, the existing event upsert compares every source field and parsed JSON value before declaring a mutation. Equal content retains the stored hash and its successful checkpoints; changed metadata, ordered membership, time, identity, authority or invalid JSON still causes normal replacement. This compatibility check does not bulk rewrite fingerprints or invalidate successful windows.
+
 
 ## V4.0-D persisted Workspace reads
 

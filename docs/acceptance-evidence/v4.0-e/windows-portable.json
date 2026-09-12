@@ -1,29 +1,29 @@
 {
-  "archiveSha256": "331ea1362ae4108ed41c2ad2a77af6321b3bcb576ef763348d260266587f9ee2",
+  "scope": "Local Windows bundled runtime; no Tag, Release or desktop shell",
+  "schemaClassification": "KNOWN_CURRENT",
+  "verifiedAt": "2026-09-12T05:28:32.2461030Z",
+  "archiveSha256": "fc2a4fb8c85885bfeec544f260840a52877da7c2591b2c289d0bf9b25c8c8e42",
+  "restore": "PASS",
+  "backup": "PASS",
+  "dpapi": "PASS",
+  "manifestBeforeAndAfter": "PASS",
   "startups": [
     {
-      "developerToolsExcluded": true,
-      "backend": 200,
       "bundledRuntimeVerified": true,
-      "frontend": 200,
-      "round": 1
+      "backend": 200,
+      "developerToolsExcluded": true,
+      "round": 1,
+      "frontend": 200
     },
     {
-      "developerToolsExcluded": true,
-      "backend": 200,
       "bundledRuntimeVerified": true,
-      "frontend": 200,
-      "round": 2
+      "backend": 200,
+      "developerToolsExcluded": true,
+      "round": 2,
+      "frontend": 200
     }
   ],
-  "dpapi": "PASS",
-  "scope": "Local Windows bundled runtime; no Tag, Release or desktop shell",
-  "backup": "PASS",
-  "manifestBeforeAndAfter": "PASS",
-  "portsReleased": true,
   "status": "PASS",
-  "schemaClassification": "KNOWN_CURRENT",
-  "sourceHead": "a1d4e5f443ca61900769a526e73e3564d48cf54a",
-  "verifiedAt": "2026-09-12T03:04:03.3497533Z",
-  "restore": "PASS"
+  "sourceHead": "1e65d70ed0b921300ffae69ff75e65c968da52dc",
+  "portsReleased": true
 }
