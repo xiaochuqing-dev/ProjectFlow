@@ -2839,8 +2839,18 @@ public class ProjectHistoryReconstructionService {
         }
         boolean deterministicTitleFallback = false;
         if (!narrativeValidator.semanticallyUseful(title, summary, envelope)) {
-            title = original.humanTitle();
-            summary = original.oneSentenceSummary();
+            // Keep independently useful wording; the full authority validator
+            // below still checks the complete combined Story.
+            if (narrativeValidator.semanticallyUseful(summary, summary, envelope)
+                && narrativeValidator.semanticallyUseful(original.humanTitle(), summary, envelope)) {
+                title = original.humanTitle();
+            } else if (narrativeValidator.semanticallyUseful(title, title, envelope)
+                && narrativeValidator.semanticallyUseful(title, original.oneSentenceSummary(), envelope)) {
+                summary = original.oneSentenceSummary();
+            } else {
+                title = original.humanTitle();
+                summary = original.oneSentenceSummary();
+            }
             deterministicTitleFallback = true;
             if (!narrativeValidator.hasActionObjectResult(title, summary)) {
                 throw new HistoryValidationException(

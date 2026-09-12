@@ -16,6 +16,8 @@ Historical document content reuses the existing Git collector through fixed argu
 
 Story-only semantic recovery preserves validated siblings and, within a rejected Story, independently valid wording groups. At most eight local candidates run through the same complete Story validator; rejected fields retain the source-bounded draft. Reason references are checked before wording, and invalid IDs, Evidence or shape still reject the window. The existing single model repair and final whole-output validation remain mandatory. Transient rejected wording is never persisted. An explicit refresh upgrades only legacy checkpoints that actually replaced rejected Stories; clean windows remain cached, and a safe recovery-version marker restores subsequent zero-call no-change reads.
 
+The ordinary title/summary fallback also retains an independently useful field when replacing its weaker partner. The retained field must pass the existing usefulness check on its own, and the combined Story still passes the complete authority validator. A pair that omits the supported result retains the deterministic fallback. This local validation change adds no model call and does not invalidate already valid checkpoints.
+
 
 ## V4.0-D persisted Workspace reads
 

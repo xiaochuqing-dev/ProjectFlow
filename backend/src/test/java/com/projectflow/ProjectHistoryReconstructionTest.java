@@ -1262,6 +1262,36 @@ class ProjectHistoryReconstructionTest {
     }
 
     @Test
+    void nonActionTitleRetainsAnIndependentlySupportedSummary() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("useful-summary-title-fallback");
+        Files.createDirectories(repository);
+        ProjectSpace project = project(userId, "Independent Summary Preservation", repository);
+        historicalFacts(project, 1, 1, 1, 0);
+        provider(userId);
+        String detail = "本条记录区分来源文字与实际运行结果。";
+        AtomicInteger calls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            calls.incrementAndGet();
+            JsonNode output = objectMapper.readTree(historyModelResponse(invocation.getArgument(1, String.class)));
+            var story = (com.fasterxml.jackson.databind.node.ObjectNode) output.path("stories").get(0);
+            story.put("humanTitle", "目前的工程背景");
+            story.put("oneSentenceSummary", story.path("oneSentenceSummary").asText() + detail);
+            return modelResponse(objectMapper.writeValueAsString(output));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        assertThat(calls.get()).isEqualTo(1);
+        assertThat(readService.stories(userId, project.getId(), null, false, null, null, 0, 100).items())
+            .singleElement().satisfies(story -> {
+                assertThat(story.humanTitle()).isNotEqualTo("目前的工程背景");
+                assertThat(story.oneSentenceSummary()).contains(detail);
+            });
+        assertThat(factRepository.countByProjectId(project.getId())).isEqualTo(1);
+    }
+
+    @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void upgradesOnlyLegacyRepairedWindowsAndThenReturnsToZeroCallCacheHits() throws Exception {
         UUID userId = UUID.randomUUID();

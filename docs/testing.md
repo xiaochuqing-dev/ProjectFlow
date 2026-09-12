@@ -12,6 +12,8 @@ Real Sol/xhigh Current, History, failures/recovery, independent visible-product 
 
 Document-delta regressions verify bounded source excerpts, exact version changes, retained immutable annotations and unchanged reruns. Additional semantic regressions keep document test/release statements below runtime authority and prevent singleton manifest/schema files from becoming a whole-project skeleton. Recovery tests retain valid siblings plus the specific summary/change inside a Story with an unsafe after-state; an unsafe title cannot erase an independently valid summary. Ineligible reason Evidence is rejected even when the title is also unsafe. Existing invalid-ID, mixed-Chapter and unsupported-claim assertions remain unchanged. A two-window legacy-cache test verifies one repaired window is upgraded, the clean row is untouched, and a subsequent unchanged refresh uses zero calls. Facts remain unchanged throughout.
 
+`nonActionTitleRetainsAnIndependentlySupportedSummary` reproduces loss of a valid summary when an otherwise safe title lacks an action. The fix preserves that summary with one model call and unchanged Fact count; the existing missing-result test continues to require the deterministic pair. The four focused preservation regressions passed after the initial red reproduction and a rejected broader fallback attempt, which remain recorded as failures.
+
 
 ## V4.0-D acceptance boundary
 
