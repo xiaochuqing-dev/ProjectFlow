@@ -1,0 +1,8 @@
+{
+  "type": "ACCEPTANCE_TERMINAL_LIFETIME",
+  "recordedAt": "2026-09-12T07:03:00Z",
+  "sourceHead": "268172023810119ffa18b4bcbde193e2ce0e37e0",
+  "observation": "The corrected root batch invocation rebuilt successfully and emitted a ready build record, then exited its Enter-to-stop lifecycle because the non-interactive command input closed. The subsequent browser check received connection refused.",
+  "correction": "Run the same root batch from the same different directory in an allocated terminal, keeping its interactive input open. No repository code or configuration change.",
+  "scope": "The premature terminal exit is not counted as a retained-runtime UI pass. Final retained-runtime evidence is recorded separately in windows-launcher.json."
+}

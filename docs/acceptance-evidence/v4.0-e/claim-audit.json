@@ -4,7 +4,7 @@
   "recentStories": [
     {
       "project": "Corporation-Agent",
-      "title": "新增和更新项目检查记录与文档，留下测试、检查与发布核对说明",
+      "title": "新增和修改项目检查记录与文档",
       "classification": "OBSERVED",
       "time": {
         "basis": "GIT_COMMIT_TIME",
@@ -58,7 +58,7 @@
     },
     {
       "project": "Corporation-Agent",
-      "title": "新增并更新项目版本记录，形成从 2.0.0 到 2.2.0 的版本文字记录",
+      "title": "新增并更新项目版本记录，留下 2.0.0 至 2.2.0 的版本变更链",
       "classification": "OBSERVED",
       "time": {
         "basis": "GIT_COMMIT_TIME",
@@ -80,7 +80,7 @@
     },
     {
       "project": "Corporation-Agent",
-      "title": "新增并更新项目使用说明，形成覆盖多个版本内容的说明记录",
+      "title": "新增并更新项目使用说明，形成 2.0.0 至 2.2.0 的版本说明记录",
       "classification": "OBSERVED",
       "time": {
         "basis": "GIT_COMMIT_TIME",
@@ -106,7 +106,7 @@
     },
     {
       "project": "Corporation-Agent",
-      "title": "更新项目报告（版本2.0.0、2.1.0），留下发布顺序及验收检查结果的文字记录",
+      "title": "修改项目报告（版本2.0.0、2.1.0）",
       "classification": "OBSERVED",
       "time": {
         "basis": "GIT_COMMIT_TIME",
@@ -131,7 +131,7 @@
     },
     {
       "project": "Corporation-Agent",
-      "title": "调整协作、成果交付、提交审核相关的前后端代码、文档与脚本，留下多类文件的修改记录",
+      "title": "修改协作、成果交付、提交审核相关的前后端代码、文档与脚本",
       "classification": "OBSERVED",
       "time": {
         "basis": "GIT_COMMIT_TIME",
@@ -160,7 +160,7 @@
     },
     {
       "project": "Corporation-Agent",
-      "title": "从对应版本中移除图片资料，留下删除记录",
+      "title": "移除图片资料，记录一次版本内的删除",
       "classification": "REMOVED",
       "time": {
         "basis": "GIT_COMMIT_TIME",
@@ -182,7 +182,7 @@
     },
     {
       "project": "Corporation-Agent",
-      "title": "修改项目历程、来源证据、协作相关的前后端代码与文档，留下覆盖接口、测试和报告的变更记录",
+      "title": "修改项目历程、来源证据、协作相关的前后端代码、文档",
       "classification": "OBSERVED",
       "time": {
         "basis": "GIT_COMMIT_TIME",
@@ -211,7 +211,7 @@
     },
     {
       "project": "ProjectFlow",
-      "title": "记录合并请求24（真实项目理解、来源边界与开发工作线）的说明，形成待核实的范围声明",
+      "title": "记录合并请求24对真实项目理解、来源边界和开发工作线的说明，形成可追溯的来源声明",
       "classification": "DECLARED",
       "time": {
         "basis": "PR_UPDATED_AT",
@@ -231,7 +231,7 @@
     },
     {
       "project": "ProjectFlow",
-      "title": "更新项目检查记录与截图，形成可追溯的审阅材料",
+      "title": "更新项目检查记录与截图，形成可追溯的检查材料",
       "classification": "OBSERVED",
       "time": {
         "basis": "GIT_COMMIT_TIME",
@@ -260,7 +260,7 @@
     },
     {
       "project": "ProjectFlow",
-      "title": "整理开发工作线相关代码，留下待核实的变化记录",
+      "title": "记录开发助手对开发工作线相关代码的调整报告，形成包含检查结果和未完成项的过程声明",
       "classification": "UNKNOWN",
       "time": {
         "basis": "AGENT_GIT_RECORD_TIME",
@@ -289,7 +289,7 @@
     },
     {
       "project": "ProjectFlow",
-      "title": "更新项目上下文说明，留下可追溯的日期记录",
+      "title": "更新项目上下文说明，形成连续日期变更记录",
       "classification": "OBSERVED",
       "time": {
         "basis": "GIT_COMMIT_TIME",
@@ -313,7 +313,7 @@
     },
     {
       "project": "ProjectFlow",
-      "title": "更新项目理解、工作区和项目历程相关的前后端代码与文档，形成V4.0-D范围与依赖说明",
+      "title": "调整项目理解、工作区和项目历程的前后端代码与文档，留下可追溯的变更及说明",
       "classification": "OBSERVED",
       "time": {
         "basis": "GIT_COMMIT_TIME",
@@ -342,7 +342,7 @@
     },
     {
       "project": "ProjectFlow",
-      "title": "更新项目理解、开发工作线和工作区相关的前后端代码，形成组件与服务的变更记录",
+      "title": "调整项目理解、开发工作线和工作区的前后端代码，形成可追溯的代码与文件变更",
       "classification": "OBSERVED",
       "time": {
         "basis": "GIT_COMMIT_TIME",
@@ -371,7 +371,7 @@
     },
     {
       "project": "ProjectFlow",
-      "title": "更新项目理解、开发工作线和工作区相关的前后端代码与文档，形成可追溯的变更记录",
+      "title": "修改项目理解、开发工作线、工作区相关的前后端代码、文档",
       "classification": "OBSERVED",
       "time": {
         "basis": "GIT_COMMIT_TIME",

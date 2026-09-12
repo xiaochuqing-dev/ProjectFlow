@@ -1,0 +1,14 @@
+{
+  "status": "PENDING_FIRST_V4_0_E_PUSH",
+  "repository": "xiaochuqing-dev/ProjectFlow",
+  "branch": "codex/v4.0-e-semantic-quality-debt-closure",
+  "baseBranch": "codex/v4.0-d-real-project-understanding",
+  "baseHead": "81730744a325ccc2391009b367ca4ba95aef6d14",
+  "checks": [],
+  "scope": "Local and independent semantic acceptance is complete. No V4.0-E GitHub run is claimed until its actual push and pull-request required checks finish.",
+  "ownerReview": "NOT_REVIEWED",
+  "merge": false,
+  "ready": false,
+  "tag": false,
+  "release": false
+}

@@ -1,0 +1,213 @@
+变化详情
+ProjectFlow · 工作结果入库时间 · 2026-09-10
+记录开发助手对开发工作线相关代码的调整报告，形成包含检查结果和未完成项的过程声明
+
+工作记录涵盖信息来源区分、项目历程阅读方式、构建与测试结果记录以及项目理解生成失败的记录；实际实现和验证效果均未获独立核实。
+
+01
+此前状态
+
+这份工作记录没有独立证明调整前的代码和界面状态。
+
+02
+本次变化
+
+开发助手报告，本阶段让“当前状态”区分来源支持的变化、项目说明或合并请求声明、系统归纳、本地观察与未知，不再生成无来源的百分比或阶段节点，也不再把观察到的基础文件描述成首次完成整套产品；项目历程则默认先显示变化概览，再按时间或长期主题阅读，并在分页前完成近期排序，在故事与工程证据的下钻中保留来源强弱。
+
+03
+当前结果
+
+开发过程声明已经保留，实现和验证结果仍需要独立证据。
+
+尚未确认
+目前没有足够信息确认为什么做这次调整。
+覆盖与缺口
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。
+查看工程证据与来源
+开发助手的工作结果声明
+
+Agent 工作结果 · 修改 · 在本次读取的历史中
+
+覆盖与缺口
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。
+收起 Evidence 详情
+变更声明：Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。；项目历程默认显示变化概览，再按时间或长期主题阅读；近期排序在分页前完成，Story 与工程 Evidence 下钻保留来源强弱。。验证声明：构建：最终显示修正已通过 Windows 根入口从工作区外相对路径生产构建与前后端启动，Enter 正常退出，3000/8080 无监听残留。；测试：功能 Head 2c14bf1 CI：backend/H2 739（12 skipped，727 执行）、PG16 integration 6 + …；人工检查：AGENT_VISUAL_REVIEW 与 AGENT_SOURCE_AUDIT 已执行；高风险无来源陈述 0，20 条真实分支核对通过。MODEL…。未完成声明：两份真实当前材料 Understanding 在 Sol/xhigh、900 秒配置下均因 HTTP/2 CANCEL 失败；保留本地观察，缺少成功当前能力语义结果。；History 仍有过于笼统的材料[ABSOLUTE_PATH_REDACTED] Agent 文件的实际发生时间未充分证明；尚不能宣称新用户理解目标全部达成。
+
+agent-result:.projectflow/agent-results/20260910-v40d-real-project-understanding/result.json
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。
+
+同一来源的关联引用
+
+file:backend/src/main/java/com/projectflow/service/ProjectWorklineCollector.java
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。
+
+同一来源的关联引用
+
+file:backend/src/main/java/com/projectflow/service/ProjectHistorySourceCollector.java
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。
+
+同一来源的关联引用
+
+file:backend/src/main/java/com/projectflow/service/ProjectHistoryReadService.java
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。
+
+同一来源的关联引用
+
+file:backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。
+
+同一来源的关联引用
+
+file:frontend/src/components/workspace/RealCurrentPage.tsx
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。
+
+同一来源的关联引用
+
+file:frontend/src/components/workspace/WorklineReader.tsx
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。
+
+同一来源的关联引用
+
+file:frontend/src/components/workspace/HistoryReader.tsx
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。
+
+同一来源的关联引用
+
+file:frontend/src/components/workspace/Workspace.tsx
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。
+
+同一来源的关联引用
+
+file:frontend/src/lib/workspace-claims.ts
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。
+
+同一来源的关联引用
+
+file:docs/projectflow-v4.0-d-real-project-understanding-report.md
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。
+
+同一来源的关联引用
+
+file:docs/acceptance-evidence/v4.0-d/verification.json
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。
+
+原始提交与来源信息
+
+变更声明：Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。；项目历程默认显示变化概览，再按时间或长期主题阅读；近期排序在分页前完成，Story 与工程 Evidence 下钻保留来源强弱。。验证声明：构建：最终显示修正已通过 Windows 根入口从工作区外相对路径生产构建与前后端启动，Enter 正常退出，3000/8080 无监听残留。；测试：功能 Head 2c14bf1 CI：backend/H2 739（12 skipped，727 执行）、PG16 integration 6 + …；人工检查：AGENT_VISUAL_REVIEW 与 AGENT_SOURCE_AUDIT 已执行；高风险无来源陈述 0，20 条真实分支核对通过。MODEL…。未完成声明：两份真实当前材料 Understanding 在 Sol/xhigh、900 秒配置下均因 HTTP/2 CANCEL 失败；保留本地观察，缺少成功当前能力语义结果。；History 仍有过于笼统的材料[ABSOLUTE_PATH_REDACTED] Agent 文件的实际发生时间未充分证明；尚不能宣称新用户理解目标全部达成。
+
+工作结果入库时间 · 2026-09-10T05:24:46Z
+
+开发过程记录 · 开发过程记录
+
+backend/src/main/java/com/projectflow/service/ProjectWorklineCollector.java
+
+backend/src/main/java/com/projectflow/service/ProjectHistorySourceCollector.java
+
+backend/src/main/java/com/projectflow/service/ProjectHistoryReadService.java
+
+backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java
+
+frontend/src/components/workspace/RealCurrentPage.tsx
+
+frontend/src/components/workspace/WorklineReader.tsx
+
+frontend/src/components/workspace/HistoryReader.tsx
+
+frontend/src/components/workspace/Workspace.tsx
+
+frontend/src/lib/workspace-claims.ts
+
+docs/projectflow-v4.0-d-real-project-understanding-report.md
+
+docs/acceptance-evidence/v4.0-d/verification.json
+
+工程兼容工具：来源审计与修正
+查看故事工程详情
+返回阅读
+工程证据始终保留，展示不会改变事实

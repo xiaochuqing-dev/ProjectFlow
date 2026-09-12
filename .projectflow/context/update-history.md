@@ -4,7 +4,7 @@
 
 在 #24 的独立工作树中，长 reasoning Responses 改用官方 SDK SSE，完整 terminal 才进入业务 JSON 校验。每次实际请求的次数、失败类型、延迟和可用 usage 独立记录，零变化不复读历史消耗；同源规范化 Scout checkpoint 支持只恢复最终阶段。真实第三项目揭示的最终归纳失败缓存误判已加入恢复与 UI 状态保护。
 
-Current 按有来源的用途/能力说明排序并可下钻；History 以现有 subject 和有界路径提供具体文件对象，不提升声明、过程证据或 broad owner 权威。提交时间、Agent Git 入库时间、观察时间和未知时间明确分开。两份真实 Current 成功与每次失败分别记录，最终评审/测试/Windows/CI 结果见 V4.0-E 报告和 Evidence。继续 stacked Draft、Owner NOT_REVIEWED，无自动合并或 Release。
+Current 按有来源的用途/能力说明排序并可下钻；History 以现有 subject 和有界路径提供具体文件对象，不提升声明、过程证据或 broad owner 权威。提交时间、Agent Git 入库时间、观察时间和未知时间明确分开。两份真实 Current、最终 History 与零请求复用已完成。真实重启修复保留 4,312 条来源及 12 个成功窗口，仅恢复剩余两窗口和篇章；ProjectFlow 14/14、Corporation 2/2 窗口完成，独立 Sol/xhigh 均 PASS。后端/H2、PostgreSQL、exact 旧库升级、浏览器与 Windows 通过；每次失败、未知用量、非阻断评审项及最终 CI 分别记录在 V4.0-E 报告和 Evidence。继续 stacked Draft、Owner NOT_REVIEWED，无自动合并或 Release。
 
 
 ## ProjectFlow V4.0-D 真实验收收尾 - 2026-09-10

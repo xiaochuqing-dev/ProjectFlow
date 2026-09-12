@@ -1,10 +1,12 @@
 # Known risks
 
+- E 最终独立 Sol/xhigh 两项目均 PASS；ProjectFlow 仍有时间篇章泛化等 5 项非阻断建议，Corporation 有标题、长来源列表和窄屏浮层 3 项。它们与所有旧否定评审一起留在 E Evidence / Ledger，不能把 PASS 宣称为零缺陷或 Owner 通过。
+
 - E 的文档文本差异只作有界内容证据；文档里写有测试或发布结果，不等于系统已独立验证。多轮独立评审与整窗恢复导致具体措辞丢失的真实记录保留在 E failed-runs；最终语义结论必须由修复后的可见页面重新评审。
 
 - Corporation-Agent 第五轮独立 Sol/xhigh 已 PASS，仍保留 LOW 级 CA-SOL-01：局部来源卡的“完善项目骨架”比直接文件证据范围偏宽；主 Story 已明确未独立验证运行结果。该项不作为零缺陷或运行验收通过的依据。
 
-- V4.0-E 的两份真实 Sol/xhigh Current 已成功；此前 D 的 HTTP/2 CANCEL 与 E 的 History reset、上游流读取中断全部保留。不能把 relay/上游/SDK/Windows 中任一方当作已证实根因；SSE、两次有界 retry 和 Scout checkpoint 是已实施的缓解，不能保证网络永不失败。
+- V4.0-E 的两份真实 Sol/xhigh Current 已成功；此前 D 的 HTTP/2 CANCEL 与 E 的 History reset、上游流读取中断全部保留。不能把 relay/上游/SDK/Windows 中任一方当作已证实根因；SSE、最多两次 transport 请求和 Scout checkpoint 是已实施的缓解，不能保证网络永不失败。
 - E 的请求遥测区分已报告用量与完整精确用量。失败没有 terminal usage 时必须 UNKNOWN/PARTIAL，不补零、不估费用；恢复只复用当前来源、模型、协议和 effort 一致的规范化 checkpoint。旧成功缓存若 finalSynthesisStatus 为 FAILED_DEGRADED，显式刷新必须重试。
 - 更具体的文件名/文档主体仍不证明运行可用。Agent 入库时间只代表过程记录；文件观察时间不能冒充功能完成日期。普通无可靠发生时间的资料继续显示未知。
 - E 的语义评审、Windows、CI、Desktop Shell 技术入口与待处理债以本轮 Evidence 为准。下面 D/C/V3.x 条目保留当时失败与限制，不自动代表 E 当前结论；Owner Review 不因 MODEL_REVIEW 或自动测试而变为通过。

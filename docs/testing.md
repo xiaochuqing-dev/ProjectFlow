@@ -201,3 +201,5 @@ Provider capabilities are explicit inputs. `PROJECTFLOW_REAL_MODEL_SUPPORTS_REAS
 V4.0-E 新增声明归因、作者对象隔离、同窗恢复与大页元数据回归：英文/斜杠来源可阅读，第一层技术词泄漏仍拒绝，实际完成/验收主张仍受原门槛约束；超大 Git 页能恢复，单提交超限和截断路径仍明确不完整。实际全套、PG16、exact V3.9 与真实 Sol 结果分开记录在 E Evidence。
 
 重启兼容回归覆盖旧事件指纹、JSON 对象字段顺序、较早的项目 HEAD 和实际落库重读：相同来源内容按现有 TIMESTAMP(6) 精度比较后保留已有指纹，实际 coverage 值或时间变化仍产生更新。不会把有序成员、来源身份或权威变化当成无变化。真实运行的重启前后复用证据单独记录，合成回归不代替真实模型验收。
+
+V4.0-E root coexistence proof: optional integer `BackendPort` / `FrontendPort` keep the 8080/3000 defaults, reject out-of-range or equal ports before execution, and configure both built frontend/API routing and readiness URLs. PowerShell parse, invalid-parameter checks, explicit `-CheckOnly`, existing release-script and 73 frontend contracts passed. The actual root batch ran from another working directory with 18041/13041 and retained all three real projects; an unrelated service on 8080 was left running. This launcher-only successor does not change the backend/frontend semantic source or frozen model-review inputs.

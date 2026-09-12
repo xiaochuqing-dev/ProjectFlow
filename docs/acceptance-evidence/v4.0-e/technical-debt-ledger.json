@@ -1,6 +1,6 @@
 {
   "phase": "V4.0-E Draft",
-  "status": "IN_PROGRESS",
+  "status": "P0_CLOSED_FINAL_CI_PENDING",
   "items": [
     {
       "id": "E-P0-01",
@@ -10,7 +10,7 @@
       "userImpact": "No usable current material understanding",
       "engineeringRisk": "Unknown transport origin and repeated expensive work",
       "treatment": "Official SDK streaming for long reasoning requests; existing bounded retry; validated Scout checkpoint",
-      "status": "REAL_SUCCESS_OBSERVED",
+      "status": "CLOSED_VERIFIED",
       "remainingRisk": "Reset origin UNDETERMINED; two successes do not establish an outage rate",
       "recommendedPhase": "V4.0-E"
     },
@@ -22,7 +22,7 @@
       "userImpact": "Reported zero calls or misleading cost",
       "engineeringRisk": "Budget and recovery decisions lose transport evidence",
       "treatment": "Per-Job attempt collector persisted on heartbeat and finalization; nullable unknown totals and reported partial sums; cache runs excluded",
-      "status": "FOCUSED_TESTS_PASSED",
+      "status": "CLOSED_VERIFIED",
       "remainingRisk": "Unknown upstream usage remains explicitly unknown; no billing total is inferred",
       "recommendedPhase": "V4.0-E"
     },
@@ -34,8 +34,8 @@
       "userImpact": "Users cannot tell what changed",
       "engineeringRisk": "Specificity may inflate authority or alter grouping",
       "treatment": "Exact-commit ownership, diverse bounded paths, short historical document content, temporal limits, and preservation of independently validated Story wording during the existing single repair. Preserve the owning commit/Agent statement with explicit author identity, verification scope and unfinished work; process-only actual state remains UNKNOWN. Independently useful title/summary fields also survive a weaker partner; full authority validation and supported-result fallback remain required.",
-      "status": "CORPORATION_FINAL_PASS_PROJECTFLOW_PENDING",
-      "remainingRisk": "Latest Corporation visible review and Workline-only timestamp addendum passed. ProjectFlow retains prior NEEDS_REVISION reviews; two failed History windows, chapters and its final fresh review remain in progress.",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "Both independent Sol/xhigh visible reviews passed. Non-blocking wording and reading issues remain listed separately; Owner Review is NOT_REVIEWED.",
       "recommendedPhase": "V4.0-E"
     },
     {
@@ -46,8 +46,8 @@
       "userImpact": "False chronology",
       "engineeringRisk": "Clone mtime contaminates project history",
       "treatment": "Source-aware time basis; reuse collected Git record dates for Agent results; explicit observation and unknown labels",
-      "status": "IMPLEMENTED_UNDER_VERIFICATION",
-      "remainingRisk": "Sources without reliable time remain unknown; record dates do not prove functional completion",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "All 69 sampled Git source/time checks match and the independent visible review passed. Sources lacking occurrence time still remain unknown.",
       "recommendedPhase": "V4.0-E"
     },
     {
@@ -58,8 +58,8 @@
       "userImpact": "Product semantic readiness unproven",
       "engineeringRisk": "Engineering greens could conceal poor explanation",
       "treatment": "Fresh independent Sol/xhigh review of representative visible Current, History, Workline and Evidence",
-      "status": "CORPORATION_FINAL_PASS_PROJECTFLOW_PENDING",
-      "remainingRisk": "Latest Corporation visible review and Workline-only timestamp addendum passed. ProjectFlow retains prior NEEDS_REVISION reviews; two failed History windows, chapters and its final fresh review remain in progress.",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "Both independent Sol/xhigh visible reviews passed. Non-blocking wording and reading issues remain listed separately; Owner Review is NOT_REVIEWED.",
       "recommendedPhase": "V4.0-E"
     },
     {
@@ -82,8 +82,8 @@
       "userImpact": "Successful understanding still opens with file statistics",
       "engineeringRisk": "Frontend type omitted backend DECLARED/UNKNOWN states",
       "treatment": "Prioritize existing sourced purpose/capability claims; preserve per-claim classification and source filtering",
-      "status": "BROWSER_AND_PARTIAL_REVIEW_PASSED",
-      "remainingRisk": "Latest production runtime preserves all three successful Current responses; final ProjectFlow visible review remains pending.",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "Both final independent visible reviews passed; model interpretation remains separate from verified runtime capability.",
       "recommendedPhase": "V4.0-E"
     },
     {
@@ -154,7 +154,7 @@
       "userImpact": "Final material understanding appeared complete and could not recover",
       "engineeringRisk": "Untrusted cached success suppresses a required retry",
       "treatment": "Failed final stage is excluded from success cache; validated source/provider/model/protocol/effort checkpoint permits final-only recovery",
-      "status": "REAL_RECOVERY_PASSED",
+      "status": "CLOSED_VERIFIED",
       "remainingRisk": "Unknown failed-attempt usage cannot be reconstructed",
       "recommendedPhase": "V4.0-E"
     },
@@ -238,9 +238,134 @@
       "userImpact": "Already successful model windows can be recomputed unnecessarily",
       "engineeringRisk": "Iteration order changes opaque source fingerprints without a content change",
       "treatment": "Compare source content and parsed JSON on hash mismatch, excluding aggregate HEAD and respecting existing TIMESTAMP(6) precision; retain the old hash. Real coverage-value and timestamp changes still invalidate.",
-      "status": "REAL_RESTART_NOCHANGE_PASS_PROJECTFLOW_CONTINUATION_PENDING",
-      "remainingRisk": "All three Current and both complete Story reads survived restart unchanged; three Current and completed Corporation History refreshes made zero calls. ProjectFlow partial-window continuation is still running.",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "Final real restart retained all 4312 event hashes and reused 12 successful windows; only two failed windows and one chapter request were executed. The following full History no-change refresh made zero calls and preserved all 338 Story responses.",
       "recommendedPhase": "V4.0-E"
+    },
+    {
+      "id": "E-P2-06",
+      "debt": "按时间查看中的许多篇章只重复“更新某类多处代码文件及文档、保留版本变更记录”，且多个日期区间重叠。页面已说明各组可重叠，但这些名称仍难帮助首次用户理解阶段性结果、因果或演进；默认变化概览较好，因此不构成阻断。",
+      "source": "Final ProjectFlow independent Sol/xhigh visible review",
+      "priority": "P2",
+      "reviewSeverity": "MEDIUM",
+      "userImpact": "按时间查看中的许多篇章只重复“更新某类多处代码文件及文档、保留版本变更记录”，且多个日期区间重叠。页面已说明各组可重叠，但这些名称仍难帮助首次用户理解阶段性结果、因果或演进；默认变化概览较好，因此不构成阻断。",
+      "engineeringRisk": "A usability change must preserve authority, source trace, completeness and unknowns.",
+      "treatment": "Retain the non-blocking finding with its original reviewed input; no unreviewed last-minute UI change.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "按时间查看中的许多篇章只重复“更新某类多处代码文件及文档、保留版本变更记录”，且多个日期区间重叠。页面已说明各组可重叠，但这些名称仍难帮助首次用户理解阶段性结果、因果或演进；默认变化概览较好，因此不构成阻断。",
+      "recommendedPhase": "Desktop PoC usability pass",
+      "evidence": [
+        "visible-text/projectflow-history-time-final.txt",
+        "screenshots/projectflow-history-time-final-1.png",
+        "screenshots/projectflow-history-time-final-2.png",
+        "screenshots/projectflow-history-time-final-3.png"
+      ]
+    },
+    {
+      "id": "E-P2-07",
+      "debt": "时间视图第一页的主内容在部分滚动位置已经结束，而左侧篇章导航继续延伸，形成大片空白区域；这降低连续阅读效率，但分页、篇章编号和其他历史入口仍可使用。",
+      "source": "Final ProjectFlow independent Sol/xhigh visible review",
+      "priority": "P2",
+      "reviewSeverity": "LOW",
+      "userImpact": "时间视图第一页的主内容在部分滚动位置已经结束，而左侧篇章导航继续延伸，形成大片空白区域；这降低连续阅读效率，但分页、篇章编号和其他历史入口仍可使用。",
+      "engineeringRisk": "A usability change must preserve authority, source trace, completeness and unknowns.",
+      "treatment": "Retain the non-blocking finding with its original reviewed input; no unreviewed last-minute UI change.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "时间视图第一页的主内容在部分滚动位置已经结束，而左侧篇章导航继续延伸，形成大片空白区域；这降低连续阅读效率，但分页、篇章编号和其他历史入口仍可使用。",
+      "recommendedPhase": "Desktop PoC usability pass",
+      "evidence": [
+        "screenshots/projectflow-history-time-final-4.png",
+        "screenshots/projectflow-history-time-final-5.png"
+      ]
+    },
+    {
+      "id": "E-P2-08",
+      "debt": "PR 与 Agent 原文中出现面向内部处理的 [ABSOLUTE_PATH_REDACTED] 占位符，工作线详情还直接显示“检查记录：SUCCESS, SKIPPED”。来源身份和未独立验证边界是清楚的，但这些内部化文本会打断最终用户阅读，可改为自然语言的“路径已隐藏”以及按检查项解释状态。",
+      "source": "Final ProjectFlow independent Sol/xhigh visible review",
+      "priority": "P2",
+      "reviewSeverity": "LOW",
+      "userImpact": "PR 与 Agent 原文中出现面向内部处理的 [ABSOLUTE_PATH_REDACTED] 占位符，工作线详情还直接显示“检查记录：SUCCESS, SKIPPED”。来源身份和未独立验证边界是清楚的，但这些内部化文本会打断最终用户阅读，可改为自然语言的“路径已隐藏”以及按检查项解释状态。",
+      "engineeringRisk": "A usability change must preserve authority, source trace, completeness and unknowns.",
+      "treatment": "Retain the non-blocking finding with its original reviewed input; no unreviewed last-minute UI change.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "PR 与 Agent 原文中出现面向内部处理的 [ABSOLUTE_PATH_REDACTED] 占位符，工作线详情还直接显示“检查记录：SUCCESS, SKIPPED”。来源身份和未独立验证边界是清楚的，但这些内部化文本会打断最终用户阅读，可改为自然语言的“路径已隐藏”以及按检查项解释状态。",
+      "recommendedPhase": "Desktop PoC usability pass",
+      "evidence": [
+        "visible-text/projectflow-story-3-evidence-final.txt",
+        "visible-text/projectflow-workline-detail-final.txt",
+        "screenshots/projectflow-story-3-evidence-final-6.png",
+        "screenshots/projectflow-workline-detail-final-1.png"
+      ]
+    },
+    {
+      "id": "E-P2-09",
+      "debt": "当前页的“冲突与未知”包含多条句式近似的“现有证据未说明此次调整的原因”，并把覆盖诊断与具体未知混在同一长块中。边界准确，但可以按对象合并并把采样、SCIP、远程来源等覆盖诊断单列，以提升扫描效率。",
+      "source": "Final ProjectFlow independent Sol/xhigh visible review",
+      "priority": "P2",
+      "reviewSeverity": "LOW",
+      "userImpact": "当前页的“冲突与未知”包含多条句式近似的“现有证据未说明此次调整的原因”，并把覆盖诊断与具体未知混在同一长块中。边界准确，但可以按对象合并并把采样、SCIP、远程来源等覆盖诊断单列，以提升扫描效率。",
+      "engineeringRisk": "A usability change must preserve authority, source trace, completeness and unknowns.",
+      "treatment": "Retain the non-blocking finding with its original reviewed input; no unreviewed last-minute UI change.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "当前页的“冲突与未知”包含多条句式近似的“现有证据未说明此次调整的原因”，并把覆盖诊断与具体未知混在同一长块中。边界准确，但可以按对象合并并把采样、SCIP、远程来源等覆盖诊断单列，以提升扫描效率。",
+      "recommendedPhase": "Desktop PoC usability pass",
+      "evidence": [
+        "visible-text/projectflow-current-final.txt",
+        "visible-text/projectflow-current-390-final.txt",
+        "screenshots/projectflow-current-final-4.png"
+      ]
+    },
+    {
+      "id": "E-P2-10",
+      "debt": "逐文件 Evidence 对 113 条来源采用分页是安全的，但第一页仍主要呈现连续路径清单，用户需要多次滚动才能回到分页和返回入口。可增加按文件类型或语义角色的小结与页内定位，不改变现有可追溯性。",
+      "source": "Final ProjectFlow independent Sol/xhigh visible review",
+      "priority": "P2",
+      "reviewSeverity": "LOW",
+      "userImpact": "逐文件 Evidence 对 113 条来源采用分页是安全的，但第一页仍主要呈现连续路径清单，用户需要多次滚动才能回到分页和返回入口。可增加按文件类型或语义角色的小结与页内定位，不改变现有可追溯性。",
+      "engineeringRisk": "A usability change must preserve authority, source trace, completeness and unknowns.",
+      "treatment": "Retain the non-blocking finding with its original reviewed input; no unreviewed last-minute UI change.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "逐文件 Evidence 对 113 条来源采用分页是安全的，但第一页仍主要呈现连续路径清单，用户需要多次滚动才能回到分页和返回入口。可增加按文件类型或语义角色的小结与页内定位，不改变现有可追溯性。",
+      "recommendedPhase": "Desktop PoC usability pass",
+      "evidence": [
+        "visible-text/projectflow-story-2-related-final.txt",
+        "screenshots/projectflow-story-2-related-final-2.png",
+        "screenshots/projectflow-story-2-related-final-3.png",
+        "screenshots/projectflow-story-2-related-final-4.png",
+        "screenshots/projectflow-story-2-related-final-5.png"
+      ]
+    },
+    {
+      "id": "E-P1-06",
+      "debt": "Fixed embedded ports prevent coexistence with an existing local service",
+      "source": "Final root-launcher acceptance encountered a live unrelated container on 8080",
+      "priority": "P1",
+      "userImpact": "Root launcher cannot start while its fixed backend port is owned by another application",
+      "engineeringRisk": "Stopping unrelated processes or changing global port settings would affect other work",
+      "treatment": "Add validated optional BackendPort/FrontendPort parameters; propagate them consistently to builds, process environment, readiness URLs and runtime evidence; defaults unchanged",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "Explicitly chosen ports must still be available; foreign-process protection remains enforced",
+      "recommendedPhase": "V4.0-E",
+      "evidence": [
+        "root-port-overrides.json",
+        "windows-launcher.json"
+      ]
+    },
+    {
+      "id": "E-P2-11",
+      "debt": "Library first-read badge can be confused with completed Current material understanding",
+      "source": "Agent visual check of final root library and third-project Current",
+      "priority": "P2",
+      "userImpact": "The third material project has a successful Current explanation while its library card still says waiting for first read; Current clarifies History/Workline has not been refreshed",
+      "engineeringRisk": "Combining distinct read states could falsely imply History was processed",
+      "treatment": "Record the visible scope ambiguity; retain separate Current and History/Workline semantics",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "The library card could distinguish the two read statuses more directly",
+      "recommendedPhase": "Desktop PoC usability pass",
+      "evidence": [
+        "screenshots/owner-field-recovery-library.png",
+        "screenshots/owner-field-recovery-examprep-current.png"
+      ]
     }
   ]
 }

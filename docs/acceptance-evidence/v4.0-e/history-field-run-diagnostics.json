@@ -170,6 +170,44 @@
         "representativePrimaryCoverage": 0.6795327266239175
       },
       "scope": "Safe read-only counters collected after this job became terminal and before later no-change or continuation refreshes."
+    },
+    {
+      "recordedAt": "2026-09-12T06:56:52.811532+00:00",
+      "project": "ProjectFlow",
+      "functionalSourceHead": "349a6039e68ab5ad0126a2dd1dca3dca1029e7f7",
+      "jobId": "4b2e23f0-3078-4a6e-a332-0028d3b7a437",
+      "status": "SUCCEEDED",
+      "elapsedMs": 593345,
+      "requestCount": 6,
+      "usageAvailability": "PARTIAL",
+      "reportedTotalTokens": 60167,
+      "persistedOverviewAfterTerminal": {
+        "addedEventCount": 0,
+        "updatedEventCount": 0,
+        "reusedEventCount": 4312,
+        "recomputedStoryCount": 600,
+        "reusedStoryCount": 24,
+        "modelStatus": "MODEL_VALIDATED_INCREMENTAL",
+        "totalWindowCount": 14,
+        "succeededWindowCount": 14,
+        "failedWindowCount": 0,
+        "pendingWindowCount": 0,
+        "modelProcessedWindowCount": 14,
+        "modelUnprocessedWindowCount": 0,
+        "modelWindowCacheHitCount": 12,
+        "modelCheckpointCount": 15,
+        "chapterSynthesisFailedCount": 0,
+        "chapterSynthesisPendingCount": 0,
+        "chapterSynthesisCacheHitCount": 0,
+        "reusedChapterCount": 0,
+        "storyWordingRecoveryVersion": 1,
+        "eventConservation": true,
+        "invalidEvidenceRefCount": 0,
+        "unsupportedStrongFactCount": 0,
+        "unsupportedClaimCount": 0,
+        "representativePrimaryCoverage": 0.6795327266239175
+      },
+      "scope": "Safe read-only counters collected after this job became terminal and before later no-change or continuation refreshes."
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
-  "recordedAt": "2026-09-12T04:50:33.203614+00:00",
-  "functionalSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491",
-  "status": "PARTIAL",
+  "recordedAt": "2026-09-12T06:57:13.682864+00:00",
+  "scope": "Source identity is recorded per check; the earlier Corporation result was additionally verified on the final runtime in restart-checkpoint-retention.json.",
+  "status": "PASS",
   "checks": [
     {
       "name": "Corporation-Agent",
@@ -12,6 +12,18 @@
       "usageAvailability": "NOT_CALLED",
       "elapsedMs": 591,
       "readableStories": 22,
+      "allStoryResponsesPreserved": true
+    },
+    {
+      "name": "ProjectFlow",
+      "projectId": "112e956a-070e-4e11-867d-188852d550f2",
+      "jobId": "5100f33d-b43d-46fe-ba37-b624f58e51d3",
+      "functionalSourceHead": "349a6039e68ab5ad0126a2dd1dca3dca1029e7f7",
+      "status": "SUCCEEDED",
+      "requestCount": 0,
+      "usageAvailability": "NOT_CALLED",
+      "elapsedMs": 19638,
+      "readableStories": 338,
       "allStoryResponsesPreserved": true
     }
   ]

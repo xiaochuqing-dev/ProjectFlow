@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-09-12T03:27:58.980052+00:00",
+  "recordedAt": "2026-09-12T07:32:22.410141+00:00",
   "model": "gpt-5.6-sol",
   "protocol": "OPENAI_RESPONSES",
   "reasoningEffort": "xhigh",
@@ -96,6 +96,20 @@
       "evidenceClass": "REAL",
       "observed": "Cancelling the obsolete History run retained telemetry for 18 completed transport attempts with 337959 reported tokens; the nineteenth client-cancelled attempt has unknown usage, so exact usage remains PARTIAL. Four clean successful Story windows and seven successful but wording-affected windows remained persisted. After database backup and runtime restart, all three successful Current response hashes and the prior complete History timestamp were unchanged.",
       "evidence": "failed-runs/obsolete-history-run-cancelled.json"
+    },
+    {
+      "id": "final-persisted-history-recovery",
+      "status": "PASS",
+      "evidenceClass": "REAL",
+      "observed": "Final ProjectFlow recovery reused twelve successful windows, completed fourteen of fourteen windows and all chapters with six transport requests, preserved all 4312 events with zero updates, and retained failed-attempt usage as PARTIAL.",
+      "evidence": "history-field-run-diagnostics.json; failed-runs/persisted-identity-history-recovery-transport.json"
+    },
+    {
+      "id": "final-persisted-no-change",
+      "status": "PASS",
+      "evidenceClass": "REAL",
+      "observed": "All three Current responses survived runtime replacement and a zero-request refresh. Final History no-change preserved all 338 ProjectFlow and 22 Corporation Story responses with zero requests and NOT_CALLED usage.",
+      "evidence": "restart-checkpoint-retention.json; history-final-nochange.json"
     }
   ],
   "limitations": [

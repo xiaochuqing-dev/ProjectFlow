@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "sourceHead": "b74b7b8c035b125d18e065d69d9b7cf95ea12777",
+  "scope": "Only the local embedded root launcher changed after semantic source 349a6039; backend/frontend semantic code and the frozen independent review inputs are unchanged.",
+  "reason": "An existing unrelated container uses the default backend port. Optional process-local ports allow the root launcher to coexist without stopping that service.",
+  "parameters": {"backendPort": 18041, "frontendPort": 13041},
+  "defaultParametersRetained": {"backendPort": 8080, "frontendPort": 3000},
+  "checks": {
+    "powershellParse": "PASS",
+    "outOfRangeRejectedBeforeExecution": "PASS",
+    "samePortRejectedBeforeExecution": "PASS",
+    "explicitPortCheckOnly": "PASS",
+    "releaseScriptContracts": "PASS",
+    "frontendLint": "PASS",
+    "frontendContractsPassed": 73,
+    "frontendContractsFailed": 0,
+    "actualRootBuildAndRetainedRuntime": "windows-launcher.json",
+    "threePersistedProjectBrowserChecks": "PASS"
+  },
+  "unrelatedServiceStopped": false,
+  "operatingSystemConfigurationChanged": false,
+  "modelCallsForThisCheck": 0
+}

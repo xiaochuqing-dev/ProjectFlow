@@ -1,0 +1,45 @@
+{
+  "taskGoal": "按 V4.0-E 提示词完成真实语义质量、长模型请求可靠性与关键技术债收口；保留 Draft 和独立 Owner Review 边界。",
+  "actualChanges": [
+    "长 reasoning Responses 复用官方 SDK 流式传输，完整终止响应才进入业务校验；既有重试、取消、模型、xhigh 和输入边界保持。",
+    "失败 Job 持续保留实际请求、延迟、规范化失败和已报告用量；未知用量为 UNKNOWN/PARTIAL，无变化刷新不复读旧消耗。",
+    "当前材料理解保留已验证的 Scout 检查点，仅在来源与模型配置一致时恢复后续阶段；最终归纳失败不能被成功缓存掩盖。",
+    "History 使用有界代码对象、历史文档变化及明确作者的声明说明具体行为、验证范围和未完成项，不把代码、文档或开发助手自报提升为独立运行验证。",
+    "语义恢复保留通过同一完整校验器的其他 Story 与字段；标题回退也保留独立有用的摘要，非法来源和越权主张仍拒绝。",
+    "重启时比较来源内容和 JSON，而不因对象顺序、聚合项目 HEAD 或数据库时间精度制造伪变化；真实恢复复用 4,312 条事件和 12 个成功窗口，实际来源变化仍正常失效。",
+    "提交、过程记录、本地观察和未知时间在列表与来源详情中明确区分；完整父子关系、长期主题筛选、Workline 和 V4 接入链路保持。",
+    "两个真实项目的 Current 均完成 Sol/Responses/xhigh 理解，第三个材料项目完成最终阶段恢复；使用既有 Windows User RELAY 凭据并走 DPAPI。",
+    "核心代码完成后端/H2、PostgreSQL 16、exact V3.9 升级、生产构建、浏览器与 Windows 便携验证；最终两份独立 Sol/xhigh 语义复核均 PASS，真实模型与固定模型测试证据分别记录。",
+    "根启动器增加有界且互异的可选前后端端口，在其他容器使用 8080 时使用 18041/13041 重建并运行当前工作树；三个真实项目、两份最终 History 和 DPAPI 配置保留，未停止无关服务。"
+  ],
+  "keyFiles": [
+    "backend/src/main/java/com/projectflow/service/model/OpenAiResponsesAdapter.java",
+    "backend/src/main/java/com/projectflow/service/ModelRequestTelemetryContext.java",
+    "backend/src/main/java/com/projectflow/service/ProjectAnalysisJobRunner.java",
+    "backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryReconstructionService.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistorySourceCollector.java",
+    "backend/src/main/java/com/projectflow/service/ProjectHistoryNarrativeEntailmentValidator.java",
+    "frontend/src/components/workspace/RealCurrentPage.tsx",
+    "frontend/src/components/workspace/WorkspaceStoryDialog.tsx",
+    "docs/projectflow-v4.0-e-semantic-quality-debt-closure-report.md",
+    "docs/acceptance-evidence/v4.0-e/verification.json",
+    "start-projectflow-embedded.ps1"
+  ],
+  "verification": {
+    "build": "核心源码 349a6039 完成生产构建；源码等价的 2681720 Windows 便携包两次启动、DPAPI、manifest、备份恢复和端口释放通过。根启动器 b74b7b8 从不同目录以显式端口完成重建与保留运行。",
+    "tests": "核心源码后端/H2 782 项：771 passed、11 条件跳过；PG16 必需 7 passed；exact V3.9 2 passed；前端契约 73 passed；Playwright 38 passed；Hermes 10 passed；Obsidian 27 passed。根端口参数另通过语法、非法范围、端口冲突、显式 CheckOnly、发布脚本契约与前端 73 项复验。最终提交 CI 待实际运行。",
+    "manualCheck": "两个真实 Current 均使用 Sol/Responses/xhigh 成功；ProjectFlow History 14/14、Corporation 2/2 完成并零请求复用。最终独立 MODEL_REVIEW 均 PASS：ProjectFlow 34 TXT/77 PNG，Corporation 34 TXT/67 PNG及7 TXT/9 PNG工作线增补。Agent 核对16条近期Story、69组Git来源/时间、20条工作线、11条Current陈述和8张根启动截图；高风险无来源项为0。Owner Review=NOT_REVIEWED。"
+  },
+  "unfinished": [
+    "最终 Draft PR 的 push/PR required CI 与 OSV 尚待执行；本结果为本地与语义验收记录，后续提交追加实际 GitHub 结果。",
+    "Owner Review=NOT_REVIEWED；不自动 Ready、合并、Tag 或 Release。",
+    "HTTP/2 reset 来源仍为 UNDETERMINED；未知用量保留 UNKNOWN/PARTIAL，不保证网络永不失败。",
+    "独立复核的非阻断阅读问题、第三材料项目库状态提示、项目级 Provider 绑定等债按 Ledger 留待后续；Archify 是未来增强。"
+  ],
+  "sedimentCandidates": [
+    "失败包装与阶段恢复可保留实际请求和未知用量边界，已成功 Current 能以零模型调用复用。",
+    "来源充分时用具体对象和作者声明解释历史变化，并在语义恢复中保留独立有效内容；派生解释不写成 ProjectFact。",
+    "本地根启动可用显式端口与已有服务共存，默认端口和无关进程保护保持；真实保留运行与参数边界已验证。"
+  ]
+}

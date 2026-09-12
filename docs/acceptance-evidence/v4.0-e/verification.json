@@ -1,6 +1,6 @@
 {
   "recordedAt": "2026-09-12T06:50:47.343565+00:00",
-  "state": "IN_PROGRESS",
+  "state": "LOCAL_ACCEPTANCE_PASS_CI_PENDING",
   "functionalSourceHead": "349a6039e68ab5ad0126a2dd1dca3dca1029e7f7",
   "backend": {
     "command": "PROJECTFLOW_RUN_POSTGRES_MIGRATION_TESTS=true mvn -q -Ppostgres-it verify",
@@ -1854,7 +1854,7 @@
     "lint": "PASS",
     "contracts": 73,
     "contractsFailed": 0,
-    "productionBuild": "PENDING_FINAL_PRODUCTION_BUILD",
+    "productionBuild": "PASS",
     "playwright": {
       "passed": 38,
       "failed": 0,
@@ -1888,8 +1888,26 @@
   },
   "acceptanceEvidenceContracts": "PASS",
   "releaseScriptContracts": "PASS",
-  "rootLauncher": "PENDING_FINAL_RUNTIME",
-  "windowsPortable": "PENDING_FINAL_CLEAN_COMMIT_BUILD",
+  "rootLauncher": {
+    "status": "PASS",
+    "evidence": "windows-launcher.json",
+    "functionalSourceHead": "349a6039e68ab5ad0126a2dd1dca3dca1029e7f7",
+    "buildSourceRevision": "b74b7b8c035b125d18e065d69d9b7cf95ea12777",
+    "retainedRealProjects": 3,
+    "retainedFinalHistories": 2,
+    "agentViewedScreenshots": 8,
+    "agentVisualResult": "Core pages readable, saved results retained, no visible secret or blocking layout issue."
+  },
+  "windowsPortable": "PASS",
   "osv": "PENDING_CI",
-  "sensitiveScan": "PENDING_FINAL"
+  "sensitiveScan": {
+    "status": "PASS",
+    "evidence": "sensitive-scan.json",
+    "scope": "Tracked and non-ignored untracked text; CI secret patterns and exact existing Windows User credential/endpoint; machine paths in new E evidence."
+  },
+  "windowsPortableSourceHead": "268172023810119ffa18b4bcbde193e2ce0e37e0",
+  "windowsPortableEvidence": "windows-portable.json",
+  "sourceEquivalence": "Portable source 2681720 differs from functional source 349a6039 only in documentation and acceptance evidence.",
+  "launcherFunctionalSourceHead": "b74b7b8c035b125d18e065d69d9b7cf95ea12777",
+  "rootPortOverrideEvidence": "root-port-overrides.json"
 }

@@ -1,0 +1,94 @@
+{
+  "reviewType": "MODEL_REVIEW_ADDENDUM",
+  "reviewer": {
+    "model": "GPT-5.6 Sol",
+    "effort": "xhigh"
+  },
+  "verdict": "PASS",
+  "changesPriorConclusion": false,
+  "priorVerdictRetained": "PASS",
+  "summary": "重新采集的 Corporation-Agent 工作线视图不改变原结论。界面只呈现 main 一条已读取主线，明确说明用途暂无来源支持；提交已包含在主线、领先 0/落后 0、本地 HEAD、最后活动时间和观察时间彼此一致。未配置 GitHub 时，远程协作时间与 PR 状态均保持未知，没有把分支名、提交关系或远程缺失误写成业务用途或合入证明。390 至 1600 宽度均无横向溢出，主卡片、限制说明与来源入口可读。",
+  "coverage": {
+    "manifestRead": true,
+    "matchedViewCount": 7,
+    "txtReadCount": 7,
+    "pngViewedCount": 9,
+    "views": [
+      "worklines-final",
+      "workline-detail-final",
+      "worklines-390-final",
+      "worklines-640-final",
+      "worklines-1024-final",
+      "worklines-1280-final",
+      "worklines-1600-final"
+    ],
+    "txtFiles": [
+      "visible-text/corporation-worklines-final.txt",
+      "visible-text/corporation-workline-detail-final.txt",
+      "visible-text/corporation-worklines-390-final.txt",
+      "visible-text/corporation-worklines-640-final.txt",
+      "visible-text/corporation-worklines-1024-final.txt",
+      "visible-text/corporation-worklines-1280-final.txt",
+      "visible-text/corporation-worklines-1600-final.txt"
+    ],
+    "pngFiles": [
+      "screenshots/corporation-worklines-final-1.png",
+      "screenshots/corporation-worklines-final-2.png",
+      "screenshots/corporation-workline-detail-final-1.png",
+      "screenshots/corporation-workline-detail-final-2.png",
+      "screenshots/corporation-worklines-390-final-1.png",
+      "screenshots/corporation-worklines-640-final-1.png",
+      "screenshots/corporation-worklines-1024-final-1.png",
+      "screenshots/corporation-worklines-1280-final-1.png",
+      "screenshots/corporation-worklines-1600-final-1.png"
+    ]
+  },
+  "criteria": {
+    "mainlineAndBranch": {
+      "result": "PASS",
+      "assessment": "只显示 1 条已读取分支并明确主线为 main；分支名没有被解释为业务用途。",
+      "evidence": [
+        "visible-text/corporation-worklines-final.txt",
+        "screenshots/corporation-worklines-final-1.png"
+      ]
+    },
+    "currentStatus": {
+      "result": "PASS",
+      "assessment": "主卡片明确给出提交已包含在主线、最后活动时间；详情用领先 0/落后 0 和本地 HEAD 支撑，并单独声明计数不能证明工作尚未合入。",
+      "evidence": [
+        "visible-text/corporation-workline-detail-final.txt",
+        "screenshots/corporation-workline-detail-final-1.png"
+      ]
+    },
+    "unknowns": {
+      "result": "PASS",
+      "assessment": "用途、远程协作时间与 PR 状态均明确保持未知；没有用本地 Git 状态填补缺失的远程信息。",
+      "evidence": [
+        "visible-text/corporation-worklines-final.txt",
+        "screenshots/corporation-worklines-final-1.png"
+      ]
+    },
+    "sourceAndTimeSemantics": {
+      "result": "PASS",
+      "assessment": "本地观察时间、最后活动时间和详情中的 HEAD 观察时间均有清楚标签；结论来源标为本地 Git HEAD 与提交样本。",
+      "evidence": [
+        "visible-text/corporation-worklines-final.txt",
+        "visible-text/corporation-workline-detail-final.txt",
+        "screenshots/corporation-workline-detail-final-1.png"
+      ]
+    },
+    "responsiveReading": {
+      "result": "PASS",
+      "assessment": "390、640、1024、1280、1440 与 1600 宽度下主线、状态、未知提示和依据入口均可读，manifest 对这些视图记录的 horizontalOverflow 均为 0。",
+      "evidence": [
+        "screenshots/corporation-worklines-390-final-1.png",
+        "screenshots/corporation-worklines-640-final-1.png",
+        "screenshots/corporation-worklines-1024-final-1.png",
+        "screenshots/corporation-worklines-1280-final-1.png",
+        "screenshots/corporation-worklines-1600-final-1.png"
+      ]
+    }
+  },
+  "blockingIssues": [],
+  "nonblockingIssues": []
+}
