@@ -483,14 +483,14 @@ public class ProjectHistoryReconstructionService {
 
     private boolean sameSourcePayload(ProjectHistoryEvent event, CollectedEvent draft) {
         // Legacy fingerprints include Map iteration order, which can change across JVMs.
-        // Keep the existing hash and checkpoints only when every source field is equal.
+        // The aggregate project HEAD is not part of an immutable event's payload.
+        // Keep hashes/checkpoints only for equal content at the stored timestamp precision.
         try {
             return event.getSourceType() == draft.sourceType()
                 && Objects.equals(event.getSourceIdentity(), draft.sourceIdentity())
                 && Objects.equals(event.getSourceRevision(), draft.sourceRevision())
-                && Objects.equals(event.getProjectRevision(), draft.projectRevision())
-                && Objects.equals(event.getOccurredAt(), draft.occurredAt())
-                && Objects.equals(event.getEffectiveAt(), draft.effectiveAt())
+                && sameStoredTime(event.getOccurredAt(), draft.occurredAt())
+                && sameStoredTime(event.getEffectiveAt(), draft.effectiveAt())
                 && Objects.equals(event.getActorLabel(), draft.actorLabel())
                 && event.getScope() == draft.scope() && event.getCategory() == draft.category()
                 && event.getTransition() == draft.transition()
@@ -506,6 +506,13 @@ public class ProjectHistoryReconstructionService {
         } catch (Exception ignored) {
             return false;
         }
+    }
+
+    private static boolean sameStoredTime(Instant first, Instant second) {
+        // Both supported databases persist these columns as TIMESTAMP(6).
+        return Objects.equals(first, second) || (first != null && second != null
+            && first.plusNanos(500).truncatedTo(ChronoUnit.MICROS)
+                .equals(second.plusNanos(500).truncatedTo(ChronoUnit.MICROS)));
     }
 
     private void beginSnapshot(UUID projectId, UUID jobId, boolean changed) {

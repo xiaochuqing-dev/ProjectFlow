@@ -106,9 +106,9 @@ Current 先展示用途与有来源说明，其余盘点可展开。每条声明
 
 ## 20. Backend / PostgreSQL / Windows
 
-最新功能源码 `b6da7f0745dfc4af91c62871a034dbdc3f20187b` 的后端/H2 全套 782 项：771 通过、11 项按既有 opt-in 边界跳过。PostgreSQL 16 集成 7 项通过且无跳过；exact V3.9 的 H2/PostgreSQL 旧库升级证明 2 项通过、无跳过，耗时 48.272 秒。前端类型检查、73 项契约和 38 项 Playwright 通过，浏览器全套耗时 3.0 分钟。Playwright 使用真实前后端、Next 开发模式与固定兼容模型，不作为真实 Sol 证明。该源码的生产包和 Windows 正在复验，旧功能源码的证据独立保留。
+最新功能源码 `b6da7f0745dfc4af91c62871a034dbdc3f20187b` 的后端/H2 全套 782 项：771 通过、11 项按既有 opt-in 边界跳过。PostgreSQL 16 集成 7 项通过且无跳过；exact V3.9 的 H2/PostgreSQL 旧库升级证明 2 项通过、无跳过，耗时 48.272 秒。前端类型检查、73 项契约和 38 项 Playwright 通过，浏览器全套耗时 3.0 分钟。Playwright 使用真实前后端、Next 开发模式与固定兼容模型，不作为真实 Sol 证明。该功能源码的生产包与 Windows 便携复验已通过，旧功能源码的证据独立保留。
 
-Hermes 10 项、Obsidian 27 项通过；5,000 facts 规模的 Obsidian 无变化同步为零写入。最新便携包源提交为 `a1d4e5f443ca61900769a526e73e3564d48cf54a`，与功能源码 `80c5402` 仅有文档和证据差异。两次 bundled-runtime 启动、DPAPI、manifest、备份恢复和退出端口释放均通过；运行 PATH 不含 Maven/npm/Git。完整真实项目页面另外验收，不能把便携包 HTTP 证明扩大为完整产品验收。根启动器、OSV 与本分支 CI 仍待最终记录。
+Hermes 10 项、Obsidian 27 项通过；5,000 facts 规模的 Obsidian 无变化同步为零写入。最新便携包源提交为 `e47da61ae0ab12496884710bd6bf8fd826f34134`，与功能源码 `b6da7f0` 仅有文档和证据差异。两次 bundled-runtime 启动、DPAPI、manifest、备份恢复和退出端口释放均通过；运行 PATH 不含 Maven/npm/Git。完整真实项目页面另外验收，不能把便携包 HTTP 证明扩大为完整产品验收。根启动器、OSV 与本分支 CI 仍待最终记录。
 
 ## 21. Failures / recovery
 

@@ -85,6 +85,7 @@ class ProjectHistoryReconstructionTest {
     @Autowired ProjectContinuityDirtyMarker continuityDirtyMarker;
     @Autowired ModelOutputAdapter outputAdapter;
     @Autowired ObjectMapper objectMapper;
+    @Autowired jakarta.persistence.EntityManager entityManager;
     @MockitoBean ModelGatewayService modelGateway;
 
     @TempDir Path temporaryRoot;
@@ -96,6 +97,8 @@ class ProjectHistoryReconstructionTest {
         Path result = root.resolve(".projectflow/agent-results/review/result.json");
         Files.createDirectories(result.getParent());
         Files.writeString(result, "{\"actualChanges\":[\"审核记录增加来源说明\"],\"keyFiles\":[\"src/Review.java\"]}");
+        Files.setLastModifiedTime(result, java.nio.file.attribute.FileTime.from(
+            Instant.parse("2026-06-01T08:30:00.123456700Z")));
         ProjectSpace project = project(userId, "Coverage order", root);
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         var event = eventRepository.findByProjectId(project.getId()).stream()
@@ -110,7 +113,10 @@ class ProjectHistoryReconstructionTest {
         String legacyHash = "a".repeat(64);
         org.springframework.test.util.ReflectionTestUtils.setField(event, "coverageJson", reversed.toString());
         org.springframework.test.util.ReflectionTestUtils.setField(event, "payloadHash", legacyHash);
+        // Older immutable events keep the project HEAD observed when they were first collected.
+        org.springframework.test.util.ReflectionTestUtils.setField(event, "projectRevision", "older-project-head");
         eventRepository.saveAndFlush(event);
+        entityManager.clear();
 
         reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
         assertThat(eventRepository.findById(event.getId()).orElseThrow().getPayloadHash()).isEqualTo(legacyHash);
@@ -125,6 +131,10 @@ class ProjectHistoryReconstructionTest {
         assertThat(readService.overview(userId, project.getId()).diagnostics()).containsEntry("updatedEventCount", 1);
         assertThat(objectMapper.readTree(eventRepository.findById(event.getId()).orElseThrow().getCoverageJson())
             .path("claimOnly").asBoolean()).isTrue();
+        Files.setLastModifiedTime(result, java.nio.file.attribute.FileTime.from(
+            Instant.parse("2026-06-01T08:30:01.123456700Z")));
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(readService.overview(userId, project.getId()).diagnostics()).containsEntry("updatedEventCount", 1);
         assertThat(factRepository.countByProjectId(project.getId())).isZero();
         verifyNoInteractions(modelGateway);
     }
