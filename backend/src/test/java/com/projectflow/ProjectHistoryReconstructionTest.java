@@ -113,6 +113,8 @@ class ProjectHistoryReconstructionTest {
         assertThat(story.claimAttribution().state()).isEqualTo("UNKNOWN");
         assertThat(story.claimAttribution().supportClass()).isEqualTo("PROCESS_DECLARATION");
         assertThat(story.claimAttribution().directEvidenceRefs()).isEmpty();
+        assertThat(new com.projectflow.service.ProjectHistoryNarrativeEntailmentValidator()
+            .hasActionObjectResult(story.humanTitle(), story.oneSentenceSummary())).isTrue();
         assertThat(story.change()).contains("开发助手", "工作记录");
         assertThat(story.afterState()).contains("独立证据");
         assertThat(factRepository.countByProjectId(project.getId())).isZero();

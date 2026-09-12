@@ -59,7 +59,7 @@ public class ProjectHistorySourceCollector {
     static final int MAX_COMMITS = 5_000;
     static final int COMMIT_PAGE_SIZE = 25;
     static final int MAX_EVENTS = 20_000;
-    static final int MAX_FILE_EVENTS_PER_COMMIT = 500;
+    static final int MAX_FILE_EVENTS_PER_COMMIT = 1_000;
     static final int MAX_AGENT_RESULTS = 200;
     static final int MAX_CURRENT_FILES = 5_000;
     private static final int MAX_PROJECTION_SCAN_ENTRIES = 5_000;
@@ -370,17 +370,35 @@ public class ProjectHistorySourceCollector {
         Set<String> removedPaths = new LinkedHashSet<>();
         List<CommitDraft> discovered = new ArrayList<>();
         int boundedTotal = totalCountKnown ? Math.min(totalCommits, MAX_COMMITS) : MAX_COMMITS;
-        for (int offset = 0; offset < boundedTotal && events.size() < MAX_EVENTS; offset += COMMIT_PAGE_SIZE) {
+        int pageSize = COMMIT_PAGE_SIZE;
+        int resizedPages = 0;
+        for (int offset = 0; offset < boundedTotal && events.size() < MAX_EVENTS;) {
             ModelCancellationContext.throwIfCancelled();
+            int requested = Math.min(pageSize, boundedTotal - offset);
+            List<String> pageLimitations = new ArrayList<>();
+            CollectionState pageState = new CollectionState();
             String output = command(
                 root,
-                limitations,
-                collectionState,
+                pageLimitations,
+                pageState,
                 "git", "log", "--all", "--topo-order", "--date=iso-strict",
                 "--pretty=format:__PF_COMMIT__%x09%H%x09%P%x09%aI%x09%an%x09%s%x09%D",
                 "--name-status", "--find-renames=50%",
-                "--max-count=" + Math.min(COMMIT_PAGE_SIZE, boundedTotal - offset), "--skip=" + offset, "--"
+                "--max-count=" + requested, "--skip=" + offset, "--"
             );
+            if (output.length() >= 100_000 && requested > 1) {
+                // Shrinking persists across pages: at most four extra attempts, never an unbounded retry.
+                pageSize = Math.max(1, requested / 2);
+                resizedPages++;
+                continue;
+            }
+            collectionState.complete &= pageState.complete;
+            limitations.addAll(pageLimitations);
+            if (output.length() >= 100_000) {
+                // An oversized single commit stays incomplete; never turn a partial path into Evidence.
+                int lastLine = output.lastIndexOf('\n');
+                output = lastLine < 0 ? "" : output.substring(0, lastLine + 1);
+            }
             if (output.isBlank()) break;
             List<CommitDraft> commits = parseCommits(output, project.getCreatedAt(), limitations);
             if (commits.isEmpty()) break;
@@ -388,8 +406,11 @@ public class ProjectHistorySourceCollector {
                 collectionState.complete = false;
             }
             discovered.addAll(commits);
-            if (commits.size() < Math.min(COMMIT_PAGE_SIZE, boundedTotal - offset)) break;
+            offset += commits.size();
+            if (commits.size() < requested) break;
         }
+        if (resizedPages > 0) limitations.add("Git 元数据页触及输出上限后缩小读取范围 " + resizedPages
+            + " 次；已按更小范围重新读取，单提交与总事件上限仍然适用。 ");
         collectDocumentChanges(project.getId(), root, discovered, collectionState, limitations);
         java.util.Collections.reverse(discovered);
         for (CommitDraft commit : discovered) {

@@ -1215,7 +1215,7 @@ public class ProjectHistoryReconstructionService {
         );
         if ("PROCESS_DECLARATION".equals(narrativeEnvelope.supportClass())) {
             presentation = new ProjectHistoryLanguageService.Presentation(
-                "记录" + subjectLabel + "的开发过程声明",
+                "记录" + subjectLabel + "的开发过程声明，保留作者报告内容",
                 "开发助手的工作记录描述了" + subjectLabel + "的调整；声明中的实际效果仍待独立核实。",
                 "这份工作记录没有独立证明变更前的完整状态。",
                 "开发助手在工作记录中说明了本次调整，可以继续核对其具体声明与来源。",
