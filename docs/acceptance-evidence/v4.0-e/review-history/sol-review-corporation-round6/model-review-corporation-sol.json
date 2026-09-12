@@ -1,0 +1,194 @@
+{
+  "reviewType": "MODEL_REVIEW",
+  "reviewer": {
+    "model": "gpt-5.6-sol",
+    "effort": "xhigh"
+  },
+  "verdict": "PASS",
+  "summary": "首次使用者可以识别 Corporation-Agent 的项目身份，并区分 README 声明、系统归纳、直接观察到的文件变化与仍未确认事项。最近变化可从概览进入此前状态、本次变化、当前结果，再追到 Git 提交和相对文件来源；单一 main 分支、远程协作未配置和 PR 状态未知也有明确提示。未见把文档验收声称或文件存在直接提升为运行通过的无依据结论。主要不足是同页不同读取时间未标时区、部分当前材料来源显示为泛化标签，以及单分支页面的“已包含在主线”容易被理解为协作合入结论；这些问题会增加解释成本，但现有上下文和限制提示足以避免形成实质误判，因此不阻断通过。",
+  "coverage": {
+    "manifestRead": "corporation-visual-manifest.json",
+    "txtReadCount": 34,
+    "pngViewedCount": 67,
+    "txtFiles": [
+      "visible-text/corporation-current-final.txt",
+      "visible-text/corporation-current-sources-final.txt",
+      "visible-text/corporation-history-default-final.txt",
+      "visible-text/corporation-story-1-final.txt",
+      "visible-text/corporation-story-1-evidence-final.txt",
+      "visible-text/corporation-story-2-final.txt",
+      "visible-text/corporation-story-2-evidence-final.txt",
+      "visible-text/corporation-story-2-related-final.txt",
+      "visible-text/corporation-story-3-final.txt",
+      "visible-text/corporation-story-3-evidence-final.txt",
+      "visible-text/corporation-story-4-final.txt",
+      "visible-text/corporation-story-4-evidence-final.txt",
+      "visible-text/corporation-story-5-final.txt",
+      "visible-text/corporation-story-5-evidence-final.txt",
+      "visible-text/corporation-story-5-related-final.txt",
+      "visible-text/corporation-history-time-final.txt",
+      "visible-text/corporation-threads-directory-final.txt",
+      "visible-text/corporation-worklines-final.txt",
+      "visible-text/corporation-workline-detail-final.txt",
+      "visible-text/corporation-current-390-final.txt",
+      "visible-text/corporation-history-390-final.txt",
+      "visible-text/corporation-worklines-390-final.txt",
+      "visible-text/corporation-current-640-final.txt",
+      "visible-text/corporation-history-640-final.txt",
+      "visible-text/corporation-worklines-640-final.txt",
+      "visible-text/corporation-current-1024-final.txt",
+      "visible-text/corporation-history-1024-final.txt",
+      "visible-text/corporation-worklines-1024-final.txt",
+      "visible-text/corporation-current-1280-final.txt",
+      "visible-text/corporation-history-1280-final.txt",
+      "visible-text/corporation-worklines-1280-final.txt",
+      "visible-text/corporation-current-1600-final.txt",
+      "visible-text/corporation-history-1600-final.txt",
+      "visible-text/corporation-worklines-1600-final.txt"
+    ],
+    "pngFiles": [
+      "screenshots/corporation-current-final-1.png",
+      "screenshots/corporation-current-final-2.png",
+      "screenshots/corporation-current-final-3.png",
+      "screenshots/corporation-current-final-4.png",
+      "screenshots/corporation-current-sources-final-1.png",
+      "screenshots/corporation-history-default-final-1.png",
+      "screenshots/corporation-history-default-final-2.png",
+      "screenshots/corporation-history-default-final-3.png",
+      "screenshots/corporation-story-1-final-1.png",
+      "screenshots/corporation-story-1-final-2.png",
+      "screenshots/corporation-story-1-evidence-final-1.png",
+      "screenshots/corporation-story-1-evidence-final-2.png",
+      "screenshots/corporation-story-1-evidence-final-3.png",
+      "screenshots/corporation-story-2-final-1.png",
+      "screenshots/corporation-story-2-final-2.png",
+      "screenshots/corporation-story-2-evidence-final-1.png",
+      "screenshots/corporation-story-2-evidence-final-2.png",
+      "screenshots/corporation-story-2-evidence-final-3.png",
+      "screenshots/corporation-story-2-evidence-final-4.png",
+      "screenshots/corporation-story-2-evidence-final-5.png",
+      "screenshots/corporation-story-2-evidence-final-6.png",
+      "screenshots/corporation-story-2-evidence-final-7.png",
+      "screenshots/corporation-story-2-related-final-1.png",
+      "screenshots/corporation-story-2-related-final-2.png",
+      "screenshots/corporation-story-2-related-final-3.png",
+      "screenshots/corporation-story-2-related-final-4.png",
+      "screenshots/corporation-story-2-related-final-5.png",
+      "screenshots/corporation-story-3-final-1.png",
+      "screenshots/corporation-story-3-final-2.png",
+      "screenshots/corporation-story-3-evidence-final-1.png",
+      "screenshots/corporation-story-3-evidence-final-2.png",
+      "screenshots/corporation-story-3-evidence-final-3.png",
+      "screenshots/corporation-story-4-final-1.png",
+      "screenshots/corporation-story-4-final-2.png",
+      "screenshots/corporation-story-4-evidence-final-1.png",
+      "screenshots/corporation-story-4-evidence-final-2.png",
+      "screenshots/corporation-story-4-evidence-final-3.png",
+      "screenshots/corporation-story-5-final-1.png",
+      "screenshots/corporation-story-5-final-2.png",
+      "screenshots/corporation-story-5-evidence-final-1.png",
+      "screenshots/corporation-story-5-evidence-final-2.png",
+      "screenshots/corporation-story-5-evidence-final-3.png",
+      "screenshots/corporation-story-5-related-final-1.png",
+      "screenshots/corporation-story-5-related-final-2.png",
+      "screenshots/corporation-history-time-final-1.png",
+      "screenshots/corporation-history-time-final-2.png",
+      "screenshots/corporation-threads-directory-final-1.png",
+      "screenshots/corporation-threads-directory-final-2.png",
+      "screenshots/corporation-worklines-final-1.png",
+      "screenshots/corporation-worklines-final-2.png",
+      "screenshots/corporation-workline-detail-final-1.png",
+      "screenshots/corporation-workline-detail-final-2.png",
+      "screenshots/corporation-current-390-final-1.png",
+      "screenshots/corporation-history-390-final-1.png",
+      "screenshots/corporation-worklines-390-final-1.png",
+      "screenshots/corporation-current-640-final-1.png",
+      "screenshots/corporation-history-640-final-1.png",
+      "screenshots/corporation-worklines-640-final-1.png",
+      "screenshots/corporation-current-1024-final-1.png",
+      "screenshots/corporation-history-1024-final-1.png",
+      "screenshots/corporation-worklines-1024-final-1.png",
+      "screenshots/corporation-current-1280-final-1.png",
+      "screenshots/corporation-history-1280-final-1.png",
+      "screenshots/corporation-worklines-1280-final-1.png",
+      "screenshots/corporation-current-1600-final-1.png",
+      "screenshots/corporation-history-1600-final-1.png",
+      "screenshots/corporation-worklines-1600-final-1.png"
+    ]
+  },
+  "dimensions": {
+    "projectIdentity": {
+      "judgment": "PASS",
+      "reason": "项目名、本地项目身份、V4 工作区、README 来源位置和项目用途在首屏集中呈现；宽泛能力描述明确归属于项目说明或 README 声明。"
+    },
+    "currentConfirmableResult": {
+      "judgment": "PASS",
+      "reason": "页面把可支持判断、项目文档声明、当前未确认和直接证据支持的变化分区呈现，并反复说明文件变化不等于运行验收通过。"
+    },
+    "recentSubstantiveChanges": {
+      "judgment": "PASS",
+      "reason": "默认顺序前五条中既有文档和版本记录变化，也有通知、沟通、附件相关的跨配置、前后端代码、文档与脚本变化；详情说明此前状态、变化范围、当前结果与相关变化，且不把提交者的功能描述当作独立验证。"
+    },
+    "sourceTraceability": {
+      "judgment": "PASS_WITH_CAVEAT",
+      "reason": "故事可追到 Git 提交、提交时间、相对文件路径和逐文件变化，来源链完整；当前材料的部分展开项只显示“工具读取材料”，对象辨识仍需额外展开。"
+    },
+    "declarationInferenceUnknown": {
+      "judgment": "PASS",
+      "reason": "项目明确声明、系统归纳、已观察到来源变化、尚未确认、覆盖与缺口等身份持续可见；未知原因、未验证功能、缺失语义索引和远程信息均保留为未知。"
+    },
+    "singleBranchAndCollaboration": {
+      "judgment": "PASS_WITH_CAVEAT",
+      "reason": "页面明确只有 main 一条已读取分支，并说明未配置 GitHub、远程协作信息不完整及 PR 状态未知；但对 main 自身显示“提交已包含在主线”仍可能被误读为协作合入结论。"
+    },
+    "timeMeaning": {
+      "judgment": "PASS_WITH_CAVEAT",
+      "reason": "提交时间、读取时间、本地观察、最后活动和时间篇章区分明确，重叠篇章也注明不代表成熟阶段；同页读取时间未标明时区，且 02:42 与 10:25/10:26 并列，当前性比较不够直观。"
+    },
+    "unsupportedClaims": {
+      "judgment": "PASS",
+      "reason": "即使原始提交文字声称 acceptance、successful CI 或 passing CI，产品仍只确认文档或文件发生变化，并明确实际效果未经独立核实；未见无来源的完成度、里程碑或运行通过结论。"
+    },
+    "responsiveReadability": {
+      "judgment": "PASS",
+      "reason": "390、640、1024、1280、1600 宽度均无横向溢出；390 宽度收起主侧栏与右侧证据栏，核心文字和操作仍可读，较宽视图保持稳定的内容层级。"
+    }
+  },
+  "findings": [
+    {
+      "severity": "MEDIUM",
+      "blocking": false,
+      "issue": "同一当前状态页面并列显示“历程与工作线读取：2026/9/12 10:25:10”和“系统归纳 · 读取于 2026/9/12 02:42:03”，工作线又显示 10:26:39，但这些时间没有时区或统一口径说明。",
+      "userImpact": "用户能看出这些是不同类型的读取或观察时间，但难以判断它们是否只是时区差异、是否来自同一次刷新，以及哪一份状态更新，削弱了对当前性的快速判断。",
+      "references": [
+        "visible-text/corporation-current-final.txt",
+        "visible-text/corporation-current-sources-final.txt",
+        "visible-text/corporation-worklines-final.txt",
+        "screenshots/corporation-current-390-final-1.png",
+        "screenshots/corporation-current-1600-final-1.png"
+      ]
+    },
+    {
+      "severity": "LOW",
+      "blocking": false,
+      "issue": "当前材料来源展开后，多项来源仅显示重复的“工具读取材料 · 读取时为当前材料”，没有在这一层直接标出具体文件或工具结果身份。",
+      "userImpact": "用户仍能从上方判断文字看到相关文件名，并可继续展开工程读取详情，但当前结论到具体来源的映射不如故事详情中的 Git 提交和相对路径直接。",
+      "references": [
+        "visible-text/corporation-current-sources-final.txt",
+        "screenshots/corporation-current-sources-final-1.png"
+      ]
+    },
+    {
+      "severity": "LOW",
+      "blocking": false,
+      "issue": "只有 main 一条本地分支且 GitHub 未配置时，工作线仍把“提交已包含在主线”作为“合入状态”展示；详情同时说明领先/落后计数不能证明工作合入。",
+      "userImpact": "谨慎阅读可理解为本地 main 与自身的提交关系，但首次使用者可能先把该短句理解为已经完成远程协作或 PR 合入。",
+      "references": [
+        "visible-text/corporation-worklines-final.txt",
+        "visible-text/corporation-workline-detail-final.txt",
+        "screenshots/corporation-worklines-390-final-1.png",
+        "screenshots/corporation-workline-detail-final-1.png"
+      ]
+    }
+  ]
+}

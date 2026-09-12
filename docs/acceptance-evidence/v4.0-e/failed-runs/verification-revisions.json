@@ -125,6 +125,11 @@
       "finding": "ProjectFlow independent Sol/xhigh round five remained NEEDS_REVISION: default Stories erased behavior, verification scope and unfinished work already present in commit or Agent declarations.",
       "action": "Preserve bounded owned source statements in model context and require explicit author attribution. Process-only implementation state remains UNKNOWN with no direct evidence; disclose development-process and system-inference labels.",
       "final": "Source and recovery contracts passed; new production History replay and independent visible review pending. Frozen round-five inputs and conclusion remain under sol-review-projectflow-round5."
+    },
+    {
+      "finding": "The initial 49-test field-recovery run had one new-fixture failure and one new-fixture transaction error.",
+      "action": "Use the existing non-transactional boundary for a persisted checkpoint upgrade test; use a known prohibited milestone claim to exercise semantic rejection rather than the existing deterministic title normalization path.",
+      "final": "Four wording/Evidence regressions plus the one cache-upgrade test passed; the complete full regression follows separately."
     }
   ],
   "rawLogsIncluded": false
