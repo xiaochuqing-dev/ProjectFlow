@@ -1,5 +1,7 @@
 # Update history
 
+2026-09-12 追加最终工程事实：Draft #25 已推送，实际 push/PR Quality 与 Windows 四次运行全部 SUCCESS，OSV 通过，旧 Action runtime deprecation 在本轮日志和 annotations 中未复现。V4.0-E PASS，Desktop 技术入口 READY_FOR_POC；Owner NOT_REVIEWED，未执行 Ready、merge、Tag、Release。
+
 ## ProjectFlow V4.0-E 语义质量与可靠性债 - 2026-09-12
 
 在 #24 的独立工作树中，长 reasoning Responses 改用官方 SDK SSE，完整 terminal 才进入业务 JSON 校验。每次实际请求的次数、失败类型、延迟和可用 usage 独立记录，零变化不复读历史消耗；同源规范化 Scout checkpoint 支持只恢复最终阶段。真实第三项目揭示的最终归纳失败缓存误判已加入恢复与 UI 状态保护。

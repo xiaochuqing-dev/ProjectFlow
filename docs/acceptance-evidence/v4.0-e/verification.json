@@ -1,6 +1,6 @@
 {
-  "recordedAt": "2026-09-12T06:50:47.343565+00:00",
-  "state": "LOCAL_ACCEPTANCE_PASS_CI_PENDING",
+  "recordedAt": "2026-09-12T07:46:37.812404+00:00",
+  "state": "PASS",
   "functionalSourceHead": "349a6039e68ab5ad0126a2dd1dca3dca1029e7f7",
   "backend": {
     "command": "PROJECTFLOW_RUN_POSTGRES_MIGRATION_TESTS=true mvn -q -Ppostgres-it verify",
@@ -1899,7 +1899,11 @@
     "agentVisualResult": "Core pages readable, saved results retained, no visible secret or blocking layout issue."
   },
   "windowsPortable": "PASS",
-  "osv": "PENDING_CI",
+  "osv": {
+    "status": "PASS",
+    "scope": "Required push and pull_request locked dependency scan",
+    "evidence": "ci.json"
+  },
   "sensitiveScan": {
     "status": "PASS",
     "evidence": "sensitive-scan.json",
@@ -1909,5 +1913,12 @@
   "windowsPortableEvidence": "windows-portable.json",
   "sourceEquivalence": "Portable source 2681720 differs from functional source 349a6039 only in documentation and acceptance evidence.",
   "launcherFunctionalSourceHead": "b74b7b8c035b125d18e065d69d9b7cf95ea12777",
-  "rootPortOverrideEvidence": "root-port-overrides.json"
+  "rootPortOverrideEvidence": "root-port-overrides.json",
+  "desktopShellTechnicalEntry": "READY_FOR_POC",
+  "ownerReview": "NOT_REVIEWED",
+  "ci": {
+    "status": "PASS",
+    "validatedHead": "806ea4a7dcad3d72f5d3a12517332d69dfb6047f",
+    "evidence": "ci.json"
+  }
 }

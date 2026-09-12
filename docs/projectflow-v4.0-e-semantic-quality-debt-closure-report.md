@@ -1,6 +1,6 @@
 # ProjectFlow V4.0-E：语义质量、模型可靠性与关键技术债
 
-状态：LOCAL_ACCEPTANCE_PASS_CI_PENDING。独立 stacked Draft；Owner Review = NOT_REVIEWED。验收事实持续追加至 `acceptance-evidence/v4.0-e/`，本报告不代表 Ready、merge、Tag 或 Release 授权。
+状态：PASS；DESKTOP_SHELL_TECHNICAL_ENTRY = READY_FOR_POC。独立 stacked Draft；Owner Review = NOT_REVIEWED。验收事实持续追加至 `acceptance-evidence/v4.0-e/`，本报告不代表 Ready、merge、Tag 或 Release 授权。
 
 ## 1. Phase Goal
 
@@ -106,7 +106,7 @@ Current 先展示用途与有来源说明，其余盘点可展开。每条声明
 
 ## 19. CI debt
 
-#24 最新 Quality 与 Windows 均成功。当前已使用新版且 SHA 固定的 Actions；检查的日志/注释未发现待解决 runtime/setup-java deprecation，因此没有为还债盲目改工作流。最终本分支 CI 单独记录。
+#24 最新 Quality 与 Windows 均成功。当前已使用新版且 SHA 固定的 Actions；检查的日志/注释未发现待解决 runtime/setup-java deprecation，因此没有为还债盲目改工作流。本分支最终四次 push/PR Quality 与 Windows 日志及 check annotations 已复核；未发现未解决的 Actions runtime/setup-java deprecation，既有固定 SHA 保持不变。实际记录见 `ci-warning-audit.json`。
 
 ## 20. Backend / PostgreSQL / Windows
 
@@ -116,7 +116,7 @@ Hermes 10 项、Obsidian 27 项通过。Obsidian 的 5,000 facts、36 个月、1
 
 便携包源提交 `268172023810119ffa18b4bcbde193e2ce0e37e0` 与功能源码仅有文档和证据差异；两次 bundled-runtime 启动、DPAPI、manifest、KNOWN_CURRENT 备份恢复和端口释放均通过，运行 PATH 不含 Maven/npm/Git。根启动器在独立提交 `b74b7b8c035b125d18e065d69d9b7cf95ea12777` 添加了可选端口；参数范围、端口不可相同、显式端口预检、发布脚本契约与前端 73 项契约通过。根 Start-ProjectFlow.bat 已带 `-BackendPort 18041 -FrontendPort 13041` 从不同工作目录重建并运行当前工作树，保留三个真实项目、两份最终 History 和 DPAPI 配置；Agent 浏览器再次检查已保存 Current、默认近期变化与工作线。旧阶段数据先备份，停库后才复制。启动证明在 logs/last-embedded-build.json 及 windows-launcher.json，Root 与便携验证范围分开。
 
-本分支最终 required CI 与 OSV 仍待 GitHub 实际运行后追加。
+交付源码 `806ea4a7dcad3d72f5d3a12517332d69dfb6047f` 的 push 与 PR 各 10 个必需检查均实际 SUCCESS，包括 OSV、PostgreSQL、exact V3.9 升级和 Windows。四次运行：[pull_request Quality 34681190607](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190607)，[pull_request Windows 34681190254](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190254)，[push Quality 34681166371](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166371)，[push Windows 34681166128](https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166128)。可选真实模型 workflow 保持跳过，本地 Key 没有进入 GitHub。其后的 facts-only 回填只更新文档/证据，不修改已验收产品源码；回填交付 Head 的新 CI 结果记录在 Draft PR #25 正文中。
 
 ## 21. Failures / recovery
 
@@ -163,7 +163,7 @@ Agent 不填写 HUMAN_PASS；Owner 的判断独立于工程与模型评审。
 
 ## 24. STACK_CONSOLIDATION_READINESS
 
-GitHub 复核时 #21–#24 均为开放 Draft，master 仍为 `1712841b77fd1e8146ce4ab6beaf404e5b1f7a53`。B⊂C⊂D⊂E 已由 Git ancestry 验证；E 本地完整验收已完成，正在创建 Draft 并等待实际 CI。
+GitHub 复核时 #21–#24 均为开放 Draft，master 仍为 `1712841b77fd1e8146ce4ab6beaf404e5b1f7a53`。B⊂C⊂D⊂E 已由 Git ancestry 验证；E 已创建 [Draft PR #25](https://github.com/xiaochuqing-dev/ProjectFlow/pull/25)，base 为 #24；实际 push/PR required CI 已通过。
 
 | PR | base branch | actual head |
 | --- | --- | --- |
@@ -171,9 +171,9 @@ GitHub 复核时 #21–#24 均为开放 Draft，master 仍为 `1712841b77fd1e814
 | #22 | master | `7d5f30eff3a05105b7f3f60e07e352d297301ed5` |
 | #23 | codex/v4.0-b-gui-first-prototype | `703120998f2296b4e615cd785e651a351c5dc8c9` |
 | #24 | codex/v4.0-c-gui-productization | `81730744a325ccc2391009b367ca4ba95aef6d14` |
-| V4.0-E | codex/v4.0-d-real-project-understanding | 语义源码 `349a6039e68ab5ad0126a2dd1dca3dca1029e7f7`；启动器源码 `b74b7b8c035b125d18e065d69d9b7cf95ea12777`；交付提交与 PR 待记录 |
+| #25 V4.0-E | codex/v4.0-d-real-project-understanding | CI 验证 Head `806ea4a7dcad3d72f5d3a12517332d69dfb6047f`；后续仅追加验收事实 |
 
-正确顺序为 #22 → #23 → #24 → E，逐步重新定位 base 并验证 master；本轮不执行合并。#21 的 Windows 端口等待改动已经包含，Tomcat 安全基线被后续版本承接，Dogfood 时间夹具被后续实现承接，AppShell 旧版本标题改为显式工程兼容入口。不能笼统称 #21 全部已吸收：以下四份文档和两份 Agent Result 不在 E 树中，须在后续合并整理时显式保留或归档。
+正确顺序为 #22 → #23 → #24 → #25，逐步重新定位 base 并验证 master；本轮不执行合并。#21 的 Windows 端口等待改动已经包含，Tomcat 安全基线被后续版本承接，Dogfood 时间夹具被后续实现承接，AppShell 旧版本标题改为显式工程兼容入口。不能笼统称 #21 全部已吸收：以下四份文档和两份 Agent Result 不在 E 树中，须在后续合并整理时显式保留或归档。
 
 - `docs/projectflow-v4-design-system-and-desktop-foundation-research.md`
 - `docs/projectflow-v4-gui-foundation-current-state-audit.md`
@@ -188,7 +188,7 @@ GitHub 复核时 #21–#24 均为开放 Draft，master 仍为 `1712841b77fd1e814
 
 ## 25. DESKTOP_SHELL_TECHNICAL_ENTRY
 
-当前为 BLOCKED，唯一剩余技术交付门槛是本分支 required CI / OSV 的实际成功记录。两份真实 Current、最终 History 恢复及无变化零调用、独立 MODEL_REVIEW PASS、来源/时间审计与本地 Windows/浏览器验证已经完成。CI 未完成前不标 READY_FOR_POC；Owner Review 仍为 NOT_REVIEWED，与技术入口分开。
+当前为 READY_FOR_POC。两份真实 Sol/xhigh Current、最终 History 恢复及无变化零调用、独立 MODEL_REVIEW PASS、具体可读变化、来源/时间审计、V4 正常流程、本地 Windows/浏览器与本分支 push/PR required CI、OSV 已全部通过。P0 关闭；网络 reset 最终来源仍未知，非阻断 P1/P2 仍在 Ledger。该结论只允许下一阶段做桌面壳技术 PoC，不等于 Owner Approval、正式桌面集成或发布；Owner Review 仍为 NOT_REVIEWED。
 
 ## 26. Future Archify direction
 

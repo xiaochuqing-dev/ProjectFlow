@@ -1,5 +1,7 @@
 # ProjectFlow Project Context
 
+V4.0-E 最终技术验收 PASS，DESKTOP_SHELL_TECHNICAL_ENTRY = READY_FOR_POC；Draft PR #25 依赖 #24，四次 push/PR Quality 与 Windows（含 OSV）实际通过，见 E ci.json。后续仅追加验收事实的交付 Head 及其新 CI 记录在 #25 正文。Owner Review 仍为 NOT_REVIEWED，下一阶段可做 V4.0-F Electron vs Tauri PoC，不自动实施或合并。
+
 Last updated: 2026-09-12
 
 V4.0-E 在 #24 Head `81730744a325ccc2391009b367ca4ba95aef6d14` 上关闭语义质量与可靠性债。长 reasoning Responses 复用官方 SDK SSE，只接收完整 terminal；有界 transport retry、900 秒单请求和 xhigh 不变。Job 按实际 adapter attempt 聚合，未知 usage 为 null/UNKNOWN，无变化零调用。已校验 Scout checkpoint 只服务于同源后续阶段恢复，不进入 GET；最终归纳失败不能命中成功缓存。History 复用现有 subject/path/来源，提供具体对象与 action，维持 broad owner 的 OBSERVED 上限和原成员；提交、过程记录、观察时间分别标示。无需新 schema、事实写入、引擎或依赖。

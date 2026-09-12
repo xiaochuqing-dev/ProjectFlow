@@ -1,5 +1,7 @@
 # ProjectFlow
 
+V4.0-E 已通过真实理解、独立语义复核及 required push/PR CI；Desktop Shell 技术入口为 READY_FOR_POC。交付为 [Draft PR #25](https://github.com/xiaochuqing-dev/ProjectFlow/pull/25)，Owner Review 仍为 NOT_REVIEWED。
+
 ## V4 Workspace（V4.0-E Draft）
 
 V4.0-E 修复长时间 Responses 读取、真实请求计数和失败阶段恢复；Current 按有来源的用途与能力展开，History 的文件对象和时间来源更具体。ProjectFlow 与 Corporation-Agent 已完成真实 Sol/xhigh Current、最终 History 和零调用复用，两份独立语义复核均为 PASS；完整门禁和 Desktop Shell 技术入口以 [V4.0-E 报告](docs/projectflow-v4.0-e-semantic-quality-debt-closure-report.md) 及其 Evidence 的最终状态为准。Owner Review 独立记录，仍是依赖 #24 的 Draft。

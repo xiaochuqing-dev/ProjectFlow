@@ -1,5 +1,7 @@
 # Known risks
 
+V4.0-E required push/PR CI 与 OSV 已通过，技术入口 READY_FOR_POC；仍为 Draft #25、Owner NOT_REVIEWED。最终 reset 来源未知及 Ledger 的非阻断 P1/P2 保留；技术通过不等于零缺陷、合并或发布授权。
+
 - E 最终独立 Sol/xhigh 两项目均 PASS；ProjectFlow 仍有时间篇章泛化等 5 项非阻断建议，Corporation 有标题、长来源列表和窄屏浮层 3 项。它们与所有旧否定评审一起留在 E Evidence / Ledger，不能把 PASS 宣称为零缺陷或 Owner 通过。
 
 - E 的文档文本差异只作有界内容证据；文档里写有测试或发布结果，不等于系统已独立验证。多轮独立评审与整窗恢复导致具体措辞丢失的真实记录保留在 E failed-runs；最终语义结论必须由修复后的可见页面重新评审。

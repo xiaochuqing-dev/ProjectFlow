@@ -1,6 +1,6 @@
 {
   "phase": "V4.0-E Draft",
-  "status": "P0_CLOSED_FINAL_CI_PENDING",
+  "status": "P0_CLOSED_VERIFIED",
   "items": [
     {
       "id": "E-P0-01",
@@ -69,10 +69,13 @@
       "priority": "P1",
       "userImpact": "Potential future CI breakage",
       "engineeringRisk": "Deprecated action runtime",
-      "treatment": "Inspected current pinned Actions and latest PR #24 Quality annotations/log; no matching deprecation warnings found",
+      "treatment": "Inspected all four final push/PR Quality and Windows logs plus check annotations; no unresolved action-runtime/setup-java deprecation remains. Existing pinned Actions retained.",
       "status": "OBSOLETE",
-      "remainingRisk": "Recheck new phase CI",
-      "recommendedPhase": "Ongoing dependency maintenance"
+      "remainingRisk": "Future upstream action runtime changes require ordinary maintenance.",
+      "recommendedPhase": "Ongoing dependency maintenance",
+      "evidence": [
+        "ci-warning-audit.json"
+      ]
     },
     {
       "id": "E-P1-02",
