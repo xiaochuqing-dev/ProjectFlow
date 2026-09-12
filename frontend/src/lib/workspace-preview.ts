@@ -277,6 +277,7 @@ export function persistedStory(story: ProjectHistoryStory): WorkspaceStory {
   const claim = story.claimAttribution;
   const sources = claim?.directEvidenceRefs ?? story.evidenceRefs ?? [];
   const classification: ClaimClassification = story.conflicts?.length ? "CONFLICTED"
+    : claim?.state === "UNKNOWN" && claim.supportClass === "PROCESS_DECLARATION" ? "PROCESS_EVIDENCE"
     : claim && ["PLANNED", "DECLARED"].includes(claim.state) ? "DECLARED"
     : sources.length ? "INFERRED" : "UNKNOWN";
   // A broad filesystem subject proves file changes, not first creation of the whole application.

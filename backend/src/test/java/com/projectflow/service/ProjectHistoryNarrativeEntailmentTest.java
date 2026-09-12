@@ -19,6 +19,53 @@ class ProjectHistoryNarrativeEntailmentTest {
     private final ProjectHistoryNarrativeEntailmentValidator validator = new ProjectHistoryNarrativeEntailmentValidator();
 
     @Test
+    void processDeclarationCanDescribeItsOwnBehaviorWithoutBorrowingImplementationAuthority() {
+        var envelope = validator.envelope(new EvidenceProfile("accounting", "账务服务相关代码", Transition.MODIFIED,
+            List.of(new ProjectHistoryNarrativeEntailmentValidator.EvidenceAtom("agent-owned", List.of("accounting"),
+                Category.AGENT_RESULT, Transition.MODIFIED, Authority.PROCESS_EVIDENCE, ProjectFactEpistemicStatus.PROCESS_EVIDENCE,
+                List.of("src/AccountingService.java"), "发票审核区分 OCR/PDF 提取结果与人工确认；批量导入仍有重复项。",
+                List.of("agent-result:billing-review"))), false));
+        assertThat(envelope.claimState()).isEqualTo(ClaimState.UNKNOWN);
+        assertThat(envelope.supportClass()).isEqualTo("PROCESS_DECLARATION");
+        assertThat(envelope.directEvidenceRefs()).isEmpty();
+        assertThat(envelope.indirectEvidenceRefs()).containsExactly("agent-result:billing-review");
+        assertThat(envelope.humanSafeSourceContext()).anySatisfy(value ->
+            assertThat(value).startsWith("开发过程声明").contains("OCR/PDF", "批量导入仍有重复项"));
+        String title = "工作记录说明发票审核区分提取结果与人工确认";
+        String summary = "开发助手报告了审核展示的调整，并记录批量导入仍有重复项；实际效果尚待独立核实。";
+        assertThat(validator.semanticallyUseful(title, summary, envelope)).isTrue();
+        validator.validateStory(envelope, title, summary, "此前的审核行为没有独立记录。",
+            "开发助手在工作记录中描述了提取结果与人工确认的区分，并保留重复项问题。",
+            "上述内容属于开发过程声明，未证明审核流程的实际运行效果。", "", "调整原因仍未知。");
+        assertThatThrownBy(() -> validator.validateStory(envelope, title, summary, "此前的审核行为没有独立记录。",
+            "开发助手已经实现了审核流程并通过验收。", "来源声明已保留。", "", "调整原因仍未知。"))
+            .isInstanceOf(NarrativeViolation.class);
+        assertThatThrownBy(() -> validator.validateStory(envelope,
+            "工作记录说明库存管理区分生产仓与备用仓", "开发助手报告库存管理的调整并保留核对结果。",
+            "此前未知。", "开发助手记录库存变化。", "这是未经独立验证的声明。", "", "原因未知。"))
+            .isInstanceOf(NarrativeViolation.class).hasMessageContaining("allowed subject");
+    }
+
+    @Test
+    void englishCommitStatementsAreBoundedOwnedContextAndCannotWhitelistTechnicalTokens() {
+        var envelope = validator.envelope(new EvidenceProfile("report", "审阅报告", Transition.MODIFIED,
+            List.of(new ProjectHistoryNarrativeEntailmentValidator.EvidenceAtom("commit-owned", List.of("report"),
+                Category.COMMIT, Transition.MODIFIED, Authority.SOURCE_BACKED, ProjectFactEpistemicStatus.OBSERVED,
+                List.of("review/report.md"), "test: record invoice acceptance and retain duplicate-import blockers",
+                List.of("commit:owned")),
+                new ProjectHistoryNarrativeEntailmentValidator.EvidenceAtom("commit-unrelated", List.of("warehouse"),
+                    Category.COMMIT, Transition.MODIFIED, Authority.SOURCE_BACKED, ProjectFactEpistemicStatus.OBSERVED,
+                    List.of("warehouse/report.md"), "feat: warehouse is production ready", List.of("commit:other"))), false));
+        assertThat(envelope.humanSafeSourceContext()).anySatisfy(value -> assertThat(value)
+            .startsWith("提交者声明").contains("duplicate-import blockers"));
+        assertThat(envelope.humanSafeSourceContext()).noneMatch(value -> value.contains("warehouse"));
+        assertThat(envelope.claimState()).isEqualTo(ClaimState.OBSERVED);
+        assertThat(validator.containsFirstLayerLeak("记录 duplicate-import 的审阅报告", envelope.humanSafeSourceContext())).isTrue();
+        assertThatThrownBy(() -> validator.validateStateCeiling(envelope.claimState(), "发票系统已经通过验收"))
+            .isInstanceOf(NarrativeViolation.class);
+    }
+
+    @Test
     void boundedSourceContextIncludesLatestDocumentContentWithoutRaisingAuthority() {
         var atoms = new java.util.ArrayList<ProjectHistoryNarrativeEntailmentValidator.EvidenceAtom>();
         for (int i = 0; i < 8; i++) atoms.add(new ProjectHistoryNarrativeEntailmentValidator.EvidenceAtom(

@@ -1,11 +1,11 @@
 /** The visible claim cannot exceed its source. This is a display gate, never a Fact writer. */
-export type ClaimClassification = "VERIFIED" | "OBSERVED" | "DECLARED" | "INFERRED" | "UNKNOWN" | "CONFLICTED";
+export type ClaimClassification = "VERIFIED" | "OBSERVED" | "DECLARED" | "PROCESS_EVIDENCE" | "INFERRED" | "UNKNOWN" | "CONFLICTED";
 export type WorkspaceClaim = { text: string; kind: string; classification: ClaimClassification; sources: string[] };
 const intentKinds = new Set(["PLAN", "MILESTONE", "RELEASE_DATE", "USER_GOAL", "TEAM_INTENT", "COMMERCIAL_PLAN"]);
 const quantifiedKinds = new Set(["PROGRESS", "MATURITY", "EXPECTATION"]);
 export const claimLabels: Record<ClaimClassification, string> = {
   VERIFIED: "已验证事实", OBSERVED: "已观察事实", DECLARED: "项目明确声明",
-  INFERRED: "系统归纳", UNKNOWN: "暂无明确记录", CONFLICTED: "来源有冲突",
+  PROCESS_EVIDENCE: "开发过程声明", INFERRED: "系统归纳", UNKNOWN: "暂无明确记录", CONFLICTED: "来源有冲突",
 };
 export function supportedClaim(claim: WorkspaceClaim): WorkspaceClaim | null {
   if (!claim.text.trim() || !claim.sources.length || claim.classification === "UNKNOWN") return null;

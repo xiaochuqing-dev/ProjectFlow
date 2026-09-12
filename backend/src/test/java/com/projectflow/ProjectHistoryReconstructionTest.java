@@ -90,6 +90,66 @@ class ProjectHistoryReconstructionTest {
     @TempDir Path temporaryRoot;
 
     @Test
+    void agentStatementPreservesVerificationAndUnfinishedScopeWithoutBecomingFact() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path root = temporaryRoot.resolve("invoice-process-record");
+        Path result = root.resolve(".projectflow/agent-results/invoice-review/result.json");
+        Files.createDirectories(result.getParent());
+        Files.writeString(result, objectMapper.writeValueAsString(Map.of(
+            "taskGoal", "调整发票审核流程", "actualChanges", List.of("发票审核区分自动提取结果与人工确认", "批量导入新增重复项提示"),
+            "keyFiles", List.of("src/AccountingService.java"),
+            "verification", Map.of("build", "PASS", "tests", "12 项通过，真实接口未验收", "manualCheck", "NOT_REVIEWED"),
+            "unfinished", List.of("重复导入仍可能生成多条记录", "真实接口尚未验收"))));
+        ProjectSpace project = project(userId, "Invoice process record", root);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        var event = eventRepository.findByProjectId(project.getId()).stream()
+            .filter(value -> value.getSourceType().name().equals("AGENT_RESULT")).findFirst().orElseThrow();
+        assertThat(event.getSafeSourceLabel()).contains("发票审核区分自动提取结果与人工确认", "批量导入新增重复项提示",
+            "验证声明", "真实接口未验收", "未完成声明", "重复导入仍可能生成多条记录").hasSizeLessThanOrEqualTo(1_000);
+        assertThat(event.getAuthority().name()).isEqualTo("PROCESS_EVIDENCE");
+        assertThat(event.getEpistemicStatus()).isEqualTo(ProjectFactEpistemicStatus.PROCESS_EVIDENCE);
+        var story = readService.stories(userId, project.getId(), null, false, null, null, 0, 100).items().stream()
+            .filter(value -> value.eventRefs().contains(event.getId())).findFirst().orElseThrow();
+        assertThat(story.claimAttribution().state()).isEqualTo("UNKNOWN");
+        assertThat(story.claimAttribution().supportClass()).isEqualTo("PROCESS_DECLARATION");
+        assertThat(story.claimAttribution().directEvidenceRefs()).isEmpty();
+        assertThat(story.change()).contains("开发助手", "工作记录");
+        assertThat(story.afterState()).contains("独立证据");
+        assertThat(factRepository.countByProjectId(project.getId())).isZero();
+        assertThat(reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false).cacheHit()).isTrue();
+        verifyNoInteractions(modelGateway);
+        provider(userId);
+        AtomicInteger requests = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(1, String.class);
+            if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS)
+                return modelResponse(historyChapterModelResponse(prompt));
+            requests.incrementAndGet();
+            assertThat(prompt).contains("开发过程声明", "真实接口未验收", "重复导入仍可能生成多条记录");
+            JsonNode output = objectMapper.readTree(historyModelResponse(prompt));
+            for (JsonNode item : output.path("stories")) if (item.path("storyId").asText().equals(story.id())) {
+                var wording = (com.fasterxml.jackson.databind.node.ObjectNode) item;
+                wording.put("humanTitle", "工作记录说明发票审核展示调整，保留重复项问题")
+                    .put("oneSentenceSummary", "开发助手报告区分自动提取结果与人工确认，并记录批量导入的重复项问题。")
+                    .put("beforeWording", "这份来源没有独立确认此前的审核行为。")
+                    .put("changeWording", "开发助手记录了审核展示的区分以及批量导入提示，并声明真实接口尚未验收。")
+                    .put("afterWording", "工作结果中已有具体调整声明；实际效果与真实接口仍待独立验证。");
+            }
+            return modelResponse(objectMapper.writeValueAsString(output));
+        });
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), true);
+        var rewritten = readService.stories(userId, project.getId(), null, false, null, null, 0, 100).items().stream()
+            .filter(value -> value.id().equals(story.id())).findFirst().orElseThrow();
+        assertThat(rewritten.humanTitle()).contains("发票审核展示调整", "重复项问题");
+        assertThat(rewritten.summaryStatus()).isEqualTo("MODEL_VALIDATED");
+        assertThat(rewritten.claimAttribution().state()).isEqualTo("UNKNOWN");
+        assertThat(requests.get()).isEqualTo(1);
+        assertThat(reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false).cacheHit()).isTrue();
+        assertThat(requests.get()).isEqualTo(1);
+        assertThat(factRepository.countByProjectId(project.getId())).isZero();
+    }
+
+    @Test
     void historicalDocumentContentIsBoundedOwnedAndStableOutsideTheLatestSample() throws Exception {
         UUID userId = UUID.randomUUID();
         Path root = temporaryRoot.resolve("document-delta");

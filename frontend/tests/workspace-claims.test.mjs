@@ -9,6 +9,18 @@ const { supportedClaim, claimLabels } = runtime.exports;
 const previewCompiled = ts.transpileModule(readFileSync("src/lib/workspace-preview.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 const preview = { exports: {} }; new Function("exports", "module", "require", previewCompiled)(preview.exports, preview, () => runtime.exports);
 
+test("process declarations stay visible without becoming confirmed outcomes", () => {
+  const story = { id: "process", humanTitle: "工作记录说明发票审核展示调整", oneSentenceSummary: "开发助手报告了调整并保留重复项问题。",
+    beforeState: "此前未知", change: "开发助手记录审核调整", afterState: "声明仍需独立验证", occurredTo: "2026-09-09", eventRefs: ["e"], conflicts: [], unknowns: [],
+    claimAttribution: { subject: "账务服务相关代码", state: "UNKNOWN", supportClass: "PROCESS_DECLARATION", outcome: "实际结果未知", directEvidenceRefs: [], indirectEvidenceRefs: ["agent-result:invoice"] } };
+  const visible = preview.exports.persistedStory(story);
+  assert.equal(visible.classification, "PROCESS_EVIDENCE");
+  assert.equal(claimLabels[visible.classification], "开发过程声明");
+  assert.equal(visible.confirmedOutcome, false);
+  assert.equal(visible.title, story.humanTitle);
+  assert.equal(preview.exports.persistedStory({ ...story, claimAttribution: { ...story.claimAttribution, supportClass: "INSUFFICIENT" } }).classification, "UNKNOWN");
+});
+
 test("observed scaffold files cannot claim first creation or runtime completion", () => {
   const story = { id: "observed", humanTitle: "建立后端项目骨架", oneSentenceSummary: "首次建立后端项目骨架", beforeState: "此前不存在后端", afterState: "后端已经完成", change: "建立后端", occurredTo: "2026-09-09", eventRefs: ["e"], conflicts: [], unknowns: [], claimAttribution: { subject: "后端项目骨架", state: "OBSERVED", outcome: "文件已有变化", directEvidenceRefs: ["file:backend/new-feature.java"] } };
   const visible = preview.exports.persistedStory(story);

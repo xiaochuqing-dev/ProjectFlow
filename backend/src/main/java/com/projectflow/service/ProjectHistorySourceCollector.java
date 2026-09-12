@@ -1039,10 +1039,7 @@ public class ProjectHistorySourceCollector {
                 String relative = safeRelativePath(root.relativize(normalized).toString());
                 List<String> keyFiles = jsonStrings(rootNode.path("keyFiles"), 60).stream()
                     .map(ProjectHistorySourceCollector::safeRelativePath).filter(value -> !value.isBlank()).toList();
-                List<String> changes = jsonStrings(rootNode.path("actualChanges"), 8).stream()
-                    .map(value -> safeLabel(value, 500)).filter(value -> !value.isBlank()).toList();
-                String goal = safeLabel(rootNode.path("taskGoal").asText(""), 500);
-                String label = changes.isEmpty() ? goal : changes.get(0);
+                String label = agentResultStatement(rootNode);
                 if (label.isBlank()) label = "Agent 工作结果 " + relative;
                 List<String> evidence = new ArrayList<>();
                 evidence.add("agent-result:" + relative);
@@ -1064,13 +1061,35 @@ public class ProjectHistorySourceCollector {
                     keyFiles.stream().map(ProjectHistorySourceCollector::historySubjectKey).distinct().limit(20).toList(),
                     evidence, List.of(), Authority.PROCESS_EVIDENCE, ProjectFactEpistemicStatus.PROCESS_EVIDENCE,
                     Map.of("source", "agent-result", "claimOnly", true, "timeBasis", timeBasis),
-                    List.of("Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。 "), ""
+                    List.of("Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。 ",
+                        "工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。"), ""
                 ));
             }
         } catch (IOException exception) {
             collectionState.complete = false;
             limitations.add("Agent Result 目录无法完整读取；本次继续使用其他来源。 ");
         }
+    }
+
+    private String agentResultStatement(JsonNode node) {
+        List<String> sections = new ArrayList<>();
+        List<String> changes = jsonStrings(node.path("actualChanges"), 2).stream()
+            .map(value -> safeLabel(value, 210)).filter(value -> !value.isBlank()).toList();
+        if (!changes.isEmpty()) sections.add("变更声明：" + String.join("；", changes));
+        else {
+            String goal = safeLabel(node.path("taskGoal").asText(""), 210);
+            if (!goal.isBlank()) sections.add("任务目标声明：" + goal);
+        }
+        List<String> verification = new ArrayList<>();
+        for (String field : List.of("build", "tests", "manualCheck")) {
+            String value = safeLabel(node.path("verification").path(field).asText(""), 75);
+            if (!value.isBlank()) verification.add((field.equals("build") ? "构建" : field.equals("tests") ? "测试" : "人工检查") + "：" + value);
+        }
+        if (!verification.isEmpty()) sections.add("验证声明：" + String.join("；", verification));
+        List<String> unfinished = jsonStrings(node.path("unfinished"), 2).stream()
+            .map(value -> safeLabel(value, 100)).filter(value -> !value.isBlank()).toList();
+        if (!unfinished.isEmpty()) sections.add("未完成声明：" + String.join("；", unfinished));
+        return safeLabel(String.join("。", sections), 1_000);
     }
 
     private void collectProjectFacts(

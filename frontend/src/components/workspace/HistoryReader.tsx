@@ -187,6 +187,7 @@ function ThreadReader({ project, demo, onStory, chapters, chapterPage, onChapter
           <span className="pf-eyebrow">{thread?.subjectType === "RECORD_CONTEXT" ? "相关记录线索" : "长期主题"}{demo ? " · 示例" : ""}</span>
           <h2 ref={heading} tabIndex={-1}>{example?.subjectLabel ?? thread?.subjectLabel}</h2>
           <p>{(example?.summary ?? thread?.currentOutcome) || "现有记录尚未确认主题的当前结果。"}</p>
+          {!demo && <p className="pf-claim-badge">系统归纳 · 实现与验证范围以关联变化的来源为准</p>}
           {!demo && <span><Clock3 size={14} />关联变化覆盖：{historyDateRange(ordered[0]?.occurredFrom, latestStoryTime(ordered))}</span>}
           <small>{storyItems.length} 条可阅读变化 · {demo ? "示例内容" : project.stale ? "可能已过期" : "已保存的演变记录"}</small>
         </header>
@@ -225,6 +226,7 @@ function ThreadReader({ project, demo, onStory, chapters, chapterPage, onChapter
           <Workflow size={22} /><h3>{item.subjectLabel}</h3><p>{item.summary}</p><span>{item.stories.length} 条变化 · 示例<ArrowRight size={15} /></span>
         </Link>) : visibleList?.items.map((item) => <Link className="pf-thread-card" key={item.id} href={`${listHref}&thread=${encodeURIComponent(item.id)}`}>
           <Workflow size={22} /><h3>{item.subjectLabel}</h3><p>{item.currentOutcome || "当前结果尚未确认"}</p>
+          <small className="pf-claim-badge">系统归纳 · 查看关联变化核对实现范围</small>
           <span>{item.storyRefs.length} 条关联变化<ArrowRight size={15} /></span>
           {!!item.conflicts.length && <small className="pf-chip conflict">存在冲突</small>}
           {!!item.unknowns.length && <small className="pf-chip unknown">仍有未知</small>}

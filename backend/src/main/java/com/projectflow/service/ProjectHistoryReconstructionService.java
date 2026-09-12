@@ -53,7 +53,7 @@ import com.projectflow.service.ProjectHistorySourceCollector.CollectionOutcome;
  */
 @Service
 public class ProjectHistoryReconstructionService {
-    static final String STRATEGY_VERSION = "project-history-v40e-specificity-time-v7";
+    static final String STRATEGY_VERSION = "project-history-v40e-specificity-time-v8";
     static final String PROMPT_VERSION = ProjectHistoryPromptBuilder.PROMPT_VERSION;
     private static final int MODEL_STORY_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
     private static final int MODEL_EVENT_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_EVENT_LIMIT;
@@ -1213,6 +1213,14 @@ public class ProjectHistoryReconstructionService {
             narrativePaths(subjectKey, events), labels,
             transitions.stream().map(Enum::name).toList()
         );
+        if ("PROCESS_DECLARATION".equals(narrativeEnvelope.supportClass())) {
+            presentation = new ProjectHistoryLanguageService.Presentation(
+                "记录" + subjectLabel + "的开发过程声明",
+                "开发助手的工作记录描述了" + subjectLabel + "的调整；声明中的实际效果仍待独立核实。",
+                "这份工作记录没有独立证明变更前的完整状态。",
+                "开发助手在工作记录中说明了本次调整，可以继续核对其具体声明与来源。",
+                "开发过程声明已经保留，实现和验证结果仍需要独立证据。", subjectLabel);
+        }
         // Enrich only the owning document Story, and retain the same claim validator.
         List<String> documentChanges = events.stream().filter(event -> event.category() == Category.FILE_CHANGE)
             .filter(event -> event.subjectKeys().contains(subjectKey))
@@ -2709,13 +2717,20 @@ public class ProjectHistoryReconstructionService {
             }
             if (!seenStories.add(id)) throw new HistoryValidationException(ValidationKind.CONTRACT, "Duplicate story ID");
             try {
+                List<EventView> members = original.eventRefs().stream().map(eventsById::get)
+                    .filter(java.util.Objects::nonNull).toList();
+                String subjectLabel = languageService.readableObject(
+                    original.primarySubjectKey(), narrativePaths(original.primarySubjectKey(), members), narrativeSourceLabels(members));
+                ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
+                    original.primarySubjectKey(), subjectLabel, primaryTransition(storyTransitions(members)), members,
+                    !reasonEvidenceByStory.getOrDefault(id, List.of()).isEmpty());
                 String title = modelText(node, "humanTitle", 240);
                 String summary = modelText(node, "oneSentenceSummary", 1_000);
                 if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
                     throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, "History model returned vague wording");
                 }
                 boolean deterministicTitleFallback = false;
-                if (!narrativeValidator.semanticallyUseful(title, summary, original.claimAttribution().subject())) {
+                if (!narrativeValidator.semanticallyUseful(title, summary, envelope)) {
                     title = original.humanTitle();
                     summary = original.oneSentenceSummary();
                     deterministicTitleFallback = true;
@@ -2744,19 +2759,6 @@ public class ProjectHistoryReconstructionService {
                 if (unknownWording.isBlank()) {
                     unknownWording = stringList(node.path("unknowns"), 20).stream().findFirst().orElse("");
                 }
-                List<EventView> members = original.eventRefs().stream().map(eventsById::get)
-                    .filter(java.util.Objects::nonNull).toList();
-                String subjectLabel = languageService.readableObject(
-                    original.primarySubjectKey(),
-                    narrativePaths(original.primarySubjectKey(), members),
-                    narrativeSourceLabels(members)
-                );
-                ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
-                    original.primarySubjectKey(), subjectLabel,
-                    primaryTransition(storyTransitions(members)),
-                    members,
-                    !reasonEvidenceByStory.getOrDefault(id, List.of()).isEmpty()
-                );
                 boolean sourceStateUnknown = members.stream()
                     .anyMatch(event -> event.epistemicStatus() == ProjectFactEpistemicStatus.UNKNOWN);
                 List<String> unknowns = unknownWording.isBlank() && !reason.isBlank() && !sourceStateUnknown

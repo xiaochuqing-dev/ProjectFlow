@@ -135,8 +135,14 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         if (safe.claimState() == ClaimState.CONFLICTED && containsPositiveOutcome(firstLayer)) {
             throw violation(ViolationKind.STATE_UPGRADE, "Conflicted Evidence cannot produce a positive outcome");
         }
-        if (!mentionsSubject(title + " " + summary, safe.subjectLabel())) {
+        if (!mentionsSubject(title + " " + summary, safe.subjectLabel())
+            && !attributedSourceSubject(title, summary, safe)) {
             throw violation(ViolationKind.UNSUPPORTED_OBJECT, "Narrative wording is not anchored to the allowed subject");
+        }
+        if ("PROCESS_DECLARATION".equals(safe.supportClass())
+            && (!sourceAttribution(title + " " + summary) || !sourceAttribution(change)
+                || !containsAny(after, "声明", "记录", "独立验证", "尚待核实", "待核实"))) {
+            throw violation(ViolationKind.STATE_UPGRADE, "Process wording must retain its author and verification boundary");
         }
         if (stateUpgrade(firstLayer, safe.claimState())) {
             throw violation(ViolationKind.STATE_UPGRADE, "Narrative claim is stronger than its Evidence state");
@@ -187,6 +193,28 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         String wording = text(title) + " " + text(summary);
         return java.util.Arrays.stream(concepts.split("、")).filter(value -> value.length() >= 2)
             .anyMatch(wording::contains);
+    }
+
+    public boolean semanticallyUseful(String title, String summary, NarrativeEnvelope envelope) {
+        return semanticallyUseful(title, summary, envelope.subjectLabel())
+            || hasActionObjectResult(title, summary) && attributedSourceSubject(title, summary, envelope);
+    }
+
+    private static boolean sourceAttribution(String value) {
+        return containsAny(value, "作者", "提交者", "开发助手", "工作记录", "开发过程", "来源声明");
+    }
+
+    private static boolean attributedSourceSubject(String title, String summary, NarrativeEnvelope envelope) {
+        String wording = text(title) + " " + text(summary);
+        if (!sourceAttribution(wording)) return false;
+        Set<String> described = meaningfulHanBigrams(wording);
+        described.removeAll(hanBigrams("作者提交者开发助手工作记录开发过程来源声明"));
+        return envelope.humanSafeSourceContext().stream().filter(ProjectHistoryNarrativeEntailmentValidator::sourceStatement)
+            .map(value -> value.substring(value.indexOf('：') + 1)).anyMatch(value -> {
+                Set<String> shared = meaningfulHanBigrams(value);
+                shared.retainAll(described);
+                return shared.size() >= 3;
+            });
     }
 
     public void validateChapter(String title, String summary, List<String> primaryStoryWording) {
@@ -380,11 +408,33 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         result.add(text(profile.subjectLabel()));
         List<EvidenceAtom> latestFirst = new ArrayList<>(profile.atoms());
         java.util.Collections.reverse(latestFirst);
+        // A source statement is safe to retell as a statement, never as proof
+        // of the behavior it asserts. Do not discard English or slash-bearing
+        // prose; the unchanged first-layer validator still rejects raw paths.
+        latestFirst.stream().filter(atom -> atom.subjectKeys().contains(profile.subjectKey()))
+            .filter(atom -> !atom.evidenceRefs().isEmpty())
+            .map(ProjectHistoryNarrativeEntailmentValidator::sourceStatementContext)
+            .filter(value -> !value.isBlank()).distinct().limit(2).forEach(result::add);
         latestFirst.stream().map(EvidenceAtom::sourceLabel).map(ProjectHistoryNarrativeEntailmentValidator::text)
             .filter(value -> containsHan(value) && !value.contains("/") && !value.contains("\\") && !value.contains("…"))
             .filter(value -> !FIXTURE_IDENTIFIER.matcher(value).matches())
-            .limit(5).forEach(result::add);
+            .filter(value -> !result.stream().anyMatch(context -> context.endsWith("：" + value)))
+            .limit(Math.max(0, 6 - result.size())).forEach(result::add);
         return List.copyOf(result);
+    }
+
+    private static String sourceStatementContext(EvidenceAtom atom) {
+        String prefix = atom.category() == Category.AGENT_RESULT ? "开发过程声明（未经独立验证）："
+            : Set.of(Category.COMMIT, Category.MERGE).contains(atom.category()) ? "提交者声明（不等于实现或验收结果）："
+            : Set.of(Category.PULL_REQUEST, Category.ISSUE, Category.USER_DECLARATION).contains(atom.category())
+                ? "来源作者声明（不等于实现或验收结果）：" : "";
+        String label = text(atom.sourceLabel());
+        if (prefix.isBlank() || label.isBlank() || FIXTURE_IDENTIFIER.matcher(label).matches()) return "";
+        return prefix + (label.length() <= 1_000 ? label : label.substring(0, 999) + "…");
+    }
+
+    private static boolean sourceStatement(String value) {
+        return value.startsWith("开发过程声明（") || value.startsWith("提交者声明（") || value.startsWith("来源作者声明（");
     }
 
     private static List<String> allowedClaims(ClaimState state) {

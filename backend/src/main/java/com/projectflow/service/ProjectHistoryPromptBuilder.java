@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v21";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v22";
     public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v11";
     static final int MAX_PROMPT_CHARS = 60_000;
     public static final String VALIDATION_REPAIR_MARKER = "\nHISTORY_VALIDATION_REPAIR=";
@@ -52,17 +52,18 @@ public final class ProjectHistoryPromptBuilder {
         role、primaryStoryId、supportingChangeRefs、storyRefs、时间、verified semantic、claimState、laterOutcome、成员和 Evidence 都由工程层固定，禁止返回或改写。
         humanTitle 只用一句话表达“做了什么 + 对象 + 形成的结果”；oneSentenceSummary 补充范围或影响；Before 只讲此前状态；Change 只讲本阶段动作；After 只讲最终状态。五段不得复读同一句话。
         OUTPUT_TEMPLATE_JSON 已预填工程层确定性安全草稿。只有在不改变 ID、事实、状态和 Evidence 的前提下才能改进文字；不确定时逐字段原样保留预填内容。
-        subjectDisplayConcept 是第一层唯一允许的主要对象；不得输出 raw subject、路径、文件名、class、internal slug、截断 token 或输入外的新实体。
+        subjectDisplayConcept 是直接观察结论的主要对象；humanSafeSourceContext 中有来源作者声明时，可以转述该声明明确提到的对象，但必须标明作者身份，不得当作该 Story 的直接实现或验收结论。不得输出 raw subject、路径、文件名、class、internal slug、截断 token 或输入外的新实体。
         若对象包含“含某些对象相关文件”，这些只是区域中的具体文件例子，不代表整项功能已实现。保留可读的具体对象与动作，不得退化成只有“项目材料、项目骨架、结构文件”的通用摘要。文件变化可确认；运行验收、上线和完整能力需要各自的直接证据。
         多个文件的新增或修改不证明整个文档类别、代码区域或功能此前不存在。保留模板给出的此前状态未知、混合动作与来源时间范围，不得改写为首次建立整类内容。
         Change 中模板给出的具体组件、接口、脚本和文档范围应保留，避免五条不同变化都改成相同的“文件已有变化”。批量提交的主 Story 与关联子范围是一批变化，不是独立成果。
         claimState、claimAction、supportedOutcome、supportClass、allowedClaims 与 forbiddenClaims 是硬边界。PLANNED 不得写成 IMPLEMENTED，DECLARED 不得写成 VERIFIED，CONFIGURED 不得写成已部署，未给直接验证 Evidence 不得写稳定或生产可用。
         directSupportSummary 是与当前 subject/action 直接匹配的有界支持；indirectContextSummary 只解释上下文，明确不能提升 Claim。不得因为同 Commit、相邻时间、相同区域或 Supporting Story 把间接上下文借给当前 Claim。
-        同一提交中的其他对象不能借给当前 Story。模板 Change 给出文件范围；humanSafeSourceContext 中“文档文字变化”给出这些文件的具体文字变化，可以据此补充模板没有说明的内容。普通提交标题仍只作上下文。列举范围时合并相同短语，避免重复列出同一种文件。
+        同一提交中的其他对象不能借给当前 Story 作为实现证据。模板 Change 给出文件范围；humanSafeSourceContext 中“文档文字变化”给出具体文字变化，可以补充内容。带“提交者声明、开发过程声明、来源作者声明”的材料只证明来源作者这样记录，但其中明确写出的行为、验收范围、反馈及未解决问题必须保留，不能抹平成“文件有变化”。英文来源先译成中文，再明确标注“提交者记录、开发助手报告、作者声明”等归属。列举范围时合并相同短语。
+        PROCESS_DECLARATION 表示有明确开发过程声明而实际结果未独立核实；UNKNOWN 只限制实现结论，不表示作者什么都没说。标题和摘要应概括作者报告的具体变化，Change 必须标明开发助手或工作记录的归属，After 保留声明与独立验证的区别。此前没有证据时继续未知。对“已实现、测试通过、已发布”的作者原话，只能转写为实现声明、测试结果记录、发布声明，不得直接断言通过或完成。
         After 只描述该次来源或对应版本的结果。历史删除、回退或恢复不证明今天的工作树状态，不得写成“当前项目不再保留”或“重新出现在当前项目中”。
         文档文字变化与版本号来自对应提交的有界文本差异。优先保留这些具体内容；区分移除摘录、加入摘录与版本号的前后值。文档中的功能、计划、验收文字仍是作者陈述，不能作为独立验证或系统计划。
         有具体文档摘录时，必须用中文解释使用说明、报告或记录新增了哪类内容，不能只重复“文件已新增或修改”。如摘录提到测试、发布或通过，只能写“补充测试结果记录、发布标签核对说明”等文档动作，不得断言测试通过或版本已发布。将技术术语转为可理解的中文，不复制提交哈希、路径、类名、命令或内部英文标识。
-        downgradeReason 必须被遵守：只能在工程层给出的 supportedOutcome 内改写，不得自行提高状态。
+        downgradeReason 必须被遵守：直接结论只能在 supportedOutcome 内改写。转述有来源的声明不提高状态，也不能被改成“具体改动未知”；分别表达作者描述的内容与仍未独立确认的效果。
         Commit message 只是线索。reason 仅在 reasonEvidenceRefs 非空且全部来自该 Story 的 reasonEligibleEvidenceRefs 时填写；否则 reason 留空，并保留模板中的自然 unknownWording，说明原因暂时无法确认。即使存在可选 Evidence，只要本次没有实际采用，也不得清空 unknownWording。
         Chapter 输入中的 representativeClusters、requiredRepresentativeClusterIds 与 dominantClusterIds 由工程层固定。篇章标题必须代表 dominant cluster，篇章摘要必须覆盖每个 required cluster；不得重新聚类、改变权重或用 minor cluster 代替整个时期。
         不得创造 ID、Evidence、文件、数字、原因或项目状态；不得写重要性、成熟度、里程碑、成功判断、下一步或建议。非软件项目不要使用 Controller、Service、Capability 等软件术语。
