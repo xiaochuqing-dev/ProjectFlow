@@ -1,0 +1,18 @@
+{
+  "recordedAt": "2026-09-12T04:50:33.203614+00:00",
+  "functionalSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491",
+  "status": "PARTIAL",
+  "checks": [
+    {
+      "name": "Corporation-Agent",
+      "projectId": "f5f80a76-95c8-41e1-8c5f-49eee3fecfa3",
+      "jobId": "b3167029-0c88-4ce8-91d9-3ba0366b1606",
+      "status": "SUCCEEDED",
+      "requestCount": 0,
+      "usageAvailability": "NOT_CALLED",
+      "elapsedMs": 591,
+      "readableStories": 22,
+      "allStoryResponsesPreserved": true
+    }
+  ]
+}

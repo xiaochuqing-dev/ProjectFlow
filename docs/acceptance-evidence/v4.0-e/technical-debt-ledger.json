@@ -33,9 +33,9 @@
       "priority": "P0",
       "userImpact": "Users cannot tell what changed",
       "engineeringRisk": "Specificity may inflate authority or alter grouping",
-      "treatment": "Exact-commit ownership, diverse bounded paths, short historical document content, temporal limits, and preservation of independently validated Story wording during the existing single repair. Preserve the owning commit/Agent statement with explicit author identity, verification scope and unfinished work; process-only actual state remains UNKNOWN.",
-      "status": "SOURCE_DECLARATION_FIX_UNDER_REAL_REVALIDATION",
-      "remainingRisk": "Corporation-Agent round-five PASS retained; ProjectFlow round-five NEEDS_REVISION retained. New source-attributed wording is running through production Sol/xhigh and will receive a fresh independent visible review.",
+      "treatment": "Exact-commit ownership, diverse bounded paths, short historical document content, temporal limits, and preservation of independently validated Story wording during the existing single repair. Preserve the owning commit/Agent statement with explicit author identity, verification scope and unfinished work; process-only actual state remains UNKNOWN. Independently useful title/summary fields also survive a weaker partner; full authority validation and supported-result fallback remain required.",
+      "status": "CORPORATION_FINAL_PASS_PROJECTFLOW_PENDING",
+      "remainingRisk": "Latest Corporation visible review passed after reading all 34 TXT and 67 PNG. ProjectFlow retains prior NEEDS_REVISION reviews; its remaining History window and final fresh review are pending.",
       "recommendedPhase": "V4.0-E"
     },
     {
@@ -58,8 +58,8 @@
       "userImpact": "Product semantic readiness unproven",
       "engineeringRisk": "Engineering greens could conceal poor explanation",
       "treatment": "Fresh independent Sol/xhigh review of representative visible Current, History, Workline and Evidence",
-      "status": "SOURCE_DECLARATION_FIX_UNDER_REAL_REVALIDATION",
-      "remainingRisk": "Corporation-Agent round-five PASS retained; ProjectFlow round-five NEEDS_REVISION retained. New source-attributed wording is running through production Sol/xhigh and will receive a fresh independent visible review.",
+      "status": "CORPORATION_FINAL_PASS_PROJECTFLOW_PENDING",
+      "remainingRisk": "Latest Corporation visible review passed after reading all 34 TXT and 67 PNG. ProjectFlow retains prior NEEDS_REVISION reviews; its remaining History window and final fresh review are pending.",
       "recommendedPhase": "V4.0-E"
     },
     {
@@ -83,7 +83,7 @@
       "engineeringRisk": "Frontend type omitted backend DECLARED/UNKNOWN states",
       "treatment": "Prioritize existing sourced purpose/capability claims; preserve per-claim classification and source filtering",
       "status": "BROWSER_AND_PARTIAL_REVIEW_PASSED",
-      "remainingRisk": "38 browser cases and Corporation-Agent visible review pass; final ProjectFlow review pending.",
+      "remainingRisk": "Latest production runtime preserves all three successful Current responses; final ProjectFlow visible review remains pending.",
       "recommendedPhase": "V4.0-E"
     },
     {
@@ -193,6 +193,42 @@
       "status": "DEFERRED_SCOPED_CONTRACT_UNIFICATION",
       "remainingRisk": "The old generic Job budget fields remain unsuitable for displaying a whole History cost ceiling. No global budget/runner rewrite is claimed.",
       "recommendedPhase": "Before exposing aggregate budget controls in Desktop"
+    },
+    {
+      "id": "E-P2-03",
+      "debt": "Some recent document/change titles remain broad",
+      "source": "Latest Corporation-Agent independent Sol/xhigh visible review",
+      "priority": "P2",
+      "userImpact": "The default overview requires opening a Story to learn the precise record category or content.",
+      "engineeringRisk": "Do not hide evidence or add unsupported specificity to reduce reading effort.",
+      "treatment": "Review found the notification/communication implementation and version/document changes concrete; broader record/report titles are non-blocking.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "The default overview requires opening a Story to learn the precise record category or content.",
+      "recommendedPhase": "Desktop PoC usability pass"
+    },
+    {
+      "id": "E-P2-04",
+      "debt": "Long source lists take multiple screens to inspect",
+      "source": "Latest Corporation-Agent independent Sol/xhigh visible review",
+      "priority": "P2",
+      "userImpact": "Large commit file inventories have a high scanning cost.",
+      "engineeringRisk": "Do not hide evidence or add unsupported specificity to reduce reading effort.",
+      "treatment": "Keep all sources and current Story/Evidence trace; consider a focused grouping treatment in a later usability pass.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "Large commit file inventories have a high scanning cost.",
+      "recommendedPhase": "Desktop PoC usability pass"
+    },
+    {
+      "id": "E-P2-05",
+      "debt": "The narrow-screen evidence control overlaps a small reading area",
+      "source": "Latest Corporation-Agent independent Sol/xhigh visible review",
+      "priority": "P2",
+      "userImpact": "At 390px, a fixed evidence entry can temporarily cover the lower-right text while scrolling.",
+      "engineeringRisk": "Do not hide evidence or add unsupported specificity to reduce reading effort.",
+      "treatment": "No horizontal overflow or blocked core operation was observed; preserve the review and revisit docking/spacing later.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "At 390px, a fixed evidence entry can temporarily cover the lower-right text while scrolling.",
+      "recommendedPhase": "Desktop PoC usability pass"
     }
   ]
 }
