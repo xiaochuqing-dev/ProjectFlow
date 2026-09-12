@@ -33,9 +33,9 @@
       "priority": "P0",
       "userImpact": "Users cannot tell what changed",
       "engineeringRisk": "Specificity may inflate authority or alter grouping",
-      "treatment": "Exact-commit Primary/Supporting grouping, diverse bounded path samples, concrete component/API/script examples, and Chapter scope validation",
-      "status": "IMPLEMENTED_UNDER_REAL_REVALIDATION",
-      "remainingRisk": "Latest real refresh and independent visible-product review pending",
+      "treatment": "Exact-commit ownership, diverse bounded paths, short historical document content, temporal limits, and preservation of independently validated Story wording during the existing single repair. Preserve the owning commit/Agent statement with explicit author identity, verification scope and unfinished work; process-only actual state remains UNKNOWN.",
+      "status": "SOURCE_DECLARATION_FIX_UNDER_REAL_REVALIDATION",
+      "remainingRisk": "Corporation-Agent round-five PASS retained; ProjectFlow round-five NEEDS_REVISION retained. New source-attributed wording is running through production Sol/xhigh and will receive a fresh independent visible review.",
       "recommendedPhase": "V4.0-E"
     },
     {
@@ -58,8 +58,8 @@
       "userImpact": "Product semantic readiness unproven",
       "engineeringRisk": "Engineering greens could conceal poor explanation",
       "treatment": "Fresh independent Sol/xhigh review of representative visible Current, History, Workline and Evidence",
-      "status": "NEEDS_REVISION",
-      "remainingRisk": "Required Sol/xhigh Corporation review found duplicate commit groups, single-record Threads and incomplete Chapter scope. Failed visible inputs are frozen.",
+      "status": "SOURCE_DECLARATION_FIX_UNDER_REAL_REVALIDATION",
+      "remainingRisk": "Corporation-Agent round-five PASS retained; ProjectFlow round-five NEEDS_REVISION retained. New source-attributed wording is running through production Sol/xhigh and will receive a fresh independent visible review.",
       "recommendedPhase": "V4.0-E"
     },
     {
@@ -82,8 +82,8 @@
       "userImpact": "Successful understanding still opens with file statistics",
       "engineeringRisk": "Frontend type omitted backend DECLARED/UNKNOWN states",
       "treatment": "Prioritize existing sourced purpose/capability claims; preserve per-claim classification and source filtering",
-      "status": "FOCUSED_TESTS_PASSED",
-      "remainingRisk": "Browser and independent model review pending",
+      "status": "BROWSER_AND_PARTIAL_REVIEW_PASSED",
+      "remainingRisk": "38 browser cases and Corporation-Agent visible review pass; final ProjectFlow review pending.",
       "recommendedPhase": "V4.0-E"
     },
     {
@@ -157,6 +157,18 @@
       "status": "REAL_RECOVERY_PASSED",
       "remainingRisk": "Unknown failed-attempt usage cannot be reconstructed",
       "recommendedPhase": "V4.0-E"
+    },
+    {
+      "id": "E-P2-02",
+      "debt": "A local Evidence card retains a broad skeleton/completeness label",
+      "source": "Independent Corporation-Agent final Sol/xhigh review, CA-SOL-01",
+      "priority": "P2",
+      "userImpact": "A reader may temporarily interpret a broad file-change card as wider architecture completion.",
+      "engineeringRisk": "The label is broader than direct file evidence; the main Story explicitly limits the claim to file changes and unverified runtime.",
+      "treatment": "Retain the reviewer finding and scope limitation; do not alter the frozen reviewed output.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "One LOW visible wording issue; no runtime or deployment acceptance is asserted.",
+      "recommendedPhase": "Focused History wording maintenance"
     }
   ]
 }

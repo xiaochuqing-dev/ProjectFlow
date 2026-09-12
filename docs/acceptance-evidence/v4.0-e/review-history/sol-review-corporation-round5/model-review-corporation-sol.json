@@ -1,0 +1,407 @@
+{
+  "reviewType": "MODEL_REVIEW",
+  "product": "Corporation-Agent",
+  "reviewPerspective": "首次使用者，仅依据冻结的最终用户可见文本与截图",
+  "reviewer": {
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "xhigh"
+  },
+  "verdict": "PASS",
+  "summary": "普通首次使用者能够识别 Corporation-Agent 的项目身份，区分项目文档声明、本次材料直接支持的当前结果、系统归纳与未知项；八条近期变化均保留来源边界，前五条详情提供了足够的内容差异或明确的文件修改范围；来源、时间、单一 main 分支、重叠篇章和空长期主题的含义均可理解。发现一处局部过宽归纳，但主故事已有明确限制，不足以造成核心理解错误。",
+  "decisionBasis": {
+    "passReason": "核心语义路径完整且没有把文档、提交文字或文件存在提升为运行成功、验收通过或发布完成；一个 LOW 级来源卡措辞问题不会阻止普通用户形成正确的整体判断。",
+    "blockerCount": 0,
+    "findingCount": 1
+  },
+  "coverage": {
+    "manifest": "corporation-visual-manifest.json",
+    "manifestRows": 34,
+    "expectedTextCount": 34,
+    "reviewedTextCount": 34,
+    "expectedScreenshotCount": 67,
+    "reviewedScreenshotCount": 67,
+    "textFiles": [
+      "visible-text/corporation-current-final.txt",
+      "visible-text/corporation-current-sources-final.txt",
+      "visible-text/corporation-history-default-final.txt",
+      "visible-text/corporation-story-1-final.txt",
+      "visible-text/corporation-story-1-evidence-final.txt",
+      "visible-text/corporation-story-2-final.txt",
+      "visible-text/corporation-story-2-evidence-final.txt",
+      "visible-text/corporation-story-2-related-final.txt",
+      "visible-text/corporation-story-3-final.txt",
+      "visible-text/corporation-story-3-evidence-final.txt",
+      "visible-text/corporation-story-4-final.txt",
+      "visible-text/corporation-story-4-evidence-final.txt",
+      "visible-text/corporation-story-5-final.txt",
+      "visible-text/corporation-story-5-evidence-final.txt",
+      "visible-text/corporation-story-5-related-final.txt",
+      "visible-text/corporation-history-time-final.txt",
+      "visible-text/corporation-threads-directory-final.txt",
+      "visible-text/corporation-worklines-final.txt",
+      "visible-text/corporation-workline-detail-final.txt",
+      "visible-text/corporation-current-390-final.txt",
+      "visible-text/corporation-history-390-final.txt",
+      "visible-text/corporation-worklines-390-final.txt",
+      "visible-text/corporation-current-640-final.txt",
+      "visible-text/corporation-history-640-final.txt",
+      "visible-text/corporation-worklines-640-final.txt",
+      "visible-text/corporation-current-1024-final.txt",
+      "visible-text/corporation-history-1024-final.txt",
+      "visible-text/corporation-worklines-1024-final.txt",
+      "visible-text/corporation-current-1280-final.txt",
+      "visible-text/corporation-history-1280-final.txt",
+      "visible-text/corporation-worklines-1280-final.txt",
+      "visible-text/corporation-current-1600-final.txt",
+      "visible-text/corporation-history-1600-final.txt",
+      "visible-text/corporation-worklines-1600-final.txt"
+    ],
+    "screenshotFiles": [
+      "screenshots/corporation-current-final-1.png",
+      "screenshots/corporation-current-final-2.png",
+      "screenshots/corporation-current-final-3.png",
+      "screenshots/corporation-current-final-4.png",
+      "screenshots/corporation-current-sources-final-1.png",
+      "screenshots/corporation-history-default-final-1.png",
+      "screenshots/corporation-history-default-final-2.png",
+      "screenshots/corporation-history-default-final-3.png",
+      "screenshots/corporation-story-1-final-1.png",
+      "screenshots/corporation-story-1-final-2.png",
+      "screenshots/corporation-story-1-evidence-final-1.png",
+      "screenshots/corporation-story-1-evidence-final-2.png",
+      "screenshots/corporation-story-1-evidence-final-3.png",
+      "screenshots/corporation-story-2-final-1.png",
+      "screenshots/corporation-story-2-final-2.png",
+      "screenshots/corporation-story-2-evidence-final-1.png",
+      "screenshots/corporation-story-2-evidence-final-2.png",
+      "screenshots/corporation-story-2-evidence-final-3.png",
+      "screenshots/corporation-story-2-evidence-final-4.png",
+      "screenshots/corporation-story-2-evidence-final-5.png",
+      "screenshots/corporation-story-2-evidence-final-6.png",
+      "screenshots/corporation-story-2-evidence-final-7.png",
+      "screenshots/corporation-story-2-related-final-1.png",
+      "screenshots/corporation-story-2-related-final-2.png",
+      "screenshots/corporation-story-2-related-final-3.png",
+      "screenshots/corporation-story-2-related-final-4.png",
+      "screenshots/corporation-story-2-related-final-5.png",
+      "screenshots/corporation-story-3-final-1.png",
+      "screenshots/corporation-story-3-final-2.png",
+      "screenshots/corporation-story-3-evidence-final-1.png",
+      "screenshots/corporation-story-3-evidence-final-2.png",
+      "screenshots/corporation-story-3-evidence-final-3.png",
+      "screenshots/corporation-story-4-final-1.png",
+      "screenshots/corporation-story-4-final-2.png",
+      "screenshots/corporation-story-4-evidence-final-1.png",
+      "screenshots/corporation-story-4-evidence-final-2.png",
+      "screenshots/corporation-story-4-evidence-final-3.png",
+      "screenshots/corporation-story-5-final-1.png",
+      "screenshots/corporation-story-5-final-2.png",
+      "screenshots/corporation-story-5-evidence-final-1.png",
+      "screenshots/corporation-story-5-evidence-final-2.png",
+      "screenshots/corporation-story-5-evidence-final-3.png",
+      "screenshots/corporation-story-5-related-final-1.png",
+      "screenshots/corporation-story-5-related-final-2.png",
+      "screenshots/corporation-history-time-final-1.png",
+      "screenshots/corporation-history-time-final-2.png",
+      "screenshots/corporation-threads-directory-final-1.png",
+      "screenshots/corporation-threads-directory-final-2.png",
+      "screenshots/corporation-worklines-final-1.png",
+      "screenshots/corporation-worklines-final-2.png",
+      "screenshots/corporation-workline-detail-final-1.png",
+      "screenshots/corporation-workline-detail-final-2.png",
+      "screenshots/corporation-current-390-final-1.png",
+      "screenshots/corporation-history-390-final-1.png",
+      "screenshots/corporation-worklines-390-final-1.png",
+      "screenshots/corporation-current-640-final-1.png",
+      "screenshots/corporation-history-640-final-1.png",
+      "screenshots/corporation-worklines-640-final-1.png",
+      "screenshots/corporation-current-1024-final-1.png",
+      "screenshots/corporation-history-1024-final-1.png",
+      "screenshots/corporation-worklines-1024-final-1.png",
+      "screenshots/corporation-current-1280-final-1.png",
+      "screenshots/corporation-history-1280-final-1.png",
+      "screenshots/corporation-worklines-1280-final-1.png",
+      "screenshots/corporation-current-1600-final-1.png",
+      "screenshots/corporation-history-1600-final-1.png",
+      "screenshots/corporation-worklines-1600-final-1.png"
+    ],
+    "responsiveViewports": [
+      390,
+      640,
+      1024,
+      1280,
+      1600
+    ]
+  },
+  "dimensions": [
+    {
+      "dimension": "project_identity",
+      "status": "PASS",
+      "judgment": "首页稳定显示 Corporation-Agent，并把项目身份说明定位为 README.md:3 的“项目声明/项目说明与自述”；普通用户能理解其为围绕身份、角色和权限工作的企业 Agent Workspace，同时知道较详细能力描述来自项目文档。",
+      "evidence": [
+        "visible-text/corporation-current-final.txt",
+        "screenshots/corporation-current-final-1.png",
+        "screenshots/corporation-current-sources-final-1.png"
+      ]
+    },
+    {
+      "dimension": "confirmed_current_outcome",
+      "status": "PASS",
+      "judgment": "当前页把可确认结果限定在本次材料可直接支持的事实：docker-compose 样本的 PostgreSQL 17-alpine 与回环绑定、README/后端/前端锁文件记录的 2.2.0、当前工作树无本地变更，以及有来源的文件与结构信号；功能描述被标为项目声明，测试、持续集成和运行状态进入未知。",
+      "evidence": [
+        "visible-text/corporation-current-final.txt",
+        "visible-text/corporation-current-sources-final.txt",
+        "screenshots/corporation-current-final-1.png",
+        "screenshots/corporation-current-final-2.png",
+        "screenshots/corporation-current-final-3.png"
+      ]
+    },
+    {
+      "dimension": "recent_substantial_changes",
+      "status": "PASS",
+      "judgment": "默认八条变化均已检查。前五条详情中，1、3、4、5 给出可核对的文字内容差异，2 给出清晰的跨前端、后端、脚本和文档修改范围；其余默认卡对只能确认文件变化的条目保持保守。八条之间能区分检查记录、通信/通知/附件、版本记录、使用说明、项目报告、协作/交付/审核、图片删除和历程/证据/协作材料。",
+      "evidence": [
+        "visible-text/corporation-history-default-final.txt",
+        "visible-text/corporation-story-1-final.txt",
+        "visible-text/corporation-story-2-final.txt",
+        "visible-text/corporation-story-3-final.txt",
+        "visible-text/corporation-story-4-final.txt",
+        "visible-text/corporation-story-5-final.txt",
+        "screenshots/corporation-history-default-final-1.png",
+        "screenshots/corporation-history-default-final-2.png",
+        "screenshots/corporation-history-default-final-3.png"
+      ]
+    },
+    {
+      "dimension": "source_trace",
+      "status": "PASS",
+      "judgment": "变化详情可展开到直接 Git 提交、提交时间、commit 标识、来源路径和逐文件范围；相关来源单独标注“同一次 Git 提交”并说明关联不证明因果。当前页也提供材料来源入口。",
+      "evidence": [
+        "visible-text/corporation-current-sources-final.txt",
+        "visible-text/corporation-story-1-evidence-final.txt",
+        "visible-text/corporation-story-2-evidence-final.txt",
+        "visible-text/corporation-story-3-evidence-final.txt",
+        "visible-text/corporation-story-4-evidence-final.txt",
+        "visible-text/corporation-story-5-evidence-final.txt",
+        "screenshots/corporation-story-2-evidence-final-3.png",
+        "screenshots/corporation-story-5-evidence-final-2.png"
+      ]
+    },
+    {
+      "dimension": "declared_inferred_unknown",
+      "status": "PASS_WITH_LIMITATION",
+      "judgment": "“项目明确声明”“系统归纳”“尚未确认”“覆盖与缺口”等层级在首页和故事页可见；文档自述、观察到的文件变化、系统归纳和未知项基本不混用。唯一明显偏差是 Story 2 的局部证据卡使用未充分解释的“完善/项目骨架”措辞，详见 CA-SOL-01。",
+      "evidence": [
+        "visible-text/corporation-current-final.txt",
+        "visible-text/corporation-story-2-evidence-final.txt",
+        "screenshots/corporation-current-final-3.png",
+        "screenshots/corporation-story-2-evidence-final-2.png"
+      ]
+    },
+    {
+      "dimension": "single_branch",
+      "status": "PASS",
+      "judgment": "开发工作线只显示一条 main 主线，明确“已读取最近 8 条提交、用途暂无明确声明”，并说明分支名本身不能证明用途；领先/落后 0/0 被限定为 Git 提交比较，不能证明工作已经合入。",
+      "evidence": [
+        "visible-text/corporation-worklines-final.txt",
+        "visible-text/corporation-workline-detail-final.txt",
+        "screenshots/corporation-worklines-final-1.png",
+        "screenshots/corporation-workline-detail-final-1.png"
+      ]
+    },
+    {
+      "dimension": "time_meaning",
+      "status": "PASS",
+      "judgment": "项目历程说明按记录的来源时间阅读，时间依据不完整时以证据限制为准；四个时间篇章明确可重叠、不是前后相继的成熟阶段。工作线区分本地观察时间与最后活动时间，未配置 GitHub 时远程时间保持未知。",
+      "evidence": [
+        "visible-text/corporation-history-time-final.txt",
+        "visible-text/corporation-worklines-final.txt",
+        "visible-text/corporation-workline-detail-final.txt",
+        "screenshots/corporation-history-time-final-1.png",
+        "screenshots/corporation-worklines-final-1.png"
+      ]
+    },
+    {
+      "dimension": "unsupported_claims",
+      "status": "PASS_WITH_LIMITATION",
+      "judgment": "原始提交中诸如“passing CI”的文字仍可见，但被明确标为原始来源且旁边说明“未独立验证运行结果”；报告、README 和版本记录均没有被提升为独立验证结论。Story 2 的局部“完善前后端项目骨架”仍属过宽归纳，未造成主结论越权。",
+      "evidence": [
+        "visible-text/corporation-story-5-evidence-final.txt",
+        "visible-text/corporation-story-2-evidence-final.txt",
+        "screenshots/corporation-story-5-evidence-final-2.png",
+        "screenshots/corporation-story-2-evidence-final-2.png"
+      ]
+    },
+    {
+      "dimension": "story_chapter_thread",
+      "status": "PASS",
+      "judgment": "Story 详情采用“此前状态/本次变化/当前结果/未知/覆盖与缺口”结构，重复内容主要用于证据边界而非制造多个成果。时间篇章声明可重叠；长期主题为空时明确说明材料尚未形成同一对象的连续演变，没有把单次提交或目录清单伪装为 Thread。",
+      "evidence": [
+        "visible-text/corporation-story-1-final.txt",
+        "visible-text/corporation-history-time-final.txt",
+        "visible-text/corporation-threads-directory-final.txt",
+        "screenshots/corporation-threads-directory-final-1.png"
+      ]
+    },
+    {
+      "dimension": "readability_responsive",
+      "status": "PASS",
+      "judgment": "390、640、1024、1280、1600 五档视口的当前状态、项目历程和开发工作线均已检查；清单记录 horizontalOverflow 为 0，截图中标题、边界标签、卡片和主操作仍按自然顺序可读。窄屏隐藏侧栏并保留工程证据入口，宽屏证据栏未遮挡主内容。",
+      "evidence": [
+        "screenshots/corporation-current-390-final-1.png",
+        "screenshots/corporation-history-390-final-1.png",
+        "screenshots/corporation-worklines-390-final-1.png",
+        "screenshots/corporation-current-640-final-1.png",
+        "screenshots/corporation-history-640-final-1.png",
+        "screenshots/corporation-worklines-640-final-1.png",
+        "screenshots/corporation-current-1024-final-1.png",
+        "screenshots/corporation-history-1024-final-1.png",
+        "screenshots/corporation-worklines-1024-final-1.png",
+        "screenshots/corporation-current-1280-final-1.png",
+        "screenshots/corporation-history-1280-final-1.png",
+        "screenshots/corporation-worklines-1280-final-1.png",
+        "screenshots/corporation-current-1600-final-1.png",
+        "screenshots/corporation-history-1600-final-1.png",
+        "screenshots/corporation-worklines-1600-final-1.png"
+      ]
+    }
+  ],
+  "storyChecks": [
+    {
+      "story": 1,
+      "status": "PASS",
+      "judgment": "检查记录与文档的变化说明给出了修改前的简略/待验收表述、本次补入的测试结果、持续集成、密钥检查、版本标签与发布记录文字，并明确这些只是文档记录，不能证明运行或发布结果。",
+      "evidence": [
+        "visible-text/corporation-story-1-final.txt",
+        "visible-text/corporation-story-1-evidence-final.txt",
+        "screenshots/corporation-story-1-final-1.png",
+        "screenshots/corporation-story-1-evidence-final-2.png"
+      ]
+    },
+    {
+      "story": 2,
+      "status": "PASS_WITH_LOW_FINDING",
+      "judgment": "主故事将结论限制为通知、沟通、附件相关代码、文档与脚本留下修改记录，并明确此前完整状态和功能验收未知；相关来源按同一次提交关联且声明不证明因果。局部证据卡使用了范围过宽的“完善前后端项目骨架”归纳，见 finding CA-SOL-01。",
+      "evidence": [
+        "visible-text/corporation-story-2-final.txt",
+        "visible-text/corporation-story-2-evidence-final.txt",
+        "visible-text/corporation-story-2-related-final.txt",
+        "screenshots/corporation-story-2-evidence-final-1.png",
+        "screenshots/corporation-story-2-evidence-final-2.png",
+        "screenshots/corporation-story-2-related-final-1.png"
+      ]
+    },
+    {
+      "story": 3,
+      "status": "PASS",
+      "judgment": "明确呈现版本文字由 2.0.0 到 2.1.0 再到 2.2.0 的变化，并把“版本记录发生变化”与“对应版本已经发布”分开。",
+      "evidence": [
+        "visible-text/corporation-story-3-final.txt",
+        "visible-text/corporation-story-3-evidence-final.txt",
+        "screenshots/corporation-story-3-final-1.png",
+        "screenshots/corporation-story-3-evidence-final-2.png"
+      ]
+    },
+    {
+      "story": 4,
+      "status": "PASS",
+      "judgment": "使用说明的变化具体到团队成员维护、成果上传与审核、文字/文件协作、站内通知、按需模型分析，以及任务流程说明转为持久化运行和断线恢复；页面持续标明这些是文档声明，不等于功能已验证。",
+      "evidence": [
+        "visible-text/corporation-story-4-final.txt",
+        "visible-text/corporation-story-4-evidence-final.txt",
+        "screenshots/corporation-story-4-final-1.png",
+        "screenshots/corporation-story-4-evidence-final-1.png"
+      ]
+    },
+    {
+      "story": 5,
+      "status": "PASS",
+      "judgment": "报告变化说明了原先较简略或待更新的状态文字、本次替换的验收/发布顺序及新增检查记录，并把报告内容变化与实际验收、持续集成或发布成功严格区分；协作脚本仅作为同提交关联来源。",
+      "evidence": [
+        "visible-text/corporation-story-5-final.txt",
+        "visible-text/corporation-story-5-evidence-final.txt",
+        "visible-text/corporation-story-5-related-final.txt",
+        "screenshots/corporation-story-5-final-1.png",
+        "screenshots/corporation-story-5-evidence-final-2.png",
+        "screenshots/corporation-story-5-related-final-1.png"
+      ]
+    },
+    {
+      "story": 6,
+      "status": "PASS",
+      "judgment": "默认变化卡将可确认范围限定为协作、成果交付、审核等前后端文件、文档与脚本的修改记录，没有把文件范围升级为功能完成或验收通过。",
+      "evidence": [
+        "visible-text/corporation-history-default-final.txt",
+        "screenshots/corporation-history-default-final-2.png"
+      ]
+    },
+    {
+      "story": 7,
+      "status": "PASS",
+      "judgment": "默认变化卡只确认对应版本中的图片材料被删除，并明确不能据此推断其他版本或当前版本也没有这些图片。",
+      "evidence": [
+        "visible-text/corporation-history-default-final.txt",
+        "screenshots/corporation-history-default-final-3.png"
+      ]
+    },
+    {
+      "story": 8,
+      "status": "PASS",
+      "judgment": "默认变化卡只确认项目历程、来源证据、协作相关前后端代码、文档与脚本出现修改记录，没有声称运行结果。",
+      "evidence": [
+        "visible-text/corporation-history-default-final.txt",
+        "screenshots/corporation-history-default-final-3.png"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "CA-SOL-01",
+      "severity": "LOW",
+      "blocking": false,
+      "dimensions": [
+        "declared_inferred_unknown",
+        "unsupported_claims",
+        "readability"
+      ],
+      "title": "Story 2 的局部来源卡使用了比直接证据更宽的“完善/项目骨架”表述",
+      "observation": "“补充项目检查记录与文档，完善项目配置基础”和直接工程证据卡“完善前后端项目骨架，并保留原始提交信息供核对”带有完成度与整体基础结构判断；同页可见直接依据只确认一次提交包含通知、沟通、附件、配置、测试、脚本与文档等大量文件变化，并未解释为何可归纳为“项目骨架已完善”。",
+      "impact": "普通新用户若先读来源卡标题，可能把一次广泛文件变更理解成前后端基础架构已经得到完善。主故事的“只证明文件发生变化、运行结果未独立验证”显著降低了误导程度，因此不阻断本轮通过。",
+      "recommendation": "将卡片标题改成对可见范围的中性描述，例如“通知、沟通、附件及配套配置文件发生变更”，或把“项目骨架”明确标为系统归纳并说明依据。",
+      "evidence": [
+        {
+          "file": "visible-text/corporation-story-2-evidence-final.txt",
+          "location": "“相关来源中的其他变化”最后一张卡及“查看工程证据与来源”下方的直接证据卡标题"
+        },
+        {
+          "file": "screenshots/corporation-story-2-evidence-final-2.png",
+          "location": "页面中部“补充项目检查记录与文档，完善项目配置基础”及其下方“完善前后端项目骨架”证据卡"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "冻结清单只提供静态可见文本和截图；未验证按钮、抽屉、搜索、返回、分页与外链目标的实际交互。",
+    "Story 2 的相关来源在冻结输入中只展示第 1/4 页，因此未覆盖第 2 至 4 页的视觉呈现与逐项语义。",
+    "未包含无障碍树、键盘焦点顺序、屏幕阅读器播报或实测对比度数据；本结论仅覆盖截图可见的版式与文字可读性。",
+    "按评审约束未验证源码、DTO、运行功能、测试、持续集成、发布、远程 GitHub/PR 或项目 API；这些未知不被本评审补推。",
+    "本文件只给出 Corporation-Agent 的独立结论，不代表对其他项目或 ProjectFlow 整体的结论。"
+  ],
+  "inputBoundary": {
+    "allowedAndRead": [
+      "corporation-visual-manifest.json",
+      "清单列出的 34 份 visible-text TXT",
+      "清单列出的 67 张 screenshots PNG"
+    ],
+    "excluded": [
+      "源码",
+      "DTO",
+      "Ground Truth",
+      "审计",
+      "阶段报告",
+      "其他轮评审结论",
+      "项目 API",
+      "冻结清单之外的文件"
+    ]
+  }
+}

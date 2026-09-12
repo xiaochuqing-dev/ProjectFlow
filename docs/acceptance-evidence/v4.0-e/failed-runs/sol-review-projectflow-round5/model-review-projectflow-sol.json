@@ -1,0 +1,516 @@
+{
+  "verdict": "NEEDS_REVISION",
+  "reviewer": {
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "xhigh",
+    "rationale": "按指定模型与最高强度，对清单中的 34 份可见文本和 76 张实际截图逐项完成首次用户视角交叉检查；重点核对来源身份、当前结论、变化语义、分支关系、时间语义、未知边界与响应式可读性。"
+  },
+  "coverage": {
+    "manifest": "projectflow-visual-manifest.json",
+    "scope": "仅使用 manifest 及其列出的 TXT/PNG；未读取代码、协议、DTO/API、Ground Truth、claim audit、阶段报告、以前评审或其他目录。",
+    "textFiles": {
+      "expected": 34,
+      "reviewed": 34,
+      "complete": true
+    },
+    "pngFiles": {
+      "expected": 76,
+      "reviewed": 76,
+      "complete": true
+    },
+    "viewports": {
+      "default": "1440x1000",
+      "responsiveWidthsReviewed": [390, 640, 1024, 1280, 1600],
+      "horizontalOverflowReported": 0
+    },
+    "checks": [
+      {
+        "dimension": "Identity",
+        "status": "PASS",
+        "reason": "首屏明确说明 ProjectFlow 的用途，并把 README/项目说明标为项目声明，没有伪装成独立验收结论。",
+        "references": [
+          "visible-text/projectflow-current-final.txt",
+          "screenshots/projectflow-current-final-1.png"
+        ]
+      },
+      {
+        "dimension": "confirmed current outcome",
+        "status": "PARTIAL",
+        "reason": "已观察到的仓库状态与未知项有清晰标签，但 Current 没有利用已存在的分支/PR 证据说明当前 V4.0-D 所处的 Draft、未合入和 stacked 位置。",
+        "references": [
+          "visible-text/projectflow-current-final.txt",
+          "visible-text/projectflow-workline-detail-final.txt"
+        ]
+      },
+      {
+        "dimension": "recent substantial changes",
+        "status": "FAIL",
+        "reason": "多条最近来源含有可保留为声明的具体行为、验收材料和剩余阻断含义，默认摘要却退化成泛化的文件变化或待核实记录，用户无法得知实质变化。",
+        "references": [
+          "visible-text/projectflow-history-default-final.txt",
+          "visible-text/projectflow-story-2-evidence-final.txt",
+          "visible-text/projectflow-story-3-evidence-final.txt",
+          "visible-text/projectflow-story-4-evidence-final.txt"
+        ]
+      },
+      {
+        "dimension": "source trace",
+        "status": "PARTIAL",
+        "reason": "提交、PR、Agent 结果、时间、哈希与相对文件路径大多可追溯；匿名工具材料与超长重复清单降低了可用性。",
+        "references": [
+          "screenshots/projectflow-story-1-evidence-final-2.png",
+          "screenshots/projectflow-story-2-evidence-final-2.png",
+          "screenshots/projectflow-current-sources-final-1.png"
+        ]
+      },
+      {
+        "dimension": "declared/inferred/unknown",
+        "status": "PARTIAL",
+        "reason": "Current、History 和 Story 对项目声明、系统归纳、过程记录和未知的区分总体可靠；长期主题卡片中的“已有代码实现”没有同等清晰的推断身份。",
+        "references": [
+          "visible-text/projectflow-current-sources-final.txt",
+          "visible-text/projectflow-threads-directory-final.txt"
+        ]
+      },
+      {
+        "dimension": "multi-branch",
+        "status": "PASS",
+        "reason": "19 条分支、主线、Draft、未合入状态以及 #24 基于 #23、#23 基于 #22 的 stacked 关系均可见，并明确提示分支名与 ahead/behind 不能证明用途或合入。",
+        "references": [
+          "visible-text/projectflow-worklines-final.txt",
+          "visible-text/projectflow-workline-detail-final.txt",
+          "screenshots/projectflow-worklines-final-1.png",
+          "screenshots/projectflow-workline-detail-final-1.png"
+        ]
+      },
+      {
+        "dimension": "single-branch",
+        "status": "NOT_APPLICABLE",
+        "reason": "本项目清单明确显示 19 条分支和多层 Draft 依赖，不是单分支项目；本轮没有单分支样本可独立判断。",
+        "references": [
+          "visible-text/projectflow-worklines-final.txt"
+        ]
+      },
+      {
+        "dimension": "time meaning",
+        "status": "PASS_WITH_ISSUE",
+        "reason": "提案更新时间、提交时间、工作结果入库时间被明确区分，时间篇章也声明可重叠且不代表成熟阶段；时间目录与当前详情的视觉对应仍有可用性问题。",
+        "references": [
+          "visible-text/projectflow-history-default-final.txt",
+          "visible-text/projectflow-history-time-final.txt",
+          "screenshots/projectflow-history-time-final-1.png"
+        ]
+      },
+      {
+        "dimension": "unsupported claims",
+        "status": "PARTIAL",
+        "reason": "核心故事普遍避免把文档、Agent 或 PR 声明升级成运行事实；长期主题的“已有代码实现”和历史 PR 列表中重复出现的“HEAD 匹配”仍需要更明确的观察对象与来源身份。",
+        "references": [
+          "visible-text/projectflow-threads-directory-final.txt",
+          "visible-text/projectflow-worklines-final.txt"
+        ]
+      },
+      {
+        "dimension": "readability/responsive",
+        "status": "PASS_WITH_ISSUES",
+        "reason": "390、640、1024、1280、1600 五档均无横向溢出，导航、卡片和正文可读；展开证据的重复路径墙与时间页的目录/详情错位显著增加阅读成本。",
+        "references": [
+          "screenshots/projectflow-current-390-final-1.png",
+          "screenshots/projectflow-history-640-final-1.png",
+          "screenshots/projectflow-worklines-1024-final-1.png",
+          "screenshots/projectflow-current-1280-final-1.png",
+          "screenshots/projectflow-worklines-1600-final-1.png"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "view": "current-final",
+        "text": "visible-text/projectflow-current-final.txt",
+        "images": [
+          "screenshots/projectflow-current-final-1.png",
+          "screenshots/projectflow-current-final-2.png",
+          "screenshots/projectflow-current-final-3.png",
+          "screenshots/projectflow-current-final-4.png"
+        ]
+      },
+      {
+        "view": "current-sources-final",
+        "text": "visible-text/projectflow-current-sources-final.txt",
+        "images": ["screenshots/projectflow-current-sources-final-1.png"]
+      },
+      {
+        "view": "history-default-final",
+        "text": "visible-text/projectflow-history-default-final.txt",
+        "images": [
+          "screenshots/projectflow-history-default-final-1.png",
+          "screenshots/projectflow-history-default-final-2.png",
+          "screenshots/projectflow-history-default-final-3.png"
+        ]
+      },
+      {
+        "view": "story-1-final",
+        "text": "visible-text/projectflow-story-1-final.txt",
+        "images": [
+          "screenshots/projectflow-story-1-final-1.png",
+          "screenshots/projectflow-story-1-final-2.png"
+        ]
+      },
+      {
+        "view": "story-1-evidence-final",
+        "text": "visible-text/projectflow-story-1-evidence-final.txt",
+        "images": [
+          "screenshots/projectflow-story-1-evidence-final-1.png",
+          "screenshots/projectflow-story-1-evidence-final-2.png",
+          "screenshots/projectflow-story-1-evidence-final-3.png"
+        ]
+      },
+      {
+        "view": "story-2-final",
+        "text": "visible-text/projectflow-story-2-final.txt",
+        "images": [
+          "screenshots/projectflow-story-2-final-1.png",
+          "screenshots/projectflow-story-2-final-2.png"
+        ]
+      },
+      {
+        "view": "story-2-evidence-final",
+        "text": "visible-text/projectflow-story-2-evidence-final.txt",
+        "images": [
+          "screenshots/projectflow-story-2-evidence-final-1.png",
+          "screenshots/projectflow-story-2-evidence-final-2.png",
+          "screenshots/projectflow-story-2-evidence-final-3.png",
+          "screenshots/projectflow-story-2-evidence-final-4.png",
+          "screenshots/projectflow-story-2-evidence-final-5.png",
+          "screenshots/projectflow-story-2-evidence-final-6.png",
+          "screenshots/projectflow-story-2-evidence-final-7.png"
+        ]
+      },
+      {
+        "view": "story-2-related-final",
+        "text": "visible-text/projectflow-story-2-related-final.txt",
+        "images": [
+          "screenshots/projectflow-story-2-related-final-1.png",
+          "screenshots/projectflow-story-2-related-final-2.png",
+          "screenshots/projectflow-story-2-related-final-3.png",
+          "screenshots/projectflow-story-2-related-final-4.png",
+          "screenshots/projectflow-story-2-related-final-5.png"
+        ]
+      },
+      {
+        "view": "story-3-final",
+        "text": "visible-text/projectflow-story-3-final.txt",
+        "images": [
+          "screenshots/projectflow-story-3-final-1.png",
+          "screenshots/projectflow-story-3-final-2.png"
+        ]
+      },
+      {
+        "view": "story-3-evidence-final",
+        "text": "visible-text/projectflow-story-3-evidence-final.txt",
+        "images": [
+          "screenshots/projectflow-story-3-evidence-final-1.png",
+          "screenshots/projectflow-story-3-evidence-final-2.png",
+          "screenshots/projectflow-story-3-evidence-final-3.png",
+          "screenshots/projectflow-story-3-evidence-final-4.png",
+          "screenshots/projectflow-story-3-evidence-final-5.png",
+          "screenshots/projectflow-story-3-evidence-final-6.png"
+        ]
+      },
+      {
+        "view": "story-4-final",
+        "text": "visible-text/projectflow-story-4-final.txt",
+        "images": [
+          "screenshots/projectflow-story-4-final-1.png",
+          "screenshots/projectflow-story-4-final-2.png"
+        ]
+      },
+      {
+        "view": "story-4-evidence-final",
+        "text": "visible-text/projectflow-story-4-evidence-final.txt",
+        "images": [
+          "screenshots/projectflow-story-4-evidence-final-1.png",
+          "screenshots/projectflow-story-4-evidence-final-2.png",
+          "screenshots/projectflow-story-4-evidence-final-3.png"
+        ]
+      },
+      {
+        "view": "story-5-final",
+        "text": "visible-text/projectflow-story-5-final.txt",
+        "images": [
+          "screenshots/projectflow-story-5-final-1.png",
+          "screenshots/projectflow-story-5-final-2.png"
+        ]
+      },
+      {
+        "view": "story-5-evidence-final",
+        "text": "visible-text/projectflow-story-5-evidence-final.txt",
+        "images": [
+          "screenshots/projectflow-story-5-evidence-final-1.png",
+          "screenshots/projectflow-story-5-evidence-final-2.png",
+          "screenshots/projectflow-story-5-evidence-final-3.png"
+        ]
+      },
+      {
+        "view": "history-time-final",
+        "text": "visible-text/projectflow-history-time-final.txt",
+        "images": [
+          "screenshots/projectflow-history-time-final-1.png",
+          "screenshots/projectflow-history-time-final-2.png",
+          "screenshots/projectflow-history-time-final-3.png",
+          "screenshots/projectflow-history-time-final-4.png",
+          "screenshots/projectflow-history-time-final-5.png"
+        ]
+      },
+      {
+        "view": "threads-directory-final",
+        "text": "visible-text/projectflow-threads-directory-final.txt",
+        "images": [
+          "screenshots/projectflow-threads-directory-final-1.png",
+          "screenshots/projectflow-threads-directory-final-2.png",
+          "screenshots/projectflow-threads-directory-final-3.png"
+        ]
+      },
+      {
+        "view": "thread-first-final",
+        "text": "visible-text/projectflow-thread-first-final.txt",
+        "images": [
+          "screenshots/projectflow-thread-first-final-1.png",
+          "screenshots/projectflow-thread-first-final-2.png"
+        ]
+      },
+      {
+        "view": "worklines-final",
+        "text": "visible-text/projectflow-worklines-final.txt",
+        "images": [
+          "screenshots/projectflow-worklines-final-1.png",
+          "screenshots/projectflow-worklines-final-2.png",
+          "screenshots/projectflow-worklines-final-3.png",
+          "screenshots/projectflow-worklines-final-4.png"
+        ]
+      },
+      {
+        "view": "workline-detail-final",
+        "text": "visible-text/projectflow-workline-detail-final.txt",
+        "images": [
+          "screenshots/projectflow-workline-detail-final-1.png",
+          "screenshots/projectflow-workline-detail-final-2.png"
+        ]
+      },
+      {
+        "view": "current-390-final",
+        "text": "visible-text/projectflow-current-390-final.txt",
+        "images": ["screenshots/projectflow-current-390-final-1.png"]
+      },
+      {
+        "view": "history-390-final",
+        "text": "visible-text/projectflow-history-390-final.txt",
+        "images": ["screenshots/projectflow-history-390-final-1.png"]
+      },
+      {
+        "view": "worklines-390-final",
+        "text": "visible-text/projectflow-worklines-390-final.txt",
+        "images": ["screenshots/projectflow-worklines-390-final-1.png"]
+      },
+      {
+        "view": "current-640-final",
+        "text": "visible-text/projectflow-current-640-final.txt",
+        "images": ["screenshots/projectflow-current-640-final-1.png"]
+      },
+      {
+        "view": "history-640-final",
+        "text": "visible-text/projectflow-history-640-final.txt",
+        "images": ["screenshots/projectflow-history-640-final-1.png"]
+      },
+      {
+        "view": "worklines-640-final",
+        "text": "visible-text/projectflow-worklines-640-final.txt",
+        "images": ["screenshots/projectflow-worklines-640-final-1.png"]
+      },
+      {
+        "view": "current-1024-final",
+        "text": "visible-text/projectflow-current-1024-final.txt",
+        "images": ["screenshots/projectflow-current-1024-final-1.png"]
+      },
+      {
+        "view": "history-1024-final",
+        "text": "visible-text/projectflow-history-1024-final.txt",
+        "images": ["screenshots/projectflow-history-1024-final-1.png"]
+      },
+      {
+        "view": "worklines-1024-final",
+        "text": "visible-text/projectflow-worklines-1024-final.txt",
+        "images": ["screenshots/projectflow-worklines-1024-final-1.png"]
+      },
+      {
+        "view": "current-1280-final",
+        "text": "visible-text/projectflow-current-1280-final.txt",
+        "images": ["screenshots/projectflow-current-1280-final-1.png"]
+      },
+      {
+        "view": "history-1280-final",
+        "text": "visible-text/projectflow-history-1280-final.txt",
+        "images": ["screenshots/projectflow-history-1280-final-1.png"]
+      },
+      {
+        "view": "worklines-1280-final",
+        "text": "visible-text/projectflow-worklines-1280-final.txt",
+        "images": ["screenshots/projectflow-worklines-1280-final-1.png"]
+      },
+      {
+        "view": "current-1600-final",
+        "text": "visible-text/projectflow-current-1600-final.txt",
+        "images": ["screenshots/projectflow-current-1600-final-1.png"]
+      },
+      {
+        "view": "history-1600-final",
+        "text": "visible-text/projectflow-history-1600-final.txt",
+        "images": ["screenshots/projectflow-history-1600-final-1.png"]
+      },
+      {
+        "view": "worklines-1600-final",
+        "text": "visible-text/projectflow-worklines-1600-final.txt",
+        "images": ["screenshots/projectflow-worklines-1600-final-1.png"]
+      }
+    ]
+  },
+  "findings": [
+    {
+      "id": "PF-SOL-01",
+      "level": "P1",
+      "blocking": true,
+      "category": "recent substantial changes / semantic fidelity",
+      "title": "默认故事把有来源的实质含义降格成泛化文件变化",
+      "detail": "Story 3 的 Agent 结果明确声明 Current 已区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知，并避免无来源百分比与把骨架误述为整套产品；默认故事却只说“整理开发工作线相关代码，具体改动和结果仍不清楚”，甚至标为“暂无明确记录”。Story 2 的提交原文包含“preserve remaining quality blockers”，且来源列表含多个 failed-runs，但默认摘要只说形成审阅材料。Story 4 的提交原文声明记录 GUI acceptance evidence 与 owner feedback，默认故事只保留日期文字变更。谨慎降级事实强度是正确的，但这些内容仍应作为“开发过程声明/提交者声明”被保留，不能被抹成无意义的目录和文件变化。",
+      "impact": "首次用户无法从最近八条和前五条故事理解这轮工作实际试图改变什么、留下了哪些阻断或验收主张；这直接破坏 ProjectFlow 的核心项目理解价值。",
+      "visibleLocations": [
+        "visible-text/projectflow-history-default-final.txt",
+        "visible-text/projectflow-story-2-final.txt",
+        "visible-text/projectflow-story-2-evidence-final.txt",
+        "visible-text/projectflow-story-3-final.txt",
+        "visible-text/projectflow-story-3-evidence-final.txt",
+        "visible-text/projectflow-story-4-final.txt",
+        "visible-text/projectflow-story-4-evidence-final.txt",
+        "screenshots/projectflow-history-default-final-1.png",
+        "screenshots/projectflow-story-3-final-1.png",
+        "screenshots/projectflow-story-3-evidence-final-2.png",
+        "screenshots/projectflow-story-4-evidence-final-2.png"
+      ],
+      "requiredRevision": "在默认标题、摘要和 01/02/03 中保留来源作者明确说过的行为、验收范围、剩余阻断与 owner feedback 含义，并标注为开发过程声明或提交者声明；继续明确它们不等于独立验证。"
+    },
+    {
+      "id": "PF-SOL-02",
+      "level": "P2",
+      "blocking": false,
+      "category": "confirmed current outcome",
+      "title": "Current 没有呈现已存在证据支持的当前 Draft 与 stacked 状态",
+      "detail": "Current 首屏突出 V4.0-D 的目标描述和“已读取”，实际可确认项却只到测试配置、worktree CLEAN、提交数和无 Tag。另一个已读取视图已经能确认本地 HEAD 与 PR #24 分支 HEAD 一致、PR #24 仍为 Draft 且未合入并基于 #23。这个当前集成状态对理解“现在是什么”非常关键，却只能离开 Current 后查到。",
+      "impact": "用户容易把显眼的 V4.0-D 项目声明理解为已整合的当前结果，无法在 Current 一眼看清当前 checkout、主线和 Draft 的关系。",
+      "visibleLocations": [
+        "visible-text/projectflow-current-final.txt",
+        "visible-text/projectflow-worklines-final.txt",
+        "visible-text/projectflow-workline-detail-final.txt",
+        "screenshots/projectflow-current-final-1.png",
+        "screenshots/projectflow-workline-detail-final-1.png"
+      ],
+      "requiredRevision": "在 Current 的已观察结果中加入一条紧凑的当前分支/PR 集成状态，并明确 V4.0-D 的能力描述仍是声明；保留跳转到完整工作线依据。"
+    },
+    {
+      "id": "PF-SOL-03",
+      "level": "P2",
+      "blocking": false,
+      "category": "source trace / readability",
+      "title": "展开 Evidence 后形成超长、重复的路径墙",
+      "detail": "Story 2 的单条提交展开后占 7 张连续截图，随后还有 12 页、113 条逐文件来源；Story 3 对每个同源引用重复同一限制句和相同折叠控件。原始追溯存在，但缺少先按来源类型与变更性质聚合的可读层。",
+      "impact": "用户能追到源，却很难判断哪些文件解释行为、哪些是测试/截图/失败记录，也很难快速发现真正影响结论的证据。",
+      "visibleLocations": [
+        "visible-text/projectflow-story-2-evidence-final.txt",
+        "visible-text/projectflow-story-2-related-final.txt",
+        "visible-text/projectflow-story-3-evidence-final.txt",
+        "screenshots/projectflow-story-2-evidence-final-3.png",
+        "screenshots/projectflow-story-2-evidence-final-7.png",
+        "screenshots/projectflow-story-3-evidence-final-4.png"
+      ],
+      "requiredRevision": "先显示按代码、测试、文档、截图、失败记录等分组的数量和高价值样本，再允许展开完整路径；同源限制只在组级显示一次。"
+    },
+    {
+      "id": "PF-SOL-04",
+      "level": "P2",
+      "blocking": false,
+      "category": "source identity",
+      "title": "Current 来源展开包含无法辨认的匿名工具材料",
+      "detail": "“本次材料能支持的判断”展开后，两条来源都显示为“工具读取材料 · 读取时为当前材料”，没有工具类型、证据角色或可区分名称。虽然其余来源能显示文件路径，这两项无法被用户独立识别。",
+      "impact": "来源追溯在最重要的 Current 判断中出现断点，用户不能知道匿名材料具体支持了哪一部分结论。",
+      "visibleLocations": [
+        "visible-text/projectflow-current-sources-final.txt",
+        "screenshots/projectflow-current-sources-final-1.png"
+      ],
+      "requiredRevision": "为工具来源提供稳定、非敏感且可区分的显示名与证据角色；不能安全命名时合并为一个明确的工具观察摘要。"
+    },
+    {
+      "id": "PF-SOL-05",
+      "level": "P2",
+      "blocking": false,
+      "category": "time navigation / readability",
+      "title": "时间篇章目录与正在阅读的详情缺少可见对应关系",
+      "detail": "按时间查看时，主详情展示 2026/9/7–2026/9/10 的最近篇章，左侧同屏目录却是 CHAPTER 01–20 的 6–8 月内容，没有高亮当前篇章，也看不到当前篇章编号。到页面末尾，主栏已结束并留下大片空白，左侧目录仍继续。",
+      "impact": "用户无法确认自己正在读哪个篇章，也难以从时间目录定位或返回当前选择；长页面的视觉重心断裂。",
+      "visibleLocations": [
+        "visible-text/projectflow-history-time-final.txt",
+        "screenshots/projectflow-history-time-final-1.png",
+        "screenshots/projectflow-history-time-final-4.png",
+        "screenshots/projectflow-history-time-final-5.png"
+      ],
+      "requiredRevision": "让目录自动定位并高亮当前篇章，显示同一编号与时间范围；分页或虚拟化目录，使目录高度与主详情阅读路径保持一致。"
+    },
+    {
+      "id": "PF-SOL-06",
+      "level": "P2",
+      "blocking": false,
+      "category": "inferred / unsupported claims",
+      "title": "长期主题卡片中的“已有代码实现”缺少明确推断身份",
+      "detail": "长期主题目录直接写“任务页面已有代码实现”“分析任务已有代码实现”“接口客户端已有代码实现”“数据结构修复已有代码实现”等结论，只附“仍有未知”，没有像 Current 和 History 那样标明这是系统归纳、直接观察还是项目声明。",
+      "impact": "“已有代码实现”容易被理解为确定事实或可用能力，而“稳定性仍需验证”只限制稳定性，并未说明实现判断本身来自何种证据。",
+      "visibleLocations": [
+        "visible-text/projectflow-threads-directory-final.txt",
+        "screenshots/projectflow-threads-directory-final-1.png",
+        "screenshots/projectflow-threads-directory-final-2.png"
+      ],
+      "requiredRevision": "为主题级结论显示与其他页面一致的来源身份；若证据只证明文件存在或发生变化，应改写为“观察到相关代码文件/变化”，避免使用更强的“已有实现”。"
+    },
+    {
+      "id": "PF-SOL-07",
+      "level": "P3",
+      "blocking": false,
+      "category": "multi-branch terminology",
+      "title": "多个历史 PR 同时显示“HEAD 匹配”，观察对象不明确",
+      "detail": "已合入历史列表中 PR #12、#11、#10、#9、#8、#7、#6 均显示“PR 已合并，HEAD 匹配”。详情页会区分本地 Git HEAD 与 GitHub 分支 HEAD，但列表没有说明这里匹配的是哪两个 HEAD。",
+      "impact": "用户可能误读为这些不同历史 PR 都匹配当前 checkout HEAD，也无法凭列表判断该状态的证据语义。",
+      "visibleLocations": [
+        "visible-text/projectflow-worklines-final.txt",
+        "screenshots/projectflow-worklines-final-2.png",
+        "screenshots/projectflow-worklines-final-3.png",
+        "screenshots/projectflow-worklines-final-4.png"
+      ],
+      "requiredRevision": "把“HEAD 匹配”改为明确的比较对象，例如“本地分支与 GitHub 分支 HEAD 匹配”，或直接显示合入依据。"
+    }
+  ],
+  "summary": {
+    "reason": "产品已经能清楚区分声明、系统归纳、过程记录和未知，多分支与时间来源语义也总体可靠，五档响应式没有横向溢出。最终不能通过的原因不是未知项多，而是已有来源中最重要的变化语义在默认 Current/History/Story 路径里被系统性抹平；用户看到的是泛化文件变化，无法理解具体行为、验收主张和剩余质量阻断。",
+    "blockingFindingIds": ["PF-SOL-01"],
+    "nonBlockingFindingIds": [
+      "PF-SOL-02",
+      "PF-SOL-03",
+      "PF-SOL-04",
+      "PF-SOL-05",
+      "PF-SOL-06",
+      "PF-SOL-07"
+    ],
+    "strengths": [
+      "项目身份与 README/项目说明的声明身份清楚。",
+      "PR、Git、Agent 结果和时间类型没有被静默混成同一种事实。",
+      "多分支 Draft、stacked base 与未合入状态可追溯，并带有 ahead/behind 限制说明。",
+      "390、640、1024、1280、1600 五档均保持可读且无横向溢出。"
+    ]
+  }
+}

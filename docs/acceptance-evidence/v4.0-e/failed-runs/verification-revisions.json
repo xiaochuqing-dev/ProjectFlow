@@ -104,6 +104,27 @@
       "finding": "New mixed-commit regression caught file members moving to an inventory owner while the commit event retained its prior first-file owner.",
       "action": "Select the commit owner from its own source revision and bind only that source-backed commit to the derived inventory subject; keep every original event.",
       "final": "Focused rerun in progress"
+    },
+    {
+      "finding": "The first sibling-preservation regression run changed the existing unsupported-claim failure classification for mixed Story/Chapter output.",
+      "action": "Restrict partial semantic preservation to valid Story-only windows. Mixed Chapter output, structural defects and invalid references retain whole-window rejection; the original classification assertion is unchanged.",
+      "initial": "71 focused tests, one failure",
+      "final": "71 focused tests passed; subsequent full backend/H2 772 tests (761 passed, 11 opt-in skips), PostgreSQL 16 seven passed and exact V3.9 two passed."
+    },
+    {
+      "finding": "Source-declaration revision full regression: 775 tests, 3 failures, 0 errors, 11 opt-in skips. Prompt expectation remained v21, process fallback lacked an explicit record result, and a 25-commit metadata page was truncated after four of 351 commits.",
+      "action": "Update the legitimate v22 prompt contract; keep the quality gate and add an explicit source-record result; shrink oversized Git pages with bounded resizing and retain a 1000-file single-commit budget, the 100000-character command limit, cancellation and all coverage gaps.",
+      "final": "Eight focused checks passed, including all three real history continuity Dogfood scenarios; 351/351 Git commits read, event conservation true, representative coverage 0.6875092512587908 against unchanged 0.60 threshold. Full regression pending."
+    },
+    {
+      "finding": "New pagination regression initially used a nonexistent record accessor, causing test compilation failure before execution.",
+      "action": "Use the existing readGitCommits accessor; no production or acceptance condition changed.",
+      "final": "Three pagination regressions passed: page recovery, explicit single-commit file ceiling and partial-path rejection."
+    },
+    {
+      "finding": "ProjectFlow independent Sol/xhigh round five remained NEEDS_REVISION: default Stories erased behavior, verification scope and unfinished work already present in commit or Agent declarations.",
+      "action": "Preserve bounded owned source statements in model context and require explicit author attribution. Process-only implementation state remains UNKNOWN with no direct evidence; disclose development-process and system-inference labels.",
+      "final": "Source and recovery contracts passed; new production History replay and independent visible review pending. Frozen round-five inputs and conclusion remain under sol-review-projectflow-round5."
     }
   ],
   "rawLogsIncluded": false

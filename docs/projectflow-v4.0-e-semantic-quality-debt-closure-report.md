@@ -8,7 +8,7 @@
 
 ## 2. GitHub / PR baseline
 
-开始时远程 master 为 `1712841b77fd1e8146ce4ab6beaf404e5b1f7a53`。#24 仍为 Draft，Head `81730744a325ccc2391009b367ca4ba95aef6d14`，因此从该提交建立独立 worktree 与 `codex/v4.0-e-semantic-quality-debt-closure`。原工作区的已修改与未跟踪内容保持原样。
+开始时远程 master 为 `1712841b77fd1e8146ce4ab6beaf404e5b1f7a53`。#24 仍为 Draft，Head `81730744a325ccc2391009b367ca4ba95aef6d14`，因此从该提交建立独立 worktree 与 `codex/v4.0-e-semantic-quality-debt-closure`。本任务在独立工作树实施，没有在用户原工作区写入。
 
 ## 3. V4.0-D blockers
 
@@ -46,6 +46,8 @@ ProjectFlow 与 Corporation-Agent 均已通过真实 Sol / Responses / xhigh Cur
 
 模型仍接收工程层确定的主体、时间和 Evidence；候选保留来源类别多样性，同时优先近期变化，并先提供最近的对应文本。使用说明、报告和验收记录中的内容只支持“文档补充了什么”，不证明功能或验收通过。单个依赖清单或数据结构文件不再被称为整个项目骨架。
 
+提交者和开发助手的有界声明保留具体行为、验证范围及未完成项，包括英文原文或带斜杠的描述。模型必须用中文转述并标清作者；这只证明来源做过该声明。纯过程记录保持 UNKNOWN 实现状态、空直接证据与 PROCESS_DECLARATION 支持类型，不自动写入 ProjectFact。
+
 ## 10. History quality
 
 观察类代码变化明确写新增/修改对象，并保留“文件变化不等于运行验收”。同一提交的总览与细分范围通过 Primary/Supporting 关系阅读，相关范围可继续下钻；原始事件和双向关系完整保留。篇章切分保持完整父子组，并只复用兼容的分组与代表性计划。词汇更具体不会把 broad owner 改成能力实体，也不会让样例文件名拆散既有 broad representation family。
@@ -60,11 +62,11 @@ Git 用提交时间；PR 区分 merged/closed/updated/created；Tag 用真实标
 
 ## 12. ProjectFlow Dogfood
 
-使用冻结的 PR #24 只读 clone，Current 已成功。History、全部普通首层陈述、Thread、Story/Evidence、多分支与 stacked PR 的最终证据见可见文本、截图与审计文件；未完成项不作为 PASS。
+使用冻结的 PR #24 只读 clone，Current 已成功。最终 History 耗时 2,749,896 毫秒，20 次实际请求；14 个窗口全部完成，篇章无失败或待处理项，4,312 个来源事件守恒，代表性覆盖为 0.6763，原 0.60 门槛未降低。第 10 次请求发生 HTTP/2 reset，第 11 次有界重试成功；总用量为 PARTIAL，已报告 297,306 tokens 不代表完整总量。随后无变化重跑耗时 20,799 毫秒、零请求。最终 34 份文本与 76 张截图已冻结，独立评审正在进行。
 
 ## 13. Corporation-Agent / third-project Dogfood
 
-Corporation-Agent 使用冻结 `f80553c61aaf19b19e729d47739d6b8f35c1dffd`、17 commits、单 main 分支。较早的 xhigh History 恢复成功与无变化零调用记录全部保留。文档内容复验有一次 Job 成功、4 次实际请求、耗时 519,167 毫秒，但整窗恢复抹去了具体措辞，因此明确不计为语义验收。保留合格措辞后的真实复验正在执行。README 能力仍为声明，代码新增不等于上线。
+Corporation-Agent 使用冻结 `f80553c61aaf19b19e729d47739d6b8f35c1dffd`、17 commits、单 main 分支。较早的 xhigh History 恢复成功与无变化零调用记录全部保留。文档内容复验有一次 Job 成功、4 次实际请求、耗时 519,167 毫秒，但整窗恢复抹去了具体措辞，因此明确不计为语义验收。保留合格措辞后的真实复验成功：6 次实际 xhigh 请求、耗时 932,182 毫秒；无变化重跑 736 毫秒、零请求。默认最近五条已显示文档中的版本变化、协作方式和检查记录内容，独立语义复审仍在进行。README 能力仍为声明，代码新增不等于上线。
 
 第三项目为本地通用备考技能包的只读 clone。真实 Final Synthesis 失败后保留已验证 Scout，恢复只调用一次 Final Synthesis 并成功；最新无变化重跑为零请求。初始失败、状态误报和恢复分别留档，没有把材料包强制理解为前后端应用。
 
@@ -76,7 +78,9 @@ Corporation-Agent 使用冻结 `f80553c61aaf19b19e729d47739d6b8f35c1dffd`、17 c
 
 ## 15. MODEL_REVIEW
 
-独立 reviewer 使用 GPT-5.6 Sol / xhigh，仅获得普通用户可见 Current、History、Workline、Story/Evidence 文本和截图。不得获得代码、DTO、Ground Truth 或本报告中的审计答案。第四轮 Corporation-Agent 仍为 NEEDS_REVISION：34 份 TXT、67 张 PNG 均已检查，但默认近期变化主要描述文件载体，未解释内容。完整输入与结论保存在 `failed-runs/sol-review-round4/`，修复后的最终评审尚待完成。Owner Review 独立保持 NOT_REVIEWED。
+独立 reviewer 使用 GPT-5.6 Sol / xhigh，仅获得普通用户可见 Current、History、Workline、Story/Evidence 文本和截图。不得获得代码、DTO、Ground Truth 或本报告中的审计答案。第四轮 Corporation-Agent 为 NEEDS_REVISION：34 份 TXT、67 张 PNG 均已检查，但默认近期变化主要描述文件载体，未解释内容。完整输入与结论保存在 `failed-runs/sol-review-round4/`。
+
+第五轮 Corporation-Agent 为 PASS：再次完整检查 34 份 TXT、67 张 PNG，无阻断项。唯一 LOW 项为 Story 2 局部来源卡仍使用“完善项目骨架”这类范围偏宽的措辞；主 Story 已说明只能确认文件变化，不能确认运行结果。该项保留为非阻断债务，不隐去评审限制。ProjectFlow 第五轮完整检查 34 份 TXT 与 76 张 PNG，结论仍为 NEEDS_REVISION：来源声明中已有的具体行为、验证范围和未完成项被第一层通用措辞抹去。已追加保留作者身份的声明上下文与验证规则，正在定向、全量与真实复验；旧结论不改写。Owner Review 独立保持 NOT_REVIEWED。
 
 ## 16. Unsupported claim gate
 
@@ -96,9 +100,9 @@ Current 先展示用途与有来源说明，其余盘点可展开。每条声明
 
 ## 20. Backend / PostgreSQL / Windows
 
-最新后端/H2 全套 772 项：761 通过、11 项按既有 opt-in 边界跳过。PostgreSQL 16 集成 7 项通过且无跳过；exact V3.9 final 应用创建的 H2 和 PostgreSQL 16 旧库升级证明 2 项通过、零跳过，耗时 42.219 秒，不能与从当前 V1 建库混淆。前端类型检查、72 项契约、生产构建与 38 项 Playwright 全通过；浏览器门禁使用真实前后端与固定兼容模型，不冒称真实 Sol。
+源码 `0de80eb386bf4872671f349449054f0a42419f30` 的后端/H2 全套 778 项：767 通过、11 项按既有 opt-in 边界跳过。PostgreSQL 16 集成 7 项通过且无跳过；exact V3.9 final 应用创建的 H2 和 PostgreSQL 16 旧库升级证明 2 项通过、零跳过，耗时 47.452 秒。前端类型检查、73 项契约、生产构建与 38 项 Playwright 全通过；Playwright 使用真实前后端、Next 开发服务器和固定兼容模型，生产 UI 则单独构建并连接真实分析库，不能把固定模型当作 Sol。
 
-Hermes 10 项、Obsidian 27 项通过；5,000 facts 规模的 Obsidian 无变化同步为零写入。源码 `bf700b12a7165f8061559e5d05ebaa20768248fc` 的 Windows 便携包通过两次排除开发工具后的启动、DPAPI、备份恢复和前后清单验证，见 `windows-portable.json`。最终源码的根启动器、OSV 与分支 CI 仍待本轮独立收尾证据，不能使用较早启动结果代替。
+Hermes 10 项、Obsidian 27 项通过；5,000 facts 规模的 Obsidian 无变化同步为零写入。较早源码 `3baf330afed17e903967d20d1b81a83ccadfec60` 的 Windows 便携包和根启动证据已追加保留在 prior-verification；最新代码的便携包、根启动、OSV 与分支 CI 继续复验，不以旧证明冒充本轮结果。
 
 ## 21. Failures / recovery
 
@@ -106,11 +110,15 @@ Hermes 10 项、Obsidian 27 项通过；5,000 facts 规模的 Obsidian 无变化
 
 首次最终全套测试有一项无变化缓存断言失败；保持输入稳定后，未修改该断言或代码的完整重跑通过。精确瞬态原因未证实，失败仍留档。不降低事件守恒、来源、覆盖率、请求唯一性或无变化零调用门槛。
 
+第五轮声明改动的全套回归出现三个失败：Prompt 期望版本过旧、声明回退漏掉可确认的记录结果、证据文件较多时 Git 元数据页截断。修复后八项定向检查通过，包含真实历史连续性三项；完整读取 351/351 提交，覆盖率 0.6875。分页只缩小读取范围，单条命令仍限 100,000 字符，单提交文件预算由 500 调整为 1,000，总事件仍限 20,000；更大提交继续明确 INCOMPLETE，不丢弃来源来伪造完整。全套复验已通过；新的真实模型和独立评审仍在执行。
+
 ## 22. Remaining debt
 
 relay/上游 reset 的最终来源仍未证明；SSE 与阶段恢复降低影响，不保证网络永不失败。普通文件没有真实发生时间就保持未知。项目级 Provider 绑定、Obsidian GUI、clone、legacy 工程工具和未来 Archify 按 Ledger 分期处理。
 
 ## 23. Owner manual review guide
+
+本阶段入口位于独立工作树，三个只读样本及已保存分析库随该工作树保留。
 
 1. 在本阶段工作树启动 `Start-ProjectFlow.bat`。
 2. 在项目库打开 ProjectFlow。

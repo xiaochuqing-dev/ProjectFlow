@@ -10,6 +10,8 @@ Real Sol/xhigh Current, History, failures/recovery, independent visible-product 
 
 `ProjectHistoryPublicRepositoryIT#preflightsExplicitLocalReadOnlyRepositoriesWithoutModelCalls` accepts an explicit semicolon-separated `projectflow.history.local-repositories` list. It exercises production reconstruction without a Provider, verifies complete Chapter owner groups, event conservation and zero model calls, and compares repository HEAD/status before and after. Normal CI skips this local-path-only preflight; the regular frozen and generated-repository gates remain required. The persisted Thread browser fixture now contains two time-separated commits to the same artifact instead of treating a single record as a long-term theme.
 
+Document-delta regressions verify bounded source excerpts, exact version changes, retained immutable annotations and unchanged reruns. Additional semantic regressions keep document test/release statements below runtime authority and prevent singleton manifest/schema files from becoming a whole-project skeleton. The sibling-recovery regression includes one valid specific Story and one unsupported completion claim: the former retains its wording, the latter uses its safe draft, exactly two model calls occur and both original Facts remain. Existing invalid-ID, mixed-Chapter and unsupported-claim classification assertions remain unchanged.
+
 
 ## V4.0-D acceptance boundary
 
@@ -193,3 +195,5 @@ The Python suite uses real temporary Vault directories and a real CLI-to-HTTP Ga
 Real-provider evaluation can select a separate Calibration or frozen Holdout resource with `projectflow.eval.ground-truth-resource`, restrict case IDs and write an isolated sanitized result directory. Production and evaluation share the same prompt builder and gateway.
 
 Provider capabilities are explicit inputs. `PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING=true` is used for a reasoning model whose name is not covered by the generic heuristic; the key remains process-only. Expected shapes and views are validated against production prompt and registry vocabulary before a formal run. An Evidence reference is valid only when it belongs to the current case allow-list. The older “evidence precision” metric measures selection specificity and is diagnostic; it is not used as an invalid-reference count.
+
+V4.0-E 新增声明归因、作者对象隔离、同窗恢复与大页元数据回归：英文/斜杠来源可阅读，第一层技术词泄漏仍拒绝，实际完成/验收主张仍受原门槛约束；超大 Git 页能恢复，单提交超限和截断路径仍明确不完整。实际全套、PG16、exact V3.9 与真实 Sol 结果分开记录在 E Evidence。

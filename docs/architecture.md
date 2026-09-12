@@ -12,6 +12,10 @@ Within a generic code commit, the commit inventory is the main change and its ar
 
 Existing Thread identities remain readable for continuity. Single-record and broad inventory associations are marked `RECORD_CONTEXT`; the normal V4 directory requests `longTermOnly=true`, which filters before pagination and retains multi-record precise subjects. Story dialogs expose supporting ranges through existing owned read APIs. No new storage or Fact mutation is involved.
 
+Historical document content reuses the existing Git collector through fixed arguments and bounded document-delta sampling: 48 items, 16,000 characters per patch, 256,000 total characters and 20 seconds overall. Only short normalized added/removed excerpts and exact version changes survive; complete documents and patches do not. Immutable previously collected annotations remain reusable outside the latest sample. Document test or release statements support only what the document says, not verified execution.
+
+Story-only semantic recovery may preserve siblings that individually pass the existing validator after the complete output ID, shape and Evidence contract passes. Only rejected Story wording falls back to its engineering draft; the single existing recovery request and final whole-output validation remain mandatory. Mixed Chapter output, unknown IDs, invalid Evidence or structural defects still reject the whole window. The repair payload is transient, and persisted diagnostics contain only preserved/replaced counts.
+
 
 ## V4.0-D persisted Workspace reads
 
@@ -445,3 +449,5 @@ Project Memory Gateway is an additive read-only business layer over Facts, Timel
 ## V3.4.4 Obsidian projection boundary
 
 The repository-local projection CLI is a second Gateway consumer beside Hermes. It builds curated Markdown in a configured Vault managed root, never queries repositories directly, invokes a model, or writes ProjectFlow state. CORE keeps file growth proportional to months and capabilities rather than facts. Stable metadata and a recoverable manifest form the incremental control plane; managed blocks, conflicts, path containment, atomic replacement and non-destructive redirects protect user content. No frontend, watcher, persistent sync job or operating-system integration is added.
+
+V4.0-E 声明边界：提交者与 Agent 的具体行为、验证范围和未完成项可进入有界上下文，但只按作者声明转述。纯过程记录保留 UNKNOWN 实现状态、空直接证据和 PROCESS_DECLARATION 标签；不进入 ProjectFact。Git 元数据页超限时仅缩小页大小，保留单命令、单提交、总事件和取消边界。

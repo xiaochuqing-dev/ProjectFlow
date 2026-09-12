@@ -1,15 +1,15 @@
 {
-  "recordedAt": "2026-09-12T00:26:10.045350+00:00",
+  "recordedAt": "2026-09-12T02:19:55.208319+00:00",
   "state": "IN_PROGRESS",
   "backend": {
     "command": "PROJECTFLOW_RUN_POSTGRES_MIGRATION_TESTS=true mvn -q -Ppostgres-it verify",
     "totals": {
-      "tests": 772,
+      "tests": 778,
       "failures": 0,
       "errors": 0,
       "skipped": 11
     },
-    "executedPassed": 761,
+    "executedPassed": 767,
     "skippedCases": [
       {
         "suite": "com.projectflow.eval.DeepSeekDogfoodRegressionTest",
@@ -80,7 +80,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "11.79",
+        "time": "11.711",
         "skippedCases": []
       },
       {
@@ -89,7 +89,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "2.507",
+        "time": "2.232",
         "skippedCases": []
       },
       {
@@ -98,7 +98,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.272",
+        "time": "0.28",
         "skippedCases": []
       },
       {
@@ -107,7 +107,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.528",
+        "time": "0.552",
         "skippedCases": []
       },
       {
@@ -116,7 +116,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.471",
+        "time": "0.459",
         "skippedCases": []
       },
       {
@@ -125,7 +125,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.006",
+        "time": "0.004",
         "skippedCases": []
       },
       {
@@ -134,7 +134,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "1.148",
+        "time": "1.132",
         "skippedCases": []
       },
       {
@@ -143,7 +143,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.041",
+        "time": "0.042",
         "skippedCases": []
       },
       {
@@ -152,7 +152,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.248",
+        "time": "0.244",
         "skippedCases": []
       },
       {
@@ -161,7 +161,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.021",
+        "time": "0.017",
         "skippedCases": []
       },
       {
@@ -170,7 +170,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "1.684",
+        "time": "1.618",
         "skippedCases": []
       },
       {
@@ -179,7 +179,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "1",
-        "time": "0.011",
+        "time": "0.01",
         "skippedCases": [
           "realProfileKeepsOriginalProjectFlowDogfoodQualified"
         ]
@@ -210,7 +210,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "1",
-        "time": "0.002",
+        "time": "0.003",
         "skippedCases": [
           "realProviderArtifactIsCompleteBoundedAndSafe"
         ]
@@ -221,7 +221,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.056",
+        "time": "0.048",
         "skippedCases": []
       },
       {
@@ -230,7 +230,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.011",
+        "time": "0.007",
         "skippedCases": []
       },
       {
@@ -239,7 +239,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "1",
-        "time": "0.002",
+        "time": "0.001",
         "skippedCases": [
           "realProfileKeepsOriginalProjectFlowDogfoodQualified"
         ]
@@ -250,7 +250,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.151",
+        "time": "0.11",
         "skippedCases": []
       },
       {
@@ -268,7 +268,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.034",
+        "time": "0.033",
         "skippedCases": []
       },
       {
@@ -277,7 +277,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.003",
+        "time": "0.002",
         "skippedCases": []
       },
       {
@@ -295,7 +295,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "1",
-        "time": "1.424",
+        "time": "1.357",
         "skippedCases": [
           "reviewsAllTwelveBlindContinuityScenariosThroughTheGateway"
         ]
@@ -306,7 +306,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.013",
+        "time": "0.008",
         "skippedCases": []
       },
       {
@@ -315,7 +315,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "1",
-        "time": "0.016",
+        "time": "0.012",
         "skippedCases": [
           "evaluatesCalibrationAndFrozenHoldoutUsingRealProductionRefresh"
         ]
@@ -326,7 +326,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "1",
-        "time": "3.245",
+        "time": "3.044",
         "skippedCases": [
           "qualifiesRealProviderAcrossContinuationFailureNonCodeCorrectionAndDogfood"
         ]
@@ -337,7 +337,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.035",
+        "time": "0.031",
         "skippedCases": []
       },
       {
@@ -346,7 +346,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.007",
+        "time": "0.009",
         "skippedCases": []
       },
       {
@@ -366,7 +366,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.072",
+        "time": "0.073",
         "skippedCases": []
       },
       {
@@ -375,7 +375,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.078",
+        "time": "0.077",
         "skippedCases": []
       },
       {
@@ -393,7 +393,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.0",
+        "time": "0.001",
         "skippedCases": []
       },
       {
@@ -402,7 +402,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.305",
+        "time": "0.318",
         "skippedCases": []
       },
       {
@@ -411,7 +411,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.249",
+        "time": "0.262",
         "skippedCases": []
       },
       {
@@ -420,7 +420,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.594",
+        "time": "0.652",
         "skippedCases": []
       },
       {
@@ -429,7 +429,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.003",
+        "time": "0.004",
         "skippedCases": []
       },
       {
@@ -438,7 +438,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "2.879",
+        "time": "3.232",
         "skippedCases": []
       },
       {
@@ -459,7 +459,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.56",
+        "time": "0.608",
         "skippedCases": []
       },
       {
@@ -477,7 +477,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.053",
+        "time": "0.056",
         "skippedCases": []
       },
       {
@@ -486,7 +486,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.46",
+        "time": "0.465",
         "skippedCases": []
       },
       {
@@ -495,7 +495,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "9.722",
+        "time": "10.552",
         "skippedCases": []
       },
       {
@@ -504,7 +504,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "1.732",
+        "time": "1.707",
         "skippedCases": []
       },
       {
@@ -513,7 +513,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.292",
+        "time": "0.278",
         "skippedCases": []
       },
       {
@@ -522,7 +522,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.245",
+        "time": "0.233",
         "skippedCases": []
       },
       {
@@ -540,7 +540,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "5.158",
+        "time": "5.146",
         "skippedCases": []
       },
       {
@@ -558,7 +558,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "1.837",
+        "time": "1.928",
         "skippedCases": []
       },
       {
@@ -567,7 +567,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.285",
+        "time": "0.343",
         "skippedCases": []
       },
       {
@@ -576,7 +576,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.47",
+        "time": "0.458",
         "skippedCases": []
       },
       {
@@ -585,7 +585,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "15.05",
+        "time": "15.014",
         "skippedCases": []
       },
       {
@@ -594,7 +594,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.351",
+        "time": "0.318",
         "skippedCases": []
       },
       {
@@ -603,7 +603,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "7.372",
+        "time": "7.682",
         "skippedCases": []
       },
       {
@@ -612,7 +612,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "1.64",
+        "time": "1.649",
         "skippedCases": []
       },
       {
@@ -621,7 +621,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "117.655",
+        "time": "119.981",
         "skippedCases": []
       },
       {
@@ -630,7 +630,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.014",
+        "time": "0.009",
         "skippedCases": []
       },
       {
@@ -639,7 +639,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "7.612",
+        "time": "0.81",
         "skippedCases": []
       },
       {
@@ -648,7 +648,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.023",
+        "time": "0.025",
         "skippedCases": []
       },
       {
@@ -657,16 +657,16 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "2.754",
+        "time": "2.644",
         "skippedCases": []
       },
       {
         "name": "com.projectflow.ProjectHistoryReconstructionTest",
-        "tests": "46",
+        "tests": "47",
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "47.377",
+        "time": "46.406",
         "skippedCases": []
       },
       {
@@ -675,7 +675,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.785",
+        "time": "0.771",
         "skippedCases": []
       },
       {
@@ -684,7 +684,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "17.088",
+        "time": "16.663",
         "skippedCases": []
       },
       {
@@ -693,7 +693,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.007",
+        "time": "0.006",
         "skippedCases": []
       },
       {
@@ -702,7 +702,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.012",
+        "time": "0.0",
         "skippedCases": []
       },
       {
@@ -711,7 +711,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.112",
+        "time": "0.027",
         "skippedCases": []
       },
       {
@@ -720,7 +720,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.005",
+        "time": "0.001",
         "skippedCases": []
       },
       {
@@ -738,7 +738,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "1.198",
+        "time": "1.177",
         "skippedCases": []
       },
       {
@@ -747,7 +747,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "4.232",
+        "time": "4.188",
         "skippedCases": []
       },
       {
@@ -756,7 +756,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "1.177",
+        "time": "1.151",
         "skippedCases": []
       },
       {
@@ -765,7 +765,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.067",
+        "time": "0.061",
         "skippedCases": []
       },
       {
@@ -774,7 +774,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.005",
+        "time": "0.006",
         "skippedCases": []
       },
       {
@@ -792,7 +792,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.001",
+        "time": "0.002",
         "skippedCases": []
       },
       {
@@ -801,7 +801,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.305",
+        "time": "0.307",
         "skippedCases": []
       },
       {
@@ -810,7 +810,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.001",
+        "time": "0.0",
         "skippedCases": []
       },
       {
@@ -819,7 +819,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.617",
+        "time": "0.629",
         "skippedCases": []
       },
       {
@@ -828,7 +828,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.001",
+        "time": "0.002",
         "skippedCases": []
       },
       {
@@ -837,7 +837,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.424",
+        "time": "0.461",
         "skippedCases": []
       },
       {
@@ -846,7 +846,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.125",
+        "time": "0.129",
         "skippedCases": []
       },
       {
@@ -855,7 +855,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.006",
+        "time": "0.008",
         "skippedCases": []
       },
       {
@@ -864,7 +864,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.15",
+        "time": "0.17",
         "skippedCases": []
       },
       {
@@ -882,7 +882,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.689",
+        "time": "0.69",
         "skippedCases": []
       },
       {
@@ -891,7 +891,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.003",
+        "time": "0.002",
         "skippedCases": []
       },
       {
@@ -900,7 +900,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.097",
+        "time": "0.1",
         "skippedCases": []
       },
       {
@@ -909,7 +909,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.017",
+        "time": "0.02",
         "skippedCases": []
       },
       {
@@ -918,7 +918,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.011",
+        "time": "0.014",
         "skippedCases": []
       },
       {
@@ -927,7 +927,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.0",
+        "time": "0.001",
         "skippedCases": []
       },
       {
@@ -936,7 +936,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.0",
+        "time": "0.003",
         "skippedCases": []
       },
       {
@@ -945,7 +945,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.104",
+        "time": "0.11",
         "skippedCases": []
       },
       {
@@ -972,7 +972,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.047",
+        "time": "0.031",
         "skippedCases": []
       },
       {
@@ -990,7 +990,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.002",
+        "time": "0.003",
         "skippedCases": []
       },
       {
@@ -1017,7 +1017,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.095",
+        "time": "0.104",
         "skippedCases": []
       },
       {
@@ -1035,7 +1035,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.342",
+        "time": "0.14",
         "skippedCases": []
       },
       {
@@ -1044,7 +1044,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.0",
+        "time": "0.001",
         "skippedCases": []
       },
       {
@@ -1053,7 +1053,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.004",
+        "time": "0.003",
         "skippedCases": []
       },
       {
@@ -1062,7 +1062,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.002",
+        "time": "0.004",
         "skippedCases": []
       },
       {
@@ -1071,7 +1071,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.779",
+        "time": "0.828",
         "skippedCases": []
       },
       {
@@ -1089,7 +1089,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.008",
+        "time": "0.002",
         "skippedCases": []
       },
       {
@@ -1098,7 +1098,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.0",
+        "time": "0.002",
         "skippedCases": []
       },
       {
@@ -1107,7 +1107,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.236",
+        "time": "0.225",
         "skippedCases": []
       },
       {
@@ -1116,7 +1116,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.282",
+        "time": "0.253",
         "skippedCases": []
       },
       {
@@ -1134,7 +1134,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.003",
+        "time": "0.001",
         "skippedCases": []
       },
       {
@@ -1143,7 +1143,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "3.081",
+        "time": "3.023",
         "skippedCases": []
       },
       {
@@ -1152,7 +1152,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.624",
+        "time": "0.617",
         "skippedCases": []
       },
       {
@@ -1161,7 +1161,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.001",
+        "time": "0.002",
         "skippedCases": []
       },
       {
@@ -1188,7 +1188,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "2.486",
+        "time": "2.47",
         "skippedCases": []
       },
       {
@@ -1197,7 +1197,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.002",
+        "time": "0.003",
         "skippedCases": []
       },
       {
@@ -1206,7 +1206,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.025",
+        "time": "0.033",
         "skippedCases": []
       },
       {
@@ -1215,7 +1215,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.0",
+        "time": "0.002",
         "skippedCases": []
       },
       {
@@ -1224,7 +1224,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.208",
+        "time": "0.225",
         "skippedCases": []
       },
       {
@@ -1242,7 +1242,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.249",
+        "time": "0.234",
         "skippedCases": []
       },
       {
@@ -1251,7 +1251,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.006",
+        "time": "0.007",
         "skippedCases": []
       },
       {
@@ -1269,7 +1269,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.068",
+        "time": "0.061",
         "skippedCases": []
       },
       {
@@ -1278,7 +1278,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.11",
+        "time": "0.111",
         "skippedCases": []
       },
       {
@@ -1287,7 +1287,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.328",
+        "time": "0.307",
         "skippedCases": []
       },
       {
@@ -1296,7 +1296,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.109",
+        "time": "0.089",
         "skippedCases": []
       },
       {
@@ -1305,7 +1305,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.799",
+        "time": "0.806",
         "skippedCases": []
       },
       {
@@ -1314,7 +1314,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.002",
+        "time": "0.001",
         "skippedCases": []
       },
       {
@@ -1323,7 +1323,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.0",
+        "time": "0.001",
         "skippedCases": []
       },
       {
@@ -1341,7 +1341,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.068",
+        "time": "0.059",
         "skippedCases": []
       },
       {
@@ -1350,7 +1350,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.001",
+        "time": "0.002",
         "skippedCases": []
       },
       {
@@ -1359,7 +1359,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.003",
+        "time": "0.005",
         "skippedCases": []
       },
       {
@@ -1395,7 +1395,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.08",
+        "time": "0.016",
         "skippedCases": []
       },
       {
@@ -1404,7 +1404,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.008",
+        "time": "0.003",
         "skippedCases": []
       },
       {
@@ -1413,7 +1413,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.0",
+        "time": "0.001",
         "skippedCases": []
       },
       {
@@ -1422,7 +1422,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.021",
+        "time": "0.008",
         "skippedCases": []
       },
       {
@@ -1431,7 +1431,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.043",
+        "time": "0.012",
         "skippedCases": []
       },
       {
@@ -1440,7 +1440,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.003",
+        "time": "0.004",
         "skippedCases": []
       },
       {
@@ -1449,16 +1449,16 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.008",
+        "time": "0.003",
         "skippedCases": []
       },
       {
         "name": "com.projectflow.service.ProjectHistoryNarrativeEntailmentTest",
-        "tests": "10",
+        "tests": "12",
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.006",
+        "time": "0.01",
         "skippedCases": []
       },
       {
@@ -1494,7 +1494,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.035",
+        "time": "0.049",
         "skippedCases": []
       },
       {
@@ -1503,7 +1503,16 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.004",
+        "time": "0.005",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistorySourceCollectorPagingTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.341",
         "skippedCases": []
       },
       {
@@ -1521,7 +1530,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.012",
+        "time": "0.008",
         "skippedCases": []
       },
       {
@@ -1530,7 +1539,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.117",
+        "time": "0.084",
         "skippedCases": []
       },
       {
@@ -1539,7 +1548,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.003",
+        "time": "0.002",
         "skippedCases": []
       },
       {
@@ -1548,7 +1557,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.844",
+        "time": "0.879",
         "skippedCases": []
       },
       {
@@ -1557,7 +1566,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.019",
+        "time": "0.02",
         "skippedCases": []
       },
       {
@@ -1566,7 +1575,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.456",
+        "time": "0.461",
         "skippedCases": []
       },
       {
@@ -1575,7 +1584,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.123",
+        "time": "0.113",
         "skippedCases": []
       },
       {
@@ -1584,7 +1593,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.002",
+        "time": "0.001",
         "skippedCases": []
       },
       {
@@ -1593,7 +1602,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.006",
+        "time": "0.002",
         "skippedCases": []
       },
       {
@@ -1602,7 +1611,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.0",
+        "time": "0.002",
         "skippedCases": []
       },
       {
@@ -1620,7 +1629,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "1",
-        "time": "0.004",
+        "time": "0.002",
         "skippedCases": [
           "scansRealOpenSourceRepositoryWithinBoundedInventory"
         ]
@@ -1631,7 +1640,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.114",
+        "time": "0.096",
         "skippedCases": []
       },
       {
@@ -1649,7 +1658,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.007",
+        "time": "0.005",
         "skippedCases": []
       },
       {
@@ -1676,7 +1685,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.001",
+        "time": "0.002",
         "skippedCases": []
       },
       {
@@ -1685,7 +1694,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.087",
+        "time": "0.1",
         "skippedCases": []
       },
       {
@@ -1694,7 +1703,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.011",
+        "time": "0.013",
         "skippedCases": []
       },
       {
@@ -1703,7 +1712,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.002",
+        "time": "0.001",
         "skippedCases": []
       },
       {
@@ -1712,7 +1721,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.008",
+        "time": "0.01",
         "skippedCases": []
       },
       {
@@ -1730,7 +1739,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.013",
+        "time": "0.012",
         "skippedCases": []
       },
       {
@@ -1739,7 +1748,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.008",
+        "time": "0.003",
         "skippedCases": []
       },
       {
@@ -1748,7 +1757,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.012",
+        "time": "0.007",
         "skippedCases": []
       },
       {
@@ -1766,7 +1775,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.252",
+        "time": "0.254",
         "skippedCases": []
       },
       {
@@ -1775,7 +1784,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "2.765",
+        "time": "2.712",
         "skippedCases": []
       },
       {
@@ -1784,7 +1793,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "0.04",
+        "time": "0.041",
         "skippedCases": []
       },
       {
@@ -1793,7 +1802,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "6.846",
+        "time": "6.924",
         "skippedCases": []
       }
     ],
@@ -1810,7 +1819,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "6.564",
+        "time": "6.373",
         "skippedCases": []
       },
       {
@@ -1819,7 +1828,7 @@
         "failures": "0",
         "errors": "0",
         "skipped": "0",
-        "time": "10.629",
+        "time": "11.299",
         "skippedCases": []
       }
     ],
@@ -1837,40 +1846,41 @@
     "postgres16": "PASS",
     "tests": 2,
     "skipped": 0,
-    "seconds": 42.219,
+    "seconds": 47.452,
     "scope": "Exact old application creates legacy schema; controlled baseline/migration/credential/protected-record/restart and PostgreSQL dump/restore proof"
   },
   "frontend": {
     "lint": "PASS",
-    "contracts": 72,
+    "contracts": 73,
     "contractsFailed": 0,
     "productionBuild": "PASS",
     "playwright": {
       "passed": 38,
       "failed": 0,
-      "duration": "2.7m",
-      "scope": "Real backend/browser and fixed compatible model service; not real Sol acceptance"
+      "duration": "2.6m",
+      "scope": "Real backend/browser and fixed compatible model service; not real Sol acceptance",
+      "mode": "Next development server, actual browser/backend and fixed-model service; production build and real production UI checked separately"
     }
   },
   "hermes": {
     "passed": 10,
     "failed": 0,
-    "seconds": 6.474,
-    "startupMs": 184.6,
-    "concurrentReadMs": 352.5,
+    "seconds": 6.84,
+    "startupMs": 200.7,
+    "concurrentReadMs": 427.1,
     "concurrency": 6
   },
   "obsidian": {
     "passed": 27,
     "failed": 0,
-    "seconds": 5.488,
+    "seconds": 6.31,
     "scale": {
       "facts": 5000,
       "months": 36,
       "capabilities": 100,
       "evolutions": 1000,
       "files": 183,
-      "firstSyncMs": 446.3,
+      "firstSyncMs": 493.5,
       "writes": 184,
       "bytes": 3100622,
       "noChangeWrites": 0
@@ -1881,5 +1891,6 @@
   "rootLauncher": "PENDING_FINAL_RUNTIME",
   "windowsPortable": "PENDING_FINAL_CLEAN_COMMIT_BUILD",
   "osv": "PENDING_CI",
-  "sensitiveScan": "PENDING_FINAL"
+  "sensitiveScan": "PENDING_FINAL",
+  "functionalSourceHead": "0de80eb386bf4872671f349449054f0a42419f30"
 }

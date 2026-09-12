@@ -1,0 +1,9 @@
+{
+  "type": "ROOT_LAUNCHER_PORT_GUARD",
+  "firstAttempt": "BLOCKED_PORT_CONFLICT",
+  "observed": "The root launcher reported port 8080 owned by the Docker Desktop backend and refused to stop it.",
+  "resolution": "Subsequent read-only inventory found the port free. The unchanged root launcher then rebuilt and ran the phase worktree.",
+  "foreignProcessesStopped": false,
+  "final": "PASS",
+  "evidence": "../windows-launcher.json"
+}

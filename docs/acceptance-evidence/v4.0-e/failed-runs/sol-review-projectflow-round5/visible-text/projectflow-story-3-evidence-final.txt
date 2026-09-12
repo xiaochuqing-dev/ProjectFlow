@@ -1,0 +1,187 @@
+变化详情
+ProjectFlow · 工作结果入库时间 · 2026-09-10
+整理开发工作线相关代码，留下待核实的变化记录
+
+现有来源只能看出开发工作线相关代码有过变化，但具体改动和结果仍不清楚。
+
+01
+此前状态
+
+现有信息不足，无法说明开发工作线相关代码此前的状态。
+
+02
+本次变化
+
+本阶段仅留下了一条与开发工作线相关代码有关的变化记录。
+
+03
+当前结果
+
+这份记录不足以确定开发工作线相关代码在该次变化后的具体状态。
+
+尚未确认
+目前没有足够信息确认为什么做这次调整。
+覆盖与缺口
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+查看工程证据与来源
+开发助手的工作结果声明
+
+Agent 工作结果 · 修改 · 在本次读取的历史中
+
+覆盖与缺口
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+收起 Evidence 详情
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+agent-result:.projectflow/agent-results/20260910-v40d-real-project-understanding/result.json
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+同一来源的关联引用
+
+file:backend/src/main/java/com/projectflow/service/ProjectWorklineCollector.java
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+同一来源的关联引用
+
+file:backend/src/main/java/com/projectflow/service/ProjectHistorySourceCollector.java
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+同一来源的关联引用
+
+file:backend/src/main/java/com/projectflow/service/ProjectHistoryReadService.java
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+同一来源的关联引用
+
+file:backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+同一来源的关联引用
+
+file:frontend/src/components/workspace/RealCurrentPage.tsx
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+同一来源的关联引用
+
+file:frontend/src/components/workspace/WorklineReader.tsx
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+同一来源的关联引用
+
+file:frontend/src/components/workspace/HistoryReader.tsx
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+同一来源的关联引用
+
+file:frontend/src/components/workspace/Workspace.tsx
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+同一来源的关联引用
+
+file:frontend/src/lib/workspace-claims.ts
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+同一来源的关联引用
+
+file:docs/projectflow-v4.0-d-real-project-understanding-report.md
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+同一来源的关联引用
+
+file:docs/acceptance-evidence/v4.0-d/verification.json
+
+当前性：在本次读取的历史中 · 开发过程记录
+
+工程覆盖数据
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+原始提交与来源信息
+
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+工作结果入库时间 · 2026-09-10T05:24:46Z
+
+开发过程记录 · 开发过程记录
+
+backend/src/main/java/com/projectflow/service/ProjectWorklineCollector.java
+
+backend/src/main/java/com/projectflow/service/ProjectHistorySourceCollector.java
+
+backend/src/main/java/com/projectflow/service/ProjectHistoryReadService.java
+
+backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java
+
+frontend/src/components/workspace/RealCurrentPage.tsx
+
+frontend/src/components/workspace/WorklineReader.tsx
+
+frontend/src/components/workspace/HistoryReader.tsx
+
+frontend/src/components/workspace/Workspace.tsx
+
+frontend/src/lib/workspace-claims.ts
+
+docs/projectflow-v4.0-d-real-project-understanding-report.md
+
+docs/acceptance-evidence/v4.0-d/verification.json
+
+工程兼容工具：来源审计与修正
+查看故事工程详情
+返回阅读
+工程证据始终保留，展示不会改变事实
