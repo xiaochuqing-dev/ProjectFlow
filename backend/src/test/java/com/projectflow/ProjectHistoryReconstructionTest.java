@@ -1158,6 +1158,7 @@ class ProjectHistoryReconstructionTest {
             JsonNode invalid = objectMapper.readTree(valid);
             com.fasterxml.jackson.databind.node.ObjectNode story =
                 (com.fasterxml.jackson.databind.node.ObjectNode) invalid.path("stories").get(0);
+            story.put("humanTitle", "系统已经通过验收并发布上线");
             story.put("reason", "未经合格 Evidence 支持的原因");
             story.set("reasonEvidenceRefs", objectMapper.valueToTree(List.of("fact:" + UUID.randomUUID())));
             return modelResponse(objectMapper.writeValueAsString(invalid));
@@ -1187,6 +1188,8 @@ class ProjectHistoryReconstructionTest {
         provider(userId);
         AtomicInteger calls = new AtomicInteger();
         String preserved = "这条记录补充了可供逐项核对的具体内容。";
+        String repairedChange = "这条变化保留了来源中对调整范围的具体说明。";
+        String summaryDetail = "本条记录区分来源文字与实际运行结果。";
         when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
             String prompt = invocation.getArgument(1, String.class);
             if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS)
@@ -1196,10 +1199,12 @@ class ProjectHistoryReconstructionTest {
                 assertThat(output.path("stories").size()).isGreaterThanOrEqualTo(2);
                 ((com.fasterxml.jackson.databind.node.ObjectNode) output.path("stories").get(0))
                     .put("changeWording", preserved);
-                ((com.fasterxml.jackson.databind.node.ObjectNode) output.path("stories").get(1))
-                    .put("afterWording", "系统已经通过验收并发布上线。");
+                var rejected = (com.fasterxml.jackson.databind.node.ObjectNode) output.path("stories").get(1);
+                rejected.put("oneSentenceSummary", rejected.path("oneSentenceSummary").asText() + summaryDetail);
+                rejected.put("changeWording", repairedChange);
+                rejected.put("afterWording", "系统已经通过验收并发布上线。");
             } else {
-                assertThat(prompt).contains("REQUIRED_OUTPUT_TEMPLATE_JSON=", preserved)
+                assertThat(prompt).contains("REQUIRED_OUTPUT_TEMPLATE_JSON=", preserved, repairedChange, summaryDetail)
                     .doesNotContain("系统已经通过验收并发布上线");
             }
             return modelResponse(objectMapper.writeValueAsString(output));
@@ -1210,10 +1215,103 @@ class ProjectHistoryReconstructionTest {
         assertThat(calls.get()).isEqualTo(2);
         var stories = readService.stories(userId, project.getId(), null, false, null, null, 0, 100).items();
         assertThat(stories).anySatisfy(story -> assertThat(story.change()).isEqualTo(preserved));
+        assertThat(stories).anySatisfy(story -> {
+            assertThat(story.change()).isEqualTo(repairedChange);
+            assertThat(story.oneSentenceSummary()).contains(summaryDetail);
+        });
         assertThat(stories).allSatisfy(story -> assertThat(story.afterState()).doesNotContain("系统已经通过验收并发布上线"));
         assertThat(factRepository.countByProjectId(project.getId())).isEqualTo(2);
         assertThat(readService.overview(userId, project.getId()).diagnostics())
             .containsEntry("modelValidationRepairCount", 1).containsEntry("failedWindowCount", 0);
+    }
+
+    @Test
+    void unsafeTitleDoesNotEraseAnIndependentlyValidSummary() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("preserved-summary-with-invalid-title");
+        Files.createDirectories(repository);
+        ProjectSpace project = project(userId, "Bounded Field Recovery", repository);
+        historicalFacts(project, 1, 1, 1, 0);
+        provider(userId);
+        AtomicInteger calls = new AtomicInteger();
+        String detail = "本条记录区分来源文字与实际运行结果。";
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(1, String.class);
+            JsonNode output = objectMapper.readTree(historyModelResponse(prompt));
+            if (calls.incrementAndGet() == 1) {
+                var rejected = (com.fasterxml.jackson.databind.node.ObjectNode) output.path("stories").get(0);
+                rejected.put("oneSentenceSummary", rejected.path("oneSentenceSummary").asText() + detail);
+                rejected.put("humanTitle", "完成关键里程碑并成功交付项目");
+            } else {
+                assertThat(prompt).contains("REQUIRED_OUTPUT_TEMPLATE_JSON=", detail)
+                    .doesNotContain("完成关键里程碑并成功交付项目");
+            }
+            return modelResponse(objectMapper.writeValueAsString(output));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(calls.get()).isEqualTo(2);
+        var stories = readService.stories(userId, project.getId(), null, false, null, null, 0, 100).items();
+        assertThat(stories).singleElement().satisfies(story -> {
+            assertThat(story.oneSentenceSummary()).contains(detail);
+            assertThat(story.humanTitle()).doesNotContain("通过验收", "发布上线");
+        });
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(calls.get()).isEqualTo(2);
+        assertThat(readService.overview(userId, project.getId()).diagnostics()).containsEntry("requestCount", 0);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void upgradesOnlyLegacyRepairedWindowsAndThenReturnsToZeroCallCacheHits() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("legacy-repaired-window-upgrade");
+        Files.createDirectories(repository);
+        ProjectSpace project = project(userId, "Legacy Wording Recovery", repository);
+        historicalFacts(project, 2 * ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT, 1, 1, 0);
+        provider(userId);
+        AtomicInteger calls = new AtomicInteger();
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(1, String.class);
+            if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS)
+                return modelResponse(historyChapterModelResponse(prompt));
+            calls.incrementAndGet();
+            return modelResponse(historyModelResponse(prompt));
+        });
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(calls.get()).isEqualTo(2);
+        var windows = checkpointRepository.findByProjectIdOrderByUpdatedAtAsc(project.getId()).stream()
+            .filter(value -> value.getWindowIdentity().startsWith("window-")).toList();
+        assertThat(windows).hasSize(2);
+        for (int i = 0; i < windows.size(); i++) {
+            var window = windows.get(i);
+            var diagnostics = (com.fasterxml.jackson.databind.node.ObjectNode)
+                objectMapper.readTree(window.getDiagnosticsJson());
+            diagnostics.remove("storyWordingRecoveryVersion");
+            diagnostics.put("replacedRejectedStoryCount", i == 0 ? 1 : 0);
+            window.succeed(window.getRequestCount(), objectMapper.writeValueAsString(diagnostics));
+            checkpointRepository.saveAndFlush(window);
+        }
+        var cleanWindow = checkpointRepository.findById(windows.get(1).getId()).orElseThrow();
+        Long cleanVersion = cleanWindow.getVersion();
+        var snapshot = snapshotRepository.findByProjectId(project.getId()).orElseThrow();
+        var snapshotDiagnostics = (com.fasterxml.jackson.databind.node.ObjectNode)
+            objectMapper.readTree(snapshot.getDiagnosticsJson());
+        snapshotDiagnostics.remove("storyWordingRecoveryVersion");
+        snapshot.recordCacheHit(UUID.randomUUID(), objectMapper.writeValueAsString(snapshotDiagnostics));
+        snapshotRepository.saveAndFlush(snapshot);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(calls.get()).isEqualTo(3);
+        assertThat(checkpointRepository.findById(cleanWindow.getId()).orElseThrow().getVersion()).isEqualTo(cleanVersion);
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("modelWindowCacheHitCount", 1).containsEntry("failedWindowCount", 0);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(calls.get()).isEqualTo(3);
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("requestCount", 0).containsEntry("cacheHit", true);
+        assertThat(factRepository.countByProjectId(project.getId()))
+            .isEqualTo(2 * ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT);
     }
 
     @Test

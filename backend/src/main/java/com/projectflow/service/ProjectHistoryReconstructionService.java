@@ -54,6 +54,7 @@ import com.projectflow.service.ProjectHistorySourceCollector.CollectionOutcome;
 @Service
 public class ProjectHistoryReconstructionService {
     static final String STRATEGY_VERSION = "project-history-v40e-specificity-time-v8";
+    private static final int STORY_WORDING_RECOVERY_VERSION = 1;
     static final String PROMPT_VERSION = ProjectHistoryPromptBuilder.PROMPT_VERSION;
     private static final int MODEL_STORY_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
     private static final int MODEL_EVENT_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_EVENT_LIMIT;
@@ -193,6 +194,7 @@ public class ProjectHistoryReconstructionService {
                 && hasCurrentChapterPlan(before)
                 && correctionRevision.equals(previousCorrectionRevision)
                 && !hasRetryableWindowCheckpoint(projectId)
+                && !hasPendingWordingRecovery(projectId, before)
                 && !hasPendingWindowDiagnostics(before);
             if (cacheHit) {
                 Map<String, Object> diagnostics = diagnostics(
@@ -971,6 +973,29 @@ public class ProjectHistoryReconstructionService {
     private boolean hasRetryableWindowCheckpoint(UUID projectId) {
         return windowCheckpointRepository.findByProjectIdOrderByUpdatedAtAsc(projectId).stream()
             .anyMatch(checkpoint -> RETRYABLE_WINDOW_STATUSES.contains(checkpoint.getStatus()));
+    }
+
+    private boolean hasPendingWordingRecovery(UUID projectId, ProjectHistorySnapshot snapshot) {
+        try {
+            if (objectMapper.readTree(snapshot.getDiagnosticsJson())
+                .path("storyWordingRecoveryVersion").asInt(0) >= STORY_WORDING_RECOVERY_VERSION) return false;
+        } catch (Exception ignored) {
+            // An old or unreadable marker cannot certify the recovery behavior.
+        }
+        return windowCheckpointRepository.findByProjectIdOrderByUpdatedAtAsc(projectId).stream()
+            .anyMatch(this::requiresWordingRecovery);
+    }
+
+    private boolean requiresWordingRecovery(ProjectHistoryWindowCheckpoint checkpoint) {
+        if (!"SUCCEEDED".equals(checkpoint.getStatus())
+            || !checkpoint.getWindowIdentity().startsWith("window-")) return false;
+        try {
+            JsonNode diagnostics = objectMapper.readTree(checkpoint.getDiagnosticsJson());
+            return diagnostics.path("replacedRejectedStoryCount").asInt(0) > 0
+                && diagnostics.path("storyWordingRecoveryVersion").asInt(0) < STORY_WORDING_RECOVERY_VERSION;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     private boolean hasPendingWindowDiagnostics(ProjectHistorySnapshot snapshot) {
@@ -2072,6 +2097,7 @@ public class ProjectHistoryReconstructionService {
 
     /** Restore only validated story/chapter presentation for a cache hit. */
     private SnapshotResult readCachedWindow(ProjectHistoryWindowCheckpoint checkpoint, ModelBatch batch) {
+        if (requiresWordingRecovery(checkpoint)) return null;
         try {
             JsonNode root = objectMapper.readTree(checkpoint.getValidatedResultJson());
             if (root == null || !root.isObject()) return null;
@@ -2407,7 +2433,7 @@ public class ProjectHistoryReconstructionService {
 
     private String safeCheckpointDiagnostics(ModelGatewayService.ModelCallDiagnostics diagnostics, int preservedStories, int replacedStories) {
         if (diagnostics == null) return "{}";
-        return json(Map.of(
+        Map<String, Object> result = new LinkedHashMap<>(Map.of(
             "requestCount", diagnostics.requestCount(),
             "totalTokens", diagnostics.totalTokens(),
             "latencyMs", diagnostics.latencyMs(),
@@ -2419,6 +2445,8 @@ public class ProjectHistoryReconstructionService {
             "preservedValidatedStoryCount", preservedStories,
             "replacedRejectedStoryCount", replacedStories
         ));
+        result.put("storyWordingRecoveryVersion", STORY_WORDING_RECOVERY_VERSION);
+        return json(result);
     }
 
     private boolean systemicProviderFailure(Exception exception) {
@@ -2716,72 +2744,21 @@ public class ProjectHistoryReconstructionService {
                 throw new HistoryValidationException(ValidationKind.CROSS_PROJECT_REFERENCE, "Unknown story ID");
             }
             if (!seenStories.add(id)) throw new HistoryValidationException(ValidationKind.CONTRACT, "Duplicate story ID");
+            List<EventView> members = original.eventRefs().stream().map(eventsById::get)
+                .filter(java.util.Objects::nonNull).toList();
+            String subjectLabel = languageService.readableObject(
+                original.primarySubjectKey(), narrativePaths(original.primarySubjectKey(), members), narrativeSourceLabels(members));
+            ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
+                original.primarySubjectKey(), subjectLabel, primaryTransition(storyTransitions(members)), members,
+                !reasonEvidenceByStory.getOrDefault(id, List.of()).isEmpty());
+            List<String> eligibleReasonEvidence = reasonEvidenceByStory.getOrDefault(id, List.of());
             try {
-                List<EventView> members = original.eventRefs().stream().map(eventsById::get)
-                    .filter(java.util.Objects::nonNull).toList();
-                String subjectLabel = languageService.readableObject(
-                    original.primarySubjectKey(), narrativePaths(original.primarySubjectKey(), members), narrativeSourceLabels(members));
-                ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
-                    original.primarySubjectKey(), subjectLabel, primaryTransition(storyTransitions(members)), members,
-                    !reasonEvidenceByStory.getOrDefault(id, List.of()).isEmpty());
-                String title = modelText(node, "humanTitle", 240);
-                String summary = modelText(node, "oneSentenceSummary", 1_000);
-                if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
-                    throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, "History model returned vague wording");
-                }
-                boolean deterministicTitleFallback = false;
-                if (!narrativeValidator.semanticallyUseful(title, summary, envelope)) {
-                    title = original.humanTitle();
-                    summary = original.oneSentenceSummary();
-                    deterministicTitleFallback = true;
-                    if (!narrativeValidator.hasActionObjectResult(title, summary)) {
-                        throw new HistoryValidationException(
-                            ValidationKind.UNSUPPORTED_CLAIM,
-                            "History title does not state an action, object and supported result"
-                        );
-                    }
-                }
-                String before = modelText(node, "beforeWording", 1_000);
-                String change = modelText(node, "changeWording", 1_200);
-                String after = modelText(node, "afterWording", 1_000);
-                if (before.isBlank()) before = original.beforeState();
-                if (change.isBlank()) change = original.change();
-                if (after.isBlank()) after = original.afterState();
-                List<String> reasonEvidence = stringList(node.path("reasonEvidenceRefs"), 30);
-                if (!reasonEvidenceByStory.getOrDefault(id, List.of()).containsAll(reasonEvidence)) {
-                    throw new HistoryValidationException(ValidationKind.INVALID_EVIDENCE, "History model returned ineligible reason Evidence");
-                }
-                String reason = modelText(node, "reason", 1_000);
-                if (!reason.isBlank() && reasonEvidence.isEmpty()) {
-                    throw new HistoryValidationException(ValidationKind.INVALID_EVIDENCE, "History reason has no Evidence");
-                }
-                String unknownWording = modelText(node, "unknownWording", 500);
-                if (unknownWording.isBlank()) {
-                    unknownWording = stringList(node.path("unknowns"), 20).stream().findFirst().orElse("");
-                }
-                boolean sourceStateUnknown = members.stream()
-                    .anyMatch(event -> event.epistemicStatus() == ProjectFactEpistemicStatus.UNKNOWN);
-                List<String> unknowns = unknownWording.isBlank() && !reason.isBlank() && !sourceStateUnknown
-                    ? List.of()
-                    : narrativeValidator.normalizeUnknowns(unknownWording, sourceStateUnknown);
-                try {
-                    narrativeValidator.validateStory(
-                        envelope, title, summary, before, change, after, reason,
-                        unknowns.stream().findFirst().orElse("")
-                    );
-                } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
-                    throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
-                }
-                stories.put(id, copyStory(
-                    original, original.laterOutcome(), "INFERRED_NON_AUTHORITATIVE",
-                    deterministicTitleFallback ? "MODEL_VALIDATED_WITH_DETERMINISTIC_TITLE" : "MODEL_VALIDATED",
-                    title, summary, before, change, after, reason, reasonEvidence,
-                    original.conflicts(), unknowns
-                ));
+                stories.put(id, parseStoryWording(node, original, envelope, members, eligibleReasonEvidence));
             } catch (HistoryValidationException failure) {
-                // Keep independently validated siblings. Unknown IDs, invalid
-                // Evidence and structural failures still reject the whole window.
+                // Invalid IDs and Evidence still reject the complete window. Only
+                // wording may recover, under the same full-story authority checks.
                 if (failure.kind() != ValidationKind.UNSUPPORTED_CLAIM || !storyOnlyOutput) throw failure;
+                stories.put(id, preserveValidatedStoryFields(node, original, envelope, members, eligibleReasonEvidence));
                 if (rejectedWording == null) rejectedWording = failure;
                 rejectedStoryCount++;
             }
@@ -2828,13 +2805,7 @@ public class ProjectHistoryReconstructionService {
         if (rejectedWording != null) {
             if (eligibleChapterIds.isEmpty()) {
                 String validatedOutput = json(Map.of("stories", orderedStories.stream()
-                    .filter(story -> eligibleStoryIds.contains(story.id())).map(story -> Map.of(
-                        "storyId", story.id(), "humanTitle", story.humanTitle(),
-                        "oneSentenceSummary", story.oneSentenceSummary(), "beforeWording", story.beforeState(),
-                        "changeWording", story.change(), "afterWording", story.afterState(),
-                        "reason", story.reason(), "reasonEvidenceRefs", story.reasonEvidenceRefs(),
-                        "unknownWording", story.unknowns().stream().findFirst().orElse("")
-                    )).toList(), "chapters", List.of()));
+                    .filter(story -> eligibleStoryIds.contains(story.id())).map(this::storyWordingNode).toList(), "chapters", List.of()));
                 if (validatedOutput.length() < ProjectHistoryPromptBuilder.MAX_PROMPT_CHARS - 1_000) {
                     rejectedWording.validatedRepairOutput = validatedOutput;
                     rejectedWording.preservedStories = eligibleStoryIds.size() - rejectedStoryCount;
@@ -2844,6 +2815,109 @@ public class ProjectHistoryReconstructionService {
             throw rejectedWording;
         }
         return new SnapshotResult(orderedChapters, orderedStories, base.threads());
+    }
+
+    private ChangeStory parseStoryWording(
+        JsonNode node,
+        ChangeStory original,
+        ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope,
+        List<EventView> members,
+        List<String> eligibleReasonEvidence
+    ) {
+        List<String> reasonEvidence = stringList(node.path("reasonEvidenceRefs"), 30);
+        if (!eligibleReasonEvidence.containsAll(reasonEvidence)) {
+            throw new HistoryValidationException(ValidationKind.INVALID_EVIDENCE, "History model returned ineligible reason Evidence");
+        }
+        String reason = modelText(node, "reason", 1_000);
+        if (!reason.isBlank() && reasonEvidence.isEmpty()) {
+            throw new HistoryValidationException(ValidationKind.INVALID_EVIDENCE, "History reason has no Evidence");
+        }
+        String title = modelText(node, "humanTitle", 240);
+        String summary = modelText(node, "oneSentenceSummary", 1_000);
+        if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
+            throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, "History model returned vague wording");
+        }
+        boolean deterministicTitleFallback = false;
+        if (!narrativeValidator.semanticallyUseful(title, summary, envelope)) {
+            title = original.humanTitle();
+            summary = original.oneSentenceSummary();
+            deterministicTitleFallback = true;
+            if (!narrativeValidator.hasActionObjectResult(title, summary)) {
+                throw new HistoryValidationException(
+                    ValidationKind.UNSUPPORTED_CLAIM,
+                    "History title does not state an action, object and supported result"
+                );
+            }
+        }
+        String before = modelText(node, "beforeWording", 1_000);
+        String change = modelText(node, "changeWording", 1_200);
+        String after = modelText(node, "afterWording", 1_000);
+        if (before.isBlank()) before = original.beforeState();
+        if (change.isBlank()) change = original.change();
+        if (after.isBlank()) after = original.afterState();
+        String unknownWording = modelText(node, "unknownWording", 500);
+        if (unknownWording.isBlank()) {
+            unknownWording = stringList(node.path("unknowns"), 20).stream().findFirst().orElse("");
+        }
+        boolean sourceStateUnknown = members.stream()
+            .anyMatch(event -> event.epistemicStatus() == ProjectFactEpistemicStatus.UNKNOWN);
+        List<String> unknowns = unknownWording.isBlank() && !reason.isBlank() && !sourceStateUnknown
+            ? List.of()
+            : narrativeValidator.normalizeUnknowns(unknownWording, sourceStateUnknown);
+        try {
+            narrativeValidator.validateStory(
+                envelope, title, summary, before, change, after, reason,
+                unknowns.stream().findFirst().orElse("")
+            );
+        } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
+            throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
+        }
+        return copyStory(
+            original, original.laterOutcome(), "INFERRED_NON_AUTHORITATIVE",
+            deterministicTitleFallback ? "MODEL_VALIDATED_WITH_DETERMINISTIC_TITLE" : "MODEL_VALIDATED",
+            title, summary, before, change, after, reason, reasonEvidence,
+            original.conflicts(), unknowns
+        );
+    }
+
+    private ChangeStory preserveValidatedStoryFields(
+        JsonNode rejected,
+        ChangeStory original,
+        ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope,
+        List<EventView> members,
+        List<String> eligibleReasonEvidence
+    ) {
+        ChangeStory retained = original;
+        // At most eight local validation attempts; no extra model call. Paired
+        // fields stay together where their meaning or Evidence is coupled.
+        for (List<String> fields : List.of(
+            List.of("humanTitle", "oneSentenceSummary"), List.of("humanTitle"),
+            List.of("oneSentenceSummary"), List.of("beforeWording"), List.of("changeWording"),
+            List.of("afterWording"), List.of("reason", "reasonEvidenceRefs", "unknownWording", "unknowns"),
+            List.of("unknownWording", "unknowns")
+        )) {
+            com.fasterxml.jackson.databind.node.ObjectNode candidate = storyWordingNode(retained);
+            for (String field : fields) {
+                candidate.remove(field);
+                if (rejected.has(field)) candidate.set(field, rejected.get(field));
+            }
+            try {
+                retained = parseStoryWording(candidate, original, envelope, members, eligibleReasonEvidence);
+            } catch (HistoryValidationException failure) {
+                if (failure.kind() != ValidationKind.UNSUPPORTED_CLAIM) throw failure;
+            }
+        }
+        return retained;
+    }
+
+    private com.fasterxml.jackson.databind.node.ObjectNode storyWordingNode(ChangeStory story) {
+        return objectMapper.valueToTree(Map.of(
+            "storyId", story.id(), "humanTitle", story.humanTitle(),
+            "oneSentenceSummary", story.oneSentenceSummary(), "beforeWording", story.beforeState(),
+            "changeWording", story.change(), "afterWording", story.afterState(),
+            "reason", story.reason(), "reasonEvidenceRefs", story.reasonEvidenceRefs(),
+            "unknownWording", story.unknowns().stream().findFirst().orElse("")
+        ));
     }
 
     private Map<String, List<String>> reasonEligibleEvidence(
@@ -3360,6 +3434,7 @@ public class ProjectHistoryReconstructionService {
     ) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("strategyVersion", STRATEGY_VERSION);
+        result.put("storyWordingRecoveryVersion", STORY_WORDING_RECOVERY_VERSION);
         result.put("promptVersion", PROMPT_VERSION);
         result.put("rewriteMode", rewriteMode);
         result.put("cacheHit", cacheHit);
