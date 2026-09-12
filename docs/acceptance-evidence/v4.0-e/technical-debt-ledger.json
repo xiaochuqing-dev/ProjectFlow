@@ -35,7 +35,7 @@
       "engineeringRisk": "Specificity may inflate authority or alter grouping",
       "treatment": "Exact-commit ownership, diverse bounded paths, short historical document content, temporal limits, and preservation of independently validated Story wording during the existing single repair. Preserve the owning commit/Agent statement with explicit author identity, verification scope and unfinished work; process-only actual state remains UNKNOWN. Independently useful title/summary fields also survive a weaker partner; full authority validation and supported-result fallback remain required.",
       "status": "CORPORATION_FINAL_PASS_PROJECTFLOW_PENDING",
-      "remainingRisk": "Latest Corporation visible review passed after reading all 34 TXT and 67 PNG. ProjectFlow retains prior NEEDS_REVISION reviews; its remaining History window and final fresh review are pending.",
+      "remainingRisk": "Latest Corporation visible review and Workline-only timestamp addendum passed. ProjectFlow retains prior NEEDS_REVISION reviews; two failed History windows, chapters and its final fresh review remain in progress.",
       "recommendedPhase": "V4.0-E"
     },
     {
@@ -59,7 +59,7 @@
       "engineeringRisk": "Engineering greens could conceal poor explanation",
       "treatment": "Fresh independent Sol/xhigh review of representative visible Current, History, Workline and Evidence",
       "status": "CORPORATION_FINAL_PASS_PROJECTFLOW_PENDING",
-      "remainingRisk": "Latest Corporation visible review passed after reading all 34 TXT and 67 PNG. ProjectFlow retains prior NEEDS_REVISION reviews; its remaining History window and final fresh review are pending.",
+      "remainingRisk": "Latest Corporation visible review and Workline-only timestamp addendum passed. ProjectFlow retains prior NEEDS_REVISION reviews; two failed History windows, chapters and its final fresh review remain in progress.",
       "recommendedPhase": "V4.0-E"
     },
     {
@@ -233,13 +233,13 @@
     {
       "id": "E-P1-05",
       "debt": "Unchanged source metadata invalidates History checkpoints after restart",
-      "source": "V4.0-E real ProjectFlow restart, closed-backup/API comparison and coverage serialization proof",
+      "source": "V4.0-E real restart; two closed H2 backups confirm all 83 changed hashes had identical content, plus persisted H2 identity regressions.",
       "priority": "P1",
       "userImpact": "Already successful model windows can be recomputed unnecessarily",
       "engineeringRisk": "Iteration order changes opaque source fingerprints without a content change",
-      "treatment": "When hashes differ, compare every source field and parsed JSON; keep the original hash and checkpoint for equal content",
-      "status": "FULL_TESTS_PASS_REAL_RESTART_PENDING",
-      "remainingRisk": "Final real restart and zero-call History checks are still pending",
+      "treatment": "Compare source content and parsed JSON on hash mismatch, excluding aggregate HEAD and respecting existing TIMESTAMP(6) precision; retain the old hash. Real coverage-value and timestamp changes still invalidate.",
+      "status": "REAL_RESTART_NOCHANGE_PASS_PROJECTFLOW_CONTINUATION_PENDING",
+      "remainingRisk": "All three Current and both complete Story reads survived restart unchanged; three Current and completed Corporation History refreshes made zero calls. ProjectFlow partial-window continuation is still running.",
       "recommendedPhase": "V4.0-E"
     }
   ]

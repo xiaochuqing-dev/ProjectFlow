@@ -1,5 +1,5 @@
 {
-  "functionalSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491",
+  "scope": "Source identity recorded per terminal run; successful windows survive later runtime changes.",
   "runs": [
     {
       "recordedAt": "2026-09-12T04:27:26.184491+00:00",
@@ -31,7 +31,8 @@
         "unsupportedClaimCount": 0,
         "representativePrimaryCoverage": 0.7894795630406637
       },
-      "scope": "Safe read-only counters collected after this job became terminal and before later no-change or continuation refreshes."
+      "scope": "Safe read-only counters collected after this job became terminal and before later no-change or continuation refreshes.",
+      "functionalSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491"
     },
     {
       "recordedAt": "2026-09-12T04:44:01.180392+00:00",
@@ -63,7 +64,8 @@
         "unsupportedClaimCount": 0,
         "representativePrimaryCoverage": 0.6795327266239175
       },
-      "scope": "Safe read-only counters collected after this job became terminal and before later no-change or continuation refreshes."
+      "scope": "Safe read-only counters collected after this job became terminal and before later no-change or continuation refreshes.",
+      "functionalSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491"
     },
     {
       "recordedAt": "2026-09-12T04:50:32.343701+00:00",
@@ -95,7 +97,8 @@
         "unsupportedClaimCount": 0,
         "representativePrimaryCoverage": 0.7894795630406637
       },
-      "scope": "Safe read-only counters collected after this job became terminal and before later no-change or continuation refreshes."
+      "scope": "Safe read-only counters collected after this job became terminal and before later no-change or continuation refreshes.",
+      "functionalSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491"
     },
     {
       "recordedAt": "2026-09-12T05:06:12.350591+00:00",
@@ -120,6 +123,45 @@
         "chapterSynthesisPendingCount": 0,
         "chapterSynthesisCacheHitCount": 0,
         "reusedChapterCount": 26,
+        "storyWordingRecoveryVersion": 1,
+        "eventConservation": true,
+        "invalidEvidenceRefCount": 0,
+        "unsupportedStrongFactCount": 0,
+        "unsupportedClaimCount": 0,
+        "representativePrimaryCoverage": 0.6795327266239175
+      },
+      "scope": "Safe read-only counters collected after this job became terminal and before later no-change or continuation refreshes.",
+      "functionalSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491"
+    },
+    {
+      "recordedAt": "2026-09-12T06:36:53.842709+00:00",
+      "project": "ProjectFlow",
+      "functionalSourceHead": "8dd9d6cfeda2dfbb76118ca0f3e1b4f99a0bd6f4",
+      "jobId": "115d1a1f-85fa-4247-ac5a-d704f34b8b8d",
+      "status": "SUCCEEDED_WITH_WARNINGS",
+      "elapsedMs": 4875764,
+      "requestCount": 27,
+      "usageAvailability": "PARTIAL",
+      "reportedTotalTokens": 364906,
+      "persistedOverviewAfterTerminal": {
+        "addedEventCount": 0,
+        "updatedEventCount": 83,
+        "reusedEventCount": 4229,
+        "recomputedStoryCount": 600,
+        "reusedStoryCount": 24,
+        "modelStatus": "MODEL_PARTIAL_FALLBACK_DETERMINISTIC",
+        "totalWindowCount": 14,
+        "succeededWindowCount": 12,
+        "failedWindowCount": 2,
+        "pendingWindowCount": 0,
+        "modelProcessedWindowCount": 12,
+        "modelUnprocessedWindowCount": 2,
+        "modelWindowCacheHitCount": 0,
+        "modelCheckpointCount": 14,
+        "chapterSynthesisFailedCount": 0,
+        "chapterSynthesisPendingCount": 0,
+        "chapterSynthesisCacheHitCount": 0,
+        "reusedChapterCount": 0,
         "storyWordingRecoveryVersion": 1,
         "eventConservation": true,
         "invalidEvidenceRefCount": 0,

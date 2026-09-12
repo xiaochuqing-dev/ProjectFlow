@@ -46,5 +46,20 @@
     "errors": 0,
     "optInSkipped": 11,
     "postgres16RequiredPassed": 7
+  },
+  "subsequentClosedDatabaseProof": {
+    "source": "Two exclusive-lock-confirmed closed H2 backups opened with ACCESS_MODE_DATA=r; canonical comparison excludes only update timestamp and fingerprint.",
+    "beforeEventCount": 4312,
+    "afterEventCount": 4312,
+    "changedFingerprints": 83,
+    "contentEqualChangedFingerprints": 83,
+    "sourceCategories": {
+      "GITHUB/PULL_REQUEST": 24,
+      "AGENT_RESULT/AGENT_RESULT": 59
+    },
+    "contentChanges": [],
+    "rawRowsPublished": false,
+    "recordedAt": "2026-09-12T06:48:40.935415+00:00",
+    "interpretation": "The earlier API comparison was a lower bound. Direct read-only comparisons of both closed databases confirm all 83 changed fingerprints had equal source content; no raw source rows are published."
   }
 }

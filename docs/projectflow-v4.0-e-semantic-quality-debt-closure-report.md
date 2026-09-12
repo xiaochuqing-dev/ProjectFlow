@@ -36,7 +36,7 @@ Job 级 collector 在实际进入 adapter 时记录 attempt，跨线程显式传
 
 ## 8. Current Understanding results
 
-ProjectFlow 与 Corporation-Agent 均已通过真实 Sol / Responses / xhigh Current，分别两次请求。此前源码 `8dd9d6c` 上无变化重跑分别为 836 毫秒与 99 毫秒；第三项目为 19 毫秒，三份均为零请求、NOT_CALLED。重启及刷新前后完整 Current API 响应一致，旧零调用结果也继续保留。具体用量与阶段状态见 `real-model-usage.json`；History 的成功没有用于替代 Current 验收。
+ProjectFlow 与 Corporation-Agent 均已通过真实 Sol / Responses / xhigh Current，分别两次请求。最新功能源码 `349a6039` 上无变化重跑分别为 831 毫秒与 110 毫秒；第三项目为 17 毫秒，三份均为零请求、NOT_CALLED。重启及刷新前后完整 Current API 响应一致，旧零调用结果也继续保留。具体用量与阶段状态见 `real-model-usage.json`；History 的成功没有用于替代 Current 验收。
 
 ## 9. Semantic specificity changes
 
@@ -66,11 +66,13 @@ Git 用提交时间；PR 区分 merged/closed/updated/created；Tag 用真实标
 
 第六轮运行中确认了单个坏字段仍会抹去同条有效内容，遂通过正式取消入口停止旧逻辑任务。19 次真实请求中，18 次收到响应，最后一次 CLIENT_CANCELLED；已报告 337,959 tokens，最后一次用量未知。12 个 checkpoint 保留：11 个成功、1 个取消；成功项中 4 个无须升级，7 个曾替换措辞。最新字段恢复实现只重算受影响窗口和未完成尾部，未修改只读 clone。
 
-字段修复后的首轮完成了 13/14 个窗口，复用 4 个成功窗口；21 次请求中 18 次收到响应、3 次传输失败，已报告 312,122 tokens，总量 PARTIAL。随后补跑复用全部 13 个成功窗口，但两次请求分别发生 IO_FAILURE 和 HTTP2_STREAM_RESET_CANCEL，用量 UNKNOWN。再一次重启后的补跑出现额外窗口请求，不能再描述为只恢复一个窗口：闭库备份与只读 API 比对发现 83 条事件被更新，其中至少 72 条来源内容相同。旧 JSON 对象字段顺序进入指纹使缓存失效，已新增内容相等时保留旧指纹的兼容修复；真实任务仍运行，最终复用数量与重启证明待记录。
+字段修复后的首轮完成了 13/14 个窗口，复用 4 个成功窗口；21 次请求中 18 次收到响应、3 次传输失败，已报告 312,122 tokens，总量 PARTIAL。随后补跑复用全部 13 个成功窗口，但两次请求分别发生 IO_FAILURE 和 HTTP2_STREAM_RESET_CANCEL，用量 UNKNOWN。再一次重启后的补跑出现额外窗口请求，不能描述为只恢复一个窗口：该轮最终完成 12/14 个窗口，零缓存命中，27 次请求、4,875,764 毫秒，已报告 364,906 tokens，总量 PARTIAL。25 次收到响应、2 次传输失败；收到响应也不等于通过内容校验。对前后两个已关闭 H2 备份的只读比对确认：4,312 个事件 ID 不变，83 条指纹变化的来源内容全部相等（24 条 PR、59 条 Agent result）。原先 API 比对的 72 条只是下界。旧 JSON 对象字段顺序进入指纹，错误地使成功窗口失效。
+
+兼容修复保留内容相等事件的旧指纹；聚合项目 HEAD 和数据库时间精度也不再造成伪更新。最新 `349a6039` 重启前后，三个 Current 及 ProjectFlow 338 条、Corporation 22 条 Story 的完整响应一致。三个 Current 与 Corporation History 的刷新均零请求；ProjectFlow 正通过原刷新入口恢复两个失败窗口，最终缓存复用和篇章结果另行记录。
 
 ## 13. Corporation-Agent / third-project Dogfood
 
-Corporation-Agent 使用冻结 `f80553c61aaf19b19e729d47739d6b8f35c1dffd`、17 commits、单 main 分支。较早的成功、失败、泛化措辞与零调用记录全部保留。最终字段恢复先保留一个成功窗口，再补齐另一个窗口和篇章：4 次真实 xhigh 请求、40,775 tokens、356,701 毫秒，全部 2 个窗口成功，22 条可读 Story。最新源码上的再次刷新为 1,153 毫秒、零请求，全部 Story 响应保持一致。独立 Sol/xhigh 完整检查 34 份 TXT、67 张 PNG，结论 PASS，无阻断项；部分标题、长来源列表与窄屏浮层有非阻断改进项。README 能力仍为声明，代码新增不等于上线。
+Corporation-Agent 使用冻结 `f80553c61aaf19b19e729d47739d6b8f35c1dffd`、17 commits、单 main 分支。较早的成功、失败、泛化措辞与零调用记录全部保留。最终字段恢复先保留一个成功窗口，再补齐另一个窗口和篇章：4 次真实 xhigh 请求、40,775 tokens、356,701 毫秒，全部 2 个窗口成功，22 条可读 Story。最新源码 `349a6039` 上的再次刷新为 1,371 毫秒、零请求，全部 Story 响应保持一致。独立 Sol/xhigh 完整检查 34 份 TXT、67 张 PNG，结论 PASS，无阻断项；部分标题、长来源列表与窄屏浮层有非阻断改进项。README 能力仍为声明，代码新增不等于上线。
 
 第三项目为本地通用备考技能包的只读 clone。真实 Final Synthesis 失败后保留已验证 Scout，恢复只调用一次 Final Synthesis 并成功；最新无变化重跑为零请求。初始失败、状态误报和恢复分别留档，没有把材料包强制理解为前后端应用。
 
@@ -86,7 +88,7 @@ Corporation-Agent 使用冻结 `f80553c61aaf19b19e729d47739d6b8f35c1dffd`、17 c
 
 第五轮 Corporation-Agent 为 PASS：再次完整检查 34 份 TXT、67 张 PNG，无阻断项。唯一 LOW 项为 Story 2 局部来源卡仍使用“完善项目骨架”这类范围偏宽的措辞；主 Story 已说明只能确认文件变化，不能确认运行结果。该项保留为非阻断债务，不隐去评审限制。ProjectFlow 第五轮完整检查 34 份 TXT 与 76 张 PNG，结论仍为 NEEDS_REVISION：来源声明中已有的具体行为、验证范围和未完成项被第一层通用措辞抹去。已追加保留作者身份的声明上下文与验证规则，正在定向、全量与真实复验；旧结论不改写。Owner Review 独立保持 NOT_REVIEWED。
 
-最新字段恢复后的 Corporation-Agent 由全新 Sol/xhigh reviewer 独立复核，仍为 PASS（34 TXT / 67 PNG）。该输入冻结不改写；后续本地标题回退修复未使已保存 Current 与全部 Story 响应发生变化，见 `final-runtime-retention.json`。ProjectFlow 最终复核须等待剩余 History 完成后重新采集普通用户默认内容，不能用旧轮次结论代替。
+最新字段恢复后的 Corporation-Agent 由全新 Sol/xhigh reviewer 独立复核，仍为 PASS（34 TXT / 67 PNG）。该输入冻结不改写；后续本地标题回退修复未使已保存 Current 与全部 Story 响应发生变化，见 `final-runtime-retention.json`。随后重新采集的 Corporation 27 份 TXT 与原评审相同，其余 7 份 Workline 文本只更新本次观察时间；同一独立 Sol reviewer 完整检查这 7 份 TXT / 9 张 PNG 的增补，仍为 PASS。ProjectFlow 最终复核须等待剩余 History 完成后重新采集普通用户默认内容，不能用旧轮次结论代替。
 
 ## 16. Unsupported claim gate
 
@@ -106,9 +108,9 @@ Current 先展示用途与有来源说明，其余盘点可展开。每条声明
 
 ## 20. Backend / PostgreSQL / Windows
 
-最新功能源码 `b6da7f0745dfc4af91c62871a034dbdc3f20187b` 的后端/H2 全套 782 项：771 通过、11 项按既有 opt-in 边界跳过。PostgreSQL 16 集成 7 项通过且无跳过；exact V3.9 的 H2/PostgreSQL 旧库升级证明 2 项通过、无跳过，耗时 48.272 秒。前端类型检查、73 项契约和 38 项 Playwright 通过，浏览器全套耗时 3.0 分钟。Playwright 使用真实前后端、Next 开发模式与固定兼容模型，不作为真实 Sol 证明。该功能源码的生产包与 Windows 便携复验已通过，旧功能源码的证据独立保留。
+最新功能源码 `349a6039e68ab5ad0126a2dd1dca3dca1029e7f7` 的后端/H2 全套 782 项：771 通过、11 项按既有 opt-in 边界跳过。PostgreSQL 16 集成 7 项通过且无跳过；exact V3.9 的 H2/PostgreSQL 旧库升级证明 2 项通过、无跳过，耗时 48.984 秒。前端类型检查、73 项契约与 38 项 Playwright 均通过，浏览器全套耗时 3.0 分钟；最新源码的便携构建待复验。Playwright 使用真实前后端、Next 开发模式与固定兼容模型，不作为真实 Sol 证明。旧功能源码的生产包、Windows 便携与其他验证证据独立保留。
 
-Hermes 10 项、Obsidian 27 项通过；5,000 facts 规模的 Obsidian 无变化同步为零写入。最新便携包源提交为 `e47da61ae0ab12496884710bd6bf8fd826f34134`，与功能源码 `b6da7f0` 仅有文档和证据差异。两次 bundled-runtime 启动、DPAPI、manifest、备份恢复和退出端口释放均通过；运行 PATH 不含 Maven/npm/Git。完整真实项目页面另外验收，不能把便携包 HTTP 证明扩大为完整产品验收。根启动器、OSV 与本分支 CI 仍待最终记录。
+Hermes 10 项、Obsidian 27 项通过；5,000 facts 规模的 Obsidian 无变化同步为零写入。此前便携包源提交为 `e47da61ae0ab12496884710bd6bf8fd826f34134`，与功能源码 `b6da7f0` 仅有文档和证据差异。两次 bundled-runtime 启动、DPAPI、manifest、备份恢复和退出端口释放均通过；运行 PATH 不含 Maven/npm/Git。完整真实项目页面另外验收，不能把便携包 HTTP 证明扩大为完整产品验收。根启动器、OSV 与本分支 CI 仍待最终记录。
 
 ## 21. Failures / recovery
 
@@ -123,6 +125,8 @@ Hermes 10 项、Obsidian 27 项通过；5,000 facts 规模的 Obsidian 无变化
 最新又用确定性测试复现了普通标题回退误丢有效摘要：安全但没有动作的标题导致两个字段一并被替换。首个较宽修复触发缺少结果的旧回归，已保留该失败并收紧条件：被保留字段须独立通过既有语义有用性门槛，组合仍通过完整权威校验。四项定向和 781 项全套通过；没有额外模型调用，也没有全局清空有效缓存。
 
 真实重启发现的指纹顺序问题另有一个先红后绿的定向回归：全部来源字段相同则不更新事件、不替换旧指纹；coverage 值实际变化仍更新。新测试使用合成旧指纹，只证明兼容逻辑，不冒充真实重启或 Sol 验收。
+
+追加的持久化回归又先后复现两种伪变化：不可变来源沿用较早项目 HEAD，以及 100 纳秒文件时间被 TIMESTAMP(6) 舍入后重新读取。修复后两项定向、782 项后端全套、7 项 PostgreSQL 与 2 项 exact 旧库升级检查通过；真实重启及零请求证明见 `restart-checkpoint-retention.json`，两个先红后绿的结果保留在 `failed-runs/restart-persisted-identity.json`。
 
 ## 22. Remaining debt
 
@@ -157,7 +161,7 @@ GitHub 复核时 #21–#24 均为开放 Draft，master 仍为 `1712841b77fd1e814
 | #22 | master | `7d5f30eff3a05105b7f3f60e07e352d297301ed5` |
 | #23 | codex/v4.0-b-gui-first-prototype | `703120998f2296b4e615cd785e651a351c5dc8c9` |
 | #24 | codex/v4.0-c-gui-productization | `81730744a325ccc2391009b367ca4ba95aef6d14` |
-| V4.0-E | codex/v4.0-d-real-project-understanding | 功能源码 `b6da7f0745dfc4af91c62871a034dbdc3f20187b`；最终证据提交与 PR 待记录 |
+| V4.0-E | codex/v4.0-d-real-project-understanding | 功能源码 `349a6039e68ab5ad0126a2dd1dca3dca1029e7f7`；最终证据提交与 PR 待记录 |
 
 正确顺序为 #22 → #23 → #24 → E，逐步重新定位 base 并验证 master；本轮不执行合并。#21 的 Windows 端口等待改动已经包含，Tomcat 安全基线被后续版本承接，Dogfood 时间夹具被后续实现承接，AppShell 旧版本标题改为显式工程兼容入口。不能笼统称 #21 全部已吸收：以下四份文档和两份 Agent Result 不在 E 树中，须在后续合并整理时显式保留或归档。
 
