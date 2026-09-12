@@ -99,7 +99,7 @@ export function HistoryPage({ project, demo, onStory }: Props) {
           onClick={() => router.push(`${base}&axis=time${chapterId ? `&chapter=${encodeURIComponent(chapterId)}` : ""}`, { scroll: false })}><BookOpenText size={16} />按时间查看</button>
         <button aria-pressed={axis === "threads"} className={axis === "threads" ? "active" : ""}
           onClick={() => router.push(`${base}&axis=threads${selectedId ? `&chapter=${encodeURIComponent(selectedId)}` : ""}`, { scroll: false })}><Workflow size={16} />按长期主题查看</button>
-      </div><span>{axis === "chapters" ? "按来源时间阅读各组变化；日期可以重叠" : axis === "threads" ? "某个功能、问题或方向如何持续变化" : "先看最近发生了什么，再深入时间或主题"}</span>
+      </div><span>{axis === "chapters" ? "按来源时间分组阅读；各组可以重叠，不代表前后相继的成熟阶段" : axis === "threads" ? "某个功能、问题或方向如何持续变化" : "先看最近发生了什么，再深入时间或主题"}</span>
     </div>
     {axis === "threads" ? <ThreadReader project={project} demo={demo} onStory={onStory}
       chapters={chapterList} chapterPage={page} onChapterPage={setPage} chapterLoading={listLoading}
@@ -250,7 +250,7 @@ export function StoryCard({ story, onStory }: { story: WorkspaceStory; onStory: 
 export function HistoryBoundaries({ conflicts = [], unknowns = [], limitations = [] }: { conflicts?: string[]; unknowns?: string[]; limitations?: string[] }) {
   return <div className="pf-history-boundaries">{[
     { label: "存在冲突", items: conflicts, tone: "conflict" }, { label: "尚未确认", items: unknowns, tone: "unknown" }, { label: "覆盖与缺口", items: limitations, tone: "attention" },
-  ].filter((group) => group.items.length).map((group) => <section key={group.label} className={group.tone}><h3>{group.label}</h3><ul>{group.items.map((item, i) => <li key={i}>{item}</li>)}</ul></section>)}</div>;
+  ].map((group) => ({ ...group, items: [...new Set(group.items.map(item => item.trim()).filter(Boolean))] })).filter((group) => group.items.length).map((group) => <section key={group.label} className={group.tone}><h3>{group.label}</h3><ul>{group.items.map((item, i) => <li key={i}>{item}</li>)}</ul></section>)}</div>;
 }
 
 export function ReadError({ message, onRetry }: { message: string; onRetry: () => void }) {

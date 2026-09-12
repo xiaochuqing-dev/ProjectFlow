@@ -58,7 +58,7 @@ public final class ProjectHistoryLanguageService {
         String title = switch (transition == null ? Transition.UNKNOWN_TRANSITION : transition) {
             case CREATED -> "建立" + object + "，形成可继续查看的初始成果";
             case MODIFIED -> "完善" + object + "，更新已有内容";
-            case REMOVED -> "移除" + object + "，当前项目不再保留这项内容";
+            case REMOVED -> "移除" + object + "，记录一次版本内的删除";
             case RESTORED -> "恢复" + object + "，让此前移除的内容重新出现";
             case RENAMED -> "调整" + object + "的名称，原有内容继续保留";
             case MOVED -> "调整" + object + "的存放位置，原有内容继续保留";
@@ -72,8 +72,9 @@ public final class ProjectHistoryLanguageService {
         String summary = switch (transition == null ? Transition.UNKNOWN_TRANSITION : transition) {
             case CREATED -> "这一阶段首次形成" + object + "，主要内容已纳入项目记录。";
             case MODIFIED -> "这次调整补充了" + object + "的内容，原有记录仍可继续核对。";
-            case REMOVED, REVERTED -> object + "已退出当前结果，原始来源仍保留在工程详情中。";
-            case RESTORED, REAPPLIED -> object + "重新回到当前结果，此前变化仍可从历史中核对。";
+            case REMOVED -> "来源提交记录了" + object + "的移除；该事件不能单独证明当前目录仍缺少这些内容。";
+            case REVERTED -> "来源记录了对" + object + "上一项变化的撤销，具体回退范围仍可在工程详情中核对。";
+            case RESTORED, REAPPLIED -> object + "在这次变更中重新出现，此前变化仍可从历史中核对。";
             case RENAMED, MOVED -> object + "调整了名称或位置，内容本身继续保留。";
             case REPLACED -> object + "换成了新的内容版本，旧版本仍可从历史中核对。";
             case SPLIT -> object + "被整理为多个部分，方便分别查看。";
@@ -89,7 +90,7 @@ public final class ProjectHistoryLanguageService {
         String change = switch (transition == null ? Transition.UNKNOWN_TRANSITION : transition) {
             case CREATED -> "这一阶段首次建立" + object + "，并保存了相关内容。";
             case MODIFIED -> "这一阶段补充或调整了" + object + "的现有内容。";
-            case REMOVED -> "这一阶段从当前项目结果中移除了" + object + "。";
+            case REMOVED -> "这一阶段从对应版本中移除了" + object + "。";
             case RESTORED -> "这一阶段把此前移除的" + object + "恢复回来。";
             case RENAMED -> "这一阶段更改了" + object + "的名称。";
             case MOVED -> "这一阶段调整了" + object + "的存放位置。";
@@ -103,8 +104,9 @@ public final class ProjectHistoryLanguageService {
         String after = switch (transition == null ? Transition.UNKNOWN_TRANSITION : transition) {
             case CREATED -> "项目中已有" + object + "，后续可以继续查看和完善。";
             case MODIFIED -> object + "已更新为当前记录的内容。";
-            case REMOVED, REVERTED -> "当前项目结果中已不再包含" + object + "。";
-            case RESTORED, REAPPLIED -> object + "已重新出现在当前项目中。";
+            case REMOVED -> "删除已记录在该版本的变更中，后续是否恢复需要继续核对。";
+            case REVERTED -> "该版本记录了对先前变化的回退，不能据此判断整个对象的当前状态。";
+            case RESTORED, REAPPLIED -> object + "已在对应版本中恢复，后续状态需另查来源。";
             case RENAMED, MOVED -> object + "以新的名称或位置继续保留。";
             case REPLACED -> "当前项目采用" + object + "的新内容版本。";
             case SPLIT -> object + "目前可以按不同部分分别查看。";
@@ -245,7 +247,10 @@ public final class ProjectHistoryLanguageService {
                 : lower.contains("/models/") ? "数据模型文件"
                 : lower.startsWith("scripts/") ? "脚本"
                 : DOCUMENT_EXTENSIONS.contains(extension(path)) ? "文档" : "相关文件";
-            examples.add(objects + kind);
+            for (String object : objects.split("、")) {
+                examples.add(object + kind);
+                if (examples.size() == 5) break;
+            }
             if (examples.size() == 5) break;
         }
         return examples.isEmpty() ? pathScope(paths) : String.join("、", examples);
@@ -485,7 +490,7 @@ public final class ProjectHistoryLanguageService {
 
     private static boolean startsWithAction(String value) {
         return containsAnyAtStart(value,
-            "新增", "建立", "完成", "更新", "完善", "移除", "恢复", "调整", "替换", "拆分", "合并",
+            "新增", "建立", "完成", "更新", "修改", "完善", "移除", "恢复", "调整", "替换", "拆分", "合并",
             "撤销", "重新加入", "记录", "规划", "说明", "补充", "实现", "验证", "整理", "形成", "编写"
         );
     }

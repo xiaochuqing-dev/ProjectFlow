@@ -15,8 +15,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Shared production/evaluation prompt builder for bounded project-history wording. */
 @Component
 public final class ProjectHistoryPromptBuilder {
-    public static final String PROMPT_VERSION = "project-history-synthesis-v17";
-    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v10";
+    public static final String PROMPT_VERSION = "project-history-synthesis-v21";
+    public static final String CHAPTER_PROMPT_VERSION = "project-history-chapter-synthesis-v11";
     static final int MAX_PROMPT_CHARS = 60_000;
     public static final String VALIDATION_REPAIR_MARKER = "\nHISTORY_VALIDATION_REPAIR=";
     private static final String VALIDATION_REPAIR_INSTRUCTIONS = """
@@ -58,6 +58,10 @@ public final class ProjectHistoryPromptBuilder {
         Change 中模板给出的具体组件、接口、脚本和文档范围应保留，避免五条不同变化都改成相同的“文件已有变化”。批量提交的主 Story 与关联子范围是一批变化，不是独立成果。
         claimState、claimAction、supportedOutcome、supportClass、allowedClaims 与 forbiddenClaims 是硬边界。PLANNED 不得写成 IMPLEMENTED，DECLARED 不得写成 VERIFIED，CONFIGURED 不得写成已部署，未给直接验证 Evidence 不得写稳定或生产可用。
         directSupportSummary 是与当前 subject/action 直接匹配的有界支持；indirectContextSummary 只解释上下文，明确不能提升 Claim。不得因为同 Commit、相邻时间、相同区域或 Supporting Story 把间接上下文借给当前 Claim。
+        同一提交中的其他对象不能借给当前 Story。模板 Change 给出文件范围；humanSafeSourceContext 中“文档文字变化”给出这些文件的具体文字变化，可以据此补充模板没有说明的内容。普通提交标题仍只作上下文。列举范围时合并相同短语，避免重复列出同一种文件。
+        After 只描述该次来源或对应版本的结果。历史删除、回退或恢复不证明今天的工作树状态，不得写成“当前项目不再保留”或“重新出现在当前项目中”。
+        文档文字变化与版本号来自对应提交的有界文本差异。优先保留这些具体内容；区分移除摘录、加入摘录与版本号的前后值。文档中的功能、计划、验收文字仍是作者陈述，不能作为独立验证或系统计划。
+        有具体文档摘录时，必须用中文解释使用说明、报告或记录新增了哪类内容，不能只重复“文件已新增或修改”。如摘录提到测试、发布或通过，只能写“补充测试结果记录、发布标签核对说明”等文档动作，不得断言测试通过或版本已发布。将技术术语转为可理解的中文，不复制提交哈希、路径、类名、命令或内部英文标识。
         downgradeReason 必须被遵守：只能在工程层给出的 supportedOutcome 内改写，不得自行提高状态。
         Commit message 只是线索。reason 仅在 reasonEvidenceRefs 非空且全部来自该 Story 的 reasonEligibleEvidenceRefs 时填写；否则 reason 留空，并保留模板中的自然 unknownWording，说明原因暂时无法确认。即使存在可选 Evidence，只要本次没有实际采用，也不得清空 unknownWording。
         Chapter 输入中的 representativeClusters、requiredRepresentativeClusterIds 与 dominantClusterIds 由工程层固定。篇章标题必须代表 dominant cluster，篇章摘要必须覆盖每个 required cluster；不得重新聚类、改变权重或用 minor cluster 代替整个时期。
@@ -76,6 +80,7 @@ public final class ProjectHistoryPromptBuilder {
         一个簇若包含前端、后端、文档或脚本多个主要范围，摘要必须覆盖这些范围，不能只选其中一个范围代表整体。
         不得仅用“围绕某主题推进”“相关成果逐步形成并得到完善”“完成相关建设”等空泛句式。不得使用“相关变化”“工程分组”“形成初始结果”“进入当前时间点可确认的新状态”等内部模板表达。
         如果部分 Story 摘要因边界被省略，只能根据工程层成果簇及代表摘要保守归纳，不得补造遗漏内容。
+        归纳保持来源的时间边界：历史删除、回退或恢复只证明对应版本的变化，不证明当前工作树仍然缺失或保留该内容。
         禁止重要性、成熟度、里程碑、成功判断、下一步、计划或建议。禁止创造 ID、Evidence、文件、数字、原因或项目状态。
         只返回严格 JSON，不得增加字段：
         {"chapters":[{"chapterId":"","representedClusterIds":[],"title":"","summary":""}]}
@@ -139,6 +144,14 @@ public final class ProjectHistoryPromptBuilder {
         String exactTemplate = chapter
             ? chapterOutputTemplate(safePrompt, objectMapper)
             : outputTemplate(safePrompt);
+        return exactOutputRepair(safeKind, repairInstructions, exactTemplate);
+    }
+
+    String validatedStoryRepair(String kind, String validatedOutput) {
+        return exactOutputRepair(kind, VALIDATION_REPAIR_INSTRUCTIONS, validatedOutput);
+    }
+
+    private static String exactOutputRepair(String safeKind, String repairInstructions, String exactTemplate) {
         String repaired = VALIDATION_REPAIR_MARKER + safeKind + "\n" + repairInstructions
             + "\nREQUIRED_OUTPUT_TEMPLATE_JSON=" + exactTemplate;
         if (repaired.length() > MAX_PROMPT_CHARS) {

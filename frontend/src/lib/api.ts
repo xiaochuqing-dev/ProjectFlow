@@ -3114,6 +3114,7 @@ export type ProjectHistoryThread = {
 
 export type ProjectHistoryEvent = {
   id: string;
+  sourceRevision?: string;
   coverage?: { timeBasis?: string; timeLabel?: string };
   occurredAt: string;
   sourceType: string;

@@ -1,29 +1,29 @@
 {
   "portsReleased": true,
-  "restore": "PASS",
   "schemaClassification": "KNOWN_CURRENT",
   "status": "PASS",
-  "verifiedAt": "2026-09-11T20:48:30.9702082Z",
-  "manifestBeforeAndAfter": "PASS",
   "dpapi": "PASS",
-  "sourceHead": "b087ccbd460ddfeb2c78967150e59a7e5661dfdf",
+  "backup": "PASS",
   "startups": [
     {
-      "round": 1,
-      "backend": 200,
       "bundledRuntimeVerified": true,
       "frontend": 200,
-      "developerToolsExcluded": true
+      "developerToolsExcluded": true,
+      "backend": 200,
+      "round": 1
     },
     {
-      "round": 2,
-      "backend": 200,
       "bundledRuntimeVerified": true,
       "frontend": 200,
-      "developerToolsExcluded": true
+      "developerToolsExcluded": true,
+      "backend": 200,
+      "round": 2
     }
   ],
+  "verifiedAt": "2026-09-11T22:02:22.3856189Z",
+  "sourceHead": "bf700b12a7165f8061559e5d05ebaa20768248fc",
+  "manifestBeforeAndAfter": "PASS",
   "scope": "Local Windows bundled runtime; no Tag, Release or desktop shell",
-  "backup": "PASS",
-  "archiveSha256": "425116607fdcfbd0bd433d8d269d7b718898a0679f270d55d232b4a3ce6ed379"
+  "restore": "PASS",
+  "archiveSha256": "43d3b5c27cf6624315888cc89c7284d6175c6eb0c0d1ec431f0230f21c0dcacf"
 }

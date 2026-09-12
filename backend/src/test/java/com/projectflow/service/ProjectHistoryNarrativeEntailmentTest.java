@@ -19,6 +19,41 @@ class ProjectHistoryNarrativeEntailmentTest {
     private final ProjectHistoryNarrativeEntailmentValidator validator = new ProjectHistoryNarrativeEntailmentValidator();
 
     @Test
+    void boundedSourceContextIncludesLatestDocumentContentWithoutRaisingAuthority() {
+        var atoms = new java.util.ArrayList<ProjectHistoryNarrativeEntailmentValidator.EvidenceAtom>();
+        for (int i = 0; i < 8; i++) atoms.add(new ProjectHistoryNarrativeEntailmentValidator.EvidenceAtom(
+            "event-" + i, List.of("readme"), Category.FILE_CHANGE, Transition.MODIFIED, Authority.SOURCE_BACKED,
+            ProjectFactEpistemicStatus.OBSERVED, List.of("README.md"), "文档文字变化：加入说明第" + i + "项", List.of("file:README.md")));
+        var envelope = validator.envelope(new EvidenceProfile("readme", "项目使用说明", Transition.MODIFIED, atoms, false));
+        assertThat(envelope.humanSafeSourceContext()).hasSize(6).contains("文档文字变化：加入说明第7项")
+            .doesNotContain("文档文字变化：加入说明第0项");
+        assertThat(envelope.claimState()).isEqualTo(ClaimState.OBSERVED);
+        assertThatThrownBy(() -> validator.validateStateCeiling(envelope.claimState(), "系统已经通过验收并发布上线"))
+            .isInstanceOf(NarrativeViolation.class);
+    }
+
+    @Test
+    void historicalRemovalCannotClaimTheCurrentWorktreeStillLacksTheArtifact() {
+        var language = new ProjectHistoryLanguageService();
+        var envelope = validator.envelope(new EvidenceProfile(
+            "图片资料", Transition.REMOVED, List.of(Category.FILE_CHANGE), List.of(Authority.FACTUAL_SOURCE),
+            List.of(ProjectFactEpistemicStatus.OBSERVED), List.of("assets/overview.png"), List.of(), false
+        ));
+        var wording = language.fallback(ClaimState.REMOVED, Transition.REMOVED, "overview",
+            List.of("assets/overview.png"), List.of(), List.of("REMOVED"));
+        validator.validateStory(envelope, wording.title(), wording.summary(), wording.before(), wording.change(),
+            wording.after(), "", "后续是否恢复尚未确认。");
+        assertThat(wording.change()).contains("对应版本");
+        assertThatThrownBy(() -> validator.validateStory(envelope,
+            "移除图片资料，当前项目不再保留这项内容", wording.summary(), wording.before(), wording.change(),
+            wording.after(), "", "后续是否恢复尚未确认。"))
+            .isInstanceOf(NarrativeViolation.class).hasMessageContaining("current worktree");
+        assertThatThrownBy(() -> validator.validateChapter(
+            "移除图片资料，当前项目不再保留这项内容", wording.summary(), List.of(wording.title())))
+            .isInstanceOf(NarrativeViolation.class).hasMessageContaining("current worktree");
+    }
+
+    @Test
     void configurationEvidenceCannotClaimDeploymentOrProductionReadiness() {
         var envelope = validator.envelope(new EvidenceProfile(
             "环境配置示例", Transition.CREATED, List.of(Category.FILE_CHANGE), List.of(Authority.FACTUAL_SOURCE),

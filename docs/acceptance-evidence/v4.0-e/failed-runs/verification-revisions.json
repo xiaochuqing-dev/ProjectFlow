@@ -89,6 +89,21 @@
       "finding": "The first final full suite failed only the current-worktree no-change cache assertion; 761 other cases completed without a failure (including 11 opt-in skips).",
       "action": "Repeated the unchanged full gate while keeping its source input stable; no threshold or cache assertion was weakened. The original false result is retained; the precise transient cause was not established.",
       "final": "PASS on rerun: 762 total, 751 passed, 11 opt-in skips; dedicated exact V3.9 tests subsequently passed 2/2 with zero skips."
+    },
+    {
+      "finding": "Second Corporation Sol/xhigh visible review found README borrowing same-commit implementation paths, historical deletion promoted to current absence, and repetitive Evidence labels.",
+      "action": "Freeze all 35 texts and 79 screenshots; give unlabeled mixed commits their own owner, restrict precise narrative paths, validate lifecycle time boundaries and name source evidence by its own role.",
+      "final": "Fix under deterministic and real revalidation"
+    },
+    {
+      "finding": "ProjectFlow round-two review identified duplicate generic Thread names, multi-month overlapping chapters, incomplete mixed-language PR scope and repeated Agent statements.",
+      "action": "Preserve stable identities; translate bounded owned subjects, cap continuous Story spans using the existing time window, retain complete PR scope and display each identical source statement once with all references retained.",
+      "final": "Full independent review and new real replay pending"
+    },
+    {
+      "finding": "New mixed-commit regression caught file members moving to an inventory owner while the commit event retained its prior first-file owner.",
+      "action": "Select the commit owner from its own source revision and bind only that source-backed commit to the derived inventory subject; keep every original event.",
+      "final": "Focused rerun in progress"
     }
   ],
   "rawLogsIncluded": false

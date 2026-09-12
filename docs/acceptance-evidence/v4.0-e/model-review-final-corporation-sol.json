@@ -1,0 +1,340 @@
+{
+  "reviewType": "MODEL_REVIEW",
+  "reviewTarget": "Corporation-Agent",
+  "reviewer": {
+    "actualModel": "gpt-5.6-sol",
+    "reasoningEffort": "xhigh",
+    "independentReview": true
+  },
+  "scope": {
+    "corporationAgent": "COMPLETE",
+    "overallProduct": "WAITING_FOR_PROJECTFLOW_VISIBLE_INPUT",
+    "basis": "仅依据清单列明的最终用户可见文本与截图；未读取实现代码、DTO、Ground Truth、claim audit、阶段报告、既往评审或实现说明，也未调用项目 API。"
+  },
+  "inputManifest": "docs/acceptance-evidence/v4.0-e/corporation-visual-manifest.json",
+  "visibleTextReviewed": {
+    "expectedCount": 35,
+    "reviewedCount": 35,
+    "paths": [
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-sources-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-default-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-1-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-1-evidence-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-1-related-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-2-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-2-evidence-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-2-related-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-3-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-3-evidence-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-4-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-4-evidence-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-5-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-5-evidence-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-5-related-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-time-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-threads-directory-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-worklines-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-workline-detail-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-390-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-390-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-worklines-390-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-640-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-640-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-worklines-640-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-1024-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-1024-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-worklines-1024-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-1280-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-1280-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-worklines-1280-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-1600-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-1600-final.txt",
+      "docs/acceptance-evidence/v4.0-e/visible-text/corporation-worklines-1600-final.txt"
+    ]
+  },
+  "screenshotsReviewed": {
+    "expectedCount": 79,
+    "reviewedCount": 79,
+    "paths": [
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-current-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-current-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-current-final-3.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-current-final-4.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-current-sources-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-default-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-default-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-default-final-3.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-1-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-1-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-1-evidence-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-1-evidence-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-1-evidence-final-3.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-1-evidence-final-4.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-1-evidence-final-5.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-1-related-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-1-related-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-evidence-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-evidence-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-evidence-final-3.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-evidence-final-4.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-evidence-final-5.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-evidence-final-6.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-evidence-final-7.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-related-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-related-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-related-final-3.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-related-final-4.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-related-final-5.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-3-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-3-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-3-evidence-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-3-evidence-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-3-evidence-final-3.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-4-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-4-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-4-evidence-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-4-evidence-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-4-evidence-final-3.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-4-evidence-final-4.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-4-evidence-final-5.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-evidence-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-evidence-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-evidence-final-3.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-evidence-final-4.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-evidence-final-5.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-evidence-final-6.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-related-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-related-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-related-final-3.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-related-final-4.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-related-final-5.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-time-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-time-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-threads-directory-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-threads-directory-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-worklines-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-worklines-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-workline-detail-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-workline-detail-final-2.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-current-390-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-390-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-worklines-390-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-current-640-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-640-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-worklines-640-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-current-1024-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-1024-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-worklines-1024-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-current-1280-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-1280-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-worklines-1280-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-current-1600-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-1600-final-1.png",
+      "docs/acceptance-evidence/v4.0-e/screenshots/corporation-worklines-1600-final-1.png"
+    ]
+  },
+  "coverage": {
+    "defaultEightChangesReviewed": true,
+    "firstFiveStoriesReviewedInOrder": true,
+    "storyEvidenceAndRelatedScopesReviewed": true,
+    "timeChaptersReviewed": true,
+    "longTermThemesReviewed": true,
+    "singleBranchWorklineReviewed": true,
+    "responsiveWidthsReviewed": [390, 640, 1024, 1280, 1600]
+  },
+  "verdict": "NEEDS_REVISION",
+  "verdictRationale": "项目身份、来源追踪和声明边界已基本可读，但一条默认 Story 把模型配置文件与测试归入“项目使用说明”，使实质变化被错误命名；另有历史删除事件被直接表述为当前缺失，而所给可见来源没有呈现支撑该当前状态的证据。这两处会改变首次使用者对项目最近成果和当前状态的判断。",
+  "dimensionJudgments": [
+    {
+      "dimension": "项目身份",
+      "judgment": "PASS",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-final.txt:45",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-final.txt:64",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-current-1600-final-1.png"
+      ],
+      "reason": "项目名、README 声明来源、版本与产品用途都可见，并明确说明文档声明不等于本次验证。"
+    },
+    {
+      "dimension": "能确认的当前结果",
+      "judgment": "PASS_WITH_LIMITATIONS",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-final.txt:57",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-final.txt:62",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-final.txt:63",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-final.txt:67"
+      ],
+      "reason": "当前页能确认数据库样本配置与版本一致性，同时列出前端路由、组件和 API 客户端等未确认项；运行效果和验收状态被保留为未知。"
+    },
+    {
+      "dimension": "最近实质变化",
+      "judgment": "NEEDS_REVISION",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-default-final.txt:77",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-4-final.txt:3",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-4-final.txt:15",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-4-final-1.png"
+      ],
+      "reason": "通知/沟通/附件与协作/交付/审核已形成两条可理解主线，但“模型配置相关文件和模型配置测试文件”被归为“项目使用说明”，首次使用者会漏掉或误判该实质变化。"
+    },
+    {
+      "dimension": "来源追踪",
+      "judgment": "PASS_WITH_LIMITATIONS",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-2-evidence-final.txt:25",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-evidence-final-2.png",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-evidence-final-3.png",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-evidence-final-2.png"
+      ],
+      "reason": "主提交可追到提交哈希、提交时间和完整文件路径，且以 OBSERVED 标识；部分相关范围仍由大量同名泛化卡片组成，定位成本偏高。"
+    },
+    {
+      "dimension": "声明、归纳与未知边界",
+      "judgment": "PASS",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-final.txt:57",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-final.txt:64",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-sources-final.txt:107",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-sources-final.txt:125"
+      ],
+      "reason": "系统归纳、项目文档声明和当前未确认分区清楚；历史报告不会被当作当前运行或质量验证。"
+    },
+    {
+      "dimension": "Story、具体变化与长期主题层级",
+      "judgment": "PASS_WITH_LIMITATIONS",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-2-final.txt:25",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-5-final.txt:25",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-threads-directory-final.txt:52",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-threads-directory-final-1.png"
+      ],
+      "reason": "主 Story 下有可追溯的相关具体变化，没有连续来源时不生成长期主题；少数范围文案仍重复，证据卡标题也过于同质。"
+    },
+    {
+      "dimension": "时间含义",
+      "judgment": "NEEDS_REVISION",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-default-final.txt:52",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-time-final.txt:49",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-time-final.txt:93",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-time-final-1.png"
+      ],
+      "reason": "提交时间、重叠日期与限制说明清楚；但图片删除事件被写成当前状态，越过了所给可见来源中明确呈现的时间边界。"
+    },
+    {
+      "dimension": "单分支 Workline",
+      "judgment": "PASS",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-worklines-final.txt:43",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-worklines-final.txt:52",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-workline-detail-final.txt:15",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-workline-detail-final-1.png"
+      ],
+      "reason": "仅有 main 时没有编造用途；GitHub/PR 状态保持未知，领先/落后计数也明确不能证明是否合入。"
+    },
+    {
+      "dimension": "响应式可读性",
+      "judgment": "PASS",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-current-390-final-1.png",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-640-final-1.png",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-worklines-1024-final-1.png",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-current-1280-final-1.png",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-1600-final-1.png"
+      ],
+      "reason": "390、640、1024、1280、1600 五档均保留核心语义，未观察到文字水平溢出或关键状态被改写。"
+    }
+  ],
+  "issues": [
+    {
+      "id": "CORP-SOL-001",
+      "severity": "MEDIUM",
+      "title": "模型配置实现与测试被命名为项目使用说明",
+      "finding": "默认变化和 Story 标题均为“新增并修改项目使用说明”，但 Story 的本次变化明确包含模型配置相关文件和模型配置测试文件；同一证据列表后部又出现“完善后端项目骨架”和“新增后端项目骨架”。",
+      "impact": "首次使用者会把该段理解为文档维护，无法从默认八条变化判断模型配置本身是否发生了实现与测试变化；Story 的对象和证据范围不一致。",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-default-final.txt:77",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-4-final.txt:3",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-4-final.txt:15",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-4-final.txt:20",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-4-evidence-final.txt:92",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-4-evidence-final.txt:98",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-4-final-1.png",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-4-evidence-final-4.png"
+      ],
+      "requiredRevision": "将模型配置及其测试拆成可见的相关具体变化或独立 Story，或把主 Story 标题和当前结果改为同时覆盖使用说明与模型配置，并让证据标题指向具体对象。"
+    },
+    {
+      "id": "CORP-SOL-002",
+      "severity": "MEDIUM",
+      "title": "历史删除事件被表述为当前项目状态",
+      "finding": "变化概览和时间篇章都写成“当前项目不再保留这项内容”，而本轮提供的可见文本与截图只展示了删除变化的系统归纳，没有展示一次当前工作树内容检查或其他能确认未被重新加入的来源。",
+      "impact": "首次使用者会把一次历史删除直接当作当前缺失事实；如果后续提交重新加入同类资料，该表述会失真。",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-default-final.txt:91",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-time-final.txt:93",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-history-time-final.txt:105",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-time-final-1.png",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-history-default-final-2.png"
+      ],
+      "requiredRevision": "若只有删除提交，改为“该提交移除了图片资料”；若要声明当前缺失，应在用户可见来源中附上当前工作树检查及观察时间。"
+    },
+    {
+      "id": "CORP-SOL-003",
+      "severity": "LOW",
+      "title": "相关范围与证据卡存在重复和泛化",
+      "finding": "通知/沟通 Story 的范围出现“存储脚本、存储脚本”和“来源证据相关文件、沟通、来源证据相关文件”；相关后端证据页连续多张卡都叫“新增后端项目骨架”。",
+      "impact": "不会改变主结论，但会降低来源页的可扫描性，用户必须逐卡展开才能区分通知、沟通、迁移或测试的具体对象。",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-2-final.txt:33",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-2-final.txt:43",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-2-related-final.txt:26",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-2-related-final.txt:48",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-2-related-final.txt:96",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-final-1.png",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-related-final-3.png"
+      ],
+      "requiredRevision": "去重范围短语，并用具体文件角色或变化对象替换同名泛化证据标题。"
+    }
+  ],
+  "positiveFindings": [
+    {
+      "finding": "当前页把系统可确认事实、项目文档声明和未知项分开，且明确文档声明不等于已验证。",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-final.txt:57",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-final.txt:64",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-current-final.txt:67"
+      ]
+    },
+    {
+      "finding": "通知/沟通/附件以及协作/成果交付/提交审核两条主变化均能追到具体提交、文件和相关范围，并没有把文件变化说成运行或验收通过。",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-2-final.txt:3",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-story-5-final.txt:3",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-2-evidence-final-3.png",
+        "docs/acceptance-evidence/v4.0-e/screenshots/corporation-story-5-evidence-final-3.png"
+      ]
+    },
+    {
+      "finding": "长期主题在缺少同一对象的连续来源时保持空状态，单分支 Workline 也没有从分支名或领先/落后计数推断用途与合入状态。",
+      "evidence": [
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-threads-directory-final.txt:52",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-worklines-final.txt:43",
+        "docs/acceptance-evidence/v4.0-e/visible-text/corporation-workline-detail-final.txt:15"
+      ]
+    }
+  ],
+  "uncoveredDimensions": [
+    "ProjectFlow 的最终用户可见输入尚未提供，因此不能给出整体产品结论。",
+    "本清单只提供默认第 1 至第 5 条 Story 的详情；默认第 6 至第 8 条变化只有概览，不能复核其详情页中的完整来源映射。",
+    "部分 Evidence/相关范围截图显示第 1/2、1/3 或 1/4 页，本清单未提供后续分页，无法评价后续页的具体程度与去重质量。",
+    "长期主题为空，只能评价系统是否克制地不生成，无法评价已有长期主题详情的质量。",
+    "仅有 main 单分支且未配置 GitHub，无法评价多分支、PR 目标、合入状态和远程协作呈现。",
+    "本轮没有运行态交互或验收结果，只能判断最终可见文案和截图是否正确表达这些未知。"
+  ]
+}

@@ -729,15 +729,21 @@ public class ProjectHistoryReadService {
     }
 
     private String eventUserSummary(ProjectHistoryEvent event) {
+        if (event.getCategory() == Category.AGENT_RESULT) return "开发助手的工作结果声明";
+        if (event.getCategory() == Category.PULL_REQUEST) return "合并请求中的来源声明";
+        if (event.getCategory() == Category.ISSUE) return "议题中的来源声明";
         if (event.getSourceType() == SourceType.GIT
             && Set.of(Category.COMMIT, Category.MERGE).contains(event.getCategory())) {
             return languageService.commitSummary(
                 outbound(event.getSafeSourceLabel()), event.getTransition(), strings(event.getAffectedPathsJson())
             );
         }
+        List<String> paths = strings(event.getAffectedPathsJson());
+        String subject = event.getCategory() == Category.FILE_CHANGE && paths.size() == 1
+            ? ProjectHistorySourceCollector.historySubjectKey(paths.get(0)) : outbound(event.getSafeSourceLabel());
         return languageService.fallback(
             ProjectHistoryNarrativeEntailmentValidator.ClaimState.OBSERVED,
-            event.getTransition(), outbound(event.getSafeSourceLabel()), strings(event.getAffectedPathsJson()),
+            event.getTransition(), subject, paths,
             List.of(outbound(event.getSafeSourceLabel())), List.of(event.getTransition().name())
         ).title();
     }

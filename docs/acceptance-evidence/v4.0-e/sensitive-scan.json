@@ -1,9 +1,9 @@
 {
-  "findings": [],
   "scope": "Tracked and non-ignored untracked text; CI secret pattern plus exact existing User credential/endpoint values; machine paths checked in new E evidence.",
+  "includesMarkdownAndText": true,
+  "scannedAt": "2026-09-12T00:28:55.9313844Z",
+  "textFiles": 1495,
   "exactExistingCredentialAndEndpointChecked": true,
   "status": "PASS",
-  "includesMarkdownAndText": true,
-  "scannedAt": "2026-09-11T21:56:58.6901756Z",
-  "textFiles": 1303
+  "findings": []
 }

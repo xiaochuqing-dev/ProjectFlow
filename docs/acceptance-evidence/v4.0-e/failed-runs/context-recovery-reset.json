@@ -1,0 +1,46 @@
+{
+  "recordedAt": "2026-09-12T00:14:01.823558+00:00",
+  "jobId": "77c60696-b7fd-4a3a-ac3e-a2d1e4f68132",
+  "status": "SUCCEEDED",
+  "actualRequests": 4,
+  "elapsedMs": 519167,
+  "finding": "Both History windows needed semantic validation recovery. The mandatory whole-window deterministic template erased specific wording, leaving generic user-visible summaries despite source excerpts. This run is not semantic acceptance.",
+  "retainedVisibleStatements": [
+    {
+      "humanTitle": "新增和修改项目检查记录与文档",
+      "oneSentenceSummary": "这组来源包含项目文档的变更记录。可确认文件已新增和修改，不能据此确认功能运行验收通过。",
+      "change": "本次新增和修改的具体范围包括：报告文档、来源证据相关文件。完整范围可在来源明细核对。",
+      "afterState": "项目检查记录与文档已留下可追溯的新增和修改记录；这些记录证明代码或材料变化，功能效果和验证结果仍待独立证据。",
+      "summaryStatus": "MODEL_VALIDATED"
+    },
+    {
+      "humanTitle": "修改通知、沟通、附件相关的前后端代码、文档与脚本",
+      "oneSentenceSummary": "这组来源包含持续集成配置、配套文件、后端代码、项目文档、前端代码、项目脚本的变更记录。可确认文件已修改，不能据此确认功能运行验收通过。",
+      "change": "本次修改的具体范围包括：沟通相关文件、协作相关文件、报告文档、成果交付接口文件、沟通脚本。完整范围可在来源明细核对。",
+      "afterState": "通知、沟通、附件相关的前后端代码、文档与脚本已留下可追溯的修改记录；这些记录证明代码或材料变化，功能效果和验证结果仍待独立证据。",
+      "summaryStatus": "MODEL_VALIDATED"
+    },
+    {
+      "humanTitle": "新增和修改项目版本记录",
+      "oneSentenceSummary": "更新项目版本记录的文字记录。版本文件中的版本号由 2.1.0 改为 2.2.0",
+      "change": "同一对象在该时间范围还记录了另一处文本变化：版本文件中的版本号由 2.0.0 改为 2.1.0",
+      "afterState": "项目版本记录已留下可追溯的新增和修改记录；这些记录证明代码或材料变化，功能效果和验证结果仍待独立证据。",
+      "summaryStatus": "MODEL_VALIDATED"
+    },
+    {
+      "humanTitle": "新增和修改项目使用说明",
+      "oneSentenceSummary": "这组来源包含配套文件的变更记录。可确认文件已新增和修改，不能据此确认功能运行验收通过。",
+      "change": "本次新增和修改的具体范围包括：配套文件。完整范围可在来源明细核对。",
+      "afterState": "项目使用说明已留下可追溯的新增和修改记录；这些记录证明代码或材料变化，功能效果和验证结果仍待独立证据。",
+      "summaryStatus": "MODEL_VALIDATED"
+    },
+    {
+      "humanTitle": "修改项目报告（版本2.0.0、2.1.0）",
+      "oneSentenceSummary": "这组来源包含项目文档的变更记录。可确认文件已修改，不能据此确认功能运行验收通过。",
+      "change": "本次修改的具体范围包括：报告文档。完整范围可在来源明细核对。",
+      "afterState": "项目报告（版本2.0.0、2.1.0）已留下可追溯的修改记录；这些记录证明代码或材料变化，功能效果和验证结果仍待独立证据。",
+      "summaryStatus": "MODEL_VALIDATED"
+    }
+  ],
+  "nextCorrection": "Retain individually validated sibling Story wording in the existing one-retry template; invalid identifiers and Evidence still reject the entire window."
+}

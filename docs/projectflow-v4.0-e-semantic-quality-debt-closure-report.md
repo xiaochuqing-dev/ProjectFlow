@@ -36,15 +36,23 @@ Job 级 collector 在实际进入 adapter 时记录 attempt，跨线程显式传
 
 ## 8. Current Understanding results
 
-ProjectFlow 与 Corporation-Agent 均已通过真实 Sol / Responses / xhigh Current，分别两次请求。对应零变化重跑为 130 毫秒与 42 毫秒，均零模型。具体用量与阶段状态见 `real-model-usage.json`；History 的成功没有用于替代 Current 验收。
+ProjectFlow 与 Corporation-Agent 均已通过真实 Sol / Responses / xhigh Current，分别两次请求。最新无变化重跑分别为 176 毫秒与 43 毫秒；第三项目为 174 毫秒，三份均为零请求、NOT_CALLED。具体用量与阶段状态见 `real-model-usage.json`；History 的成功没有用于替代 Current 验收。
 
 ## 9. Semantic specificity changes
 
 复用已有 Technical Atom、subject 和 changed-path inventory。区域仍是区域，只列有来源的文件对象示例；具体 subject 不借用同提交其他文件。提交范围的改动不再因含一个 `.env.example` 就误标为环境配置。通用标识翻译覆盖通知、沟通、附件、发票、支付等对象；没有项目名条件分支。
 
+历史文档通过固定参数的 Git 差异读取补充内容证据：最多 48 个文档差异、单次 16,000 字符、总计 256,000 字符、20 秒总期限。只留下最多两条加入、一条移除的短文本及版本前后值；原始 patch、完整文档和凭据不持久化。敏感、符号链接、二进制或超限输入仍按原边界降级。已采集的不可变提交注释复用，不因最新抽样窗口移走而抹除旧证据或破坏无变化缓存。
+
+模型仍接收工程层确定的主体、时间和 Evidence；候选保留来源类别多样性，同时优先近期变化，并先提供最近的对应文本。使用说明、报告和验收记录中的内容只支持“文档补充了什么”，不证明功能或验收通过。单个依赖清单或数据结构文件不再被称为整个项目骨架。
+
 ## 10. History quality
 
-观察类代码变化明确写新增/修改对象，并保留“文件变化不等于运行验收”。精确声明、配置、实现、验证和冲突的原权威不变。词汇更具体不会把 broad owner 改成能力实体，也不会让样例文件名拆散既有 broad representation family。具体标题不再被更宽泛的模型改写覆盖。
+观察类代码变化明确写新增/修改对象，并保留“文件变化不等于运行验收”。同一提交的总览与细分范围通过 Primary/Supporting 关系阅读，相关范围可继续下钻；原始事件和双向关系完整保留。篇章切分保持完整父子组，并只复用兼容的分组与代表性计划。词汇更具体不会把 broad owner 改成能力实体，也不会让样例文件名拆散既有 broad representation family。
+
+仅一条记录或宽泛文件区域的既有 Thread 保留稳定身份，标为记录上下文；V4 在分页前筛选跨多条记录的精确主体。原工程接口、历史连续性与消费边界保持兼容。代表性覆盖不足时可作有界的时间阅读切分，原 0.60 门槛未降低；它不代表成熟阶段。
+
+真实复验又定位到整窗恢复丢失语义的问题：一条措辞被拒绝后，原恢复模板会把同窗已合格文字全部改回通用草稿。现在仅在 Story-only 输出的 ID、结构和 Evidence 完整合法时，保留逐条通过同一 Validator 的文字，为被拒绝条目使用工程草稿，仍执行原有一次恢复与完整复验。非法 ID、Evidence、未知字段或混入篇章仍拒绝整窗；恢复计数和保留/替换数量写入原 checkpoint 的安全诊断，原模型内容不进入诊断。
 
 ## 11. Time provenance
 
@@ -56,15 +64,19 @@ Git 用提交时间；PR 区分 merged/closed/updated/created；Tag 用真实标
 
 ## 13. Corporation-Agent / third-project Dogfood
 
-Corporation-Agent 使用冻结 `f80553c61aaf19b19e729d47739d6b8f35c1dffd`、17 commits、单 main 分支。Current 与真实 History 已成功；README 能力仍为声明，代码新增不等于上线。另用本地通用备考技能包的只读 clone 验证非典型应用形态；它触发的真实 Final Synthesis 失败与恢复单独记录，不掩盖为完整成功。
+Corporation-Agent 使用冻结 `f80553c61aaf19b19e729d47739d6b8f35c1dffd`、17 commits、单 main 分支。较早的 xhigh History 恢复成功与无变化零调用记录全部保留。文档内容复验有一次 Job 成功、4 次实际请求、耗时 519,167 毫秒，但整窗恢复抹去了具体措辞，因此明确不计为语义验收。保留合格措辞后的真实复验正在执行。README 能力仍为声明，代码新增不等于上线。
+
+第三项目为本地通用备考技能包的只读 clone。真实 Final Synthesis 失败后保留已验证 Scout，恢复只调用一次 Final Synthesis 并成功；最新无变化重跑为零请求。初始失败、状态误报和恢复分别留档，没有把材料包强制理解为前后端应用。
 
 ## 14. Sol / xhigh usage
 
-所有本轮真实请求使用现有 Windows User RELAY 变量，经 ProjectFlow DPAPI Provider credential path；未切模型、协议或 effort。逐次实际用量、未知用量、延迟和重试见 `real-model-usage.json`。没有用账单或价格估算冒充实际费用。
+有效验收使用现有 Windows User RELAY 变量，经 ProjectFlow DPAPI Provider credential path，模型为 Sol、协议为 Responses、effort 为 xhigh。一次任务执行器重启遗漏进程覆盖，产生了 6 次 high 请求；该轮被明确排除于验收，保留在 `failed-runs/restart-effort-deviation.json`，随后恢复显式 xhigh 并复跑。应用全局默认值没有为本轮改写。
+
+逐次实际用量、未知用量、延迟和重试见 `real-model-usage.json`。记录中的 effort 来自真实 attempt 遥测，不按预期硬填；无请求显示 NOT_CALLED。没有用账单或价格估算冒充实际费用。
 
 ## 15. MODEL_REVIEW
 
-最终独立 reviewer 使用 GPT-5.6 Sol / xhigh，仅获得普通用户可见 Current、History、Workline、Story/Evidence 文本和截图。不得获得代码、DTO、Ground Truth 或本报告中的审计答案。结果见 `model-review-summary.json`；Owner Review 独立保持 NOT_REVIEWED。
+独立 reviewer 使用 GPT-5.6 Sol / xhigh，仅获得普通用户可见 Current、History、Workline、Story/Evidence 文本和截图。不得获得代码、DTO、Ground Truth 或本报告中的审计答案。第四轮 Corporation-Agent 仍为 NEEDS_REVISION：34 份 TXT、67 张 PNG 均已检查，但默认近期变化主要描述文件载体，未解释内容。完整输入与结论保存在 `failed-runs/sol-review-round4/`，修复后的最终评审尚待完成。Owner Review 独立保持 NOT_REVIEWED。
 
 ## 16. Unsupported claim gate
 
@@ -84,11 +96,15 @@ Current 先展示用途与有来源说明，其余盘点可展开。每条声明
 
 ## 20. Backend / PostgreSQL / Windows
 
-运行实际计数见 `verification.json`。根启动器已重建当前工作树，后端健康与前端均 HTTP 200，并保存 `logs/last-embedded-build.json`。exact V3.9 final 应用创建的 H2 与 PostgreSQL 16 旧库升级测试通过，不能与从当前 V1 建库混淆。Windows portable、OSV 与最终 CI 仍按独立证据验收。
+最新后端/H2 全套 772 项：761 通过、11 项按既有 opt-in 边界跳过。PostgreSQL 16 集成 7 项通过且无跳过；exact V3.9 final 应用创建的 H2 和 PostgreSQL 16 旧库升级证明 2 项通过、零跳过，耗时 42.219 秒，不能与从当前 V1 建库混淆。前端类型检查、72 项契约、生产构建与 38 项 Playwright 全通过；浏览器门禁使用真实前后端与固定兼容模型，不冒称真实 Sol。
+
+Hermes 10 项、Obsidian 27 项通过；5,000 facts 规模的 Obsidian 无变化同步为零写入。源码 `bf700b12a7165f8061559e5d05ebaa20768248fc` 的 Windows 便携包通过两次排除开发工具后的启动、DPAPI、备份恢复和前后清单验证，见 `windows-portable.json`。最终源码的根启动器、OSV 与分支 CI 仍待本轮独立收尾证据，不能使用较早启动结果代替。
 
 ## 21. Failures / recovery
 
-保留所有 V4.0-D 失败。V4.0-E 记录了早期测试回归、旧快照断言、篇章覆盖下降、第三项目实际 HTTP 失败，以及 History 的实际 HTTP/2 reset 与有界成功重试。发生/观察时间变化导致篇章数量可变，连续性测试改比安全不变量并独立验证请求唯一性，不降低事件守恒、来源、覆盖率或零变化门槛。
+保留所有 V4.0-D 失败。V4.0-E 记录了旧快照断言、篇章覆盖下降、第三项目实际 HTTP 失败，以及 History 的实际 HTTP/2 reset 与有界成功重试。后续还发现旧篇章复用不适配新的父子组、普通动词“修改”被质量门槛误拒绝、单记录浏览器夹具不再符合长期主题定义，以及执行器重启遗漏 effort 覆盖；逐项修复或纠正并追加复验。
+
+首次最终全套测试有一项无变化缓存断言失败；保持输入稳定后，未修改该断言或代码的完整重跑通过。精确瞬态原因未证实，失败仍留档。不降低事件守恒、来源、覆盖率、请求唯一性或无变化零调用门槛。
 
 ## 22. Remaining debt
 

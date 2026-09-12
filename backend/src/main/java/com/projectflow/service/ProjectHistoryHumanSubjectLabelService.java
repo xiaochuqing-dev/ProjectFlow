@@ -26,7 +26,7 @@ public final class ProjectHistoryHumanSubjectLabelService {
     private static final Set<String> VIDEO_EXTENSIONS = Set.of("mp4", "mov", "mkv", "webm", "avi");
     private static final Set<String> DESIGN_EXTENSIONS = Set.of("fig", "sketch", "psd", "ai", "xd", "svg", "png", "jpg", "jpeg");
     private static final Set<String> CODE_EXTENSIONS = Set.of(
-        "java", "kt", "kts", "go", "rs", "py", "js", "jsx", "ts", "tsx", "vue", "svelte", "cs", "cpp", "c", "h"
+        "java", "kt", "kts", "go", "rs", "py", "js", "mjs", "cjs", "jsx", "ts", "tsx", "vue", "svelte", "cs", "cpp", "c", "h"
     );
     private static final Pattern FIXTURE_IDENTIFIER = Pattern.compile(
         "(?i).*(?:outcome|part|fixture|phase|embedded|segment)[-_ ]*\\d+.*"
@@ -79,6 +79,13 @@ public final class ProjectHistoryHumanSubjectLabelService {
         }
         if (subjectSample.startsWith("project-area-") && !skeleton.isBlank()) return skeleton;
 
+        if (!safePaths.isEmpty() && safePaths.stream().noneMatch(path -> CODE_EXTENSIONS.contains(extension(path)))
+            && safePaths.stream().anyMatch(path -> path.toLowerCase(Locale.ROOT)
+                .matches(".*(?:acceptance|verification|validation|test-results|audit|coverage|ci|evidence|secret-scan)[/_.-].*"))) {
+            return safePaths.stream().anyMatch(path -> Set.of("png", "jpg", "jpeg", "webp").contains(extension(path)))
+                ? "项目检查记录与截图" : "项目检查记录与文档";
+        }
+
         // A commit-scoped change owns its changed-path inventory. Name examples
         // from that inventory without claiming a particular feature is complete.
         if (subjectSample.startsWith("change-")
@@ -93,6 +100,10 @@ public final class ProjectHistoryHumanSubjectLabelService {
 
         String sourceFile = subjectPathAnchored && objectPaths.size() == 1 ? objectPaths.get(0)
             : safePaths.size() == 1 ? safePaths.get(0) : "";
+        String technicalSubject = technicalSubject(subjectSample, objectPaths);
+        if (technicalSubject.isBlank() && !sourceFile.isBlank())
+            technicalSubject = technicalSubject(ProjectHistorySourceCollector.historySubjectKey(sourceFile), List.of(sourceFile));
+        if (!technicalSubject.isBlank()) return technicalSubject;
         String fileName = sourceFile.replace('\\', '/');
         fileName = fileName.substring(fileName.lastIndexOf('/') + 1).toLowerCase(Locale.ROOT);
         if (fileName.equals("third_party_notices.md")) return "第三方组件声明";
@@ -169,6 +180,8 @@ public final class ProjectHistoryHumanSubjectLabelService {
             && !Set.of("项目文档", "项目材料", "项目阶段文档", "报告文档").contains(sourceObject))
             return sourceObject.endsWith("文档") || sourceObject.endsWith("记录") ? sourceObject : sourceObject + "的文档记录";
         if (!concrete.isBlank() && documentOnly(safePaths)) return concrete + "文档";
+        if (!concrete.isBlank() && safePaths.stream().allMatch(path -> path.replace('\\', '/').startsWith("scripts/")))
+            return concrete + "脚本";
         if (!concrete.isBlank() && safePaths.stream().anyMatch(path -> CODE_EXTENSIONS.contains(extension(path))))
             return concrete + "相关代码";
         String artifact = artifactLabel(rawSubject, safePaths);
@@ -240,6 +253,7 @@ public final class ProjectHistoryHumanSubjectLabelService {
         String sample = String.join(" ", paths).replace('\\', '/').toLowerCase(Locale.ROOT);
         boolean frontend = containsAny(sample, "frontend/", "next.config", "next-env", "package.json", "postcss");
         boolean backend = containsAny(sample, "backend/", "pom.xml", "application.yml", "application.yaml");
+        if (paths.size() == 1) return frontend ? "前端代码文件" : backend ? "后端代码文件" : "";
         if (frontend && backend) return "前后端项目骨架";
         if (frontend) return "前端项目骨架";
         if (backend) return "后端项目骨架";
@@ -253,6 +267,7 @@ public final class ProjectHistoryHumanSubjectLabelService {
         if (!containsHan(candidate) || !safeHumanLabel(candidate)) candidate = "";
         if (SLIDE_EXTENSIONS.contains(extension)) return named(candidate, "项目演示文稿");
         if (DOCUMENT_EXTENSIONS.contains(extension)) return named(candidate, "项目文档");
+        if ("json".equals(extension)) return named(candidate, "结构化资料记录");
         if (DATA_EXTENSIONS.contains(extension)) return named(candidate, "数据分析结果");
         if (VIDEO_EXTENSIONS.contains(extension)) return named(candidate, "项目视频");
         if (DESIGN_EXTENSIONS.contains(extension)) return named(candidate, "设计稿");
@@ -269,7 +284,13 @@ public final class ProjectHistoryHumanSubjectLabelService {
             String safe = text(label);
             // Version and conventional commit prefixes are context, not paths.
             safe = safe.replaceFirst("(?i)^(?:feat|fix|docs|test|chore)(?:\\([^)]{1,50}\\))?:\\s*", "")
-                .replaceAll("(?i)\\b(?:v?\\d+(?:\\.\\d+)+(?:[-.]?[a-z])?|agent)\\b", "").trim();
+                .replaceAll("(?i)\\b(?:v\\d+(?:\\.\\d+)*(?:[-.]?[a-z])?|\\d+(?:\\.\\d+)+)\\b", "")
+                .replaceFirst("^[A-Za-z][A-Za-z0-9_-]*\\s*[：:]\\s*", "").trim();
+            String[][] terms = {{"thread", "长期主题"}, {"provider", "模型配置"}, {"workspace", "工作区"},
+                {"current", "当前状态"}, {"history", "项目历程"}, {"story", "变化故事"}, {"evidence", "来源证据"},
+                {"agent", "开发助手"}, {"api", "接口"}, {"gui", "界面"}, {"ui", "界面"}};
+            for (String[] term : terms) safe = safe.replaceAll("(?i)\\b" + term[0] + "\\b", term[1]);
+            safe = safe.replaceAll("\\s+", "").replaceFirst("^[：:，,]+", "");
             if (!containsHan(safe) || safe.contains("/") || safe.contains("\\")
                 || safe.codePoints().anyMatch(codePoint -> codePoint < 128 && Character.isLetter(codePoint))) continue;
             safe = safe.replaceFirst(
@@ -280,6 +301,42 @@ public final class ProjectHistoryHumanSubjectLabelService {
             if (safeHumanLabel(safe)) return boundedWords(safe, 24);
         }
         return "";
+    }
+
+    private static String technicalSubject(String subject, List<String> ownedPaths) {
+        if (ownedPaths.isEmpty()) return "";
+        String normalized = subject.replaceAll("([a-z0-9])([A-Z])", "$1-$2").toLowerCase(Locale.ROOT);
+        if (ownedPaths.stream().allMatch(path -> path.replace('\\', '/').toLowerCase(Locale.ROOT).contains("/schemas/")))
+            return Set.of("file", "files").contains(normalized) ? "文件数据结构定义" : "数据结构定义文件";
+        String[][] terms = {
+            {"model-gateway", "模型调用入口"}, {"model-output-adapter", "模型返回适配"},
+            {"model-output", "模型返回结果"}, {"model-task-type", "模型任务分类"},
+            {"analysis-job", "分析任务"}, {"project-dto", "项目数据结构"},
+            {"schema-repair", "数据结构修复"}, {"runtime-parity", "启动环境一致性"},
+            {"quality-gates", "质量检查配置"}, {"intelligence", "项目分析"},
+            {"documentation", "项目说明文档"}, {"dashboard", "项目总览"},
+            {"architecture", "架构说明"}, {"project-context", "项目上下文说明"},
+            {"prd", "产品需求说明"}, {"agents", "开发助手协作说明"},
+            {"capabilities", "能力地图"}, {"tasks", "任务页面"}
+        };
+        for (String[] term : terms) {
+            if (!normalized.contains(term[0])) continue;
+            String label = term[1];
+            if (ownedPaths.stream().allMatch(path -> path.replace('\\', '/').toLowerCase(Locale.ROOT).contains("/test")))
+                return label + "测试代码";
+            if (documentOnly(ownedPaths) && !label.endsWith("文档") && !label.endsWith("说明")) return label + "说明文档";
+            return label;
+        }
+        if (normalized.startsWith("start-") && ownedPaths.stream().allMatch(path ->
+            Set.of("bat", "cmd", "ps1", "sh").contains(extension(path))))
+            return normalized.contains("embedded") ? "内嵌服务启动脚本" : "项目启动脚本";
+        return switch (normalized) {
+            case "pom", "build-gradle" -> "构建依赖配置";
+            case "package" -> "前端依赖清单";
+            case "tsconfig", "next-env" -> "前端类型配置";
+            case "api" -> "接口客户端";
+            default -> "";
+        };
     }
 
     private static String fallbackSuffix(String candidate, String fallback) {

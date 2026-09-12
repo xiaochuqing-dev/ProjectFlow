@@ -9,6 +9,15 @@ import com.projectflow.service.ProjectHistoryNarrativeEntailmentValidator.ClaimS
 
 class ProjectHistorySemanticUsefulnessTest {
 
+    @Test void readableDocumentContentNeedNotRepeatTheProjectPrefixOrDanglingConjunction() {
+        var gate = new ProjectHistoryNarrativeEntailmentValidator();
+        assertThat(gate.semanticallyUseful("更新使用说明，补充通知和任务沟通的操作说明",
+            "使用说明记录了附件与通知的操作范围，实际运行结果尚未确认。", "项目使用说明")).isTrue();
+        assertThat(gate.semanticallyUseful("补充检查记录，保存持续集成和标签核对说明",
+            "这些记录描述了检查和归档范围，不能据此确认验收通过。", "项目检查记录与文档")).isTrue();
+        assertThat(gate.semanticallyUseful("修改项目材料，保留记录", "当前文件已更新", "通知、沟通、附件相关代码")).isFalse();
+    }
+
     @Test void pullRequestContextNamesItsScopeWithoutPromotingAuthorClaims() {
         var value = new ProjectHistoryLanguageService().fallback(ClaimState.DECLARED, Transition.MODIFIED,
             "pull-request-51", List.of(), List.of("Pull Request #51：feat: invoice payment review；说明：tests passed"),
@@ -82,7 +91,10 @@ class ProjectHistorySemanticUsefulnessTest {
         assertThat(named).contains("发票", "支付", "库存").doesNotContain("ProjectFlow", "Corporation");
         assertThat(language.readableObject("unfamiliar", List.of("unknown/frob.md"), List.of())).isEqualTo("项目文档");
         assertThat(language.readableObject("login", List.of("frontend/package.json"), List.of("完成登录功能")))
-            .isEqualTo("前端项目骨架");
+            .isEqualTo("前端依赖清单").doesNotContain("登录", "项目骨架");
+        var scripts = language.fallback(ClaimState.OBSERVED, Transition.MODIFIED, "project-area-scripts",
+            List.of("scripts/backup-storage.ps1", "scripts/storage.ps1"), List.of(), List.of());
+        assertThat(scripts.change()).containsOnlyOnce("存储脚本").contains("备份脚本").doesNotContain("备份、");
     }
 
     @Test void documentContextAddsSpecificityWithoutBorrowingRuntimeAuthority() {

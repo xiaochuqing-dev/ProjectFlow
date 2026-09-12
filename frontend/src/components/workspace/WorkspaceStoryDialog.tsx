@@ -11,6 +11,7 @@ import { readSession } from "@/lib/auth";
 import {
   projectHistoryPresentationLabel, projectHistoryRewriteStateLabel, projectHistorySourceTypeLabel,
   projectHistoryTransitionLabel, safeHistoryDeepLink,
+  projectHistoryEvidenceValidationLabel,
 } from "@/lib/project-history";
 import { persistedStory, workspaceHref, type WorkspaceProject, type WorkspaceStory } from "@/lib/workspace-preview";
 import { HistoryBoundaries, ReadError, ReadingPages } from "./HistoryReader";
@@ -25,6 +26,7 @@ export function StoryDialog({ story, project, demo, onClose }: {
   const [retry, setRetry] = useState(0);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [page, setPage] = useState(0);
+  const [filePage, setFilePage] = useState(0);
   const [focusedId, setFocusedId] = useState(story.id);
   const [related, setRelated] = useState<ProjectHistoryStoryDetail[]>([]);
   const [relatedError, setRelatedError] = useState("");
@@ -34,7 +36,7 @@ export function StoryDialog({ story, project, demo, onClose }: {
     if (demo) return;
     let active = true;
     setLoading(true); setError("");
-    setRelated([]); setRelatedError(""); setRelatedPage(0); setPage(0);
+    setRelated([]); setRelatedError(""); setRelatedPage(0); setPage(0); setFilePage(0);
     getProjectHistoryStory(readSession().accessToken, project.id, focusedId)
       .then((value) => { if (active) setDetail(value); })
       .catch((e) => { if (active) setError(e.message); })
@@ -54,6 +56,8 @@ export function StoryDialog({ story, project, demo, onClose }: {
   const display = detail ? persistedStory(detail.story) : story;
   const longTermThreads = detail?.threads.filter(thread => thread.subjectType !== "RECORD_CONTEXT" && thread.storyRefs.length >= 2) ?? [];
   const missingEvents = detail ? detail.story.eventRefs.filter((id) => !detail.events.some((event) => event.id === id)).length : 0;
+  const sourceEvents = detail?.events.filter(event => event.category !== "FILE_CHANGE") ?? [];
+  const fileEvents = detail?.events.filter(event => event.category === "FILE_CHANGE") ?? [];
   return <WorkspaceDialog title="变化详情" labelledBy="workspace-story-title" onClose={onClose} className="pf-story-dialog">
     <div className="pf-story-dialog-content">
       <span className="pf-eyebrow">{project.name}{demo ? " · 示例数据" : ""} · {display.date}</span>
@@ -65,10 +69,15 @@ export function StoryDialog({ story, project, demo, onClose }: {
         <span>0{index + 1}</span><div><h3>{label}</h3><p>{value || "现有材料尚未确认"}</p></div>
       </section>)}</div>
       {detail && <>
-        {!!detail.story.supportingChangeRefs?.length && <section className="pf-story-context"><h3>关联的具体变化</h3>
-          <p>以下范围属于这项变化的来源脉络，可逐项阅读动作与证据。</p>
+        {!!detail.story.supportingChangeRefs?.length && <section className="pf-story-context"><h3>相关来源中的其他变化</h3>
+          <p>这些记录按共同提交或相近的来源线索关联，关联本身不证明因果关系。本条变化的直接来源见下方工程证据。</p>
           {relatedError && <ReadError message={relatedError} onRetry={() => setRetry(n => n + 1)} />}
-          {related.map(value => <button className="pf-story-card" key={value.story.id} onClick={() => setFocusedId(value.story.id)}><h4>{value.story.humanTitle}</h4><p>{value.story.change}</p><span>阅读这个范围与来源</span></button>)}
+          {related.map(value => {
+            const sameCommit = value.events.some(event => event.sourceType === "GIT" && event.sourceRevision
+              && detail.events.some(source => source.sourceType === "GIT" && source.sourceRevision === event.sourceRevision));
+            return <button className="pf-story-card" key={value.story.id} onClick={() => setFocusedId(value.story.id)}><h4>{value.story.humanTitle}</h4><p>{value.story.change}</p>
+              <span>{sameCommit ? "关联依据：同一次 Git 提交" : "关联依据：相近时间的共同来源线索；具体关系尚未确认"}</span></button>;
+          })}
           <ReadingPages page={relatedPage} totalPages={Math.ceil(detail.story.supportingChangeRefs.length / 6)} onPage={setRelatedPage} label="关联变化范围" />
         </section>}
         {detail.story.reason && <section className="pf-story-context"><h3>已记录的原因</h3><p>{detail.story.reason}</p></section>}
@@ -81,8 +90,13 @@ export function StoryDialog({ story, project, demo, onClose }: {
       <details className="pf-source-details" onToggle={(event) => setSourcesOpen(event.currentTarget.open)}>
         <summary><GitBranch size={16} />查看工程证据与来源</summary>
         {demo ? <p>演示 Commit {story.evidence}。本原型中的人物、时间、提交和验证结果均为示例，不对应真实工程验收。</p> : <>
-          {sourcesOpen && detail?.events.slice(page * 10, (page + 1) * 10).map((event, index) => <EvidenceEvent key={`${detail.presentationRevision}:${event.id}`} projectId={project.id} event={event} initialOpen={index === 0} />)}
-          <ReadingPages page={page} totalPages={Math.ceil((detail?.events.length ?? 0) / 10)} onPage={setPage} label="来源事件" />
+          {sourcesOpen && sourceEvents.slice(page * 10, (page + 1) * 10).map((event, index) => <EvidenceEvent key={`${detail?.presentationRevision}:${event.id}`} projectId={project.id} event={event} initialOpen={index === 0} />)}
+          <ReadingPages page={page} totalPages={Math.ceil(sourceEvents.length / 10)} onPage={setPage} label="来源事件" />
+          {sourcesOpen && !!fileEvents.length && <details className="pf-source-details" open={!sourceEvents.length}>
+            <summary>逐文件变更（{fileEvents.length} 条来源）</summary>
+            {fileEvents.slice(filePage * 10, (filePage + 1) * 10).map(event => <EvidenceEvent key={`${detail?.presentationRevision}:${event.id}`} projectId={project.id} event={event} initialOpen={false} />)}
+            <ReadingPages page={filePage} totalPages={Math.ceil(fileEvents.length / 10)} onPage={setFilePage} label="文件变更" />
+          </details>}
           {!loading && detail && !detail.events.length && <p>此故事没有可进一步读取的来源事件，不能据此补充验证结果。</p>}
           <Link href={`/projects/${project.id}/history?compat=1&type=story&id=${encodeURIComponent(focusedId)}`}>工程兼容工具：来源审计与修正<ExternalLink size={14} /></Link>
         </>}
@@ -119,6 +133,7 @@ function EvidenceEvent({ projectId, event, initialOpen }: { projectId: string; e
   const sourceLink = safeHistoryDeepLink(event.rawSourceDeepLink);
   return <article className="pf-event-evidence">
     <h3>{event.userSummary || "来源事件"}</h3>
+    {event.category === "FILE_CHANGE" && <p style={{ overflowWrap: "anywhere" }}>{event.affectedPaths.join("、")}</p>}
     <p>{projectHistorySourceTypeLabel(event.sourceType)} · {projectHistoryTransitionLabel(event.transition)} · {projectHistoryRewriteStateLabel(event.rewriteState)}</p>
     <HistoryBoundaries limitations={event.limitations} />
     <button className="pf-button" onClick={() => setOpen(!open)} aria-expanded={open}>{open ? "收起 Evidence 详情" : "查看 Evidence 详情"}</button>
@@ -127,10 +142,11 @@ function EvidenceEvent({ projectId, event, initialOpen }: { projectId: string; e
       {error && <ReadError message={error} onRetry={() => setRetry((n) => n + 1)} />}
       {evidence?.items.map((item, index) => {
         const deepLink = safeHistoryDeepLink(item.deepLink);
+        const sharedLabel = item.label && evidence.items.slice(0, index).some((previous) => previous.label === item.label);
         return <section key={`${item.type}:${item.reference}:${index}`}>
-          <h4>{item.label || item.type}</h4><p>{item.reference}</p>
-          <p>当前性：{projectHistoryRewriteStateLabel(item.currentness)} · 验证：{item.validation || "尚未确认"}</p>
-          <p>覆盖：{item.coverage || "尚未记录"}{item.revision ? ` · 版本：${item.revision}` : ""}</p>
+          <h4>{sharedLabel ? "同一来源的关联引用" : item.label || item.type}</h4><p>{item.reference}</p>
+          <p>当前性：{projectHistoryRewriteStateLabel(item.currentness)} · {projectHistoryEvidenceValidationLabel(item.validation)}</p>
+          <details className="pf-source-details"><summary>工程覆盖数据</summary><p>{item.coverage || "尚未记录"}</p><p>验证类型：{item.validation || "尚未记录"}{item.revision ? ` · 版本：${item.revision}` : ""}</p></details>
           {item.limitations.map((limit) => <p key={limit}>{limit}</p>)}
           {deepLink && <a href={deepLink} target={deepLink.startsWith("https://") ? "_blank" : undefined} rel="noreferrer">打开证据<ExternalLink size={13} /></a>}
         </section>;
@@ -139,7 +155,7 @@ function EvidenceEvent({ projectId, event, initialOpen }: { projectId: string; e
       {evidence?.truncated && <p className="pf-notice">证据详情已达到安全读取上限，当前仅显示有界结果。</p>}
     </div>}
     <details className="pf-source-details"><summary>原始提交与来源信息</summary>
-      <p>{event.safeSourceLabel}</p><p>{String(event.coverage?.timeLabel || "来源记录时间；不代表功能完成时间")} · {event.occurredAt}</p><p>证据身份：{event.epistemicStatus} · {event.authority}</p>
+      <p>{event.safeSourceLabel}</p><p>{String(event.coverage?.timeLabel || "来源记录时间；不代表功能完成时间")} · {event.occurredAt}</p><p>{projectHistoryEvidenceValidationLabel(event.epistemicStatus)} · {projectHistoryEvidenceValidationLabel(event.authority)}</p>
       {event.affectedPaths.map((file) => <p key={file}>{file}</p>)}
       {sourceLink && <a href={sourceLink} target={sourceLink.startsWith("https://") ? "_blank" : undefined} rel="noreferrer">打开原始来源<ExternalLink size={13} /></a>}
     </details>

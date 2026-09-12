@@ -90,6 +90,39 @@ class ProjectHistoryReconstructionTest {
     @TempDir Path temporaryRoot;
 
     @Test
+    void historicalDocumentContentIsBoundedOwnedAndStableOutsideTheLatestSample() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path root = temporaryRoot.resolve("document-delta");
+        Files.createDirectories(root);
+        git(root, "init", "-b", "master");
+        git(root, "config", "user.name", "Fixture");
+        git(root, "config", "user.email", "fixture@example.invalid");
+        Files.writeString(root.resolve("VERSION"), "1.4.0\n");
+        Files.writeString(root.resolve("README.md"), "# 使用指南\n仅支持文本附件\n");
+        commitAt(root, "初始使用指南", Instant.parse("2026-01-01T00:00:00Z"));
+        Files.writeString(root.resolve("VERSION"), "1.5.0\n");
+        Files.writeString(root.resolve("README.md"), "# 使用指南\n新增图片附件预览说明\n通知面板列出未读消息\n");
+        commitAt(root, "更新说明与版本", Instant.parse("2026-01-02T00:00:00Z"));
+        ProjectSpace project = project(userId, "Foreign document project", root);
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        var versionEvent = eventRepository.findByProjectId(project.getId()).stream()
+            .filter(event -> event.getSafeSourceLabel().contains("1.4.0 改为 1.5.0")).findFirst().orElseThrow();
+        assertThat(versionEvent.getAuthority().name()).isEqualTo("SOURCE_BACKED");
+        assertThat(versionEvent.getEpistemicStatus()).isEqualTo(ProjectFactEpistemicStatus.OBSERVED);
+        assertThat(versionEvent.getAffectedPathsJson()).isEqualTo("[\"VERSION\"]");
+        String payloadHash = versionEvent.getPayloadHash();
+        assertThat(readService.stories(userId, project.getId(), null, false, null, null, 0, 100).items())
+            .anySatisfy(story -> assertThat(story.oneSentenceSummary()).contains("1.4.0", "1.5.0"));
+        assertThat(reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false).cacheHit()).isTrue();
+        for (int i = 0; i < 50; i++) Files.writeString(root.resolve("note-" + i + ".md"), "新增通知筛选的操作说明\n");
+        commitAt(root, "新增独立说明材料", Instant.parse("2026-02-01T00:00:00Z"));
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+        assertThat(eventRepository.findById(versionEvent.getId()).orElseThrow().getPayloadHash()).isEqualTo(payloadHash);
+        assertThat(reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false).cacheHit()).isTrue();
+        assertThat(factRepository.countByProjectId(project.getId())).isZero();
+    }
+
+    @Test
     void collectsDatabaseAgentResultCandidateAndAcknowledgesInternalDirtyRevision() throws Exception {
         UUID userId = UUID.randomUUID();
         Path projectRoot = temporaryRoot.resolve("agent-candidate-continuity");
@@ -613,6 +646,42 @@ class ProjectHistoryReconstructionTest {
     }
 
     @Test
+    void mixedCommitDoesNotBorrowItsFirstDocumentSubjectForUnrelatedCode() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("mixed-document-and-code");
+        Files.createDirectories(repository);
+        git(repository, "init", "-b", "master");
+        git(repository, "config", "user.email", "history@example.com");
+        git(repository, "config", "user.name", "History Fixture");
+        Files.writeString(repository.resolve("README.md"), "# Usage\n");
+        commitAt(repository, "update", Instant.parse("2025-01-01T00:00:00Z"));
+        for (String path : List.of("README.md", "docs/Report.md", "backend/src/ProviderService.java",
+            "backend/tests/ProviderTest.java", "scripts/storage.py")) {
+            Path file = repository.resolve(path);
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, "updated content\n");
+        }
+        commitAt(repository, "update", Instant.parse("2025-01-02T00:00:00Z"));
+        ProjectSpace project = project(userId, "Mixed document and code", repository);
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        var stories = readService.stories(userId, project.getId(), null, false, true, null, null, 0, 100).items();
+        assertThat(stories).filteredOn(story -> story.primarySubjectKey().equals("readme")).allSatisfy(story -> {
+            assertThat(story.change()).doesNotContain("模型配置", "存储", "后端");
+            assertThat(story.technicalDetails()).containsExactly("README.md");
+        });
+        assertThat(stories).anySatisfy(story -> {
+            assertThat(story.primarySubjectKey()).startsWith("change-");
+            assertThat(story.humanTitle()).contains("模型配置");
+            assertThat(story.change()).contains("模型配置", "存储");
+            assertThat(story.claimAttribution().state()).isEqualTo("OBSERVED");
+            assertThat(story.claimAttribution().directEvidenceRefs()).anyMatch(ref -> ref.startsWith("commit:"));
+        });
+        assertThat(readService.overview(userId, project.getId()).diagnostics().get("eventConservation")).isEqualTo(true);
+    }
+
+    @Test
     void foldsLargeCrossAreaImportIntoReadableAreaStoriesInsteadOfFileNameStories() throws Exception {
         UUID userId = UUID.randomUUID();
         Path repository = temporaryRoot.resolve("large-cross-area-import");
@@ -1047,6 +1116,45 @@ class ProjectHistoryReconstructionTest {
     }
 
     @Test
+    void preservesValidatedSiblingWordingWhenOneStoryNeedsSemanticRepair() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Path repository = temporaryRoot.resolve("preserved-semantic-siblings");
+        Files.createDirectories(repository);
+        ProjectSpace project = project(userId, "Independent Story Repair", repository);
+        historicalFacts(project, 2, 1, 1, 0);
+        provider(userId);
+        AtomicInteger calls = new AtomicInteger();
+        String preserved = "这条记录补充了可供逐项核对的具体内容。";
+        when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(1, String.class);
+            if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS)
+                return modelResponse(historyChapterModelResponse(prompt));
+            JsonNode output = objectMapper.readTree(historyModelResponse(prompt));
+            if (calls.incrementAndGet() == 1) {
+                assertThat(output.path("stories").size()).isGreaterThanOrEqualTo(2);
+                ((com.fasterxml.jackson.databind.node.ObjectNode) output.path("stories").get(0))
+                    .put("changeWording", preserved);
+                ((com.fasterxml.jackson.databind.node.ObjectNode) output.path("stories").get(1))
+                    .put("afterWording", "系统已经通过验收并发布上线。");
+            } else {
+                assertThat(prompt).contains("REQUIRED_OUTPUT_TEMPLATE_JSON=", preserved)
+                    .doesNotContain("系统已经通过验收并发布上线");
+            }
+            return modelResponse(objectMapper.writeValueAsString(output));
+        });
+
+        reconstructionService.refresh(userId, project.getId(), UUID.randomUUID(), false);
+
+        assertThat(calls.get()).isEqualTo(2);
+        var stories = readService.stories(userId, project.getId(), null, false, null, null, 0, 100).items();
+        assertThat(stories).anySatisfy(story -> assertThat(story.change()).isEqualTo(preserved));
+        assertThat(stories).allSatisfy(story -> assertThat(story.afterState()).doesNotContain("系统已经通过验收并发布上线"));
+        assertThat(factRepository.countByProjectId(project.getId())).isEqualTo(2);
+        assertThat(readService.overview(userId, project.getId()).diagnostics())
+            .containsEntry("modelValidationRepairCount", 1).containsEntry("failedWindowCount", 0);
+    }
+
+    @Test
     void retainsDeterministicTitlePairWhenProviderOmitsTheSupportedResult() throws Exception {
         UUID userId = UUID.randomUUID();
         Path repository = temporaryRoot.resolve("model-title-result-fallback");
@@ -1336,6 +1444,7 @@ class ProjectHistoryReconstructionTest {
 
         AtomicInteger storyCalls = new AtomicInteger();
         AtomicInteger chapterCalls = new AtomicInteger();
+        AtomicReference<Instant> latestSelectedTime = new AtomicReference<>(Instant.EPOCH);
         when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
             String prompt = invocation.getArgument(1, String.class);
             if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
@@ -1343,6 +1452,12 @@ class ProjectHistoryReconstructionTest {
                 return modelResponse(historyChapterModelResponse(prompt));
             }
             storyCalls.incrementAndGet();
+            JsonNode selected = objectMapper.readTree(prompt.substring(
+                prompt.indexOf("\nSTORIES_JSON=") + "\nSTORIES_JSON=".length(), prompt.indexOf("\nCHAPTERS_JSON=")));
+            for (JsonNode story : selected) {
+                Instant time = Instant.parse(story.path("occurredTo").asText());
+                if (time.isAfter(latestSelectedTime.get())) latestSelectedTime.set(time);
+            }
             return modelResponse(historyModelResponse(prompt));
         });
 
@@ -1352,6 +1467,8 @@ class ProjectHistoryReconstructionTest {
         assertThat(storyCalls.get()).as("history diagnostics: %s", overview.diagnostics()).isEqualTo(1);
         assertThat(chapterCalls.get()).isLessThanOrEqualTo(4);
         assertThat(overview.sourceEventCount()).isGreaterThan(1_000);
+        assertThat(latestSelectedTime.get()).isEqualTo(eventRepository.findByProjectId(project.getId()).stream()
+            .map(com.projectflow.entity.ProjectHistoryEvent::getOccurredAt).max(Instant::compareTo).orElseThrow());
         assertThat(overview.coverage().complete()).isTrue();
         assertThat(((Number) overview.diagnostics().get("boundedDeterministicStoryCount")).intValue()).isGreaterThan(0);
         assertThat(overview.diagnostics().get("eventConservation")).isEqualTo(true);

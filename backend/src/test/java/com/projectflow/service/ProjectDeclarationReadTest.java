@@ -15,7 +15,7 @@ class ProjectDeclarationReadTest {
     final ProjectHistorySourceCollector collector = new ProjectHistorySourceCollector(
         mock(ProjectRepository.class), mock(ProjectMemoryRepository.class), mock(ProjectFactRepository.class),
         mock(ProjectAgentCandidateRepository.class), mock(LocalProjectPathGuard.class), commands,
-        new SensitiveContentRedactor(), new ObjectMapper());
+        new SensitiveContentRedactor(), new ObjectMapper(), mock(ProjectHistoryEventRepository.class));
     ProjectHistorySourceCollector.CollectionOutcome source() {
         var source = mock(ProjectHistorySourceCollector.CollectionOutcome.class);
         when(source.projectRoot()).thenReturn(root);
@@ -24,6 +24,20 @@ class ProjectDeclarationReadTest {
     @Test void noDocumentIsAnUnknownPlanAndNeverRunsCommands() {
         assertThat(collector.collectDeclarations(source())).isEmpty();
         verifyNoInteractions(commands);
+    }
+    @Test void historicalTextChangeKeepsVersionValuesAndSourceStatementBoundary() {
+        assertThat(collector.documentChangeSummary("VERSION", "@@ -1 +1 @@\n-1.4.0\n+1.5.0\n"))
+            .isEqualTo("版本文件中的版本号由 1.4.0 改为 1.5.0");
+        String delta = collector.documentChangeSummary("README.md",
+            "--- a/README.md\n+++ b/README.md\n-仅支持文本附件\n+新增图片附件预览说明\n+通知面板列出未读消息\n");
+        assertThat(delta).contains("新增图片附件预览说明", "通知面板列出未读消息", "文档陈述")
+            .doesNotContain("---", "+++", "@@");
+    }
+    @Test void historicalTextChangeDropsSecretsPathsAndLongSourceBodies() {
+        String delta = collector.documentChangeSummary("guide.md", "+api_key=private-secret-example\n"
+            + "+本地目录 C:\\Users\\private\\data\n+" + "完整正文不应保留".repeat(100) + "\n+添加通知列表的使用说明\n");
+        assertThat(delta).contains("添加通知列表的使用说明").doesNotContain("private", "完整正文", "api_key");
+        assertThat(collector.documentChangeSummary("VERSION", "+not-a-version\n")).isEmpty();
     }
     @Test void onlyPlanSectionsProduceQuotedDeclarationsWithSourceLocation() throws Exception {
         Files.writeString(root.resolve("README.md"), "# Example\n\n这是用于协作和文件管理的示例项目。\n\n## 计划\n- [ ] 计划增加任务附件的预览入口\n### 细节\n- 预计随后支持更多预览格式\n## 已完成\n已经增加稳定的通知读取入口。\n");

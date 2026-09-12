@@ -21,7 +21,7 @@ import java.util.stream.Stream;
  * Story presentation. It never changes facts, Evidence, roles or Claim state.
  */
 public final class ProjectHistoryChapterRepresentationPlanner {
-    public static final String PLAN_VERSION = "project-history-chapter-representation-v3";
+    public static final String PLAN_VERSION = "project-history-chapter-representation-v5";
     static final int MAX_REPRESENTATIVE_CLUSTERS = 4;
     static final int MAX_REPRESENTATIVE_STORIES_PER_CLUSTER = 3;
     static final int MIN_PRIMARY_PER_SPLIT = 4;
@@ -172,6 +172,11 @@ public final class ProjectHistoryChapterRepresentationPlanner {
         double weight = (2.0 + Math.sqrt(stories.size())
             + Math.min(1.0, Math.log1p(activeDays) / 4.0)
             + Math.min(1.0, Math.max(0L, activeMonths - 1L) * 0.20));
+        // A broad source-backed change should not lose to one adjacent config
+        // merely because both have one Story. Bound this scope contribution
+        // below one additional outcome; file volume never changes Claim authority.
+        long sourcePaths = stories.stream().flatMap(story -> story.technicalDetails().stream()).distinct().count();
+        weight += Math.min(0.5, Math.log1p(sourcePaths) / 5.0);
         ChangeStory headlineStory = stories.stream().max(
             Comparator.comparingInt(ProjectHistoryChapterRepresentationPlanner::storyClaimRank)
                 .thenComparing(ChangeStory::occurredTo, Comparator.nullsFirst(Comparator.naturalOrder()))
@@ -198,7 +203,8 @@ public final class ProjectHistoryChapterRepresentationPlanner {
             if (context.contains("脚本")) label += "与脚本";
             String objects = ProjectHistoryHumanSubjectLabelService.concreteObjects(stories.stream()
                 .flatMap(story -> story.technicalDetails().stream()).distinct().limit(120).toList(), "");
-            headlineOutcome = "记录" + label + "的变化" + (objects.isBlank() ? "" : "（含" + objects + "相关文件）");
+            headlineOutcome = objects.isBlank() ? "记录" + label + "的变化"
+                : "更新" + objects + "相关的" + label + "，保留版本变更记录";
             representativeOutcomes = Stream.concat(Stream.of(headlineOutcome), representativeOutcomes.stream())
                 .distinct().limit(MAX_REPRESENTATIVE_STORIES_PER_CLUSTER).toList();
         }

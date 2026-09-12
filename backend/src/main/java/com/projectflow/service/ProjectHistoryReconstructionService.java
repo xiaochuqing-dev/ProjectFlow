@@ -53,7 +53,7 @@ import com.projectflow.service.ProjectHistorySourceCollector.CollectionOutcome;
  */
 @Service
 public class ProjectHistoryReconstructionService {
-    static final String STRATEGY_VERSION = "project-history-v40e-specificity-time-v4";
+    static final String STRATEGY_VERSION = "project-history-v40e-specificity-time-v7";
     static final String PROMPT_VERSION = ProjectHistoryPromptBuilder.PROMPT_VERSION;
     private static final int MODEL_STORY_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_STORY_LIMIT;
     private static final int MODEL_EVENT_LIMIT = ProjectHistoryWindowPlanner.DEFAULT_EVENT_LIMIT;
@@ -628,6 +628,10 @@ public class ProjectHistoryReconstructionService {
                 selected = pathSubjects.get(0);
             } else if (!changeSubjects.isEmpty()) {
                 selected = changeSubjects.get(0);
+            } else if (pathSubjects.size() > 3) {
+                // A mixed commit without a semantic change label must not lend
+                // all its files to the first precise subject (often README).
+                selected = commitInventorySubject(event);
             } else {
                 selected = firstNonArea(event.subjectKeys(), pathSubjects);
             }
@@ -640,13 +644,18 @@ public class ProjectHistoryReconstructionService {
         return result;
     }
 
+    private static String commitInventorySubject(EventView event) {
+        return "change-" + ProjectHistorySourceCollector.sha256(event.stableKey()).substring(0, 20);
+    }
+
     private String selectStorySubject(EventView event, Map<String, String> commitGroups) {
         if (event.subjectKeys().contains("dependency-metadata")
             || event.subjectKeys().contains("sensitive-material")
             || event.subjectKeys().contains("projectflow-metadata")) {
             return event.subjectKeys().stream().filter(RAW_ONLY_SUBJECTS::contains).findFirst().orElse("");
         }
-        String parent = event.relationRefs().stream()
+        String parent = Set.of(Category.COMMIT, Category.MERGE).contains(event.category())
+            ? commitGroups.getOrDefault(event.sourceRevision(), "") : event.relationRefs().stream()
             .filter(value -> value != null && value.startsWith("commit:"))
             .map(value -> value.substring("commit:".length()))
             .map(commitGroups::get)
@@ -663,7 +672,7 @@ public class ProjectHistoryReconstructionService {
         if (splitParent && !Set.of(Category.COMMIT, Category.MERGE).contains(event.category())) {
             parent = "";
         }
-        if (!parent.isBlank() && !bulkParent && event.paths().size() < 20) return parent;
+        if (!parent.isBlank() && !bulkParent && !splitParent && event.paths().size() < 20) return parent;
         if (Set.of(Category.COMMIT, Category.MERGE).contains(event.category()) && !parent.isBlank()) {
             if (bulkParent) return parent.substring("__BULK__".length());
             if (splitParent) return parent.substring("__SPLIT__".length());
@@ -792,7 +801,9 @@ public class ProjectHistoryReconstructionService {
         int remainingPrimary = primaryCount;
         List<StoryEnvelope> result = new ArrayList<>();
         Map<String, Integer> representatives = new LinkedHashMap<>();
-        for (StoryEnvelope candidate : input) {
+        for (StoryEnvelope candidate : input.stream().sorted(Comparator
+            .comparing((StoryEnvelope value) -> value.story().occurredFrom())
+            .thenComparing(value -> value.story().id())).toList()) {
             ChangeStory story = candidate.story();
             if (!story.primary()) {
                 result.add(candidate);
@@ -809,8 +820,7 @@ public class ProjectHistoryReconstructionService {
                 && representative.transitions().stream().noneMatch(STORY_BOUNDARIES::contains)
                 && representative.story().occurredTo() != null
                 && story.occurredFrom() != null
-                && Duration.between(representative.story().occurredTo(), story.occurredFrom()).compareTo(Duration.ofDays(45)) <= 0
-                && Duration.between(representative.story().occurredTo(), story.occurredFrom()).compareTo(Duration.ofDays(-45)) >= 0
+                && Duration.between(representative.story().occurredFrom(), story.occurredTo()).compareTo(STORY_GAP) <= 0
                 && result.stream().filter(value -> value.story().primary()).count() + remainingPrimary >= readableBudget;
             if (!canFold) {
                 representatives.put(family, result.size());
@@ -1164,7 +1174,9 @@ public class ProjectHistoryReconstructionService {
         EventView previous = current.get(current.size() - 1);
         if (sharesCommit(current, next)) return false;
         Duration gap = Duration.between(previous.occurredAt(), next.occurredAt());
-        if (gap.compareTo(STORY_GAP) > 0 || current.size() >= STORY_EVENT_LIMIT) return true;
+        if (gap.compareTo(STORY_GAP) > 0
+            || Duration.between(current.get(0).occurredAt(), next.occurredAt()).compareTo(STORY_GAP) > 0
+            || current.size() >= STORY_EVENT_LIMIT) return true;
         if (STORY_BOUNDARIES.contains(previous.transition()) || STORY_BOUNDARIES.contains(next.transition())) return true;
         return next.category() == Category.TAG || previous.category() == Category.TAG;
     }
@@ -1184,23 +1196,42 @@ public class ProjectHistoryReconstructionService {
         List<String> labels = narrativeSourceLabels(events);
         String subjectLabel = languageService.readableObject(
             subjectKey,
-            narrativePaths(events),
+            narrativePaths(subjectKey, events),
             labels
         );
         List<UUID> eventRefs = events.stream().map(EventView::id).distinct().toList();
         List<String> evidence = events.stream().flatMap(event -> event.evidenceRefs().stream()).distinct().limit(100).toList();
         List<String> affectedAreas = new ArrayList<>();
         affectedAreas.add(subjectLabel);
-        events.stream().flatMap(event -> event.paths().stream()).map(ProjectHistoryReconstructionService::area)
+        narrativePaths(subjectKey, events).stream().map(ProjectHistoryReconstructionService::area)
             .filter(value -> !value.isBlank()).distinct().limit(5).forEach(affectedAreas::add);
         ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope narrativeEnvelope = narrativeEnvelope(
             subjectKey, subjectLabel, outcome, events, hasReasonEligibleEvidence(events)
         );
         ProjectHistoryLanguageService.Presentation presentation = languageService.fallback(
             narrativeEnvelope.claimState(), outcome, subjectKey,
-            narrativePaths(events), labels,
+            narrativePaths(subjectKey, events), labels,
             transitions.stream().map(Enum::name).toList()
         );
+        // Enrich only the owning document Story, and retain the same claim validator.
+        List<String> documentChanges = events.stream().filter(event -> event.category() == Category.FILE_CHANGE)
+            .filter(event -> event.subjectKeys().contains(subjectKey))
+            .sorted(Comparator.comparing(EventView::occurredAt).reversed())
+            .map(EventView::label).filter(ProjectHistoryReconstructionService::documentChangeLabel).distinct().limit(2).toList();
+        if (!documentChanges.isEmpty() && !subjectKey.startsWith("change-") && !subjectKey.startsWith("project-area-")) {
+            String specificSummary = "更新" + subjectLabel + "的文字记录。" + documentChanges.get(0);
+            String specificChange = documentChanges.size() > 1
+                ? "同一对象在该时间范围还记录了另一处文本变化：" + documentChanges.get(1)
+                : "这次更新涉及" + subjectLabel + "的文本内容；摘要中的摘录可按来源提交核对，不代表运行验收。";
+            try {
+                narrativeValidator.validateStory(narrativeEnvelope, presentation.title(), specificSummary,
+                    presentation.before(), specificChange, presentation.after(), "", "");
+                presentation = new ProjectHistoryLanguageService.Presentation(presentation.title(), specificSummary,
+                    presentation.before(), specificChange, presentation.after(), presentation.object());
+            } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation ignored) {
+                // Unsafe source assertions remain in Evidence without becoming a narrative claim.
+            }
+        }
         String change = presentation.change();
         String before = presentation.before();
         String after = presentation.after();
@@ -1218,7 +1249,7 @@ public class ProjectHistoryReconstructionService {
             .filter(event -> event.category() == Category.COMMIT || event.category() == Category.MERGE)
             .map(event -> languageService.commitSummary(event.label(), event.transition(), event.paths()))
             .distinct().limit(12).toList();
-        List<String> technicalDetails = narrativePaths(events).stream().limit(30).toList();
+        List<String> technicalDetails = narrativePaths(subjectKey, events).stream().limit(30).toList();
         List<String> atomRefs = events.stream().map(EventView::stableKey).distinct().limit(100).toList();
         ChangeStory story = new ChangeStory(
             id, subjectKey, humanTitle, summary, before, change, after, List.copyOf(affectedAreas), "", List.of(), "",
@@ -1242,9 +1273,12 @@ public class ProjectHistoryReconstructionService {
         }
     }
 
-    private static List<String> narrativePaths(List<EventView> events) {
+    private static List<String> narrativePaths(String subjectKey, List<EventView> events) {
         Map<String, List<String>> areas = new LinkedHashMap<>();
-        events.stream().flatMap(event -> event.paths().stream()).distinct()
+        boolean inventory = subjectKey.startsWith("change-") || subjectKey.startsWith("project-area-");
+        events.stream().flatMap(event -> event.paths().stream().filter(path -> inventory
+                || !Set.of(Category.COMMIT, Category.MERGE).contains(event.category())
+                || ProjectHistorySourceCollector.historySubjectKey(path).equals(subjectKey))).distinct()
             .forEach(path -> areas.computeIfAbsent(area(path), ignored -> new ArrayList<>()).add(path));
         List<String> result = new ArrayList<>();
         for (int index = 0; result.size() < 40; index++) {
@@ -1261,8 +1295,12 @@ public class ProjectHistoryReconstructionService {
     }
 
     private static List<String> narrativeSourceLabels(List<EventView> events) {
-        return events.stream().filter(event -> event.category() != Category.FILE_CHANGE)
+        return events.stream().filter(event -> event.category() != Category.FILE_CHANGE || documentChangeLabel(event.label()))
             .map(EventView::label).filter(value -> value != null && !value.isBlank()).distinct().limit(8).toList();
+    }
+
+    private static boolean documentChangeLabel(String label) {
+        return label != null && (label.startsWith("文档文字变化：") || label.startsWith("版本文件"));
     }
 
     /**
@@ -1783,7 +1821,7 @@ public class ProjectHistoryReconstructionService {
                 ModelBatch effective = batch.withChapterIds(includedChapters);
                 boolean stored = windowCheckpointService.succeed(
                     attempt, writeWindowResult(parsed, effective), response.diagnostics().requestCount(),
-                    safeCheckpointDiagnostics(response.diagnostics())
+                    safeCheckpointDiagnostics(response.diagnostics(), validated.preservedStories(), validated.replacedStories())
                 );
                 if (!stored) {
                     incomplete = true;
@@ -2356,6 +2394,10 @@ public class ProjectHistoryReconstructionService {
     }
 
     private String safeCheckpointDiagnostics(ModelGatewayService.ModelCallDiagnostics diagnostics) {
+        return safeCheckpointDiagnostics(diagnostics, 0, 0);
+    }
+
+    private String safeCheckpointDiagnostics(ModelGatewayService.ModelCallDiagnostics diagnostics, int preservedStories, int replacedStories) {
         if (diagnostics == null) return "{}";
         return json(Map.of(
             "requestCount", diagnostics.requestCount(),
@@ -2365,7 +2407,9 @@ public class ProjectHistoryReconstructionService {
             "truncated", diagnostics.truncated(),
             "schemaMatched", diagnostics.schemaMatched(),
             "retryType", diagnostics.retryType(),
-            "retrySucceeded", diagnostics.compactRetrySucceeded()
+            "retrySucceeded", diagnostics.compactRetrySucceeded(),
+            "preservedValidatedStoryCount", preservedStories,
+            "replacedRejectedStoryCount", replacedStories
         ));
     }
 
@@ -2511,7 +2555,7 @@ public class ProjectHistoryReconstructionService {
             List<EventView> members = story.eventRefs().stream().map(views::get).filter(java.util.Objects::nonNull).toList();
             String subjectLabel = languageService.readableObject(
                 story.primarySubjectKey(),
-                narrativePaths(members),
+                narrativePaths(story.primarySubjectKey(), members),
                 narrativeSourceLabels(members)
             );
             ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
@@ -2570,7 +2614,9 @@ public class ProjectHistoryReconstructionService {
             diagnostics.add(first.diagnostics());
             return new ValidatedHistoryResponse<>(first, value);
         } catch (HistoryValidationException firstFailure) {
-            String repairPrompt = promptBuilder.validationRepair(prompt, firstFailure.kind().name());
+            String repairPrompt = firstFailure.validatedRepairOutput.isBlank()
+                ? promptBuilder.validationRepair(prompt, firstFailure.kind().name())
+                : promptBuilder.validatedStoryRepair(firstFailure.kind().name(), firstFailure.validatedRepairOutput);
             ModelGatewayService.StructuredModelResponse repaired;
             try {
                 repaired = requireStructuredResponse(modelGateway.callStructured(provider, repairPrompt, task));
@@ -2587,7 +2633,7 @@ public class ProjectHistoryReconstructionService {
                     first.diagnostics(), "HISTORY_VALIDATION_RETRY", true
                 );
                 diagnostics.add(combined.diagnostics());
-                return new ValidatedHistoryResponse<>(combined, value);
+                return new ValidatedHistoryResponse<>(combined, value, firstFailure.preservedStories, firstFailure.replacedStories);
             } catch (HistoryValidationException finalFailure) {
                 ModelGatewayService.StructuredModelResponse combined = repaired.withRecovery(
                     first.diagnostics(), "HISTORY_VALIDATION_RETRY", false
@@ -2647,6 +2693,10 @@ public class ProjectHistoryReconstructionService {
         Map<String, ChangeStory> stories = new LinkedHashMap<>();
         base.stories().forEach(story -> stories.put(story.id(), story));
         Set<String> seenStories = new LinkedHashSet<>();
+        HistoryValidationException rejectedWording = null;
+        int rejectedStoryCount = 0;
+        boolean storyOnlyOutput = eligibleChapterIds.isEmpty() && root.path("chapters").isArray()
+            && root.path("chapters").isEmpty();
         JsonNode storyNodes = root.path("stories");
         if (!storyNodes.isArray()) throw new HistoryValidationException(ValidationKind.CONTRACT, "History model stories are missing");
         for (JsonNode node : storyNodes) {
@@ -2658,73 +2708,81 @@ public class ProjectHistoryReconstructionService {
                 throw new HistoryValidationException(ValidationKind.CROSS_PROJECT_REFERENCE, "Unknown story ID");
             }
             if (!seenStories.add(id)) throw new HistoryValidationException(ValidationKind.CONTRACT, "Duplicate story ID");
-            String title = modelText(node, "humanTitle", 240);
-            String summary = modelText(node, "oneSentenceSummary", 1_000);
-            if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
-                throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, "History model returned vague wording");
-            }
-            boolean deterministicTitleFallback = false;
-            if (!narrativeValidator.semanticallyUseful(title, summary, original.claimAttribution().subject())) {
-                title = original.humanTitle();
-                summary = original.oneSentenceSummary();
-                deterministicTitleFallback = true;
-                if (!narrativeValidator.hasActionObjectResult(title, summary)) {
-                    throw new HistoryValidationException(
-                        ValidationKind.UNSUPPORTED_CLAIM,
-                        "History title does not state an action, object and supported result"
-                    );
-                }
-            }
-            String before = modelText(node, "beforeWording", 1_000);
-            String change = modelText(node, "changeWording", 1_200);
-            String after = modelText(node, "afterWording", 1_000);
-            if (before.isBlank()) before = original.beforeState();
-            if (change.isBlank()) change = original.change();
-            if (after.isBlank()) after = original.afterState();
-            List<String> reasonEvidence = stringList(node.path("reasonEvidenceRefs"), 30);
-            if (!reasonEvidenceByStory.getOrDefault(id, List.of()).containsAll(reasonEvidence)) {
-                throw new HistoryValidationException(ValidationKind.INVALID_EVIDENCE, "History model returned ineligible reason Evidence");
-            }
-            String reason = modelText(node, "reason", 1_000);
-            if (!reason.isBlank() && reasonEvidence.isEmpty()) {
-                throw new HistoryValidationException(ValidationKind.INVALID_EVIDENCE, "History reason has no Evidence");
-            }
-            String unknownWording = modelText(node, "unknownWording", 500);
-            if (unknownWording.isBlank()) {
-                unknownWording = stringList(node.path("unknowns"), 20).stream().findFirst().orElse("");
-            }
-            List<EventView> members = original.eventRefs().stream().map(eventsById::get)
-                .filter(java.util.Objects::nonNull).toList();
-            String subjectLabel = languageService.readableObject(
-                original.primarySubjectKey(),
-                narrativePaths(members),
-                narrativeSourceLabels(members)
-            );
-            ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
-                original.primarySubjectKey(), subjectLabel,
-                primaryTransition(storyTransitions(members)),
-                members,
-                !reasonEvidenceByStory.getOrDefault(id, List.of()).isEmpty()
-            );
-            boolean sourceStateUnknown = members.stream()
-                .anyMatch(event -> event.epistemicStatus() == ProjectFactEpistemicStatus.UNKNOWN);
-            List<String> unknowns = unknownWording.isBlank() && !reason.isBlank() && !sourceStateUnknown
-                ? List.of()
-                : narrativeValidator.normalizeUnknowns(unknownWording, sourceStateUnknown);
             try {
-                narrativeValidator.validateStory(
-                    envelope, title, summary, before, change, after, reason,
-                    unknowns.stream().findFirst().orElse("")
+                String title = modelText(node, "humanTitle", 240);
+                String summary = modelText(node, "oneSentenceSummary", 1_000);
+                if (weak(title) || weak(summary) || prohibitedAuthorityClaim(title + " " + summary)) {
+                    throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, "History model returned vague wording");
+                }
+                boolean deterministicTitleFallback = false;
+                if (!narrativeValidator.semanticallyUseful(title, summary, original.claimAttribution().subject())) {
+                    title = original.humanTitle();
+                    summary = original.oneSentenceSummary();
+                    deterministicTitleFallback = true;
+                    if (!narrativeValidator.hasActionObjectResult(title, summary)) {
+                        throw new HistoryValidationException(
+                            ValidationKind.UNSUPPORTED_CLAIM,
+                            "History title does not state an action, object and supported result"
+                        );
+                    }
+                }
+                String before = modelText(node, "beforeWording", 1_000);
+                String change = modelText(node, "changeWording", 1_200);
+                String after = modelText(node, "afterWording", 1_000);
+                if (before.isBlank()) before = original.beforeState();
+                if (change.isBlank()) change = original.change();
+                if (after.isBlank()) after = original.afterState();
+                List<String> reasonEvidence = stringList(node.path("reasonEvidenceRefs"), 30);
+                if (!reasonEvidenceByStory.getOrDefault(id, List.of()).containsAll(reasonEvidence)) {
+                    throw new HistoryValidationException(ValidationKind.INVALID_EVIDENCE, "History model returned ineligible reason Evidence");
+                }
+                String reason = modelText(node, "reason", 1_000);
+                if (!reason.isBlank() && reasonEvidence.isEmpty()) {
+                    throw new HistoryValidationException(ValidationKind.INVALID_EVIDENCE, "History reason has no Evidence");
+                }
+                String unknownWording = modelText(node, "unknownWording", 500);
+                if (unknownWording.isBlank()) {
+                    unknownWording = stringList(node.path("unknowns"), 20).stream().findFirst().orElse("");
+                }
+                List<EventView> members = original.eventRefs().stream().map(eventsById::get)
+                    .filter(java.util.Objects::nonNull).toList();
+                String subjectLabel = languageService.readableObject(
+                    original.primarySubjectKey(),
+                    narrativePaths(original.primarySubjectKey(), members),
+                    narrativeSourceLabels(members)
                 );
-            } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
-                throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
+                ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
+                    original.primarySubjectKey(), subjectLabel,
+                    primaryTransition(storyTransitions(members)),
+                    members,
+                    !reasonEvidenceByStory.getOrDefault(id, List.of()).isEmpty()
+                );
+                boolean sourceStateUnknown = members.stream()
+                    .anyMatch(event -> event.epistemicStatus() == ProjectFactEpistemicStatus.UNKNOWN);
+                List<String> unknowns = unknownWording.isBlank() && !reason.isBlank() && !sourceStateUnknown
+                    ? List.of()
+                    : narrativeValidator.normalizeUnknowns(unknownWording, sourceStateUnknown);
+                try {
+                    narrativeValidator.validateStory(
+                        envelope, title, summary, before, change, after, reason,
+                        unknowns.stream().findFirst().orElse("")
+                    );
+                } catch (ProjectHistoryNarrativeEntailmentValidator.NarrativeViolation violation) {
+                    throw new HistoryValidationException(ValidationKind.UNSUPPORTED_CLAIM, violation.getMessage());
+                }
+                stories.put(id, copyStory(
+                    original, original.laterOutcome(), "INFERRED_NON_AUTHORITATIVE",
+                    deterministicTitleFallback ? "MODEL_VALIDATED_WITH_DETERMINISTIC_TITLE" : "MODEL_VALIDATED",
+                    title, summary, before, change, after, reason, reasonEvidence,
+                    original.conflicts(), unknowns
+                ));
+            } catch (HistoryValidationException failure) {
+                // Keep independently validated siblings. Unknown IDs, invalid
+                // Evidence and structural failures still reject the whole window.
+                if (failure.kind() != ValidationKind.UNSUPPORTED_CLAIM || !storyOnlyOutput) throw failure;
+                if (rejectedWording == null) rejectedWording = failure;
+                rejectedStoryCount++;
             }
-            stories.put(id, copyStory(
-                original, original.laterOutcome(), "INFERRED_NON_AUTHORITATIVE",
-                deterministicTitleFallback ? "MODEL_VALIDATED_WITH_DETERMINISTIC_TITLE" : "MODEL_VALIDATED",
-                title, summary, before, change, after, reason, reasonEvidence,
-                original.conflicts(), unknowns
-            ));
         }
         if (!seenStories.equals(eligibleStoryIds)) {
             throw new HistoryValidationException(ValidationKind.CONTRACT, "History model omitted stories");
@@ -2765,6 +2823,24 @@ public class ProjectHistoryReconstructionService {
         }
         List<ChangeStory> orderedStories = base.stories().stream().map(story -> stories.get(story.id())).toList();
         List<HistoryChapter> orderedChapters = base.chapters().stream().map(chapter -> chapters.get(chapter.id())).toList();
+        if (rejectedWording != null) {
+            if (eligibleChapterIds.isEmpty()) {
+                String validatedOutput = json(Map.of("stories", orderedStories.stream()
+                    .filter(story -> eligibleStoryIds.contains(story.id())).map(story -> Map.of(
+                        "storyId", story.id(), "humanTitle", story.humanTitle(),
+                        "oneSentenceSummary", story.oneSentenceSummary(), "beforeWording", story.beforeState(),
+                        "changeWording", story.change(), "afterWording", story.afterState(),
+                        "reason", story.reason(), "reasonEvidenceRefs", story.reasonEvidenceRefs(),
+                        "unknownWording", story.unknowns().stream().findFirst().orElse("")
+                    )).toList(), "chapters", List.of()));
+                if (validatedOutput.length() < ProjectHistoryPromptBuilder.MAX_PROMPT_CHARS - 1_000) {
+                    rejectedWording.validatedRepairOutput = validatedOutput;
+                    rejectedWording.preservedStories = eligibleStoryIds.size() - rejectedStoryCount;
+                    rejectedWording.replacedStories = rejectedStoryCount;
+                }
+            }
+            throw rejectedWording;
+        }
         return new SnapshotResult(orderedChapters, orderedStories, base.threads());
     }
 
@@ -2793,7 +2869,9 @@ public class ProjectHistoryReconstructionService {
             subjectLabel,
             transition,
             safeEvents.stream().map(event -> new ProjectHistoryNarrativeEntailmentValidator.EvidenceAtom(
-                event.stableKey(), event.subjectKeys(), event.category(), event.transition(), event.authority(),
+                event.stableKey(), Set.of(Category.COMMIT, Category.MERGE).contains(event.category())
+                    && subjectKey.equals(commitInventorySubject(event)) ? List.of(subjectKey) : event.subjectKeys(),
+                event.category(), event.transition(), event.authority(),
                 event.epistemicStatus(), event.paths(), event.label(), event.evidenceRefs()
             )).toList(),
             reasonEligible
@@ -3018,7 +3096,7 @@ public class ProjectHistoryReconstructionService {
                     .filter(java.util.Objects::nonNull).toList();
                 String subjectLabel = languageService.readableObject(
                     story.primarySubjectKey(),
-                    narrativePaths(members),
+                    narrativePaths(story.primarySubjectKey(), members),
                     narrativeSourceLabels(members)
                 );
                 ProjectHistoryNarrativeEntailmentValidator.NarrativeEnvelope envelope = narrativeEnvelope(
@@ -3575,6 +3653,9 @@ public class ProjectHistoryReconstructionService {
             .toList();
         Map<String, List<ChangeStory>> byFamily = new LinkedHashMap<>();
         candidates.forEach(story -> byFamily.computeIfAbsent(presentationFamily(story), ignored -> new ArrayList<>()).add(story));
+        // Keep subject diversity while giving each family's latest visible change the first slot.
+        byFamily.values().forEach(family -> family.sort(Comparator.comparing(ChangeStory::occurredTo).reversed()
+            .thenComparing(ChangeStory::id)));
         if (byFamily.values().stream().noneMatch(group -> group.size() > 1)) {
             return candidates.stream().map(ChangeStory::id)
                 .collect(LinkedHashSet::new, Set::add, Set::addAll);
@@ -4079,8 +4160,13 @@ public class ProjectHistoryReconstructionService {
 
     private record ValidatedHistoryResponse<T>(
         ModelGatewayService.StructuredModelResponse response,
-        T value
+        T value,
+        int preservedStories,
+        int replacedStories
     ) {
+        ValidatedHistoryResponse(ModelGatewayService.StructuredModelResponse response, T value) {
+            this(response, value, 0, 0);
+        }
     }
 
     private enum ValidationKind {
@@ -4092,6 +4178,11 @@ public class ProjectHistoryReconstructionService {
 
     static final class HistoryValidationException extends RuntimeException {
         private final ValidationKind kind;
+        // In-memory, validated first-layer wording only; never part of the
+        // exception message, persisted diagnostics or external DTOs.
+        private String validatedRepairOutput = "";
+        private int preservedStories;
+        private int replacedStories;
 
         HistoryValidationException(ValidationKind kind, String message) {
             super(message);

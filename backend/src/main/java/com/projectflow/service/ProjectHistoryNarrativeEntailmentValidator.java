@@ -45,10 +45,14 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         "^这一(?:阶段|时期)(?:形成|完成|包含)了?\\s*\\d+\\s*项.*"
     );
     private static final List<String> PRODUCTION_CLAIMS = List.of(
-        "生产可用", "生产环境稳定", "生产部署", "完成部署", "部署完成", "已经上线", "正式上线", "稳定运行", "完全可靠", "成熟可用"
+        "生产可用", "生产环境稳定", "生产部署", "完成部署", "部署完成", "已经上线", "正式上线", "发布上线", "稳定运行", "完全可靠", "成熟可用"
     );
     private static final List<String> VERIFIED_CLAIMS = List.of(
-        "验证通过", "已经验证", "已验证", "确认无误", "测试证明", "自动化验证通过"
+        "验证通过", "已经验证", "已验证", "确认无误", "测试证明", "自动化验证通过", "通过验收", "验收通过"
+    );
+    private static final List<String> CURRENT_LIFECYCLE_CLAIMS = List.of(
+        "当前项目不再保留", "当前项目结果中已不再包含", "当前目录不再包含",
+        "已退出当前结果", "重新出现在当前项目中"
     );
     private static final List<String> IMPLEMENTED_CLAIMS = List.of(
         "已经实现", "实现了", "形成实现", "代码实现", "实现所需的代码", "已有代码实现", "完成开发",
@@ -67,7 +71,7 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         "恢复", "完成", "形成", "统一", "分别查看", "代码实现", "实现代码", "实现基础", "基础代码", "功能基础",
         "变更记录", "现状记录", "结构更新", "更新了结构", "首次创建", "保存了", "保存相关", "工作交接记录",
         "可供查看", "可供后续查看", "可看", "从无到有", "首次出现", "再次出现", "从项目中移除", "消失", "方案记录", "初始代码",
-        "已有实现", "已有内容", "初始记录", "调整记录", "可查看", "建设方向", "配置基础"
+        "已有实现", "已有内容", "初始记录", "调整记录", "可查看", "建设方向", "配置基础", "使用说明", "操作说明", "核对说明", "记录了", "补充了"
     );
     private static final List<String> VAGUE_CHAPTER_LANGUAGE = List.of(
         "围绕项目基础建设推进阶段成果", "相关成果逐步形成并得到完善", "完成相关建设", "持续推进相关工作"
@@ -137,6 +141,9 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         if (stateUpgrade(firstLayer, safe.claimState())) {
             throw violation(ViolationKind.STATE_UPGRADE, "Narrative claim is stronger than its Evidence state");
         }
+        if (containsAffirmedAny(firstLayer, CURRENT_LIFECYCLE_CLAIMS)) {
+            throw violation(ViolationKind.STATE_UPGRADE, "Historical Evidence cannot establish current worktree state");
+        }
         if (!text(reason).isBlank() && !safe.reasonEligible()) {
             throw violation(ViolationKind.REASON_WITHOUT_EVIDENCE, "Narrative reason has no eligible Evidence");
         }
@@ -174,6 +181,7 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         String concepts = subject.contains("（含")
             ? subject.substring(subject.indexOf("（含") + 2).replace("相关文件）", "")
             : subject.replace("相关代码", "").replace("文档", "");
+        concepts = concepts.replaceFirst("^项目", "").replaceAll("[（(].*[）)]", "").replaceAll("[与和、]+$", "").trim();
         if (Set.of("", "项目", "项目材料", "项目骨架", "前端项目骨架", "后端项目骨架", "前后端项目骨架",
             "项目阶段", "项目阶段成果", "阶段成果记录", "项目成果记录", "源码功能").contains(concepts)) return true;
         String wording = text(title) + " " + text(summary);
@@ -210,6 +218,9 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
         }
         if (containsAffirmedAny(firstLayer, PRODUCTION_CLAIMS)) {
             throw violation(ViolationKind.STATE_UPGRADE, "Chapter wording invents unsupported maturity");
+        }
+        if (containsAffirmedAny(firstLayer, CURRENT_LIFECYCLE_CLAIMS)) {
+            throw violation(ViolationKind.STATE_UPGRADE, "Historical Chapter cannot establish current worktree state");
         }
     }
 
@@ -345,7 +356,7 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
                 int contextStart = Math.max(0, index - 14);
                 String prefix = safe.substring(contextStart, index);
                 if (!containsAny(prefix,
-                    "不能确认", "无法确认", "尚不能确认", "还不能确认", "未能确认", "不能据此判断",
+                    "不能确认", "无法确认", "尚不能确认", "还不能确认", "未能确认", "不能据此判断", "不能据此确认",
                     "无法据此判断", "没有证据表明", "没有证据证明", "不代表", "并不表示", "并非", "不是"
                 )) return true;
                 from = index + marker.length();
@@ -367,7 +378,9 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
     private static List<String> humanSafeContext(EvidenceProfile profile) {
         LinkedHashSet<String> result = new LinkedHashSet<>();
         result.add(text(profile.subjectLabel()));
-        profile.atoms().stream().map(EvidenceAtom::sourceLabel).map(ProjectHistoryNarrativeEntailmentValidator::text)
+        List<EvidenceAtom> latestFirst = new ArrayList<>(profile.atoms());
+        java.util.Collections.reverse(latestFirst);
+        latestFirst.stream().map(EvidenceAtom::sourceLabel).map(ProjectHistoryNarrativeEntailmentValidator::text)
             .filter(value -> containsHan(value) && !value.contains("/") && !value.contains("\\") && !value.contains("…"))
             .filter(value -> !FIXTURE_IDENTIFIER.matcher(value).matches())
             .limit(5).forEach(result::add);
@@ -382,8 +395,8 @@ public final class ProjectHistoryNarrativeEntailmentValidator {
             case IMPLEMENTED -> List.of("可以表达代码已经实现", "没有验证 Evidence 时不能表达验证通过或稳定");
             case OBSERVED -> List.of("只能表达来源中直接观察到的成果或变化", "不能升级为验证通过");
             case VERIFIED -> List.of("可以表达已有自动化验证", "不能表达生产环境稳定");
-            case REMOVED -> List.of("只能表达内容已移除或回退");
-            case RESTORED -> List.of("只能表达此前内容已恢复或重新出现");
+            case REMOVED -> List.of("只能表达对应版本中的移除或回退；不能断言当前工作树仍然缺失");
+            case RESTORED -> List.of("只能表达对应版本中的恢复；不能断言当前工作树仍然保留");
             case UNKNOWN -> List.of("只能保守表达已有记录", "不能表达实现或验证完成");
             case CONFLICTED -> List.of("只能表达来源存在冲突", "不能形成正向完成结论");
         };

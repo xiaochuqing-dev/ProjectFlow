@@ -1,0 +1,57 @@
+变化详情
+ProjectFlow · 提案更新时间 · 2026-09-09
+记录合并请求23（模型配置）的来源声明
+
+作者的文字说明涉及合并请求23（模型配置）；这些陈述不能单独证明实现或验证结果。
+
+01
+此前状态
+
+这份来源未独立证明变更前的完整状态。
+
+02
+本次变化
+
+本次保留作者对变更范围的说明，可继续下钻核对原始来源。
+
+03
+当前结果
+
+来源声明已经记录；合入、实现和验证状态需要各自的直接证据。
+
+尚未确认
+目前没有足够信息确认为什么做这次调整。
+覆盖与缺口
+PR 标题和有界正文摘要只作为 DECLARED 原因证据，不证明实现或验证结果。
+查看工程证据与来源
+完善项目材料，更新已有内容
+
+GitHub 记录 · 修改 · 在本次读取的历史中
+
+覆盖与缺口
+PR 标题和有界正文摘要只作为 DECLARED 原因证据，不证明实现或验证结果。
+收起 Evidence 详情
+Pull Request #23：ProjectFlow V4.0-C：Thread 与 Provider 迁入 V4 工作区；说明：V4-B 的真实 Thread 阅读和 Provider 编辑仍需跳回旧界面。本 PR 将 Thread → Story → Evidence 与全局 Provider 日常管理迁入 V4 Workspace，并把启动欢迎页主入口接到 V4 项目库。
+
+github-pr:23
+
+当前性：在本次读取的历史中 · 验证：DECLARED
+
+覆盖：{"bodyExcerptIncluded":true,"source":"github-cli","timeLabel":"提案更新时间","timeBasis":"PR_UPDATED_AT"} · 版本：2026-09-09T09:18:15Z
+
+PR 标题和有界正文摘要只作为 DECLARED 原因证据，不证明实现或验证结果。
+
+打开证据
+原始提交与来源信息
+
+Pull Request #23：ProjectFlow V4.0-C：Thread 与 Provider 迁入 V4 工作区；说明：V4-B 的真实 Thread 阅读和 Provider 编辑仍需跳回旧界面。本 PR 将 Thread → Story → Evidence 与全局 Provider 日常管理迁入 V4 Workspace，并把启动欢迎页主入口接到 V4 项目库。
+
+提案更新时间 · 2026-09-09T09:18:15Z
+
+证据身份：DECLARED · DECLARED
+
+打开原始来源
+工程兼容工具：来源审计与修正
+查看故事工程详情
+返回阅读
+工程证据始终保留，展示不会改变事实

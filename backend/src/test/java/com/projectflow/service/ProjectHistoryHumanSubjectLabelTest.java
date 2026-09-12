@@ -10,6 +10,31 @@ class ProjectHistoryHumanSubjectLabelTest {
     private final ProjectHistoryLanguageService language = new ProjectHistoryLanguageService();
 
     @Test
+    void namesScriptAndCheckArtifactsWithoutClaimingTheirRuntimeOutcome() {
+        assertThat(language.readableObject("files", List.of("backend/app/schemas/files.py"), List.of()))
+            .isEqualTo("文件数据结构定义");
+        assertThat(language.readableObject("opaque", List.of("backend/app/opaque.py"), List.of()))
+            .isEqualTo("后端代码文件");
+        assertThat(language.readableObject("browser-collaboration", List.of("scripts/browser_collaboration.mjs"), List.of()))
+            .isEqualTo("协作脚本");
+        assertThat(language.readableObject("change-documents", List.of("docs/report.md", "docs/implementation-ci.json", "docs/secret-scan-evidence.json"), List.of()))
+            .isEqualTo("项目检查记录与文档");
+    }
+
+    @Test
+    void translatesMixedLanguageProposalScopeWithoutDroppingOneOfItsObjects() {
+        assertThat(language.readableObject("pull-request-7", List.of(),
+            List.of("Pull Request #7：Example V4.0-C：Thread 与 Provider 迁入 V4 工作区；说明：来源声明")))
+            .contains("长期主题", "模型配置", "迁入", "工作区").doesNotContain("Example", "Thread", "Provider");
+        assertThat(language.readableObject("pom", List.of("backend/pom.xml"), List.of()))
+            .isEqualTo("构建依赖配置");
+        assertThat(language.readableObject("api", List.of("frontend/src/lib/api.ts"), List.of()))
+            .isEqualTo("接口客户端");
+        assertThat(language.readableObject("change-save-validation", List.of("reports/validation.json", "reports/screenshot.png"), List.of()))
+            .isEqualTo("项目检查记录与截图");
+    }
+
+    @Test
     void replacesBareTechnicalSubjectsWithEvidenceBoundedHumanConcepts() {
         assertThat(language.readableObject("research report", List.of("research/ResearchReport.md"), List.of()))
             .isEqualTo("研究报告");

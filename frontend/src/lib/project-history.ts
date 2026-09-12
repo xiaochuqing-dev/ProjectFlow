@@ -79,3 +79,13 @@ export function projectHistoryRewriteStateLabel(value: string | null | undefined
   };
   return labels[value ?? ""] ?? "有效性待核对";
 }
+
+export function projectHistoryEvidenceValidationLabel(value: string | null | undefined) {
+  const labels: Record<string, string> = {
+    OBSERVED: "已观察到来源变化，未独立验证运行结果", SOURCE_BACKED: "可追溯到直接来源",
+    VERIFIED: "存在验证记录，范围以来源为准", DECLARED: "来源作者的陈述",
+    PROCESS_EVIDENCE: "开发过程记录", INFERRED: "系统归纳", EXPLAINED: "基于来源的解释",
+    UNKNOWN: "尚未确认", CONFLICTED: "来源有冲突",
+  };
+  return labels[value ?? ""] ?? "验证边界见来源记录";
+}
