@@ -61,8 +61,14 @@ final class ProjectHistoryClaimEvidenceAttributionService {
         indirectSet.removeAll(directRefs);
         List<String> indirectRefs = List.copyOf(indirectSet);
         String supportClass = supportClass(state, direct);
+        List<EvidenceAtom> processDeclarations = indirect.stream()
+            .filter(atom -> supportsSubject(atom, subjectKey) && evidenceClass(atom) == EvidenceClass.PROCESS
+                && !atom.sourceLabel().isBlank() && !atom.evidenceRefs().isEmpty()).toList();
+        boolean processOnly = state == ClaimState.UNKNOWN && direct.isEmpty() && !processDeclarations.isEmpty();
+        if (processOnly) supportClass = "PROCESS_DECLARATION";
         String downgradeReason = broadAreaCeiling
             ? "项目区域级 Evidence 只能证明该区域有可观察变化，不能证明某个具体功能已经实现或验证。"
+            : processOnly ? "开发助手明确记录了变化声明；可以转述其内容，但实际实现与验证结果仍待独立证据。"
             : downgradeReason(state, direct, indirect, classified);
         return new Attribution(
             subjectKey,
@@ -72,7 +78,7 @@ final class ProjectHistoryClaimEvidenceAttributionService {
             outcome,
             directRefs,
             indirectRefs,
-            direct.stream().map(EvidenceAtom::authority).distinct().map(Enum::name).toList(),
+            (processOnly ? processDeclarations : direct).stream().map(EvidenceAtom::authority).distinct().map(Enum::name).toList(),
             supportClass,
             downgradeReason,
             supportSummary(classified),

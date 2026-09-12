@@ -1,0 +1,284 @@
+{
+  "recordedAt": "2026-09-11T20:13:20.525791+00:00",
+  "scope": "Every readable Story counted; default recent eight retained without cherry-picking. Separate visible UI review is authoritative for usability.",
+  "projects": [
+    {
+      "project": "ProjectFlow",
+      "totalReadableStories": 240,
+      "diagnostics": {
+        "modelStatus": "MODEL_VALIDATED",
+        "totalWindowCount": 11,
+        "succeededWindowCount": 11,
+        "failedWindowCount": 0,
+        "pendingWindowCount": 0,
+        "chapterSynthesisFailedCount": 0,
+        "chapterSynthesisPendingCount": 0,
+        "eventConservation": true,
+        "invalidEvidenceRefCount": 0,
+        "crossProjectRefCount": 0,
+        "unsupportedStrongFactCount": 0,
+        "unsupportedClaimCount": 0,
+        "technicalLeakCount": 0,
+        "representativePrimaryCoverage": 0.7062457409414724
+      },
+      "recentDefaultStories": [
+        {
+          "title": "说明项目材料的设计，形成可查阅的方案",
+          "summary": "项目材料中已经说明项目材料的设计内容，实际实现情况仍待确认。",
+          "time": {
+            "basis": "PR_UPDATED_AT",
+            "label": "提案更新时间",
+            "eventTimeKnown": false,
+            "sourceBases": [
+              "PR_UPDATED_AT"
+            ]
+          },
+          "sourceCount": 1,
+          "claimState": "DECLARED"
+        },
+        {
+          "title": "整理开发工作线相关代码，记录当前能够确认的变化",
+          "summary": "现有来源只能确认开发工作线相关代码发生过变化，具体动作和结果仍不完整。",
+          "time": {
+            "basis": "AGENT_GIT_RECORD_TIME",
+            "label": "工作结果入库时间",
+            "eventTimeKnown": false,
+            "sourceBases": [
+              "AGENT_GIT_RECORD_TIME"
+            ]
+          },
+          "sourceCount": 12,
+          "claimState": "UNKNOWN"
+        },
+        {
+          "title": "建立项目文档，形成可继续查看的初始成果",
+          "summary": "这一阶段首次形成项目文档，主要内容已纳入项目记录。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 100,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "新增前端代码（含项目理解、开发工作线、工作区相关文件），保留文件变更记录",
+          "summary": "来源记录了前端代码（含项目理解、开发工作线、工作区相关文件）的新增。可确认相应文件变化，不能据此确认功能运行验收通过。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 24,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "完善项目文档，更新已有内容",
+          "summary": "这次调整补充了项目文档的内容，原有记录仍可继续核对。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 10,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "修改相关代码（含项目理解、开发工作线、工作区文件），保留文件变更记录",
+          "summary": "来源记录了相关代码（含项目理解、开发工作线、工作区文件）的修改。可确认相应文件变化，不能据此确认功能运行验收通过。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 1,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "新增后端代码（含开发工作线、项目历程相关文件），保留文件变更记录",
+          "summary": "来源记录了后端代码（含开发工作线、项目历程相关文件）的新增。可确认相应文件变化，不能据此确认功能运行验收通过。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 12,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "说明项目材料的设计，形成可查阅的方案",
+          "summary": "项目材料中已经说明项目材料的设计内容，实际实现情况仍待确认。",
+          "time": {
+            "basis": "PR_UPDATED_AT",
+            "label": "提案更新时间",
+            "eventTimeKnown": false,
+            "sourceBases": [
+              "PR_UPDATED_AT"
+            ]
+          },
+          "sourceCount": 1,
+          "claimState": "DECLARED"
+        }
+      ],
+      "timeBases": {
+        "PR_UPDATED_AT": 4,
+        "AGENT_GIT_RECORD_TIME": 10,
+        "GIT_COMMIT_TIME": 196,
+        "PR_MERGED_AT": 20,
+        "MIXED": 10
+      }
+    },
+    {
+      "project": "Corporation-Agent",
+      "totalReadableStories": 33,
+      "diagnostics": {
+        "modelStatus": "MODEL_VALIDATED",
+        "totalWindowCount": 2,
+        "succeededWindowCount": 2,
+        "failedWindowCount": 0,
+        "pendingWindowCount": 0,
+        "chapterSynthesisFailedCount": 0,
+        "chapterSynthesisPendingCount": 0,
+        "eventConservation": true,
+        "invalidEvidenceRefCount": 0,
+        "crossProjectRefCount": 0,
+        "unsupportedStrongFactCount": 0,
+        "unsupportedClaimCount": 0,
+        "technicalLeakCount": 0,
+        "representativePrimaryCoverage": 0.857858956541451
+      },
+      "recentDefaultStories": [
+        {
+          "title": "建立项目文档，形成可继续查看的初始成果",
+          "summary": "这一阶段首次形成项目文档，主要内容已纳入项目记录。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 10,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "新增沟通、备份、存储相关代码，留下可核对的变更记录",
+          "summary": "此次新增涉及沟通、备份和存储相关代码；现有来源只能确认文件发生变化，不能说明相关功能已通过运行验收。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 8,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "新增前端代码（含通知、沟通、附件相关文件），留下可核对的变更记录",
+          "summary": "此次新增涉及通知、沟通和附件相关文件；现有来源只能确认文件发生变化，不能说明相关功能已通过运行验收。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 19,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "新增后端代码（含通知、沟通、协作相关文件），留下可核对的变更记录",
+          "summary": "此次新增涉及通知、沟通和协作相关文件；现有来源只能确认文件发生变化，不能说明相关功能已通过运行验收。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 35,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "修改相关代码（含通知、沟通、协作文件），留下可核对的变更记录",
+          "summary": "此次修改涉及通知、沟通和协作文件；现有来源只能确认文件发生变化，不能说明功能已通过运行验收。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 1,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "建立项目文档，形成可继续查看的初始成果",
+          "summary": "这一阶段首次形成项目文档，主要内容已纳入项目记录。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 30,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "建立项目版本记录，形成可继续查看和完善的初始记录",
+          "summary": "本阶段首次把相关内容纳入项目版本记录，为后续查看和完善保留了记录。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 4,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "新增项目使用说明，保留文件变更记录",
+          "summary": "来源记录了项目使用说明的新增。可确认相应文件变化，不能据此确认功能运行验收通过。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 22,
+          "claimState": "OBSERVED"
+        }
+      ],
+      "timeBases": {
+        "GIT_COMMIT_TIME": 33
+      }
+    }
+  ]
+}

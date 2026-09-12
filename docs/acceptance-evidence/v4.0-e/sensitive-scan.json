@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "scannedAt": "2026-09-12T07:47:29.211423+00:00",
+  "textFiles": 1761,
+  "includesMarkdownAndText": true,
+  "exactExistingCredentialAndEndpointChecked": true,
+  "filenameEnumeration": "Git NUL-separated UTF-8 filenames",
+  "findings": [],
+  "scope": "Tracked and non-ignored untracked text; CI secret patterns and exact existing Windows User credential/endpoint; machine paths in new E evidence."
+}

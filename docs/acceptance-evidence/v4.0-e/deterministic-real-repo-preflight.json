@@ -1,0 +1,17 @@
+[ {
+  "project" : "ProjectFlow",
+  "events" : 4302,
+  "chapters" : 11,
+  "head" : "81730744a325ccc2391009b367ca4ba95aef6d14",
+  "repositoryUnchanged" : true,
+  "modelRequests" : 0,
+  "eventConservation" : true
+}, {
+  "project" : "Corporation-Agent",
+  "events" : 521,
+  "chapters" : 8,
+  "head" : "f80553c61aaf19b19e729d47739d6b8f35c1dffd",
+  "repositoryUnchanged" : true,
+  "modelRequests" : 0,
+  "eventConservation" : true
+} ]

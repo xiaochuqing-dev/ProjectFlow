@@ -1,0 +1,49 @@
+工作线依据
+V4.0-D：真实项目理解、来源边界与开发工作线
+项目明确声明
+
+codex/v4.0-d-real-project-understanding
+
+合入状态
+
+PR 尚未合并
+
+相对主线的提交关系
+
+领先 12 / 落后 0
+
+领先 / 落后计数比较 Git 提交，不能证明工作尚未合入。
+
+PR 中的明确声明
+PR #24：V4.0-D：真实项目理解、来源边界与开发工作线
+
+本次把真实项目的 Current、History 和开发工作线纳入同一 V4 阅读流程。Current 区分直接证据、项目声明、系统归纳、本地观察和未知；History 默认变化概览；Git/PR 工作线保留来源时间、合入依据和 stacked 依赖。普通项目、接入、设置及历程路径进入 V4，列表读取失败不会显示成空库。 此 PR 保持 Draft，base 为 `codex/v4.0-c-gui-productization`，依赖 Draft #23；#23 依赖 #22。没有 Ready、merge、Tag、Release 或 Desktop Shell 集成。 验证与限制： - `2c14bf1` 已通过 backend/H2 739 项（12 skipped，727 实际执行）、PG16、生产前端[ABSOLUTE_PATH_REDACTED] Playwright 37 项、前端 contracts 69 项及 Windows CI。最终显示修正通过本地列表错误回归、根入口重新构建、56 张最终真实[ABSOLUTE_PATH_REDACTED] 3000/8080 …
+
+PR 基于 codex/v4.0-c-gui-productization，状态：草稿
+
+检查记录：SUCCESS, SKIPPED
+
+提交样本与变更文件
+结论来源
+本地 Git HEAD 与提交样本
+
+81730744a325ccc2391009b367ca4ba95aef6d14
+
+观察于 2026/9/12 06:00:41
+相对共同祖先的文件变化
+
+1712841b77fd1e8146ce4ab6beaf404e5b1f7a53..81730744a325ccc2391009b367ca4ba95aef6d14
+
+观察于 2026/9/12 06:00:41
+GitHub 分支 HEAD
+
+81730744a325ccc2391009b367ca4ba95aef6d14
+
+观察于 2026/9/12 06:00:41
+PR #24 中的声明及状态
+
+https://github.com/xiaochuqing-dev/ProjectFlow/pull/24
+
+观察于 2026/9/12 06:00:41
+
+仅列出前 40 个变更文件。

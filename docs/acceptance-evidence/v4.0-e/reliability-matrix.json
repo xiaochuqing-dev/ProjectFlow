@@ -1,0 +1,121 @@
+{
+  "recordedAt": "2026-09-12T07:32:22.410141+00:00",
+  "model": "gpt-5.6-sol",
+  "protocol": "OPENAI_RESPONSES",
+  "reasoningEffort": "xhigh",
+  "transportOrigin": "UNDETERMINED",
+  "interpretation": "Observed mitigation and stage recovery; no claim of a permanent network fix or measured outage rate.",
+  "checks": [
+    {
+      "id": "current-real-success",
+      "status": "PASS",
+      "evidenceClass": "REAL",
+      "observed": "ProjectFlow and Corporation-Agent Current each succeeded using the production Gateway, gpt-5.6-sol, OPENAI_RESPONSES, xhigh; two requests per project.",
+      "evidence": "real-model-usage.json"
+    },
+    {
+      "id": "current-no-change",
+      "status": "PASS",
+      "evidenceClass": "REAL",
+      "observed": "Both Current no-change runs reused the saved result with zero transport requests and zero new tokens.",
+      "evidence": "real-model-usage.json"
+    },
+    {
+      "id": "reset-and-bounded-retry",
+      "status": "PASS",
+      "evidenceClass": "REAL_AND_DETERMINISTIC",
+      "observed": "A real History HTTP2_STREAM_RESET recovered with TRANSPORT_RETRY; the failed attempt retained unknown usage. The retry budget remains bounded.",
+      "evidence": "real-model-usage.json; ModelRequestTelemetryTest.boundedHttp2ResetRetryRetainsActualCountAndUnknownTotalUsage"
+    },
+    {
+      "id": "checkpoint-recovery",
+      "status": "PASS",
+      "evidenceClass": "REAL_AND_DETERMINISTIC",
+      "observed": "The third real project retained validated Scout/tool evidence after Final Synthesis failed; recovery invoked only Final Synthesis once and completed.",
+      "evidence": "real-model-usage.json; ProjectUnderstandingServiceTest.finalSynthesisFailurePreservesStageOneAndToolEvidence"
+    },
+    {
+      "id": "preserve-previous-trusted-snapshot",
+      "status": "PASS",
+      "evidenceClass": "DETERMINISTIC",
+      "observed": "Failed semantic refresh keeps the previous successful snapshot and marks it stale; detached stale updates preserve the newer checkpoint.",
+      "evidence": "ProjectUnderstandingServiceTest.failedSemanticRefreshKeepsPreviousSnapshotAndMarksItStale; markingDetachedPreviousStaleKeepsNewerValidatedCheckpoint"
+    },
+    {
+      "id": "failed-job-telemetry",
+      "status": "PASS",
+      "evidenceClass": "DETERMINISTIC",
+      "observed": "Wrapped Current failure reaches JobRunner with two actual requests and UNKNOWN usage, rather than a false zero.",
+      "evidence": "ModelRequestTelemetryTest.wrappedUnderstandingFailurePersistsTwoRequestsThroughJobRunner"
+    },
+    {
+      "id": "partial-usage",
+      "status": "PASS",
+      "evidenceClass": "REAL_AND_DETERMINISTIC",
+      "observed": "An upstream failure without usage leaves totalTokens null/PARTIAL; reported totals contain only completed responses.",
+      "evidence": "real-model-usage.json; ModelRequestTelemetryTest"
+    },
+    {
+      "id": "timeout",
+      "status": "PASS",
+      "evidenceClass": "DETERMINISTIC",
+      "observed": "Executor timeout interrupts only its active transport request and retains normalized timeout diagnostics.",
+      "evidence": "ModelRequestTelemetryTest.executorTimeoutInterruptsOnlyTheActiveRequest"
+    },
+    {
+      "id": "cancellation",
+      "status": "PASS",
+      "evidenceClass": "DETERMINISTIC",
+      "observed": "Cancellation prevents recovery requests and retains an already-entered attempt; cancellation before adapter entry remains NOT_CALLED.",
+      "evidence": "ModelRequestTelemetryTest.cancellationDoesNotRetryOrLoseAnAttemptAndEmptyScopeIsNotCalled; ModelGatewayServiceTest.cancellationStopsRecoveryRequestAfterFirstResponse"
+    },
+    {
+      "id": "stream-terminal-validation",
+      "status": "PASS",
+      "evidenceClass": "DETERMINISTIC",
+      "observed": "Official SDK SSE accepts a completed terminal envelope; a stream ending without a terminal response cannot become successful partial JSON.",
+      "evidence": "OpenAiResponsesStreamingTest"
+    },
+    {
+      "id": "explicit-stream-error",
+      "status": "PASS",
+      "evidenceClass": "DETERMINISTIC",
+      "observed": "Only the explicit HTTP 200 upstream_error/stream_read_error tuple becomes a bounded transport retry; ordinary rejected requests retain HTTP status and unknown usage.",
+      "evidence": "ModelRequestTelemetryTest.explicitUpstreamStreamReadErrorUsesExistingTransportRetryBudget; rejectedRequestKeepsHttpStatusAndUnknownUsageWithoutPayloads"
+    },
+    {
+      "id": "idempotency-and-read-only",
+      "status": "PASS",
+      "evidenceClass": "DETERMINISTIC",
+      "observed": "Existing active-job uniqueness, cancellation, window checkpoints, cache reuse, event conservation and read-only GET contracts passed the full backend/PostgreSQL suite.",
+      "evidence": "verification.json; continuity-regression.json"
+    },
+    {
+      "id": "real-cancellation-and-runtime-restart",
+      "status": "PASS",
+      "evidenceClass": "REAL",
+      "observed": "Cancelling the obsolete History run retained telemetry for 18 completed transport attempts with 337959 reported tokens; the nineteenth client-cancelled attempt has unknown usage, so exact usage remains PARTIAL. Four clean successful Story windows and seven successful but wording-affected windows remained persisted. After database backup and runtime restart, all three successful Current response hashes and the prior complete History timestamp were unchanged.",
+      "evidence": "failed-runs/obsolete-history-run-cancelled.json"
+    },
+    {
+      "id": "final-persisted-history-recovery",
+      "status": "PASS",
+      "evidenceClass": "REAL",
+      "observed": "Final ProjectFlow recovery reused twelve successful windows, completed fourteen of fourteen windows and all chapters with six transport requests, preserved all 4312 events with zero updates, and retained failed-attempt usage as PARTIAL.",
+      "evidence": "history-field-run-diagnostics.json; failed-runs/persisted-identity-history-recovery-transport.json"
+    },
+    {
+      "id": "final-persisted-no-change",
+      "status": "PASS",
+      "evidenceClass": "REAL",
+      "observed": "All three Current responses survived runtime replacement and a zero-request refresh. Final History no-change preserved all 338 ProjectFlow and 22 Corporation Story responses with zero requests and NOT_CALLED usage.",
+      "evidence": "restart-checkpoint-retention.json; history-final-nochange.json"
+    }
+  ],
+  "limitations": [
+    "No billing receipt: cost is UNKNOWN.",
+    "Missing upstream usage is not estimated as zero.",
+    "Mock transport tests are contract evidence, not real relay availability measurements.",
+    "Owner Review is separate and remains NOT_REVIEWED."
+  ]
+}

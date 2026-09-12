@@ -1,0 +1,115 @@
+变化详情
+ProjectFlow · 提交时间 · 2026-09-10
+返回主变化
+新增和修改项目检查记录与截图
+
+这组来源包含项目文档的变更记录。可确认文件已新增和修改，不能据此确认功能运行验收通过。
+
+01
+此前状态
+
+现有来源未覆盖项目检查记录与截图变更前的完整内容，不能证明该类内容的初始状态。
+
+02
+本次变化
+
+本次新增和修改的具体范围包括：项目理解文档、报告文档、开发工作线相关文件、项目理解相关文件、审阅相关文件。完整范围可在来源明细核对。
+
+03
+当前结果
+
+项目检查记录与截图已留下可追溯的新增和修改记录；这些记录证明代码或材料变化，功能效果和验证结果仍待独立证据。
+
+尚未确认
+目前没有足够信息确认为什么做这次调整。
+覆盖与缺口
+文本变化仅是该版本文档的有界摘录；文档内的功能或验收陈述不等于独立验证。
+查看工程证据与来源
+逐文件变更（113 条来源）
+新增项目检查记录与文档
+
+docs/acceptance-evidence/v4.0-d/README.md
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+覆盖与缺口
+文本变化仅是该版本文档的有界摘录；文档内的功能或验收陈述不等于独立验证。
+查看 Evidence 详情
+原始提交与来源信息
+新增项目检查记录与文档
+
+docs/acceptance-evidence/v4.0-d/branch-workline-audit.json
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+新增项目检查记录与文档
+
+docs/acceptance-evidence/v4.0-d/ci.json
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+新增项目检查记录与文档
+
+docs/acceptance-evidence/v4.0-d/claim-audit.json
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+新增项目检查记录与文档
+
+docs/acceptance-evidence/v4.0-d/failed-runs/Corporation-Agent-understanding-after-cache-fix.json
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+新增项目检查记录与文档
+
+docs/acceptance-evidence/v4.0-d/failed-runs/Corporation-Agent-understanding-job.json
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+新增项目检查记录与文档
+
+docs/acceptance-evidence/v4.0-d/failed-runs/ProjectFlow-job.json
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+新增项目检查记录与文档
+
+docs/acceptance-evidence/v4.0-d/failed-runs/ProjectFlow-understanding-after-cache-fix.json
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+新增项目检查记录与文档
+
+docs/acceptance-evidence/v4.0-d/failed-runs/ProjectFlow-understanding-job.json
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+新增项目检查记录与文档
+
+docs/acceptance-evidence/v4.0-d/failed-runs/model-review-round1.json
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+第 1 / 12 页
+工程兼容工具：来源审计与修正
+查看故事工程详情
+返回阅读
+工程证据始终保留，展示不会改变事实

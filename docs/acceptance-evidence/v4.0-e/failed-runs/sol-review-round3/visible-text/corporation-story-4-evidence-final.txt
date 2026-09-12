@@ -1,0 +1,72 @@
+变化详情
+Corporation-Agent · 提交时间 · 2026-09-05 – 2026-09-09
+新增并修改项目使用说明，形成可追溯的文档记录
+
+本阶段覆盖项目使用说明的新增和修改，只能确认文档发生变化，不能据此判断功能验收结果。
+
+01
+此前状态
+
+现有来源未完整记录项目使用说明变更前的内容，因此无法确认其初始状态。
+
+02
+本次变化
+
+本次新增并修改了项目使用说明对应的文件。
+
+03
+当前结果
+
+来源中已留有项目使用说明的新增和修改记录，功能效果和验证结果仍需独立证据确认。
+
+尚未确认
+目前没有足够信息确认为什么做这次调整。
+查看工程证据与来源
+完善项目文档，并保留原始提交信息供核对。
+
+Git 记录 · 修改 · 在本次读取的历史中
+
+收起 Evidence 详情
+docs: record completed V0 acceptance and successful CI
+
+commit:1409f5dc2ca9dc36cdbf378d13c67620622c0102
+
+当前性：在本次读取的历史中 · 验证：OBSERVED
+
+覆盖：{"source":"git","fileChangeCount":2,"timeBasis":"GIT_COMMIT_TIME","timeLabel":"提交时间"} · 版本：1409f5dc2ca9dc36cdbf378d13c67620622c0102
+
+原始提交与来源信息
+
+docs: record completed V0 acceptance and successful CI
+
+提交时间 · 2026-09-06T04:09:25Z
+
+证据身份：OBSERVED · SOURCE_BACKED
+
+README.md
+
+docs/reports/Corporation-Agent_V0_Closeout_Report.md
+
+完善项目文档，并保留原始提交信息供核对。
+
+Git 记录 · 修改 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+完善项目检查记录与文档，并保留原始提交信息供核对。
+
+Git 记录 · 修改 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+完善项目文档，并保留原始提交信息供核对。
+
+Git 记录 · 修改 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+逐文件变更（11 条来源）
+工程兼容工具：来源审计与修正
+查看故事工程详情
+返回阅读
+工程证据始终保留，展示不会改变事实

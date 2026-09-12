@@ -58,7 +58,7 @@ public final class ProjectHistoryLanguageService {
         String title = switch (transition == null ? Transition.UNKNOWN_TRANSITION : transition) {
             case CREATED -> "建立" + object + "，形成可继续查看的初始成果";
             case MODIFIED -> "完善" + object + "，更新已有内容";
-            case REMOVED -> "移除" + object + "，当前项目不再保留这项内容";
+            case REMOVED -> "移除" + object + "，记录一次版本内的删除";
             case RESTORED -> "恢复" + object + "，让此前移除的内容重新出现";
             case RENAMED -> "调整" + object + "的名称，原有内容继续保留";
             case MOVED -> "调整" + object + "的存放位置，原有内容继续保留";
@@ -72,8 +72,9 @@ public final class ProjectHistoryLanguageService {
         String summary = switch (transition == null ? Transition.UNKNOWN_TRANSITION : transition) {
             case CREATED -> "这一阶段首次形成" + object + "，主要内容已纳入项目记录。";
             case MODIFIED -> "这次调整补充了" + object + "的内容，原有记录仍可继续核对。";
-            case REMOVED, REVERTED -> object + "已退出当前结果，原始来源仍保留在工程详情中。";
-            case RESTORED, REAPPLIED -> object + "重新回到当前结果，此前变化仍可从历史中核对。";
+            case REMOVED -> "来源提交记录了" + object + "的移除；该事件不能单独证明当前目录仍缺少这些内容。";
+            case REVERTED -> "来源记录了对" + object + "上一项变化的撤销，具体回退范围仍可在工程详情中核对。";
+            case RESTORED, REAPPLIED -> object + "在这次变更中重新出现，此前变化仍可从历史中核对。";
             case RENAMED, MOVED -> object + "调整了名称或位置，内容本身继续保留。";
             case REPLACED -> object + "换成了新的内容版本，旧版本仍可从历史中核对。";
             case SPLIT -> object + "被整理为多个部分，方便分别查看。";
@@ -89,7 +90,7 @@ public final class ProjectHistoryLanguageService {
         String change = switch (transition == null ? Transition.UNKNOWN_TRANSITION : transition) {
             case CREATED -> "这一阶段首次建立" + object + "，并保存了相关内容。";
             case MODIFIED -> "这一阶段补充或调整了" + object + "的现有内容。";
-            case REMOVED -> "这一阶段从当前项目结果中移除了" + object + "。";
+            case REMOVED -> "这一阶段从对应版本中移除了" + object + "。";
             case RESTORED -> "这一阶段把此前移除的" + object + "恢复回来。";
             case RENAMED -> "这一阶段更改了" + object + "的名称。";
             case MOVED -> "这一阶段调整了" + object + "的存放位置。";
@@ -103,8 +104,9 @@ public final class ProjectHistoryLanguageService {
         String after = switch (transition == null ? Transition.UNKNOWN_TRANSITION : transition) {
             case CREATED -> "项目中已有" + object + "，后续可以继续查看和完善。";
             case MODIFIED -> object + "已更新为当前记录的内容。";
-            case REMOVED, REVERTED -> "当前项目结果中已不再包含" + object + "。";
-            case RESTORED, REAPPLIED -> object + "已重新出现在当前项目中。";
+            case REMOVED -> "删除已记录在该版本的变更中，后续是否恢复需要继续核对。";
+            case REVERTED -> "该版本记录了对先前变化的回退，不能据此判断整个对象的当前状态。";
+            case RESTORED, REAPPLIED -> object + "已在对应版本中恢复，后续状态需另查来源。";
             case RENAMED, MOVED -> object + "以新的名称或位置继续保留。";
             case REPLACED -> "当前项目采用" + object + "的新内容版本。";
             case SPLIT -> object + "目前可以按不同部分分别查看。";
@@ -124,13 +126,24 @@ public final class ProjectHistoryLanguageService {
     ) {
         Presentation observed = fallback(transition, subject, paths, sourceLabels, transitions);
         String object = observed.object();
+        if (claimState == ProjectHistoryNarrativeEntailmentValidator.ClaimState.DECLARED
+            && subject != null && subject.matches("(?:pull-request|issue)-\\d+")) {
+            return new Presentation(
+                "记录" + object + "的来源声明",
+                "作者的文字说明涉及" + object + "；这些陈述不能单独证明实现或验证结果。",
+                "这份来源未独立证明变更前的完整状态。",
+                "本次保留作者对变更范围的说明，可继续下钻核对原始来源。",
+                "来源声明已经记录；合入、实现和验证状态需要各自的直接证据。",
+                object
+            );
+        }
         ProjectHistoryNarrativeEntailmentValidator.ClaimState state = claimState == null
             ? ProjectHistoryNarrativeEntailmentValidator.ClaimState.UNKNOWN : claimState;
         return switch (state) {
             case PLANNED -> new Presentation(
                 "规划" + object + "，明确后续建设方向",
                 "现有材料记录了" + object + "的目标和范围，但还不能确认已经实现。",
-                "此前材料中还没有明确记录" + object + "的规划。",
+                "现有来源未独立确认此前" + object + "规划的完整状态。",
                 "这一阶段在项目材料中补充了" + object + "的规划。",
                 "项目已经记录" + object + "的方向，实际实现状态仍需代码证据确认。",
                 object
@@ -138,7 +151,7 @@ public final class ProjectHistoryLanguageService {
             case DECLARED -> new Presentation(
                 "说明" + object + "的设计，形成可查阅的方案",
                 "项目材料中已经说明" + object + "的设计内容，实际实现情况仍待确认。",
-                "此前还没有完整记录" + object + "的设计说明。",
+                "此前" + object + "设计说明的完整状态未得到独立确认。",
                 "这一阶段补充了" + object + "的设计和范围说明。",
                 "项目中已有" + object + "的方案记录，但不能据此判断功能已经实现。",
                 object
@@ -146,15 +159,15 @@ public final class ProjectHistoryLanguageService {
             case CONFIGURED -> new Presentation(
                 "补充" + object + "，完善项目配置基础",
                 "这一阶段增加了" + object + "，为后续本地设置提供参考。",
-                "此前项目中还没有这份" + object + "。",
+                "此前" + object + "的内容需要对照来源版本核对。",
                 "本次加入了" + object + "及其可参考的配置内容。",
                 "项目中已有" + object + "，实际运行状态仍需其他证据确认。",
                 object
             );
             case IMPLEMENTED -> new Presentation(
-                transition == Transition.MODIFIED ? "完善" + object + "，更新已有实现" : "实现" + object + "，形成可使用的功能",
+                transition == Transition.MODIFIED ? "完善" + object + "，更新已有实现" : "新增" + object + "的实现代码",
                 "相关代码已经形成" + object + "的实现，具体范围可在工程详情中核对。",
-                transition == Transition.CREATED ? "此前代码中还没有" + object + "的实现。" : "此前代码中已经有" + object + "的基础实现。",
+                "现有证据未完整覆盖变更前" + object + "的实现状态。",
                 transition == Transition.CREATED ? "这一阶段加入了实现" + object + "所需的代码。" : "这一阶段补充或调整了" + object + "的实现代码。",
                 object + "已有代码实现，但稳定性仍需验证证据支持。",
                 object
@@ -162,7 +175,7 @@ public final class ProjectHistoryLanguageService {
             case VERIFIED -> new Presentation(
                 "验证" + object + "，补充自动化检查依据",
                 "现有验证来源覆盖了" + object + "，验证范围可在工程详情中继续核对。",
-                "此前还没有当前这组针对" + object + "的验证记录。",
+                "现有来源只覆盖这组检查，不能据此判断此前" + object + "的验证情况。",
                 "这一阶段为" + object + "增加或更新了自动化验证。",
                 object + "已有自动化验证记录，但不能据此推断生产环境稳定。",
                 object
@@ -183,8 +196,64 @@ public final class ProjectHistoryLanguageService {
                 object + "的结果仍需核对，当前不作为已完成事实。",
                 object
             );
-            case REMOVED, RESTORED, OBSERVED -> observed;
+            case OBSERVED -> observedFiles(transition, object, paths, transitions, observed);
+            case REMOVED, RESTORED -> observed;
         };
+    }
+
+    private static Presentation observedFiles(Transition transition, String object, List<String> paths, List<String> transitions, Presentation fallback) {
+        if (paths == null || paths.isEmpty()) return fallback;
+        String action = switch (transition == null ? Transition.UNKNOWN_TRANSITION : transition) {
+            case CREATED -> "新增";
+            case REMOVED -> "移除";
+            case RENAMED -> "重命名";
+            case MOVED -> "移动";
+            case RESTORED -> "恢复";
+            default -> "修改";
+        };
+        if (transitions != null && transitions.contains("CREATED") && transitions.contains("MODIFIED")) action = "新增和修改";
+        return new Presentation(
+            action + object,
+            "这组来源包含" + pathScope(paths) + "的变更记录。可确认文件已" + action + "，不能据此确认功能运行验收通过。",
+            "现有来源未覆盖" + object + "变更前的完整内容，不能证明该类内容的初始状态。",
+            "本次" + action + "的具体范围包括：" + pathExamples(paths) + "。完整范围可在来源明细核对。",
+            object + "已留下可追溯的" + action + "记录；这些记录证明代码或材料变化，功能效果和验证结果仍待独立证据。",
+            object
+        );
+    }
+
+    private static String pathScope(List<String> paths) {
+        LinkedHashSet<String> scopes = new LinkedHashSet<>();
+        for (String raw : paths) {
+            String path = raw.replace('\\', '/').toLowerCase(Locale.ROOT);
+            scopes.add(path.startsWith("frontend/") ? "前端代码" : path.startsWith("backend/") ? "后端代码"
+                : path.startsWith("docs/") ? "项目文档" : path.startsWith("scripts/") ? "项目脚本"
+                : path.startsWith(".github/workflows/") ? "持续集成配置" : "配套文件");
+        }
+        return String.join("、", scopes);
+    }
+
+    private static String pathExamples(List<String> paths) {
+        LinkedHashSet<String> examples = new LinkedHashSet<>();
+        for (String raw : paths) {
+            String path = raw.replace('\\', '/');
+            String lower = path.toLowerCase(Locale.ROOT);
+            String objects = ProjectHistoryHumanSubjectLabelService.concreteObjects(List.of(path), "");
+            if (objects.isBlank()) continue;
+            String kind = lower.contains("/test") || lower.startsWith("test") ? "测试文件"
+                : lower.contains("/components/") ? "界面组件"
+                : lower.contains("/api/") ? "接口文件"
+                : lower.contains("/services/") || lower.endsWith("service.java") ? "服务代码"
+                : lower.contains("/models/") ? "数据模型文件"
+                : lower.startsWith("scripts/") ? "脚本"
+                : DOCUMENT_EXTENSIONS.contains(extension(path)) ? "文档" : "相关文件";
+            for (String object : objects.split("、")) {
+                examples.add(object + kind);
+                if (examples.size() == 5) break;
+            }
+            if (examples.size() == 5) break;
+        }
+        return examples.isEmpty() ? pathScope(paths) : String.join("、", examples);
     }
 
     public String readableObject(String subject, List<String> paths, List<String> labels) {
@@ -421,7 +490,7 @@ public final class ProjectHistoryLanguageService {
 
     private static boolean startsWithAction(String value) {
         return containsAnyAtStart(value,
-            "新增", "建立", "完成", "更新", "完善", "移除", "恢复", "调整", "替换", "拆分", "合并",
+            "新增", "建立", "完成", "更新", "修改", "完善", "移除", "恢复", "调整", "替换", "拆分", "合并",
             "撤销", "重新加入", "记录", "规划", "说明", "补充", "实现", "验证", "整理", "形成", "编写"
         );
     }

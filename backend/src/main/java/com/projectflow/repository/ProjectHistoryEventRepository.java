@@ -25,6 +25,8 @@ public interface ProjectHistoryEventRepository
 
     List<ProjectHistoryEvent> findByProjectId(UUID projectId);
 
+    List<ProjectHistoryEvent> findByProjectIdOrderByOccurredAtDesc(UUID projectId, org.springframework.data.domain.Pageable page);
+
     List<ProjectHistoryEvent> findByProjectIdAndIdIn(UUID projectId, Collection<UUID> ids);
 
     long countByProjectIdAndRewriteState(UUID projectId, RewriteState rewriteState);

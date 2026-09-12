@@ -1,5 +1,12 @@
 # Model Gateway V2
 
+## V4.0-E long-request recovery and telemetry
+
+Reasoning Responses with a configured request timeout above five minutes use the official SDK SSE transport with `store(false)` and SDK retries disabled. Only terminal completed/incomplete/failed responses are normalized; deltas and reasoning are never persisted. The Gateway retains the configured model/effort/budget and finite timeout. An HTTP 200 carrying the explicit `upstream_error` / `stream_read_error` tuple is a network failure eligible for the same existing two-attempt transport bound; unrelated HTTP errors are not blindly retried.
+
+A per-Job collector counts actual adapter starts across executor threads and semantic exception wrappers. Heartbeat/finalization publish completed, failed and in-flight attempts, safe normalized failure/HTTP status and nullable usage. `NOT_CALLED` means zero attempts; `UNKNOWN` and `PARTIAL` preserve missing terminal usage, with separate reported sums. No endpoint, key, Header value, prompt, response or reasoning enters telemetry. Understanding stage reuse is an existing-snapshot concern and does not add another Gateway or model client.
+
+
 ## Why and what remains stable
 
 V3.4.5 removes the assumption that every Provider speaks OpenAI Chat Completions. `ModelGatewayService` remains the stable business facade and preserves the V3.3.8 reliability core: registered task types, dynamic output budgets, model-aware temperature omission, bounded concurrency/cancellation, transport retry, truncation and empty-after-reasoning recovery, partial JSON parsing, one-shot Schema repair and safe diagnostics.

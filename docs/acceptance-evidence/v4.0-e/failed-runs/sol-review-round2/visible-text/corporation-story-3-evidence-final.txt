@@ -1,0 +1,71 @@
+变化详情
+Corporation-Agent · 提交时间 · 2026-09-08 – 2026-09-09
+新增并修改项目版本记录，留下可追溯的变更记录
+
+本次变化涉及项目版本记录对应的配套文件；目前只能确认文件有新增和修改，尚无功能运行或验收结果的直接证据。
+
+01
+此前状态
+
+现有来源没有覆盖项目版本记录变更前的完整内容，因此其原有状态无法确认。
+
+02
+本次变化
+
+本阶段新增并修改了项目版本记录对应的配套文件，完整范围可在来源明细中核对。
+
+03
+当前结果
+
+项目版本记录现已留下可追溯的新增和修改记录；这些记录仅能说明材料发生变化，不能确认功能效果或验证结果。
+
+尚未确认
+目前没有足够信息确认为什么做这次调整。
+查看工程证据与来源
+新增项目版本记录
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+收起 Evidence 详情
+新增 VERSION
+
+commit:e51aaf42ba21994d43bd3fbc8e2cb2fb88b91c40
+
+当前性：在本次读取的历史中 · 验证：OBSERVED
+
+覆盖：{"source":"git-name-status","metadataOnly":false,"timeLabel":"提交时间","timeBasis":"GIT_COMMIT_TIME"} · 版本：e51aaf42ba21994d43bd3fbc8e2cb2fb88b91c40
+
+新增 VERSION
+
+file:VERSION
+
+当前性：在本次读取的历史中 · 验证：OBSERVED
+
+覆盖：{"source":"git-name-status","metadataOnly":false,"timeLabel":"提交时间","timeBasis":"GIT_COMMIT_TIME"} · 版本：e51aaf42ba21994d43bd3fbc8e2cb2fb88b91c40
+
+原始提交与来源信息
+
+新增 VERSION
+
+提交时间 · 2026-09-08T09:26:42Z
+
+证据身份：OBSERVED · SOURCE_BACKED
+
+VERSION
+
+修改项目版本记录
+
+Git 记录 · 修改 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+修改项目版本记录
+
+Git 记录 · 修改 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+工程兼容工具：来源审计与修正
+查看故事工程详情
+返回阅读
+工程证据始终保留，展示不会改变事实

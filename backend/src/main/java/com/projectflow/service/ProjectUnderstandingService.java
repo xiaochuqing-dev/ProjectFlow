@@ -80,6 +80,10 @@ public class ProjectUnderstandingService {
     private final FinalProfileSynthesisService finalSynthesisService;
     private final DynamicProjectProfileSynthesizer profileSynthesizer;
     private final ObjectMapper objectMapper;
+    private static final String CHECKPOINT_FIELD = "validatedScoutCheckpoint";
+
+    @org.springframework.beans.factory.annotation.Value("${projectflow.model.reasoning-effort:${PROJECTFLOW_MODEL_REASONING_EFFORT:high}}")
+    private String configuredReasoningEffort = "high";
 
     public ProjectUnderstandingService(
         ProjectRepository projectRepository,
@@ -144,7 +148,8 @@ public class ProjectUnderstandingService {
             && provider != null
             && ("MODEL_UNAVAILABLE".equals(current.getSemanticStatus())
                 || "MODEL_FAILED".equals(current.getSemanticStatus())
-                || "FAILED_DEGRADED".equals(current.getSemanticStatus()));
+                || "FAILED_DEGRADED".equals(current.getSemanticStatus())
+                || "FAILED_DEGRADED".equals(readSnapshot(current).finalSynthesisStatus()));
         boolean cacheCandidate = current != null
             && current.getStructureIndexVersion().equals(CompositeProjectStructureIndexer.INDEX_VERSION)
             && current.getModelAnalysisVersion().equals(MODEL_ANALYSIS_VERSION)
@@ -314,7 +319,17 @@ public class ProjectUnderstandingService {
 
         progress.accept("SEMANTIC_SCOUT", "正在对压缩候选做一次语义分诊与项目形态判断");
         try {
-            ScoutResult semantic = semanticScoutService.scout(
+            String checkpointKey = ProjectHistorySourceCollector.sha256(
+                MODEL_ANALYSIS_VERSION + "|" + provider.getId() + "|" + provider.getModelName()
+                    + "|" + provider.getProtocol() + "|" + configuredReasoningEffort
+                    + "|" + project.getName() + "|" + project.getDescription()
+                    + "|" + scan.intake().contentHash() + "|" + scan.intake().git()
+                    + "|" + historical.coverage().gitCommitCount() + "|" + historical.coverage().coveredCommitCount()
+                    + "|" + historical.coverage().tagCount());
+            ScoutResult checkpoint = readScoutCheckpoint(current, checkpointKey);
+            boolean reusedScout = checkpoint != null;
+            if (reusedScout) progress.accept("SCOUT_CHECKPOINT_REUSED", "复用同一来源下已校验的语义分诊，只恢复后续阶段");
+            ScoutResult semantic = reusedScout ? checkpoint : semanticScoutService.scout(
                 provider,
                 project,
                 scan.intake(),
@@ -332,6 +347,12 @@ public class ProjectUnderstandingService {
                 true
             );
             planTimeMs += elapsedMs(semanticPlanStarted);
+            if (!reusedScout) {
+                DynamicProjectProfileResponse validatedProfile = profileSynthesizer.synthesize(
+                    project, scan.intake(), index, discovery.sourceMap(), historical.coverage(),
+                    semantic.scout(), semanticPlan, semantic.root(), semantic.allowedEvidence());
+                saveScoutCheckpoint(projectId, current, deterministic, checkpointKey, semantic, validatedProfile);
+            }
             progress.accept("CAPABILITY_EXECUTION", "正在按 Scout 与 Planner 选择执行固定参数工程能力");
             long executionStarted = System.nanoTime();
             ExecutionOutcome execution = executionCoordinator.execute(
@@ -347,15 +368,15 @@ public class ProjectUnderstandingService {
             ContextPackingDiagnostics contextPacking = semantic.contextPacking();
             boolean invalidEvidenceFiltered = semantic.invalidEvidenceFiltered();
             long finalModelTimeMs = 0;
-            int logicalModelRequests = 1;
+            int logicalModelRequests = reusedScout ? 0 : 1;
             String finalSynthesisStatus = execution.highValueEvidenceProduced()
                 ? "PENDING"
                 : "SKIPPED_NO_HIGH_VALUE_EVIDENCE";
             List<ModelGatewayService.ModelCallDiagnostics> modelDiagnostics = new ArrayList<>();
-            modelDiagnostics.add(semantic.diagnostics());
+            if (!reusedScout && semantic.diagnostics() != null) modelDiagnostics.add(semantic.diagnostics());
             if (execution.highValueEvidenceProduced() && semanticPlan.maxModelRequests() >= 2) {
                 progress.accept("FINAL_SYNTHESIS", "新增工具证据已通过校验，正在进行第二阶段最终归纳");
-                logicalModelRequests = 2;
+                logicalModelRequests++;
                 long finalModelStarted = System.nanoTime();
                 try {
                     SynthesisResult finalSynthesis = finalSynthesisService.synthesize(
@@ -438,6 +459,10 @@ public class ProjectUnderstandingService {
                 logicalModelRequests
             );
             progress.accept("PERSIST_UNDERSTANDING", "正在校验证据并保存当前理解");
+            if ("FAILED_DEGRADED".equals(finalSynthesisStatus) && current != null
+                && !Set.of("MODEL_FAILED", "MODEL_UNAVAILABLE", "FAILED_DEGRADED").contains(current.getSemanticStatus())) {
+                throw new UnderstandingModelException("最终归纳失败；保留上次可信理解和本次已校验分诊检查点", null);
+            }
             ProjectUnderstandingSnapshotResponse saved = persistSnapshot(
                 projectId,
                 withAnalysisMetrics(enriched, metrics)
@@ -454,10 +479,10 @@ public class ProjectUnderstandingService {
             preservePreviousAsStale(current);
             throw new IllegalStateException("项目理解任务已中断；已保留上一次保存的理解", exception);
         } catch (Exception exception) {
-            if (current == null) {
+            if (current == null && understandingRepository.findByProjectId(projectId).isEmpty()) {
                 persistSnapshot(projectId, withModelFailure(deterministic));
             } else {
-                preservePreviousAsStale(current);
+                preservePreviousAsStale(current != null ? current : understandingRepository.findByProjectId(projectId).orElse(null));
             }
             throw new UnderstandingModelException(
                 current == null
@@ -686,8 +711,8 @@ public class ProjectUnderstandingService {
         );
         allClaims.addAll(profileClaims(dynamicProfile));
         UnderstandingQuality quality = new UnderstandingQuality(
-            semanticScout.contractDiagnostics() != null
-                && "FAILED_DEGRADED".equals(semanticScout.contractDiagnostics().status())
+            "FAILED_DEGRADED".equals(finalSynthesisStatus) || (semanticScout.contractDiagnostics() != null
+                && "FAILED_DEGRADED".equals(semanticScout.contractDiagnostics().status()))
                     ? "FAILED_DEGRADED"
                     : "SUCCEEDED",
             allClaims.isEmpty() ? "LOW" : confidence(index),
@@ -870,13 +895,20 @@ public class ProjectUnderstandingService {
             ProjectUnderstandingSnapshot entity = understandingRepository.findByProjectId(projectId)
                 .orElseGet(() -> new ProjectUnderstandingSnapshot(projectId));
             ProjectUnderstandingSnapshotResponse withId = withIdentity(response, entity.getId(), "CURRENT");
+            com.fasterxml.jackson.databind.node.ObjectNode storedJson = objectMapper.valueToTree(withId);
+            // Keep a validated checkpoint only while the final stage needs
+            // recovery. Successful snapshots naturally remove it.
+            if ("FAILED_DEGRADED".equals(response.finalSynthesisStatus()) && entity.getSnapshotJson() != null) {
+                JsonNode checkpoint = objectMapper.readTree(entity.getSnapshotJson()).get(CHECKPOINT_FIELD);
+                if (checkpoint != null) storedJson.set(CHECKPOINT_FIELD, checkpoint);
+            }
             entity.replace(
                 response.sourceRevision(),
                 response.intake().contentHash(),
                 response.structureIndexVersion(),
                 response.modelAnalysisVersion(),
                 response.quality().semanticStatus(),
-                objectMapper.writeValueAsString(withId),
+                objectMapper.writeValueAsString(storedJson),
                 response.analyzedAt()
             );
             understandingRepository.save(entity);
@@ -888,8 +920,11 @@ public class ProjectUnderstandingService {
 
     private ProjectUnderstandingSnapshotResponse readSnapshot(ProjectUnderstandingSnapshot entity) {
         try {
-            ProjectUnderstandingSnapshotResponse stored = objectMapper.readValue(
-                entity.getSnapshotJson(),
+            com.fasterxml.jackson.databind.node.ObjectNode json = (com.fasterxml.jackson.databind.node.ObjectNode)
+                objectMapper.readTree(entity.getSnapshotJson());
+            json.remove(CHECKPOINT_FIELD);
+            ProjectUnderstandingSnapshotResponse stored = objectMapper.treeToValue(
+                json,
                 ProjectUnderstandingSnapshotResponse.class
             );
             return withIdentity(stored, entity.getId(), entity.getCurrentStatus());
@@ -902,10 +937,53 @@ public class ProjectUnderstandingService {
         }
     }
 
+    private ScoutResult readScoutCheckpoint(ProjectUnderstandingSnapshot entity, String key) {
+        if (entity == null) return null;
+        try {
+            JsonNode checkpoint = objectMapper.readTree(entity.getSnapshotJson()).path(CHECKPOINT_FIELD);
+            if (!key.equals(checkpoint.path("key").asText())) return null;
+            SemanticScoutResponse scout = objectMapper.treeToValue(checkpoint.path("scout"), SemanticScoutResponse.class);
+            com.fasterxml.jackson.databind.node.ObjectNode root = objectMapper.createObjectNode();
+            root.set("dynamicProfile", checkpoint.path("profile"));
+            Set<String> evidence = new LinkedHashSet<>();
+            checkpoint.path("allowedEvidence").forEach(value -> evidence.add(value.asText()));
+            return new ScoutResult(scout, root, Set.copyOf(evidence),
+                null, 0, checkpoint.path("invalidEvidenceFiltered").asBoolean(),
+                objectMapper.treeToValue(checkpoint.path("contextPacking"), ContextPackingDiagnostics.class));
+        } catch (Exception ignored) {
+            return null; // incompatible checkpoint triggers bounded fresh Scout
+        }
+    }
+
+    private void saveScoutCheckpoint(UUID projectId, ProjectUnderstandingSnapshot previous,
+        ProjectUnderstandingSnapshotResponse deterministic, String key, ScoutResult scout,
+        DynamicProjectProfileResponse validatedProfile) throws JsonProcessingException {
+        // Persist only the normalized, evidence-filtered read model. Never the
+        // model root, prompt, source text, raw response or reasoning.
+        if (previous == null) persistSnapshot(projectId, withModelFailure(deterministic));
+        ProjectUnderstandingSnapshot entity = understandingRepository.findByProjectId(projectId).orElseThrow();
+        com.fasterxml.jackson.databind.node.ObjectNode json = (com.fasterxml.jackson.databind.node.ObjectNode)
+            objectMapper.readTree(entity.getSnapshotJson());
+        com.fasterxml.jackson.databind.node.ObjectNode checkpoint = objectMapper.createObjectNode();
+        checkpoint.put("key", key);
+        checkpoint.set("scout", objectMapper.valueToTree(scout.scout()));
+        checkpoint.set("profile", objectMapper.valueToTree(validatedProfile));
+        checkpoint.set("allowedEvidence", objectMapper.valueToTree(scout.allowedEvidence()));
+        checkpoint.set("contextPacking", objectMapper.valueToTree(scout.contextPacking()));
+        checkpoint.put("invalidEvidenceFiltered", scout.invalidEvidenceFiltered());
+        json.set(CHECKPOINT_FIELD, checkpoint);
+        entity.recordCheckpointJson(objectMapper.writeValueAsString(json));
+        understandingRepository.save(entity);
+    }
+
     private void preservePreviousAsStale(ProjectUnderstandingSnapshot previous) {
         if (previous != null) {
-            previous.markStale();
-            understandingRepository.save(previous);
+            // A checkpoint may have been saved through a different detached
+            // entity. Mark the latest row stale without overwriting that JSON.
+            ProjectUnderstandingSnapshot latest = understandingRepository.findByProjectId(previous.getProjectId())
+                .orElse(previous);
+            latest.markStale();
+            understandingRepository.save(latest);
         }
     }
 

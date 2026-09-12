@@ -1,0 +1,93 @@
+变化详情
+ProjectFlow · 提交时间 · 2026-09-09
+返回主变化
+新增和修改后端代码（含开发工作线、项目历程相关文件）
+
+这组来源包含后端代码的变更记录。可确认文件已新增和修改，不能据此确认功能运行验收通过。
+
+01
+此前状态
+
+现有来源未覆盖后端代码（含开发工作线、项目历程相关文件）变更前的完整内容，不能证明该类内容的初始状态。
+
+02
+本次变化
+
+本次新增和修改的具体范围包括：开发工作线相关文件、开发工作线测试文件、项目历程相关文件、项目历程服务代码。完整范围可在来源明细核对。
+
+03
+当前结果
+
+后端代码（含开发工作线、项目历程相关文件）已留下可追溯的新增和修改记录；这些记录证明代码或材料变化，功能效果和验证结果仍待独立证据。
+
+尚未确认
+目前没有足够信息确认为什么做这次调整。
+查看工程证据与来源
+新增后端项目骨架
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+收起 Evidence 详情
+新增 backend/src/main/java/com/projectflow/service/ProjectWorklineCollector.java
+
+commit:358b9c2bc59c9bc8c5d5055707cd17e1852551be
+
+当前性：在本次读取的历史中 · 验证：OBSERVED
+
+覆盖：{"timeLabel":"提交时间","metadataOnly":false,"source":"git-name-status","timeBasis":"GIT_COMMIT_TIME"} · 版本：358b9c2bc59c9bc8c5d5055707cd17e1852551be
+
+新增 backend/src/main/java/com/projectflow/service/ProjectWorklineCollector.java
+
+file:backend/src/main/java/com/projectflow/service/ProjectWorklineCollector.java
+
+当前性：在本次读取的历史中 · 验证：OBSERVED
+
+覆盖：{"timeLabel":"提交时间","metadataOnly":false,"source":"git-name-status","timeBasis":"GIT_COMMIT_TIME"} · 版本：358b9c2bc59c9bc8c5d5055707cd17e1852551be
+
+原始提交与来源信息
+新增后端项目骨架
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+新增后端项目骨架
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+新增后端项目骨架
+
+Git 记录 · 新增 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+修改后端项目骨架
+
+Git 记录 · 修改 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+修改后端项目骨架
+
+Git 记录 · 修改 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+修改后端项目骨架
+
+Git 记录 · 修改 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+修改后端项目骨架
+
+Git 记录 · 修改 · 在本次读取的历史中
+
+查看 Evidence 详情
+原始提交与来源信息
+工程兼容工具：来源审计与修正
+查看故事工程详情
+返回阅读
+工程证据始终保留，展示不会改变事实

@@ -1,0 +1,38 @@
+{
+  "recordedAt": "2026-09-11T23:06:21.903132+00:00",
+  "observations": [
+    {
+      "run": "semantic-scope-full-verify",
+      "tests": 765,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 11,
+      "failure": "First current-repository chapter incorrectly headlined repository ignore rules; PostgreSQL phase not reached."
+    },
+    {
+      "run": "semantic-scope-dogfood-diagnose",
+      "failure": "Same dominance regression reproduced; all source events retained; cacheHit true; representative coverage 0.7969833524098032."
+    },
+    {
+      "run": "semantic-temporal-dogfood",
+      "failure": "Ten-day chronological presentation compression reduced long overlaps; first chapter dominance still failed; coverage 0.7114200324947484."
+    },
+    {
+      "run": "semantic-temporal2-dogfood",
+      "failure": "Requiring day-separated reading boundaries reduced representative coverage to 0.4239419283542546; not accepted."
+    },
+    {
+      "run": "semantic-temporal3-dogfood",
+      "failure": "Using latest end time across all preceding Stories still blocked useful reading splits; coverage 0.48204339897698956; not accepted."
+    },
+    {
+      "jobId": "a0976f8c-edc8-4e12-84a2-8bfdc8ac99fd",
+      "status": "CANCELLED",
+      "requestCount": 5,
+      "completed": 3,
+      "failed": 2,
+      "usageAvailability": "PARTIAL",
+      "reason": "Implementation temporal correction required before further paid History windows; preserved existing successful Current and prior history/checkpoints."
+    }
+  ]
+}

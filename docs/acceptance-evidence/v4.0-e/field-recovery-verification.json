@@ -1,0 +1,45 @@
+{
+  "recordedAt": "2026-09-12T02:53:48.034722+00:00",
+  "functionalSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491",
+  "finding": "An unsupported field in one Story reset its entire wording, erasing independently valid concrete summary/change content.",
+  "change": "Reuse one complete Story validator for at most eight local field groups; keep the existing one model repair, all authority checks, structural rejection and no Fact writes.",
+  "cacheCompatibility": "Only old windows whose safe diagnostics record replacedRejectedStoryCount > 0 are candidates for one explicit-refresh recovery upgrade. Clean successful windows stay reusable; unchanged reruns return to zero requests.",
+  "focusedChecks": {
+    "wordingAndEvidence": 4,
+    "cacheUpgrade": 1,
+    "passed": 5,
+    "failed": 0
+  },
+  "realValidation": "PENDING",
+  "modelReviewBeforeChange": {
+    "project": "Corporation-Agent",
+    "model": "gpt-5.6-sol",
+    "effort": "xhigh",
+    "verdict": "PASS",
+    "txt": 34,
+    "png": 67,
+    "review": "review-history/sol-review-corporation-round6/model-review-corporation-sol.json"
+  },
+  "scope": "General recovery behavior, no project-specific title or summary branches and no global prompt/source fingerprint invalidation.",
+  "fullRegression": {
+    "backendTests": 780,
+    "passed": 769,
+    "optionalSkipped": 11,
+    "failures": 0,
+    "errors": 0,
+    "historyReconstructionTests": 49,
+    "postgres16RequiredPassed": 7,
+    "exactV39UpgradePassed": 2,
+    "exactV39UpgradeSkipped": 0,
+    "exactV39Seconds": 43.628,
+    "playwrightPassed": 38,
+    "playwrightFailed": 0,
+    "playwrightDuration": "2.6m"
+  },
+  "reviewTimeClarification": {
+    "findingRetained": "The reviewer found the lack of explicit timezone/refresh-run explanation confusing; this remains a non-blocking usability item.",
+    "currentMaterialAnalyzedAt": "2026-09-11T18:42:03.907453800Z",
+    "historyLatestSuccessfulAt": "2026-09-12T02:25:10.067622Z",
+    "observation": "The Corporation timestamps belong to different completed reads. Both stored timestamps are UTC; the displayed gap is real, not evidence of a conversion defect."
+  }
+}

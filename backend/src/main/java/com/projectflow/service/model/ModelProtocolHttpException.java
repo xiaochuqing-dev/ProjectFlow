@@ -35,6 +35,9 @@ public final class ModelProtocolHttpException extends IOException {
     public String errorType() { return errorType; }
     public String errorCode() { return errorCode; }
     public String errorParam() { return errorParam; }
+    public boolean streamReadFailure() {
+        return statusCode == 200 && "upstream_error".equals(errorType) && "stream_read_error".equals(errorCode);
+    }
 
     private static String safeToken(String value) {
         if (value == null || value.isBlank()) return "";

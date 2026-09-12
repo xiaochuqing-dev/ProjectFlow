@@ -140,11 +140,12 @@ public class ProjectHistoryController {
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
         @PathVariable UUID projectId,
         @RequestParam(required = false) String subject,
+        @RequestParam(defaultValue = "false") boolean longTermOnly,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
         AuthUser user = authService.currentUser(authorizationHeader);
-        return ApiResponse.ok(historyService.threads(user.id(), projectId, subject, page, size));
+        return ApiResponse.ok(historyService.threads(user.id(), projectId, subject, longTermOnly, page, size));
     }
 
     @GetMapping("/threads/{threadId}")

@@ -50,6 +50,7 @@ import com.projectflow.repository.ProjectFactRepository;
 import com.projectflow.repository.ProjectAgentCandidateRepository;
 import com.projectflow.repository.ProjectMemoryRepository;
 import com.projectflow.repository.ProjectRepository;
+import com.projectflow.repository.ProjectHistoryEventRepository;
 import com.projectflow.support.AppException;
 
 /** Bounded, fixed-command discovery for source-backed project-history events. */
@@ -58,7 +59,7 @@ public class ProjectHistorySourceCollector {
     static final int MAX_COMMITS = 5_000;
     static final int COMMIT_PAGE_SIZE = 25;
     static final int MAX_EVENTS = 20_000;
-    static final int MAX_FILE_EVENTS_PER_COMMIT = 500;
+    static final int MAX_FILE_EVENTS_PER_COMMIT = 1_000;
     static final int MAX_AGENT_RESULTS = 200;
     static final int MAX_CURRENT_FILES = 5_000;
     private static final int MAX_PROJECTION_SCAN_ENTRIES = 5_000;
@@ -68,6 +69,10 @@ public class ProjectHistorySourceCollector {
     private static final int MAX_GITHUB_ITEMS = 40;
     private static final int MAX_GITHUB_RATIONALE_CHARS = 600;
     private static final int MAX_LIST_ITEMS = 100;
+    static final String DOCUMENT_DELTA_VERSION = "historical-document-text-v1";
+    static final int MAX_DOCUMENT_DELTAS = 48;
+    private static final int MAX_DOCUMENT_DIFF_CHARS = 16_000;
+    private static final int MAX_DOCUMENT_DIFF_TOTAL_CHARS = 256_000;
     private static final Duration GIT_TIMEOUT = Duration.ofSeconds(30);
     private static final Duration OPTIONAL_SOURCE_TIMEOUT = Duration.ofSeconds(8);
     private static final Pattern PR_REFERENCE = Pattern.compile("(?i)(?:pull request|\\bpr)\\s*#(\\d+)");
@@ -109,6 +114,7 @@ public class ProjectHistorySourceCollector {
     private final LocalCommandExecutor commandExecutor;
     private final SensitiveContentRedactor redactor;
     private final ObjectMapper objectMapper;
+    private final ProjectHistoryEventRepository historyEventRepository;
 
     public ProjectHistorySourceCollector(
         ProjectRepository projectRepository,
@@ -118,7 +124,8 @@ public class ProjectHistorySourceCollector {
         LocalProjectPathGuard pathGuard,
         LocalCommandExecutor commandExecutor,
         SensitiveContentRedactor redactor,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        ProjectHistoryEventRepository historyEventRepository
     ) {
         this.projectRepository = projectRepository;
         this.memoryRepository = memoryRepository;
@@ -128,6 +135,7 @@ public class ProjectHistorySourceCollector {
         this.commandExecutor = commandExecutor;
         this.redactor = redactor;
         this.objectMapper = objectMapper;
+        this.historyEventRepository = historyEventRepository;
     }
 
     public CollectionOutcome collect(UUID userId, UUID projectId) {
@@ -362,17 +370,35 @@ public class ProjectHistorySourceCollector {
         Set<String> removedPaths = new LinkedHashSet<>();
         List<CommitDraft> discovered = new ArrayList<>();
         int boundedTotal = totalCountKnown ? Math.min(totalCommits, MAX_COMMITS) : MAX_COMMITS;
-        for (int offset = 0; offset < boundedTotal && events.size() < MAX_EVENTS; offset += COMMIT_PAGE_SIZE) {
+        int pageSize = COMMIT_PAGE_SIZE;
+        int resizedPages = 0;
+        for (int offset = 0; offset < boundedTotal && events.size() < MAX_EVENTS;) {
             ModelCancellationContext.throwIfCancelled();
+            int requested = Math.min(pageSize, boundedTotal - offset);
+            List<String> pageLimitations = new ArrayList<>();
+            CollectionState pageState = new CollectionState();
             String output = command(
                 root,
-                limitations,
-                collectionState,
+                pageLimitations,
+                pageState,
                 "git", "log", "--all", "--topo-order", "--date=iso-strict",
                 "--pretty=format:__PF_COMMIT__%x09%H%x09%P%x09%aI%x09%an%x09%s%x09%D",
                 "--name-status", "--find-renames=50%",
-                "--max-count=" + Math.min(COMMIT_PAGE_SIZE, boundedTotal - offset), "--skip=" + offset, "--"
+                "--max-count=" + requested, "--skip=" + offset, "--"
             );
+            if (output.length() >= 100_000 && requested > 1) {
+                // Shrinking persists across pages: at most four extra attempts, never an unbounded retry.
+                pageSize = Math.max(1, requested / 2);
+                resizedPages++;
+                continue;
+            }
+            collectionState.complete &= pageState.complete;
+            limitations.addAll(pageLimitations);
+            if (output.length() >= 100_000) {
+                // An oversized single commit stays incomplete; never turn a partial path into Evidence.
+                int lastLine = output.lastIndexOf('\n');
+                output = lastLine < 0 ? "" : output.substring(0, lastLine + 1);
+            }
             if (output.isBlank()) break;
             List<CommitDraft> commits = parseCommits(output, project.getCreatedAt(), limitations);
             if (commits.isEmpty()) break;
@@ -380,8 +406,12 @@ public class ProjectHistorySourceCollector {
                 collectionState.complete = false;
             }
             discovered.addAll(commits);
-            if (commits.size() < Math.min(COMMIT_PAGE_SIZE, boundedTotal - offset)) break;
+            offset += commits.size();
+            if (commits.size() < requested) break;
         }
+        if (resizedPages > 0) limitations.add("Git 元数据页触及输出上限后缩小读取范围 " + resizedPages
+            + " 次；已按更小范围重新读取，单提交与总事件上限仍然适用。 ");
+        collectDocumentChanges(project.getId(), root, discovered, collectionState, limitations);
         java.util.Collections.reverse(discovered);
         for (CommitDraft commit : discovered) {
             addCommitEvents(project, projectRevision, commit, removedPaths, events, limitations, collectionState);
@@ -515,14 +545,23 @@ public class ProjectHistorySourceCollector {
                 : bulkSemanticChange && BULK_AREA_TRANSITIONS.contains(transition)
                     ? affected.stream().map(ProjectHistorySourceCollector::historyAreaKey).distinct().limit(8).toList()
                 : fileSubjects(affected, transition, changes);
+            Map<String, Object> fileCoverage = new LinkedHashMap<>();
+            fileCoverage.put("source", "git-name-status");
+            fileCoverage.put("metadataOnly", sensitive || noise || projectflowMetadata);
+            String documentChange = collectionState.documentChanges.get(commit.sha() + ":" + currentPath);
+            if (documentChange != null && !sensitive && !noise && !projectflowMetadata) {
+                fileCoverage.put("documentDeltaVersion", DOCUMENT_DELTA_VERSION);
+                fileCoverage.put("documentChange", documentChange);
+                fileLimitations.add("文本变化仅是该版本文档的有界摘录；文档内的功能或验收陈述不等于独立验证。 ");
+            }
             add(events, event(
                 project.getId(), SourceType.GIT,
                 commit.sha() + ":" + change.status() + ":" + String.join("->", affected), commit.sha(), projectRevision,
                 commit.occurredAt(), commit.author(), Scope.HISTORICAL, Category.FILE_CHANGE, transition,
-                fileLabel(transition, currentPath), affected,
+                documentChange == null || documentChange.isBlank() ? fileLabel(transition, currentPath) : documentChange, affected,
                 fileSubjects, List.of("commit:" + commit.sha(), "file:" + currentPath),
                 changeRelations, Authority.SOURCE_BACKED, ProjectFactEpistemicStatus.OBSERVED,
-                Map.of("source", "git-name-status", "metadataOnly", sensitive || noise || projectflowMetadata), fileLimitations, ""
+                fileCoverage, fileLimitations, ""
             ));
         }
         if (!semanticPaths.isEmpty() || paths.isEmpty()) {
@@ -531,6 +570,105 @@ public class ProjectHistorySourceCollector {
         if (bySubject.size() >= 3 && genericCommitSubject(commit.subject())) {
             limitations.add("检测到一个语义不足且跨多个项目要素的提交；变化故事按项目要素拆分，未直接复述 Commit message。 ");
         }
+    }
+
+    /** Immutable Git blobs are sampled through fixed argv, never through a model command.
+     * Only short redacted text changes survive; patches and full documents stay transient. */
+    private void collectDocumentChanges(UUID projectId, Path root, List<CommitDraft> commits,
+        CollectionState state, List<String> limitations) {
+        for (var old : historyEventRepository.findByProjectIdOrderByOccurredAtDesc(projectId,
+            org.springframework.data.domain.PageRequest.of(0, MAX_EVENTS))) {
+            if (old.getSourceType() != SourceType.GIT || old.getCategory() != Category.FILE_CHANGE
+                || !isCommitSha(old.getSourceRevision())) continue;
+            try {
+                JsonNode coverage = objectMapper.readTree(old.getCoverageJson());
+                if (!DOCUMENT_DELTA_VERSION.equals(coverage.path("documentDeltaVersion").asText())) continue;
+                JsonNode paths = objectMapper.readTree(old.getAffectedPathsJson());
+                if (paths.isArray() && !paths.isEmpty()) {
+                    String path = safeRelativePath(paths.get(paths.size() - 1).asText());
+                    if (documentDeltaPath(path, state)) state.documentChanges.put(
+                        old.getSourceRevision() + ":" + path, safeLabel(coverage.path("documentChange").asText(), 600));
+                }
+            } catch (Exception ignored) { /* Invalid derived metadata is safely rebuilt. */ }
+        }
+        List<Map.Entry<String, String>> candidates = new ArrayList<>();
+        commits.stream().sorted(Comparator.comparing(CommitDraft::occurredAt).reversed()
+            .thenComparing(CommitDraft::sha)).forEach(commit -> commit.changes().stream()
+                .map(change -> change.second().isBlank() ? change.first() : change.second()).distinct()
+                .filter(path -> documentDeltaPath(path, state))
+                .sorted(Comparator.comparingInt((String path) -> path.equalsIgnoreCase("VERSION") ? 0
+                    : path.equalsIgnoreCase("README.md") ? 1 : 2).thenComparing(path -> path))
+                .forEach(path -> candidates.add(Map.entry(commit.sha(), path))));
+        int readChars = 0;
+        long deadline = System.nanoTime() + Duration.ofSeconds(20).toNanos();
+        for (var candidate : candidates.stream().limit(MAX_DOCUMENT_DELTAS).toList()) {
+            ModelCancellationContext.throwIfCancelled();
+            String key = candidate.getKey() + ":" + candidate.getValue();
+            if (state.documentChanges.containsKey(key)) continue;
+            if (readChars >= MAX_DOCUMENT_DIFF_TOTAL_CHARS || System.nanoTime() >= deadline) break;
+            LocalCommandExecutor.CommandResult result;
+            try {
+                result = commandExecutor.execute(root, List.of("git", "show", "--format=", "--no-ext-diff",
+                    "--no-textconv", "--unified=0", "--no-renames", candidate.getKey(), "--",
+                    ":(literal)" + candidate.getValue()), Duration.ofNanos(Math.max(1,
+                        Math.min(OPTIONAL_SOURCE_TIMEOUT.toNanos(), deadline - System.nanoTime()))));
+            } catch (java.util.concurrent.CancellationException cancelled) { throw cancelled;
+            } catch (RuntimeException unavailable) { continue; }
+            ModelCancellationContext.throwIfCancelled();
+            if (result.timedOut() || result.exitCode() != 0) continue;
+            String patch = result.output() == null ? "" : result.output();
+            readChars += patch.length();
+            // A successful oversized/binary/symlink sample remains metadata-only and is cached.
+            String change = patch.length() > MAX_DOCUMENT_DIFF_CHARS || patch.contains("120000")
+                || patch.indexOf('\0') >= 0 ? "" : documentChangeSummary(candidate.getValue(), patch);
+            state.documentChanges.put(key, change);
+        }
+        if (!candidates.isEmpty()) {
+            long summarized = candidates.stream().filter(item -> !state.documentChanges
+                .getOrDefault(item.getKey() + ":" + item.getValue(), "").isBlank()).count();
+            limitations.add("历史文本差异采用有界抽样（" + summarized + "/" + candidates.size()
+                + "）；未抽样或无法安全提取的文档仍只保留文件变化，文档声明不代表功能验收。 ");
+        }
+    }
+
+    private boolean documentDeltaPath(String path, CollectionState state) {
+        String lower = path.toLowerCase(Locale.ROOT);
+        return !redactor.isSensitivePath(path) && !noisePath(path) && !projectflowMetadataPath(path, state)
+            && (lower.equals("version") || lower.endsWith("/version") || lower.endsWith(".md")
+                || lower.endsWith(".txt") || lower.endsWith(".rst") || lower.endsWith(".adoc"));
+    }
+
+    String documentChangeSummary(String path, String patch) {
+        if (path.equalsIgnoreCase("VERSION") || path.toLowerCase(Locale.ROOT).endsWith("/version")) {
+            List<String> removed = patch.lines().filter(line -> line.matches("-[vV]?[0-9]+(?:\\.[0-9]+){1,3}(?:[-+][A-Za-z0-9.-]+)?"))
+                .map(line -> line.substring(1)).distinct().limit(2).toList();
+            List<String> added = patch.lines().filter(line -> line.matches("\\+[vV]?[0-9]+(?:\\.[0-9]+){1,3}(?:[-+][A-Za-z0-9.-]+)?"))
+                .map(line -> line.substring(1)).distinct().limit(2).toList();
+            if (added.size() == 1 && removed.size() <= 1) return removed.isEmpty()
+                ? "版本文件新增版本号 " + added.get(0) : "版本文件中的版本号由 " + removed.get(0) + " 改为 " + added.get(0);
+            return "";
+        }
+        List<String> added = documentTextLines(patch, '+');
+        List<String> removed = documentTextLines(patch, '-');
+        List<String> newText = added.stream().filter(line -> !removed.contains(line)).limit(2).toList();
+        List<String> oldText = removed.stream().filter(line -> !added.contains(line)).limit(1).toList();
+        if (newText.isEmpty() && oldText.isEmpty()) return "";
+        return "文档文字变化：" + (oldText.isEmpty() ? "" : "移除摘录「" + String.join("；", oldText) + "」；")
+            + (newText.isEmpty() ? "" : "加入摘录「" + String.join("；", newText) + "」")
+            + "。这些文字是文档陈述，实际运行结果需另查证据。";
+    }
+
+    private List<String> documentTextLines(String patch, char sign) {
+        return patch.lines().filter(line -> line.length() > 3 && line.charAt(0) == sign
+                && line.charAt(1) != sign)
+            .map(line -> line.substring(1).trim())
+            .filter(line -> !line.startsWith("```") && !line.startsWith("|") && !line.startsWith("![")
+                && !line.contains("{") && !line.contains("}") && !line.contains("=") && !line.contains("<"))
+            .map(line -> line.replaceAll("\\[([^]]+)]\\([^)]*\\)", "$1")
+                .replaceFirst("^(?:#{1,6}|[-*]|[0-9]+\\.)\\s+", "").replace("**", "").replace("`", ""))
+            .filter(line -> line.length() >= 8 && line.length() <= 180 && !line.contains("/") && !line.contains("\\")
+                && line.equals(redactor.redactOutboundText(line)) && line.matches(".*[\\p{L}].*"))
+            .distinct().limit(16).toList();
     }
 
     private Set<FileChange> splitAdds(List<FileChange> changes) {
@@ -718,7 +856,10 @@ public class ProjectHistorySourceCollector {
                 Scope.HISTORICAL, Category.PULL_REQUEST,
                 value.path("mergedAt").asText("").isBlank() ? Transition.MODIFIED : Transition.MERGED,
                 label, paths, subjects, evidence, relations, Authority.DECLARED, ProjectFactEpistemicStatus.DECLARED,
-                Map.of("source", "github-cli", "bodyExcerptIncluded", !rationale.isBlank()),
+                Map.of("source", "github-cli", "bodyExcerptIncluded", !rationale.isBlank(),
+                    "timeBasis", !value.path("mergedAt").asText("").isBlank() ? "PR_MERGED_AT"
+                        : !value.path("closedAt").asText("").isBlank() ? "PR_CLOSED_AT"
+                        : !value.path("updatedAt").asText("").isBlank() ? "PR_UPDATED_AT" : "PR_CREATED_AT"),
                 List.of("PR 标题和有界正文摘要只作为 DECLARED 原因证据，不证明实现或验证结果。 "),
                 safeGitHubLink(value.path("url").asText(""))
             ));
@@ -752,7 +893,9 @@ public class ProjectHistorySourceCollector {
                 Category.ISSUE, Transition.MODIFIED, label, List.of(), List.of("issue-" + number),
                 List.of("github-issue:" + number), List.of(), Authority.DECLARED,
                 ProjectFactEpistemicStatus.DECLARED,
-                Map.of("source", "github-cli", "bodyExcerptIncluded", !rationale.isBlank()),
+                Map.of("source", "github-cli", "bodyExcerptIncluded", !rationale.isBlank(),
+                    "timeBasis", !value.path("closedAt").asText("").isBlank() ? "ISSUE_CLOSED_AT"
+                        : !value.path("updatedAt").asText("").isBlank() ? "ISSUE_UPDATED_AT" : "ISSUE_CREATED_AT"),
                 List.of("Issue 标题和有界正文摘要只作为 DECLARED 原因证据，不证明实现或验证结果。 "),
                 safeGitHubLink(value.path("url").asText(""))
             ));
@@ -917,28 +1060,57 @@ public class ProjectHistorySourceCollector {
                 String relative = safeRelativePath(root.relativize(normalized).toString());
                 List<String> keyFiles = jsonStrings(rootNode.path("keyFiles"), 60).stream()
                     .map(ProjectHistorySourceCollector::safeRelativePath).filter(value -> !value.isBlank()).toList();
-                List<String> changes = jsonStrings(rootNode.path("actualChanges"), 8).stream()
-                    .map(value -> safeLabel(value, 500)).filter(value -> !value.isBlank()).toList();
-                String goal = safeLabel(rootNode.path("taskGoal").asText(""), 500);
-                String label = changes.isEmpty() ? goal : changes.get(0);
+                String label = agentResultStatement(rootNode);
                 if (label.isBlank()) label = "Agent 工作结果 " + relative;
                 List<String> evidence = new ArrayList<>();
                 evidence.add("agent-result:" + relative);
                 keyFiles.stream().limit(40).forEach(file -> evidence.add("file:" + file));
+                // Reuse already collected Git metadata. A clone's mtime is an
+                // observation, never the date on which this work happened.
+                boolean uncommitted = events.values().stream().anyMatch(item ->
+                    "git-status".equals(item.coverage().get("source")) && item.affectedPaths().contains(relative));
+                Instant recorded = uncommitted ? null : events.values().stream()
+                    .filter(item -> "git-name-status".equals(item.coverage().get("source"))
+                        && item.affectedPaths().contains(relative))
+                    .map(CollectedEvent::occurredAt).max(Instant::compareTo).orElse(null);
+                String timeBasis = recorded == null ? "SOURCE_OBSERVATION_TIME" : "AGENT_GIT_RECORD_TIME";
+                if (recorded == null) recorded = Files.getLastModifiedTime(normalized).toInstant();
                 add(events, event(
                     projectId, SourceType.AGENT_RESULT, relative, sha256(bytes), projectRevision,
-                    Files.getLastModifiedTime(normalized).toInstant(), "Agent", Scope.HISTORICAL,
+                    recorded, "Agent", Scope.HISTORICAL,
                     Category.AGENT_RESULT, Transition.MODIFIED, label, keyFiles,
                     keyFiles.stream().map(ProjectHistorySourceCollector::historySubjectKey).distinct().limit(20).toList(),
                     evidence, List.of(), Authority.PROCESS_EVIDENCE, ProjectFactEpistemicStatus.PROCESS_EVIDENCE,
-                    Map.of("source", "agent-result", "claimOnly", true),
-                    List.of("Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。 "), ""
+                    Map.of("source", "agent-result", "claimOnly", true, "timeBasis", timeBasis),
+                    List.of("Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。 ",
+                        "工作结果仅保留有界的变更、验证与未完成声明摘录；完整记录仍需回到来源核对。"), ""
                 ));
             }
         } catch (IOException exception) {
             collectionState.complete = false;
             limitations.add("Agent Result 目录无法完整读取；本次继续使用其他来源。 ");
         }
+    }
+
+    private String agentResultStatement(JsonNode node) {
+        List<String> sections = new ArrayList<>();
+        List<String> changes = jsonStrings(node.path("actualChanges"), 2).stream()
+            .map(value -> safeLabel(value, 210)).filter(value -> !value.isBlank()).toList();
+        if (!changes.isEmpty()) sections.add("变更声明：" + String.join("；", changes));
+        else {
+            String goal = safeLabel(node.path("taskGoal").asText(""), 210);
+            if (!goal.isBlank()) sections.add("任务目标声明：" + goal);
+        }
+        List<String> verification = new ArrayList<>();
+        for (String field : List.of("build", "tests", "manualCheck")) {
+            String value = safeLabel(node.path("verification").path(field).asText(""), 75);
+            if (!value.isBlank()) verification.add((field.equals("build") ? "构建" : field.equals("tests") ? "测试" : "人工检查") + "：" + value);
+        }
+        if (!verification.isEmpty()) sections.add("验证声明：" + String.join("；", verification));
+        List<String> unfinished = jsonStrings(node.path("unfinished"), 2).stream()
+            .map(value -> safeLabel(value, 100)).filter(value -> !value.isBlank()).toList();
+        if (!unfinished.isEmpty()) sections.add("未完成声明：" + String.join("；", unfinished));
+        return safeLabel(String.join("。", sections), 1_000);
     }
 
     private void collectProjectFacts(
@@ -1179,6 +1351,18 @@ public class ProjectHistorySourceCollector {
             .filter(value -> !value.isBlank()).toList(), 30);
         String link = safeDeepLink(deepLink);
         Instant safeOccurred = occurredAt == null ? Instant.EPOCH : occurredAt;
+        Map<String, Object> timedCoverage = new LinkedHashMap<>(coverage);
+        String source = String.valueOf(coverage.getOrDefault("source", ""));
+        String basis = occurredAt == null ? "UNKNOWN" : switch (source) {
+            case "git", "git-name-status", "explicit-commit-reference" -> "GIT_COMMIT_TIME";
+            case "git-tag-metadata" -> "GIT_TAG_TIME";
+            case "git-status" -> "SOURCE_OBSERVATION_TIME";
+            case "project-fact" -> "FACT_SOURCE_TIME";
+            default -> "SOURCE_OBSERVATION_TIME";
+        };
+        timedCoverage.putIfAbsent("timeBasis", basis);
+        timedCoverage.put("timeLabel", com.projectflow.dto.ProjectHistoryDtos.TimeProvenance.fromBases(
+            List.of(String.valueOf(timedCoverage.get("timeBasis")))).label());
         LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
         payload.put("sourceType", sourceType.name());
         payload.put("sourceIdentity", identity);
@@ -1193,14 +1377,14 @@ public class ProjectHistorySourceCollector {
         payload.put("relations", relations);
         payload.put("authority", authority.name());
         payload.put("epistemicStatus", epistemicStatus.name());
-        payload.put("coverage", coverage);
+        payload.put("coverage", timedCoverage);
         payload.put("limitations", safeLimitations);
         payload.put("deepLink", link);
         String payloadHash = sha256(json(payload));
         return new CollectedEvent(
             stableKey, sourceType, identity, revision, safeLabel(projectRevision, 180), safeOccurred, safeOccurred,
             safeLabel(actorLabel, 160), scope, category, transition, safeLabel(safeSourceLabel, 1_000), paths, subjects,
-            evidence, relations, authority, epistemicStatus, Map.copyOf(coverage), safeLimitations, link, payloadHash
+            evidence, relations, authority, epistemicStatus, Map.copyOf(timedCoverage), safeLimitations, link, payloadHash
         );
     }
 
@@ -1653,5 +1837,6 @@ public class ProjectHistorySourceCollector {
     private static final class CollectionState {
         private boolean complete = true;
         private final Set<String> projectionRoots = new LinkedHashSet<>();
+        private final Map<String, String> documentChanges = new LinkedHashMap<>();
     }
 }

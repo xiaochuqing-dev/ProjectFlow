@@ -1,0 +1,65 @@
+{
+  "recordedAt": "2026-09-12T05:51:00Z",
+  "type": "REAL_RESTART_FINDING_AND_SYNTHETIC_REGRESSION",
+  "baselineFunctionalSourceHead": "8dd9d6cfeda2dfbb76118ca0f3e1b4f99a0bd6f4",
+  "realObservation": {
+    "source": "Closed pre-restart H2 backup opened read-only, compared with owned read-only History Event API",
+    "beforeEventCount": 4312,
+    "afterEventCount": 4312,
+    "updatedEventCount": 83,
+    "updatedSourceCategories": {
+      "GITHUB/PULL_REQUEST": 24,
+      "AGENT_RESULT/AGENT_RESULT": 59
+    },
+    "confirmedContentEqualUpdatedEventsAtLeast": 72,
+    "finding": "Order-dependent serialized coverage entered legacy payload fingerprints and invalidated otherwise reusable model windows after a JVM restart. Remaining comparison differences include DTO path sanitization and are not asserted as content-equivalent.",
+    "coverageOrderProof": {
+      "checkedAgentResults": 59,
+      "legacyHashesReproducedByCoverageOrder": 59,
+      "distinctHashesPerIdenticalPayload": [
+        6
+      ]
+    }
+  },
+  "redReproduction": {
+    "tests": 1,
+    "failures": 1,
+    "errors": 0
+  },
+  "correctedFocusedRun": {
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "correction": "Compare every source field and parsed JSON when hashes differ. Retain the old event/hash for equal content; changed coverage still invalidates. No global fingerprint migration or model call was added.",
+  "limitations": [
+    "The regression models an older serialization with a synthetic fingerprint; it does not replace a real restart and no-change proof.",
+    "The first red invocation used an incorrect relative GH isolation lookup. Its local no-Git Agent-result fixture made no model or GitHub request. The corrected run used the existing isolated directory.",
+    "The read-only backup helper initially needed the existing H2 lowercase-schema setting and explicit UTF-8 CSV encoding; both were corrected before the comparison."
+  ],
+  "correctedFunctionalSourceHead": "b6da7f0745dfc4af91c62871a034dbdc3f20187b",
+  "fullBackendRegression": {
+    "tests": 782,
+    "passed": 771,
+    "failures": 0,
+    "errors": 0,
+    "optInSkipped": 11,
+    "postgres16RequiredPassed": 7
+  },
+  "subsequentClosedDatabaseProof": {
+    "source": "Two exclusive-lock-confirmed closed H2 backups opened with ACCESS_MODE_DATA=r; canonical comparison excludes only update timestamp and fingerprint.",
+    "beforeEventCount": 4312,
+    "afterEventCount": 4312,
+    "changedFingerprints": 83,
+    "contentEqualChangedFingerprints": 83,
+    "sourceCategories": {
+      "GITHUB/PULL_REQUEST": 24,
+      "AGENT_RESULT/AGENT_RESULT": 59
+    },
+    "contentChanges": [],
+    "rawRowsPublished": false,
+    "recordedAt": "2026-09-12T06:48:40.935415+00:00",
+    "interpretation": "The earlier API comparison was a lower bound. Direct read-only comparisons of both closed databases confirm all 83 changed fingerprints had equal source content; no raw source rows are published."
+  }
+}

@@ -1,5 +1,26 @@
 # Architecture
 
+## V4.0-E reliability and semantic boundaries
+
+Understanding retains the same 0/1/2 logical-call chain. The existing snapshot JSON privately holds a validated Scout/profile checkpoint keyed to intake/history and provider/model/protocol/effort; it is omitted from public DTOs. Recovery reruns bounded providers and eligible Final Synthesis only. Failed final synthesis is explicitly degraded and cannot satisfy a no-change success shortcut; prior trusted results and the recovery checkpoint survive failure. No schema or ProjectFact writer was added.
+
+Job transport accounting is bound per execution, propagated into the Gateway executor, and persisted during heartbeat/finalization. Actual adapter entry is the counting boundary. Known reported sums are distinct from nullable exact totals; an unchanged read has no transport attempts. Long reasoning Responses use the official SDK streaming API without delta persistence. Explicit upstream stream-read errors share the existing bounded transport retry.
+
+History specificity reuses precise subject membership and bounded file inventory. Broad areas keep their original representative family and OBSERVED ceiling; filename examples cannot promote them. Story DTO time provenance distinguishes commit/tag/PR event, Agent Git record, source observation, mixed and unknown times. Existing Workline collection, ownership, immutable GET, PR authority and V4 route boundaries are unchanged.
+
+Within a generic code commit, the commit inventory is the main change and its area ranges remain linked Supporting Stories. Different commits do not collapse into one broad area Story. Chapter reuse requires matching strategy/representation versions and complete owner groups; reading-density boundaries never detach children. A low-coverage interleaved chapter may split at a real chronological boundary when representative coverage improves, without asserting a development phase or maturity. Models receive the same aggregate scope that validation checks.
+
+Existing Thread identities remain readable for continuity. Single-record and broad inventory associations are marked `RECORD_CONTEXT`; the normal V4 directory requests `longTermOnly=true`, which filters before pagination and retains multi-record precise subjects. Story dialogs expose supporting ranges through existing owned read APIs. No new storage or Fact mutation is involved.
+
+Historical document content reuses the existing Git collector through fixed arguments and bounded document-delta sampling: 48 items, 16,000 characters per patch, 256,000 total characters and 20 seconds overall. Only short normalized added/removed excerpts and exact version changes survive; complete documents and patches do not. Immutable previously collected annotations remain reusable outside the latest sample. Document test or release statements support only what the document says, not verified execution.
+
+Story-only semantic recovery preserves validated siblings and, within a rejected Story, independently valid wording groups. At most eight local candidates run through the same complete Story validator; rejected fields retain the source-bounded draft. Reason references are checked before wording, and invalid IDs, Evidence or shape still reject the window. The existing single model repair and final whole-output validation remain mandatory. Transient rejected wording is never persisted. An explicit refresh upgrades only legacy checkpoints that actually replaced rejected Stories; clean windows remain cached, and a safe recovery-version marker restores subsequent zero-call no-change reads.
+
+The ordinary title/summary fallback also retains an independently useful field when replacing its weaker partner. The retained field must pass the existing usefulness check on its own, and the combined Story still passes the complete authority validator. A pair that omits the supported result retains the deterministic fallback. This local validation change adds no model call and does not invalidate already valid checkpoints.
+
+Legacy source fingerprints can depend on JSON object iteration order across JVMs. When a collected hash differs, the existing event upsert compares source payload fields and parsed JSON values before declaring a mutation. The aggregate project HEAD is not part of an immutable event's content, and time comparison uses the existing TIMESTAMP(6) storage precision. Equal content retains the stored hash and its successful checkpoints; changed metadata, ordered membership, represented time, identity, authority or invalid JSON still causes normal replacement. This compatibility check does not bulk rewrite fingerprints or invalidate successful windows.
+
+
 ## V4.0-D persisted Workspace reads
 
 The normal project library, intake, current state, history and settings routes converge on the V4 Workspace. Engineering compatibility routes require an explicit entry. Current material understanding reuses the existing explicit Understanding Job and persisted snapshot; a read never starts a model call. Failed first semantic attempts remain visible local observations and cannot satisfy the unchanged successful-understanding cache shortcut on an explicit retry.
@@ -432,3 +453,5 @@ Project Memory Gateway is an additive read-only business layer over Facts, Timel
 ## V3.4.4 Obsidian projection boundary
 
 The repository-local projection CLI is a second Gateway consumer beside Hermes. It builds curated Markdown in a configured Vault managed root, never queries repositories directly, invokes a model, or writes ProjectFlow state. CORE keeps file growth proportional to months and capabilities rather than facts. Stable metadata and a recoverable manifest form the incremental control plane; managed blocks, conflicts, path containment, atomic replacement and non-destructive redirects protect user content. No frontend, watcher, persistent sync job or operating-system integration is added.
+
+V4.0-E 声明边界：提交者与 Agent 的具体行为、验证范围和未完成项可进入有界上下文，但只按作者声明转述。纯过程记录保留 UNKNOWN 实现状态、空直接证据和 PROCESS_DECLARATION 标签；不进入 ProjectFact。Git 元数据页超限时仅缩小页大小，保留单命令、单提交、总事件和取消边界。

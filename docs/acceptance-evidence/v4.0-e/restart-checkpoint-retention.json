@@ -1,0 +1,74 @@
+{
+  "recordedAt": "2026-09-12T06:46:16.687689+00:00",
+  "status": "PASS",
+  "functionalSourceHead": "349a6039e68ab5ad0126a2dd1dca3dca1029e7f7",
+  "persistedReadHashesUnchangedAcrossRestartAndNoChange": [
+    {
+      "project": "ProjectFlow",
+      "projectId": "112e956a-070e-4e11-867d-188852d550f2",
+      "currentResponseSha256": "7fb40773d0a7ec919a6b63daf969b84bf3b586cb2959c8b88f9887d454152cc3",
+      "readableStories": 338,
+      "allStoriesResponseSha256": "72bf97efffa2bfc1940a18332325ecb31b5a0f936c7acc0d5faa2822f582a2f9"
+    },
+    {
+      "project": "Corporation-Agent",
+      "projectId": "f5f80a76-95c8-41e1-8c5f-49eee3fecfa3",
+      "currentResponseSha256": "bac85a973e917f2d0f010666a047e9bc39ef444bf9c0754134165c365d21e0b4",
+      "readableStories": 22,
+      "allStoriesResponseSha256": "00238180c891684ed9c243a92858d07d718510c66df490e2ba99fbd4e6882d43"
+    },
+    {
+      "project": "Universal Exam Prep",
+      "projectId": "f4976bdf-1927-42e9-acb2-6a1e4d2580bc",
+      "currentResponseSha256": "499d71f81f0ff4557a5b82b67f356f68f74b080d677fc44c047a49a78bd0ee40"
+    }
+  ],
+  "checks": [
+    {
+      "name": "ProjectFlow",
+      "projectId": "112e956a-070e-4e11-867d-188852d550f2",
+      "jobId": "4d2b0850-c1bd-4fe5-818f-0c9e6ea604d8",
+      "kind": "understanding",
+      "functionalSourceHead": "349a6039e68ab5ad0126a2dd1dca3dca1029e7f7",
+      "status": "SUCCEEDED",
+      "requestCount": 0,
+      "usageAvailability": "NOT_CALLED",
+      "elapsedMs": 831
+    },
+    {
+      "name": "Corporation-Agent",
+      "projectId": "f5f80a76-95c8-41e1-8c5f-49eee3fecfa3",
+      "jobId": "de99792c-8480-41fa-a445-710f1269858d",
+      "kind": "understanding",
+      "functionalSourceHead": "349a6039e68ab5ad0126a2dd1dca3dca1029e7f7",
+      "status": "SUCCEEDED",
+      "requestCount": 0,
+      "usageAvailability": "NOT_CALLED",
+      "elapsedMs": 110
+    },
+    {
+      "name": "Universal Exam Prep",
+      "projectId": "f4976bdf-1927-42e9-acb2-6a1e4d2580bc",
+      "jobId": "da9492ec-bd37-41ed-9b3c-38f6371a98c4",
+      "kind": "understanding",
+      "functionalSourceHead": "349a6039e68ab5ad0126a2dd1dca3dca1029e7f7",
+      "status": "SUCCEEDED",
+      "requestCount": 0,
+      "usageAvailability": "NOT_CALLED",
+      "elapsedMs": 17
+    },
+    {
+      "name": "Corporation-Agent",
+      "projectId": "f5f80a76-95c8-41e1-8c5f-49eee3fecfa3",
+      "jobId": "4c30fd82-0806-4909-9de1-ac4b14f302cc",
+      "kind": "history",
+      "functionalSourceHead": "349a6039e68ab5ad0126a2dd1dca3dca1029e7f7",
+      "updatedEventCount": 0,
+      "status": "SUCCEEDED",
+      "requestCount": 0,
+      "usageAvailability": "NOT_CALLED",
+      "elapsedMs": 1371
+    }
+  ],
+  "scope": "Production cache-compatibility runtime replacement: all Current and Story responses remain unchanged; Current and completed Corporation History refresh with zero calls. ProjectFlow History is partial at this restart; only its subsequent bounded continuation may execute remaining model work, recorded separately."
+}

@@ -347,6 +347,44 @@ class ProjectUnderstandingServiceTest {
             .contains("最终归纳失败；当前结果保留第一阶段语义与已校验工具证据");
         verify(gateway).callStructured(any(), any(), eq(ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT));
         verify(gateway).callStructured(any(), any(), eq(ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS));
+
+        assertThat(storedSnapshot.get().getSnapshotJson()).contains("validatedScoutCheckpoint");
+        assertThat(mapper.writeValueAsString(service.get(userId, projectId))).doesNotContain("validatedScoutCheckpoint");
+        // Older persisted snapshots could say SUCCEEDED even though Final
+        // Synthesis failed. Their unchanged refresh must still recover.
+        ReflectionTestUtils.setField(storedSnapshot.get(), "semanticStatus", "SUCCEEDED");
+        String recovered = """
+            {"dynamicProfile":{"summary":"恢复后的文档理解","sections":[]},
+             "stageTwoChanges":[],"conflicts":[],"unknowns":[]}
+            """;
+        when(gateway.callStructured(any(), any(), eq(ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS)))
+            .thenReturn(new ModelGatewayService.StructuredModelResponse(recovered,
+                new ModelOutputAdapter(mapper).parse(recovered, ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS)));
+        var retry = service.refresh(userId, projectId);
+        assertThat(retry.snapshot().finalSynthesisStatus()).isEqualTo("SUCCEEDED");
+        assertThat(retry.snapshot().analysisMetrics().modelRequestCount()).isEqualTo(1);
+        verify(gateway, times(1)).callStructured(any(), any(), eq(ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT));
+        verify(gateway, times(2)).callStructured(any(), any(), eq(ModelTaskType.PROJECT_UNDERSTANDING_FINAL_SYNTHESIS));
+        assertThat(storedSnapshot.get().getSnapshotJson()).doesNotContain("validatedScoutCheckpoint");
+
+        Files.writeString(root.resolve("new-evidence.md"), "新的来源内容必须重新分诊，不能复用旧检查点。\n");
+        service.refresh(userId, projectId);
+        verify(gateway, times(2)).callStructured(any(), any(), eq(ModelTaskType.PROJECT_UNDERSTANDING_SNAPSHOT));
+    }
+
+    @Test
+    void markingDetachedPreviousStaleKeepsNewerValidatedCheckpoint() {
+        ProjectUnderstandingSnapshot detached = new ProjectUnderstandingSnapshot(projectId);
+        detached.recordCheckpointJson("{\"previous\":true}");
+        ProjectUnderstandingSnapshot latest = new ProjectUnderstandingSnapshot(projectId);
+        latest.recordCheckpointJson("{\"previous\":true,\"validatedScoutCheckpoint\":{\"key\":\"safe-hash\"}}");
+        storedSnapshot.set(latest);
+
+        ReflectionTestUtils.invokeMethod(service, "preservePreviousAsStale", detached);
+
+        assertThat(storedSnapshot.get()).isSameAs(latest);
+        assertThat(latest.getSnapshotJson()).contains("validatedScoutCheckpoint");
+        assertThat(latest.getCurrentStatus()).isEqualTo("STALE");
     }
 
     private static Stream<Arguments> finalSynthesisFailures() {

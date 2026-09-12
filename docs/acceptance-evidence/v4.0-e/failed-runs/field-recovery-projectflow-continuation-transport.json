@@ -1,0 +1,45 @@
+{
+  "recordedAt": "2026-09-12T05:07:53.464327+00:00",
+  "project": "ProjectFlow",
+  "jobId": "147ea885-0aca-4556-957b-a6dbd8875441",
+  "functionalSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491",
+  "status": "SUCCEEDED_WITH_WARNINGS",
+  "elapsedMs": 710275,
+  "requestCount": 2,
+  "usageAvailability": "UNKNOWN",
+  "reportedTotalTokens": 0,
+  "origin": "UNDETERMINED",
+  "attempts": [
+    {
+      "sequence": 1,
+      "taskType": "PROJECT_HISTORY_SYNTHESIS",
+      "protocol": "OPENAI_RESPONSES",
+      "reasoningEffort": "xhigh",
+      "retryReason": "NONE",
+      "status": "FAILED",
+      "latencyMs": 87151,
+      "failureCode": "NETWORK_ERROR",
+      "transportFailureType": "IO_FAILURE",
+      "httpStatus": null,
+      "promptTokens": null,
+      "completionTokens": null,
+      "totalTokens": null
+    },
+    {
+      "sequence": 2,
+      "taskType": "PROJECT_HISTORY_SYNTHESIS",
+      "protocol": "OPENAI_RESPONSES",
+      "reasoningEffort": "xhigh",
+      "retryReason": "TRANSPORT_RETRY",
+      "status": "FAILED",
+      "latencyMs": 600405,
+      "failureCode": "NETWORK_ERROR",
+      "transportFailureType": "HTTP2_STREAM_RESET_CANCEL",
+      "httpStatus": null,
+      "promptTokens": null,
+      "completionTokens": null,
+      "totalTokens": null
+    }
+  ],
+  "scope": "Terminal production Gateway telemetry. Unreported usage remains unknown; successful History checkpoints remain persisted."
+}

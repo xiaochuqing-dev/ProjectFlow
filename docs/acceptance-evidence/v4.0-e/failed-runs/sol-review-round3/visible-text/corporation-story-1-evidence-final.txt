@@ -1,0 +1,58 @@
+变化详情
+Corporation-Agent · 提交时间 · 2026-09-09
+新增和修改项目文档，留下可追溯的变更记录
+
+来源记录了项目文档的新增和修改；只能确认文件发生变化，不能确认功能运行或验收结果。
+
+01
+此前状态
+
+现有来源没有提供项目文档在变更前的完整内容，因此无法确认其原始状态。
+
+02
+本次变化
+
+本阶段新增和修改了报告文档、来源证据相关文件；完整范围可在来源明细中核对。
+
+03
+当前结果
+
+项目文档已留下可追溯的新增和修改记录，但这些记录只能证明材料发生变化，不能确认功能效果或验收结果。
+
+尚未确认
+目前没有足够信息确认为什么做这次调整。
+查看工程证据与来源
+完善项目文档，并保留原始提交信息供核对。
+
+Git 记录 · 修改 · 在本次读取的历史中
+
+收起 Evidence 详情
+docs: finalize v2.2.0 acceptance and CI evidence
+
+commit:f80553c61aaf19b19e729d47739d6b8f35c1dffd
+
+当前性：在本次读取的历史中 · 验证：OBSERVED
+
+覆盖：{"source":"git","fileChangeCount":4,"timeBasis":"GIT_COMMIT_TIME","timeLabel":"提交时间"} · 版本：f80553c61aaf19b19e729d47739d6b8f35c1dffd
+
+原始提交与来源信息
+
+docs: finalize v2.2.0 acceptance and CI evidence
+
+提交时间 · 2026-09-09T08:11:45Z
+
+证据身份：OBSERVED · SOURCE_BACKED
+
+docs/reports/Corporation-Agent_v2.2.0_Report.md
+
+docs/reports/assets/v2.2.0/README.md
+
+docs/reports/assets/v2.2.0/implementation-ci.json
+
+docs/reports/assets/v2.2.0/secret-scan-evidence.json
+
+逐文件变更（4 条来源）
+工程兼容工具：来源审计与修正
+查看故事工程详情
+返回阅读
+工程证据始终保留，展示不会改变事实

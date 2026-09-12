@@ -1,0 +1,187 @@
+变化详情
+ProjectFlow · 工作结果入库时间 · 2026-09-10
+整理开发工作线相关代码，记录当前能够确认的变化
+
+现有来源只能确认开发工作线相关代码发生过变化，具体动作和结果仍不完整。
+
+01
+此前状态
+
+此前状态缺少足够信息。
+
+02
+本次变化
+
+这一阶段留下了与开发工作线相关代码有关的变化记录。
+
+03
+当前结果
+
+开发工作线相关代码的当前状态仍需要更多来源确认。
+
+尚未确认
+目前没有足够信息确认为什么做这次调整。
+覆盖与缺口
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+查看工程证据与来源
+修改项目使用说明
+
+Agent 工作结果 · 修改 · 在本次读取的历史中
+
+覆盖与缺口
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+收起 Evidence 详情
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+agent-result:.projectflow/agent-results/20260910-v40d-real-project-understanding/result.json
+
+当前性：在本次读取的历史中 · 验证：PROCESS_EVIDENCE
+
+覆盖：{"source":"agent-result","timeLabel":"工作结果入库时间","claimOnly":true,"timeBasis":"AGENT_GIT_RECORD_TIME"} · 版本：fdce189cdd1d7fc5180c553b4b4bfc18299751deb1f260f7642cec2d81842249
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+file:backend/src/main/java/com/projectflow/service/ProjectWorklineCollector.java
+
+当前性：在本次读取的历史中 · 验证：PROCESS_EVIDENCE
+
+覆盖：{"source":"agent-result","timeLabel":"工作结果入库时间","claimOnly":true,"timeBasis":"AGENT_GIT_RECORD_TIME"} · 版本：fdce189cdd1d7fc5180c553b4b4bfc18299751deb1f260f7642cec2d81842249
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+file:backend/src/main/java/com/projectflow/service/ProjectHistorySourceCollector.java
+
+当前性：在本次读取的历史中 · 验证：PROCESS_EVIDENCE
+
+覆盖：{"source":"agent-result","timeLabel":"工作结果入库时间","claimOnly":true,"timeBasis":"AGENT_GIT_RECORD_TIME"} · 版本：fdce189cdd1d7fc5180c553b4b4bfc18299751deb1f260f7642cec2d81842249
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+file:backend/src/main/java/com/projectflow/service/ProjectHistoryReadService.java
+
+当前性：在本次读取的历史中 · 验证：PROCESS_EVIDENCE
+
+覆盖：{"source":"agent-result","timeLabel":"工作结果入库时间","claimOnly":true,"timeBasis":"AGENT_GIT_RECORD_TIME"} · 版本：fdce189cdd1d7fc5180c553b4b4bfc18299751deb1f260f7642cec2d81842249
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+file:backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java
+
+当前性：在本次读取的历史中 · 验证：PROCESS_EVIDENCE
+
+覆盖：{"source":"agent-result","timeLabel":"工作结果入库时间","claimOnly":true,"timeBasis":"AGENT_GIT_RECORD_TIME"} · 版本：fdce189cdd1d7fc5180c553b4b4bfc18299751deb1f260f7642cec2d81842249
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+file:frontend/src/components/workspace/RealCurrentPage.tsx
+
+当前性：在本次读取的历史中 · 验证：PROCESS_EVIDENCE
+
+覆盖：{"source":"agent-result","timeLabel":"工作结果入库时间","claimOnly":true,"timeBasis":"AGENT_GIT_RECORD_TIME"} · 版本：fdce189cdd1d7fc5180c553b4b4bfc18299751deb1f260f7642cec2d81842249
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+file:frontend/src/components/workspace/WorklineReader.tsx
+
+当前性：在本次读取的历史中 · 验证：PROCESS_EVIDENCE
+
+覆盖：{"source":"agent-result","timeLabel":"工作结果入库时间","claimOnly":true,"timeBasis":"AGENT_GIT_RECORD_TIME"} · 版本：fdce189cdd1d7fc5180c553b4b4bfc18299751deb1f260f7642cec2d81842249
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+file:frontend/src/components/workspace/HistoryReader.tsx
+
+当前性：在本次读取的历史中 · 验证：PROCESS_EVIDENCE
+
+覆盖：{"source":"agent-result","timeLabel":"工作结果入库时间","claimOnly":true,"timeBasis":"AGENT_GIT_RECORD_TIME"} · 版本：fdce189cdd1d7fc5180c553b4b4bfc18299751deb1f260f7642cec2d81842249
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+file:frontend/src/components/workspace/Workspace.tsx
+
+当前性：在本次读取的历史中 · 验证：PROCESS_EVIDENCE
+
+覆盖：{"source":"agent-result","timeLabel":"工作结果入库时间","claimOnly":true,"timeBasis":"AGENT_GIT_RECORD_TIME"} · 版本：fdce189cdd1d7fc5180c553b4b4bfc18299751deb1f260f7642cec2d81842249
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+file:frontend/src/lib/workspace-claims.ts
+
+当前性：在本次读取的历史中 · 验证：PROCESS_EVIDENCE
+
+覆盖：{"source":"agent-result","timeLabel":"工作结果入库时间","claimOnly":true,"timeBasis":"AGENT_GIT_RECORD_TIME"} · 版本：fdce189cdd1d7fc5180c553b4b4bfc18299751deb1f260f7642cec2d81842249
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+file:docs/projectflow-v4.0-d-real-project-understanding-report.md
+
+当前性：在本次读取的历史中 · 验证：PROCESS_EVIDENCE
+
+覆盖：{"source":"agent-result","timeLabel":"工作结果入库时间","claimOnly":true,"timeBasis":"AGENT_GIT_RECORD_TIME"} · 版本：fdce189cdd1d7fc5180c553b4b4bfc18299751deb1f260f7642cec2d81842249
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+file:docs/acceptance-evidence/v4.0-d/verification.json
+
+当前性：在本次读取的历史中 · 验证：PROCESS_EVIDENCE
+
+覆盖：{"source":"agent-result","timeLabel":"工作结果入库时间","claimOnly":true,"timeBasis":"AGENT_GIT_RECORD_TIME"} · 版本：fdce189cdd1d7fc5180c553b4b4bfc18299751deb1f260f7642cec2d81842249
+
+Agent 完成或测试声明属于过程证据，未经独立验证不能升级为强事实。
+
+原始提交与来源信息
+
+Current 明确区分来源支持的变化、README/PR 声明、系统归纳、本地观察和未知；不生成无来源百分比或里程碑，观察到骨架文件不再被说成首次实现整套产品。
+
+工作结果入库时间 · 2026-09-10T05:24:46Z
+
+证据身份：PROCESS_EVIDENCE · PROCESS_EVIDENCE
+
+backend/src/main/java/com/projectflow/service/ProjectWorklineCollector.java
+
+backend/src/main/java/com/projectflow/service/ProjectHistorySourceCollector.java
+
+backend/src/main/java/com/projectflow/service/ProjectHistoryReadService.java
+
+backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java
+
+frontend/src/components/workspace/RealCurrentPage.tsx
+
+frontend/src/components/workspace/WorklineReader.tsx
+
+frontend/src/components/workspace/HistoryReader.tsx
+
+frontend/src/components/workspace/Workspace.tsx
+
+frontend/src/lib/workspace-claims.ts
+
+docs/projectflow-v4.0-d-real-project-understanding-report.md
+
+docs/acceptance-evidence/v4.0-d/verification.json
+
+工程兼容工具：来源审计与修正
+查看故事工程详情
+返回阅读
+工程证据始终保留，展示不会改变事实

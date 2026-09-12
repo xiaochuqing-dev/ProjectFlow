@@ -1,0 +1,118 @@
+{
+  "recordedAt": "2026-09-12T07:08:26.442993+00:00",
+  "phase": "V4.0-E Draft",
+  "functionalSourceHead": "349a6039e68ab5ad0126a2dd1dca3dca1029e7f7",
+  "reviewType": "MODEL_REVIEW",
+  "verdict": "PASS",
+  "ownerReview": "NOT_REVIEWED",
+  "inputBoundary": "Only final user-visible TXT, PNG and capture manifests. No implementation code, DTO, Ground Truth, claim-audit answers or expected verdict supplied.",
+  "sampling": "Actual default recent eight and first five Story/Evidence drilldowns, Current/source, timeline, Thread and Workline views, plus 390/640/1024/1280/1600 widths; no quality-selected subset.",
+  "retentionEvidence": [
+    "final-runtime-retention.json",
+    "restart-checkpoint-retention.json",
+    "corporation-final-content-retention.json"
+  ],
+  "reviews": [
+    {
+      "project": "corporation",
+      "review": "final-visible/model-review-corporation-sol.json",
+      "manifest": "final-visible/corporation-visual-manifest.json",
+      "reviewer": {
+        "model": "GPT-5.6 Sol",
+        "effort": "xhigh"
+      },
+      "verdict": "PASS",
+      "summary": "仅依据 manifest 列出的首次用户可见内容，Corporation-Agent 已清楚建立项目身份，并把文档声明、系统归纳、直接来源与未知项分开。当前可确认结果主要限定为版本、样本配置、工作树与 Git 记录，所有功能或验收陈述均被明确降格为文档声明或未独立验证。五条抽查故事均可继续追到提交、时间和文件来源；单一 main 主线自然展示，远程状态保持未知。窄屏无横向溢出且核心内容可读，因此没有阻断项；最近变化的部分标题偏泛、超长来源列表的扫描成本和 390px 底部浮层遮挡属于非阻断改进项。",
+      "coverage": {
+        "txtReadCount": 34,
+        "pngViewedCount": 67
+      },
+      "findings": [],
+      "worklineAddendum": {
+        "review": "final-visible/model-review-corporation-worklines-sol.json",
+        "verdict": "PASS",
+        "coverage": {
+          "txtReadCount": 7,
+          "pngViewedCount": 9
+        },
+        "scope": "Seven replacement Workline views are separately reviewed; 27 other text views match the original full review. Capture times and hashes are retained in the visible manifest and corporation-final-content-retention.json."
+      }
+    },
+    {
+      "project": "projectflow",
+      "review": "final-visible/model-review-projectflow-sol.json",
+      "manifest": "final-visible/projectflow-visual-manifest.json",
+      "reviewer": {
+        "model": "GPT-5.6 Sol",
+        "effort": "xhigh"
+      },
+      "verdict": "PASS",
+      "summary": "在清单所覆盖的最终用户可见材料中，首次用户能够识别 ProjectFlow 的项目身份，理解当前页面所给出的只是有来源的材料归纳，并能把文件或代码存在、作者或 Agent 的声明与独立运行验收区分开。最近变化默认按来源时间出现，五条 Story 均保留此前状态、本次变化、当前结果、未知与 Evidence 下钻；Git 提交、PR 声明、Agent 工作结果和逐文件变化具有清晰来源身份。开发工作线明确显示 master、未合并 Draft PR、PR base 与 #24→#23→#22 的 stacked 依赖，也区分最后活动时间、提交/提案/入库时间和读取或观察时间。390、640、1024、1280、1600 宽度均可阅读且清单记录无横向溢出。未发现无来源的完成度、里程碑或运行验收主张，也未发现真正阻断首次理解的问题。时间篇章的语义重复、长 Evidence 清单和少量内部化占位文本仍可改进。",
+      "coverage": {
+        "txtReadCount": 34,
+        "pngViewedCount": 77
+      },
+      "findings": [
+        {
+          "severity": "MEDIUM",
+          "blocking": false,
+          "reason": "按时间查看中的许多篇章只重复“更新某类多处代码文件及文档、保留版本变更记录”，且多个日期区间重叠。页面已说明各组可重叠，但这些名称仍难帮助首次用户理解阶段性结果、因果或演进；默认变化概览较好，因此不构成阻断。",
+          "evidence": [
+            "visible-text/projectflow-history-time-final.txt",
+            "screenshots/projectflow-history-time-final-1.png",
+            "screenshots/projectflow-history-time-final-2.png",
+            "screenshots/projectflow-history-time-final-3.png"
+          ]
+        },
+        {
+          "severity": "LOW",
+          "blocking": false,
+          "reason": "时间视图第一页的主内容在部分滚动位置已经结束，而左侧篇章导航继续延伸，形成大片空白区域；这降低连续阅读效率，但分页、篇章编号和其他历史入口仍可使用。",
+          "evidence": [
+            "screenshots/projectflow-history-time-final-4.png",
+            "screenshots/projectflow-history-time-final-5.png"
+          ]
+        },
+        {
+          "severity": "LOW",
+          "blocking": false,
+          "reason": "PR 与 Agent 原文中出现面向内部处理的 [ABSOLUTE_PATH_REDACTED] 占位符，工作线详情还直接显示“检查记录：SUCCESS, SKIPPED”。来源身份和未独立验证边界是清楚的，但这些内部化文本会打断最终用户阅读，可改为自然语言的“路径已隐藏”以及按检查项解释状态。",
+          "evidence": [
+            "visible-text/projectflow-story-3-evidence-final.txt",
+            "visible-text/projectflow-workline-detail-final.txt",
+            "screenshots/projectflow-story-3-evidence-final-6.png",
+            "screenshots/projectflow-workline-detail-final-1.png"
+          ]
+        },
+        {
+          "severity": "LOW",
+          "blocking": false,
+          "reason": "当前页的“冲突与未知”包含多条句式近似的“现有证据未说明此次调整的原因”，并把覆盖诊断与具体未知混在同一长块中。边界准确，但可以按对象合并并把采样、SCIP、远程来源等覆盖诊断单列，以提升扫描效率。",
+          "evidence": [
+            "visible-text/projectflow-current-final.txt",
+            "visible-text/projectflow-current-390-final.txt",
+            "screenshots/projectflow-current-final-4.png"
+          ]
+        },
+        {
+          "severity": "LOW",
+          "blocking": false,
+          "reason": "逐文件 Evidence 对 113 条来源采用分页是安全的，但第一页仍主要呈现连续路径清单，用户需要多次滚动才能回到分页和返回入口。可增加按文件类型或语义角色的小结与页内定位，不改变现有可追溯性。",
+          "evidence": [
+            "visible-text/projectflow-story-2-related-final.txt",
+            "screenshots/projectflow-story-2-related-final-2.png",
+            "screenshots/projectflow-story-2-related-final-3.png",
+            "screenshots/projectflow-story-2-related-final-4.png",
+            "screenshots/projectflow-story-2-related-final-5.png"
+          ]
+        }
+      ]
+    }
+  ],
+  "priorReviews": "All prior V4.0-D and V4.0-E PASS/NEEDS_REVISION inputs and findings remain in their original locations. This additive review does not rewrite them.",
+  "limits": [
+    "Independent model review is not Owner approval.",
+    "Visible samples and source audits do not prove every unobserved runtime behavior.",
+    "Transport reset origin remains UNDETERMINED; review does not guarantee network reliability."
+  ]
+}

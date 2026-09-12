@@ -1,0 +1,473 @@
+{
+  "project": "projectflow",
+  "capturedAt": "2026-09-11T22:27:40.516Z",
+  "source": "Actual production build and persisted real backend; DOM-visible text only, no DTO inputs",
+  "errors": [],
+  "rows": [
+    {
+      "view": "current-final",
+      "text": "visible-text/projectflow-current-final.txt",
+      "images": [
+        "screenshots/projectflow-current-final-1.png",
+        "screenshots/projectflow-current-final-2.png",
+        "screenshots/projectflow-current-final-3.png",
+        "screenshots/projectflow-current-final-4.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "current-sources-final",
+      "text": "visible-text/projectflow-current-sources-final.txt",
+      "images": [
+        "screenshots/projectflow-current-sources-final-1.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "history-default-final",
+      "text": "visible-text/projectflow-history-default-final.txt",
+      "images": [
+        "screenshots/projectflow-history-default-final-1.png",
+        "screenshots/projectflow-history-default-final-2.png",
+        "screenshots/projectflow-history-default-final-3.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "story-1-final",
+      "text": "visible-text/projectflow-story-1-final.txt",
+      "images": [
+        "screenshots/projectflow-story-1-final-1.png",
+        "screenshots/projectflow-story-1-final-2.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "story-1-evidence-final",
+      "text": "visible-text/projectflow-story-1-evidence-final.txt",
+      "images": [
+        "screenshots/projectflow-story-1-evidence-final-1.png",
+        "screenshots/projectflow-story-1-evidence-final-2.png",
+        "screenshots/projectflow-story-1-evidence-final-3.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "story-2-final",
+      "text": "visible-text/projectflow-story-2-final.txt",
+      "images": [
+        "screenshots/projectflow-story-2-final-1.png",
+        "screenshots/projectflow-story-2-final-2.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "story-2-evidence-final",
+      "text": "visible-text/projectflow-story-2-evidence-final.txt",
+      "images": [
+        "screenshots/projectflow-story-2-evidence-final-1.png",
+        "screenshots/projectflow-story-2-evidence-final-2.png",
+        "screenshots/projectflow-story-2-evidence-final-3.png",
+        "screenshots/projectflow-story-2-evidence-final-4.png",
+        "screenshots/projectflow-story-2-evidence-final-5.png",
+        "screenshots/projectflow-story-2-evidence-final-6.png",
+        "screenshots/projectflow-story-2-evidence-final-7.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "story-2-related-final",
+      "text": "visible-text/projectflow-story-2-related-final.txt",
+      "images": [
+        "screenshots/projectflow-story-2-related-final-1.png",
+        "screenshots/projectflow-story-2-related-final-2.png",
+        "screenshots/projectflow-story-2-related-final-3.png",
+        "screenshots/projectflow-story-2-related-final-4.png",
+        "screenshots/projectflow-story-2-related-final-5.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "story-3-final",
+      "text": "visible-text/projectflow-story-3-final.txt",
+      "images": [
+        "screenshots/projectflow-story-3-final-1.png",
+        "screenshots/projectflow-story-3-final-2.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "story-3-evidence-final",
+      "text": "visible-text/projectflow-story-3-evidence-final.txt",
+      "images": [
+        "screenshots/projectflow-story-3-evidence-final-1.png",
+        "screenshots/projectflow-story-3-evidence-final-2.png",
+        "screenshots/projectflow-story-3-evidence-final-3.png",
+        "screenshots/projectflow-story-3-evidence-final-4.png",
+        "screenshots/projectflow-story-3-evidence-final-5.png",
+        "screenshots/projectflow-story-3-evidence-final-6.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "story-4-final",
+      "text": "visible-text/projectflow-story-4-final.txt",
+      "images": [
+        "screenshots/projectflow-story-4-final-1.png",
+        "screenshots/projectflow-story-4-final-2.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "story-4-evidence-final",
+      "text": "visible-text/projectflow-story-4-evidence-final.txt",
+      "images": [
+        "screenshots/projectflow-story-4-evidence-final-1.png",
+        "screenshots/projectflow-story-4-evidence-final-2.png",
+        "screenshots/projectflow-story-4-evidence-final-3.png",
+        "screenshots/projectflow-story-4-evidence-final-4.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "story-4-related-final",
+      "text": "visible-text/projectflow-story-4-related-final.txt",
+      "images": [
+        "screenshots/projectflow-story-4-related-final-1.png",
+        "screenshots/projectflow-story-4-related-final-2.png",
+        "screenshots/projectflow-story-4-related-final-3.png",
+        "screenshots/projectflow-story-4-related-final-4.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "story-5-final",
+      "text": "visible-text/projectflow-story-5-final.txt",
+      "images": [
+        "screenshots/projectflow-story-5-final-1.png",
+        "screenshots/projectflow-story-5-final-2.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "story-5-evidence-final",
+      "text": "visible-text/projectflow-story-5-evidence-final.txt",
+      "images": [
+        "screenshots/projectflow-story-5-evidence-final-1.png",
+        "screenshots/projectflow-story-5-evidence-final-2.png",
+        "screenshots/projectflow-story-5-evidence-final-3.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "history-time-final",
+      "text": "visible-text/projectflow-history-time-final.txt",
+      "images": [
+        "screenshots/projectflow-history-time-final-1.png",
+        "screenshots/projectflow-history-time-final-2.png",
+        "screenshots/projectflow-history-time-final-3.png",
+        "screenshots/projectflow-history-time-final-4.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "threads-directory-final",
+      "text": "visible-text/projectflow-threads-directory-final.txt",
+      "images": [
+        "screenshots/projectflow-threads-directory-final-1.png",
+        "screenshots/projectflow-threads-directory-final-2.png",
+        "screenshots/projectflow-threads-directory-final-3.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "thread-first-final",
+      "text": "visible-text/projectflow-thread-first-final.txt",
+      "images": [
+        "screenshots/projectflow-thread-first-final-1.png",
+        "screenshots/projectflow-thread-first-final-2.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "worklines-final",
+      "text": "visible-text/projectflow-worklines-final.txt",
+      "images": [
+        "screenshots/projectflow-worklines-final-1.png",
+        "screenshots/projectflow-worklines-final-2.png",
+        "screenshots/projectflow-worklines-final-3.png",
+        "screenshots/projectflow-worklines-final-4.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "workline-detail-final",
+      "text": "visible-text/projectflow-workline-detail-final.txt",
+      "images": [
+        "screenshots/projectflow-workline-detail-final-1.png",
+        "screenshots/projectflow-workline-detail-final-2.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "current-390-final",
+      "text": "visible-text/projectflow-current-390-final.txt",
+      "images": [
+        "screenshots/projectflow-current-390-final-1.png"
+      ],
+      "viewport": {
+        "width": 390,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "history-390-final",
+      "text": "visible-text/projectflow-history-390-final.txt",
+      "images": [
+        "screenshots/projectflow-history-390-final-1.png"
+      ],
+      "viewport": {
+        "width": 390,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "worklines-390-final",
+      "text": "visible-text/projectflow-worklines-390-final.txt",
+      "images": [
+        "screenshots/projectflow-worklines-390-final-1.png"
+      ],
+      "viewport": {
+        "width": 390,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "current-640-final",
+      "text": "visible-text/projectflow-current-640-final.txt",
+      "images": [
+        "screenshots/projectflow-current-640-final-1.png"
+      ],
+      "viewport": {
+        "width": 640,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "history-640-final",
+      "text": "visible-text/projectflow-history-640-final.txt",
+      "images": [
+        "screenshots/projectflow-history-640-final-1.png"
+      ],
+      "viewport": {
+        "width": 640,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "worklines-640-final",
+      "text": "visible-text/projectflow-worklines-640-final.txt",
+      "images": [
+        "screenshots/projectflow-worklines-640-final-1.png"
+      ],
+      "viewport": {
+        "width": 640,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "current-1024-final",
+      "text": "visible-text/projectflow-current-1024-final.txt",
+      "images": [
+        "screenshots/projectflow-current-1024-final-1.png"
+      ],
+      "viewport": {
+        "width": 1024,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "history-1024-final",
+      "text": "visible-text/projectflow-history-1024-final.txt",
+      "images": [
+        "screenshots/projectflow-history-1024-final-1.png"
+      ],
+      "viewport": {
+        "width": 1024,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "worklines-1024-final",
+      "text": "visible-text/projectflow-worklines-1024-final.txt",
+      "images": [
+        "screenshots/projectflow-worklines-1024-final-1.png"
+      ],
+      "viewport": {
+        "width": 1024,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "current-1280-final",
+      "text": "visible-text/projectflow-current-1280-final.txt",
+      "images": [
+        "screenshots/projectflow-current-1280-final-1.png"
+      ],
+      "viewport": {
+        "width": 1280,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "history-1280-final",
+      "text": "visible-text/projectflow-history-1280-final.txt",
+      "images": [
+        "screenshots/projectflow-history-1280-final-1.png"
+      ],
+      "viewport": {
+        "width": 1280,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "worklines-1280-final",
+      "text": "visible-text/projectflow-worklines-1280-final.txt",
+      "images": [
+        "screenshots/projectflow-worklines-1280-final-1.png"
+      ],
+      "viewport": {
+        "width": 1280,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "current-1600-final",
+      "text": "visible-text/projectflow-current-1600-final.txt",
+      "images": [
+        "screenshots/projectflow-current-1600-final-1.png"
+      ],
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "history-1600-final",
+      "text": "visible-text/projectflow-history-1600-final.txt",
+      "images": [
+        "screenshots/projectflow-history-1600-final-1.png"
+      ],
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "worklines-1600-final",
+      "text": "visible-text/projectflow-worklines-1600-final.txt",
+      "images": [
+        "screenshots/projectflow-worklines-1600-final-1.png"
+      ],
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    }
+  ]
+}

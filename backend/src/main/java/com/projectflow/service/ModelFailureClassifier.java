@@ -47,6 +47,7 @@ public final class ModelFailureClassifier {
         if (statusCode == 401 || statusCode == 403) return PROVIDER_AUTH_FAILED;
         if (statusCode == 429) return PROVIDER_RATE_LIMITED;
         if (statusCode >= 500 && statusCode < 600) return PROVIDER_5XX;
+        if (statusCode >= 400 && statusCode < 500) return "PROVIDER_REQUEST_REJECTED";
         return UNKNOWN_CALL_FAILED;
     }
 
@@ -55,6 +56,10 @@ public final class ModelFailureClassifier {
      */
     public static String classifyException(Exception failure) {
         if (failure == null) return UNKNOWN_CALL_FAILED;
+        if (failure instanceof java.util.concurrent.CancellationException || failure instanceof InterruptedException) return "CANCELLED";
+        if (failure instanceof AnalysisDeadlineContext.DeadlineExceededException) return "DURATION_BUDGET_EXCEEDED";
+        if (failure instanceof com.projectflow.service.model.ModelProtocolHttpException http)
+            return http.streamReadFailure() ? NETWORK_ERROR : classifyHttpStatus(http.statusCode());
         if (failure instanceof ModelGatewayService.ModelCredentialException credential) return credential.code();
         if (failure instanceof ModelGatewayService.ModelHttpException) {
             return classifyHttpStatus(((ModelGatewayService.ModelHttpException) failure).statusCode());
@@ -80,6 +85,18 @@ public final class ModelFailureClassifier {
             return JSON_PARSE_FAILED;
         }
         if (failure instanceof IOException) return NETWORK_ERROR;
+        Throwable nested = failure.getCause();
+        for (int depth = 0; nested != null && nested != failure && depth < 16; depth++, nested = nested.getCause()) {
+            if (nested instanceof Exception exception) {
+                if (exception instanceof ModelGatewayService.ModelCredentialException
+                    || exception instanceof ModelGatewayService.ModelHttpException
+                    || exception instanceof com.projectflow.service.model.ModelProtocolHttpException
+                    || exception instanceof ModelGatewayService.ModelResponseFormatException
+                    || exception instanceof java.util.concurrent.CancellationException
+                    || exception instanceof InterruptedException) return classifyException(exception);
+            }
+        }
+        if (hasCause(failure, IOException.class)) return NETWORK_ERROR;
         return UNKNOWN_CALL_FAILED;
     }
 

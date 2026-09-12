@@ -1,0 +1,278 @@
+{
+  "reviewType": "MODEL_REVIEW",
+  "round": 1,
+  "project": "Corporation-Agent",
+  "model": "gpt-6-astra",
+  "effort": "xhigh",
+  "status": "NEEDS_REVISION",
+  "reviewBoundary": "本结论仅覆盖 Corporation-Agent 的真实用户可见界面，不包含 ProjectFlow；MODEL_REVIEW 不等于 Owner Review。",
+  "inputScope": {
+    "manifest": "failed-runs/review-round1/input.json",
+    "allowedBase": "docs/acceptance-evidence/v4.0-e/failed-runs/review-round1/",
+    "selection": "Default Current and all eight default recent stories; first five sequential Story/Evidence details; default time chapter including supporting records; first theme directory/detail; single-branch Workline; narrow viewport. No selection by quality.",
+    "visibleTextFilesRead": [
+      "visible-text/corporation-current-final.txt",
+      "visible-text/corporation-current-sources-final.txt",
+      "visible-text/corporation-history-default-final.txt",
+      "visible-text/corporation-story-1-final.txt",
+      "visible-text/corporation-story-1-evidence-final.txt",
+      "visible-text/corporation-story-2-final.txt",
+      "visible-text/corporation-story-2-evidence-final.txt",
+      "visible-text/corporation-story-3-final.txt",
+      "visible-text/corporation-story-3-evidence-final.txt",
+      "visible-text/corporation-story-4-final.txt",
+      "visible-text/corporation-story-4-evidence-final.txt",
+      "visible-text/corporation-story-5-final.txt",
+      "visible-text/corporation-story-5-evidence-final.txt",
+      "visible-text/corporation-history-time-final.txt",
+      "visible-text/corporation-threads-directory-final.txt",
+      "visible-text/corporation-thread-first-final.txt",
+      "visible-text/corporation-worklines-final.txt",
+      "visible-text/corporation-workline-detail-final.txt",
+      "visible-text/corporation-current-390-final.txt",
+      "visible-text/corporation-history-390-final.txt",
+      "visible-text/corporation-worklines-390-final.txt"
+    ],
+    "screenshotsInspected": [
+      "screenshots/corporation-current-final-1.png",
+      "screenshots/corporation-current-final-2.png",
+      "screenshots/corporation-current-final-3.png",
+      "screenshots/corporation-current-sources-final-1.png",
+      "screenshots/corporation-history-default-final-1.png",
+      "screenshots/corporation-history-default-final-2.png",
+      "screenshots/corporation-history-default-final-3.png",
+      "screenshots/corporation-story-1-final-1.png",
+      "screenshots/corporation-story-1-final-2.png",
+      "screenshots/corporation-story-1-evidence-final-1.png",
+      "screenshots/corporation-story-1-evidence-final-2.png",
+      "screenshots/corporation-story-1-evidence-final-3.png",
+      "screenshots/corporation-story-1-evidence-final-5.png",
+      "screenshots/corporation-story-2-evidence-final-1.png",
+      "screenshots/corporation-story-3-evidence-final-1.png",
+      "screenshots/corporation-story-5-evidence-final-1.png",
+      "screenshots/corporation-history-time-final-1.png",
+      "screenshots/corporation-history-time-final-2.png",
+      "screenshots/corporation-threads-directory-final-1.png",
+      "screenshots/corporation-threads-directory-final-2.png",
+      "screenshots/corporation-thread-first-final-1.png",
+      "screenshots/corporation-thread-first-final-2.png",
+      "screenshots/corporation-worklines-final-1.png",
+      "screenshots/corporation-worklines-final-2.png",
+      "screenshots/corporation-current-390-final-1.png",
+      "screenshots/corporation-history-390-final-1.png",
+      "screenshots/corporation-worklines-390-final-1.png"
+    ],
+    "excluded": [
+      "source code",
+      "DTOs and raw APIs",
+      "Ground Truth",
+      "claim audits",
+      "other reports and historical reviews",
+      "files not listed by the manifest",
+      "online project information"
+    ]
+  },
+  "findings": [
+    {
+      "id": "CA-R1-01",
+      "severity": "HIGH",
+      "blocksPass": true,
+      "area": "最近 3–5 个具体变化",
+      "summary": "同一提交被拆成多条并列变化，并由一条汇总变化再次覆盖，造成重复计数。",
+      "visibleText": [
+        "新增沟通、备份、存储相关代码，留下可核对的变更记录",
+        "新增前端代码（含通知、沟通、附件相关文件），留下可核对的变更记录",
+        "新增后端代码（含通知、沟通、协作相关文件），留下可核对的变更记录",
+        "修改相关代码（含通知、沟通、协作文件），留下可核对的变更记录",
+        "commit:6a0fed928c64f8fea85872bc1e927886c2f948e6"
+      ],
+      "impact": "用户会把同一提交的文件级切片和提交级汇总误读成四个连续事件，最近变化的数量、顺序和独立性失真。",
+      "evidenceLocations": [
+        "visible-text/corporation-current-final.txt",
+        "visible-text/corporation-history-default-final.txt",
+        "visible-text/corporation-story-2-evidence-final.txt",
+        "visible-text/corporation-story-3-evidence-final.txt",
+        "visible-text/corporation-story-4-evidence-final.txt",
+        "visible-text/corporation-story-5-evidence-final.txt",
+        "screenshots/corporation-current-final-2.png",
+        "screenshots/corporation-current-final-3.png",
+        "screenshots/corporation-history-default-final-1.png",
+        "screenshots/corporation-history-default-final-2.png"
+      ]
+    },
+    {
+      "id": "CA-R1-02",
+      "severity": "HIGH",
+      "blocksPass": true,
+      "area": "Story 基线与时间含义",
+      "summary": "首条故事声称此前没有项目文档并首次建立文档，但已展开的可见来源是修改记录；故事日期与来源提交日期也不一致。",
+      "visibleText": [
+        "此前项目中还没有项目文档。",
+        "这一阶段首次建立项目文档，并保存了相关内容。",
+        "Git 记录 · 修改 · 当前有效",
+        "Corporation-Agent · 提交时间 · 2026-09-09",
+        "提交时间 · 2026-09-08T09:30:08Z"
+      ],
+      "impact": "用户无法从可见来源核对‘首次’和此前状态，并会对该故事究竟发生在 9 月 8 日还是 9 月 9 日产生直接冲突。",
+      "evidenceLocations": [
+        "visible-text/corporation-story-1-final.txt",
+        "visible-text/corporation-story-1-evidence-final.txt",
+        "screenshots/corporation-story-1-final-1.png",
+        "screenshots/corporation-story-1-evidence-final-1.png",
+        "screenshots/corporation-story-1-evidence-final-2.png"
+      ]
+    },
+    {
+      "id": "CA-R1-03",
+      "severity": "HIGH",
+      "blocksPass": true,
+      "area": "按时间查看",
+      "summary": "时间篇章存在重复、重叠和题文不一致。",
+      "visibleText": [
+        "CHAPTER 02 建立项目文档，形成可继续查看的初始成果 2026/9/5 – 2026/9/8",
+        "CHAPTER 03 建立项目文档，形成可继续查看的初始成果 2026/9/5 – 2026/9/5",
+        "CHAPTER 09 新增后端代码（含通知、沟通、协作相关文件），保留文件变更记录"
+      ],
+      "impact": "相邻篇章无法构成清晰时间序列；CHAPTER 09 的正文混入项目文档、成果交付、前端、后端及汇总记录，标题不足以概括实际内容。",
+      "evidenceLocations": [
+        "visible-text/corporation-history-time-final.txt",
+        "screenshots/corporation-history-time-final-1.png",
+        "screenshots/corporation-history-time-final-2.png"
+      ]
+    },
+    {
+      "id": "CA-R1-04",
+      "severity": "HIGH",
+      "blocksPass": true,
+      "area": "长期主题",
+      "summary": "长期主题目录出现无法区分的重复主题。",
+      "visibleText": [
+        "报告文档（重复四次）",
+        "版本库忽略规则（重复两次）"
+      ],
+      "impact": "用户无法判断这些卡片是不同主题还是重复项，也无法沿一个稳定主题阅读演变。",
+      "evidenceLocations": [
+        "visible-text/corporation-threads-directory-final.txt",
+        "screenshots/corporation-threads-directory-final-1.png",
+        "screenshots/corporation-threads-directory-final-2.png"
+      ]
+    },
+    {
+      "id": "CA-R1-05",
+      "severity": "MEDIUM",
+      "blocksPass": false,
+      "area": "项目身份与当前可确认结果",
+      "summary": "首屏用现在时陈述 README 中的能力声明，逐句来源身份不够显眼。",
+      "visibleText": [
+        "v2.2.0 让任务要求、申请沟通和成果审核支持文字与文件，并通过事务内 Domain Event 为相关人员生成站内通知。",
+        "普通沟通与通知均不调用模型；用户明确要求查询或分析时才创建 AgentRun。"
+      ],
+      "impact": "虽然下方明确说明文档宣称不等于验证，普通用户仍可能先把英雄摘要读成已运行验证的当前能力。",
+      "evidenceLocations": [
+        "visible-text/corporation-current-final.txt",
+        "visible-text/corporation-current-sources-final.txt",
+        "visible-text/corporation-current-390-final.txt",
+        "screenshots/corporation-current-final-1.png",
+        "screenshots/corporation-current-390-final-1.png"
+      ]
+    },
+    {
+      "id": "CA-R1-06",
+      "severity": "MEDIUM",
+      "blocksPass": false,
+      "area": "当前性",
+      "summary": "最近成功读取时间与系统归纳所覆盖的读取时间不同，界面没有解释摘要是否落后。",
+      "visibleText": [
+        "最近成功读取：2026/9/12 03:49:29",
+        "系统归纳 · 读取于 2026/9/12 02:42:03 · 仅覆盖该次读取"
+      ],
+      "impact": "用户难以判断当前状态摘要是否包含最近一次读取的材料。",
+      "evidenceLocations": [
+        "visible-text/corporation-current-final.txt",
+        "visible-text/corporation-current-sources-final.txt",
+        "visible-text/corporation-current-390-final.txt",
+        "screenshots/corporation-current-final-1.png",
+        "screenshots/corporation-current-sources-final-1.png"
+      ]
+    },
+    {
+      "id": "CA-R1-07",
+      "severity": "MEDIUM",
+      "blocksPass": false,
+      "area": "来源下钻与可读性",
+      "summary": "来源界面混入内部枚举、原始 JSON、hash 和 Content Map 诊断。",
+      "visibleText": [
+        "README_CANDIDATE",
+        "INFRA_CANDIDATE",
+        "WORKTREE_STATUS",
+        "OBSERVED · SOURCE_BACKED",
+        "覆盖：{\"timeLabel\":\"提交时间\",\"fileChangeCount\":2,\"source\":\"git\",\"timeBasis\":\"GIT_COMMIT_TIME\"}",
+        "CONTENT_MAP encoding=UTF-8"
+      ],
+      "impact": "普通用户需要穿过实现术语和高密度诊断才能理解来源支持了什么。",
+      "evidenceLocations": [
+        "visible-text/corporation-current-sources-final.txt",
+        "visible-text/corporation-story-1-evidence-final.txt",
+        "visible-text/corporation-story-2-evidence-final.txt",
+        "screenshots/corporation-current-sources-final-1.png",
+        "screenshots/corporation-story-1-evidence-final-2.png",
+        "screenshots/corporation-story-1-evidence-final-3.png"
+      ]
+    },
+    {
+      "id": "CA-R1-08",
+      "severity": "LOW",
+      "blocksPass": false,
+      "area": "单分支自然性",
+      "summary": "单分支页的事实边界诚实，但标题略强于实际证据。",
+      "visibleText": [
+        "看清哪些工作正在发生",
+        "1 条已读取分支 · 主线：main",
+        "已读取最近 8 条提交，用途暂无明确声明",
+        "远程协作信息不完整；本地工作线仍可阅读，PR 状态保持未知。"
+      ],
+      "impact": "仅有 main 和历史提交时，‘正在发生’可能让用户期待存在活跃分支；其余文本已正确限制含义。",
+      "evidenceLocations": [
+        "visible-text/corporation-worklines-final.txt",
+        "visible-text/corporation-worklines-390-final.txt",
+        "screenshots/corporation-worklines-final-1.png",
+        "screenshots/corporation-worklines-390-final-1.png"
+      ]
+    }
+  ],
+  "passedObservations": [
+    {
+      "area": "项目身份",
+      "result": "Corporation-Agent 名称、企业 Agent Workspace 定位、版本与 README 来源均清楚可见。"
+    },
+    {
+      "area": "声明、推断与未知",
+      "result": "‘项目明确声明’、‘系统归纳’和‘尚未确认’总体区分清晰。"
+    },
+    {
+      "area": "证据边界",
+      "result": "多处明确提示文件变化不等于功能通过运行验收，没有用缺少运行验收为由编造功能结果。"
+    },
+    {
+      "area": "来源下钻",
+      "result": "前五条 Story/Evidence 可下钻到提交、来源时间和文件路径。"
+    },
+    {
+      "area": "桌面与窄屏可读性",
+      "result": "已查看桌面与 390px 截图，未见明显横向溢出，窄屏主要内容可读。"
+    }
+  ],
+  "sourceLimitations": [
+    {
+      "area": "工作线依据详情",
+      "status": "UNREVIEWABLE_FROM_INPUT",
+      "detail": "visible-text/corporation-workline-detail-final.txt 只包含命令面板与导航文字，没有分支依据详情；因此该子视图无法评审，但不据此判定产品功能失败。"
+    },
+    {
+      "area": "运行验收",
+      "status": "NOT_REQUIRED_FOR_VISIBLE_SEMANTIC_REVIEW",
+      "detail": "评审只判断普通用户可见内容，不要求缺少来源时补写或编造功能结果。"
+    }
+  ],
+  "fulfillsRequiredSolReview": false
+}

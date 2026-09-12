@@ -99,7 +99,7 @@ export function HistoryPage({ project, demo, onStory }: Props) {
           onClick={() => router.push(`${base}&axis=time${chapterId ? `&chapter=${encodeURIComponent(chapterId)}` : ""}`, { scroll: false })}><BookOpenText size={16} />按时间查看</button>
         <button aria-pressed={axis === "threads"} className={axis === "threads" ? "active" : ""}
           onClick={() => router.push(`${base}&axis=threads${selectedId ? `&chapter=${encodeURIComponent(selectedId)}` : ""}`, { scroll: false })}><Workflow size={16} />按长期主题查看</button>
-      </div><span>{axis === "chapters" ? "项目按时间先后经历了什么" : axis === "threads" ? "某个功能、问题或方向如何持续变化" : "先看最近发生了什么，再深入时间或主题"}</span>
+      </div><span>{axis === "chapters" ? "按来源时间分组阅读；各组可以重叠，不代表前后相继的成熟阶段" : axis === "threads" ? "某个功能、问题或方向如何持续变化" : "先看最近发生了什么，再深入时间或主题"}</span>
     </div>
     {axis === "threads" ? <ThreadReader project={project} demo={demo} onStory={onStory}
       chapters={chapterList} chapterPage={page} onChapterPage={setPage} chapterLoading={listLoading}
@@ -156,7 +156,7 @@ function ThreadReader({ project, demo, onStory, chapters, chapterPage, onChapter
     setLoading(true); setError("");
     const token = readSession().accessToken;
     const read = threadId ? getProjectHistoryThread(token, project.id, threadId).then((value) => { if (active) setDetail(value); })
-      : listProjectHistoryThreads(token, project.id, page, subject).then((value) => { if (active) { listScope.current = `${page}:${subject}`; setList(value); } });
+      : listProjectHistoryThreads(token, project.id, page, subject, true).then((value) => { if (active) { listScope.current = `${page}:${subject}`; setList(value); } });
     read.catch((e) => { if (active) setError(e.message); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [demo, project.id, project.updated, threadId, page, subject, retry]);
@@ -184,9 +184,10 @@ function ThreadReader({ project, demo, onStory, chapters, chapterPage, onChapter
       {error && <ReadError message={error} onRetry={() => setRetry((n) => n + 1)} />}
       {(thread || example) ? <>
         <header className="pf-thread-detail-heading">
-          <span className="pf-eyebrow">长期主题{demo ? " · 示例" : ""}</span>
+          <span className="pf-eyebrow">{thread?.subjectType === "RECORD_CONTEXT" ? "相关记录线索" : "长期主题"}{demo ? " · 示例" : ""}</span>
           <h2 ref={heading} tabIndex={-1}>{example?.subjectLabel ?? thread?.subjectLabel}</h2>
           <p>{(example?.summary ?? thread?.currentOutcome) || "现有记录尚未确认主题的当前结果。"}</p>
+          {!demo && <p className="pf-claim-badge">系统归纳 · 实现与验证范围以关联变化的来源为准</p>}
           {!demo && <span><Clock3 size={14} />关联变化覆盖：{historyDateRange(ordered[0]?.occurredFrom, latestStoryTime(ordered))}</span>}
           <small>{storyItems.length} 条可阅读变化 · {demo ? "示例内容" : project.stale ? "可能已过期" : "已保存的演变记录"}</small>
         </header>
@@ -213,7 +214,7 @@ function ThreadReader({ project, demo, onStory, chapters, chapterPage, onChapter
         </details>}
       </> : !loading && !error && <p className="pf-notice">没有找到这条主线，请返回目录重新选择。</p>}
     </> : <>
-      <h2>跨阶段，读懂一个主题的演变</h2><p>主题连接不同篇章中的真实变化；它不是项目完成度，也不替代时间篇章。</p>
+      <h2>跨阶段，读懂一个主题的演变</h2><p>主题需要同一明确对象的多条变化。单次提交和目录文件清单保留在变化与证据中；没有连续来源时，不生成长期主题。</p>
       <form className="pf-thread-search" onSubmit={(event) => { event.preventDefault(); router.push(`${base}&axis=threads&subject=${encodeURIComponent(search.trim())}`, { scroll: false }); }}>
         <label className="pf-filter-search"><Search size={15} /><input aria-label="搜索演变主线" placeholder="按主题查找…" value={search} onChange={(event) => setSearch(event.target.value)} maxLength={200} /></label>
         <button className="pf-button" type="submit">查找</button>
@@ -225,6 +226,7 @@ function ThreadReader({ project, demo, onStory, chapters, chapterPage, onChapter
           <Workflow size={22} /><h3>{item.subjectLabel}</h3><p>{item.summary}</p><span>{item.stories.length} 条变化 · 示例<ArrowRight size={15} /></span>
         </Link>) : visibleList?.items.map((item) => <Link className="pf-thread-card" key={item.id} href={`${listHref}&thread=${encodeURIComponent(item.id)}`}>
           <Workflow size={22} /><h3>{item.subjectLabel}</h3><p>{item.currentOutcome || "当前结果尚未确认"}</p>
+          <small className="pf-claim-badge">系统归纳 · 查看关联变化核对实现范围</small>
           <span>{item.storyRefs.length} 条关联变化<ArrowRight size={15} /></span>
           {!!item.conflicts.length && <small className="pf-chip conflict">存在冲突</small>}
           {!!item.unknowns.length && <small className="pf-chip unknown">仍有未知</small>}
@@ -250,7 +252,7 @@ export function StoryCard({ story, onStory }: { story: WorkspaceStory; onStory: 
 export function HistoryBoundaries({ conflicts = [], unknowns = [], limitations = [] }: { conflicts?: string[]; unknowns?: string[]; limitations?: string[] }) {
   return <div className="pf-history-boundaries">{[
     { label: "存在冲突", items: conflicts, tone: "conflict" }, { label: "尚未确认", items: unknowns, tone: "unknown" }, { label: "覆盖与缺口", items: limitations, tone: "attention" },
-  ].filter((group) => group.items.length).map((group) => <section key={group.label} className={group.tone}><h3>{group.label}</h3><ul>{group.items.map((item, i) => <li key={i}>{item}</li>)}</ul></section>)}</div>;
+  ].map((group) => ({ ...group, items: [...new Set(group.items.map(item => item.trim()).filter(Boolean))] })).filter((group) => group.items.length).map((group) => <section key={group.label} className={group.tone}><h3>{group.label}</h3><ul>{group.items.map((item, i) => <li key={i}>{item}</li>)}</ul></section>)}</div>;
 }
 
 export function ReadError({ message, onRetry }: { message: string; onRetry: () => void }) {

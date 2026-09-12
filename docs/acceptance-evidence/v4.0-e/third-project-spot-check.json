@@ -1,0 +1,28 @@
+{
+  "recordedAt": "2026-09-12T03:49:26.295063+00:00",
+  "type": "AGENT_SPOT_CHECK",
+  "project": "Universal Exam Prep",
+  "scope": "Actual production UI with successful persisted Current result; History was not refreshed for this third project. No historical reconstruction or model review PASS is claimed.",
+  "visibleTextCount": 21,
+  "screenshotCount": 27,
+  "readTextFiles": [
+    "visible-text/examprep-current-final.txt",
+    "visible-text/examprep-history-default-final.txt"
+  ],
+  "inspectedPngFiles": [
+    "screenshots/examprep-current-final-1.png",
+    "screenshots/examprep-history-default-final-1.png",
+    "screenshots/examprep-current-390-final-1.png"
+  ],
+  "pageErrors": 0,
+  "horizontalOverflow": 0,
+  "observations": [
+    "Project identity is attributed to its README and skill document.",
+    "Current documents and system inference remain labeled; unknown runtime details remain unknown.",
+    "No history was fabricated for the unrefreshed material-only view.",
+    "Desktop and narrow layout retained readable text and reachable source controls."
+  ],
+  "ownerReview": "NOT_REVIEWED",
+  "functionalSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491",
+  "captureCorpus": "final-visible/examprep-visual-manifest.json"
+}

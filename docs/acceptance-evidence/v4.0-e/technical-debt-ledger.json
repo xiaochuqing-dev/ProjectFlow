@@ -1,0 +1,374 @@
+{
+  "phase": "V4.0-E Draft",
+  "status": "P0_CLOSED_VERIFIED",
+  "items": [
+    {
+      "id": "E-P0-01",
+      "debt": "Long Current Understanding HTTP/2 reset",
+      "source": "V4.0-D two real Current failures",
+      "priority": "P0",
+      "userImpact": "No usable current material understanding",
+      "engineeringRisk": "Unknown transport origin and repeated expensive work",
+      "treatment": "Official SDK streaming for long reasoning requests; existing bounded retry; validated Scout checkpoint",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "Reset origin UNDETERMINED; two successes do not establish an outage rate",
+      "recommendedPhase": "V4.0-E"
+    },
+    {
+      "id": "E-P0-02",
+      "debt": "Wrapped failure loses attempt and usage diagnostics",
+      "source": "V4.0-D failed Job DTO plus V4.0-E baseline undercount and cache overcount",
+      "priority": "P0",
+      "userImpact": "Reported zero calls or misleading cost",
+      "engineeringRisk": "Budget and recovery decisions lose transport evidence",
+      "treatment": "Per-Job attempt collector persisted on heartbeat and finalization; nullable unknown totals and reported partial sums; cache runs excluded",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "Unknown upstream usage remains explicitly unknown; no billing total is inferred",
+      "recommendedPhase": "V4.0-E"
+    },
+    {
+      "id": "E-P0-03",
+      "debt": "Generic Story wording",
+      "source": "V4.0-D independent semantic reviews",
+      "priority": "P0",
+      "userImpact": "Users cannot tell what changed",
+      "engineeringRisk": "Specificity may inflate authority or alter grouping",
+      "treatment": "Exact-commit ownership, diverse bounded paths, short historical document content, temporal limits, and preservation of independently validated Story wording during the existing single repair. Preserve the owning commit/Agent statement with explicit author identity, verification scope and unfinished work; process-only actual state remains UNKNOWN. Independently useful title/summary fields also survive a weaker partner; full authority validation and supported-result fallback remain required.",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "Both independent Sol/xhigh visible reviews passed. Non-blocking wording and reading issues remain listed separately; Owner Review is NOT_REVIEWED.",
+      "recommendedPhase": "V4.0-E"
+    },
+    {
+      "id": "E-P0-04",
+      "debt": "Observation timestamps presented as occurrence dates",
+      "source": "V4.0-D independent review",
+      "priority": "P0",
+      "userImpact": "False chronology",
+      "engineeringRisk": "Clone mtime contaminates project history",
+      "treatment": "Source-aware time basis; reuse collected Git record dates for Agent results; explicit observation and unknown labels",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "All 69 sampled Git source/time checks match and the independent visible review passed. Sources lacking occurrence time still remain unknown.",
+      "recommendedPhase": "V4.0-E"
+    },
+    {
+      "id": "E-P0-05",
+      "debt": "Independent model review not passed",
+      "source": "V4.0-D rounds 1 and 2 NEEDS_REVISION",
+      "priority": "P0",
+      "userImpact": "Product semantic readiness unproven",
+      "engineeringRisk": "Engineering greens could conceal poor explanation",
+      "treatment": "Fresh independent Sol/xhigh review of representative visible Current, History, Workline and Evidence",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "Both independent Sol/xhigh visible reviews passed. Non-blocking wording and reading issues remain listed separately; Owner Review is NOT_REVIEWED.",
+      "recommendedPhase": "V4.0-E"
+    },
+    {
+      "id": "E-P1-01",
+      "debt": "CI action runtime deprecation",
+      "source": "Older known-risks entry",
+      "priority": "P1",
+      "userImpact": "Potential future CI breakage",
+      "engineeringRisk": "Deprecated action runtime",
+      "treatment": "Inspected all four final push/PR Quality and Windows logs plus check annotations; no unresolved action-runtime/setup-java deprecation remains. Existing pinned Actions retained.",
+      "status": "OBSOLETE",
+      "remainingRisk": "Future upstream action runtime changes require ordinary maintenance.",
+      "recommendedPhase": "Ongoing dependency maintenance",
+      "evidence": [
+        "ci-warning-audit.json"
+      ]
+    },
+    {
+      "id": "E-P1-02",
+      "debt": "Current prioritizes inventory over purpose and conflates declaration with inference",
+      "source": "V4.0-E real Current output inspection",
+      "priority": "P1",
+      "userImpact": "Successful understanding still opens with file statistics",
+      "engineeringRisk": "Frontend type omitted backend DECLARED/UNKNOWN states",
+      "treatment": "Prioritize existing sourced purpose/capability claims; preserve per-claim classification and source filtering",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "Both final independent visible reviews passed; model interpretation remains separate from verified runtime capability.",
+      "recommendedPhase": "V4.0-E"
+    },
+    {
+      "id": "E-P2-01",
+      "debt": "Project-level provider/model binding",
+      "source": "No reliable persistent per-project API",
+      "priority": "P2",
+      "userImpact": "Projects share a global default",
+      "engineeringRisk": "Ad hoc schema would create unreliable binding",
+      "treatment": "Retain explicit global default",
+      "status": "DEFERRED",
+      "remainingRisk": "Per-project settings unavailable",
+      "recommendedPhase": "V4.1"
+    },
+    {
+      "id": "E-D-01",
+      "debt": "Obsidian GUI",
+      "source": "Existing CLI/projection boundary",
+      "priority": "DEFERRED",
+      "userImpact": "Synchronization uses CLI",
+      "engineeringRisk": "Watcher or daemon would expand scope",
+      "treatment": "Keep existing projection and tests",
+      "status": "DEFERRED",
+      "remainingRisk": "No GUI sync control",
+      "recommendedPhase": "After desktop stabilization"
+    },
+    {
+      "id": "E-D-02",
+      "debt": "GitHub clone engine",
+      "source": "Local-first intake",
+      "priority": "DEFERRED",
+      "userImpact": "Bind an existing local checkout",
+      "engineeringRisk": "Would turn workbench into Git client",
+      "treatment": "Preserve existing local-first contract",
+      "status": "DEFERRED",
+      "remainingRisk": "No managed cloning",
+      "recommendedPhase": "Separate product decision"
+    },
+    {
+      "id": "E-D-03",
+      "debt": "Legacy engineering tools and broad deletion",
+      "source": "History corrections, audit, Fact tools and provider cleanup",
+      "priority": "DEFERRED",
+      "userImpact": "Explicit compatibility tools remain",
+      "engineeringRisk": "Deletion could damage historical access",
+      "treatment": "Retain isolated engineering compatibility routes",
+      "status": "DEFERRED",
+      "remainingRisk": "Maintenance overhead remains",
+      "recommendedPhase": "Separate focused cleanup"
+    },
+    {
+      "id": "E-F-01",
+      "debt": "Archify / Visual Map",
+      "source": "Future product direction",
+      "priority": "FUTURE_ENHANCEMENT",
+      "userImpact": "No visual project map",
+      "engineeringRisk": "Premature visual representation layer",
+      "treatment": "No dependency or Visual IR introduced",
+      "status": "NOT_TECHNICAL_DEBT",
+      "remainingRisk": "Requires later product and architecture evaluation",
+      "recommendedPhase": "After desktop stabilization"
+    },
+    {
+      "id": "E-P0-06",
+      "debt": "Failed Final Synthesis was reused as a successful no-change result",
+      "source": "Actual third-project spot check",
+      "priority": "P0",
+      "userImpact": "Final material understanding appeared complete and could not recover",
+      "engineeringRisk": "Untrusted cached success suppresses a required retry",
+      "treatment": "Failed final stage is excluded from success cache; validated source/provider/model/protocol/effort checkpoint permits final-only recovery",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "Unknown failed-attempt usage cannot be reconstructed",
+      "recommendedPhase": "V4.0-E"
+    },
+    {
+      "id": "E-P2-02",
+      "debt": "A local Evidence card retains a broad skeleton/completeness label",
+      "source": "Independent Corporation-Agent final Sol/xhigh review, CA-SOL-01",
+      "priority": "P2",
+      "userImpact": "A reader may temporarily interpret a broad file-change card as wider architecture completion.",
+      "engineeringRisk": "The label is broader than direct file evidence; the main Story explicitly limits the claim to file changes and unverified runtime.",
+      "treatment": "Retain the reviewer finding and scope limitation; do not alter the frozen reviewed output.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "One LOW visible wording issue; no runtime or deployment acceptance is asserted.",
+      "recommendedPhase": "Focused History wording maintenance"
+    },
+    {
+      "id": "E-P1-03",
+      "debt": "Refresh time and source-label clarity",
+      "source": "Corporation independent Sol/xhigh round six, three non-blocking findings",
+      "priority": "P1",
+      "userImpact": "Different material/history read times need explicit timezone/run context; generic tool labels and main-to-itself ancestry wording require extra reading.",
+      "engineeringRisk": "A cosmetic change must not relabel source statements or imply remote/PR authority.",
+      "treatment": "Retain the review findings and verify the actual UTC timestamps; they belong to different reads, not a proven conversion defect.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "Current source cards and the single-main short label remain less direct than Story/Evidence details.",
+      "recommendedPhase": "Desktop PoC usability pass"
+    },
+    {
+      "id": "E-P1-04",
+      "debt": "Legacy Job budget fields use a different scope from aggregate transport telemetry",
+      "source": "Actual History Job metadata and ProjectAnalysisJobService/Runner inspection",
+      "priority": "P1",
+      "userImpact": "Engineering API consumers must not treat maxRequestCount=1 or maxTotalTokens=120000 as the aggregate History execution ceiling; normal V4 pages do not render those fields.",
+      "engineeringRisk": "The wrapper checks these defaults before entering History, while History bounds its own windows and each Gateway task. Combining their meanings silently would misstate limits.",
+      "treatment": "Preserve actual attempt/usage telemetry and document the mismatch; retain the existing limit of 16 Story windows and 4 Chapter synthesis windows per refresh, bounded per-task recovery and cancellation.",
+      "status": "DEFERRED_SCOPED_CONTRACT_UNIFICATION",
+      "remainingRisk": "The old generic Job budget fields remain unsuitable for displaying a whole History cost ceiling. No global budget/runner rewrite is claimed.",
+      "recommendedPhase": "Before exposing aggregate budget controls in Desktop"
+    },
+    {
+      "id": "E-P2-03",
+      "debt": "Some recent document/change titles remain broad",
+      "source": "Latest Corporation-Agent independent Sol/xhigh visible review",
+      "priority": "P2",
+      "userImpact": "The default overview requires opening a Story to learn the precise record category or content.",
+      "engineeringRisk": "Do not hide evidence or add unsupported specificity to reduce reading effort.",
+      "treatment": "Review found the notification/communication implementation and version/document changes concrete; broader record/report titles are non-blocking.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "The default overview requires opening a Story to learn the precise record category or content.",
+      "recommendedPhase": "Desktop PoC usability pass"
+    },
+    {
+      "id": "E-P2-04",
+      "debt": "Long source lists take multiple screens to inspect",
+      "source": "Latest Corporation-Agent independent Sol/xhigh visible review",
+      "priority": "P2",
+      "userImpact": "Large commit file inventories have a high scanning cost.",
+      "engineeringRisk": "Do not hide evidence or add unsupported specificity to reduce reading effort.",
+      "treatment": "Keep all sources and current Story/Evidence trace; consider a focused grouping treatment in a later usability pass.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "Large commit file inventories have a high scanning cost.",
+      "recommendedPhase": "Desktop PoC usability pass"
+    },
+    {
+      "id": "E-P2-05",
+      "debt": "The narrow-screen evidence control overlaps a small reading area",
+      "source": "Latest Corporation-Agent independent Sol/xhigh visible review",
+      "priority": "P2",
+      "userImpact": "At 390px, a fixed evidence entry can temporarily cover the lower-right text while scrolling.",
+      "engineeringRisk": "Do not hide evidence or add unsupported specificity to reduce reading effort.",
+      "treatment": "No horizontal overflow or blocked core operation was observed; preserve the review and revisit docking/spacing later.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "At 390px, a fixed evidence entry can temporarily cover the lower-right text while scrolling.",
+      "recommendedPhase": "Desktop PoC usability pass"
+    },
+    {
+      "id": "E-P1-05",
+      "debt": "Unchanged source metadata invalidates History checkpoints after restart",
+      "source": "V4.0-E real restart; two closed H2 backups confirm all 83 changed hashes had identical content, plus persisted H2 identity regressions.",
+      "priority": "P1",
+      "userImpact": "Already successful model windows can be recomputed unnecessarily",
+      "engineeringRisk": "Iteration order changes opaque source fingerprints without a content change",
+      "treatment": "Compare source content and parsed JSON on hash mismatch, excluding aggregate HEAD and respecting existing TIMESTAMP(6) precision; retain the old hash. Real coverage-value and timestamp changes still invalidate.",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "Final real restart retained all 4312 event hashes and reused 12 successful windows; only two failed windows and one chapter request were executed. The following full History no-change refresh made zero calls and preserved all 338 Story responses.",
+      "recommendedPhase": "V4.0-E"
+    },
+    {
+      "id": "E-P2-06",
+      "debt": "按时间查看中的许多篇章只重复“更新某类多处代码文件及文档、保留版本变更记录”，且多个日期区间重叠。页面已说明各组可重叠，但这些名称仍难帮助首次用户理解阶段性结果、因果或演进；默认变化概览较好，因此不构成阻断。",
+      "source": "Final ProjectFlow independent Sol/xhigh visible review",
+      "priority": "P2",
+      "reviewSeverity": "MEDIUM",
+      "userImpact": "按时间查看中的许多篇章只重复“更新某类多处代码文件及文档、保留版本变更记录”，且多个日期区间重叠。页面已说明各组可重叠，但这些名称仍难帮助首次用户理解阶段性结果、因果或演进；默认变化概览较好，因此不构成阻断。",
+      "engineeringRisk": "A usability change must preserve authority, source trace, completeness and unknowns.",
+      "treatment": "Retain the non-blocking finding with its original reviewed input; no unreviewed last-minute UI change.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "按时间查看中的许多篇章只重复“更新某类多处代码文件及文档、保留版本变更记录”，且多个日期区间重叠。页面已说明各组可重叠，但这些名称仍难帮助首次用户理解阶段性结果、因果或演进；默认变化概览较好，因此不构成阻断。",
+      "recommendedPhase": "Desktop PoC usability pass",
+      "evidence": [
+        "visible-text/projectflow-history-time-final.txt",
+        "screenshots/projectflow-history-time-final-1.png",
+        "screenshots/projectflow-history-time-final-2.png",
+        "screenshots/projectflow-history-time-final-3.png"
+      ]
+    },
+    {
+      "id": "E-P2-07",
+      "debt": "时间视图第一页的主内容在部分滚动位置已经结束，而左侧篇章导航继续延伸，形成大片空白区域；这降低连续阅读效率，但分页、篇章编号和其他历史入口仍可使用。",
+      "source": "Final ProjectFlow independent Sol/xhigh visible review",
+      "priority": "P2",
+      "reviewSeverity": "LOW",
+      "userImpact": "时间视图第一页的主内容在部分滚动位置已经结束，而左侧篇章导航继续延伸，形成大片空白区域；这降低连续阅读效率，但分页、篇章编号和其他历史入口仍可使用。",
+      "engineeringRisk": "A usability change must preserve authority, source trace, completeness and unknowns.",
+      "treatment": "Retain the non-blocking finding with its original reviewed input; no unreviewed last-minute UI change.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "时间视图第一页的主内容在部分滚动位置已经结束，而左侧篇章导航继续延伸，形成大片空白区域；这降低连续阅读效率，但分页、篇章编号和其他历史入口仍可使用。",
+      "recommendedPhase": "Desktop PoC usability pass",
+      "evidence": [
+        "screenshots/projectflow-history-time-final-4.png",
+        "screenshots/projectflow-history-time-final-5.png"
+      ]
+    },
+    {
+      "id": "E-P2-08",
+      "debt": "PR 与 Agent 原文中出现面向内部处理的 [ABSOLUTE_PATH_REDACTED] 占位符，工作线详情还直接显示“检查记录：SUCCESS, SKIPPED”。来源身份和未独立验证边界是清楚的，但这些内部化文本会打断最终用户阅读，可改为自然语言的“路径已隐藏”以及按检查项解释状态。",
+      "source": "Final ProjectFlow independent Sol/xhigh visible review",
+      "priority": "P2",
+      "reviewSeverity": "LOW",
+      "userImpact": "PR 与 Agent 原文中出现面向内部处理的 [ABSOLUTE_PATH_REDACTED] 占位符，工作线详情还直接显示“检查记录：SUCCESS, SKIPPED”。来源身份和未独立验证边界是清楚的，但这些内部化文本会打断最终用户阅读，可改为自然语言的“路径已隐藏”以及按检查项解释状态。",
+      "engineeringRisk": "A usability change must preserve authority, source trace, completeness and unknowns.",
+      "treatment": "Retain the non-blocking finding with its original reviewed input; no unreviewed last-minute UI change.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "PR 与 Agent 原文中出现面向内部处理的 [ABSOLUTE_PATH_REDACTED] 占位符，工作线详情还直接显示“检查记录：SUCCESS, SKIPPED”。来源身份和未独立验证边界是清楚的，但这些内部化文本会打断最终用户阅读，可改为自然语言的“路径已隐藏”以及按检查项解释状态。",
+      "recommendedPhase": "Desktop PoC usability pass",
+      "evidence": [
+        "visible-text/projectflow-story-3-evidence-final.txt",
+        "visible-text/projectflow-workline-detail-final.txt",
+        "screenshots/projectflow-story-3-evidence-final-6.png",
+        "screenshots/projectflow-workline-detail-final-1.png"
+      ]
+    },
+    {
+      "id": "E-P2-09",
+      "debt": "当前页的“冲突与未知”包含多条句式近似的“现有证据未说明此次调整的原因”，并把覆盖诊断与具体未知混在同一长块中。边界准确，但可以按对象合并并把采样、SCIP、远程来源等覆盖诊断单列，以提升扫描效率。",
+      "source": "Final ProjectFlow independent Sol/xhigh visible review",
+      "priority": "P2",
+      "reviewSeverity": "LOW",
+      "userImpact": "当前页的“冲突与未知”包含多条句式近似的“现有证据未说明此次调整的原因”，并把覆盖诊断与具体未知混在同一长块中。边界准确，但可以按对象合并并把采样、SCIP、远程来源等覆盖诊断单列，以提升扫描效率。",
+      "engineeringRisk": "A usability change must preserve authority, source trace, completeness and unknowns.",
+      "treatment": "Retain the non-blocking finding with its original reviewed input; no unreviewed last-minute UI change.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "当前页的“冲突与未知”包含多条句式近似的“现有证据未说明此次调整的原因”，并把覆盖诊断与具体未知混在同一长块中。边界准确，但可以按对象合并并把采样、SCIP、远程来源等覆盖诊断单列，以提升扫描效率。",
+      "recommendedPhase": "Desktop PoC usability pass",
+      "evidence": [
+        "visible-text/projectflow-current-final.txt",
+        "visible-text/projectflow-current-390-final.txt",
+        "screenshots/projectflow-current-final-4.png"
+      ]
+    },
+    {
+      "id": "E-P2-10",
+      "debt": "逐文件 Evidence 对 113 条来源采用分页是安全的，但第一页仍主要呈现连续路径清单，用户需要多次滚动才能回到分页和返回入口。可增加按文件类型或语义角色的小结与页内定位，不改变现有可追溯性。",
+      "source": "Final ProjectFlow independent Sol/xhigh visible review",
+      "priority": "P2",
+      "reviewSeverity": "LOW",
+      "userImpact": "逐文件 Evidence 对 113 条来源采用分页是安全的，但第一页仍主要呈现连续路径清单，用户需要多次滚动才能回到分页和返回入口。可增加按文件类型或语义角色的小结与页内定位，不改变现有可追溯性。",
+      "engineeringRisk": "A usability change must preserve authority, source trace, completeness and unknowns.",
+      "treatment": "Retain the non-blocking finding with its original reviewed input; no unreviewed last-minute UI change.",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "逐文件 Evidence 对 113 条来源采用分页是安全的，但第一页仍主要呈现连续路径清单，用户需要多次滚动才能回到分页和返回入口。可增加按文件类型或语义角色的小结与页内定位，不改变现有可追溯性。",
+      "recommendedPhase": "Desktop PoC usability pass",
+      "evidence": [
+        "visible-text/projectflow-story-2-related-final.txt",
+        "screenshots/projectflow-story-2-related-final-2.png",
+        "screenshots/projectflow-story-2-related-final-3.png",
+        "screenshots/projectflow-story-2-related-final-4.png",
+        "screenshots/projectflow-story-2-related-final-5.png"
+      ]
+    },
+    {
+      "id": "E-P1-06",
+      "debt": "Fixed embedded ports prevent coexistence with an existing local service",
+      "source": "Final root-launcher acceptance encountered a live unrelated container on 8080",
+      "priority": "P1",
+      "userImpact": "Root launcher cannot start while its fixed backend port is owned by another application",
+      "engineeringRisk": "Stopping unrelated processes or changing global port settings would affect other work",
+      "treatment": "Add validated optional BackendPort/FrontendPort parameters; propagate them consistently to builds, process environment, readiness URLs and runtime evidence; defaults unchanged",
+      "status": "CLOSED_VERIFIED",
+      "remainingRisk": "Explicitly chosen ports must still be available; foreign-process protection remains enforced",
+      "recommendedPhase": "V4.0-E",
+      "evidence": [
+        "root-port-overrides.json",
+        "windows-launcher.json"
+      ]
+    },
+    {
+      "id": "E-P2-11",
+      "debt": "Library first-read badge can be confused with completed Current material understanding",
+      "source": "Agent visual check of final root library and third-project Current",
+      "priority": "P2",
+      "userImpact": "The third material project has a successful Current explanation while its library card still says waiting for first read; Current clarifies History/Workline has not been refreshed",
+      "engineeringRisk": "Combining distinct read states could falsely imply History was processed",
+      "treatment": "Record the visible scope ambiguity; retain separate Current and History/Workline semantics",
+      "status": "DEFERRED_NON_BLOCKING",
+      "remainingRisk": "The library card could distinguish the two read statuses more directly",
+      "recommendedPhase": "Desktop PoC usability pass",
+      "evidence": [
+        "screenshots/owner-field-recovery-library.png",
+        "screenshots/owner-field-recovery-examprep-current.png"
+      ]
+    }
+  ]
+}

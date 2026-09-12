@@ -1,0 +1,18 @@
+{
+  "capturedAt": "2026-09-12T03:50:10.958Z",
+  "scope": "Actual Corporation-Agent UI after a bounded History transport failure and partial completion, before explicit continuation. This is failure evidence, not final acceptance.",
+  "jobId": "6068a379-713b-412e-8130-5ad0a39361e8",
+  "rows": [
+    {
+      "view": "current",
+      "text": "current.txt",
+      "screenshot": "current.png"
+    },
+    {
+      "view": "history",
+      "text": "history.txt",
+      "screenshot": "history.png"
+    }
+  ],
+  "pageErrors": []
+}

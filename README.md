@@ -1,12 +1,17 @@
 # ProjectFlow
 
-## V4 Workspace（V4.0-D Draft）
+V4.0-E 已通过真实理解、独立语义复核及 required push/PR CI；Desktop Shell 技术入口为 READY_FOR_POC。交付为 [Draft PR #25](https://github.com/xiaochuqing-dev/ProjectFlow/pull/25)，Owner Review 仍为 NOT_REVIEWED。
+
+## V4 Workspace（V4.0-E Draft）
+
+V4.0-E 修复长时间 Responses 读取、真实请求计数和失败阶段恢复；Current 按有来源的用途与能力展开，History 的文件对象和时间来源更具体。ProjectFlow 与 Corporation-Agent 已完成真实 Sol/xhigh Current、最终 History 和零调用复用，两份独立语义复核均为 PASS；完整门禁和 Desktop Shell 技术入口以 [V4.0-E 报告](docs/projectflow-v4.0-e-semantic-quality-debt-closure-report.md) 及其 Evidence 的最终状态为准。Owner Review 独立记录，仍是依赖 #24 的 Draft。
+
 
 ProjectFlow 是用于理解项目现状、阅读真实变化并维护长期项目记忆的工作区。V4.0-D 将普通项目入口、创建和接入统一到午夜蓝 Workspace；当前页区分已观察结果、项目声明、系统归纳和未知，历程先显示变化概览，再按时间或长期主题阅读。开发工作线基于有界 Git / GitHub 证据，不把分支名或提交数量当成目的、进度或尚未合入的证明。
 
-普通入口是 `/workspace/projects`。`/projects`、项目详情、普通历程链接与 `/settings` 会转入 Workspace。创建、本地绑定、GitHub 地址、ZIP 和文本接入均使用 V4 页面及既有后端。根目录 `Start-ProjectFlow.bat` 可从任意目录启动；显式更新状态复用持久化 Job，查看页面不会扫描或调用模型。工程审计通过明确的兼容入口保留。
+普通入口是 `/workspace/projects`。`/projects`、项目详情、普通历程链接与 `/settings` 会转入 Workspace。创建、本地绑定、GitHub 地址、ZIP 和文本接入均使用 V4 页面及既有后端。根目录 `Start-ProjectFlow.bat` 可从任意目录启动；显式更新状态复用持久化 Job，查看页面不会扫描或调用模型。工程审计通过明确的兼容入口保留。 默认端口被占用时，可使用 `Start-ProjectFlow.bat -BackendPort 18041 -FrontendPort 13041` 为本次启动指定端口。
 
-本轮 PR #24 依赖 V4.0-C PR #23，保持 Draft；验收见 [V4.0-D 阶段报告](docs/projectflow-v4.0-d-real-project-understanding-report.md)。这不是正式 Release。
+上一阶段 PR #24 依赖 V4.0-C PR #23，保持 Draft；验收见 [V4.0-D 阶段报告](docs/projectflow-v4.0-d-real-project-understanding-report.md)。这不是正式 Release。
 
 启动欢迎页点击“进入 V4 工作区”即可打开项目库，可连续使用当前状态、项目历程、工作线、Agent 交接和设置。仅显式 `?demo=1` 加载示例，真实读取失败不会切换为示例。当前材料理解与历程更新复用已有持久化任务；长历史使用 checkpoint 恢复，AUTO 不再套用隐藏的 10 分钟总截止。
 

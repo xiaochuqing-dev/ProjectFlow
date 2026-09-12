@@ -1,6 +1,12 @@
 # ProjectFlow Project Context
 
-Last updated: 2026-09-10
+V4.0-E 最终技术验收 PASS，DESKTOP_SHELL_TECHNICAL_ENTRY = READY_FOR_POC；Draft PR #25 依赖 #24，四次 push/PR Quality 与 Windows（含 OSV）实际通过，见 E ci.json。后续仅追加验收事实的交付 Head 及其新 CI 记录在 #25 正文。Owner Review 仍为 NOT_REVIEWED，下一阶段可做 V4.0-F Electron vs Tauri PoC，不自动实施或合并。
+
+Last updated: 2026-09-12
+
+V4.0-E 在 #24 Head `81730744a325ccc2391009b367ca4ba95aef6d14` 上关闭语义质量与可靠性债。长 reasoning Responses 复用官方 SDK SSE，只接收完整 terminal；有界 transport retry、900 秒单请求和 xhigh 不变。Job 按实际 adapter attempt 聚合，未知 usage 为 null/UNKNOWN，无变化零调用。已校验 Scout checkpoint 只服务于同源后续阶段恢复，不进入 GET；最终归纳失败不能命中成功缓存。History 复用现有 subject/path/来源，提供具体对象与 action，维持 broad owner 的 OBSERVED 上限和原成员；提交、过程记录、观察时间分别标示。无需新 schema、事实写入、引擎或依赖。
+
+本轮两份真实 Current、两份最终 History、重启保留和无变化零调用均已验证，两份独立 Sol/xhigh 可见复核均为 PASS。来源指纹兼容比较忽略 JSON 对象顺序、聚合 HEAD，并尊重既有数据库时间精度；真实来源变化仍使检查点失效。全套验证及 Desktop Shell 技术入口见 `docs/projectflow-v4.0-e-semantic-quality-debt-closure-report.md` 和 `docs/acceptance-evidence/v4.0-e/` 的最终状态。继承版本的失败与审批记录保留其历史含义；不能把 V4.0-D 的 BLOCKED 或本轮工程通过直接替代 V4.0-E 的语义结论。Owner Review 保持独立，禁止自动 Ready、merge、Tag、Release。
 
 V4.0-D 在 PR #23 Head `703120998f2296b4e615cd785e651a351c5dc8c9` 上以独立 worktree 推进。普通项目、创建/接入、设置与旧普通 History 链接进入 V4；工程兼容工具必须显式进入。当前状态用来源门槛区分声明、推断和可确认结果，无来源计划与进度保持空。History 默认变化概览，另有按时间与按长期主题阅读。Workline 和有界 README/roadmap 声明作为既有 History snapshot 的版本化派生字段，在显式 Job 中读取，GET 仅分页读持久化内容；失败保留上次工作线并显示过期状态。没有新增 schema、引擎或 Git 写操作。真实 Dogfood、模型、Windows、CI 及剩余边界见本阶段报告；不得提前声称 Owner Review 或正式 Release 通过。
 

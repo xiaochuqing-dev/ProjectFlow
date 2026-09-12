@@ -1,0 +1,11 @@
+{
+  "recordedAt": "2026-09-12T05:09:00Z",
+  "type": "SYNTHETIC_REGRESSION_AND_RECOVERY",
+  "baselineFunctionalSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491",
+  "finding": "A safe but non-action title caused the ordinary first-layer fallback to discard an independently supported summary.",
+  "redReproduction": {"tests": 1, "failures": 1, "errors": 0},
+  "firstFixAttempt": {"tests": 4, "failures": 1, "errors": 0, "finding": "A partner field could borrow all result meaning from the fallback and incorrectly replace the existing missing-result behavior."},
+  "correctedFocusedRun": {"tests": 4, "failures": 0, "errors": 0, "skipped": 0},
+  "correction": "Retained wording must independently satisfy the existing usefulness gate; the combined Story still undergoes full authority validation. No additional model call or global cache invalidation.",
+  "limitations": ["Synthetic model contract; not production Sol acceptance.", "The first red invocation had an unsuccessful GH isolation-directory lookup; its synthetic Fact fixture did not use a Git repository. The corrected runs used the existing isolated directory."]
+}

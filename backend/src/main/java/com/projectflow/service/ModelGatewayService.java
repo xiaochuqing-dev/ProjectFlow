@@ -347,23 +347,33 @@ public class ModelGatewayService {
         int allowedAttempts = MAX_TRANSPORT_ATTEMPTS;
         long requestSequenceStartedAt = System.nanoTime();
         for (int attempt = 1; attempt <= allowedAttempts; attempt++) {
+            ModelCancellationContext.throwIfCancelled();
+            AnalysisDeadlineContext.throwIfExpired();
+            var telemetry = ModelRequestTelemetryContext.current();
+            var telemetryIndex = new java.util.concurrent.atomic.AtomicInteger(-1);
+            String retryReason = attempt > 1 ? "TRANSPORT_RETRY" : parameters.retryType();
             try {
                 CanonicalModelResponse response = CancellableModelRequestExecutor.execute(() -> {
                     MODEL_REQUEST_SLOTS.acquire();
                     try {
+                        if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
+                        if (telemetry != null) telemetryIndex.set(telemetry.begin(
+                            task, provider.getProtocol().name(), request.reasoningEffort(), retryReason));
                         return protocolAdapters.require(provider.getProtocol()).execute(request);
                     } finally {
                         MODEL_REQUEST_SLOTS.release();
                     }
                 }, timeout);
+                if (telemetry != null) telemetry.complete(telemetryIndex.get(), response);
                 return parseCanonicalResponse(
                     response, provider, task, capabilities, parameters, prompt == null ? 0 : prompt.length(),
                     timeout.toSeconds(), elapsedMs(requestSequenceStartedAt), attempt - 1
                 );
             } catch (IOException exception) {
+                if (telemetry != null) telemetry.fail(telemetryIndex.get(), exception);
                 if (exception instanceof ModelResponseFormatException) throw exception;
                 if (exception instanceof ModelProtocolHttpException http) {
-                    if (attempt < allowedAttempts && isTransientModelStatus(http.statusCode())) {
+                    if (attempt < allowedAttempts && (isTransientModelStatus(http.statusCode()) || http.streamReadFailure())) {
                         pauseBeforeRetry(attempt);
                         continue;
                     }
@@ -375,6 +385,9 @@ public class ModelGatewayService {
                     throw new ModelTransportException(exception, attempt);
                 }
                 pauseBeforeRetry(attempt);
+            } catch (RuntimeException | InterruptedException exception) {
+                if (telemetry != null) telemetry.fail(telemetryIndex.get(), exception);
+                throw exception;
             }
         }
         throw new IOException("model request failed");

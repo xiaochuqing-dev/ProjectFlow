@@ -427,9 +427,16 @@ public class ProjectHistoryReadService {
 
     @Transactional(readOnly = true)
     public EvolutionThreadPageResponse threads(UUID userId, UUID projectId, String subject, int page, int size) {
+        return threads(userId, projectId, subject, false, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public EvolutionThreadPageResponse threads(UUID userId, UUID projectId, String subject, boolean longTermOnly, int page, int size) {
         ProjectHistoryCorrectionService.CorrectedHistory corrected = corrected(userId, projectId);
         List<EvolutionThread> values = corrected.threads()
-            .stream().filter(thread -> subject == null || subject.isBlank()
+            .stream().filter(thread -> !longTermOnly || thread.storyRefs().size() >= 2
+                && !thread.subjectKey().startsWith("change-") && !thread.subjectKey().startsWith("project-area-"))
+            .filter(thread -> subject == null || subject.isBlank()
                 || thread.subjectKey().contains(normalize(subject))
                 || thread.subjectLabel().toLowerCase(Locale.ROOT).contains(subject.toLowerCase(Locale.ROOT)))
             .toList();
@@ -722,14 +729,21 @@ public class ProjectHistoryReadService {
     }
 
     private String eventUserSummary(ProjectHistoryEvent event) {
+        if (event.getCategory() == Category.AGENT_RESULT) return "开发助手的工作结果声明";
+        if (event.getCategory() == Category.PULL_REQUEST) return "合并请求中的来源声明";
+        if (event.getCategory() == Category.ISSUE) return "议题中的来源声明";
         if (event.getSourceType() == SourceType.GIT
             && Set.of(Category.COMMIT, Category.MERGE).contains(event.getCategory())) {
             return languageService.commitSummary(
                 outbound(event.getSafeSourceLabel()), event.getTransition(), strings(event.getAffectedPathsJson())
             );
         }
+        List<String> paths = strings(event.getAffectedPathsJson());
+        String subject = event.getCategory() == Category.FILE_CHANGE && paths.size() == 1
+            ? ProjectHistorySourceCollector.historySubjectKey(paths.get(0)) : outbound(event.getSafeSourceLabel());
         return languageService.fallback(
-            event.getTransition(), outbound(event.getSafeSourceLabel()), strings(event.getAffectedPathsJson()),
+            ProjectHistoryNarrativeEntailmentValidator.ClaimState.OBSERVED,
+            event.getTransition(), subject, paths,
             List.of(outbound(event.getSafeSourceLabel())), List.of(event.getTransition().name())
         ).title();
     }

@@ -9,6 +9,18 @@ const { supportedClaim, claimLabels } = runtime.exports;
 const previewCompiled = ts.transpileModule(readFileSync("src/lib/workspace-preview.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 const preview = { exports: {} }; new Function("exports", "module", "require", previewCompiled)(preview.exports, preview, () => runtime.exports);
 
+test("process declarations stay visible without becoming confirmed outcomes", () => {
+  const story = { id: "process", humanTitle: "工作记录说明发票审核展示调整", oneSentenceSummary: "开发助手报告了调整并保留重复项问题。",
+    beforeState: "此前未知", change: "开发助手记录审核调整", afterState: "声明仍需独立验证", occurredTo: "2026-09-09", eventRefs: ["e"], conflicts: [], unknowns: [],
+    claimAttribution: { subject: "账务服务相关代码", state: "UNKNOWN", supportClass: "PROCESS_DECLARATION", outcome: "实际结果未知", directEvidenceRefs: [], indirectEvidenceRefs: ["agent-result:invoice"] } };
+  const visible = preview.exports.persistedStory(story);
+  assert.equal(visible.classification, "PROCESS_EVIDENCE");
+  assert.equal(claimLabels[visible.classification], "开发过程声明");
+  assert.equal(visible.confirmedOutcome, false);
+  assert.equal(visible.title, story.humanTitle);
+  assert.equal(preview.exports.persistedStory({ ...story, claimAttribution: { ...story.claimAttribution, supportClass: "INSUFFICIENT" } }).classification, "UNKNOWN");
+});
+
 test("observed scaffold files cannot claim first creation or runtime completion", () => {
   const story = { id: "observed", humanTitle: "建立后端项目骨架", oneSentenceSummary: "首次建立后端项目骨架", beforeState: "此前不存在后端", afterState: "后端已经完成", change: "建立后端", occurredTo: "2026-09-09", eventRefs: ["e"], conflicts: [], unknowns: [], claimAttribution: { subject: "后端项目骨架", state: "OBSERVED", outcome: "文件已有变化", directEvidenceRefs: ["file:backend/new-feature.java"] } };
   const visible = preview.exports.persistedStory(story);
@@ -21,6 +33,31 @@ test("observed scaffold files cannot claim first creation or runtime completion"
 });
 test("no source means no plan or progress", () => {
   for (const kind of ["PLAN", "MILESTONE", "PROGRESS", "MATURITY", "USER_GOAL"]) assert.equal(supportedClaim({ text: "下一步", kind, classification: "DECLARED", sources: [] }), null);
+});
+test("history dates retain event versus observation provenance including legacy unknowns", () => {
+  const base = { id: "time", humanTitle: "新增发票相关代码", oneSentenceSummary: "可确认文件新增", occurredTo: "2026-01-02T00:00:00Z", eventRefs: ["e"], evidenceRefs: ["file:invoice"], conflicts: [], unknowns: [] };
+  assert.match(preview.exports.persistedStory(base).date, /来源时间依据未知/);
+  assert.match(preview.exports.persistedStory({ ...base, timeProvenance: { label: "提交时间" } }).date, /提交时间 · 2026-01-02/);
+  assert.match(preview.exports.persistedStory({ ...base, timeProvenance: { label: "来源观察时间，发生时间未知" } }).date, /发生时间未知/);
+  assert.match(preview.exports.persistedStory({ ...base, occurredFrom: "2026-01-01T00:00:00Z", timeProvenance: { label: "提交时间" } }).date, /2026-01-01 – 2026-01-02/);
+});
+test("current explains sourced purpose before inventory and keeps declarations distinct", () => {
+  const claim = (id, text, epistemicStatus, evidenceRefs = ["readme"]) => ({ id, text, epistemicStatus, evidenceRefs });
+  const state = { sourceMap: { sources: [{ id: "readme" }] }, identity: { claims: [claim("metrics", "扫描了100个文件", "OBSERVED")] },
+    dynamicProfile: { sections: [ { type: "CURRENT_STATE", claims: [claim("metrics", "扫描了100个文件", "OBSERVED")] },
+      { type: "PURPOSE", claims: [claim("purpose", "文档声明这是一个发票审核应用", "DECLARED"), claim("unknown", "状态未知", "UNKNOWN"), claim("invalid", "完成上线", "INFERRED", ["missing"])] } ] } };
+  const result = preview.exports.currentMaterialClaims(state);
+  assert.equal(result[0].id, "purpose"); assert.equal(result[0].classification, "DECLARED");
+  assert.equal(result.filter(item => item.id === "metrics").length, 1);
+  assert.equal(result.length, 2);
+});
+test("identity still precedes inventory when the model has no PURPOSE section", () => {
+  const inventory = { id: "inventory", text: "扫描12个文件，仓库分类为 MEDIUM", epistemicStatus: "OBSERVED", evidenceRefs: ["manifest"] };
+  const identity = { id: "purpose", text: "项目说明写明用于发票审核", epistemicStatus: "DECLARED", evidenceRefs: ["readme"] };
+  const result = preview.exports.currentMaterialClaims({ sourceMap: { sources: [{ id: "readme" }, { id: "manifest" }] },
+    identity: { claims: [inventory, identity] }, dynamicProfile: { sections: [{ type: "CURRENT_STATE", claims: [inventory, identity] }] } });
+  assert.equal(result[0].id, "purpose");
+  assert.match(result[1].text, /规模为 中型/);
 });
 test("roadmap declaration stays declared and inference cannot become intent", () => {
   const claim = { text: "支持离线导入", kind: "PLAN", classification: "DECLARED", sources: ["README.md:14"] };

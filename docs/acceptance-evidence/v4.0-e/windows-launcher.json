@@ -1,0 +1,99 @@
+{
+  "version": "3.10.0",
+  "sourceRevision": "b74b7b8c035b125d18e065d69d9b7cf95ea12777",
+  "hasLocalChanges": true,
+  "frontendDependencies": "verified",
+  "frontendBuildId": "MVoPQhMuoVBDSPRCQpXHZ",
+  "frontendBuiltAt": "2026-09-12T15:18:14.8134802+08:00",
+  "readyAt": "2026-09-12T15:18:24.4292366+08:00",
+  "frontendUrl": "http://127.0.0.1:13041/login",
+  "backendHealthUrl": "http://127.0.0.1:18041/api/health",
+  "backendPort": 18041,
+  "frontendPort": 13041,
+  "status": "PASS",
+  "functionalSourceHead": "349a6039e68ab5ad0126a2dd1dca3dca1029e7f7",
+  "recordedAt": "2026-09-12T07:19:36.604378+00:00",
+  "command": "cmd.exe /d /c ..\\..\\Start-ProjectFlow.bat -NoBrowser -BackendPort 18041 -FrontendPort 13041",
+  "invokedFrom": "tmp/v40e-run (different working directory)",
+  "backendHttpStatus": 200,
+  "frontendHttpStatus": 200,
+  "uiProof": {
+    "verifiedAt": "2026-09-12T07:19:35.951Z",
+    "status": "PASS",
+    "projectCount": 3,
+    "checks": [
+      {
+        "project": "ProjectFlow",
+        "currentMaterialVisible": true,
+        "finalRecentStoriesVisible": 8,
+        "worklineVisible": true
+      },
+      {
+        "project": "Corporation-Agent",
+        "currentMaterialVisible": true,
+        "finalRecentStoriesVisible": 8,
+        "worklineVisible": true
+      },
+      {
+        "project": "Universal Exam Prep",
+        "currentMaterialVisible": true
+      }
+    ],
+    "pageErrors": [],
+    "screenshots": [
+      "screenshots/owner-field-recovery-library.png",
+      "screenshots/owner-field-recovery-projectflow-current.png",
+      "screenshots/owner-field-recovery-projectflow-history.png",
+      "screenshots/owner-field-recovery-projectflow-worklines.png",
+      "screenshots/owner-field-recovery-corporation-current.png",
+      "screenshots/owner-field-recovery-corporation-history.png",
+      "screenshots/owner-field-recovery-corporation-worklines.png",
+      "screenshots/owner-field-recovery-examprep-current.png"
+    ],
+    "scope": "Root launcher with final persisted real Current, History and Workline; no model refresh triggered."
+  },
+  "retainedProjects": [
+    {
+      "project": "Universal Exam Prep",
+      "currentSemanticStatus": "SUCCEEDED",
+      "finalSynthesisStatus": "SUCCEEDED"
+    },
+    {
+      "project": "ProjectFlow",
+      "currentSemanticStatus": "SUCCEEDED",
+      "finalSynthesisStatus": "SUCCEEDED",
+      "history": {
+        "modelStatus": "CACHE_HIT",
+        "totalWindowCount": 14,
+        "succeededWindowCount": 14,
+        "failedWindowCount": 0,
+        "pendingWindowCount": 0,
+        "chapterSynthesisFailedCount": 0,
+        "chapterSynthesisPendingCount": 0,
+        "eventConservation": true
+      }
+    },
+    {
+      "project": "Corporation-Agent",
+      "currentSemanticStatus": "SUCCEEDED",
+      "finalSynthesisStatus": "SUCCEEDED",
+      "history": {
+        "modelStatus": "CACHE_HIT",
+        "totalWindowCount": 2,
+        "succeededWindowCount": 2,
+        "failedWindowCount": 0,
+        "pendingWindowCount": 0,
+        "chapterSynthesisFailedCount": 0,
+        "chapterSynthesisPendingCount": 0,
+        "eventConservation": true
+      }
+    }
+  ],
+  "credentialStorage": "Existing Windows current-user DPAPI; phase-local config excluded from Git",
+  "dataIsolation": "Final phase-local acceptance database; previous owner runtime data/config retained before replacement",
+  "runtimeLeftRunning": true,
+  "ownerReview": "NOT_REVIEWED",
+  "mode": "Embedded root development launcher; bundled portable runtime verified separately in windows-portable.json",
+  "sourceSync": "Built the current worktree with local evidence changes; no clean-worktree remote fast-forward claim.",
+  "sourceDifference": "Backend/frontend semantic code matches 349a6039. The root launcher separately adds validated optional ports at b74b7b8; the existing service on 8080 was not stopped."
+}

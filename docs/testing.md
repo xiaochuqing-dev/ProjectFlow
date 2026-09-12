@@ -1,5 +1,20 @@
 # Testing
 
+## V4.0-E acceptance boundary
+
+`ModelRequestTelemetryTest` exercises wrapped failures, known/unknown usage, transport reset, explicit HTTP-200 upstream stream-read failure versus other HTTP-200 errors, bounded retries, timeout and cancellation. `OpenAiResponsesStreamingTest` uses a loopback SSE server to verify terminal completion, missing terminal failure and disabled remote storage. These tests are synthetic contracts, not real Provider acceptance.
+
+`ProjectUnderstandingServiceTest` verifies source-bound Scout reuse, no-change zero calls, legacy failed-final cache invalidation, changed-source invalidation, and preservation across detached snapshot instances. History regressions cover concrete cross-project subjects, no broad-owner promotion, generic commit inventories, source-aware Agent/file/PR time and Chinese first-layer text. Existing frozen Ground Truth is unchanged; the E continuity artifact compares safety invariants while live scenario assertions verify bounded recomputation, cache reuse and stable unaffected identities.
+
+Real Sol/xhigh Current, History, failures/recovery, independent visible-product review, source audits, Windows and CI are separately recorded in `docs/acceptance-evidence/v4.0-e/`. Required unit/PG/H2/legacy/credential/projection/browser gates cannot substitute for MODEL_REVIEW or Owner Review.
+
+`ProjectHistoryPublicRepositoryIT#preflightsExplicitLocalReadOnlyRepositoriesWithoutModelCalls` accepts an explicit semicolon-separated `projectflow.history.local-repositories` list. It exercises production reconstruction without a Provider, verifies complete Chapter owner groups, event conservation and zero model calls, and compares repository HEAD/status before and after. Normal CI skips this local-path-only preflight; the regular frozen and generated-repository gates remain required. The persisted Thread browser fixture now contains two time-separated commits to the same artifact instead of treating a single record as a long-term theme.
+
+Document-delta regressions verify bounded source excerpts, exact version changes, retained immutable annotations and unchanged reruns. Additional semantic regressions keep document test/release statements below runtime authority and prevent singleton manifest/schema files from becoming a whole-project skeleton. Recovery tests retain valid siblings plus the specific summary/change inside a Story with an unsafe after-state; an unsafe title cannot erase an independently valid summary. Ineligible reason Evidence is rejected even when the title is also unsafe. Existing invalid-ID, mixed-Chapter and unsupported-claim assertions remain unchanged. A two-window legacy-cache test verifies one repaired window is upgraded, the clean row is untouched, and a subsequent unchanged refresh uses zero calls. Facts remain unchanged throughout.
+
+`nonActionTitleRetainsAnIndependentlySupportedSummary` reproduces loss of a valid summary when an otherwise safe title lacks an action. The fix preserves that summary with one model call and unchanged Fact count; the existing missing-result test continues to require the deterministic pair. The four focused preservation regressions passed after the initial red reproduction and a rejected broader fallback attempt, which remain recorded as failures.
+
+
 ## V4.0-D acceptance boundary
 
 `ProjectWorklineCollectorTest`, `ProjectWorklineReadTest` and `ProjectDeclarationReadTest` cover bounded Git/PR collection, exact merged HEAD and ambiguous ancestry, unavailable GitHub, source declarations, owned persisted reads and recent-story pagination. `ProjectUnderstandingServiceTest` covers retrying a failed first semantic attempt with unchanged files while retaining the zero-model no-change path for successful/no-model snapshots. Workspace E2E covers current material job recovery, claim display ceilings, intake redirects and real/demo isolation.
@@ -182,3 +197,9 @@ The Python suite uses real temporary Vault directories and a real CLI-to-HTTP Ga
 Real-provider evaluation can select a separate Calibration or frozen Holdout resource with `projectflow.eval.ground-truth-resource`, restrict case IDs and write an isolated sanitized result directory. Production and evaluation share the same prompt builder and gateway.
 
 Provider capabilities are explicit inputs. `PROJECTFLOW_REAL_MODEL_SUPPORTS_REASONING=true` is used for a reasoning model whose name is not covered by the generic heuristic; the key remains process-only. Expected shapes and views are validated against production prompt and registry vocabulary before a formal run. An Evidence reference is valid only when it belongs to the current case allow-list. The older “evidence precision” metric measures selection specificity and is diagnostic; it is not used as an invalid-reference count.
+
+V4.0-E 新增声明归因、作者对象隔离、同窗恢复与大页元数据回归：英文/斜杠来源可阅读，第一层技术词泄漏仍拒绝，实际完成/验收主张仍受原门槛约束；超大 Git 页能恢复，单提交超限和截断路径仍明确不完整。实际全套、PG16、exact V3.9 与真实 Sol 结果分开记录在 E Evidence。
+
+重启兼容回归覆盖旧事件指纹、JSON 对象字段顺序、较早的项目 HEAD 和实际落库重读：相同来源内容按现有 TIMESTAMP(6) 精度比较后保留已有指纹，实际 coverage 值或时间变化仍产生更新。不会把有序成员、来源身份或权威变化当成无变化。真实运行的重启前后复用证据单独记录，合成回归不代替真实模型验收。
+
+V4.0-E root coexistence proof: optional integer `BackendPort` / `FrontendPort` keep the 8080/3000 defaults, reject out-of-range or equal ports before execution, and configure both built frontend/API routing and readiness URLs. PowerShell parse, invalid-parameter checks, explicit `-CheckOnly`, existing release-script and 73 frontend contracts passed. The actual root batch ran from another working directory with 18041/13041 and retained all three real projects; an unrelated service on 8080 was left running. This launcher-only successor does not change the backend/frontend semantic source or frozen model-review inputs.

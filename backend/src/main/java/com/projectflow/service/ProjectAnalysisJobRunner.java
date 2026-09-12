@@ -84,10 +84,12 @@ public class ProjectAnalysisJobRunner {
         }
 
         long startedAt = System.nanoTime();
+        var transportTelemetry = new ModelRequestTelemetryContext.Collector();
         try (
+            ModelCancellationContext.Scope telemetryScope = ModelRequestTelemetryContext.bind(transportTelemetry);
             ModelCancellationContext.Scope ignored = ModelCancellationContext.bind(
                 () -> jobRepository.findById(jobId).map(ProjectAnalysisJob::isCancellationRequested).orElse(true),
-                () -> heartbeat(jobId)
+                () -> heartbeat(jobId, transportTelemetry)
             );
             AnalysisDeadlineContext.Scope deadline = AnalysisDeadlineContext.bind(
                 job.getStartedAt(),
@@ -197,9 +199,13 @@ public class ProjectAnalysisJobRunner {
                         jobRepository.save(current);
                     })
                 );
-                recordJobUsage(jobId, outcome.snapshot().diagnostics());
+                if (!outcome.cacheHit()) recordJobUsage(jobId, outcome.snapshot().diagnostics());
                 if (!checkpoint(jobId, false)) return;
-                markSucceeded(jobId, "", null);
+                if ("FAILED_DEGRADED".equals(outcome.snapshot().finalSynthesisStatus())) {
+                    markSucceededWithWarnings(jobId, "", "最终归纳未完成；保留已校验的分诊结果，可重试后续阶段。");
+                } else {
+                    markSucceeded(jobId, "", null);
+                }
                 recordUsage(
                     job,
                     "PROJECT_UNDERSTANDING_REFRESH",
@@ -275,7 +281,8 @@ public class ProjectAnalysisJobRunner {
                 jobRepository.save(current);
                 return;
             }
-            LOGGER.warn("Project analysis job failed: jobId={}", jobId, exception);
+            // Exception chains may contain SDK response bodies or endpoints.
+            LOGGER.warn("Project analysis job failed: jobId={}, code={}", jobId, ModelFailureClassifier.classifyException(exception));
             ProjectCapabilityService.CapabilityAnalysisException capabilityException =
                 exception instanceof ProjectCapabilityService.CapabilityAnalysisException value ? value : null;
             String failureStage = capabilityException == null ? null : capabilityException.stage();
@@ -289,6 +296,8 @@ public class ProjectAnalysisJobRunner {
             if (job.getJobType() == ProjectAnalysisJobType.PROJECT_TIMELINE_REFRESH) {
                 eventPublisher.publishEvent(new ProjectTimelineRefreshRequestedEvent(job.getUserId(), job.getProjectId()));
             }
+        } finally {
+            recordTransportTelemetry(jobId, transportTelemetry);
         }
     }
 
@@ -358,17 +367,42 @@ public class ProjectAnalysisJobRunner {
         return true;
     }
 
-    private void heartbeat(UUID jobId) {
+    private void heartbeat(UUID jobId, ModelRequestTelemetryContext.Collector telemetry) {
         jobRepository.findById(jobId).ifPresent(job -> {
             java.time.Instant last = job.getHeartbeatAt();
             if (last != null && java.time.Duration.between(last, java.time.Instant.now()).toMillis() < 2_000) return;
             job.heartbeat();
+            applyTransportTelemetry(job, telemetry.snapshot());
             jobRepository.save(job);
         });
     }
 
+    private void recordTransportTelemetry(UUID jobId, ModelRequestTelemetryContext.Collector telemetry) {
+        jobRepository.findById(jobId).ifPresent(job -> {
+            applyTransportTelemetry(job, telemetry.snapshot());
+            jobRepository.save(job);
+        });
+    }
+
+    private void applyTransportTelemetry(ProjectAnalysisJob job, ModelRequestTelemetryContext.Snapshot telemetry) {
+        if (telemetry.requestCount() == 0 && job.getRequestCount() > 0) return; // Legacy/test-only producer.
+        job.recordTransportTelemetry(telemetry.requestCount(), telemetry.reportedPromptTokens(),
+            telemetry.reportedCompletionTokens(), telemetry.reportedTotalTokens());
+        try {
+            var prior = job.getDiagnosticsJson() == null || job.getDiagnosticsJson().isBlank()
+                ? objectMapper.createObjectNode() : objectMapper.readTree(job.getDiagnosticsJson());
+            com.fasterxml.jackson.databind.node.ObjectNode envelope = prior.isObject() ? (com.fasterxml.jackson.databind.node.ObjectNode) prior
+                : objectMapper.createObjectNode().set("calls", prior);
+            envelope.set("transportTelemetry", objectMapper.valueToTree(telemetry));
+            job.recordDiagnostics(objectMapper.writeValueAsString(envelope), job.isModelReturned() || telemetry.completedRequestCount() > 0);
+        } catch (JsonProcessingException ignored) {
+            job.recordDiagnostics(safeJson(java.util.Map.of("transportTelemetry", telemetry)), job.isModelReturned());
+        }
+    }
+
     private void recordJobUsage(UUID jobId, ModelCallDiagnosticsResponse diagnostics) {
         if (diagnostics == null) return;
+        if (recordObservedUsage(jobId, safeJson(diagnostics), diagnostics.contentPresent())) return;
         jobRepository.findById(jobId).ifPresent(job -> {
             int requests = Math.max(1, diagnostics.requestCount());
             for (int index = 0; index < requests; index++) {
@@ -385,6 +419,7 @@ public class ProjectAnalysisJobRunner {
 
     private void recordJobUsage(UUID jobId, ProjectCapabilityService.CapabilityDiagnostics diagnostics) {
         if (diagnostics == null) return;
+        if (recordObservedUsage(jobId, safeJson(diagnostics), diagnostics.rawResponsePresent())) return;
         jobRepository.findById(jobId).ifPresent(job -> {
             int requests = Math.max(1, diagnostics.requestCount());
             for (int index = 0; index < requests; index++) {
@@ -401,6 +436,7 @@ public class ProjectAnalysisJobRunner {
 
     private void recordScanUsage(UUID jobId, WorkSessionScanResponse result) {
         if (result == null || result.batch() == null || result.batch().analysisScope() == null) return;
+        if (recordObservedUsage(jobId, result.batch().analysisScope(), true)) return;
         try {
             var diagnostics = objectMapper.readTree(result.batch().analysisScope());
             int requests = Math.max(0, diagnostics.path("requestCount").asInt(0));
@@ -422,6 +458,7 @@ public class ProjectAnalysisJobRunner {
 
     private void recordHistoryUsage(UUID jobId, String diagnosticsJson) {
         if (diagnosticsJson == null || diagnosticsJson.isBlank()) return;
+        if (recordObservedUsage(jobId, diagnosticsJson, true)) return;
         try {
             var diagnostics = objectMapper.readTree(diagnosticsJson);
             int requests = Math.max(0, diagnostics.path("requestCount").asInt(0));
@@ -443,6 +480,7 @@ public class ProjectAnalysisJobRunner {
 
     private void recordTimelineUsage(UUID jobId, java.util.List<ModelGatewayService.ModelCallDiagnostics> diagnostics) {
         if (diagnostics == null || diagnostics.isEmpty()) return;
+        if (recordObservedUsage(jobId, safeJson(diagnostics), diagnostics.stream().anyMatch(ModelGatewayService.ModelCallDiagnostics::contentPresent))) return;
         jobRepository.findById(jobId).ifPresent(job -> {
             for (ModelGatewayService.ModelCallDiagnostics item : diagnostics) {
                 int requests = Math.max(1, item.requestCount());
@@ -457,6 +495,17 @@ public class ProjectAnalysisJobRunner {
             job.recordDiagnostics(safeJson(diagnostics), diagnostics.stream().anyMatch(ModelGatewayService.ModelCallDiagnostics::contentPresent));
             jobRepository.save(job);
         });
+    }
+
+    private boolean recordObservedUsage(UUID jobId, String diagnostics, boolean contentPresent) {
+        var collector = ModelRequestTelemetryContext.current();
+        if (collector == null || collector.snapshot().requestCount() == 0) return false;
+        jobRepository.findById(jobId).ifPresent(job -> {
+            job.recordDiagnostics(diagnostics, contentPresent);
+            applyTransportTelemetry(job, collector.snapshot());
+            jobRepository.save(job);
+        });
+        return true;
     }
 
     private void recordCapabilityUsage(

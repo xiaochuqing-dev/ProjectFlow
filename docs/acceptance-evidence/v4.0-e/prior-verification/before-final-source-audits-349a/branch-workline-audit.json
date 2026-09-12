@@ -1,0 +1,308 @@
+{
+  "method": "All persisted branch rows compared with frozen local refs and Git containment; Draft and dependency compared with persisted PR source. Remote PR status separately inspected through gh.",
+  "projects": [
+    {
+      "project": "Corporation-Agent",
+      "branchCount": 1,
+      "githubStatus": "NO_REMOTE",
+      "groups": {
+        "MAIN": 1,
+        "REVIEW": 0,
+        "DEPENDENT": 0,
+        "DEVELOPING": 0,
+        "UNKNOWN": 0,
+        "INACTIVE": 0,
+        "HISTORY": 0
+      },
+      "checked": [
+        {
+          "branch": "main",
+          "state": "MAIN",
+          "classification": "INFERRED",
+          "mergeState": "CONTAINED",
+          "dependsOn": "",
+          "pullRequest": null,
+          "mismatches": []
+        }
+      ]
+    },
+    {
+      "project": "ProjectFlow",
+      "branchCount": 19,
+      "githubStatus": "AVAILABLE",
+      "groups": {
+        "MAIN": 1,
+        "REVIEW": 0,
+        "DEPENDENT": 2,
+        "DEVELOPING": 2,
+        "UNKNOWN": 0,
+        "INACTIVE": 0,
+        "HISTORY": 14
+      },
+      "checked": [
+        {
+          "branch": "master",
+          "state": "MAIN",
+          "classification": "INFERRED",
+          "mergeState": "CONTAINED",
+          "dependsOn": "",
+          "pullRequest": null,
+          "mismatches": []
+        },
+        {
+          "branch": "codex/v4.0-d-real-project-understanding",
+          "state": "DEPENDENT",
+          "classification": "DECLARED",
+          "mergeState": "OPEN_PR",
+          "dependsOn": "codex/v4.0-c-gui-productization",
+          "pullRequest": {
+            "number": 24,
+            "draft": true,
+            "state": "OPEN",
+            "base": "codex/v4.0-c-gui-productization",
+            "head": "codex/v4.0-d-real-project-understanding"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "codex/v4.0-c-gui-productization",
+          "state": "DEPENDENT",
+          "classification": "DECLARED",
+          "mergeState": "OPEN_PR",
+          "dependsOn": "codex/v4.0-b-gui-first-prototype",
+          "pullRequest": {
+            "number": 23,
+            "draft": true,
+            "state": "OPEN",
+            "base": "codex/v4.0-b-gui-first-prototype",
+            "head": "codex/v4.0-c-gui-productization"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "codex/v4.0-b-gui-first-prototype",
+          "state": "DEVELOPING",
+          "classification": "DECLARED",
+          "mergeState": "OPEN_PR",
+          "dependsOn": "",
+          "pullRequest": {
+            "number": 22,
+            "draft": true,
+            "state": "OPEN",
+            "base": "master",
+            "head": "codex/v4.0-b-gui-first-prototype"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "codex/v4.0-gui-foundation-ia",
+          "state": "DEVELOPING",
+          "classification": "DECLARED",
+          "mergeState": "OPEN_PR",
+          "dependsOn": "",
+          "pullRequest": {
+            "number": 21,
+            "draft": true,
+            "state": "OPEN",
+            "base": "master",
+            "head": "codex/v4.0-gui-foundation-ia"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "codex/v3.7.5-final-acceptance-backfill",
+          "state": "HISTORY",
+          "classification": "DECLARED",
+          "mergeState": "MERGED",
+          "dependsOn": "",
+          "pullRequest": {
+            "number": 12,
+            "draft": false,
+            "state": "MERGED",
+            "base": "master",
+            "head": "codex/v3.7.5-final-acceptance-backfill"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "codex/v3.7.5-cross-model-closure",
+          "state": "HISTORY",
+          "classification": "DECLARED",
+          "mergeState": "MERGED",
+          "dependsOn": "",
+          "pullRequest": {
+            "number": 11,
+            "draft": false,
+            "state": "MERGED",
+            "base": "master",
+            "head": "codex/v3.7.5-cross-model-closure"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "codex/v3.7.4-acceptance-backfill",
+          "state": "HISTORY",
+          "classification": "DECLARED",
+          "mergeState": "MERGED",
+          "dependsOn": "",
+          "pullRequest": {
+            "number": 10,
+            "draft": false,
+            "state": "MERGED",
+            "base": "master",
+            "head": "codex/v3.7.4-acceptance-backfill"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "codex/v3.7.4-strong-fact-real-project-multi-agent-foundation",
+          "state": "HISTORY",
+          "classification": "DECLARED",
+          "mergeState": "MERGED",
+          "dependsOn": "",
+          "pullRequest": {
+            "number": 9,
+            "draft": false,
+            "state": "MERGED",
+            "base": "master",
+            "head": "codex/v3.7.4-strong-fact-real-project-multi-agent-foundation"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "codex/v3.7.3-acceptance-backfill",
+          "state": "HISTORY",
+          "classification": "DECLARED",
+          "mergeState": "MERGED",
+          "dependsOn": "",
+          "pullRequest": {
+            "number": 8,
+            "draft": false,
+            "state": "MERGED",
+            "base": "master",
+            "head": "codex/v3.7.3-acceptance-backfill"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "codex/v3.7.3-long-running-multi-provider-prompt-intelligence",
+          "state": "HISTORY",
+          "classification": "DECLARED",
+          "mergeState": "MERGED",
+          "dependsOn": "",
+          "pullRequest": {
+            "number": 7,
+            "draft": false,
+            "state": "MERGED",
+            "base": "master",
+            "head": "codex/v3.7.3-long-running-multi-provider-prompt-intelligence"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "codex/v3.7.2-final-real-model-revalidation",
+          "state": "HISTORY",
+          "classification": "DECLARED",
+          "mergeState": "MERGED",
+          "dependsOn": "",
+          "pullRequest": {
+            "number": 6,
+            "draft": false,
+            "state": "MERGED",
+            "base": "master",
+            "head": "codex/v3.7.2-final-real-model-revalidation"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "codex/v3.7.2-real-model-quality",
+          "state": "HISTORY",
+          "classification": "DECLARED",
+          "mergeState": "MERGED",
+          "dependsOn": "",
+          "pullRequest": {
+            "number": 5,
+            "draft": false,
+            "state": "MERGED",
+            "base": "master",
+            "head": "codex/v3.7.2-real-model-quality"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "codex/v3.7.1-adaptive-execution",
+          "state": "HISTORY",
+          "classification": "DECLARED",
+          "mergeState": "MERGED",
+          "dependsOn": "",
+          "pullRequest": {
+            "number": 4,
+            "draft": false,
+            "state": "MERGED",
+            "base": "master",
+            "head": "codex/v3.7.1-adaptive-execution"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "codex/v3.7-universal-evidence",
+          "state": "HISTORY",
+          "classification": "DECLARED",
+          "mergeState": "MERGED",
+          "dependsOn": "",
+          "pullRequest": {
+            "number": 3,
+            "draft": false,
+            "state": "MERGED",
+            "base": "master",
+            "head": "codex/v3.7-universal-evidence"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "agent/projectflow-v3.3.7",
+          "state": "HISTORY",
+          "classification": "DECLARED",
+          "mergeState": "MERGED",
+          "dependsOn": "",
+          "pullRequest": {
+            "number": 1,
+            "draft": false,
+            "state": "MERGED",
+            "base": "master",
+            "head": "agent/projectflow-v3.3.7"
+          },
+          "mismatches": []
+        },
+        {
+          "branch": "fix/changebatch-null-timing-columns",
+          "state": "HISTORY",
+          "classification": "INFERRED",
+          "mergeState": "CONTAINED",
+          "dependsOn": "",
+          "pullRequest": null,
+          "mismatches": []
+        },
+        {
+          "branch": "codex/projectflow-v3.3.2",
+          "state": "HISTORY",
+          "classification": "INFERRED",
+          "mergeState": "CONTAINED",
+          "dependsOn": "",
+          "pullRequest": null,
+          "mismatches": []
+        },
+        {
+          "branch": "codex/persistent-change-scan",
+          "state": "HISTORY",
+          "classification": "INFERRED",
+          "mergeState": "CONTAINED",
+          "dependsOn": "",
+          "pullRequest": null,
+          "mismatches": []
+        }
+      ]
+    }
+  ],
+  "mismatches": 0
+}

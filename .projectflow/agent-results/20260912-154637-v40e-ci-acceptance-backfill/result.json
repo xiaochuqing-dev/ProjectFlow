@@ -1,0 +1,24 @@
+{
+  "taskGoal": "追加 V4.0-E Draft PR 与实际 CI 结果，完成技术验收状态和栈整理依据。",
+  "actualChanges": [
+    "Draft PR #25 以 #24 为 base 推送，实际 push 与 PR 各十项 required gates 全部成功。",
+    "复核四次 CI 的日志与注释，OSV、Windows、PostgreSQL、exact 旧库升级等门禁通过；更新技术入口为 READY_FOR_POC。",
+    "文档和证据明确区分技术通过、Owner NOT_REVIEWED 与后续合并决定；保留所有失败、未知用量与未吸收的 #21 差异。"
+  ],
+  "keyFiles": [
+    "docs/acceptance-evidence/v4.0-e/ci.json",
+    "docs/acceptance-evidence/v4.0-e/ci-warning-audit.json",
+    "docs/acceptance-evidence/v4.0-e/stack-consolidation-readiness.json",
+    "docs/projectflow-v4.0-e-semantic-quality-debt-closure-report.md"
+  ],
+  "verification": {
+    "build": "CI 源码 806ea4a7dcad3d72f5d3a12517332d69dfb6047f；push/PR Windows production portable build SUCCESS；本地根启动器及源码范围见 windows-launcher.json。",
+    "tests": "实际四次 CI 全部 SUCCESS，push/PR 各十项必需检查通过；链接和逐 Job 结论见 ci.json。随后 facts-only 回填 Head 的新 CI 将单独记录于 #25 正文。",
+    "manualCheck": "Agent 核对 GitHub Draft/base/head、实际 CI 状态和注释、文档/Evidence 一致性。真实产品页面与独立 Sol review 的原始范围保持不变。"
+  },
+  "unfinished": [
+    "Owner Review 仍为 NOT_REVIEWED；未获合并、正式桌面集成或发布批准。",
+    "网络 reset 最终来源 UNDETERMINED，非阻断 P1/P2 与 #21 独有材料的后续处置见 Ledger 和 Stack Readiness。"
+  ],
+  "sedimentCandidates": []
+}

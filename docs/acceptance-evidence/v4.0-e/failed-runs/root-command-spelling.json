@@ -1,0 +1,10 @@
+{
+  "type": "ACCEPTANCE_COMMAND_INVOCATION_ERROR",
+  "recordedAt": "2026-09-12T07:02:00Z",
+  "sourceHead": "268172023810119ffa18b4bcbde193e2ce0e37e0",
+  "attemptedCommand": "cmd.exe /d /c ../../Start-ProjectFlow.bat -NoBrowser",
+  "result": "cmd parsed the forward-slash relative path as an invalid command; the batch launcher was not entered.",
+  "exitCode": 1,
+  "correction": "Repeat from the same different working directory using Windows backslash separators. No repository code or configuration change.",
+  "verification": "The corrected actual launcher result is recorded separately in windows-launcher.json."
+}

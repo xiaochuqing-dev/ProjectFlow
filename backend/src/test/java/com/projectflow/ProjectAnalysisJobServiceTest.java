@@ -39,6 +39,28 @@ class ProjectAnalysisJobServiceTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
+    void failedTransportDtoRetainsAttemptsAndDoesNotInventZeroUsage() throws Exception {
+        UUID userId = UUID.randomUUID();
+        ProjectSpace project = new ProjectSpace(userId);
+        ProjectAnalysisJob job = new ProjectAnalysisJob(project.getId(), userId, ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH, null);
+        job.markRunning();
+        job.recordTransportTelemetry(2, 0, 0, 0);
+        var telemetry = new com.projectflow.service.ModelRequestTelemetryContext.Snapshot(
+            2, 0, 2, 0, "UNKNOWN", null, null, null, 0, 0, 0, 100, List.of());
+        job.recordDiagnostics(objectMapper.writeValueAsString(java.util.Map.of("transportTelemetry", telemetry)), false);
+        job.markFailed("模型理解失败");
+        when(projectRepository.findByIdAndUserId(project.getId(), userId)).thenReturn(Optional.of(project));
+        when(jobRepository.findByProjectIdOrderByCreatedAtDesc(project.getId())).thenReturn(List.of(job));
+        var service = new ProjectAnalysisJobService(jobRepository, projectRepository, jobRunner, objectMapper, transactionManager);
+        var response = service.listProjectJobs(userId, project.getId()).get(0);
+        assertThat(response.requestCount()).isEqualTo(2);
+        assertThat(response.totalTokens()).isNull();
+        assertThat(response.promptTokens()).isNull();
+        assertThat(response.transportTelemetry().failedRequestCount()).isEqualTo(2);
+        assertThat(response.transportTelemetry().usageAvailability()).isEqualTo("UNKNOWN");
+    }
+
+    @Test
     void listsRunningJobsWhenCompletedCapabilitySummaryExists() {
         UUID userId = UUID.randomUUID();
         ProjectSpace project = new ProjectSpace(userId);

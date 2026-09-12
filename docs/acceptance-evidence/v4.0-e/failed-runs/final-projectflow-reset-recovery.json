@@ -1,0 +1,52 @@
+{
+  "recordedAt": "2026-09-12T01:24:14.456447+00:00",
+  "type": "REAL_TRANSPORT_FAILURE_WITH_SUCCESSFUL_BOUNDED_RECOVERY",
+  "project": "ProjectFlow",
+  "jobId": "403af231-07d0-4b56-8e7a-2bb5e04ef526",
+  "finalJobStatus": "SUCCEEDED",
+  "elapsedMs": 2749896,
+  "actualRequests": 20,
+  "failedAttempts": [
+    {
+      "sequence": 10,
+      "taskType": "PROJECT_HISTORY_SYNTHESIS",
+      "protocol": "OPENAI_RESPONSES",
+      "reasoningEffort": "xhigh",
+      "retryReason": "NONE",
+      "status": "FAILED",
+      "latencyMs": 123894,
+      "failureCode": "NETWORK_ERROR",
+      "transportFailureType": "HTTP2_STREAM_RESET",
+      "httpStatus": null,
+      "promptTokens": null,
+      "completionTokens": null,
+      "totalTokens": null
+    }
+  ],
+  "recoveryAttempts": [
+    {
+      "sequence": 11,
+      "taskType": "PROJECT_HISTORY_SYNTHESIS",
+      "protocol": "OPENAI_RESPONSES",
+      "reasoningEffort": "xhigh",
+      "retryReason": "TRANSPORT_RETRY",
+      "status": "RESPONSE_RECEIVED",
+      "latencyMs": 62876,
+      "failureCode": "",
+      "transportFailureType": "",
+      "httpStatus": null,
+      "promptTokens": 3560,
+      "completionTokens": 3338,
+      "totalTokens": 6898
+    }
+  ],
+  "usageAvailability": "PARTIAL",
+  "exactTotalTokens": null,
+  "reportedTotalTokens": 297306,
+  "source": "Persisted Job transport telemetry, not top-level terminal failureCode.",
+  "progressCorrection": "Earlier progress messages incorrectly inferred no transport failures from the empty terminal Job failureCode. The per-attempt audit exposed sequence 10 reset and sequence 11 successful transport retry; that statement was explicitly corrected before final acceptance.",
+  "finalNoChangeJobId": "8ecebbcb-5387-4a35-9bc0-dc7d642c8dc2",
+  "finalNoChangeElapsedMs": 20799,
+  "finalNoChangeRequests": 0,
+  "origin": "UNDETERMINED"
+}

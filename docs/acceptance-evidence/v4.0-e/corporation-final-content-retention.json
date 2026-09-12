@@ -1,0 +1,238 @@
+{
+  "recordedAt": "2026-09-12T05:26:44.757849+00:00",
+  "status": "PASS",
+  "reviewCaptureSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491",
+  "finalRuntimeSourceHead": "8dd9d6cfeda2dfbb76118ca0f3e1b4f99a0bd6f4",
+  "finalRuntimeCapturedAt": "2026-09-12T05:22:23.785Z",
+  "checks": [
+    {
+      "path": "visible-text/corporation-current-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "927c5e3e92b2240f4546dbfdad49b3c7717496f917da226dde16cfc531dde443",
+      "finalRuntimeTextSha256": "927c5e3e92b2240f4546dbfdad49b3c7717496f917da226dde16cfc531dde443"
+    },
+    {
+      "path": "visible-text/corporation-current-sources-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "edbca90a37926bf0d5eb958e343062c85d49e1c62cccd7d5fc3cfb0f20dbed00",
+      "finalRuntimeTextSha256": "edbca90a37926bf0d5eb958e343062c85d49e1c62cccd7d5fc3cfb0f20dbed00"
+    },
+    {
+      "path": "visible-text/corporation-history-default-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "d7df118b457ea57278225e3e2b5346df54694bbd8c44e538db9035803924c0ae",
+      "finalRuntimeTextSha256": "d7df118b457ea57278225e3e2b5346df54694bbd8c44e538db9035803924c0ae"
+    },
+    {
+      "path": "visible-text/corporation-story-1-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "22d02a84305513fa19b96f8551dd4a82de4e08b22e8abed18ed8588e76394ce6",
+      "finalRuntimeTextSha256": "22d02a84305513fa19b96f8551dd4a82de4e08b22e8abed18ed8588e76394ce6"
+    },
+    {
+      "path": "visible-text/corporation-story-1-evidence-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "b81864ad9a50c7699a88b2e00edcc5e01167f737eb9487e441216fc5986a1247",
+      "finalRuntimeTextSha256": "b81864ad9a50c7699a88b2e00edcc5e01167f737eb9487e441216fc5986a1247"
+    },
+    {
+      "path": "visible-text/corporation-story-2-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "b59db5f223b40e75beb8e0b76fdc817484f5d0b4f602d220c1c820fb1cf6d434",
+      "finalRuntimeTextSha256": "b59db5f223b40e75beb8e0b76fdc817484f5d0b4f602d220c1c820fb1cf6d434"
+    },
+    {
+      "path": "visible-text/corporation-story-2-evidence-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "cfd53879899e94d842b93164a4b3257feceeb540d483136552fbd97eebfeaeda",
+      "finalRuntimeTextSha256": "cfd53879899e94d842b93164a4b3257feceeb540d483136552fbd97eebfeaeda"
+    },
+    {
+      "path": "visible-text/corporation-story-2-related-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "d080fa11643b833709a849663c734c8b2fbe8f262502745d7183fd312a746b2b",
+      "finalRuntimeTextSha256": "d080fa11643b833709a849663c734c8b2fbe8f262502745d7183fd312a746b2b"
+    },
+    {
+      "path": "visible-text/corporation-story-3-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "542ca61b62abef739734316b392d6e0877be8033d1673410d7de9f8ea315dd3f",
+      "finalRuntimeTextSha256": "542ca61b62abef739734316b392d6e0877be8033d1673410d7de9f8ea315dd3f"
+    },
+    {
+      "path": "visible-text/corporation-story-3-evidence-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "ab13ca271f5320f6a51fd514b0560f96b5488c39dae4bc77024016500ad6d3e1",
+      "finalRuntimeTextSha256": "ab13ca271f5320f6a51fd514b0560f96b5488c39dae4bc77024016500ad6d3e1"
+    },
+    {
+      "path": "visible-text/corporation-story-4-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "ae0c6999360508377b3e9d7a0ea27caba9b6979d5e552c91a73715d248cb37d4",
+      "finalRuntimeTextSha256": "ae0c6999360508377b3e9d7a0ea27caba9b6979d5e552c91a73715d248cb37d4"
+    },
+    {
+      "path": "visible-text/corporation-story-4-evidence-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "a19c3faaab76903f75c6e90122a55993b5ef6ffd5e575d7792a440758238c2f5",
+      "finalRuntimeTextSha256": "a19c3faaab76903f75c6e90122a55993b5ef6ffd5e575d7792a440758238c2f5"
+    },
+    {
+      "path": "visible-text/corporation-story-5-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "89f306fc409a38a45fe50620295e0135799142e984f16dd076d07a3ab6c3683f",
+      "finalRuntimeTextSha256": "89f306fc409a38a45fe50620295e0135799142e984f16dd076d07a3ab6c3683f"
+    },
+    {
+      "path": "visible-text/corporation-story-5-evidence-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "41c98eb8ba855299f3ca355510d88589afe9e15151e5aa8ebc8cd652a458726b",
+      "finalRuntimeTextSha256": "41c98eb8ba855299f3ca355510d88589afe9e15151e5aa8ebc8cd652a458726b"
+    },
+    {
+      "path": "visible-text/corporation-story-5-related-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "638b7a86a257a7ce917ef70e21fe2ab5e393e3e7e2e54874a382db6df4abdd69",
+      "finalRuntimeTextSha256": "638b7a86a257a7ce917ef70e21fe2ab5e393e3e7e2e54874a382db6df4abdd69"
+    },
+    {
+      "path": "visible-text/corporation-history-time-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "3bf9719518fae2a0754ace01ff4279530c703c22decaeda410c62918975dc4d4",
+      "finalRuntimeTextSha256": "3bf9719518fae2a0754ace01ff4279530c703c22decaeda410c62918975dc4d4"
+    },
+    {
+      "path": "visible-text/corporation-threads-directory-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "141ec01f724f141d2dc4b1993093e615fb2d88b0245d20d26622e3119b8dae08",
+      "finalRuntimeTextSha256": "141ec01f724f141d2dc4b1993093e615fb2d88b0245d20d26622e3119b8dae08"
+    },
+    {
+      "path": "visible-text/corporation-worklines-final.txt",
+      "identical": false,
+      "reviewedTextSha256": "03268a995d14a6d12f097030246cde8cbf0316ddb77d29186ea883c2781ca864",
+      "finalRuntimeTextSha256": "7529bec7a625f8aae881e7a7db61a753b104c48c9fa98800304d8188c7fc899d",
+      "observationTimeOnlyChange": true,
+      "previousObservation": "2026/9/12 12:50:32",
+      "finalObservation": "2026/9/12 13:11:09"
+    },
+    {
+      "path": "visible-text/corporation-workline-detail-final.txt",
+      "identical": false,
+      "reviewedTextSha256": "9a1c6f554fb32045cb35bce9c36661f6f556da700c1cc5b66917977a6689a4e7",
+      "finalRuntimeTextSha256": "fb54709f2e4adf5176099cae2cf76176a8e0eda957dccc0b72751a96270e39d3",
+      "observationTimeOnlyChange": true,
+      "previousObservation": "2026/9/12 12:50:32",
+      "finalObservation": "2026/9/12 13:11:09"
+    },
+    {
+      "path": "visible-text/corporation-current-390-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "8da49263ee4777f2db75058af54a26dc2ac5ac168a8c9841743e2c6143f51d7e",
+      "finalRuntimeTextSha256": "8da49263ee4777f2db75058af54a26dc2ac5ac168a8c9841743e2c6143f51d7e"
+    },
+    {
+      "path": "visible-text/corporation-history-390-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "da4a73534576c47de3e65bbc8cb25b90c58cc67f83410769d69cf39d2141e43c",
+      "finalRuntimeTextSha256": "da4a73534576c47de3e65bbc8cb25b90c58cc67f83410769d69cf39d2141e43c"
+    },
+    {
+      "path": "visible-text/corporation-worklines-390-final.txt",
+      "identical": false,
+      "reviewedTextSha256": "c48f02857e4859cc1475c930a059a7d47ac5400921ef78b365bea8d31104c7b7",
+      "finalRuntimeTextSha256": "d7778a6690c95261a7182cfbbe6088ef5615bc0ac6a96bb65101aa3b3df7e111",
+      "observationTimeOnlyChange": true,
+      "previousObservation": "2026/9/12 12:50:32",
+      "finalObservation": "2026/9/12 13:11:09"
+    },
+    {
+      "path": "visible-text/corporation-current-640-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "7f99ad5597e4641a33f45cb3563af6bebe8f879bbafa24c75e73447a2431c066",
+      "finalRuntimeTextSha256": "7f99ad5597e4641a33f45cb3563af6bebe8f879bbafa24c75e73447a2431c066"
+    },
+    {
+      "path": "visible-text/corporation-history-640-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "ea954754d8edd7965ec83e725261657af51607b8553e2a541ae7e5873207d970",
+      "finalRuntimeTextSha256": "ea954754d8edd7965ec83e725261657af51607b8553e2a541ae7e5873207d970"
+    },
+    {
+      "path": "visible-text/corporation-worklines-640-final.txt",
+      "identical": false,
+      "reviewedTextSha256": "b53cae700adf973a9db1e68b0caab0c6ffa0d61df56c30d10bbef98c627293e8",
+      "finalRuntimeTextSha256": "2287649743347a516f1e86f54447b1d11140125e77fcd6561e3bc680118980f3",
+      "observationTimeOnlyChange": true,
+      "previousObservation": "2026/9/12 12:50:32",
+      "finalObservation": "2026/9/12 13:11:09"
+    },
+    {
+      "path": "visible-text/corporation-current-1024-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "d8579953b8bfc105d7af3683e968d8d7d5d26a343013a0c367361c802ead1328",
+      "finalRuntimeTextSha256": "d8579953b8bfc105d7af3683e968d8d7d5d26a343013a0c367361c802ead1328"
+    },
+    {
+      "path": "visible-text/corporation-history-1024-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "cde0c7be2d093099d08ada14b439f9cd2ee73d9ca7391f56a8e52336824434f4",
+      "finalRuntimeTextSha256": "cde0c7be2d093099d08ada14b439f9cd2ee73d9ca7391f56a8e52336824434f4"
+    },
+    {
+      "path": "visible-text/corporation-worklines-1024-final.txt",
+      "identical": false,
+      "reviewedTextSha256": "2b1a6d29840e247cf7356ce8a74bcbfec397253911650785c946650ddbfd1a69",
+      "finalRuntimeTextSha256": "5b4cc8c28c8dd6e64e4b9be64c5be8622d1f5d7116d57c56915443b0e0756b1d",
+      "observationTimeOnlyChange": true,
+      "previousObservation": "2026/9/12 12:50:32",
+      "finalObservation": "2026/9/12 13:11:09"
+    },
+    {
+      "path": "visible-text/corporation-current-1280-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "927c5e3e92b2240f4546dbfdad49b3c7717496f917da226dde16cfc531dde443",
+      "finalRuntimeTextSha256": "927c5e3e92b2240f4546dbfdad49b3c7717496f917da226dde16cfc531dde443"
+    },
+    {
+      "path": "visible-text/corporation-history-1280-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "d7df118b457ea57278225e3e2b5346df54694bbd8c44e538db9035803924c0ae",
+      "finalRuntimeTextSha256": "d7df118b457ea57278225e3e2b5346df54694bbd8c44e538db9035803924c0ae"
+    },
+    {
+      "path": "visible-text/corporation-worklines-1280-final.txt",
+      "identical": false,
+      "reviewedTextSha256": "03268a995d14a6d12f097030246cde8cbf0316ddb77d29186ea883c2781ca864",
+      "finalRuntimeTextSha256": "7529bec7a625f8aae881e7a7db61a753b104c48c9fa98800304d8188c7fc899d",
+      "observationTimeOnlyChange": true,
+      "previousObservation": "2026/9/12 12:50:32",
+      "finalObservation": "2026/9/12 13:11:09"
+    },
+    {
+      "path": "visible-text/corporation-current-1600-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "927c5e3e92b2240f4546dbfdad49b3c7717496f917da226dde16cfc531dde443",
+      "finalRuntimeTextSha256": "927c5e3e92b2240f4546dbfdad49b3c7717496f917da226dde16cfc531dde443"
+    },
+    {
+      "path": "visible-text/corporation-history-1600-final.txt",
+      "identical": true,
+      "reviewedTextSha256": "d7df118b457ea57278225e3e2b5346df54694bbd8c44e538db9035803924c0ae",
+      "finalRuntimeTextSha256": "d7df118b457ea57278225e3e2b5346df54694bbd8c44e538db9035803924c0ae"
+    },
+    {
+      "path": "visible-text/corporation-worklines-1600-final.txt",
+      "identical": false,
+      "reviewedTextSha256": "03268a995d14a6d12f097030246cde8cbf0316ddb77d29186ea883c2781ca864",
+      "finalRuntimeTextSha256": "7529bec7a625f8aae881e7a7db61a753b104c48c9fa98800304d8188c7fc899d",
+      "observationTimeOnlyChange": true,
+      "previousObservation": "2026/9/12 12:50:32",
+      "finalObservation": "2026/9/12 13:11:09"
+    }
+  ],
+  "exactlyUnchangedTextCount": 27,
+  "observationTimeOnlyChangedTextCount": 7,
+  "worklineReviewAddendum": "model-review-corporation-worklines-sol.json",
+  "scope": "All 34 Corporation views were recaptured through the final production UI. 27 TXT are identical; seven Workline TXT differ only in the single local observation timestamp. The independent Sol reviewer viewed all seven changed TXT and nine PNG and retained PASS. Final delivery uses those newly reviewed Workline files while retaining the other frozen reviewed views. Original inputs/reviews remain immutable."
+}

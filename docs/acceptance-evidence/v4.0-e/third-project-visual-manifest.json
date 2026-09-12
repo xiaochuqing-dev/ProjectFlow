@@ -1,0 +1,11 @@
+{
+  "project": "Universal Exam Prep",
+  "source": "Actual production UI and real persisted Current",
+  "text": "visible-text/examprep-current-final.txt",
+  "images": [
+    "screenshots/examprep-current-final-1.png",
+    "screenshots/examprep-current-final-2.png",
+    "screenshots/examprep-current-final-3.png"
+  ],
+  "errors": []
+}

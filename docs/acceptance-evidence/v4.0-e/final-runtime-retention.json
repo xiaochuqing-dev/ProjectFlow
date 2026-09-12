@@ -1,0 +1,69 @@
+{
+  "recordedAt": "2026-09-12T05:11:10.483459+00:00",
+  "status": "PASS",
+  "functionalSourceHead": "8dd9d6cfeda2dfbb76118ca0f3e1b4f99a0bd6f4",
+  "persistedReadHashesUnchangedAcrossRestartAndNoChange": [
+    {
+      "project": "ProjectFlow",
+      "projectId": "112e956a-070e-4e11-867d-188852d550f2",
+      "currentResponseSha256": "7fb40773d0a7ec919a6b63daf969b84bf3b586cb2959c8b88f9887d454152cc3",
+      "readableStories": 338,
+      "allStoriesResponseSha256": "36600544f641164f70a5cb80e5eb8ccbb6e05a30c940fa8c66dd9f136c4fc198"
+    },
+    {
+      "project": "Corporation-Agent",
+      "projectId": "f5f80a76-95c8-41e1-8c5f-49eee3fecfa3",
+      "currentResponseSha256": "bac85a973e917f2d0f010666a047e9bc39ef444bf9c0754134165c365d21e0b4",
+      "readableStories": 22,
+      "allStoriesResponseSha256": "00238180c891684ed9c243a92858d07d718510c66df490e2ba99fbd4e6882d43"
+    },
+    {
+      "project": "Universal Exam Prep",
+      "projectId": "f4976bdf-1927-42e9-acb2-6a1e4d2580bc",
+      "currentResponseSha256": "499d71f81f0ff4557a5b82b67f356f68f74b080d677fc44c047a49a78bd0ee40"
+    }
+  ],
+  "checks": [
+    {
+      "name": "ProjectFlow",
+      "projectId": "112e956a-070e-4e11-867d-188852d550f2",
+      "jobId": "82aac799-6a60-4ca5-9f4b-973896e08d22",
+      "kind": "understanding",
+      "status": "SUCCEEDED",
+      "requestCount": 0,
+      "usageAvailability": "NOT_CALLED",
+      "elapsedMs": 836
+    },
+    {
+      "name": "Corporation-Agent",
+      "projectId": "f5f80a76-95c8-41e1-8c5f-49eee3fecfa3",
+      "jobId": "2e3436f2-9509-4414-8716-7f7cecfe9e81",
+      "kind": "understanding",
+      "status": "SUCCEEDED",
+      "requestCount": 0,
+      "usageAvailability": "NOT_CALLED",
+      "elapsedMs": 99
+    },
+    {
+      "name": "Universal Exam Prep",
+      "projectId": "f4976bdf-1927-42e9-acb2-6a1e4d2580bc",
+      "jobId": "a1cbfbd4-c644-4a00-bbe2-dae929140db3",
+      "kind": "understanding",
+      "status": "SUCCEEDED",
+      "requestCount": 0,
+      "usageAvailability": "NOT_CALLED",
+      "elapsedMs": 19
+    },
+    {
+      "name": "Corporation-Agent",
+      "projectId": "f5f80a76-95c8-41e1-8c5f-49eee3fecfa3",
+      "jobId": "a1237fab-d82f-4280-82a1-cecfb493f35a",
+      "kind": "history",
+      "status": "SUCCEEDED",
+      "requestCount": 0,
+      "usageAvailability": "NOT_CALLED",
+      "elapsedMs": 1153
+    }
+  ],
+  "scope": "Production runtime replacement and zero-call checks. ProjectFlow History was still partial and was read-only here; its pending scope is handled separately."
+}

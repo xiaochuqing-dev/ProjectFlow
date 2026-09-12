@@ -1,0 +1,243 @@
+{
+  "schemaVersion": "1.0",
+  "reviewType": "MODEL_REVIEW",
+  "reviewedProduct": "ProjectFlow",
+  "reviewer": {
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "xhigh",
+    "perspective": "首次使用者的独立产品语义评审"
+  },
+  "verdict": "NEEDS_REVISION",
+  "basis": {
+    "visibleContentOnly": true,
+    "manifest": "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/projectflow-visual-manifest.json",
+    "textFilesRead": 35,
+    "screenshotsViewed": 80,
+    "manifestErrors": [],
+    "excludedFromReview": [
+      "实现源代码",
+      "DTO",
+      "Ground Truth",
+      "claim audit 文件内容",
+      "阶段报告与工程测试结果",
+      "以往评审结论",
+      "项目 API"
+    ]
+  },
+  "reviewedRows": [
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-current-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-current-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-current-final-2.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-current-final-3.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-current-final-4.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-current-sources-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-current-sources-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-history-default-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-default-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-default-final-2.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-default-final-3.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-1-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-1-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-1-final-2.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-1-evidence-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-1-evidence-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-1-evidence-final-2.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-1-evidence-final-3.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-2-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-final-2.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-2-evidence-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-evidence-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-evidence-final-2.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-evidence-final-3.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-evidence-final-4.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-evidence-final-5.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-evidence-final-6.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-evidence-final-7.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-2-related-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-related-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-related-final-2.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-related-final-3.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-related-final-4.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-related-final-5.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-3-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-3-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-3-final-2.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-3-evidence-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-3-evidence-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-3-evidence-final-2.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-3-evidence-final-3.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-3-evidence-final-4.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-3-evidence-final-5.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-3-evidence-final-6.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-4-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-4-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-4-final-2.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-4-evidence-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-4-evidence-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-4-evidence-final-2.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-4-evidence-final-3.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-4-evidence-final-4.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-4-related-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-4-related-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-4-related-final-2.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-4-related-final-3.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-4-related-final-4.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-5-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-5-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-5-final-2.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-5-evidence-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-5-evidence-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-5-evidence-final-2.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-5-evidence-final-3.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-history-time-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-time-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-time-final-2.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-time-final-3.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-time-final-4.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-threads-directory-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-threads-directory-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-threads-directory-final-2.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-threads-directory-final-3.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-thread-first-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-thread-first-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-thread-first-final-2.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-worklines-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-worklines-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-worklines-final-2.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-worklines-final-3.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-worklines-final-4.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-workline-detail-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-workline-detail-final-1.png","docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-workline-detail-final-2.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-current-390-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-current-390-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-history-390-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-390-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-worklines-390-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-worklines-390-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-current-640-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-current-640-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-history-640-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-640-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-worklines-640-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-worklines-640-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-current-1024-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-current-1024-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-history-1024-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-1024-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-worklines-1024-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-worklines-1024-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-current-1280-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-current-1280-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-history-1280-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-1280-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-worklines-1280-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-worklines-1280-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-current-1600-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-current-1600-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-history-1600-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-1600-final-1.png"]},
+    {"text":"docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-worklines-1600-final.txt","images":["docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-worklines-1600-final-1.png"]}
+  ],
+  "coverage": {
+    "defaultRecentChanges": "全部阅读，不仅抽查表现较好的条目",
+    "orderedStoryDetails": "依次阅读前五条 Story 及其清单内 Evidence；Story 2、Story 4 的关联范围也已阅读",
+    "historyViews": "变化概览、时间篇章、长期主题目录和第一个长期主题详情",
+    "worklineViews": "默认分支列表和 PR #24 单分支详情",
+    "responsiveWidths": [390, 640, 1024, 1280, 1600],
+    "horizontalOverflowReportedByManifest": 0
+  },
+  "dimensionJudgments": [
+    {
+      "dimension": "项目身份",
+      "judgment": "PASS",
+      "reason": "当前页在首屏说明 ProjectFlow 用于理解现状、阅读真实变化和维护长期项目记忆，并把 README 声明、系统归纳与当前读取时间分开标识。"
+    },
+    {
+      "dimension": "能确认的当前结果",
+      "judgment": "PASS_WITH_LIMITATIONS",
+      "reason": "文件、配置、Git clean、提交数和无 Tag 等可观察结果被明确限制为材料或仓库状态，未写成功能已运行；但紧随其后的近期变化中有泛化标题，降低用户对具体当前成果的理解。"
+    },
+    {
+      "dimension": "最近实质变化",
+      "judgment": "NEEDS_REVISION",
+      "reason": "第二条重要变化只称“修改数据分析结果”，实际来源涉及大量验收材料和部分前端页面；关联范围又将多个文件重复命名为“新增数据分析结果”，不能回答产品具体发生了什么变化。"
+    },
+    {
+      "dimension": "来源追踪",
+      "judgment": "NEEDS_REVISION",
+      "reason": "多数 Story 可追到 commit、文件或 PR，并保留时间与证据身份；但 Story 5 将 PR #23 命名为“模型配置”，展开后的同一 PR 原始标题和正文却是 Thread、Provider 与 V4 Workspace 迁移，来源链内出现直接语义矛盾。"
+    },
+    {
+      "dimension": "声明、归纳与未知边界",
+      "judgment": "PASS",
+      "reason": "项目明确声明、系统归纳、暂无明确记录、尚未确认、过程证据与运行验收边界持续可见；没有把 Agent 声明或文件存在自动升级为已验证功能。"
+    },
+    {
+      "dimension": "单分支呈现",
+      "judgment": "PASS",
+      "reason": "PR #24 详情同时显示草稿、基线依赖、领先/落后计数的限制、PR 内声明和四类结论来源；明确写出计数不能证明是否合入。"
+    },
+    {
+      "dimension": "时间含义",
+      "judgment": "NEEDS_REVISION",
+      "reason": "单条变化区分提交时间、提案更新时间和工作结果入库时间；但 11 个时间篇章区间大量重叠，标题几乎都只是“记录多处代码文件及文档的变化”，无法表达阶段边界或阶段成果。"
+    },
+    {
+      "dimension": "无来源或过强结论",
+      "judgment": "PASS_WITH_LIMITATIONS",
+      "reason": "可见文案大多主动降低强度并提示仍需独立证据。主要风险来自 PR #23 的错误主题归属和泛化 Story/Chapter，而不是把测试、运行或完成状态写成已证实。"
+    },
+    {
+      "dimension": "Story 具体程度",
+      "judgment": "NEEDS_REVISION",
+      "reason": "Story 4 能说明项目理解、工作线、工作区的前后端与文档变化；Story 2 仍为“修改数据分析结果”，Story 3 的 Evidence 卡又以“修改项目使用说明”承载整段工作线与 Current/History 声明，具体对象与证据标题不一致。"
+    },
+    {
+      "dimension": "Chapter 具体程度",
+      "judgment": "NEEDS_REVISION",
+      "reason": "11 个 Chapter 主要由文件类别拼接命名，且时间段交叠，不能让首次用户读出从一个阶段到下一个阶段的演变。"
+    },
+    {
+      "dimension": "Thread 连续性与去重",
+      "judgment": "NEEDS_REVISION",
+      "reason": "长期主题目录第一页将“前后端项目骨架”重复为三张卡、“前端项目骨架”重复为七张卡，并另有两张“后端项目骨架”；这与页面自己宣称的“同一明确对象的多条变化”不一致。"
+    },
+    {
+      "dimension": "响应式可读性",
+      "judgment": "PASS_WITH_LIMITATIONS",
+      "reason": "390、640、1024、1280、1600 的首屏均保留项目名、来源身份、时间和工作线状态，未见横向溢出；冻结输入只覆盖各宽度一个首屏状态，不能判断长页面全部滚动位置和交互状态。"
+    }
+  ],
+  "findings": [
+    {
+      "id": "PF-SOL-01",
+      "severity": "HIGH",
+      "title": "PR #23 的 Story 名称与展开的原始 PR 内容直接矛盾",
+      "locations": [
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-5-final.txt:3",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-5-evidence-final.txt:34",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-5-final-1.png",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-5-evidence-final-2.png"
+      ],
+      "evidence": "Story 标题为“记录合并请求23（模型配置）的来源声明”，同一条展开来源的 PR 标题和正文却明确是“Thread 与 Provider 迁入 V4 工作区”，并说明 Story/Evidence、Provider 管理和欢迎页入口迁移。",
+      "impact": "用户从概览与 Story 标题会把 PR #23 误解成模型配置变更；来源展开反而推翻上层结论，破坏追溯可信度。",
+      "requiredRevision": "用原始 PR 的明确对象重写 Story 标题与摘要，并让 Current、History、Story 和 Workline 使用一致身份。"
+    },
+    {
+      "id": "PF-SOL-02",
+      "severity": "HIGH",
+      "title": "长期主题目录把同一对象拆成大量重复 Thread",
+      "locations": [
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-threads-directory-final.txt:55",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-threads-directory-final.txt:73",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-threads-directory-final.txt:109",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-threads-directory-final-1.png",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-threads-directory-final-2.png",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-threads-directory-final-3.png"
+      ],
+      "evidence": "第一页可见三张“前后端项目骨架”、七张“前端项目骨架”和两张“后端项目骨架”，摘要与未知状态高度同质。",
+      "impact": "同一能力演变被切碎，用户无法判断这些卡是不同对象、不同阶段，还是重复聚类结果；长期主题视图不能履行连续阅读职责。",
+      "requiredRevision": "按稳定对象合并同义主题，并在一个 Thread 内按时间排列变化；若对象确实不同，标题必须给出可区分的范围。"
+    },
+    {
+      "id": "PF-SOL-03",
+      "severity": "HIGH",
+      "title": "时间篇章由重叠区间和文件类别标题组成，不能表达项目阶段",
+      "locations": [
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-history-time-final.txt:52",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-history-time-final.txt:92",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-history-time-final.txt:97",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-time-final-1.png",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-time-final-2.png",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-history-time-final-3.png"
+      ],
+      "evidence": "11 个 Chapter 几乎都叫“记录多处代码文件及文档（与脚本）的变化”，括号内只替换工作区、来源证据、模型配置等文件类别；区间从 6 月至 9 月相互大量重叠。选中篇章的摘要继续串联“完成修改数据分析结果”等事件名。",
+      "impact": "首次用户看不到阶段的开始、结果和转折，同一变化可能落入多个篇章，Chapter 失去时间叙事与定位价值。",
+      "requiredRevision": "用不重叠或有明确包含关系的阶段窗口，并以该阶段的可确认成果命名；无法形成阶段时应退回按日期/事件阅读。"
+    },
+    {
+      "id": "PF-SOL-04",
+      "severity": "HIGH",
+      "title": "“修改数据分析结果”无法概括实际变化，展开后被大量验收文件和重复卡片淹没",
+      "locations": [
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-2-final.txt:3",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-2-final.txt:15",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-2-evidence-final.txt:44",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-2-related-final.txt:48",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-2-related-final.txt:102",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-final-1.png",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-evidence-final-2.png",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-related-final-3.png",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-2-related-final-4.png"
+      ],
+      "evidence": "Story 本身称“修改数据分析结果”，范围却包括工作线、历程、项目理解、审阅、来源证据和前端界面；commit 原题是记录真实项目验收并保留质量阻断项。Evidence 展开优先展示大量截图和验收材料路径，关联范围第一页又连续九次出现“新增数据分析结果”，并显示第 1/12 页。",
+      "impact": "该 Story 位于当前页和历程前列，却不能告诉用户本次产品变化是什么；文件数量和分页扩大阅读成本，并制造“很多结果”但没有具体结果的印象。",
+      "requiredRevision": "按用户可理解的成果拆分或重命名 Story，先给出一到数条实质结果，再把长文件清单降到来源层；合并同名文件 Evidence。"
+    },
+    {
+      "id": "PF-SOL-05",
+      "severity": "MEDIUM",
+      "title": "Agent Story 的 Evidence 标题错误且同一声明按文件重复",
+      "locations": [
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-3-evidence-final.txt:27",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-3-evidence-final.txt:34",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-3-evidence-final.txt:156",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-3-evidence-final-1.png",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-3-evidence-final-2.png",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-3-evidence-final-5.png"
+      ],
+      "evidence": "Story 是“整理开发工作线相关代码”，第一张 Evidence 卡却命名为“修改项目使用说明”；同一段关于 Current、History 和 Workline 的 Agent 声明从第 34 行到第 156 行随每个文件重复。",
+      "impact": "标题使用户误判来源对象，重复声明掩盖每个文件到底支持哪一部分结论。",
+      "requiredRevision": "以一次 Agent 结果作为一个过程来源，在其下列出文件引用；Evidence 标题应直接对应工作线/当前状态/历程的声明对象。"
+    },
+    {
+      "id": "PF-SOL-06",
+      "severity": "LOW",
+      "title": "PR #24 标题含异常标点",
+      "locations": [
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/visible-text/projectflow-story-1-final.txt:3",
+        "docs/acceptance-evidence/v4.0-e/failed-runs/sol-review-round2/screenshots/projectflow-story-1-final-1.png"
+      ],
+      "evidence": "标题显示“记录合并请求24（：真实项目理解、来源边界与开发工作线）的来源声明”，出现多余的左括号和冒号组合。",
+      "impact": "不改变事实边界，但会让高频标题显得是拼接产物，降低可读性。",
+      "requiredRevision": "改为自然标题，例如“记录合并请求 #24：真实项目理解、来源边界与开发工作线的来源声明”。"
+    }
+  ],
+  "strengths": [
+    "当前页清楚说明项目身份，并将 README 声明、系统归纳、本地观察和未知分开。",
+    "Story 详情普遍保留“此前状态 / 本次变化 / 当前结果”和运行验收限制。",
+    "Workline 列表能区分主线、有依赖、正在开发、已合入/历史；PR #24 单分支详情给出可复核来源和观察时间。",
+    "响应式首屏在五种宽度保留核心身份与来源语义，清单报告横向溢出为 0。"
+  ],
+  "uncoveredDimensions": [
+    "Story 2 关联范围只冻结第 1/12 页，后续页面未包含在清单。",
+    "长期主题目录只冻结第 1/3 页，且只提供第一个 Thread 的详情。",
+    "开发工作线列表只冻结第 1/2 页，且只提供 PR #24 的单分支详情。",
+    "响应式视图每个宽度只提供一个首屏状态，未覆盖长页面全部滚动位置、搜索、分页和抽屉交互。",
+    "评审未验证任何隐藏后台事实、运行行为或来源文件真伪；结论只针对冻结用户可见语义。"
+  ],
+  "decisionRationale": "ProjectFlow 已能让首次用户识别项目身份、证据身份、未知边界和单分支状态，但三个核心阅读层仍有阻断：PR #23 的上层结论与原始来源冲突，时间篇章无法表达阶段，长期主题严重重复。近期 Story 还被泛化标题和逐文件重复 Evidence 淹没。因此用户无法稳定回答“最近实质改变了什么、它属于哪个连续主题、来源是否与标题一致”，结论为 NEEDS_REVISION。"
+}

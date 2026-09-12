@@ -1,0 +1,59 @@
+{
+  "recordedAt": "2026-09-12T07:46:37.707228+00:00",
+  "validatedHead": "806ea4a7dcad3d72f5d3a12517332d69dfb6047f",
+  "reviewStatus": "COMPLETE",
+  "unresolvedRuntimeDeprecations": 0,
+  "scope": "Actual push and pull_request Quality/Windows logs, GitHub runner warnings and all returned check annotations. This is an Action runtime/setup-java debt audit, not a claim that compilers or simulated failure tests emit no diagnostic text.",
+  "runs": [
+    {
+      "runId": 34681190607,
+      "event": "pull_request",
+      "workflow": "ProjectFlow V3.10 Quality Gates",
+      "url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190607",
+      "logSha256": "bf0a92e6243ac16088262a6685b1f8c8bb5179a6ff7918f62f77671cbf451427",
+      "annotationCount": 0,
+      "runnerWarningCount": 0,
+      "runtimeDeprecationCount": 0,
+      "reviewedBroadPatternMatches": 2,
+      "classification": "Broad matches are normal OSV container variable names or a displayed PowerShell port-release assertion. They are not runtime/deprecation warnings."
+    },
+    {
+      "runId": 34681190254,
+      "event": "pull_request",
+      "workflow": "Windows portable release readiness",
+      "url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190254",
+      "logSha256": "9f313f0e80c64c2e0b3f4c8716e6475685ad76a4a6fc37c3d826c5135ae35d79",
+      "annotationCount": 0,
+      "runnerWarningCount": 0,
+      "runtimeDeprecationCount": 0,
+      "reviewedBroadPatternMatches": 1,
+      "classification": "Broad matches are normal OSV container variable names or a displayed PowerShell port-release assertion. They are not runtime/deprecation warnings."
+    },
+    {
+      "runId": 34681166371,
+      "event": "push",
+      "workflow": "ProjectFlow V3.10 Quality Gates",
+      "url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166371",
+      "logSha256": "c0d1e95621f38175a8fdf9b9f74910b2a11d74d51b82c20532a0e013a62dac13",
+      "annotationCount": 0,
+      "runnerWarningCount": 0,
+      "runtimeDeprecationCount": 0,
+      "reviewedBroadPatternMatches": 2,
+      "classification": "Broad matches are normal OSV container variable names or a displayed PowerShell port-release assertion. They are not runtime/deprecation warnings."
+    },
+    {
+      "runId": 34681166128,
+      "event": "push",
+      "workflow": "Windows portable release readiness",
+      "url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166128",
+      "logSha256": "1a48553f3182b66aced1344f3d8af6d9ab6fd5b31025dfee4bb02d461386b90b",
+      "annotationCount": 0,
+      "runnerWarningCount": 0,
+      "runtimeDeprecationCount": 0,
+      "reviewedBroadPatternMatches": 1,
+      "classification": "Broad matches are normal OSV container variable names or a displayed PowerShell port-release assertion. They are not runtime/deprecation warnings."
+    }
+  ],
+  "actionChange": "None; existing pinned compatible Actions remain in place.",
+  "rawLogsPublished": false
+}

@@ -1,0 +1,266 @@
+{
+  "project": "examprep",
+  "capturedAt": "2026-09-12T03:46:23.994Z",
+  "source": "Actual production build and persisted real backend; DOM-visible text only, no DTO inputs",
+  "errors": [],
+  "rows": [
+    {
+      "view": "current-final",
+      "text": "visible-text/examprep-current-final.txt",
+      "images": [
+        "screenshots/examprep-current-final-1.png",
+        "screenshots/examprep-current-final-2.png",
+        "screenshots/examprep-current-final-3.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "current-sources-final",
+      "text": "visible-text/examprep-current-sources-final.txt",
+      "images": [
+        "screenshots/examprep-current-sources-final-1.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "history-default-final",
+      "text": "visible-text/examprep-history-default-final.txt",
+      "images": [
+        "screenshots/examprep-history-default-final-1.png",
+        "screenshots/examprep-history-default-final-2.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "history-time-final",
+      "text": "visible-text/examprep-history-time-final.txt",
+      "images": [
+        "screenshots/examprep-history-time-final-1.png",
+        "screenshots/examprep-history-time-final-2.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "threads-directory-final",
+      "text": "visible-text/examprep-threads-directory-final.txt",
+      "images": [
+        "screenshots/examprep-threads-directory-final-1.png",
+        "screenshots/examprep-threads-directory-final-2.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "worklines-final",
+      "text": "visible-text/examprep-worklines-final.txt",
+      "images": [
+        "screenshots/examprep-worklines-final-1.png",
+        "screenshots/examprep-worklines-final-2.png"
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "current-390-final",
+      "text": "visible-text/examprep-current-390-final.txt",
+      "images": [
+        "screenshots/examprep-current-390-final-1.png"
+      ],
+      "viewport": {
+        "width": 390,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "history-390-final",
+      "text": "visible-text/examprep-history-390-final.txt",
+      "images": [
+        "screenshots/examprep-history-390-final-1.png"
+      ],
+      "viewport": {
+        "width": 390,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "worklines-390-final",
+      "text": "visible-text/examprep-worklines-390-final.txt",
+      "images": [
+        "screenshots/examprep-worklines-390-final-1.png"
+      ],
+      "viewport": {
+        "width": 390,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "current-640-final",
+      "text": "visible-text/examprep-current-640-final.txt",
+      "images": [
+        "screenshots/examprep-current-640-final-1.png"
+      ],
+      "viewport": {
+        "width": 640,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "history-640-final",
+      "text": "visible-text/examprep-history-640-final.txt",
+      "images": [
+        "screenshots/examprep-history-640-final-1.png"
+      ],
+      "viewport": {
+        "width": 640,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "worklines-640-final",
+      "text": "visible-text/examprep-worklines-640-final.txt",
+      "images": [
+        "screenshots/examprep-worklines-640-final-1.png"
+      ],
+      "viewport": {
+        "width": 640,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "current-1024-final",
+      "text": "visible-text/examprep-current-1024-final.txt",
+      "images": [
+        "screenshots/examprep-current-1024-final-1.png"
+      ],
+      "viewport": {
+        "width": 1024,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "history-1024-final",
+      "text": "visible-text/examprep-history-1024-final.txt",
+      "images": [
+        "screenshots/examprep-history-1024-final-1.png"
+      ],
+      "viewport": {
+        "width": 1024,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "worklines-1024-final",
+      "text": "visible-text/examprep-worklines-1024-final.txt",
+      "images": [
+        "screenshots/examprep-worklines-1024-final-1.png"
+      ],
+      "viewport": {
+        "width": 1024,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "current-1280-final",
+      "text": "visible-text/examprep-current-1280-final.txt",
+      "images": [
+        "screenshots/examprep-current-1280-final-1.png"
+      ],
+      "viewport": {
+        "width": 1280,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "history-1280-final",
+      "text": "visible-text/examprep-history-1280-final.txt",
+      "images": [
+        "screenshots/examprep-history-1280-final-1.png"
+      ],
+      "viewport": {
+        "width": 1280,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "worklines-1280-final",
+      "text": "visible-text/examprep-worklines-1280-final.txt",
+      "images": [
+        "screenshots/examprep-worklines-1280-final-1.png"
+      ],
+      "viewport": {
+        "width": 1280,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "current-1600-final",
+      "text": "visible-text/examprep-current-1600-final.txt",
+      "images": [
+        "screenshots/examprep-current-1600-final-1.png"
+      ],
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "history-1600-final",
+      "text": "visible-text/examprep-history-1600-final.txt",
+      "images": [
+        "screenshots/examprep-history-1600-final-1.png"
+      ],
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    },
+    {
+      "view": "worklines-1600-final",
+      "text": "visible-text/examprep-worklines-1600-final.txt",
+      "images": [
+        "screenshots/examprep-worklines-1600-final-1.png"
+      ],
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "horizontalOverflow": 0
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "type": "LOCAL_ROOT_STARTUP_PORT_CONFLICT",
+  "sourceHead": "268172023810119ffa18b4bcbde193e2ce0e37e0",
+  "observation": "The terminal-retained backend failed to bind 8080. A subsequent read identified a transient Docker backend listener; no running container published 8080 at the later check, and lingering loopback TIME_WAIT entries remained. The exact cause of the transient Docker listener was not established.",
+  "browserCheck": "An early UI check before backend readiness could not find the persisted project; it is not counted as a UI pass.",
+  "handling": "No unrelated process or container was stopped and no operating-system setting changed. Waited for a successful exclusive loopback socket bind before repeating the same root batch.",
+  "portAvailableAt": "2026-09-12T07:08:27.9709280Z",
+  "verification": "Final launcher and retained UI results are recorded separately in windows-launcher.json."
+}

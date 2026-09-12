@@ -99,6 +99,11 @@ class ProjectHistoryGitHubEvidenceTest {
         assertThat(eventJson)
             .contains("Pull Request #7", "github-pr:7", "[REDACTED_SECRET]")
             .doesNotContain("supersecretvalue123", "C:\\\\Users\\\\private-user");
+        assertThat(githubEvents).anySatisfy(event -> {
+            assertThat(event.category()).isEqualTo("PULL_REQUEST");
+            assertThat(event.coverage().get("timeBasis")).isEqualTo("PR_MERGED_AT");
+            assertThat(event.coverage().get("timeLabel")).isEqualTo("合入时间");
+        });
     }
 
     @Test

@@ -1,0 +1,431 @@
+{
+  "method": "Agent source audit of all default recent eight Stories per project; each loaded source event checked for project ownership, real Git commit/path/time correspondence and broad/Agent authority ceiling. Separate human-readable Current statements and independent MODEL_REVIEW remain distinct.",
+  "status": "PASS",
+  "recentStories": [
+    {
+      "project": "Corporation-Agent",
+      "title": "新增和修改项目检查记录与文档",
+      "classification": "OBSERVED",
+      "time": {
+        "basis": "GIT_COMMIT_TIME",
+        "label": "提交时间",
+        "eventTimeKnown": true,
+        "sourceBases": [
+          "GIT_COMMIT_TIME"
+        ]
+      },
+      "eventCount": 5,
+      "gitSourceChecks": 5,
+      "exactCommitTimeChecks": 5,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        "docs/reports/Corporation-Agent_v2.2.0_Report.md",
+        "docs/reports/assets/v2.2.0/README.md",
+        "docs/reports/assets/v2.2.0/implementation-ci.json",
+        "docs/reports/assets/v2.2.0/secret-scan-evidence.json"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "Corporation-Agent",
+      "title": "修改通知、沟通、附件相关的前后端代码、文档与脚本",
+      "classification": "OBSERVED",
+      "time": {
+        "basis": "GIT_COMMIT_TIME",
+        "label": "提交时间",
+        "eventTimeKnown": true,
+        "sourceBases": [
+          "GIT_COMMIT_TIME"
+        ]
+      },
+      "eventCount": 1,
+      "gitSourceChecks": 1,
+      "exactCommitTimeChecks": 1,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        ".github/workflows/ci.yml",
+        "README.md",
+        "VERSION",
+        "backend/.env.example",
+        "backend/alembic/versions/20260909_06_communication.py",
+        "backend/app/agent/collaboration_text.py",
+        "backend/app/agent/notification_tools.py",
+        "backend/app/agent/run_events.py"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "Corporation-Agent",
+      "title": "新增并更新项目版本记录，留下 2.0.0 至 2.2.0 的版本变更链",
+      "classification": "OBSERVED",
+      "time": {
+        "basis": "GIT_COMMIT_TIME",
+        "label": "提交时间",
+        "eventTimeKnown": true,
+        "sourceBases": [
+          "GIT_COMMIT_TIME"
+        ]
+      },
+      "eventCount": 3,
+      "gitSourceChecks": 3,
+      "exactCommitTimeChecks": 3,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        "VERSION"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "Corporation-Agent",
+      "title": "新增并更新项目使用说明，形成 2.0.0 至 2.2.0 的版本说明记录",
+      "classification": "OBSERVED",
+      "time": {
+        "basis": "GIT_COMMIT_TIME",
+        "label": "提交时间",
+        "eventTimeKnown": true,
+        "sourceBases": [
+          "GIT_COMMIT_TIME"
+        ]
+      },
+      "eventCount": 15,
+      "gitSourceChecks": 15,
+      "exactCommitTimeChecks": 15,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        "README.md",
+        "docs/reports/Corporation-Agent_V0_Closeout_Report.md",
+        "docs/reports/Corporation-Agent_V1_Task01_Report.md",
+        "docs/reports/Corporation-Agent_V1_Task01_DeepSeek_Go_Validation.md",
+        "docs/reports/Corporation-Agent_V1_Task02_AgentRun_Reliability_Report.md"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "Corporation-Agent",
+      "title": "修改项目报告（版本2.0.0、2.1.0）",
+      "classification": "OBSERVED",
+      "time": {
+        "basis": "GIT_COMMIT_TIME",
+        "label": "提交时间",
+        "eventTimeKnown": true,
+        "sourceBases": [
+          "GIT_COMMIT_TIME"
+        ]
+      },
+      "eventCount": 6,
+      "gitSourceChecks": 6,
+      "exactCommitTimeChecks": 6,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        "docs/reports/Corporation-Agent_v2.0.0_Report.md",
+        "docs/reports/assets/v2/v1-browser/browser-failure.png",
+        "docs/reports/Corporation-Agent_v2.1.0_Report.md",
+        "scripts/browser_collaboration.mjs"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "Corporation-Agent",
+      "title": "修改协作、成果交付、提交审核相关的前后端代码、文档与脚本",
+      "classification": "OBSERVED",
+      "time": {
+        "basis": "GIT_COMMIT_TIME",
+        "label": "提交时间",
+        "eventTimeKnown": true,
+        "sourceBases": [
+          "GIT_COMMIT_TIME"
+        ]
+      },
+      "eventCount": 1,
+      "gitSourceChecks": 1,
+      "exactCommitTimeChecks": 1,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        "README.md",
+        "VERSION",
+        "backend/.env.example",
+        "backend/alembic/versions/20260908_05_artifacts.py",
+        "backend/app/agent/artifact_catalog.py",
+        "backend/app/agent/artifact_tools.py",
+        "backend/app/agent/context.py",
+        "backend/app/agent/router.py"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "Corporation-Agent",
+      "title": "移除图片资料，记录一次版本内的删除",
+      "classification": "REMOVED",
+      "time": {
+        "basis": "GIT_COMMIT_TIME",
+        "label": "提交时间",
+        "eventTimeKnown": true,
+        "sourceBases": [
+          "GIT_COMMIT_TIME"
+        ]
+      },
+      "eventCount": 1,
+      "gitSourceChecks": 1,
+      "exactCommitTimeChecks": 1,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        "docs/reports/assets/v2/v1-browser/browser-failure.png"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "Corporation-Agent",
+      "title": "修改项目历程、来源证据、协作相关的前后端代码、文档",
+      "classification": "OBSERVED",
+      "time": {
+        "basis": "GIT_COMMIT_TIME",
+        "label": "提交时间",
+        "eventTimeKnown": true,
+        "sourceBases": [
+          "GIT_COMMIT_TIME"
+        ]
+      },
+      "eventCount": 1,
+      "gitSourceChecks": 1,
+      "exactCommitTimeChecks": 1,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        ".github/workflows/ci.yml",
+        "README.md",
+        "VERSION",
+        "backend/.env.example",
+        "backend/alembic/versions/20260908_04_collaboration.py",
+        "backend/app/agent/collaboration_catalog.py",
+        "backend/app/agent/collaboration_text.py",
+        "backend/app/agent/collaboration_tools.py"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "ProjectFlow",
+      "title": "记录合并请求24对真实项目理解、来源边界和开发工作线的说明，形成可追溯的来源声明",
+      "classification": "DECLARED",
+      "time": {
+        "basis": "PR_UPDATED_AT",
+        "label": "提案更新时间",
+        "eventTimeKnown": false,
+        "sourceBases": [
+          "PR_UPDATED_AT"
+        ]
+      },
+      "eventCount": 1,
+      "gitSourceChecks": 0,
+      "exactCommitTimeChecks": 0,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "ProjectFlow",
+      "title": "更新项目检查记录与截图，形成可追溯的检查材料",
+      "classification": "OBSERVED",
+      "time": {
+        "basis": "GIT_COMMIT_TIME",
+        "label": "提交时间",
+        "eventTimeKnown": true,
+        "sourceBases": [
+          "GIT_COMMIT_TIME"
+        ]
+      },
+      "eventCount": 1,
+      "gitSourceChecks": 1,
+      "exactCommitTimeChecks": 1,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        ".projectflow/agent-results/20260910-v40d-real-project-understanding/result.json",
+        ".projectflow/context/known-risks.md",
+        ".projectflow/context/update-history.md",
+        "PROJECT_CONTEXT.md",
+        "docs/acceptance-evidence/v4.0-d/README.md",
+        "docs/acceptance-evidence/v4.0-d/branch-workline-audit.json",
+        "docs/acceptance-evidence/v4.0-d/ci.json",
+        "docs/acceptance-evidence/v4.0-d/claim-audit.json"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "ProjectFlow",
+      "title": "记录开发助手对开发工作线相关代码的调整报告，形成包含检查结果和未完成项的过程声明",
+      "classification": "UNKNOWN",
+      "time": {
+        "basis": "AGENT_GIT_RECORD_TIME",
+        "label": "工作结果入库时间",
+        "eventTimeKnown": false,
+        "sourceBases": [
+          "AGENT_GIT_RECORD_TIME"
+        ]
+      },
+      "eventCount": 1,
+      "gitSourceChecks": 0,
+      "exactCommitTimeChecks": 0,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        "backend/src/main/java/com/projectflow/service/ProjectWorklineCollector.java",
+        "backend/src/main/java/com/projectflow/service/ProjectHistorySourceCollector.java",
+        "backend/src/main/java/com/projectflow/service/ProjectHistoryReadService.java",
+        "backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java",
+        "frontend/src/components/workspace/RealCurrentPage.tsx",
+        "frontend/src/components/workspace/WorklineReader.tsx",
+        "frontend/src/components/workspace/HistoryReader.tsx",
+        "frontend/src/components/workspace/Workspace.tsx"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "ProjectFlow",
+      "title": "更新项目上下文说明，形成连续日期变更记录",
+      "classification": "OBSERVED",
+      "time": {
+        "basis": "GIT_COMMIT_TIME",
+        "label": "提交时间",
+        "eventTimeKnown": true,
+        "sourceBases": [
+          "GIT_COMMIT_TIME"
+        ]
+      },
+      "eventCount": 6,
+      "gitSourceChecks": 6,
+      "exactCommitTimeChecks": 6,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        "PROJECT_CONTEXT.md",
+        ".projectflow/agent-results/20260907-v4-gui-first-prototype/result.json",
+        "docs/projectflow-v4.0-b-gui-first-prototype-report.md"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "ProjectFlow",
+      "title": "调整项目理解、工作区和项目历程的前后端代码与文档，留下可追溯的变更及说明",
+      "classification": "OBSERVED",
+      "time": {
+        "basis": "GIT_COMMIT_TIME",
+        "label": "提交时间",
+        "eventTimeKnown": true,
+        "sourceBases": [
+          "GIT_COMMIT_TIME"
+        ]
+      },
+      "eventCount": 15,
+      "gitSourceChecks": 15,
+      "exactCommitTimeChecks": 15,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        ".projectflow/context/known-risks.md",
+        ".projectflow/context/update-history.md",
+        "README.md",
+        "backend/src/main/java/com/projectflow/service/ProjectUnderstandingService.java",
+        "backend/src/test/java/com/projectflow/service/ProjectUnderstandingServiceTest.java",
+        "docs/architecture.md",
+        "docs/product-language-and-progressive-disclosure-contract.md",
+        "docs/projectflow-v3.8.5-human-readable-history-contract.md"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "ProjectFlow",
+      "title": "调整项目理解、开发工作线和工作区的前后端代码，形成可追溯的代码与文件变更",
+      "classification": "OBSERVED",
+      "time": {
+        "basis": "GIT_COMMIT_TIME",
+        "label": "提交时间",
+        "eventTimeKnown": true,
+        "sourceBases": [
+          "GIT_COMMIT_TIME"
+        ]
+      },
+      "eventCount": 11,
+      "gitSourceChecks": 11,
+      "exactCommitTimeChecks": 11,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        "backend/src/main/java/com/projectflow/controller/ProjectHistoryController.java",
+        "backend/src/main/java/com/projectflow/service/ProjectAnalysisJobService.java",
+        "backend/src/main/java/com/projectflow/service/ProjectHistoryReadService.java",
+        "backend/src/test/java/com/projectflow/ProjectAnalysisJobRetryIdempotencyTest.java",
+        "backend/src/test/java/com/projectflow/service/ProjectWorklineReadTest.java",
+        "frontend/e2e/workspace-understanding.spec.ts",
+        "frontend/src/components/workspace/HistoryReader.tsx",
+        "frontend/src/components/workspace/RealCurrentPage.tsx"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "ProjectFlow",
+      "title": "修改项目理解、开发工作线、工作区相关的前后端代码、文档",
+      "classification": "OBSERVED",
+      "time": {
+        "basis": "GIT_COMMIT_TIME",
+        "label": "提交时间",
+        "eventTimeKnown": true,
+        "sourceBases": [
+          "GIT_COMMIT_TIME"
+        ]
+      },
+      "eventCount": 1,
+      "gitSourceChecks": 1,
+      "exactCommitTimeChecks": 1,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        "PROJECT_CONTEXT.md",
+        "README.md",
+        "backend/src/main/java/com/projectflow/controller/ProjectHistoryController.java",
+        "backend/src/main/java/com/projectflow/service/ProjectHistoryReadService.java",
+        "backend/src/main/java/com/projectflow/service/ProjectHistoryReconstructionService.java",
+        "backend/src/main/java/com/projectflow/service/ProjectHistorySourceCollector.java",
+        "backend/src/main/java/com/projectflow/service/ProjectWorklineCollector.java",
+        "backend/src/test/java/com/projectflow/service/ProjectDeclarationReadTest.java"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    },
+    {
+      "project": "ProjectFlow",
+      "title": "修改项目使用说明",
+      "classification": "OBSERVED",
+      "time": {
+        "basis": "GIT_COMMIT_TIME",
+        "label": "提交时间",
+        "eventTimeKnown": true,
+        "sourceBases": [
+          "GIT_COMMIT_TIME"
+        ]
+      },
+      "eventCount": 2,
+      "gitSourceChecks": 2,
+      "exactCommitTimeChecks": 2,
+      "partiallyVerifiableRedactedPaths": 0,
+      "independentSourceMismatches": [],
+      "sourcePathExamples": [
+        "README.md"
+      ],
+      "authorityMeaning": "File/record observation or source statement; no runtime, deployment or production acceptance inferred"
+    }
+  ],
+  "sourceMismatches": 0,
+  "highRiskUnsupportedClaims": 0,
+  "limitations": [
+    "Redacted relative dynamic-route paths cannot be exactly compared; commit identity and time are still checked. No runtime or deployment acceptance is inferred."
+  ],
+  "runtimeCapabilitiesVerified": false,
+  "ownerReview": "NOT_REVIEWED"
+}

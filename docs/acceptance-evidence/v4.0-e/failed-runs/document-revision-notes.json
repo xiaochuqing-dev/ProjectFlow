@@ -1,0 +1,31 @@
+{
+  "recordedAt": "2026-09-12T00:00:51.913161+00:00",
+  "observations": [
+    {
+      "run": "semantic-document-focused",
+      "failure": "New test used a nonexistent repository count method; compilation failed.",
+      "correction": "Use existing countByProjectId; focused replay passed."
+    },
+    {
+      "run": "semantic-document-context-envelope",
+      "failure": "New source-boundary regression proved that the phrase about acceptance and production release was not rejected.",
+      "correction": "Add the missing authority markers and preserve explicit negation; targeted replay passed without weakening assertion."
+    },
+    {
+      "run": "semantic-label-final",
+      "failure": "An old exact-string assertion expected an entire frontend skeleton for a single dependency manifest.",
+      "correction": "Use the source-specific dependency label and additionally reject login and skeleton claims; retain multi-file skeleton assertions."
+    },
+    {
+      "run": "document-final-history",
+      "failure": "Independent review still found generic first-layer document wording despite collected source text.",
+      "correction": "Newest evidence context and newest family candidates take priority within unchanged bounds; real v20 pilot pending."
+    },
+    {
+      "run": "document-final-projectflow",
+      "jobId": "ef604f3f-ee95-433a-8819-d2c2bd66e42f",
+      "status": "CANCELLED",
+      "reason": "Stopped before further paid windows to repair the confirmed semantic-input problem. All request attempts and known partial usage retained."
+    }
+  ]
+}

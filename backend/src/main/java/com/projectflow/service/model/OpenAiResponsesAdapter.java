@@ -1,6 +1,7 @@
 package com.projectflow.service.model;
 
 import java.io.IOException;
+import java.time.Duration;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -45,6 +46,7 @@ public class OpenAiResponsesAdapter implements ModelProtocolAdapter {
             .model(request.provider().getModelName())
             .instructions(request.systemPrompt())
             .input(request.userPrompt())
+            .store(false)
             .maxOutputTokens(request.maxOutputTokens());
         if (request.temperature() != null) params.temperature(request.temperature());
         if (request.jsonMode()) {
@@ -57,7 +59,14 @@ public class OpenAiResponsesAdapter implements ModelProtocolAdapter {
         }
         OpenAIClient client = OpenAiSdkSupport.clientBuilder(request, urlGuard).build();
         try {
-            Response response = client.responses().create(params.build());
+            // Long reasoning calls otherwise remain silent until the whole
+            // response is ready. Use the official SSE transport, with the same
+            // model, effort, finite deadline and Gateway-owned retry budget.
+            // Deltas never enter validation or persistence as a partial result.
+            Response response = request.reasoningEffort() != null
+                && request.requestTimeout().compareTo(Duration.ofMinutes(5)) > 0
+                    ? streamingResponse(client, params.build())
+                    : client.responses().create(params.build());
             StringBuilder content = new StringBuilder();
             boolean refused = false;
             for (var item : response.output()) {
@@ -86,6 +95,20 @@ public class OpenAiResponsesAdapter implements ModelProtocolAdapter {
             throw new IOException("OpenAI Responses SDK request failed", exception);
         } finally {
             client.close();
+        }
+    }
+
+    private Response streamingResponse(OpenAIClient client, ResponseCreateParams params) throws IOException {
+        try (var stream = client.responses().createStreaming(params)) {
+            var events = stream.stream().iterator();
+            while (events.hasNext()) {
+                var event = events.next();
+                if (event.completed().isPresent()) return event.completed().get().response();
+                if (event.incomplete().isPresent()) return event.incomplete().get().response();
+                if (event.failed().isPresent()) return event.failed().get().response();
+                if (event.error().isPresent()) throw new IOException("Responses stream returned an error event");
+            }
+            throw new IOException("Responses stream ended without a terminal response");
         }
     }
 

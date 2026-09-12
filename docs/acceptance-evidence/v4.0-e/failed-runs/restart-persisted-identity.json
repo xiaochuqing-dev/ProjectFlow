@@ -1,0 +1,44 @@
+{
+  "recordedAt": "2026-09-12T06:33:00Z",
+  "type": "SYNTHETIC_REGRESSION_WITH_REAL_H2_RELOAD",
+  "baselineFunctionalSourceHead": "b6da7f0745dfc4af91c62871a034dbdc3f20187b",
+  "findings": [
+    "An older aggregate project HEAD is not a change to an immutable source event and must not invalidate its checkpoint.",
+    "A 100-nanosecond filesystem timestamp reloads at the existing TIMESTAMP(6) database precision; exact Instant equality incorrectly treated the unchanged source as updated."
+  ],
+  "projectHeadReproduction": {
+    "tests": 1,
+    "failures": 1,
+    "errors": 0
+  },
+  "persistedTimeReproductionAfterHeadCorrection": {
+    "tests": 1,
+    "failures": 1,
+    "errors": 0
+  },
+  "correctedFocusedRun": {
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "correction": "Exclude aggregate HEAD from content equality, compare instants at existing storage precision, and retain normal invalidation for a real coverage-value or one-second timestamp change.",
+  "scope": "Synthetic legacy fingerprint and older-head fixture with real H2 flush/clear/reload, plus the existing bounded repaired-window cache regression. No model request; not a production Sol review.",
+  "correctedFunctionalSourceHead": "349a6039e68ab5ad0126a2dd1dca3dca1029e7f7",
+  "fullBackendRegression": {
+    "tests": 782,
+    "passed": 771,
+    "failures": 0,
+    "errors": 0,
+    "optInSkipped": 11,
+    "postgres16RequiredPassed": 7
+  },
+  "exactLegacyRegression": {
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 48.984
+  },
+  "productionRestartProof": "restart-checkpoint-retention.json"
+}

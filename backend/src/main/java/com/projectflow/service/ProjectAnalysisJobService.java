@@ -425,6 +425,14 @@ public class ProjectAnalysisJobService {
         AnalysisTimePolicy.RuntimePolicy runtimePolicy = job.getJobType() == ProjectAnalysisJobType.PROJECT_UNDERSTANDING_REFRESH
             ? policyFrom(job)
             : null;
+        ModelRequestTelemetryContext.Snapshot transport = null;
+        try {
+            if (job.getDiagnosticsJson() != null && !job.getDiagnosticsJson().isBlank()) {
+                var value = objectMapper.readTree(job.getDiagnosticsJson()).path("transportTelemetry");
+                if (value.isObject()) transport = objectMapper.treeToValue(value, ModelRequestTelemetryContext.Snapshot.class);
+            }
+        } catch (JsonProcessingException ignored) { /* Legacy diagnostics remain readable. */ }
+        boolean legacyUsageUnknown = transport == null && job.getRequestCount() == 0 && job.getErrorMessage() != null;
         return new ProjectAnalysisJobResponse(
             job.getId(),
             job.getProjectId(),
@@ -459,9 +467,9 @@ public class ProjectAnalysisJobService {
             job.getMaxAttempts(),
             job.getRequestCount(),
             job.getMaxRequestCount(),
-            job.getPromptTokens(),
-            job.getCompletionTokens(),
-            job.getTotalTokens(),
+            transport != null ? transport.promptTokens() : legacyUsageUnknown ? null : Integer.valueOf(job.getPromptTokens()),
+            transport != null ? transport.completionTokens() : legacyUsageUnknown ? null : Integer.valueOf(job.getCompletionTokens()),
+            transport != null ? transport.totalTokens() : legacyUsageUnknown ? null : Integer.valueOf(job.getTotalTokens()),
             job.getMaxTotalTokens(),
             job.getElapsedMs(),
             job.getMaxDurationMs(),
@@ -474,7 +482,8 @@ public class ProjectAnalysisJobService {
             job.getRetryReason(),
             runtimePolicy == null ? null : runtimePolicy.deadlineMode().name(),
             runtimePolicy == null ? null : runtimePolicy.qualityMode().name(),
-            runtimePolicy != null && !runtimePolicy.unlimitedOverallDuration()
+            runtimePolicy != null && !runtimePolicy.unlimitedOverallDuration(),
+            transport
         );
     }
 

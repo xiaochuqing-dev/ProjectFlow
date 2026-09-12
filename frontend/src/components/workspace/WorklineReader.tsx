@@ -7,7 +7,7 @@ import { claimLabels } from "@/lib/workspace-claims";
 import { WorkspaceDialog } from "./WorkspaceDialog";
 import { ReadError, ReadingPages } from "./HistoryReader";
 const labels: Record<string, string> = { ALL: "全部", MAIN: "主线", REVIEW: "等待审查", DEPENDENT: "有依赖的工作", DEVELOPING: "正在开发", UNKNOWN: "状态待确认", INACTIVE: "长期未活动", HISTORY: "已合入 / 历史" };
-const mergeLabels: Record<string, string> = { MERGED: "PR 已合并，HEAD 匹配", CONTAINED: "提交已包含在主线", OPEN_PR: "PR 尚未合并", UNKNOWN: "是否合入尚不确定" };
+const mergeLabels: Record<string, string> = { MERGED: "PR 已合并", CONTAINED: "提交已包含在主线", OPEN_PR: "PR 尚未合并", UNKNOWN: "是否合入尚不确定" };
 const sourceLabels: Record<string, string> = { AVAILABLE: "GitHub 已读取", PARTIAL: "GitHub 部分可用", UNAVAILABLE: "GitHub 不可用", NO_REMOTE: "未配置 GitHub", NOT_READ: "尚未读取" };
 const date = (at: string) => at ? new Date(at).toLocaleString("zh-CN", { hour12: false }) : "时间未知";
 

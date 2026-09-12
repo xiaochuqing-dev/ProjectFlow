@@ -368,11 +368,15 @@ class ProjectHistoryDogfoodAcceptanceTest {
         provider(userId);
         AtomicInteger storyCalls = new AtomicInteger();
         AtomicInteger chapterCalls = new AtomicInteger();
+        java.util.Set<String> synthesizedChapterIds = new java.util.LinkedHashSet<>();
         when(modelGateway.callStructured(any(), any(), any())).thenAnswer(invocation -> {
             String prompt = invocation.getArgument(1, String.class);
             if (invocation.getArgument(2, ModelTaskType.class) == ModelTaskType.PROJECT_HISTORY_CHAPTER_SYNTHESIS) {
+                String response = historyChapterModelResponse(prompt);
+                String chapterId = objectMapper.readTree(response).path("chapters").get(0).path("chapterId").asText();
+                assertThat(synthesizedChapterIds.add(chapterId)).as("unchanged successful chapter is never replayed").isTrue();
                 chapterCalls.incrementAndGet();
-                return modelResponse(historyChapterModelResponse(prompt));
+                return modelResponse(response);
             }
             int call = storyCalls.incrementAndGet();
             if (call == 2) throw new ModelGatewayService.ModelHttpException(503);
@@ -435,7 +439,9 @@ class ProjectHistoryDogfoodAcceptanceTest {
         );
         steps.add(t7.evidence());
 
-        writeV39ContinuityArtifact(steps, storyCalls.get(), chapterCalls.get());
+        int eligibleChapterCeiling = (int) readService.chapters(userId, project.getId(), 0, 100).totalElements();
+        assertThat(chapterCalls.get()).isEqualTo(synthesizedChapterIds.size()).isLessThanOrEqualTo(eligibleChapterCeiling);
+        writeV39ContinuityArtifact(steps, storyCalls.get(), chapterCalls.get(), eligibleChapterCeiling);
     }
 
     private ObservedStep observeStep(
@@ -570,7 +576,8 @@ class ProjectHistoryDogfoodAcceptanceTest {
     private void writeV39ContinuityArtifact(
         List<Map<String, Object>> steps,
         int storyModelRequests,
-        int chapterModelRequests
+        int chapterModelRequests,
+        int eligibleChapterCeiling
     ) throws Exception {
         List<Integer> ledgerTotals = steps.stream()
             .map(step -> (Map<?, ?>) step.get("rawEvents"))
@@ -579,7 +586,7 @@ class ProjectHistoryDogfoodAcceptanceTest {
             assertThat(ledgerTotals.get(index)).isGreaterThanOrEqualTo(ledgerTotals.get(index - 1));
         }
         Map<String, Object> artifact = new LinkedHashMap<>();
-        artifact.put("schemaVersion", "projectflow-v3.9-continuity-dogfood-v1");
+        artifact.put("schemaVersion", "projectflow-v4.0-e-continuity-dogfood-v1");
         artifact.put("source", "ProjectFlow Git history plus deterministic local continuation commits");
         artifact.put("fixedCommits", Map.of(
             "v385Final", V385_FINAL_BASELINE,
@@ -598,8 +605,12 @@ class ProjectHistoryDogfoodAcceptanceTest {
         result.put("silentWrongTargetRebind", 0);
         result.put("successfulCheckpointReplays", 0);
         result.put("storyModelRequestsIncludingInjectedFailure", storyModelRequests);
-        assertThat(chapterModelRequests).isBetween(0, 1);
-        result.put("chapterModelRequestsAtMost", 1);
+        // Source-aware Agent dates and more useful labels can expose several
+        // eligible chapters. Bound requests by actual chapters, not an old
+        // fixture's accidental single observation-date grouping.
+        assertThat(chapterModelRequests).isBetween(0, eligibleChapterCeiling);
+        result.put("uniqueChapterModelRequests", chapterModelRequests);
+        result.put("chapterModelRequestsAtMost", eligibleChapterCeiling);
         artifact.put("result", result);
         artifact.put("providerEvidence", Map.of(
             "kind", "deterministic fault injection",
@@ -618,16 +629,22 @@ class ProjectHistoryDogfoodAcceptanceTest {
         Files.createDirectories(output.getParent());
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(output.toFile(), artifact);
         Path committedEvidence = Path.of(
-            "..", "docs", "acceptance-evidence", "v3.9", "dogfood-sequence.json"
+            "..", "docs", "acceptance-evidence", "v4.0-e", "continuity-regression.json"
         ).toAbsolutePath().normalize();
         if (Files.isRegularFile(committedEvidence)) {
-            Object committed = objectMapper.convertValue(
-                objectMapper.readTree(committedEvidence.toFile()), Object.class
-            );
-            Object observed = objectMapper.convertValue(artifact, Object.class);
-            assertThat(committed.equals(observed))
-                .as("committed T0-T7 evidence must match the executable sequence")
-                .isTrue();
+            JsonNode committed = objectMapper.readTree(committedEvidence.toFile());
+            JsonNode observed = objectMapper.valueToTree(artifact);
+            // Observation timestamps can change eligible chapter counts. The
+            // steps above enforce no-op identity and unique requests; compare
+            // frozen safety invariants, not one run's cache counts.
+            assertThat(observed.path("fixedCommits")).isEqualTo(committed.path("fixedCommits"));
+            assertThat(observed.path("security")).isEqualTo(committed.path("security"));
+            for (String key : List.of("pass", "stepCount", "rawEventLedgerMonotonic", "invalidEvidence",
+                "crossProjectReferences", "unsupportedStrongFacts", "silentCorrectionLoss",
+                "silentWrongTargetRebind", "successfulCheckpointReplays")) {
+                assertThat(observed.path("result").path(key)).as("continuity invariant %s", key)
+                    .isEqualTo(committed.path("result").path(key));
+            }
         }
     }
 

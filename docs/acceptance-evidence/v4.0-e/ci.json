@@ -1,0 +1,363 @@
+{
+  "recordedAt": "2026-09-12T07:44:55.852968+00:00",
+  "status": "PASS",
+  "repository": "xiaochuqing-dev/ProjectFlow",
+  "validatedHead": "806ea4a7dcad3d72f5d3a12517332d69dfb6047f",
+  "requiredChecks": [
+    "OSV locked dependency gate / osv-scan",
+    "backend-unit-and-h2",
+    "browser-e2e",
+    "frontend-quality",
+    "hermes-mcp",
+    "obsidian-projection",
+    "postgres-integration",
+    "real-v39-upgrade-proof",
+    "sensitive-content",
+    "windows-portable"
+  ],
+  "events": {
+    "push": {
+      "runs": 2,
+      "requiredPassed": [
+        "OSV locked dependency gate / osv-scan",
+        "backend-unit-and-h2",
+        "browser-e2e",
+        "frontend-quality",
+        "hermes-mcp",
+        "obsidian-projection",
+        "postgres-integration",
+        "real-v39-upgrade-proof",
+        "sensitive-content",
+        "windows-portable"
+      ],
+      "missingOrIncomplete": []
+    },
+    "pull_request": {
+      "runs": 2,
+      "requiredPassed": [
+        "OSV locked dependency gate / osv-scan",
+        "backend-unit-and-h2",
+        "browser-e2e",
+        "frontend-quality",
+        "hermes-mcp",
+        "obsidian-projection",
+        "postgres-integration",
+        "real-v39-upgrade-proof",
+        "sensitive-content",
+        "windows-portable"
+      ],
+      "missingOrIncomplete": []
+    }
+  },
+  "runs": [
+    {
+      "id": 34681190607,
+      "name": "ProjectFlow V3.10 Quality Gates",
+      "event": "pull_request",
+      "head_sha": "806ea4a7dcad3d72f5d3a12517332d69dfb6047f",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190607",
+      "created_at": "2026-09-12T07:36:52Z",
+      "updated_at": "2026-09-12T07:42:34Z",
+      "run_attempt": 1,
+      "jobs": [
+        {
+          "id": 103520013962,
+          "name": "hermes-mcp",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190607/job/103520013962",
+          "started_at": "2026-09-12T07:36:54Z",
+          "completed_at": "2026-09-12T07:37:09Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103520013962"
+        },
+        {
+          "id": 103520014053,
+          "name": "sensitive-content",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190607/job/103520014053",
+          "started_at": "2026-09-12T07:36:55Z",
+          "completed_at": "2026-09-12T07:37:07Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103520014053"
+        },
+        {
+          "id": 103520014066,
+          "name": "backend-unit-and-h2",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190607/job/103520014066",
+          "started_at": "2026-09-12T07:36:55Z",
+          "completed_at": "2026-09-12T07:41:50Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103520014066"
+        },
+        {
+          "id": 103520014087,
+          "name": "browser-e2e",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190607/job/103520014087",
+          "started_at": "2026-09-12T07:36:55Z",
+          "completed_at": "2026-09-12T07:41:05Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103520014087"
+        },
+        {
+          "id": 103520014094,
+          "name": "real-v39-upgrade-proof",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190607/job/103520014094",
+          "started_at": "2026-09-12T07:36:54Z",
+          "completed_at": "2026-09-12T07:38:26Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103520014094"
+        },
+        {
+          "id": 103520014100,
+          "name": "postgres-integration",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190607/job/103520014100",
+          "started_at": "2026-09-12T07:36:55Z",
+          "completed_at": "2026-09-12T07:42:33Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103520014100"
+        },
+        {
+          "id": 103520014136,
+          "name": "frontend-quality",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190607/job/103520014136",
+          "started_at": "2026-09-12T07:36:55Z",
+          "completed_at": "2026-09-12T07:37:48Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103520014136"
+        },
+        {
+          "id": 103520014249,
+          "name": "OSV locked dependency gate / osv-scan",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190607/job/103520014249",
+          "started_at": "2026-09-12T07:36:55Z",
+          "completed_at": "2026-09-12T07:37:55Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103520014249"
+        },
+        {
+          "id": 103520014314,
+          "name": "obsidian-projection",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190607/job/103520014314",
+          "started_at": "2026-09-12T07:36:55Z",
+          "completed_at": "2026-09-12T07:37:08Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103520014314"
+        },
+        {
+          "id": 103520014506,
+          "name": "optional-real-provider-scenarios (${{ matrix.id }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190607/job/103520014506",
+          "started_at": "2026-09-12T07:36:53Z",
+          "completed_at": "2026-09-12T07:36:53Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103520014506"
+        },
+        {
+          "id": 103520014527,
+          "name": "optional-real-provider-qualification (${{ matrix.id }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190607/job/103520014527",
+          "started_at": "2026-09-12T07:36:53Z",
+          "completed_at": "2026-09-12T07:36:53Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103520014527"
+        }
+      ]
+    },
+    {
+      "id": 34681190254,
+      "name": "Windows portable release readiness",
+      "event": "pull_request",
+      "head_sha": "806ea4a7dcad3d72f5d3a12517332d69dfb6047f",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190254",
+      "created_at": "2026-09-12T07:36:52Z",
+      "updated_at": "2026-09-12T07:44:03Z",
+      "run_attempt": 1,
+      "jobs": [
+        {
+          "id": 103520012900,
+          "name": "windows-portable",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681190254/job/103520012900",
+          "started_at": "2026-09-12T07:36:54Z",
+          "completed_at": "2026-09-12T07:44:02Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103520012900"
+        }
+      ]
+    },
+    {
+      "id": 34681166371,
+      "name": "ProjectFlow V3.10 Quality Gates",
+      "event": "push",
+      "head_sha": "806ea4a7dcad3d72f5d3a12517332d69dfb6047f",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166371",
+      "created_at": "2026-09-12T07:36:17Z",
+      "updated_at": "2026-09-12T07:41:58Z",
+      "run_attempt": 1,
+      "jobs": [
+        {
+          "id": 103519947067,
+          "name": "browser-e2e",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166371/job/103519947067",
+          "started_at": "2026-09-12T07:36:55Z",
+          "completed_at": "2026-09-12T07:41:23Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103519947067"
+        },
+        {
+          "id": 103519947114,
+          "name": "backend-unit-and-h2",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166371/job/103519947114",
+          "started_at": "2026-09-12T07:36:19Z",
+          "completed_at": "2026-09-12T07:40:33Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103519947114"
+        },
+        {
+          "id": 103519947147,
+          "name": "sensitive-content",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166371/job/103519947147",
+          "started_at": "2026-09-12T07:36:20Z",
+          "completed_at": "2026-09-12T07:36:33Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103519947147"
+        },
+        {
+          "id": 103519947168,
+          "name": "hermes-mcp",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166371/job/103519947168",
+          "started_at": "2026-09-12T07:36:19Z",
+          "completed_at": "2026-09-12T07:36:33Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103519947168"
+        },
+        {
+          "id": 103519947174,
+          "name": "postgres-integration",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166371/job/103519947174",
+          "started_at": "2026-09-12T07:36:19Z",
+          "completed_at": "2026-09-12T07:41:58Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103519947174"
+        },
+        {
+          "id": 103519947179,
+          "name": "frontend-quality",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166371/job/103519947179",
+          "started_at": "2026-09-12T07:36:19Z",
+          "completed_at": "2026-09-12T07:37:13Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103519947179"
+        },
+        {
+          "id": 103519947182,
+          "name": "real-v39-upgrade-proof",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166371/job/103519947182",
+          "started_at": "2026-09-12T07:36:20Z",
+          "completed_at": "2026-09-12T07:38:44Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103519947182"
+        },
+        {
+          "id": 103519947186,
+          "name": "obsidian-projection",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166371/job/103519947186",
+          "started_at": "2026-09-12T07:36:19Z",
+          "completed_at": "2026-09-12T07:36:36Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103519947186"
+        },
+        {
+          "id": 103519947229,
+          "name": "OSV locked dependency gate / osv-scan",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166371/job/103519947229",
+          "started_at": "2026-09-12T07:36:23Z",
+          "completed_at": "2026-09-12T07:37:09Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103519947229"
+        },
+        {
+          "id": 103519947583,
+          "name": "optional-real-provider-qualification (${{ matrix.id }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166371/job/103519947583",
+          "started_at": "2026-09-12T07:36:18Z",
+          "completed_at": "2026-09-12T07:36:17Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103519947583"
+        },
+        {
+          "id": 103519947633,
+          "name": "optional-real-provider-scenarios (${{ matrix.id }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166371/job/103519947633",
+          "started_at": "2026-09-12T07:36:18Z",
+          "completed_at": "2026-09-12T07:36:17Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103519947633"
+        }
+      ]
+    },
+    {
+      "id": 34681166128,
+      "name": "Windows portable release readiness",
+      "event": "push",
+      "head_sha": "806ea4a7dcad3d72f5d3a12517332d69dfb6047f",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166128",
+      "created_at": "2026-09-12T07:36:17Z",
+      "updated_at": "2026-09-12T07:44:39Z",
+      "run_attempt": 1,
+      "jobs": [
+        {
+          "id": 103519949939,
+          "name": "windows-portable",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/xiaochuqing-dev/ProjectFlow/actions/runs/34681166128/job/103519949939",
+          "started_at": "2026-09-12T07:36:22Z",
+          "completed_at": "2026-09-12T07:44:39Z",
+          "check_run_url": "https://api.github.com/repos/xiaochuqing-dev/ProjectFlow/check-runs/103519949939"
+        }
+      ]
+    }
+  ],
+  "pullRequest": 25,
+  "pullRequestUrl": "https://github.com/xiaochuqing-dev/ProjectFlow/pull/25",
+  "branch": "codex/v4.0-e-semantic-quality-debt-closure",
+  "baseBranch": "codex/v4.0-d-real-project-understanding",
+  "baseHead": "81730744a325ccc2391009b367ca4ba95aef6d14",
+  "ownerReview": "NOT_REVIEWED",
+  "merge": false,
+  "ready": false,
+  "tag": false,
+  "release": false,
+  "scope": "Actual required push and pull_request gates on the recorded head. The following facts-only acceptance backfill changes documentation and evidence only; its final delivery head and fresh CI are recorded in the Draft PR body without a self-referential commit loop.",
+  "optionalRealProfiles": "SKIPPED_BY_DESIGN: no local credential sent to GitHub; actual Sol/xhigh evidence was collected locally.",
+  "warningAudit": "ci-warning-audit.json"
+}

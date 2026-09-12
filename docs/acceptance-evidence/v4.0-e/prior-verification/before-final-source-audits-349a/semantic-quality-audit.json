@@ -1,0 +1,284 @@
+{
+  "recordedAt": "2026-09-12T01:20:39.036036+00:00",
+  "scope": "Every readable Story counted; default recent eight retained without cherry-picking. Separate visible UI review is authoritative for usability.",
+  "projects": [
+    {
+      "project": "ProjectFlow",
+      "totalReadableStories": 339,
+      "diagnostics": {
+        "modelStatus": "CACHE_HIT",
+        "totalWindowCount": 14,
+        "succeededWindowCount": 14,
+        "failedWindowCount": 0,
+        "pendingWindowCount": 0,
+        "chapterSynthesisFailedCount": 0,
+        "chapterSynthesisPendingCount": 0,
+        "eventConservation": true,
+        "invalidEvidenceRefCount": 0,
+        "crossProjectRefCount": 0,
+        "unsupportedStrongFactCount": 0,
+        "unsupportedClaimCount": 0,
+        "technicalLeakCount": 0,
+        "representativePrimaryCoverage": 0.676259677265792
+      },
+      "recentDefaultStories": [
+        {
+          "title": "记录合并请求24（真实项目理解、来源边界与开发工作线）的说明，形成待核实的范围声明",
+          "summary": "作者的说明把真实项目理解、来源边界和开发工作线列为合并请求24的范围，但没有直接证据证明合入、实际变化或验证结果。",
+          "time": {
+            "basis": "PR_UPDATED_AT",
+            "label": "提案更新时间",
+            "eventTimeKnown": false,
+            "sourceBases": [
+              "PR_UPDATED_AT"
+            ]
+          },
+          "sourceCount": 1,
+          "claimState": "DECLARED"
+        },
+        {
+          "title": "更新项目检查记录与截图，形成可追溯的审阅材料",
+          "summary": "变更范围涉及开发工作线、项目历程、项目理解、审阅和来源证据相关内容，仅能确认检查记录与截图等材料发生了变化。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 1,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "整理开发工作线相关代码，留下待核实的变化记录",
+          "summary": "现有来源只能看出开发工作线相关代码有过变化，但具体改动和结果仍不清楚。",
+          "time": {
+            "basis": "AGENT_GIT_RECORD_TIME",
+            "label": "工作结果入库时间",
+            "eventTimeKnown": false,
+            "sourceBases": [
+              "AGENT_GIT_RECORD_TIME"
+            ]
+          },
+          "sourceCount": 12,
+          "claimState": "UNKNOWN"
+        },
+        {
+          "title": "更新项目上下文说明，留下可追溯的日期记录",
+          "summary": "项目上下文说明中的更新时间文字先后由 2026-08-29 改为 2026-09-07、由 2026-09-07 改为 2026-09-09，再由 2026-09-09 改为 2026-09-10；可确认的是文档文字变化，不能据此确认功能运行验收通过。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 6,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "更新项目理解、工作区和项目历程相关的前后端代码与文档，形成V4.0-D范围与依赖说明",
+          "summary": "变更覆盖项目理解服务代码、工作区文件、项目历程文档和项目理解测试文件，并在文档中补充V4.0-D边界、阅读及依赖关系说明。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 15,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "更新项目理解、开发工作线和工作区相关的前后端代码，形成组件与服务的变更记录",
+          "summary": "修改范围覆盖项目历程、项目理解和工作区相关文件，以及项目历程界面组件与服务代码，但来源没有提供运行验收结果。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 11,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "更新项目理解、开发工作线和工作区相关的前后端代码与文档，形成可追溯的变更记录",
+          "summary": "变更涉及项目历程相关文件、项目理解文档、报告、工作区测试文件和项目历程服务代码，来源仅能确认这些内容被修改。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 1,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "修改项目使用说明",
+          "summary": "这组来源包含配套文件的变更记录。可确认文件已修改，不能据此确认功能运行验收通过。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 3,
+          "claimState": "OBSERVED"
+        }
+      ],
+      "timeBases": {
+        "PR_UPDATED_AT": 4,
+        "GIT_COMMIT_TIME": 278,
+        "AGENT_GIT_RECORD_TIME": 22,
+        "PR_MERGED_AT": 20,
+        "MIXED": 15
+      }
+    },
+    {
+      "project": "Corporation-Agent",
+      "totalReadableStories": 22,
+      "diagnostics": {
+        "modelStatus": "CACHE_HIT",
+        "totalWindowCount": 2,
+        "succeededWindowCount": 2,
+        "failedWindowCount": 0,
+        "pendingWindowCount": 0,
+        "chapterSynthesisFailedCount": 0,
+        "chapterSynthesisPendingCount": 0,
+        "eventConservation": true,
+        "invalidEvidenceRefCount": 0,
+        "crossProjectRefCount": 0,
+        "unsupportedStrongFactCount": 0,
+        "unsupportedClaimCount": 0,
+        "technicalLeakCount": 0,
+        "representativePrimaryCoverage": 0.7894795630406637
+      },
+      "recentDefaultStories": [
+        {
+          "title": "新增和更新项目检查记录与文档，留下测试、检查与发布核对说明",
+          "summary": "改动涉及报告和用于记录来源证据的文件，补充或更新了测试结果、持续集成、密钥检查、版本标签和发布记录等文字；这些仍是文档陈述，不能单独证明实际运行结果。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 5,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "修改通知、沟通、附件相关的前后端代码、文档与脚本",
+          "summary": "这组来源包含持续集成配置、配套文件、后端代码、项目文档、前端代码、项目脚本的变更记录。可确认文件已修改，不能据此确认功能运行验收通过。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 1,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "新增并更新项目版本记录，形成从 2.0.0 到 2.2.0 的版本文字记录",
+          "summary": "版本记录先新增 2.0.0，随后更新为 2.1.0，再更新为 2.2.0；这些文字变化不证明对应版本已经发布。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 4,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "新增并更新项目使用说明，形成覆盖多个版本内容的说明记录",
+          "summary": "说明文字涉及团队管理、成果提交与审核、文字和文件协作、站内通知，以及模型运行记录的保存与恢复；这些均为文档陈述，不代表相关能力已独立验证。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 12,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "更新项目报告（版本2.0.0、2.1.0），留下发布顺序及验收检查结果的文字记录",
+          "summary": "改动涉及版本说明、发布步骤，以及本地测试、持续集成、密钥检查和临时数据清理等记录；这些内容只是报告中的陈述，不能据此确认实际验收或发布结果。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 5,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "调整协作、成果交付、提交审核相关的前后端代码、文档与脚本，留下多类文件的修改记录",
+          "summary": "改动涉及成果交付配套文件、报告、脚本、测试文件和接口文件；目前只能确认这些内容被修改，不能确认相关功能已经完成或通过验收。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 1,
+          "claimState": "OBSERVED"
+        },
+        {
+          "title": "从对应版本中移除图片资料，留下删除记录",
+          "summary": "这次来源只证明图片资料在该版本中被移除，不能据此判断后续版本或当前目录是否仍然缺少这些资料。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 2,
+          "claimState": "REMOVED"
+        },
+        {
+          "title": "修改项目历程、来源证据、协作相关的前后端代码与文档，留下覆盖接口、测试和报告的变更记录",
+          "summary": "本批变化覆盖持续集成配置、配套文件、后端代码、项目文档和前端代码；只能确认文件修改，不能确认协作功能的运行效果。",
+          "time": {
+            "basis": "GIT_COMMIT_TIME",
+            "label": "提交时间",
+            "eventTimeKnown": true,
+            "sourceBases": [
+              "GIT_COMMIT_TIME"
+            ]
+          },
+          "sourceCount": 1,
+          "claimState": "OBSERVED"
+        }
+      ],
+      "timeBases": {
+        "GIT_COMMIT_TIME": 22
+      }
+    }
+  ]
+}

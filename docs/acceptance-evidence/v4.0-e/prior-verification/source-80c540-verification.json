@@ -1,0 +1,1901 @@
+{
+  "recordedAt": "2026-09-12T02:59:04.159100+00:00",
+  "state": "IN_PROGRESS",
+  "functionalSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491",
+  "backend": {
+    "command": "PROJECTFLOW_RUN_POSTGRES_MIGRATION_TESTS=true mvn -q -Ppostgres-it verify",
+    "totals": {
+      "tests": 780,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 11
+    },
+    "executedPassed": 769,
+    "skippedCases": [
+      {
+        "suite": "com.projectflow.eval.DeepSeekDogfoodRegressionTest",
+        "cases": [
+          "realProfileKeepsOriginalProjectFlowDogfoodQualified"
+        ]
+      },
+      {
+        "suite": "com.projectflow.eval.GLMDogfoodRegressionTest",
+        "cases": [
+          "realProfileKeepsOriginalProjectFlowDogfoodQualified"
+        ]
+      },
+      {
+        "suite": "com.projectflow.eval.IndependentSemanticReviewArtifactTest",
+        "cases": [
+          "realProviderArtifactIsCompleteBoundedAndSafe"
+        ]
+      },
+      {
+        "suite": "com.projectflow.eval.LunaDogfoodRegressionTest",
+        "cases": [
+          "realProfileKeepsOriginalProjectFlowDogfoodQualified"
+        ]
+      },
+      {
+        "suite": "com.projectflow.eval.ProjectHistoryIndependentSemanticReviewEvaluatorTest",
+        "cases": [
+          "reviewsAllTwelveBlindContinuityScenariosThroughTheGateway"
+        ]
+      },
+      {
+        "suite": "com.projectflow.eval.ProjectHistoryV385RealOutputEvaluatorTest",
+        "cases": [
+          "evaluatesCalibrationAndFrozenHoldoutUsingRealProductionRefresh"
+        ]
+      },
+      {
+        "suite": "com.projectflow.eval.ProjectHistoryV385RealScenarioEvaluatorTest",
+        "cases": [
+          "qualifiesRealProviderAcrossContinuationFailureNonCodeCorrectionAndDogfood"
+        ]
+      },
+      {
+        "suite": "com.projectflow.eval.QwenDogfoodRegressionTest",
+        "cases": [
+          "realProfileKeepsOriginalProjectFlowDogfoodQualified"
+        ]
+      },
+      {
+        "suite": "com.projectflow.migration.ProjectFlowRealV39UpgradeProofTest",
+        "cases": [
+          "upgradesRealFinalV39PostgresAfterDumpRestoreAndExplicitBackupAcknowledgement",
+          "upgradesRealFinalV39H2WithBackupCredentialMigrationAndStableRestart"
+        ]
+      },
+      {
+        "suite": "com.projectflow.service.RepositoryIntakeBenchmarkTest",
+        "cases": [
+          "scansRealOpenSourceRepositoryWithinBoundedInventory"
+        ]
+      }
+    ],
+    "suites": [
+      {
+        "name": "com.projectflow.AgentBridgeV33ControllerTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "12.025",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.AgentContextApiContractTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "2.612",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.AiOutputControllerTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.282",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.AiProviderControllerTest",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.546",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.AuthControllerTest",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.458",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.config.RuntimeSecurityPreflightTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.01",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.DataReadReliabilityTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "1.169",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.DevelopmentSegmentationServiceTest",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.041",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.DevLogControllerTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.257",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.DisplayContentSanitizerTest",
+        "tests": "17",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.018",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.EmbeddedProfileConfigurationTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "1.591",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.eval.DeepSeekDogfoodRegressionTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "0.012",
+        "skippedCases": [
+          "realProfileKeepsOriginalProjectFlowDogfoodQualified"
+        ]
+      },
+      {
+        "name": "com.projectflow.eval.GLMDogfoodRegressionTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "0.009",
+        "skippedCases": [
+          "realProfileKeepsOriginalProjectFlowDogfoodQualified"
+        ]
+      },
+      {
+        "name": "com.projectflow.eval.GroundTruthLeakTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.008",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.eval.IndependentSemanticReviewArtifactTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "0.002",
+        "skippedCases": [
+          "realProviderArtifactIsCompleteBoundedAndSafe"
+        ]
+      },
+      {
+        "name": "com.projectflow.eval.IndependentSemanticReviewEvaluatorContractTest",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.052",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.eval.IndependentSemanticReviewPackageTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.008",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.eval.LunaDogfoodRegressionTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "0.001",
+        "skippedCases": [
+          "realProfileKeepsOriginalProjectFlowDogfoodQualified"
+        ]
+      },
+      {
+        "name": "com.projectflow.eval.ProjectFlowEvalHarnessTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.142",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.eval.ProjectFlowEvalMetricsTest",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.032",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.eval.ProjectFlowEvalProductBoundaryTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.039",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.eval.ProjectFlowEvalPromptParityTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.003",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.eval.ProjectFlowRuntimeParityTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.009",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.eval.ProjectHistoryIndependentSemanticReviewEvaluatorTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "1.431",
+        "skippedCases": [
+          "reviewsAllTwelveBlindContinuityScenariosThroughTheGateway"
+        ]
+      },
+      {
+        "name": "com.projectflow.eval.ProjectHistoryV385QualificationContractTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.009",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.eval.ProjectHistoryV385RealOutputEvaluatorTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "0.017",
+        "skippedCases": [
+          "evaluatesCalibrationAndFrozenHoldoutUsingRealProductionRefresh"
+        ]
+      },
+      {
+        "name": "com.projectflow.eval.ProjectHistoryV385RealScenarioEvaluatorTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "3.282",
+        "skippedCases": [
+          "qualifiesRealProviderAcrossContinuationFailureNonCodeCorrectionAndDogfood"
+        ]
+      },
+      {
+        "name": "com.projectflow.eval.ProjectHistoryV385ReviewArtifactTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.027",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.eval.ProjectHistoryV385TitleQualityTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.007",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.eval.QwenDogfoodRegressionTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "0.003",
+        "skippedCases": [
+          "realProfileKeepsOriginalProjectFlowDogfoodQualified"
+        ]
+      },
+      {
+        "name": "com.projectflow.eval.V374DatasetSeparationTest",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.072",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.HealthControllerTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.069",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.integration.ExternalEvidenceEnvelopeValidatorTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.012",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.LongTransactionBoundaryTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.MarkdownImportControllerTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.314",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.migration.DatabaseSchemaSignatureTest",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.232",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.migration.EmbeddedH2BackupServiceTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.831",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.migration.PostgresBackupAcknowledgementTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.003",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.migration.ProjectFlowFlywayMigrationStrategyTest",
+        "tests": "9",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "2.935",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.migration.ProjectFlowRealV39UpgradeProofTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "2",
+        "time": "0.003",
+        "skippedCases": [
+          "upgradesRealFinalV39PostgresAfterDumpRestoreAndExplicitBackupAcknowledgement",
+          "upgradesRealFinalV39H2WithBackupCredentialMigrationAndStableRestart"
+        ]
+      },
+      {
+        "name": "com.projectflow.migration.ProjectFlowV39DataContinuityMigrationTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.56",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ModelFailureClassifierTest",
+        "tests": "14",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.011",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ModelOutputAdapterTest",
+        "tests": "20",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.06",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ModelSegmentEnricherTest",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.388",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.PendingChangeScanControllerTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "9.804",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectAnalysisJobCompatibilityTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "1.698",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectAnalysisJobRetryIdempotencyTest",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.308",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectAnalysisJobServiceTest",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.302",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectAnalysisJobStateTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.002",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectCapabilityMapPerformanceTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "5.004",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectCapabilityMapReadModelTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.054",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectCapabilityMapRefreshTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "1.886",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectCapabilityServiceTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.274",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectControllerTest",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.511",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectFactHistoryServiceTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "15.626",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectFactMemoryTest",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.363",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectFlowH2UpgradeIntegrationTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "7.487",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectHistoryCorrectionServiceTest",
+        "tests": "23",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "1.744",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectHistoryDogfoodAcceptanceTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "126.265",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectHistoryFrozenDatasetTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.008",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectHistoryGitHubEvidenceTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.789",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectHistoryOverviewRepresentativeChapterTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.023",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectHistoryProductAcceptanceTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "2.537",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectHistoryReconstructionTest",
+        "tests": "49",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "46.786",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectHistoryRefreshFailureTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.731",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectHistoryV385GroundTruthExecutionTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "16.848",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectHistoryV385GroundTruthTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.006",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectHistoryV39ContinuityGroundTruthTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectHistoryV39GroundTruthExecutionMapTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.027",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectHistoryV39HumanReviewWorksheetTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectHistoryWindowCheckpointTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectMemoryGatewayTest",
+        "tests": "9",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "1.241",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectSedimentControllerTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "4.221",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectTimelinePerformanceTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "1.071",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectTimelineReadModelTest",
+        "tests": "10",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.062",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.SecurityGuardrailTest",
+        "tests": "8",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.005",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.SedimentSuggestionPolicyTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.SegmentQualityGateTest",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.AdaptiveAnalysisPlannerTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.298",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.AgentCandidateWriteTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.002",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.AgentContextPackageTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.631",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.AgentResultBoundaryTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.002",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.AgentWorkResultWriteTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.415",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.AiProviderCredentialSecurityTest",
+        "tests": "12",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.122",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.AiProviderServiceProbeTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.004",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.AnalysisExecutionCoordinatorTest",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.148",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.AnalysisInputSnapshotTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.AnalysisTimePolicyTest",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.689",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.AnalysisToolRegistryTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.002",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.AnalysisViewRegistryTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.104",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.BoundedLocalAnalysisCapabilityProviderTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.023",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.BudgetAwareContextPackerTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.014",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ChapterHumanLanguageContractTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.CommitHumanSummaryContractTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ContentOverFilenameTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.103",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.CorrectedProjectionConsistencyTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.CorrectedReadRevisionParityTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.002",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.CrossChunkFactMergeTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.043",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.CrossConsumerHistoryConsistencyTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.CrossProjectIsolationTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.002",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.DeclaredFactValidationTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.DeprecationEvidenceTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.DynamicProfileClaimLimitTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.093",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.FactPromotionGuardTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.FixedCommandExecutorTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.161",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.GenericCommitGroupingTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.GitHubCliServiceTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.005",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.HighValueEvidenceGateTest",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.HistoricalCoverageServiceTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.962",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.HistoricalReasonEvidenceTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.HumanReviewSampleManifestTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.003",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.InferenceIsolationTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.LargeFileContentMapTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.217",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.model.OpenAiResponsesStreamingTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.275",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ModelCapabilityRegistryTest",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ModelGatewayCredentialBoundaryTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ModelGatewayProtocolMatrixTest",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "3.084",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ModelGatewayServiceTest",
+        "tests": "16",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.625",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ModelOutputMinimalSchemaTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ModelPortabilityContractTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.005",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ModelRequestPolicyTest",
+        "tests": "14",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.003",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ModelRequestTelemetryTest",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "2.446",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.MultiProjectAuthorizationTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.003",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.MultiRangeSamplingTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.032",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.NonCodeLanguageRegressionTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.002",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.PartialFileTailHashTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.226",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.PrimarySupportingBidirectionalInvariantTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectAgentRevalidationServiceTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.264",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectCapabilityMapModelOutputTest",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.008",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectContinuityDeltaTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.003",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectContinuityDirtyMarkerConcurrencyTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.068",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectContinuityDirtyMarkerTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.106",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectDeclarationReadTest",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.329",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectEvidenceDiscoveryServiceTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.112",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectEvolutionBridgeServiceTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.804",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectFactAttentionReclassificationServiceTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.002",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryBeforeChangeAfterNonRepetitionTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryChapterNoRawSubjectLeakTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryChapterRepresentationPlannerTest",
+        "tests": "19",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.066",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryChapterSemanticSynthesisTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryClaimEvidenceAttributionContractTest",
+        "tests": "11",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.005",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryCrossProviderNarrativeParityTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.003",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryDeclaredVsVerifiedTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryDogfoodNarrativeEntailmentTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryFinalChapterReviewManifestTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.024",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryFinalHumanSignoffEvidenceTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.003",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryHumanNarrativeContractTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryHumanReviewRound2ManifestTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.008",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryHumanReviewRound3ManifestTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.013",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryHumanSubjectLabelTest",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.003",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryLanguagePolicyTest",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.004",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryNarrativeEntailmentTest",
+        "tests": "12",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.01",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryNarrativeParaphraseValidationTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.002",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryNonCodeHumanLanguageTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryPlannedVsImplementedTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryPromptBuilderTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.036",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistorySemanticUsefulnessTest",
+        "tests": "10",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.004",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistorySourceCollectorPagingTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.343",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryUnknownHumanWordingTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectHistoryWindowPlannerTest",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.012",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectTimelineModelOutputTest",
+        "tests": "36",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.081",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectUnderstandingPromptBuilderTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.002",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectUnderstandingServiceTest",
+        "tests": "14",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.755",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectWorklineCollectorTest",
+        "tests": "13",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.017",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProjectWorklineReadTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.508",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProviderCredentialMigrationCoordinatorTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.115",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProviderCredentialStoreTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProviderNeutralPromptSnapshotTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.002",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.ProviderNeutralSemanticValidationTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.RealDogfoodRoleGraphConsistencyTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.009",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.RepositoryIntakeBenchmarkTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "0.002",
+        "skippedCases": [
+          "scansRealOpenSourceRepositoryWithinBoundedInventory"
+        ]
+      },
+      {
+        "name": "com.projectflow.service.RepositoryIntakeServiceTest",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.105",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.SemanticContractDiagnosticsTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.002",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.SemanticScoutPromptContextTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.007",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.SensitiveContentRedactorTest",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.StoryHumanLanguageContractTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.StrongFactStatusTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.0",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.StructureIndexV2Test",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.106",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.TailRevisionDetectionTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.013",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.TechnicalDebtEvidenceTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.TimelinePeriodResolverTest",
+        "tests": "26",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.013",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.TwoModelContractTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.001",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.UnknownExtensionTextTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.011",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.UnsupportedClaimFailureTaxonomyTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.003",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.WeirdFilenameDiscoveryTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.01",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.service.WindowsDpapiProviderCredentialStoreTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.124",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.TaskControllerTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.251",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.V2CoreControllerTest",
+        "tests": "33",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "2.772",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.V33PersistenceTest",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.047",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.WorkSessionScanControllerTest",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "6.544",
+        "skippedCases": []
+      }
+    ],
+    "scope": "Full backend/H2 contracts. Dedicated real V3.9 proof and real Sol dogfood are recorded separately; opt-in real-provider suites are not claimed as ordinary test passes."
+  },
+  "postgres16": {
+    "status": "PASS",
+    "tests": 7,
+    "skipped": 0,
+    "suites": [
+      {
+        "name": "com.projectflow.migration.ProjectFlowFlywayPostgresIT",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "6.537",
+        "skippedCases": []
+      },
+      {
+        "name": "com.projectflow.ProjectFlowPostgresIT",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "11.058",
+        "skippedCases": []
+      }
+    ],
+    "failsafeTotalsIncludingOptionalSuites": {
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 7
+    }
+  },
+  "exactV39Upgrade": {
+    "status": "PASS",
+    "sourceHead": "dd5ee41b6afcbd7703fa0883dc115c11f4821447",
+    "h2": "PASS",
+    "postgres16": "PASS",
+    "tests": 2,
+    "skipped": 0,
+    "seconds": 43.628,
+    "scope": "Exact old application creates legacy schema; controlled baseline/migration/credential/protected-record/restart and PostgreSQL dump/restore proof"
+  },
+  "frontend": {
+    "lint": "PASS",
+    "contracts": 73,
+    "contractsFailed": 0,
+    "productionBuild": "PASS",
+    "playwright": {
+      "passed": 38,
+      "failed": 0,
+      "duration": "2.6m",
+      "scope": "Real backend/browser and fixed compatible model service; not real Sol acceptance"
+    }
+  },
+  "hermes": {
+    "passed": 10,
+    "failed": 0,
+    "seconds": 6.84,
+    "startupMs": 200.7,
+    "concurrentReadMs": 427.1,
+    "concurrency": 6
+  },
+  "obsidian": {
+    "passed": 27,
+    "failed": 0,
+    "seconds": 6.31,
+    "scale": {
+      "facts": 5000,
+      "months": 36,
+      "capabilities": 100,
+      "evolutions": 1000,
+      "files": 183,
+      "firstSyncMs": 493.5,
+      "writes": 184,
+      "bytes": 3100622,
+      "noChangeWrites": 0
+    }
+  },
+  "acceptanceEvidenceContracts": "PASS",
+  "releaseScriptContracts": "PASS",
+  "rootLauncher": "PENDING_FINAL_RUNTIME",
+  "windowsPortable": {
+    "status": "PASS",
+    "sourceHead": "a1d4e5f443ca61900769a526e73e3564d48cf54a",
+    "functionalSourceHead": "80c5402231df6e11a400d684ee68de68e1f78491",
+    "evidence": "windows-portable.json",
+    "sourceDifference": "Documentation and evidence only; backend/frontend/scripts build inputs unchanged."
+  },
+  "osv": "PENDING_CI",
+  "sensitiveScan": "PENDING_FINAL"
+}

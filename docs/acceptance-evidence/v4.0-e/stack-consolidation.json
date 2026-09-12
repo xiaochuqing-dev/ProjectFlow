@@ -1,0 +1,87 @@
+{
+  "inspectedAt": "2026-09-11T22:09:09.057Z",
+  "master": "1712841b77fd1e8146ce4ab6beaf404e5b1f7a53",
+  "existingPullRequests": [
+    {
+      "baseRefName": "master",
+      "baseRefOid": "1712841b77fd1e8146ce4ab6beaf404e5b1f7a53",
+      "headRefName": "codex/v4.0-gui-foundation-ia",
+      "headRefOid": "d853e6f16d6a63562192eb51548f7b7949c2ffc9",
+      "isDraft": true,
+      "number": 21,
+      "state": "OPEN",
+      "title": "ProjectFlow V4.0-A: freeze GUI foundation and information architecture",
+      "url": "https://github.com/xiaochuqing-dev/ProjectFlow/pull/21"
+    },
+    {
+      "baseRefName": "master",
+      "baseRefOid": "1712841b77fd1e8146ce4ab6beaf404e5b1f7a53",
+      "headRefName": "codex/v4.0-b-gui-first-prototype",
+      "headRefOid": "7d5f30eff3a05105b7f3f60e07e352d297301ed5",
+      "isDraft": true,
+      "number": 22,
+      "state": "OPEN",
+      "title": "ProjectFlow V4.0-B：参考图驱动的六页 GUI 第一版原型",
+      "url": "https://github.com/xiaochuqing-dev/ProjectFlow/pull/22"
+    },
+    {
+      "baseRefName": "codex/v4.0-b-gui-first-prototype",
+      "baseRefOid": "7d5f30eff3a05105b7f3f60e07e352d297301ed5",
+      "headRefName": "codex/v4.0-c-gui-productization",
+      "headRefOid": "703120998f2296b4e615cd785e651a351c5dc8c9",
+      "isDraft": true,
+      "number": 23,
+      "state": "OPEN",
+      "title": "ProjectFlow V4.0-C：Thread 与 Provider 迁入 V4 工作区",
+      "url": "https://github.com/xiaochuqing-dev/ProjectFlow/pull/23"
+    },
+    {
+      "baseRefName": "codex/v4.0-c-gui-productization",
+      "baseRefOid": "703120998f2296b4e615cd785e651a351c5dc8c9",
+      "headRefName": "codex/v4.0-d-real-project-understanding",
+      "headRefOid": "81730744a325ccc2391009b367ca4ba95aef6d14",
+      "isDraft": true,
+      "number": 24,
+      "state": "OPEN",
+      "title": "V4.0-D：真实项目理解、来源边界与开发工作线",
+      "url": "https://github.com/xiaochuqing-dev/ProjectFlow/pull/24"
+    }
+  ],
+  "phaseE": {
+    "branch": "codex/v4.0-e-semantic-quality-debt-closure",
+    "base": "codex/v4.0-d-real-project-understanding",
+    "implementationHead": "bf700b12a7165f8061559e5d05ebaa20768248fc",
+    "pullRequest": "PENDING_VALIDATION_AND_DRAFT_CREATION"
+  },
+  "requiredOrder": [
+    "#22",
+    "#23",
+    "#24",
+    "V4.0-E"
+  ],
+  "automaticMerge": false,
+  "phaseA": {
+    "status": "PARTIALLY_ABSORBED",
+    "observed": "The backend and workflows are identical to the later prototype boundary; the old AppShell foundation has been superseded by the later GUI. The following source contracts and process records are not in the later tree and require explicit retention or archival before stack cleanup.",
+    "unabsorbedPaths": [
+      "docs/projectflow-v4-design-system-and-desktop-foundation-research.md",
+      "docs/projectflow-v4-gui-foundation-current-state-audit.md",
+      "docs/projectflow-v4-gui-foundation-phase-a-report.md",
+      "docs/projectflow-v4-gui-foundation-product-contract.md",
+      ".projectflow/agent-results/20260904-2015-v40-gui-foundation-ia/result.json",
+      ".projectflow/agent-results/20260905-025101-v40-gui-foundation-owner-review-revision/result.json"
+    ]
+  },
+  "postMergeGates": [
+    "Backend/H2 and frozen continuity",
+    "PostgreSQL 16",
+    "Exact final V3.9 application upgrade proof",
+    "Frontend production build and Playwright",
+    "Windows portable/DPAPI/backup/restore",
+    "Sensitive-content scan and OSV",
+    "Master root launcher and relative-path current-tree build"
+  ],
+  "evidenceRetention": "Keep all A–E source contracts, real model attempts, failed runs, reviews and migration evidence permanently reachable. A final merge-SHA/CI correction may be a facts-only evidence backfill; it does not modify ProjectFact.",
+  "cleanup": "Only after verified merge coverage, durable evidence retention and explicit owner authorization. No automatic branch deletion, Tag or Release.",
+  "ownerReview": "NOT_REVIEWED"
+}

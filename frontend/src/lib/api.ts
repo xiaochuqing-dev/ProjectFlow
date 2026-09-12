@@ -1264,7 +1264,7 @@ export type ProjectAnalysisJobType =
 export type UnderstandingClaim = {
   id: string;
   text: string;
-  epistemicStatus: "OBSERVED" | "INFERRED" | "EXPLAINED";
+  epistemicStatus: "OBSERVED" | "INFERRED" | "EXPLAINED" | "DECLARED" | "PROCESS_EVIDENCE" | "UNKNOWN" | "CONFLICTED";
   confidence: "HIGH" | "MEDIUM" | "LOW";
   evidenceRefs: string[];
 };
@@ -1710,9 +1710,15 @@ export type ProjectAnalysisJob = {
   maxAttempts: number;
   requestCount: number;
   maxRequestCount: number;
-  promptTokens: number;
-  completionTokens: number;
-  totalTokens: number;
+  promptTokens: number | null;
+  completionTokens: number | null;
+  totalTokens: number | null;
+  transportTelemetry?: {
+    requestCount: number; completedRequestCount: number; failedRequestCount: number;
+    inFlightRequestCount: number; usageAvailability: "ACTUAL" | "PARTIAL" | "UNKNOWN" | "NOT_CALLED";
+    reportedPromptTokens: number; reportedCompletionTokens: number; reportedTotalTokens: number;
+    latencyMs: number;
+  } | null;
   maxTotalTokens: number;
   elapsedMs: number;
   maxDurationMs: number;
@@ -3073,6 +3079,7 @@ export type ProjectHistoryStory = {
   displayStatus?: string;
   correctionConflicts?: string[];
   claimAttribution?: ProjectHistoryClaimAttribution;
+  timeProvenance?: { basis: string; label: string; eventTimeKnown: boolean; sourceBases: string[] };
 };
 
 export type ProjectHistoryClaimAttribution = {
@@ -3107,6 +3114,8 @@ export type ProjectHistoryThread = {
 
 export type ProjectHistoryEvent = {
   id: string;
+  sourceRevision?: string;
+  coverage?: { timeBasis?: string; timeLabel?: string };
   occurredAt: string;
   sourceType: string;
   category: string;
@@ -3292,8 +3301,9 @@ export type ProjectHistoryPage<T> = {
   totalPages: number;
 };
 
-export function listProjectHistoryThreads(token: string, projectId: string, page = 0, subject = ""): Promise<ProjectHistoryPage<ProjectHistoryThread>> {
+export function listProjectHistoryThreads(token: string, projectId: string, page = 0, subject = "", longTermOnly = false): Promise<ProjectHistoryPage<ProjectHistoryThread>> {
   const query = new URLSearchParams({ page: String(Math.max(0, page)), size: "12", subject });
+  if (longTermOnly) query.set("longTermOnly", "true");
   return projectHistoryGet(token, `/projects/${projectId}/history/threads?${query}`);
 }
 

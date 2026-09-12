@@ -1,0 +1,29 @@
+{
+  "portsReleased": true,
+  "schemaClassification": "KNOWN_CURRENT",
+  "status": "PASS",
+  "dpapi": "PASS",
+  "backup": "PASS",
+  "startups": [
+    {
+      "bundledRuntimeVerified": true,
+      "frontend": 200,
+      "developerToolsExcluded": true,
+      "backend": 200,
+      "round": 1
+    },
+    {
+      "bundledRuntimeVerified": true,
+      "frontend": 200,
+      "developerToolsExcluded": true,
+      "backend": 200,
+      "round": 2
+    }
+  ],
+  "verifiedAt": "2026-09-11T22:02:22.3856189Z",
+  "sourceHead": "bf700b12a7165f8061559e5d05ebaa20768248fc",
+  "manifestBeforeAndAfter": "PASS",
+  "scope": "Local Windows bundled runtime; no Tag, Release or desktop shell",
+  "restore": "PASS",
+  "archiveSha256": "43d3b5c27cf6624315888cc89c7284d6175c6eb0c0d1ec431f0230f21c0dcacf"
+}

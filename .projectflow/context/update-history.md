@@ -1,5 +1,14 @@
 # Update history
 
+2026-09-12 追加最终工程事实：Draft #25 已推送，实际 push/PR Quality 与 Windows 四次运行全部 SUCCESS，OSV 通过，旧 Action runtime deprecation 在本轮日志和 annotations 中未复现。V4.0-E PASS，Desktop 技术入口 READY_FOR_POC；Owner NOT_REVIEWED，未执行 Ready、merge、Tag、Release。
+
+## ProjectFlow V4.0-E 语义质量与可靠性债 - 2026-09-12
+
+在 #24 的独立工作树中，长 reasoning Responses 改用官方 SDK SSE，完整 terminal 才进入业务 JSON 校验。每次实际请求的次数、失败类型、延迟和可用 usage 独立记录，零变化不复读历史消耗；同源规范化 Scout checkpoint 支持只恢复最终阶段。真实第三项目揭示的最终归纳失败缓存误判已加入恢复与 UI 状态保护。
+
+Current 按有来源的用途/能力说明排序并可下钻；History 以现有 subject 和有界路径提供具体文件对象，不提升声明、过程证据或 broad owner 权威。提交时间、Agent Git 入库时间、观察时间和未知时间明确分开。两份真实 Current、最终 History 与零请求复用已完成。真实重启修复保留 4,312 条来源及 12 个成功窗口，仅恢复剩余两窗口和篇章；ProjectFlow 14/14、Corporation 2/2 窗口完成，独立 Sol/xhigh 均 PASS。后端/H2、PostgreSQL、exact 旧库升级、浏览器与 Windows 通过；每次失败、未知用量、非阻断评审项及最终 CI 分别记录在 V4.0-E 报告和 Evidence。继续 stacked Draft、Owner NOT_REVIEWED，无自动合并或 Release。
+
+
 ## ProjectFlow V4.0-D 真实验收收尾 - 2026-09-10
 
 两份只读项目分别完成 History 与工作线读取，54 条可见陈述的高风险无来源项为 0，20 条分支独立核对通过。最新功能 Head 的后端/H2 739 项（12 skipped）、生产浏览器 37 项、PG16 和 Windows CI 通过。当前材料 Understanding 两份均在真实 Sol/xhigh 重试后失败；独立模型复审仍认为当前能力和历史变化过于笼统。已修复失败理解缓存、骨架观察措辞、窄屏证据按钮遮挡和来源时间说明，但阶段成功条件未全部满足，保留 Draft、Owner NOT_REVIEWED、Desktop Shell BLOCKED。完整来源和限制见 V4.0-D Evidence，不把工程通过写成语义通过。
